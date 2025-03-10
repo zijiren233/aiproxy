@@ -18,7 +18,7 @@ metadata:
   name: aiproxy
   namespace: aiproxy-system
   annotations:
-    originImageName: ghcr.io/labring/sealos-aiproxy-service:latest
+    originImageName: ghcr.io/labring/aiproxy:latest
     deploy.cloud.sealos.io/minReplicas: '3'
     deploy.cloud.sealos.io/maxReplicas: '3'
   labels:
@@ -42,7 +42,7 @@ spec:
     spec:
       containers:
         - name: aiproxy
-          image: ghcr.io/labring/sealos-aiproxy-service:latest
+          image: ghcr.io/labring/aiproxy:latest
           envFrom:
           - configMapRef:
               name: aiproxy-env
