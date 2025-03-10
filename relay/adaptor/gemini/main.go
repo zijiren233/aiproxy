@@ -348,6 +348,13 @@ func responseGeminiChat2OpenAI(meta *meta.Meta, response *ChatResponse) *openai.
 		Created: time.Now().Unix(),
 		Choices: make([]*openai.TextResponseChoice, 0, len(response.Candidates)),
 	}
+	if response.UsageMetadata != nil {
+		fullTextResponse.Usage = model.Usage{
+			PromptTokens:     response.UsageMetadata.PromptTokenCount,
+			CompletionTokens: response.UsageMetadata.CandidatesTokenCount,
+			TotalTokens:      response.UsageMetadata.TotalTokenCount,
+		}
+	}
 	for i, candidate := range response.Candidates {
 		choice := openai.TextResponseChoice{
 			Index: i,
@@ -516,18 +523,7 @@ func Handler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage
 	if err != nil {
 		return nil, openai.ErrorWrapper(err, "unmarshal_response_body_failed", http.StatusInternalServerError)
 	}
-	if len(geminiResponse.Candidates) == 0 {
-		return nil, openai.ErrorWrapperWithMessage("No candidates returned", "gemini_error", resp.StatusCode)
-	}
 	fullTextResponse := responseGeminiChat2OpenAI(meta, &geminiResponse)
-	fullTextResponse.Model = meta.OriginModel
-
-	usage := model.Usage{
-		PromptTokens:     geminiResponse.UsageMetadata.PromptTokenCount,
-		CompletionTokens: geminiResponse.UsageMetadata.CandidatesTokenCount,
-		TotalTokens:      geminiResponse.UsageMetadata.TotalTokenCount,
-	}
-	fullTextResponse.Usage = usage
 	jsonResponse, err := sonic.Marshal(fullTextResponse)
 	if err != nil {
 		return nil, openai.ErrorWrapper(err, "marshal_response_body_failed", http.StatusInternalServerError)
@@ -535,5 +531,5 @@ func Handler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage
 	c.Writer.Header().Set("Content-Type", "application/json")
 	c.Writer.WriteHeader(resp.StatusCode)
 	_, _ = c.Writer.Write(jsonResponse)
-	return &usage, nil
+	return &fullTextResponse.Usage, nil
 }
