@@ -1,7 +1,5 @@
 FROM golang:1.23-alpine AS builder
 
-ARG VERSION
-
 WORKDIR /aiproxy
 
 COPY ./ ./
@@ -9,6 +7,12 @@ COPY ./ ./
 RUN go build -trimpath -tags "jsoniter" -ldflags "-s -w" -o aiproxy
 
 FROM alpine:latest
+
+RUN mkdir -p /aiproxy
+
+WORKDIR /aiproxy
+
+VOLUME /aiproxy
 
 RUN apk add --no-cache ca-certificates tzdata ffmpeg curl && \
     rm -rf /var/cache/apk/*

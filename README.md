@@ -1,5 +1,11 @@
 # Deploy
 
+## Use Docker
+
+```bash
+docker run -d --name aiproxy -p 3000:3000 -v ./aiproxy:/aiproxy ghcr.io/aiproxy/aiproxy:latest
+```
+
 ## Use Docker Compose
 
 Copy [docker-compose.yaml](./docker-compose.yaml) to the same directory as the `aiproxy` binary.
@@ -30,6 +36,8 @@ docker-compose up -d
 - `SQL_MAX_IDLE_CONNS`: The maximum number of idle connections in the database, default is `100`
 - `SQL_MAX_OPEN_CONNS`: The maximum number of open connections to the database, default is `1000`
 - `SQL_MAX_LIFETIME`: The maximum lifetime of a connection in seconds, default is `60`
+- `SQLITE_PATH`: The path to the sqlite database, default is `aiproxy.db`
+- `SQL_BUSY_TIMEOUT`: The busy timeout for the database, default is `3000`
 
 ### Notify Options
 
