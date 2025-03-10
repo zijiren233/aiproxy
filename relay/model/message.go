@@ -102,5 +102,5 @@ type ImageURL struct {
 type MessageContent struct {
 	ImageURL *ImageURL `json:"image_url,omitempty"`
 	Type     string    `json:"type,omitempty"`
-	Text     string    `json:"text"`
+	Text     string    `json:"text,omitempty"`
 }
