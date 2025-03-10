@@ -349,11 +349,12 @@ func buildGetLogsQuery(
 	if group != "" {
 		tx = tx.Where("group_id = ?", group)
 	}
-	if !startTimestamp.IsZero() && !endTimestamp.IsZero() {
+	switch {
+	case !startTimestamp.IsZero() && !endTimestamp.IsZero():
 		tx = tx.Where("request_at BETWEEN ? AND ?", startTimestamp, endTimestamp)
-	} else if !startTimestamp.IsZero() {
+	case !startTimestamp.IsZero():
 		tx = tx.Where("request_at >= ?", startTimestamp)
-	} else if !endTimestamp.IsZero() {
+	case !endTimestamp.IsZero():
 		tx = tx.Where("request_at <= ?", endTimestamp)
 	}
 	if tokenName != "" {
@@ -601,11 +602,12 @@ func buildSearchLogsQuery(
 		tx = tx.Where("model = ?", modelName)
 	}
 
-	if !startTimestamp.IsZero() && !endTimestamp.IsZero() {
+	switch {
+	case !startTimestamp.IsZero() && !endTimestamp.IsZero():
 		tx = tx.Where("request_at BETWEEN ? AND ?", startTimestamp, endTimestamp)
-	} else if !startTimestamp.IsZero() {
+	case !startTimestamp.IsZero():
 		tx = tx.Where("request_at >= ?", startTimestamp)
-	} else if !endTimestamp.IsZero() {
+	case !endTimestamp.IsZero():
 		tx = tx.Where("request_at <= ?", endTimestamp)
 	}
 

@@ -11,28 +11,13 @@ on:
   push:
     branches: [ "main" ]
     paths-ignore:
-      - "docs/**"
       - "**/*.md"
       - "**/*.yaml"
-      - "CONTRIBUTORS"
-      - "CHANGELOG/**"
-      - "controllers/**"
-      - "service/**"
-      - "webhooks/**"
-      - "frontend/**"
   pull_request:
     branches: [ "*" ]
     paths-ignore:
-      - "docs/**"
-      - "CHANGELOG/**"
       - "**/*.md"
       - "**/*.yaml"
-      - "CONTRIBUTORS"
-      - "CHANGELOG/**"
-      - "controllers/**"
-      - "service/**"
-      - "webhooks/**"
-      - "frontend/**"
 
 jobs:
   golangci-lint:
