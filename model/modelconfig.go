@@ -20,7 +20,7 @@ type ModelConfig struct {
 	CreatedAt         time.Time              `gorm:"index;autoCreateTime"          json:"created_at"`
 	UpdatedAt         time.Time              `gorm:"index;autoUpdateTime"          json:"updated_at"`
 	Config            map[ModelConfigKey]any `gorm:"serializer:fastjson;type:text" json:"config,omitempty"`
-	ImagePrices       map[string]float64     `gorm:"serializer:fastjson"           json:"image_prices,omitempty"`
+	ImagePrices       map[string]float64     `gorm:"serializer:fastjson,type:text" json:"image_prices,omitempty"`
 	Model             string                 `gorm:"primaryKey"                    json:"model"`
 	Owner             ModelOwner             `gorm:"type:varchar(255);index"       json:"owner"`
 	ImageMaxBatchSize int                    `json:"image_batch_size,omitempty"`

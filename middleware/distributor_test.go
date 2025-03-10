@@ -62,21 +62,21 @@ func BenchmarkCompareGetModelFromJSON(b *testing.B) {
 
 		b.Run(tt.name+"/Std", func(b *testing.B) {
 			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
+			for range b.N {
 				_, _ = StdGetModelFromJSON(jsonBytes)
 			}
 		})
 
 		b.Run(tt.name+"/JSONIter", func(b *testing.B) {
 			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
+			for range b.N {
 				_, _ = JSONIterGetModelFromJSON(jsonBytes)
 			}
 		})
 
 		b.Run(tt.name+"/Sonic", func(b *testing.B) {
 			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
+			for range b.N {
 				_, _ = middleware.GetModelFromJSON(jsonBytes)
 			}
 		})

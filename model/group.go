@@ -24,15 +24,15 @@ const (
 
 type Group struct {
 	CreatedAt    time.Time        `json:"created_at"`
-	ID           string           `gorm:"primaryKey"          json:"id"`
-	Tokens       []*Token         `gorm:"foreignKey:GroupID"  json:"-"`
-	Status       int              `gorm:"default:1;index"     json:"status"`
-	UsedAmount   float64          `gorm:"index"               json:"used_amount"`
-	RPMRatio     float64          `gorm:"index"               json:"rpm_ratio"`
-	RPM          map[string]int64 `gorm:"serializer:fastjson" json:"rpm"`
-	TPMRatio     float64          `gorm:"index"               json:"tpm_ratio"`
-	TPM          map[string]int64 `gorm:"serializer:fastjson" json:"tpm"`
-	RequestCount int              `gorm:"index"               json:"request_count"`
+	ID           string           `gorm:"primaryKey"                    json:"id"`
+	Tokens       []*Token         `gorm:"foreignKey:GroupID"            json:"-"`
+	Status       int              `gorm:"default:1;index"               json:"status"`
+	UsedAmount   float64          `gorm:"index"                         json:"used_amount"`
+	RPMRatio     float64          `gorm:"index"                         json:"rpm_ratio"`
+	RPM          map[string]int64 `gorm:"serializer:fastjson,type:text" json:"rpm"`
+	TPMRatio     float64          `gorm:"index"                         json:"tpm_ratio"`
+	TPM          map[string]int64 `gorm:"serializer:fastjson,type:text" json:"tpm"`
+	RequestCount int              `gorm:"index"                         json:"request_count"`
 }
 
 func (g *Group) BeforeDelete(tx *gorm.DB) (err error) {

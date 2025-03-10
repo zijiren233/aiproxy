@@ -316,7 +316,7 @@ func initRetryState(channel *dbmodel.Channel, bizErr *model.ErrorWithStatusCode,
 func retryLoop(c *gin.Context, mode relaymode.Mode, requestModel string, state *retryState, relayController RelayController, log *log.Entry) {
 	mc := middleware.GetModelCaches(c)
 
-	for i := 0; i < state.retryTimes; i++ {
+	for i := range state.retryTimes {
 		ctxErr := c.Request.Context().Err()
 		if ctxErr != nil {
 			log.Warnf("retry loop context error: %+v", ctxErr)

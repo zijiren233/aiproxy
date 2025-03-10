@@ -122,8 +122,8 @@ func HTMLTable2Md(content string) string {
 					rowspan, _ = strconv.Atoi(matches[1])
 				}
 				content := strings.TrimSpace(tdCleanRegex.ReplaceAllString(cell, ""))
-				for i := 0; i < rowspan; i++ {
-					for j := 0; j < colspan; j++ {
+				for i := range rowspan {
+					for j := range colspan {
 						for len(tableData) <= rowIndex+i {
 							tableData = append(tableData, []string{})
 						}
@@ -147,7 +147,7 @@ func HTMLTable2Md(content string) string {
 		}
 		var chunks []string
 		headerCells := make([]string, maxColumns)
-		for i := 0; i < maxColumns; i++ {
+		for i := range maxColumns {
 			if i < len(tableData[0]) {
 				headerCells[i] = tableData[0][i]
 			} else {
@@ -156,7 +156,7 @@ func HTMLTable2Md(content string) string {
 		}
 		chunks = append(chunks, fmt.Sprintf("| %s |", strings.Join(headerCells, " | ")))
 		separatorCells := make([]string, maxColumns)
-		for i := 0; i < maxColumns; i++ {
+		for i := range maxColumns {
 			separatorCells[i] = "---"
 		}
 		chunks = append(chunks, fmt.Sprintf("| %s |", strings.Join(separatorCells, " | ")))

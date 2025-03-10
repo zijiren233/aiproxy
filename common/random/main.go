@@ -22,11 +22,11 @@ const (
 //nolint:gosec
 func GenerateKey() string {
 	key := make([]byte, 48)
-	for i := 0; i < 16; i++ {
+	for i := range 16 {
 		key[i] = keyChars[rand.IntN(len(keyChars))]
 	}
 	uuid := GetUUID()
-	for i := 0; i < 32; i++ {
+	for i := range 32 {
 		c := uuid[i]
 		if i%2 == 0 && c >= 'a' && c <= 'z' {
 			c = c - 'a' + 'A'
@@ -39,7 +39,7 @@ func GenerateKey() string {
 //nolint:gosec
 func GetRandomString(length int) string {
 	key := make([]byte, length)
-	for i := 0; i < length; i++ {
+	for i := range length {
 		key[i] = keyChars[rand.IntN(len(keyChars))]
 	}
 	return conv.BytesToString(key)
@@ -48,7 +48,7 @@ func GetRandomString(length int) string {
 //nolint:gosec
 func GetRandomNumberString(length int) string {
 	key := make([]byte, length)
-	for i := 0; i < length; i++ {
+	for i := range length {
 		key[i] = keyNumbers[rand.IntN(len(keyNumbers))]
 	}
 	return conv.BytesToString(key)
