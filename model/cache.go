@@ -412,7 +412,6 @@ type ModelConfigCache interface {
 }
 
 // read-only cache
-//
 
 type ModelCaches struct {
 	ModelConfig                     ModelConfigCache

@@ -23,7 +23,7 @@ var (
 
 var (
 	disableServe                 atomic.Bool
-	logStorageHours              int64 = 0 // default 0 means no limit
+	logStorageHours              int64 // default 0 means no limit
 	saveAllLogDetail             atomic.Bool
 	logDetailRequestBodyMaxSize  int64 = 128 * 1024 // 128KB
 	logDetailResponseBodyMaxSize int64 = 128 * 1024 // 128KB
@@ -94,7 +94,8 @@ func SetModelErrorAutoBanRate(rate float64) {
 }
 
 func GetTimeoutWithModelType() map[int]int64 {
-	return timeoutWithModelType.Load().(map[int]int64)
+	t, _ := timeoutWithModelType.Load().(map[int]int64)
+	return t
 }
 
 func SetTimeoutWithModelType(timeout map[int]int64) {
@@ -157,7 +158,8 @@ func SetDisableServe(disabled bool) {
 }
 
 func GetDefaultChannelModels() map[int][]string {
-	return defaultChannelModels.Load().(map[int][]string)
+	d, _ := defaultChannelModels.Load().(map[int][]string)
+	return d
 }
 
 func SetDefaultChannelModels(models map[int][]string) {
@@ -170,7 +172,8 @@ func SetDefaultChannelModels(models map[int][]string) {
 }
 
 func GetDefaultChannelModelMapping() map[int]map[string]string {
-	return defaultChannelModelMapping.Load().(map[int]map[string]string)
+	d, _ := defaultChannelModelMapping.Load().(map[int]map[string]string)
+	return d
 }
 
 func SetDefaultChannelModelMapping(mapping map[int]map[string]string) {
@@ -179,7 +182,8 @@ func SetDefaultChannelModelMapping(mapping map[int]map[string]string) {
 }
 
 func GetGroupConsumeLevelRatio() map[float64]float64 {
-	return groupConsumeLevelRatio.Load().(map[float64]float64)
+	r, _ := groupConsumeLevelRatio.Load().(map[float64]float64)
+	return r
 }
 
 func GetGroupConsumeLevelRatioStringKeyMap() map[string]float64 {
@@ -207,7 +211,8 @@ func SetGroupMaxTokenNum(num int64) {
 }
 
 func GetGeminiSafetySetting() string {
-	return geminiSafetySetting.Load().(string)
+	s, _ := geminiSafetySetting.Load().(string)
+	return s
 }
 
 func SetGeminiSafetySetting(setting string) {
@@ -225,7 +230,8 @@ func SetBillingEnabled(enabled bool) {
 }
 
 func GetInternalToken() string {
-	return internalToken.Load().(string)
+	t, _ := internalToken.Load().(string)
+	return t
 }
 
 func SetInternalToken(token string) {
@@ -234,7 +240,8 @@ func SetInternalToken(token string) {
 }
 
 func GetNotifyNote() string {
-	return notifyNote.Load().(string)
+	n, _ := notifyNote.Load().(string)
+	return n
 }
 
 func SetNotifyNote(note string) {

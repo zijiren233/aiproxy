@@ -54,6 +54,8 @@ func GetBalance(channel *model.Channel) (float64, error) {
 	if err != nil {
 		return 0, err
 	}
+	defer res2.Body.Close()
+
 	usage := UsageResponse{}
 	err = sonic.ConfigDefault.NewDecoder(res2.Body).Decode(&usage)
 	if err != nil {

@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  workflow_call:
+  workflow_dispatch:
+    inputs:
+      push_mage:
+        description: 'Push images'
+        required: false
+        type: boolean
+  push:
+    branches: [ "main" ]
+    paths-ignore:
+      - "docs/**"
+      - "**/*.md"
+      - "**/*.yaml"
+      - "CONTRIBUTORS"
+      - "CHANGELOG/**"
+      - "controllers/**"
+      - "service/**"
+      - "webhooks/**"
+      - "frontend/**"
+  pull_request:
+    branches: [ "*" ]
+    paths-ignore:
+      - "docs/**"
+      - "CHANGELOG/**"
+      - "**/*.md"
+      - "**/*.yaml"
+      - "CONTRIBUTORS"
+      - "CHANGELOG/**"
+      - "controllers/**"
+      - "service/**"
+      - "webhooks/**"
+      - "frontend/**"
+
+jobs:
+  golangci-lint:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Golang with cache
+        uses: magnetikonline/action-golang-cache@v5
+        with:
+          go-version: "1.23"
+
+      - name: Run Linter
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: v1.64.5
+          args: "--out-format colored-line-number --max-issues-per-linter 0 --max-same-issues 0"

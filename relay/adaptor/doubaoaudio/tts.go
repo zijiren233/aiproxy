@@ -139,7 +139,9 @@ func ConvertTTSRequest(meta *meta.Meta, req *http.Request) (string, http.Header,
 	binary.BigEndian.PutUint32(payloadArr, uint32(len(compressedData)))
 	clientRequest := make([]byte, len(defaultHeader))
 	copy(clientRequest, defaultHeader)
+	//nolint:makezero
 	clientRequest = append(clientRequest, payloadArr...)
+	//nolint:makezero
 	clientRequest = append(clientRequest, compressedData...)
 
 	return http.MethodPost, nil, bytes.NewReader(clientRequest), nil

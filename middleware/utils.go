@@ -27,7 +27,7 @@ type errorField struct {
 
 func abortWithMessage(c *gin.Context, statusCode int, message string, fields ...*errorField) {
 	typeName := ErrorTypeAIPROXY
-	var code any = nil
+	var code any
 	if len(fields) > 0 {
 		if fields[0].Type != "" {
 			typeName = fields[0].Type

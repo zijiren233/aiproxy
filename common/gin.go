@@ -50,7 +50,8 @@ func GetRequestBody(req *http.Request) ([]byte, error) {
 
 	requestBody := req.Context().Value(RequestBodyKey{})
 	if requestBody != nil {
-		return requestBody.([]byte), nil
+		b, _ := requestBody.([]byte)
+		return b, nil
 	}
 	var buf []byte
 	var err error

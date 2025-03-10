@@ -99,6 +99,8 @@ func DoHelper(
 		return nil, &detail, relayErr
 	}
 
+	defer resp.Body.Close()
+
 	// 4. Handle success response
 	usage, relayErr := handleResponse(a, c, meta, resp, &detail)
 	if relayErr != nil {

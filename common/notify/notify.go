@@ -20,7 +20,7 @@ type Notifier interface {
 
 var (
 	stdNotifier     Notifier = &StdNotifier{}
-	defaultNotifier Notifier = stdNotifier
+	defaultNotifier          = stdNotifier
 )
 
 func SetDefaultNotifier(notifier Notifier) {
@@ -47,7 +47,7 @@ func limitKey(level Level, key string) string {
 	return fmt.Sprintf("notifylimit:%s:%s", level, key)
 }
 
-func NotifyThrottle(level Level, key string, expiration time.Duration, title, message string) {
+func Throttle(level Level, key string, expiration time.Duration, title, message string) {
 	defaultNotifier.NotifyThrottle(level, limitKey(level, key), expiration, title, message)
 }
 
