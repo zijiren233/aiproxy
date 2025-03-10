@@ -220,8 +220,6 @@ func (m *MemModelMonitor) GetBannedChannelsWithModel(_ context.Context, model st
 		for channelID, channel := range data.channels {
 			if channel.bannedUntil.After(now) {
 				banned = append(banned, channelID)
-			} else {
-				channel.bannedUntil = time.Time{}
 			}
 		}
 	}
@@ -242,8 +240,6 @@ func (m *MemModelMonitor) GetAllBannedModelChannels(_ context.Context) (map[stri
 					result[model] = []int64{}
 				}
 				result[model] = append(result[model], channelID)
-			} else {
-				channel.bannedUntil = time.Time{}
 			}
 		}
 	}
