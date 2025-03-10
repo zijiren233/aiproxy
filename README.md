@@ -64,7 +64,7 @@ docker-compose up -d
 
 ### Service Control
 
-- `DISABLE_SERVE`: Disable serving requests, default false
+- `DISABLE_SERVE`: Disable serving requests, default `false`
 - `GROUP_MAX_TOKEN_NUM`: Maximum number of tokens per group (0 means unlimited), default is `0`
 - `GROUP_CONSUME_LEVEL_RATIO`: Consumption level ratio for groups, default is `{}`
 - `GEMINI_SAFETY_SETTING`: Safety setting for Gemini models, default is `BLOCK_NONE`
