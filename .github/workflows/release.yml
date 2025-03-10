@@ -1,0 +1,226 @@
+name: release
+
+on:
+  push:
+    branches:
+      - "**"
+    tags:
+      - "v*.*.*"
+  pull_request:
+
+env:
+  DOCKERHUB_REPO: ${{ secrets.DOCKERHUB_USERNAME != '' && format('{0}/{1}', secrets.DOCKERHUB_USERNAME, 'aiproxy') || '' }}
+  GHCR_REPO: ghcr.io/${{ github.repository }}
+
+jobs:
+  release:
+    name: Release
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        targets:
+          - GOOS: linux
+            GOARCH: arm64
+          - GOOS: linux
+            GOARCH: amd64
+          - GOOS: darwin
+            GOARCH: arm64
+          - GOOS: darwin
+            GOARCH: amd64
+          - GOOS: windows
+            GOARCH: arm64
+            EXT: .exe
+          - GOOS: windows
+            GOARCH: amd64
+            EXT: .exe
+          - GOOS: windows
+            GOARCH: arm64
+            EXT: .exe
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.23"
+
+      - name: Build
+        run: |
+          export GOOS=${{ matrix.targets.GOOS }}
+          export GOARCH=${{ matrix.targets.GOARCH }}
+          go build -trimpath -tags "jsoniter" -ldflags "-s -w" -o aiproxy${{ matrix.targets.EXT }}
+
+      - name: Get release meta
+        if: ${{ startsWith(github.ref, 'refs/tags/') }}
+        id: release_meta
+        run: |
+          version=${GITHUB_REF/refs\/tags\/v/}
+          echo "version: ${version}"
+          prerelease=$(echo ${version} | grep -E 'rc|beta|alpha' || true)
+          release_name="Version ${version}"
+          echo "release_name: ${release_name}"
+          if [ -n "${prerelease}" ]; then
+            prerelease=true
+            release_name="${release_name} (Prerelease)"
+          fi
+          tag_name="v${version}"
+          echo "prerelease: ${prerelease}"
+          echo "tag_name: ${tag_name}"
+
+          echo ::set-output name=PRERELEASE::${prerelease}
+          echo ::set-output name=RELEASE_NAME::${release_name}
+          echo ::set-output name=TAG_NAME::${tag_name}
+
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        if: ${{ startsWith(github.ref, 'refs/tags/') }}
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          draft: false
+          prerelease: ${{ steps.release_meta.outputs.PRERELEASE }}
+          append_body: false
+          fail_on_unmatched_files: true
+          name: ${{ steps.release_meta.outputs.RELEASE_NAME }}
+          tag_name: ${{ steps.release_meta.outputs.TAG_NAME }}
+          files: |
+            aiproxy${{ matrix.targets.EXT }}
+
+  build-docker:
+    name: Release Docker
+    strategy:
+      matrix:
+        include:
+          - arch: amd64
+          - arch: arm64
+            runs-on: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runs-on || 'ubuntu-24.04' }}
+    steps:
+      - name: Login to GitHub Container Registry
+        if: ${{ github.event_name != 'pull_request' }}
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v3
+        if: ${{ github.event_name != 'pull_request' && env.DOCKERHUB_REPO }}
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Download Web
+        uses: actions/download-artifact@v4
+        with:
+          name: synctv-web
+          path: synctv-web/dist
+
+      - name: Move to public
+        run: |
+          rm -rf public/dist/*
+          cp -r synctv-web/dist/* public/dist/
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: |
+            ${{ env.DOCKERHUB_REPO }}
+            ${{ env.GHCR_REPO }}
+
+      - name: Build for ${{ matrix.arch }}
+        id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          labels: ${{ steps.meta.outputs.labels }}
+          platforms: linux/${{ matrix.arch }}
+          outputs: type=image,"name=${{ env.DOCKERHUB_REPO && format('{0},{1}', env.DOCKERHUB_REPO, env.GHCR_REPO) || env.GHCR_REPO }}",name-canonical=true,push-by-digest=${{ github.event_name != 'pull_request' }},push=${{ github.event_name != 'pull_request' }}
+
+      - name: Export digest
+        run: |
+          mkdir -p ${{ runner.temp }}/digests
+          digest="${{ steps.build.outputs.digest }}"
+          touch "${{ runner.temp }}/digests/${digest#sha256:}"
+
+      - name: Upload digest
+        uses: actions/upload-artifact@v4
+        with:
+          name: digests-${{ matrix.arch }}
+          path: ${{ runner.temp }}/digests/*
+          if-no-files-found: error
+          retention-days: 1
+
+  release-docker:
+    name: Push Docker Images
+    needs: build-docker
+    runs-on: ubuntu-24.04
+    if: ${{ github.event_name != 'pull_request' }}
+    steps:
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v3
+        if: ${{ github.event_name != 'pull_request' && env.DOCKERHUB_REPO }}
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Download digests
+        uses: actions/download-artifact@v4
+        with:
+          path: ${{ runner.temp }}/digests
+          pattern: digests-*
+          merge-multiple: true
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: |
+            ${{ env.DOCKERHUB_REPO }}
+            ${{ env.GHCR_REPO }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=ref,event=tag
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=sha
+
+      - name: Create manifest list and push
+        working-directory: ${{ runner.temp }}/digests
+        run: |
+          if [ -n "${{ env.DOCKERHUB_REPO }}" ]; then
+          docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
+              $(printf '${{ env.DOCKERHUB_REPO }}@sha256:%s ' *)
+          fi
+          docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
+            $(printf '${{ env.GHCR_REPO }}@sha256:%s ' *)
+
+      - name: Inspect image
+        run: |
+          if [ -n "${{ env.DOCKERHUB_REPO }}" ]; then
+            docker buildx imagetools inspect ${{ env.DOCKERHUB_REPO }}:${{ steps.meta.outputs.version }}
+          fi
+          docker buildx imagetools inspect ${{ env.GHCR_REPO }}:${{ steps.meta.outputs.version }}
