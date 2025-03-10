@@ -306,14 +306,14 @@ func inferMimeType(u string) string {
 	}
 }
 
-func handleConvertPdfToMd(ctx context.Context, str string) (string, error) {
+func handleConvertPdfToMd(ctx context.Context, str string) string {
 	result := InlineMdImage(ctx, str)
 	result = HTMLTable2Md(result)
 
 	result = mediaCommentRegex.ReplaceAllString(result, "")
 	result = footnoteCommentRegex.ReplaceAllString(result, "")
 
-	return result, nil
+	return result
 }
 
 func handleParsePdfResponse(meta *meta.Meta, c *gin.Context, response *StatusResponseDataResult) (*relaymodel.Usage, *relaymodel.ErrorWithStatusCode) {
@@ -328,10 +328,7 @@ func handleParsePdfResponse(meta *meta.Meta, c *gin.Context, response *StatusRes
 	switch meta.GetString("response_format") {
 	case "list":
 		for i, md := range mds {
-			result, err := handleConvertPdfToMd(c.Request.Context(), md)
-			if err != nil {
-				return nil, openai.ErrorWrapperWithMessage("convert pdf to md failed: "+err.Error(), "convert_pdf_to_md_failed", http.StatusInternalServerError)
-			}
+			result := handleConvertPdfToMd(c.Request.Context(), md)
 			mds[i] = result
 		}
 		c.JSON(http.StatusOK, relaymodel.ParsePdfListResponse{
@@ -343,10 +340,7 @@ func handleParsePdfResponse(meta *meta.Meta, c *gin.Context, response *StatusRes
 		for _, md := range mds {
 			builder.WriteString(md)
 		}
-		result, err := handleConvertPdfToMd(c.Request.Context(), builder.String())
-		if err != nil {
-			return nil, openai.ErrorWrapperWithMessage("convert pdf to md failed: "+err.Error(), "convert_pdf_to_md_failed", http.StatusInternalServerError)
-		}
+		result := handleConvertPdfToMd(c.Request.Context(), builder.String())
 		c.JSON(http.StatusOK, relaymodel.ParsePdfResponse{
 			Pages:    pages,
 			Markdown: result,

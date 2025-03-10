@@ -89,8 +89,7 @@ func (s *Splitter) processSeekTail() ([]byte, []byte) {
 	tailLen := s.tailLen
 	kmpNext := s.kmpNext
 
-	var i int
-	for i = 0; i < len(data); i++ {
+	for i := range data {
 		for j > 0 && data[i] != tail[j] {
 			j = kmpNext[j-1]
 		}

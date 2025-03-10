@@ -76,7 +76,7 @@ func RelayHelper(meta *meta.Meta, c *gin.Context, relayController RelayControlle
 	}
 	if shouldErrorMonitor(relayErr.StatusCode) {
 		hasPermission := channelHasPermission(relayErr.StatusCode)
-		beyondThreshold, autoBanned, err := monitor.AddRequest(
+		beyondThreshold, banExecution, err := monitor.AddRequest(
 			context.Background(),
 			meta.OriginModel,
 			int64(meta.Channel.ID),
@@ -86,7 +86,8 @@ func RelayHelper(meta *meta.Meta, c *gin.Context, relayController RelayControlle
 		if err != nil {
 			log.Errorf("add request failed: %+v", err)
 		}
-		if autoBanned {
+		switch {
+		case banExecution:
 			notify.ErrorThrottle(
 				fmt.Sprintf("autoBanned:%d:%s", meta.Channel.ID, meta.OriginModel),
 				time.Minute,
@@ -94,7 +95,7 @@ func RelayHelper(meta *meta.Meta, c *gin.Context, relayController RelayControlle
 					meta.Channel.Type, meta.Channel.Name, meta.Channel.ID, meta.OriginModel),
 				relayErr.JSONOrEmpty(),
 			)
-		} else if beyondThreshold {
+		case beyondThreshold:
 			notify.WarnThrottle(
 				fmt.Sprintf("beyondThreshold:%d:%s", meta.Channel.ID, meta.OriginModel),
 				time.Minute,
@@ -102,7 +103,7 @@ func RelayHelper(meta *meta.Meta, c *gin.Context, relayController RelayControlle
 					meta.Channel.Type, meta.Channel.Name, meta.Channel.ID, meta.OriginModel),
 				relayErr.JSONOrEmpty(),
 			)
-		} else if !hasPermission {
+		case !hasPermission:
 			notify.ErrorThrottle(
 				fmt.Sprintf("channelHasPermission:%d:%s", meta.Channel.ID, meta.OriginModel),
 				time.Minute,

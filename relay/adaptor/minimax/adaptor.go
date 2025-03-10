@@ -79,6 +79,6 @@ func (a *Adaptor) GetChannelName() string {
 	return "minimax"
 }
 
-func (a *Adaptor) GetBalance(channel *model.Channel) (float64, error) {
+func (a *Adaptor) GetBalance(_ *model.Channel) (float64, error) {
 	return 0, adaptor.ErrGetBalanceNotImplemented
 }

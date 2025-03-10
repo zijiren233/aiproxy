@@ -211,7 +211,7 @@ func BatchRecordConsume(
 				Add(decimal.NewFromFloat(batchData.Groups[group].Amount)).
 				InexactFloat64()
 		}
-		batchData.Groups[group].Count += 1
+		batchData.Groups[group].Count++
 	}
 
 	if tokenID > 0 {
@@ -224,7 +224,7 @@ func BatchRecordConsume(
 				Add(decimal.NewFromFloat(batchData.Tokens[tokenID].Amount)).
 				InexactFloat64()
 		}
-		batchData.Tokens[tokenID].Count += 1
+		batchData.Tokens[tokenID].Count++
 	}
 
 	if channelID > 0 {
@@ -237,7 +237,7 @@ func BatchRecordConsume(
 				Add(decimal.NewFromFloat(batchData.Channels[channelID].Amount)).
 				InexactFloat64()
 		}
-		batchData.Channels[channelID].Count += 1
+		batchData.Channels[channelID].Count++
 	}
 
 	return err

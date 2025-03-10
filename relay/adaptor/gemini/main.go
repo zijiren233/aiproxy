@@ -158,7 +158,8 @@ func buildContents(ctx context.Context, textRequest *model.GeneralOpenAIRequest)
 			Parts: make([]Part, 0),
 		}
 
-		if message.Role == "assistant" && len(message.ToolCalls) > 0 {
+		switch {
+		case message.Role == "assistant" && len(message.ToolCalls) > 0:
 			for _, toolCall := range message.ToolCalls {
 				var args map[string]any
 				if toolCall.Function.Arguments != "" {
@@ -175,7 +176,7 @@ func buildContents(ctx context.Context, textRequest *model.GeneralOpenAIRequest)
 					},
 				})
 			}
-		} else if message.Role == "tool" && message.ToolCallID != "" {
+		case message.Role == "tool" && message.ToolCallID != "":
 			var contentMap map[string]any
 			if message.Content != nil {
 				switch content := message.Content.(type) {
@@ -201,7 +202,7 @@ func buildContents(ctx context.Context, textRequest *model.GeneralOpenAIRequest)
 					},
 				},
 			})
-		} else {
+		default:
 			openaiContent := message.ParseContent()
 			for _, part := range openaiContent {
 				if part.Type == model.ContentTypeImageURL {

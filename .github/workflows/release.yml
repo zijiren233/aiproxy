@@ -1,4 +1,4 @@
-name: release
+name: Release
 
 on:
   push:
@@ -87,8 +87,8 @@ jobs:
           files: |
             aiproxy-${{ matrix.targets.GOOS }}-${{ matrix.targets.GOARCH }}${{ matrix.targets.EXT }}
 
-  build-docker:
-    name: Release Docker
+  build-docker-images:
+    name: Build Docker Images
     strategy:
       matrix:
         include:
@@ -149,9 +149,9 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
-  release-docker:
+  release-docker-images:
     name: Push Docker Images
-    needs: build-docker
+    needs: build-docker-images
     runs-on: ubuntu-24.04
     if: ${{ github.event_name != 'pull_request' }}
     steps:

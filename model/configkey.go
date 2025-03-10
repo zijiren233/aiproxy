@@ -2,6 +2,7 @@ package model
 
 import "reflect"
 
+//nolint:revive
 type ModelConfigKey string
 
 const (
@@ -14,6 +15,7 @@ const (
 	ModelConfigSupportVoicesKey    ModelConfigKey = "support_voices"
 )
 
+//nolint:revive
 type ModelConfigOption func(config map[ModelConfigKey]any)
 
 func WithModelConfigMaxContextTokens(maxContextTokens int) ModelConfigOption {

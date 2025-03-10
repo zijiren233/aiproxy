@@ -962,11 +962,12 @@ func getChartData(group string, start, end time.Time, tokenName, modelName strin
 		query = query.Where("group_id = ?", group)
 	}
 
-	if !start.IsZero() && !end.IsZero() {
+	switch {
+	case !start.IsZero() && !end.IsZero():
 		query = query.Where("request_at BETWEEN ? AND ?", start, end)
-	} else if !start.IsZero() {
+	case !start.IsZero():
 		query = query.Where("request_at >= ?", start)
-	} else if !end.IsZero() {
+	case !end.IsZero():
 		query = query.Where("request_at <= ?", end)
 	}
 
@@ -1003,11 +1004,12 @@ func getLogDistinctValues[T cmp.Ordered](field string, group string, start, end 
 		query = query.Where("group_id = ?", group)
 	}
 
-	if !start.IsZero() && !end.IsZero() {
+	switch {
+	case !start.IsZero() && !end.IsZero():
 		query = query.Where("request_at BETWEEN ? AND ?", start, end)
-	} else if !start.IsZero() {
+	case !start.IsZero():
 		query = query.Where("request_at >= ?", start)
-	} else if !end.IsZero() {
+	case !end.IsZero():
 		query = query.Where("request_at <= ?", end)
 	}
 
@@ -1030,11 +1032,12 @@ func getLogGroupByValues[T cmp.Ordered](field string, group string, start, end t
 		query = query.Where("group_id = ?", group)
 	}
 
-	if !start.IsZero() && !end.IsZero() {
+	switch {
+	case !start.IsZero() && !end.IsZero():
 		query = query.Where("request_at BETWEEN ? AND ?", start, end)
-	} else if !start.IsZero() {
+	case !start.IsZero():
 		query = query.Where("request_at >= ?", start)
-	} else if !end.IsZero() {
+	case !end.IsZero():
 		query = query.Where("request_at <= ?", end)
 	}
 
@@ -1265,6 +1268,7 @@ func GetGroupModelTPM(group string, model string) (int64, error) {
 	return tpm, err
 }
 
+//nolint:revive
 type ModelCostRank struct {
 	Model      string  `json:"model"`
 	UsedAmount float64 `json:"used_amount"`
@@ -1283,11 +1287,12 @@ func GetModelCostRank(group string, start, end time.Time) ([]*ModelCostRank, err
 		query = query.Where("group_id = ?", group)
 	}
 
-	if !start.IsZero() && !end.IsZero() {
+	switch {
+	case !start.IsZero() && !end.IsZero():
 		query = query.Where("request_at BETWEEN ? AND ?", start, end)
-	} else if !start.IsZero() {
+	case !start.IsZero():
 		query = query.Where("request_at >= ?", start)
-	} else if !end.IsZero() {
+	case !end.IsZero():
 		query = query.Where("request_at <= ?", end)
 	}
 

@@ -76,16 +76,18 @@ func GetRPM(ctx context.Context, group, model string) (int64, error) {
 
 	var pattern string
 	var overLimitPattern string
-	if group == "" && model == "" {
+
+	switch {
+	case group == "" && model == "":
 		pattern = "group_model_rpm:*:*"
 		overLimitPattern = "over_limit_rpm:*:*"
-	} else if group == "" {
+	case group == "":
 		pattern = "group_model_rpm:*:" + model
 		overLimitPattern = "over_limit_rpm:*:" + model
-	} else if model == "" {
+	case model == "":
 		pattern = fmt.Sprintf("group_model_rpm:%s:*", group)
 		overLimitPattern = fmt.Sprintf("over_limit_rpm:%s:*", group)
-	} else {
+	default:
 		pattern = fmt.Sprintf("group_model_rpm:%s:%s", group, model)
 		overLimitPattern = fmt.Sprintf("over_limit_rpm:%s:%s", group, model)
 	}

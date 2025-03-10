@@ -172,14 +172,17 @@ func ImportChannelFromOneAPI(c *gin.Context) {
 
 	var db *gorm.DB
 	var err error
-	if strings.HasPrefix(req.DSN, "mysql") {
+
+	switch {
+	case strings.HasPrefix(req.DSN, "mysql"):
 		db, err = model.OpenMySQL(req.DSN)
-	} else if strings.HasPrefix(req.DSN, "postgres") {
+	case strings.HasPrefix(req.DSN, "postgres"):
 		db, err = model.OpenPostgreSQL(req.DSN)
-	} else {
+	default:
 		middleware.ErrorResponse(c, http.StatusBadRequest, "invalid dsn, only mysql and postgres are supported")
 		return
 	}
+
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusBadRequest, err.Error())
 		return

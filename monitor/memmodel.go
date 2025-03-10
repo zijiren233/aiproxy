@@ -134,7 +134,7 @@ func (m *MemModelMonitor) checkAndBan(now time.Time, channel *ChannelStats, tryB
 		return false, true
 	}
 
-	req, err := channel.timeWindows.GetStats(maxSliceCount)
+	req, err := channel.timeWindows.GetStats()
 	if req < minRequestCount {
 		return false, false
 	}
@@ -150,14 +150,14 @@ func (m *MemModelMonitor) checkAndBan(now time.Time, channel *ChannelStats, tryB
 }
 
 func getErrorRateFromStats(stats *TimeWindowStats) float64 {
-	req, err := stats.GetStats(maxSliceCount)
+	req, err := stats.GetStats()
 	if req < minRequestCount {
 		return 0
 	}
 	return float64(err) / float64(req)
 }
 
-func (m *MemModelMonitor) GetModelsErrorRate(ctx context.Context) (map[string]float64, error) {
+func (m *MemModelMonitor) GetModelsErrorRate(_ context.Context) (map[string]float64, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
@@ -168,7 +168,7 @@ func (m *MemModelMonitor) GetModelsErrorRate(ctx context.Context) (map[string]fl
 	return result, nil
 }
 
-func (m *MemModelMonitor) GetModelChannelErrorRate(ctx context.Context, model string) (map[int64]float64, error) {
+func (m *MemModelMonitor) GetModelChannelErrorRate(_ context.Context, model string) (map[int64]float64, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
@@ -181,7 +181,7 @@ func (m *MemModelMonitor) GetModelChannelErrorRate(ctx context.Context, model st
 	return result, nil
 }
 
-func (m *MemModelMonitor) GetChannelModelErrorRates(ctx context.Context, channelID int64) (map[string]float64, error) {
+func (m *MemModelMonitor) GetChannelModelErrorRates(_ context.Context, channelID int64) (map[string]float64, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
@@ -194,7 +194,7 @@ func (m *MemModelMonitor) GetChannelModelErrorRates(ctx context.Context, channel
 	return result, nil
 }
 
-func (m *MemModelMonitor) GetAllChannelModelErrorRates(ctx context.Context) (map[int64]map[string]float64, error) {
+func (m *MemModelMonitor) GetAllChannelModelErrorRates(_ context.Context) (map[int64]map[string]float64, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
@@ -210,7 +210,7 @@ func (m *MemModelMonitor) GetAllChannelModelErrorRates(ctx context.Context) (map
 	return result, nil
 }
 
-func (m *MemModelMonitor) GetBannedChannelsWithModel(ctx context.Context, model string) ([]int64, error) {
+func (m *MemModelMonitor) GetBannedChannelsWithModel(_ context.Context, model string) ([]int64, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
@@ -228,7 +228,7 @@ func (m *MemModelMonitor) GetBannedChannelsWithModel(ctx context.Context, model 
 	return banned, nil
 }
 
-func (m *MemModelMonitor) GetAllBannedModelChannels(ctx context.Context) (map[string][]int64, error) {
+func (m *MemModelMonitor) GetAllBannedModelChannels(_ context.Context) (map[string][]int64, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
@@ -250,7 +250,7 @@ func (m *MemModelMonitor) GetAllBannedModelChannels(ctx context.Context) (map[st
 	return result, nil
 }
 
-func (m *MemModelMonitor) ClearChannelModelErrors(ctx context.Context, model string, channelID int) error {
+func (m *MemModelMonitor) ClearChannelModelErrors(_ context.Context, model string, channelID int) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -260,7 +260,7 @@ func (m *MemModelMonitor) ClearChannelModelErrors(ctx context.Context, model str
 	return nil
 }
 
-func (m *MemModelMonitor) ClearChannelAllModelErrors(ctx context.Context, channelID int) error {
+func (m *MemModelMonitor) ClearChannelAllModelErrors(_ context.Context, channelID int) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -270,7 +270,7 @@ func (m *MemModelMonitor) ClearChannelAllModelErrors(ctx context.Context, channe
 	return nil
 }
 
-func (m *MemModelMonitor) ClearAllModelErrors(ctx context.Context) error {
+func (m *MemModelMonitor) ClearAllModelErrors(_ context.Context) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -317,7 +317,7 @@ func (t *TimeWindowStats) AddRequest(now time.Time, isError bool) {
 	}
 }
 
-func (t *TimeWindowStats) GetStats(maxSlice int) (totalReq, totalErr int) {
+func (t *TimeWindowStats) GetStats() (totalReq, totalErr int) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
