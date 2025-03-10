@@ -6,12 +6,12 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	"github.com/labring/sealos/service/aiproxy/common/config"
-	"github.com/labring/sealos/service/aiproxy/common/ctxkey"
-	"github.com/labring/sealos/service/aiproxy/common/network"
-	"github.com/labring/sealos/service/aiproxy/model"
-	"github.com/labring/sealos/service/aiproxy/relay/meta"
-	"github.com/labring/sealos/service/aiproxy/relay/relaymode"
+	"github.com/labring/aiproxy/common/config"
+	"github.com/labring/aiproxy/common/ctxkey"
+	"github.com/labring/aiproxy/common/network"
+	"github.com/labring/aiproxy/model"
+	"github.com/labring/aiproxy/relay/meta"
+	"github.com/labring/aiproxy/relay/relaymode"
 	"github.com/sirupsen/logrus"
 )
 

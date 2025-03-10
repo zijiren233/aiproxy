@@ -13,14 +13,14 @@ import (
 	"github.com/bytedance/sonic"
 	"github.com/bytedance/sonic/ast"
 	"github.com/gin-gonic/gin"
-	"github.com/labring/sealos/service/aiproxy/common"
-	"github.com/labring/sealos/service/aiproxy/common/conv"
-	"github.com/labring/sealos/service/aiproxy/common/render"
-	"github.com/labring/sealos/service/aiproxy/common/splitter"
-	"github.com/labring/sealos/service/aiproxy/middleware"
-	"github.com/labring/sealos/service/aiproxy/relay/meta"
-	"github.com/labring/sealos/service/aiproxy/relay/model"
-	"github.com/labring/sealos/service/aiproxy/relay/relaymode"
+	"github.com/labring/aiproxy/common"
+	"github.com/labring/aiproxy/common/conv"
+	"github.com/labring/aiproxy/common/render"
+	"github.com/labring/aiproxy/common/splitter"
+	"github.com/labring/aiproxy/middleware"
+	"github.com/labring/aiproxy/relay/meta"
+	"github.com/labring/aiproxy/relay/model"
+	"github.com/labring/aiproxy/relay/relaymode"
 )
 
 const (

@@ -7,9 +7,9 @@ import (
 	"strconv"
 
 	"github.com/bytedance/sonic"
-	"github.com/labring/sealos/service/aiproxy/common/conv"
-	"github.com/labring/sealos/service/aiproxy/middleware"
-	"github.com/labring/sealos/service/aiproxy/relay/model"
+	"github.com/labring/aiproxy/common/conv"
+	"github.com/labring/aiproxy/middleware"
+	"github.com/labring/aiproxy/relay/model"
 )
 
 type GeneralErrorResponse struct {

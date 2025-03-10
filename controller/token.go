@@ -9,10 +9,10 @@ import (
 
 	"github.com/bytedance/sonic"
 	"github.com/gin-gonic/gin"
-	"github.com/labring/sealos/service/aiproxy/common/network"
-	"github.com/labring/sealos/service/aiproxy/common/random"
-	"github.com/labring/sealos/service/aiproxy/middleware"
-	"github.com/labring/sealos/service/aiproxy/model"
+	"github.com/labring/aiproxy/common/network"
+	"github.com/labring/aiproxy/common/random"
+	"github.com/labring/aiproxy/middleware"
+	"github.com/labring/aiproxy/model"
 )
 
 // TokenResponse represents the response structure for token endpoints

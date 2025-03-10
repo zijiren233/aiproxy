@@ -1,6 +1,6 @@
 package splitter
 
-import "github.com/labring/sealos/service/aiproxy/common/conv"
+import "github.com/labring/aiproxy/common/conv"
 
 const (
 	ThinkHead = "<think>\n"

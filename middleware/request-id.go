@@ -5,8 +5,8 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/labring/sealos/service/aiproxy/common/ctxkey"
-	"github.com/labring/sealos/service/aiproxy/common/random"
+	"github.com/labring/aiproxy/common/ctxkey"
+	"github.com/labring/aiproxy/common/random"
 )
 
 func GenRequestID() string {

@@ -7,10 +7,10 @@ import (
 
 	"github.com/bytedance/sonic"
 	"github.com/gin-gonic/gin"
-	"github.com/labring/sealos/service/aiproxy/relay/adaptor/openai"
-	"github.com/labring/sealos/service/aiproxy/relay/meta"
-	"github.com/labring/sealos/service/aiproxy/relay/model"
-	"github.com/labring/sealos/service/aiproxy/relay/utils"
+	"github.com/labring/aiproxy/relay/adaptor/openai"
+	"github.com/labring/aiproxy/relay/meta"
+	"github.com/labring/aiproxy/relay/model"
+	"github.com/labring/aiproxy/relay/utils"
 )
 
 func ConvertEmbeddingRequest(meta *meta.Meta, req *http.Request) (string, http.Header, io.Reader, error) {

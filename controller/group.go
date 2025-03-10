@@ -7,8 +7,8 @@ import (
 
 	"github.com/bytedance/sonic"
 	"github.com/gin-gonic/gin"
-	"github.com/labring/sealos/service/aiproxy/middleware"
-	"github.com/labring/sealos/service/aiproxy/model"
+	"github.com/labring/aiproxy/middleware"
+	"github.com/labring/aiproxy/model"
 )
 
 type GroupResponse struct {

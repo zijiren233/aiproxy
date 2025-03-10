@@ -9,11 +9,11 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	"github.com/labring/sealos/service/aiproxy/middleware"
-	"github.com/labring/sealos/service/aiproxy/model"
-	"github.com/labring/sealos/service/aiproxy/monitor"
-	"github.com/labring/sealos/service/aiproxy/relay/adaptor"
-	"github.com/labring/sealos/service/aiproxy/relay/channeltype"
+	"github.com/labring/aiproxy/middleware"
+	"github.com/labring/aiproxy/model"
+	"github.com/labring/aiproxy/monitor"
+	"github.com/labring/aiproxy/relay/adaptor"
+	"github.com/labring/aiproxy/relay/channeltype"
 	log "github.com/sirupsen/logrus"
 )
 

@@ -7,12 +7,12 @@ import (
 
 	"github.com/bytedance/sonic"
 	"github.com/gin-gonic/gin"
-	"github.com/labring/sealos/service/aiproxy/model"
-	"github.com/labring/sealos/service/aiproxy/relay/adaptor/anthropic"
-	"github.com/labring/sealos/service/aiproxy/relay/meta"
-	relaymodel "github.com/labring/sealos/service/aiproxy/relay/model"
-	"github.com/labring/sealos/service/aiproxy/relay/relaymode"
-	"github.com/labring/sealos/service/aiproxy/relay/utils"
+	"github.com/labring/aiproxy/model"
+	"github.com/labring/aiproxy/relay/adaptor/anthropic"
+	"github.com/labring/aiproxy/relay/meta"
+	relaymodel "github.com/labring/aiproxy/relay/model"
+	"github.com/labring/aiproxy/relay/relaymode"
+	"github.com/labring/aiproxy/relay/utils"
 	"github.com/pkg/errors"
 )
 

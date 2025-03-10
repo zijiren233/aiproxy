@@ -5,7 +5,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/labring/sealos/service/aiproxy/common/notify"
+	"github.com/labring/aiproxy/common/notify"
 )
 
 func TestPostToFeiShuv2(t *testing.T) {

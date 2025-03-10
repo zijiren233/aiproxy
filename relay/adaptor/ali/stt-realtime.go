@@ -10,9 +10,9 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
-	"github.com/labring/sealos/service/aiproxy/relay/adaptor/openai"
-	"github.com/labring/sealos/service/aiproxy/relay/meta"
-	relaymodel "github.com/labring/sealos/service/aiproxy/relay/model"
+	"github.com/labring/aiproxy/relay/adaptor/openai"
+	"github.com/labring/aiproxy/relay/meta"
+	relaymodel "github.com/labring/aiproxy/relay/model"
 )
 
 type STTMessage struct {

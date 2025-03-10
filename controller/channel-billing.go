@@ -9,17 +9,17 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/labring/sealos/service/aiproxy/common/balance"
-	"github.com/labring/sealos/service/aiproxy/common/notify"
-	"github.com/labring/sealos/service/aiproxy/middleware"
-	"github.com/labring/sealos/service/aiproxy/model"
-	"github.com/labring/sealos/service/aiproxy/relay/adaptor"
-	"github.com/labring/sealos/service/aiproxy/relay/adaptor/openai"
-	"github.com/labring/sealos/service/aiproxy/relay/channeltype"
+	"github.com/labring/aiproxy/common/balance"
+	"github.com/labring/aiproxy/common/notify"
+	"github.com/labring/aiproxy/middleware"
+	"github.com/labring/aiproxy/model"
+	"github.com/labring/aiproxy/relay/adaptor"
+	"github.com/labring/aiproxy/relay/adaptor/openai"
+	"github.com/labring/aiproxy/relay/channeltype"
 	log "github.com/sirupsen/logrus"
 )
 
-// https://github.com/labring/sealos/service/aiproxy/issues/79
+// https://github.com/labring/aiproxy/issues/79
 
 func updateChannelBalance(channel *model.Channel) (float64, error) {
 	adaptorI, ok := channeltype.GetAdaptor(channel.Type)

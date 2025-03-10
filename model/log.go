@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"github.com/bytedance/sonic"
-	"github.com/labring/sealos/service/aiproxy/common"
-	"github.com/labring/sealos/service/aiproxy/common/config"
+	"github.com/labring/aiproxy/common"
+	"github.com/labring/aiproxy/common/config"
 	"github.com/shopspring/decimal"
 	"golang.org/x/sync/errgroup"
 	"gorm.io/gorm"

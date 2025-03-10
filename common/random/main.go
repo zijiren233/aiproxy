@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
-	"github.com/labring/sealos/service/aiproxy/common/conv"
+	"github.com/labring/aiproxy/common/conv"
 )
 
 func GetUUID() string {

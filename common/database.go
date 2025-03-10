@@ -1,7 +1,7 @@
 package common
 
 import (
-	"github.com/labring/sealos/service/aiproxy/common/env"
+	"github.com/labring/aiproxy/common/env"
 )
 
 var (

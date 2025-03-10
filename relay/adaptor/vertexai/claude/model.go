@@ -1,6 +1,6 @@
 package vertexai
 
-import "github.com/labring/sealos/service/aiproxy/relay/adaptor/anthropic"
+import "github.com/labring/aiproxy/relay/adaptor/anthropic"
 
 type Request struct {
 	ToolChoice       any                 `json:"tool_choice,omitempty"`

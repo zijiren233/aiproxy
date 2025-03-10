@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/labring/sealos/service/aiproxy/relay/model"
+	"github.com/labring/aiproxy/relay/model"
 )
 
 func ResponseText2Usage(responseText string, modeName string, promptTokens int) *model.Usage {

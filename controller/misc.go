@@ -2,8 +2,8 @@ package controller
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/labring/sealos/service/aiproxy/common"
-	"github.com/labring/sealos/service/aiproxy/middleware"
+	"github.com/labring/aiproxy/common"
+	"github.com/labring/aiproxy/middleware"
 )
 
 type StatusData struct {

@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/labring/sealos/service/aiproxy/common/notify"
+	"github.com/labring/aiproxy/common/notify"
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"

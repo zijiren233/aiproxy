@@ -1,8 +1,8 @@
 package groq
 
 import (
-	"github.com/labring/sealos/service/aiproxy/model"
-	"github.com/labring/sealos/service/aiproxy/relay/relaymode"
+	"github.com/labring/aiproxy/model"
+	"github.com/labring/aiproxy/relay/relaymode"
 )
 
 // https://console.groq.com/docs/models

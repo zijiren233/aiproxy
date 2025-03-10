@@ -5,8 +5,8 @@ import (
 
 	"github.com/bytedance/sonic"
 	"github.com/gin-gonic/gin"
-	"github.com/labring/sealos/service/aiproxy/relay/adaptor/openai"
-	"github.com/labring/sealos/service/aiproxy/relay/model"
+	"github.com/labring/aiproxy/relay/adaptor/openai"
+	"github.com/labring/aiproxy/relay/model"
 )
 
 // https://open.bigmodel.cn/doc/api#chatglm_std

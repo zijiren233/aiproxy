@@ -7,10 +7,10 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/labring/sealos/service/aiproxy/common"
-	"github.com/labring/sealos/service/aiproxy/common/rpmlimit"
-	"github.com/labring/sealos/service/aiproxy/middleware"
-	"github.com/labring/sealos/service/aiproxy/model"
+	"github.com/labring/aiproxy/common"
+	"github.com/labring/aiproxy/common/rpmlimit"
+	"github.com/labring/aiproxy/middleware"
+	"github.com/labring/aiproxy/model"
 	"gorm.io/gorm"
 )
 

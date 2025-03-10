@@ -1,8 +1,8 @@
 package aws
 
 import (
-	"github.com/labring/sealos/service/aiproxy/relay/adaptor"
-	"github.com/labring/sealos/service/aiproxy/relay/adaptor/aws/utils"
+	"github.com/labring/aiproxy/relay/adaptor"
+	"github.com/labring/aiproxy/relay/adaptor/aws/utils"
 )
 
 var _ adaptor.KeyValidator = (*Adaptor)(nil)

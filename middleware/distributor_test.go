@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	jsoniter "github.com/json-iterator/go"
-	"github.com/labring/sealos/service/aiproxy/middleware"
+	"github.com/labring/aiproxy/middleware"
 )
 
 func StdGetModelFromJSON(body []byte) (string, error) {

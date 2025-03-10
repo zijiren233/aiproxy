@@ -4,8 +4,8 @@ import (
 	"net/http"
 
 	"github.com/bytedance/sonic"
-	"github.com/labring/sealos/service/aiproxy/relay/adaptor/openai"
-	relaymodel "github.com/labring/sealos/service/aiproxy/relay/model"
+	"github.com/labring/aiproxy/relay/adaptor/openai"
+	relaymodel "github.com/labring/aiproxy/relay/model"
 )
 
 type errorResponse struct {

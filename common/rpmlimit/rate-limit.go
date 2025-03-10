@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/labring/sealos/service/aiproxy/common"
+	"github.com/labring/aiproxy/common"
 	log "github.com/sirupsen/logrus"
 )
 

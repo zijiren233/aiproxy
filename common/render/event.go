@@ -3,7 +3,7 @@ package render
 import (
 	"net/http"
 
-	"github.com/labring/sealos/service/aiproxy/common/conv"
+	"github.com/labring/aiproxy/common/conv"
 )
 
 var (

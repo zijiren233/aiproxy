@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/labring/sealos/service/aiproxy/common/config"
+	"github.com/labring/aiproxy/common/config"
 )
 
 var memModelMonitor *MemModelMonitor

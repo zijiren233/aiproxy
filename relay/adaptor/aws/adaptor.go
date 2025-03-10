@@ -6,11 +6,11 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/labring/sealos/service/aiproxy/model"
-	"github.com/labring/sealos/service/aiproxy/relay/adaptor"
-	"github.com/labring/sealos/service/aiproxy/relay/adaptor/aws/utils"
-	"github.com/labring/sealos/service/aiproxy/relay/meta"
-	relaymodel "github.com/labring/sealos/service/aiproxy/relay/model"
+	"github.com/labring/aiproxy/model"
+	"github.com/labring/aiproxy/relay/adaptor"
+	"github.com/labring/aiproxy/relay/adaptor/aws/utils"
+	"github.com/labring/aiproxy/relay/meta"
+	relaymodel "github.com/labring/aiproxy/relay/model"
 )
 
 var _ adaptor.Adaptor = new(Adaptor)

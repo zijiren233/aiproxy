@@ -2,7 +2,7 @@ package model
 
 import (
 	"github.com/bytedance/sonic"
-	"github.com/labring/sealos/service/aiproxy/common/conv"
+	"github.com/labring/aiproxy/common/conv"
 )
 
 type Usage struct {

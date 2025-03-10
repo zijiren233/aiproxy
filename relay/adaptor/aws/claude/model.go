@@ -1,6 +1,6 @@
 package aws
 
-import "github.com/labring/sealos/service/aiproxy/relay/adaptor/anthropic"
+import "github.com/labring/aiproxy/relay/adaptor/anthropic"
 
 // Request is the request to AWS Claude
 //

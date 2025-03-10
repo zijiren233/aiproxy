@@ -2,10 +2,10 @@ package controller
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/labring/sealos/service/aiproxy/common/balance"
-	"github.com/labring/sealos/service/aiproxy/middleware"
-	"github.com/labring/sealos/service/aiproxy/model"
-	"github.com/labring/sealos/service/aiproxy/relay/meta"
+	"github.com/labring/aiproxy/common/balance"
+	"github.com/labring/aiproxy/middleware"
+	"github.com/labring/aiproxy/model"
+	"github.com/labring/aiproxy/relay/meta"
 	"github.com/shopspring/decimal"
 )
 

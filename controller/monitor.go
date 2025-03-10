@@ -5,8 +5,8 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"github.com/labring/sealos/service/aiproxy/middleware"
-	"github.com/labring/sealos/service/aiproxy/monitor"
+	"github.com/labring/aiproxy/middleware"
+	"github.com/labring/aiproxy/monitor"
 )
 
 func GetAllChannelModelErrorRates(c *gin.Context) {

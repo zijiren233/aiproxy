@@ -3,8 +3,8 @@ package aws_test
 import (
 	"testing"
 
-	aws "github.com/labring/sealos/service/aiproxy/relay/adaptor/aws/llama3"
-	relaymodel "github.com/labring/sealos/service/aiproxy/relay/model"
+	aws "github.com/labring/aiproxy/relay/adaptor/aws/llama3"
+	relaymodel "github.com/labring/aiproxy/relay/model"
 	"github.com/stretchr/testify/assert"
 )
 

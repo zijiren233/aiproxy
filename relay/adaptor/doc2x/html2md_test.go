@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/labring/sealos/service/aiproxy/relay/adaptor/doc2x"
+	"github.com/labring/aiproxy/relay/adaptor/doc2x"
 )
 
 func TestHTMLTable2Md(t *testing.T) {

@@ -3,7 +3,7 @@ package common
 import (
 	"unicode/utf8"
 
-	"github.com/labring/sealos/service/aiproxy/common/conv"
+	"github.com/labring/aiproxy/common/conv"
 )
 
 func TruncateByRune(s string, length int) string {

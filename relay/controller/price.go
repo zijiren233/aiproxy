@@ -1,7 +1,7 @@
 package controller
 
 import (
-	"github.com/labring/sealos/service/aiproxy/model"
+	"github.com/labring/aiproxy/model"
 )
 
 func GetModelPrice(modelConfig *model.ModelConfig) (float64, float64, bool) {

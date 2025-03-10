@@ -1,10 +1,10 @@
 package aws
 
 import (
-	"github.com/labring/sealos/service/aiproxy/model"
-	claude "github.com/labring/sealos/service/aiproxy/relay/adaptor/aws/claude"
-	llama3 "github.com/labring/sealos/service/aiproxy/relay/adaptor/aws/llama3"
-	"github.com/labring/sealos/service/aiproxy/relay/adaptor/aws/utils"
+	"github.com/labring/aiproxy/model"
+	claude "github.com/labring/aiproxy/relay/adaptor/aws/claude"
+	llama3 "github.com/labring/aiproxy/relay/adaptor/aws/llama3"
+	"github.com/labring/aiproxy/relay/adaptor/aws/utils"
 )
 
 type ModelType int

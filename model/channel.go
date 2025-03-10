@@ -8,10 +8,10 @@ import (
 	"time"
 
 	"github.com/bytedance/sonic"
-	"github.com/labring/sealos/service/aiproxy/common"
-	"github.com/labring/sealos/service/aiproxy/common/config"
-	"github.com/labring/sealos/service/aiproxy/monitor"
-	"github.com/labring/sealos/service/aiproxy/relay/relaymode"
+	"github.com/labring/aiproxy/common"
+	"github.com/labring/aiproxy/common/config"
+	"github.com/labring/aiproxy/monitor"
+	"github.com/labring/aiproxy/relay/relaymode"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )

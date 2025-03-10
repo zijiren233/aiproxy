@@ -2,9 +2,9 @@ package router
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/labring/sealos/service/aiproxy/controller"
-	"github.com/labring/sealos/service/aiproxy/middleware"
-	"github.com/labring/sealos/service/aiproxy/relay/relaymode"
+	"github.com/labring/aiproxy/controller"
+	"github.com/labring/aiproxy/middleware"
+	"github.com/labring/aiproxy/relay/relaymode"
 )
 
 func SetRelayRouter(router *gin.Engine) {

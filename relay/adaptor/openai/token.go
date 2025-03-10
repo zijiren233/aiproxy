@@ -7,9 +7,9 @@ import (
 	"sync"
 	"unicode/utf8"
 
-	"github.com/labring/sealos/service/aiproxy/common/config"
-	"github.com/labring/sealos/service/aiproxy/common/image"
-	"github.com/labring/sealos/service/aiproxy/relay/model"
+	"github.com/labring/aiproxy/common/config"
+	"github.com/labring/aiproxy/common/image"
+	"github.com/labring/aiproxy/relay/model"
 	"github.com/pkoukk/tiktoken-go"
 	log "github.com/sirupsen/logrus"
 )

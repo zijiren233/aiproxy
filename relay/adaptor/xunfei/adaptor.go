@@ -4,10 +4,10 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/labring/sealos/service/aiproxy/model"
-	"github.com/labring/sealos/service/aiproxy/relay/adaptor"
-	"github.com/labring/sealos/service/aiproxy/relay/adaptor/openai"
-	"github.com/labring/sealos/service/aiproxy/relay/meta"
+	"github.com/labring/aiproxy/model"
+	"github.com/labring/aiproxy/relay/adaptor"
+	"github.com/labring/aiproxy/relay/adaptor/openai"
+	"github.com/labring/aiproxy/relay/meta"
 )
 
 type Adaptor struct {

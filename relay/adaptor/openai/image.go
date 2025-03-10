@@ -9,11 +9,11 @@ import (
 	"github.com/bytedance/sonic"
 	"github.com/bytedance/sonic/ast"
 	"github.com/gin-gonic/gin"
-	"github.com/labring/sealos/service/aiproxy/common"
-	"github.com/labring/sealos/service/aiproxy/common/image"
-	"github.com/labring/sealos/service/aiproxy/middleware"
-	"github.com/labring/sealos/service/aiproxy/relay/meta"
-	"github.com/labring/sealos/service/aiproxy/relay/model"
+	"github.com/labring/aiproxy/common"
+	"github.com/labring/aiproxy/common/image"
+	"github.com/labring/aiproxy/middleware"
+	"github.com/labring/aiproxy/relay/meta"
+	"github.com/labring/aiproxy/relay/model"
 )
 
 func ConvertImageRequest(meta *meta.Meta, req *http.Request) (string, http.Header, io.Reader, error) {

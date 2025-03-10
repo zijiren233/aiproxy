@@ -10,8 +10,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/bedrockruntime"
 	"github.com/gin-gonic/gin"
-	"github.com/labring/sealos/service/aiproxy/relay/meta"
-	"github.com/labring/sealos/service/aiproxy/relay/model"
+	"github.com/labring/aiproxy/relay/meta"
+	"github.com/labring/aiproxy/relay/model"
 )
 
 type AwsAdapter interface {

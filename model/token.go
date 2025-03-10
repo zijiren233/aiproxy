@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/labring/sealos/service/aiproxy/common"
-	"github.com/labring/sealos/service/aiproxy/common/config"
+	"github.com/labring/aiproxy/common"
+	"github.com/labring/aiproxy/common/config"
 	log "github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"

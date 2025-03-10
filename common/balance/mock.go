@@ -3,7 +3,7 @@ package balance
 import (
 	"context"
 
-	"github.com/labring/sealos/service/aiproxy/model"
+	"github.com/labring/aiproxy/model"
 )
 
 var _ GroupBalance = (*MockGroupBalance)(nil)

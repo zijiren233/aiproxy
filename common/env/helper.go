@@ -5,7 +5,7 @@ import (
 	"strconv"
 
 	"github.com/bytedance/sonic"
-	"github.com/labring/sealos/service/aiproxy/common/conv"
+	"github.com/labring/aiproxy/common/conv"
 	log "github.com/sirupsen/logrus"
 )
 

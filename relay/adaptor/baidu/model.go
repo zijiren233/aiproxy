@@ -1,7 +1,7 @@
 package baidu
 
 import (
-	"github.com/labring/sealos/service/aiproxy/relay/model"
+	"github.com/labring/aiproxy/relay/model"
 )
 
 type Error struct {

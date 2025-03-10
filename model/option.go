@@ -11,9 +11,9 @@ import (
 	"time"
 
 	"github.com/bytedance/sonic"
-	"github.com/labring/sealos/service/aiproxy/common/config"
-	"github.com/labring/sealos/service/aiproxy/common/conv"
-	"github.com/labring/sealos/service/aiproxy/common/notify"
+	"github.com/labring/aiproxy/common/config"
+	"github.com/labring/aiproxy/common/conv"
+	"github.com/labring/aiproxy/common/notify"
 	log "github.com/sirupsen/logrus"
 )
 

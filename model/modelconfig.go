@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/bytedance/sonic"
-	"github.com/labring/sealos/service/aiproxy/common"
-	"github.com/labring/sealos/service/aiproxy/relay/relaymode"
+	"github.com/labring/aiproxy/common"
+	"github.com/labring/aiproxy/relay/relaymode"
 	"gorm.io/gorm"
 )
 

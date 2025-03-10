@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/labring/sealos/service/aiproxy/model"
-	"github.com/labring/sealos/service/aiproxy/relay/adaptor/openai"
-	"github.com/labring/sealos/service/aiproxy/relay/meta"
-	"github.com/labring/sealos/service/aiproxy/relay/relaymode"
+	"github.com/labring/aiproxy/model"
+	"github.com/labring/aiproxy/relay/adaptor/openai"
+	"github.com/labring/aiproxy/relay/meta"
+	"github.com/labring/aiproxy/relay/relaymode"
 )
 
 type Adaptor struct {

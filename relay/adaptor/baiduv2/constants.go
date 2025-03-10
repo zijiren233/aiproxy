@@ -1,8 +1,8 @@
 package baiduv2
 
 import (
-	"github.com/labring/sealos/service/aiproxy/model"
-	"github.com/labring/sealos/service/aiproxy/relay/relaymode"
+	"github.com/labring/aiproxy/model"
+	"github.com/labring/aiproxy/relay/relaymode"
 )
 
 // https://cloud.baidu.com/doc/WENXINWORKSHOP/s/Fm2vrveyu

@@ -1,8 +1,8 @@
 package ali
 
 import (
-	"github.com/labring/sealos/service/aiproxy/model"
-	"github.com/labring/sealos/service/aiproxy/relay/relaymode"
+	"github.com/labring/aiproxy/model"
+	"github.com/labring/aiproxy/relay/relaymode"
 )
 
 // https://help.aliyun.com/zh/model-studio/getting-started/models?spm=a2c4g.11186623.0.i12#ced16cb6cdfsy

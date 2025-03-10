@@ -2,8 +2,8 @@ package controller
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/labring/sealos/service/aiproxy/relay/meta"
-	relaymodel "github.com/labring/sealos/service/aiproxy/relay/model"
+	"github.com/labring/aiproxy/relay/meta"
+	relaymodel "github.com/labring/aiproxy/relay/model"
 )
 
 func RelayParsePdfHelper(meta *meta.Meta, c *gin.Context) *relaymodel.ErrorWithStatusCode {

@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/bytedance/sonic"
-	"github.com/labring/sealos/service/aiproxy/common"
+	"github.com/labring/aiproxy/common"
 	log "github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"

@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/bytedance/sonic"
-	"github.com/labring/sealos/service/aiproxy/relay/utils"
+	"github.com/labring/aiproxy/relay/utils"
 	log "github.com/sirupsen/logrus"
 )
 

@@ -3,7 +3,7 @@ package utils
 import (
 	"net/http"
 
-	relaymodel "github.com/labring/sealos/service/aiproxy/relay/model"
+	relaymodel "github.com/labring/aiproxy/relay/model"
 )
 
 func WrapErr(err error) *relaymodel.ErrorWithStatusCode {

@@ -1,8 +1,6 @@
-module github.com/labring/sealos/service/aiproxy
+module github.com/labring/aiproxy
 
-go 1.22.7
-
-replace github.com/labring/sealos/service/aiproxy => ../aiproxy
+go 1.23.0
 
 require (
 	cloud.google.com/go/iam v1.3.1

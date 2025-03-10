@@ -1,8 +1,8 @@
 package lingyiwanwu
 
 import (
-	"github.com/labring/sealos/service/aiproxy/model"
-	"github.com/labring/sealos/service/aiproxy/relay/relaymode"
+	"github.com/labring/aiproxy/model"
+	"github.com/labring/aiproxy/relay/relaymode"
 )
 
 // https://platform.lingyiwanwu.com/docs

@@ -5,11 +5,11 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/labring/sealos/service/aiproxy/model"
-	claude "github.com/labring/sealos/service/aiproxy/relay/adaptor/vertexai/claude"
-	gemini "github.com/labring/sealos/service/aiproxy/relay/adaptor/vertexai/gemini"
-	"github.com/labring/sealos/service/aiproxy/relay/meta"
-	relaymodel "github.com/labring/sealos/service/aiproxy/relay/model"
+	"github.com/labring/aiproxy/model"
+	claude "github.com/labring/aiproxy/relay/adaptor/vertexai/claude"
+	gemini "github.com/labring/aiproxy/relay/adaptor/vertexai/gemini"
+	"github.com/labring/aiproxy/relay/meta"
+	relaymodel "github.com/labring/aiproxy/relay/model"
 )
 
 type ModelType int

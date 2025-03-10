@@ -5,11 +5,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/labring/sealos/service/aiproxy/common/balance"
-	"github.com/labring/sealos/service/aiproxy/common/notify"
-	"github.com/labring/sealos/service/aiproxy/model"
-	"github.com/labring/sealos/service/aiproxy/relay/meta"
-	relaymodel "github.com/labring/sealos/service/aiproxy/relay/model"
+	"github.com/labring/aiproxy/common/balance"
+	"github.com/labring/aiproxy/common/notify"
+	"github.com/labring/aiproxy/model"
+	"github.com/labring/aiproxy/relay/meta"
+	relaymodel "github.com/labring/aiproxy/relay/model"
 	"github.com/shopspring/decimal"
 	log "github.com/sirupsen/logrus"
 )

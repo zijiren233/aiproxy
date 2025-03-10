@@ -9,11 +9,11 @@ import (
 
 	"github.com/bytedance/sonic"
 	"github.com/gin-gonic/gin"
-	"github.com/labring/sealos/service/aiproxy/common/config"
-	"github.com/labring/sealos/service/aiproxy/middleware"
-	"github.com/labring/sealos/service/aiproxy/model"
-	"github.com/labring/sealos/service/aiproxy/relay/channeltype"
-	relaymodel "github.com/labring/sealos/service/aiproxy/relay/model"
+	"github.com/labring/aiproxy/common/config"
+	"github.com/labring/aiproxy/middleware"
+	"github.com/labring/aiproxy/model"
+	"github.com/labring/aiproxy/relay/channeltype"
+	relaymodel "github.com/labring/aiproxy/relay/model"
 	log "github.com/sirupsen/logrus"
 )
 

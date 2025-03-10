@@ -4,7 +4,7 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/labring/sealos/service/aiproxy/relay/adaptor"
+	"github.com/labring/aiproxy/relay/adaptor"
 )
 
 var _ adaptor.KeyValidator = (*Adaptor)(nil)

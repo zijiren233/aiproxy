@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/labring/sealos/service/aiproxy/common/config"
+	"github.com/labring/aiproxy/common/config"
 )
 
 var ErrAudioDurationNAN = errors.New("audio duration is N/A")

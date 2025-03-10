@@ -17,15 +17,15 @@ import (
 
 	"github.com/gin-gonic/gin"
 	_ "github.com/joho/godotenv/autoload"
-	"github.com/labring/sealos/service/aiproxy/common"
-	"github.com/labring/sealos/service/aiproxy/common/balance"
-	"github.com/labring/sealos/service/aiproxy/common/config"
-	"github.com/labring/sealos/service/aiproxy/common/consume"
-	"github.com/labring/sealos/service/aiproxy/common/notify"
-	"github.com/labring/sealos/service/aiproxy/controller"
-	"github.com/labring/sealos/service/aiproxy/middleware"
-	"github.com/labring/sealos/service/aiproxy/model"
-	"github.com/labring/sealos/service/aiproxy/router"
+	"github.com/labring/aiproxy/common"
+	"github.com/labring/aiproxy/common/balance"
+	"github.com/labring/aiproxy/common/config"
+	"github.com/labring/aiproxy/common/consume"
+	"github.com/labring/aiproxy/common/notify"
+	"github.com/labring/aiproxy/controller"
+	"github.com/labring/aiproxy/middleware"
+	"github.com/labring/aiproxy/model"
+	"github.com/labring/aiproxy/router"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -71,7 +71,7 @@ func initializeNotifier() {
 }
 
 var logCallerIgnoreFuncs = map[string]struct{}{
-	"github.com/labring/sealos/service/aiproxy/middleware.logColor": {},
+	"github.com/labring/aiproxy/middleware.logColor": {},
 }
 
 func setLog(l *log.Logger) {

@@ -8,7 +8,7 @@ import (
 	credentials "cloud.google.com/go/iam/credentials/apiv1"
 	"cloud.google.com/go/iam/credentials/apiv1/credentialspb"
 	"github.com/bytedance/sonic"
-	"github.com/labring/sealos/service/aiproxy/common/conv"
+	"github.com/labring/aiproxy/common/conv"
 	"github.com/patrickmn/go-cache"
 	"google.golang.org/api/option"
 )

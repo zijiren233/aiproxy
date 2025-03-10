@@ -1,8 +1,8 @@
 package tencent
 
 import (
-	"github.com/labring/sealos/service/aiproxy/model"
-	"github.com/labring/sealos/service/aiproxy/relay/relaymode"
+	"github.com/labring/aiproxy/model"
+	"github.com/labring/aiproxy/relay/relaymode"
 )
 
 // https://cloud.tencent.com/document/product/1729/104753

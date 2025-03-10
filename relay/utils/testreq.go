@@ -6,9 +6,9 @@ import (
 	"io"
 
 	"github.com/bytedance/sonic"
-	"github.com/labring/sealos/service/aiproxy/model"
-	relaymodel "github.com/labring/sealos/service/aiproxy/relay/model"
-	"github.com/labring/sealos/service/aiproxy/relay/relaymode"
+	"github.com/labring/aiproxy/model"
+	relaymodel "github.com/labring/aiproxy/relay/model"
+	"github.com/labring/aiproxy/relay/relaymode"
 )
 
 type UnsupportedModelTypeError struct {

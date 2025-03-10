@@ -8,12 +8,12 @@ import (
 	"time"
 
 	"github.com/glebarez/sqlite"
-	"github.com/labring/sealos/service/aiproxy/common"
-	"github.com/labring/sealos/service/aiproxy/common/config"
-	"github.com/labring/sealos/service/aiproxy/common/env"
+	"github.com/labring/aiproxy/common"
+	"github.com/labring/aiproxy/common/config"
+	"github.com/labring/aiproxy/common/env"
 
 	// import fastjson serializer
-	_ "github.com/labring/sealos/service/aiproxy/common/fastJSONSerializer"
+	_ "github.com/labring/aiproxy/common/fastJSONSerializer"
 	log "github.com/sirupsen/logrus"
 	"gorm.io/driver/mysql"
 	"gorm.io/driver/postgres"

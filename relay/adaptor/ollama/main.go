@@ -9,17 +9,17 @@ import (
 
 	"github.com/bytedance/sonic"
 	"github.com/gin-gonic/gin"
-	"github.com/labring/sealos/service/aiproxy/common"
-	"github.com/labring/sealos/service/aiproxy/common/image"
-	"github.com/labring/sealos/service/aiproxy/common/random"
-	"github.com/labring/sealos/service/aiproxy/common/render"
-	"github.com/labring/sealos/service/aiproxy/common/splitter"
-	"github.com/labring/sealos/service/aiproxy/middleware"
-	"github.com/labring/sealos/service/aiproxy/relay/adaptor/openai"
-	"github.com/labring/sealos/service/aiproxy/relay/constant"
-	"github.com/labring/sealos/service/aiproxy/relay/meta"
-	relaymodel "github.com/labring/sealos/service/aiproxy/relay/model"
-	"github.com/labring/sealos/service/aiproxy/relay/utils"
+	"github.com/labring/aiproxy/common"
+	"github.com/labring/aiproxy/common/image"
+	"github.com/labring/aiproxy/common/random"
+	"github.com/labring/aiproxy/common/render"
+	"github.com/labring/aiproxy/common/splitter"
+	"github.com/labring/aiproxy/middleware"
+	"github.com/labring/aiproxy/relay/adaptor/openai"
+	"github.com/labring/aiproxy/relay/constant"
+	"github.com/labring/aiproxy/relay/meta"
+	relaymodel "github.com/labring/aiproxy/relay/model"
+	"github.com/labring/aiproxy/relay/utils"
 )
 
 func ConvertRequest(meta *meta.Meta, req *http.Request) (string, http.Header, io.Reader, error) {

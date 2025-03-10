@@ -4,8 +4,8 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/labring/sealos/service/aiproxy/common"
-	relaymodel "github.com/labring/sealos/service/aiproxy/relay/model"
+	"github.com/labring/aiproxy/common"
+	relaymodel "github.com/labring/aiproxy/relay/model"
 )
 
 func UnmarshalGeneralOpenAIRequest(req *http.Request) (*relaymodel.GeneralOpenAIRequest, error) {

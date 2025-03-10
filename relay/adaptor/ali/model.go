@@ -1,6 +1,6 @@
 package ali
 
-import relaymodel "github.com/labring/sealos/service/aiproxy/relay/model"
+import relaymodel "github.com/labring/aiproxy/relay/model"
 
 type ImageRequest struct {
 	Input struct {

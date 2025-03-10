@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/bytedance/sonic"
-	"github.com/labring/sealos/service/aiproxy/model"
-	"github.com/labring/sealos/service/aiproxy/relay/adaptor"
+	"github.com/labring/aiproxy/model"
+	"github.com/labring/aiproxy/relay/adaptor"
 )
 
 var _ adaptor.Balancer = (*Adaptor)(nil)

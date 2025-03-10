@@ -6,8 +6,8 @@ import (
 	"net/http"
 
 	"github.com/bytedance/sonic"
-	"github.com/labring/sealos/service/aiproxy/common"
-	"github.com/labring/sealos/service/aiproxy/relay/meta"
+	"github.com/labring/aiproxy/common"
+	"github.com/labring/aiproxy/relay/meta"
 )
 
 const MetaEmbeddingsPatchInputToSlices = "embeddings_input_to_slices"
