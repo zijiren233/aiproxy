@@ -8,7 +8,7 @@ docker run -d --name aiproxy -p 3000:3000 -v $(pwd)/aiproxy:/aiproxy ghcr.io/lab
 
 ## Use Docker Compose
 
-Copy [docker-compose.yaml](./docker-compose.yaml) to the same directory as the `aiproxy` binary.
+Copy [docker-compose.yaml](./docker-compose.yaml) to directory.
 
 ```bash
 docker-compose up -d
