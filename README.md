@@ -3,7 +3,7 @@
 ## Use Docker
 
 ```bash
-docker run -d --name aiproxy -p 3000:3000 -v ./aiproxy:/aiproxy ghcr.io/aiproxy/aiproxy:latest
+docker run -d --name aiproxy -p 3000:3000 -v ./aiproxy:/aiproxy ghcr.io/labring/aiproxy:latest
 ```
 
 ## Use Docker Compose
