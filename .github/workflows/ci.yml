@@ -3,18 +3,17 @@ name: CI
 on:
   workflow_call:
   workflow_dispatch:
-    inputs:
-      push_mage:
-        description: 'Push images'
-        required: false
-        type: boolean
   push:
-    branches: [ "main" ]
+    branches:
+      - "**"
+    tags:
+      - "v*.*.*"
     paths-ignore:
       - "**/*.md"
       - "**/*.yaml"
   pull_request:
-    branches: [ "*" ]
+    branches:
+      - "**"
     paths-ignore:
       - "**/*.md"
       - "**/*.yaml"

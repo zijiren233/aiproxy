@@ -6,7 +6,15 @@ on:
       - "**"
     tags:
       - "v*.*.*"
+    paths-ignore:
+      - "**/*.md"
+      - "**/*.yaml"
   pull_request:
+    branches:
+      - "**"
+    paths-ignore:
+      - "**/*.md"
+      - "**/*.yaml"
 
 env:
   DOCKERHUB_REPO: ${{ secrets.DOCKERHUB_USERNAME != '' && format('{0}/{1}', secrets.DOCKERHUB_USERNAME, 'aiproxy') || '' }}
