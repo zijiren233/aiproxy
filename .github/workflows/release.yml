@@ -37,9 +37,6 @@ jobs:
           - GOOS: darwin
             GOARCH: amd64
           - GOOS: windows
-            GOARCH: arm64
-            EXT: .exe
-          - GOOS: windows
             GOARCH: amd64
             EXT: .exe
           - GOOS: windows
