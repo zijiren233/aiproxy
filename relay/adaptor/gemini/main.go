@@ -19,7 +19,6 @@ import (
 	"github.com/labring/aiproxy/common/render"
 	"github.com/labring/aiproxy/middleware"
 	"github.com/labring/aiproxy/relay/adaptor/openai"
-	"github.com/labring/aiproxy/relay/constant"
 	"github.com/labring/aiproxy/relay/meta"
 	"github.com/labring/aiproxy/relay/model"
 	"github.com/labring/aiproxy/relay/utils"
@@ -361,7 +360,7 @@ func responseGeminiChat2OpenAI(meta *meta.Meta, response *ChatResponse) *openai.
 			Message: model.Message{
 				Role: "assistant",
 			},
-			FinishReason: constant.StopFinishReason,
+			FinishReason: model.StopFinishReason,
 		}
 		if len(candidate.Content.Parts) > 0 {
 			toolCallIndex := -1

@@ -32,7 +32,7 @@ type Meta struct {
 	Mode          relaymode.Mode
 	InputTokens   int
 	IsChannelTest bool
-	RetryTimes    int
+	GroupBalance  float64
 }
 
 type Option func(meta *Meta)
@@ -73,9 +73,9 @@ func WithToken(token *model.TokenCache) Option {
 	}
 }
 
-func WithRetryTimes(retryTimes int) Option {
+func WithGroupBalance(groupBalance float64) Option {
 	return func(meta *Meta) {
-		meta.RetryTimes = retryTimes
+		meta.GroupBalance = groupBalance
 	}
 }
 

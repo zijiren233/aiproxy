@@ -13,7 +13,6 @@ import (
 	"github.com/labring/aiproxy/common/render"
 	"github.com/labring/aiproxy/middleware"
 	"github.com/labring/aiproxy/relay/adaptor/openai"
-	"github.com/labring/aiproxy/relay/constant"
 	"github.com/labring/aiproxy/relay/meta"
 	"github.com/labring/aiproxy/relay/model"
 	"github.com/labring/aiproxy/relay/utils"
@@ -91,7 +90,7 @@ func responseBaidu2OpenAI(response *ChatResponse) *openai.TextResponse {
 			Role:    "assistant",
 			Content: response.Result,
 		},
-		FinishReason: constant.StopFinishReason,
+		FinishReason: model.StopFinishReason,
 	}
 	fullTextResponse := openai.TextResponse{
 		ID:      response.ID,
@@ -109,7 +108,8 @@ func streamResponseBaidu2OpenAI(meta *meta.Meta, baiduResponse *ChatStreamRespon
 	var choice openai.ChatCompletionsStreamResponseChoice
 	choice.Delta.Content = baiduResponse.Result
 	if baiduResponse.IsEnd {
-		choice.FinishReason = &constant.StopFinishReason
+		finishReason := model.StopFinishReason
+		choice.FinishReason = &finishReason
 	}
 	response := openai.ChatCompletionsStreamResponse{
 		ID:      baiduResponse.ID,

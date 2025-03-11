@@ -16,43 +16,27 @@ import (
 	relaymodel "github.com/labring/aiproxy/relay/model"
 )
 
-func Handle(meta *meta.Meta, c *gin.Context, preProcess func() (*PreCheckGroupBalanceReq, error)) *relaymodel.ErrorWithStatusCode {
+// HandleResult contains all the information needed for consumption recording
+type HandleResult struct {
+	Error       *relaymodel.ErrorWithStatusCode
+	Usage       *relaymodel.Usage
+	Amount      float64
+	InputPrice  float64
+	OutputPrice float64
+	Detail      *model.RequestDetail
+}
+
+func Handle(meta *meta.Meta, c *gin.Context, preProcess func() (*PreCheckGroupBalanceReq, error)) *HandleResult {
 	log := middleware.GetLogger(c)
 
 	// 1. Get adaptor
 	adaptor, ok := channeltype.GetAdaptor(meta.Channel.Type)
 	if !ok {
 		log.Errorf("invalid (%s[%d]) channel type: %d", meta.Channel.Name, meta.Channel.ID, meta.Channel.Type)
-		return openai.ErrorWrapperWithMessage(
-			"invalid channel error", "invalid_channel_type", http.StatusInternalServerError)
-	}
-
-	// 2. Get group balance
-	groupRemainBalance, postGroupConsumer, err := getGroupBalance(c, meta)
-	if err != nil {
-		log.Errorf("get group (%s) balance failed: %v", meta.Group.ID, err)
-		errMsg := fmt.Sprintf("get group (%s) balance failed", meta.Group.ID)
-		consume.AsyncConsume(
-			nil,
-			http.StatusInternalServerError,
-			nil,
-			meta,
-			0,
-			0,
-			errMsg,
-			c.ClientIP(),
-			meta.RetryTimes,
-			nil,
-		)
-		return openai.ErrorWrapperWithMessage(
-			errMsg,
-			"get_group_quota_failed",
-			http.StatusInternalServerError,
-		)
-	}
-
-	if !meta.IsChannelTest && groupRemainBalance <= 0 {
-		return openai.ErrorWrapperWithMessage(fmt.Sprintf("group (%s) balance not enough", meta.Group.ID), "insufficient_group_balance", http.StatusForbidden)
+		return &HandleResult{
+			Error: openai.ErrorWrapperWithMessage(
+				"invalid channel error", "invalid_channel_type", http.StatusInternalServerError),
+		}
 	}
 
 	// 3. Pre-process request
@@ -63,25 +47,21 @@ func Handle(meta *meta.Meta, c *gin.Context, preProcess func() (*PreCheckGroupBa
 		if err := getRequestBody(meta, c, detail); err != nil {
 			log.Errorf("get request body failed: %v", err.Error)
 		}
-		consume.AsyncConsume(
-			nil,
-			http.StatusBadRequest,
-			nil,
-			meta,
-			0,
-			0,
-			err.Error(),
-			c.ClientIP(),
-			meta.RetryTimes,
-			detail,
-		)
-		return openai.ErrorWrapper(err, "invalid_request", http.StatusBadRequest)
+		return &HandleResult{
+			Error:  openai.ErrorWrapper(err, "invalid_request", http.StatusBadRequest),
+			Detail: detail,
+		}
 	}
 
 	// 4. Pre-check balance
-	ok = checkGroupBalance(preCheckReq, meta, groupRemainBalance)
-	if !ok {
-		return openai.ErrorWrapperWithMessage(fmt.Sprintf("group (%s) balance is not enough", meta.Group.ID), "insufficient_group_balance", http.StatusForbidden)
+	if !meta.IsChannelTest && !checkGroupBalance(preCheckReq, meta.GroupBalance) {
+		return &HandleResult{
+			Error: openai.ErrorWrapperWithMessage(
+				fmt.Sprintf("group (%s) balance is not enough", meta.Group.ID),
+				middleware.GroupBalanceNotEnough,
+				http.StatusForbidden,
+			),
+		}
 	}
 
 	meta.InputTokens = preCheckReq.InputTokens
@@ -102,19 +82,13 @@ func Handle(meta *meta.Meta, c *gin.Context, preProcess func() (*PreCheckGroupBa
 			log.Errorf("handle failed: %+v", respErr)
 		}
 
-		consume.AsyncConsume(
-			postGroupConsumer,
-			respErr.StatusCode,
-			usage,
-			meta,
-			preCheckReq.InputPrice,
-			preCheckReq.OutputPrice,
-			respErr.Error.JSONOrEmpty(),
-			c.ClientIP(),
-			meta.RetryTimes,
-			detail,
-		)
-		return respErr
+		return &HandleResult{
+			Error:       respErr,
+			Usage:       usage,
+			InputPrice:  preCheckReq.InputPrice,
+			OutputPrice: preCheckReq.OutputPrice,
+			Detail:      detail,
+		}
 	}
 
 	amount := consume.CalculateAmount(usage, preCheckReq.InputPrice, preCheckReq.OutputPrice)
@@ -122,23 +96,11 @@ func Handle(meta *meta.Meta, c *gin.Context, preProcess func() (*PreCheckGroupBa
 		log.Data["amount"] = strconv.FormatFloat(amount, 'f', -1, 64)
 	}
 
-	if !config.GetSaveAllLogDetail() {
-		detail = nil
+	return &HandleResult{
+		Usage:       usage,
+		Amount:      amount,
+		InputPrice:  preCheckReq.InputPrice,
+		OutputPrice: preCheckReq.OutputPrice,
+		Detail:      detail,
 	}
-
-	// 6. Post consume
-	consume.AsyncConsume(
-		postGroupConsumer,
-		http.StatusOK,
-		usage,
-		meta,
-		preCheckReq.InputPrice,
-		preCheckReq.OutputPrice,
-		"",
-		c.ClientIP(),
-		meta.RetryTimes,
-		detail,
-	)
-
-	return nil
 }

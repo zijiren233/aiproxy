@@ -127,14 +127,22 @@ type GroupBalanceConsumer struct {
 	Consumer     balance.PostGroupConsumer
 }
 
-func GetGroupBalanceConsumer(c *gin.Context, group *model.GroupCache) (*GroupBalanceConsumer, error) {
+func GetGroupBalanceConsumerFromContext(c *gin.Context) *GroupBalanceConsumer {
 	gbcI, ok := c.Get(ctxkey.GroupBalance)
 	if ok {
 		groupBalanceConsumer, ok := gbcI.(*GroupBalanceConsumer)
 		if !ok {
-			return nil, errors.New("internal error: group balance consumer unavailable")
+			panic("internal error: group balance consumer unavailable")
 		}
-		return groupBalanceConsumer, nil
+		return groupBalanceConsumer
+	}
+	return nil
+}
+
+func GetGroupBalanceConsumer(c *gin.Context, group *model.GroupCache) (*GroupBalanceConsumer, error) {
+	gbc := GetGroupBalanceConsumerFromContext(c)
+	if gbc != nil {
+		return gbc, nil
 	}
 
 	var groupBalance float64
@@ -152,10 +160,14 @@ func GetGroupBalanceConsumer(c *gin.Context, group *model.GroupCache) (*GroupBal
 		log.Data["balance"] = strconv.FormatFloat(groupBalance, 'f', -1, 64)
 	}
 
-	gbc := &GroupBalanceConsumer{GroupBalance: groupBalance, Consumer: consumer}
+	gbc = &GroupBalanceConsumer{GroupBalance: groupBalance, Consumer: consumer}
 	c.Set(ctxkey.GroupBalance, gbc)
 	return gbc, nil
 }
+
+const (
+	GroupBalanceNotEnough = "group_balance_not_enough"
+)
 
 func checkGroupBalance(c *gin.Context, group *model.GroupCache) bool {
 	gbc, err := GetGroupBalanceConsumer(c, group)
@@ -175,7 +187,7 @@ func checkGroupBalance(c *gin.Context, group *model.GroupCache) bool {
 
 	if gbc.GroupBalance <= 0 {
 		abortLogWithMessage(c, http.StatusForbidden, fmt.Sprintf("group (%s) balance not enough", group.ID), &errorField{
-			Code: "group_balance_not_enough",
+			Code: GroupBalanceNotEnough,
 		})
 		return false
 	}
@@ -250,6 +262,7 @@ func distribute(c *gin.Context, mode relaymode.Mode) {
 			c.ClientIP(),
 			0,
 			nil,
+			true,
 		)
 		abortLogWithMessage(c, http.StatusTooManyRequests, errMsg, &errorField{
 			Type: "invalid_request_error",
@@ -278,6 +291,7 @@ func NewMetaByContext(c *gin.Context,
 	requestID := GetRequestID(c)
 	group := GetGroup(c)
 	token := GetToken(c)
+	gbc := GetGroupBalanceConsumerFromContext(c)
 
 	opts = append(
 		opts,
@@ -285,6 +299,7 @@ func NewMetaByContext(c *gin.Context,
 		meta.WithGroup(group),
 		meta.WithToken(token),
 		meta.WithEndpoint(c.Request.URL.Path),
+		meta.WithGroupBalance(gbc.GroupBalance),
 	)
 
 	return meta.NewMeta(

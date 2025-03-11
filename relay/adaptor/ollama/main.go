@@ -16,7 +16,6 @@ import (
 	"github.com/labring/aiproxy/common/splitter"
 	"github.com/labring/aiproxy/middleware"
 	"github.com/labring/aiproxy/relay/adaptor/openai"
-	"github.com/labring/aiproxy/relay/constant"
 	"github.com/labring/aiproxy/relay/meta"
 	relaymodel "github.com/labring/aiproxy/relay/model"
 	"github.com/labring/aiproxy/relay/utils"
@@ -82,7 +81,7 @@ func responseOllama2OpenAI(meta *meta.Meta, response *ChatResponse) *openai.Text
 		},
 	}
 	if response.Done {
-		choice.FinishReason = constant.StopFinishReason
+		choice.FinishReason = relaymodel.StopFinishReason
 	}
 	fullTextResponse := openai.TextResponse{
 		ID:      "chatcmpl-" + random.GetUUID(),
@@ -104,7 +103,8 @@ func streamResponseOllama2OpenAI(meta *meta.Meta, ollamaResponse *ChatResponse) 
 	choice.Delta.Role = ollamaResponse.Message.Role
 	choice.Delta.Content = ollamaResponse.Message.Content
 	if ollamaResponse.Done {
-		choice.FinishReason = &constant.StopFinishReason
+		finishReason := relaymodel.StopFinishReason
+		choice.FinishReason = &finishReason
 	}
 	response := openai.ChatCompletionsStreamResponse{
 		ID:      "chatcmpl-" + random.GetUUID(),

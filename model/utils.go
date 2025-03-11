@@ -173,6 +173,7 @@ func BatchRecordConsume(
 	ip string,
 	retryTimes int,
 	requestDetail *RequestDetail,
+	downstreamResult bool,
 ) error {
 	err := RecordConsumeLog(
 		requestID,
@@ -194,7 +195,12 @@ func BatchRecordConsume(
 		ip,
 		retryTimes,
 		requestDetail,
+		downstreamResult,
 	)
+
+	if !downstreamResult {
+		return err
+	}
 
 	amountDecimal := decimal.NewFromFloat(amount)
 
