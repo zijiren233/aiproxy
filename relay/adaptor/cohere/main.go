@@ -14,7 +14,6 @@ import (
 	"github.com/labring/aiproxy/common/render"
 	"github.com/labring/aiproxy/middleware"
 	"github.com/labring/aiproxy/relay/adaptor/openai"
-	"github.com/labring/aiproxy/relay/constant"
 	"github.com/labring/aiproxy/relay/model"
 )
 
@@ -26,7 +25,7 @@ func stopReasonCohere2OpenAI(reason *string) string {
 	}
 	switch *reason {
 	case "COMPLETE":
-		return constant.StopFinishReason
+		return model.StopFinishReason
 	default:
 		return *reason
 	}

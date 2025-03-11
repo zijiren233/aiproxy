@@ -15,7 +15,6 @@ import (
 	"github.com/labring/aiproxy/common/render"
 	"github.com/labring/aiproxy/middleware"
 	"github.com/labring/aiproxy/relay/adaptor/openai"
-	"github.com/labring/aiproxy/relay/constant"
 	"github.com/labring/aiproxy/relay/meta"
 	"github.com/labring/aiproxy/relay/model"
 )
@@ -33,7 +32,7 @@ func stopReasonClaude2OpenAI(reason *string) string {
 	}
 	switch *reason {
 	case "end_turn", "stop_sequence":
-		return constant.StopFinishReason
+		return model.StopFinishReason
 	case "max_tokens":
 		return "length"
 	case toolUseType:
