@@ -269,6 +269,12 @@ func recordResult(c *gin.Context, meta *meta.Meta, result *controller.HandleResu
 
 	gbc := middleware.GetGroupBalanceConsumerFromContext(c)
 
+	amount := consume.CalculateAmount(result.Usage, result.InputPrice, result.OutputPrice)
+	if amount > 0 {
+		log := middleware.GetLogger(c)
+		log.Data["amount"] = strconv.FormatFloat(amount, 'f', -1, 64)
+	}
+
 	consume.AsyncConsume(
 		gbc.Consumer,
 		code,
@@ -294,6 +300,27 @@ type retryState struct {
 	startTime                time.Time
 }
 
+const (
+	AIProxyChannelHeader = "Aiproxy-Channel"
+)
+
+func getChannelFromHeader(header string, mc *dbmodel.ModelCaches, requestModel string) (*dbmodel.Channel, error) {
+	channelIDInt, err := strconv.ParseInt(header, 10, 64)
+	if err != nil {
+		return nil, err
+	}
+	channels := mc.EnabledModel2channels[requestModel]
+	if len(channels) == 0 {
+		return nil, fmt.Errorf("no channels found for model %s", requestModel)
+	}
+	for _, channel := range channels {
+		if int64(channel.ID) == channelIDInt {
+			return channel, nil
+		}
+	}
+	return nil, fmt.Errorf("channel %d not found for model %s", channelIDInt, requestModel)
+}
+
 type initialChannel struct {
 	channel          *dbmodel.Channel
 	ignoreChannelIDs []int64
@@ -301,6 +328,16 @@ type initialChannel struct {
 }
 
 func getInitialChannel(c *gin.Context, requestModel string, log *log.Entry) (*initialChannel, error) {
+	mc := middleware.GetModelCaches(c)
+
+	if header := c.Request.Header.Get(AIProxyChannelHeader); header != "" {
+		channel, err := getChannelFromHeader(header, mc, requestModel)
+		if err != nil {
+			return nil, err
+		}
+		return &initialChannel{channel: channel}, nil
+	}
+
 	ids, err := monitor.GetBannedChannelsWithModel(c.Request.Context(), requestModel)
 	if err != nil {
 		log.Errorf("get %s auto banned channels failed: %+v", requestModel, err)
@@ -312,7 +349,6 @@ func getInitialChannel(c *gin.Context, requestModel string, log *log.Entry) (*in
 		log.Errorf("get channel model error rates failed: %+v", err)
 	}
 
-	mc := middleware.GetModelCaches(c)
 	channel, err := getChannelWithFallback(mc, requestModel, errorRates, ids...)
 	if err != nil {
 		return nil, err
@@ -365,7 +401,7 @@ func retryLoop(c *gin.Context, mode relaymode.Mode, requestModel string, state *
 			break
 		}
 
-		newChannel, err := getRetryChannel(mc, requestModel, state)
+		newChannel, err := getRetryChannel(c, mc, requestModel, state)
 		if err != nil {
 			break
 		}
@@ -403,7 +439,15 @@ func retryLoop(c *gin.Context, mode relaymode.Mode, requestModel string, state *
 	}
 }
 
-func getRetryChannel(mc *dbmodel.ModelCaches, model string, state *retryState) (*dbmodel.Channel, error) {
+func getRetryChannel(c *gin.Context, mc *dbmodel.ModelCaches, model string, state *retryState) (*dbmodel.Channel, error) {
+	if header := c.Request.Header.Get(AIProxyChannelHeader); header != "" {
+		channel, err := getChannelFromHeader(header, mc, model)
+		if err != nil {
+			return nil, err
+		}
+		return channel, nil
+	}
+
 	if state.exhausted {
 		return state.lastHasPermissionChannel, nil
 	}

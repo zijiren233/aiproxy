@@ -3,11 +3,9 @@ package controller
 import (
 	"fmt"
 	"net/http"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/common/config"
-	"github.com/labring/aiproxy/common/consume"
 	"github.com/labring/aiproxy/middleware"
 	"github.com/labring/aiproxy/model"
 	"github.com/labring/aiproxy/relay/adaptor/openai"
@@ -20,7 +18,6 @@ import (
 type HandleResult struct {
 	Error       *relaymodel.ErrorWithStatusCode
 	Usage       *relaymodel.Usage
-	Amount      float64
 	InputPrice  float64
 	OutputPrice float64
 	Detail      *model.RequestDetail
@@ -91,14 +88,8 @@ func Handle(meta *meta.Meta, c *gin.Context, preProcess func() (*PreCheckGroupBa
 		}
 	}
 
-	amount := consume.CalculateAmount(usage, preCheckReq.InputPrice, preCheckReq.OutputPrice)
-	if amount > 0 {
-		log.Data["amount"] = strconv.FormatFloat(amount, 'f', -1, 64)
-	}
-
 	return &HandleResult{
 		Usage:       usage,
-		Amount:      amount,
 		InputPrice:  preCheckReq.InputPrice,
 		OutputPrice: preCheckReq.OutputPrice,
 		Detail:      detail,
