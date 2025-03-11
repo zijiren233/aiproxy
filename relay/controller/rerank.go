@@ -12,7 +12,7 @@ import (
 	"github.com/labring/aiproxy/relay/utils"
 )
 
-func RerankHelper(meta *meta.Meta, c *gin.Context) *relaymodel.ErrorWithStatusCode {
+func RerankHelper(meta *meta.Meta, c *gin.Context) *HandleResult {
 	return Handle(meta, c, func() (*PreCheckGroupBalanceReq, error) {
 		if !config.GetBillingEnabled() {
 			return &PreCheckGroupBalanceReq{}, nil

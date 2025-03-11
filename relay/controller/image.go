@@ -45,7 +45,7 @@ func getImageRequest(meta *meta.Meta, c *gin.Context) (*relaymodel.ImageRequest,
 	return imageRequest, nil
 }
 
-func RelayImageHelper(meta *meta.Meta, c *gin.Context) *relaymodel.ErrorWithStatusCode {
+func RelayImageHelper(meta *meta.Meta, c *gin.Context) *HandleResult {
 	return Handle(meta, c, func() (*PreCheckGroupBalanceReq, error) {
 		if !config.GetBillingEnabled() {
 			return &PreCheckGroupBalanceReq{}, nil

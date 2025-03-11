@@ -92,8 +92,8 @@ func testSingleModel(mc *model.ModelCaches, channel *model.Channel, modelName st
 	if !ok {
 		return nil, fmt.Errorf("relay mode %d not implemented", mode)
 	}
-	bizErr := relayController(meta, newc)
-	success := bizErr == nil
+	result := relayController(meta, newc)
+	success := result.Error == nil
 	var respStr string
 	var code int
 	if success {
@@ -106,8 +106,8 @@ func testSingleModel(mc *model.ModelCaches, channel *model.Channel, modelName st
 		}
 		code = w.Code
 	} else {
-		respStr = bizErr.Error.JSONOrEmpty()
-		code = bizErr.StatusCode
+		respStr = result.Error.JSONOrEmpty()
+		code = result.Error.StatusCode
 	}
 
 	return channel.UpdateModelTest(

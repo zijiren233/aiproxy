@@ -7,11 +7,10 @@ import (
 	"github.com/labring/aiproxy/common/config"
 	"github.com/labring/aiproxy/relay/adaptor/openai"
 	"github.com/labring/aiproxy/relay/meta"
-	relaymodel "github.com/labring/aiproxy/relay/model"
 	"github.com/labring/aiproxy/relay/utils"
 )
 
-func RelayTTSHelper(meta *meta.Meta, c *gin.Context) *relaymodel.ErrorWithStatusCode {
+func RelayTTSHelper(meta *meta.Meta, c *gin.Context) *HandleResult {
 	return Handle(meta, c, func() (*PreCheckGroupBalanceReq, error) {
 		if !config.GetBillingEnabled() {
 			return &PreCheckGroupBalanceReq{}, nil

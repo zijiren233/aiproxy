@@ -1,11 +1,7 @@
 package controller
 
 import (
-	"github.com/gin-gonic/gin"
-	"github.com/labring/aiproxy/common/balance"
-	"github.com/labring/aiproxy/middleware"
 	"github.com/labring/aiproxy/model"
-	"github.com/labring/aiproxy/relay/meta"
 	"github.com/shopspring/decimal"
 )
 
@@ -31,24 +27,6 @@ func getPreConsumedAmount(req *PreCheckGroupBalanceReq) float64 {
 		InexactFloat64()
 }
 
-func checkGroupBalance(req *PreCheckGroupBalanceReq, meta *meta.Meta, groupRemainBalance float64) bool {
-	if meta.IsChannelTest {
-		return true
-	}
-
-	preConsumedAmount := getPreConsumedAmount(req)
-
-	return groupRemainBalance > preConsumedAmount
-}
-
-func getGroupBalance(ctx *gin.Context, meta *meta.Meta) (float64, balance.PostGroupConsumer, error) {
-	if meta.IsChannelTest {
-		return 0, nil, nil
-	}
-
-	gbc, err := middleware.GetGroupBalanceConsumer(ctx, meta.Group)
-	if err != nil {
-		return 0, nil, err
-	}
-	return gbc.GroupBalance, gbc.Consumer, nil
+func checkGroupBalance(req *PreCheckGroupBalanceReq, groupRemainBalance float64) bool {
+	return groupRemainBalance >= getPreConsumedAmount(req)
 }

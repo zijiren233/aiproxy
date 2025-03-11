@@ -31,11 +31,8 @@ func AsyncConsume(
 	ip string,
 	retryTimes int,
 	requestDetail *model.RequestDetail,
+	downstreamResult bool,
 ) {
-	if meta.IsChannelTest {
-		return
-	}
-
 	consumeWaitGroup.Add(1)
 	defer func() {
 		consumeWaitGroup.Done()
@@ -56,6 +53,7 @@ func AsyncConsume(
 		ip,
 		retryTimes,
 		requestDetail,
+		downstreamResult,
 	)
 }
 
@@ -71,16 +69,13 @@ func Consume(
 	ip string,
 	retryTimes int,
 	requestDetail *model.RequestDetail,
+	downstreamResult bool,
 ) {
-	if meta.IsChannelTest {
-		return
-	}
-
 	amount := CalculateAmount(usage, inputPrice, outputPrice)
 
 	amount = consumeAmount(ctx, amount, postGroupConsumer, meta)
 
-	err := recordConsume(meta, code, usage, inputPrice, outputPrice, content, ip, requestDetail, amount, retryTimes)
+	err := recordConsume(meta, code, usage, inputPrice, outputPrice, content, ip, requestDetail, amount, retryTimes, downstreamResult)
 	if err != nil {
 		log.Error("error batch record consume: " + err.Error())
 		notify.ErrorThrottle("recordConsume", time.Minute, "record consume failed", err.Error())
@@ -162,6 +157,7 @@ func recordConsume(
 	requestDetail *model.RequestDetail,
 	amount float64,
 	retryTimes int,
+	downstreamResult bool,
 ) error {
 	promptTokens := 0
 	completionTokens := 0
@@ -195,5 +191,6 @@ func recordConsume(
 		ip,
 		retryTimes,
 		requestDetail,
+		downstreamResult,
 	)
 }
