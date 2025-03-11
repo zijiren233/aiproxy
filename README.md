@@ -1,4 +1,38 @@
-# Deploy
+English | [简体中文](./README.zh.md)
+
+# AI Proxy
+
+Next-generation AI gateway, using OpenAI as the protocol entry point.
+
+## New Feature
+
+- Intelligent error retry
+- Channel selection based on priority and error rate
+- Alert notifications
+  - Channel balance warning
+  - Error rate warning
+  - Unauthorized channel warning
+  - and more...
+- Logging and auditing
+  - Comprehensive request log data
+  - Request and response body recording
+  - Request log tracing
+- Data statistics and analysis
+  - Request volume statistics
+  - Error volume statistics
+  - RPM TPM statistics
+  - Consumption statistics
+  - Model statistics
+  - Channel error rate analysis
+  - and more...
+- Rerank support
+- PDF support
+- STT model mapping support
+- Multi-tenant system separation
+- Model RPM TPM limits
+- Think model support `<think>` split to `reasoning_content`
+
+## Deploy
 
 ## Use Docker
 
@@ -19,9 +53,6 @@ docker-compose up -d
 ### Basic Configuration
 
 - `ADMIN_KEY`: The admin key for the AI Proxy Service, admin key is used to admin api and relay api, default is empty
-- `SQL_DSN`: The database connection string, default is empty, eg: `postgres://postgres:postgres@localhost:5432/postgres`
-- `LOG_SQL_DSN`: The log database connection string, default is empty, eg: `postgres://postgres:postgres@localhost:5432/postgres`
-- `REDIS_CONN_STRING`: The redis connection string, default is empty, eg: `redis://localhost:6379`
 - `INTERNAL_TOKEN`: Internal token for service authentication, default is empty
 - `FFPROBE_ENABLED`: Whether to enable ffprobe, default is `false`
 
@@ -32,6 +63,9 @@ docker-compose up -d
 
 ### Database Options
 
+- `SQL_DSN`: The database connection string, default is empty, eg: `postgres://postgres:postgres@localhost:5432/postgres`
+- `LOG_SQL_DSN`: The log database connection string, default is empty, eg: `postgres://postgres:postgres@localhost:5432/postgres`
+- `REDIS_CONN_STRING`: The redis connection string, default is empty, eg: `redis://localhost:6379`
 - `DISABLE_AUTO_MIGRATE_DB`: Disable automatic database migration, default is `false`
 - `SQL_MAX_IDLE_CONNS`: The maximum number of idle connections in the database, default is `100`
 - `SQL_MAX_OPEN_CONNS`: The maximum number of open connections to the database, default is `1000`
