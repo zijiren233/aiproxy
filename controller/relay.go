@@ -238,13 +238,13 @@ func relay(c *gin.Context, mode relaymode.Mode, relayController RelayController)
 		recordResult(c, meta, result, 0, true)
 		return
 	}
-	recordResult(c, meta, result, 0, false)
 
 	// Setup retry state
 	retryState := initRetryState(
 		retryTimes,
 		initialChannel,
-		result.Error,
+		meta,
+		result,
 	)
 
 	// Retry loop
@@ -294,8 +294,9 @@ type retryState struct {
 	ignoreChannelIDs         []int64
 	errorRates               map[int64]float64
 	exhausted                bool
-	bizErr                   *model.ErrorWithStatusCode
-	startTime                time.Time
+
+	meta   *meta.Meta
+	result *controller.HandleResult
 }
 
 type initialChannel struct {
@@ -336,8 +337,8 @@ func getInitialChannel(c *gin.Context, model string, log *log.Entry) (*initialCh
 	}, nil
 }
 
-func handleRelayResult(c *gin.Context, bizErr *model.ErrorWithStatusCode, retry bool, retryTimes int) bool {
-	if bizErr == nil {
+func handleRelayResult(c *gin.Context, bizErr *model.ErrorWithStatusCode, retry bool, retryTimes int) (done bool) {
+	if bizErr == nil || c.Request.Context().Err() != nil {
 		return true
 	}
 	if !retry || retryTimes == 0 {
@@ -348,20 +349,20 @@ func handleRelayResult(c *gin.Context, bizErr *model.ErrorWithStatusCode, retry 
 	return false
 }
 
-func initRetryState(retryTimes int, channel *initialChannel, bizErr *model.ErrorWithStatusCode) *retryState {
+func initRetryState(retryTimes int, channel *initialChannel, meta *meta.Meta, result *controller.HandleResult) *retryState {
 	state := &retryState{
 		retryTimes:       retryTimes,
 		ignoreChannelIDs: channel.ignoreChannelIDs,
 		errorRates:       channel.errorRates,
-		bizErr:           bizErr,
-		startTime:        time.Now(),
+		meta:             meta,
+		result:           result,
 	}
 
 	if channel.designatedChannel {
 		state.exhausted = true
 	}
 
-	if !channelHasPermission(bizErr.StatusCode) {
+	if !channelHasPermission(result.Error.StatusCode) {
 		state.ignoreChannelIDs = append(state.ignoreChannelIDs, int64(channel.channel.ID))
 	} else {
 		state.lastHasPermissionChannel = channel.channel
@@ -373,16 +374,29 @@ func initRetryState(retryTimes int, channel *initialChannel, bizErr *model.Error
 func retryLoop(c *gin.Context, mode relaymode.Mode, requestModel string, state *retryState, relayController RelayController, log *log.Entry) {
 	mc := middleware.GetModelCaches(c)
 
-	for i := range state.retryTimes {
-		ctxErr := c.Request.Context().Err()
-		if ctxErr != nil {
-			log.Warnf("retry loop context error: %+v", ctxErr)
+	// do not use for i := range state.retryTimes, because the retryTimes is constant
+	i := 0
+
+	for {
+		newChannel, err := getRetryChannel(mc, requestModel, state)
+		if err == nil {
+			err = prepareRetry(c, state.result.Error.StatusCode)
+		}
+		if err != nil {
+			if !errors.Is(err, ErrChannelsExhausted) {
+				log.Errorf("prepare retry failed: %+v", err)
+			}
+			// when the last request has not recorded the result, record the result
+			if state.meta != nil && state.result != nil {
+				recordResult(c, state.meta, state.result, i, true)
+			}
 			break
 		}
-
-		newChannel, err := getRetryChannel(mc, requestModel, state)
-		if err != nil {
-			break
+		// when the last request has not recorded the result, record the result
+		if state.meta != nil && state.result != nil {
+			recordResult(c, state.meta, state.result, i, false)
+			state.meta = nil
+			state.result = nil
 		}
 
 		log.Data["retry"] = strconv.Itoa(i + 1)
@@ -394,27 +408,24 @@ func retryLoop(c *gin.Context, mode relaymode.Mode, requestModel string, state *
 			state.retryTimes-i,
 		)
 
-		if !prepareRetry(c, state.bizErr.StatusCode) {
-			break
-		}
-
-		meta := middleware.NewMetaByContext(c,
+		state.meta = middleware.NewMetaByContext(c,
 			newChannel,
 			requestModel,
 			mode,
 		)
-		result, retry := RelayHelper(meta, c, relayController)
+		var retry bool
+		state.result, retry = RelayHelper(state.meta, c, relayController)
 
-		done := handleRetryResult(result.Error, retry, newChannel, state)
-		recordResult(c, meta, result, i+1, done || i == state.retryTimes-1)
-		if done {
+		done := handleRetryResult(c, retry, newChannel, state)
+		if done || i == state.retryTimes-1 {
+			recordResult(c, state.meta, state.result, i+1, true)
 			break
 		}
 	}
 
-	if state.bizErr != nil {
-		state.bizErr.Error.Message = middleware.MessageWithRequestID(c, state.bizErr.Error.Message)
-		c.JSON(state.bizErr.StatusCode, state.bizErr)
+	if state.result.Error != nil {
+		state.result.Error.Error.Message = middleware.MessageWithRequestID(c, state.result.Error.Error.Message)
+		c.JSON(state.result.Error.StatusCode, state.result.Error)
 	}
 }
 
@@ -438,11 +449,10 @@ func getRetryChannel(mc *dbmodel.ModelCaches, model string, state *retryState) (
 	return newChannel, nil
 }
 
-func prepareRetry(c *gin.Context, statusCode int) bool {
+func prepareRetry(c *gin.Context, statusCode int) error {
 	requestBody, err := common.GetRequestBody(c.Request)
 	if err != nil {
-		log.Errorf("get request body failed in prepare retry: %+v", err)
-		return false
+		return fmt.Errorf("get request body failed in prepare retry: %w", err)
 	}
 	c.Request.Body = io.NopCloser(bytes.NewBuffer(requestBody))
 
@@ -451,21 +461,23 @@ func prepareRetry(c *gin.Context, statusCode int) bool {
 		time.Sleep(time.Duration(rand.Float64()*float64(time.Second)) + time.Second)
 	}
 
-	return true
+	return nil
 }
 
-func handleRetryResult(bizErr *model.ErrorWithStatusCode, retry bool, newChannel *dbmodel.Channel, state *retryState) (done bool) {
-	state.bizErr = bizErr
-	if !retry || bizErr == nil {
+func handleRetryResult(ctx *gin.Context, retry bool, newChannel *dbmodel.Channel, state *retryState) (done bool) {
+	if ctx.Request.Context().Err() != nil {
+		return true
+	}
+	if !retry || state.result.Error == nil {
 		return true
 	}
 
 	if state.exhausted {
-		if !channelHasPermission(bizErr.StatusCode) {
+		if !channelHasPermission(state.result.Error.StatusCode) {
 			return true
 		}
 	} else {
-		if !channelHasPermission(bizErr.StatusCode) {
+		if !channelHasPermission(state.result.Error.StatusCode) {
 			state.ignoreChannelIDs = append(state.ignoreChannelIDs, int64(newChannel.ID))
 			state.retryTimes++
 		} else {
