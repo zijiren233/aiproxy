@@ -22,7 +22,7 @@ func (a *Adaptor) KeyHelp() string {
 	return "region|adcJSON"
 }
 
-// region|projectID|adcJSON
+// region|adcJSON
 func getConfigFromKey(key string) (Config, error) {
 	region, adcJSON, ok := strings.Cut(key, "|")
 	if !ok {
