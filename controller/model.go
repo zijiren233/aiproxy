@@ -190,13 +190,13 @@ func ChannelEnabledModelsByType(c *gin.Context) {
 }
 
 func ListModels(c *gin.Context) {
-	cache := middleware.GetModelCaches(c)
+	enabledModelConfigsMap := middleware.GetModelCaches(c).EnabledModelConfigsMap
 	token := middleware.GetToken(c)
 
 	availableOpenAIModels := make([]*OpenAIModels, 0, len(token.Models))
 
 	for _, model := range token.Models {
-		if mc, ok := cache.ModelConfig.GetModelConfig(model); ok {
+		if mc, ok := enabledModelConfigsMap[model]; ok {
 			availableOpenAIModels = append(availableOpenAIModels, &OpenAIModels{
 				ID:         model,
 				Object:     "model",
@@ -217,8 +217,15 @@ func ListModels(c *gin.Context) {
 
 func RetrieveModel(c *gin.Context) {
 	modelName := c.Param("model")
-	mc, ok := middleware.GetModelCaches(c).ModelConfig.GetModelConfig(modelName)
-	if !ok || !slices.Contains(middleware.GetToken(c).Models, modelName) {
+	enabledModelConfigsMap := middleware.GetModelCaches(c).EnabledModelConfigsMap
+
+	mc, ok := enabledModelConfigsMap[modelName]
+	if ok {
+		token := middleware.GetToken(c)
+		ok = slices.Contains(token.Models, modelName)
+	}
+
+	if !ok {
 		c.JSON(200, gin.H{
 			"error": &relaymodel.Error{
 				Message: fmt.Sprintf("the model '%s' does not exist", modelName),

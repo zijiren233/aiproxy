@@ -426,7 +426,6 @@ type ModelCaches struct {
 	EnabledChannelType2ModelConfigs map[int][]*ModelConfig
 
 	DisabledModel2Channels map[string][]*Channel
-	DisabledModels         []string
 }
 
 var modelCaches atomic.Pointer[ModelCaches]
@@ -471,12 +470,6 @@ func InitModelConfigAndChannelCache() error {
 
 	newDisabledModel2Channels := buildModelToChannelsMap(newDisabledChannels)
 
-	sortChannelsByPriority(newDisabledModel2Channels)
-
-	newDisabledChannelType2ModelConfigs := buildChannelTypeToModelConfigsMap(newDisabledChannels, modelConfig)
-
-	newDisabledModels, _, _, _ := buildEnabledModelsAndConfigs(newDisabledChannelType2ModelConfigs)
-
 	// Update global cache atomically
 	modelCaches.Store(&ModelCaches{
 		ModelConfig: modelConfig,
@@ -489,7 +482,6 @@ func InitModelConfigAndChannelCache() error {
 		EnabledChannelType2ModelConfigs: newEnabledChannelType2ModelConfigs,
 
 		DisabledModel2Channels: newDisabledModel2Channels,
-		DisabledModels:         newDisabledModels,
 	})
 
 	return nil

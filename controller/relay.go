@@ -298,36 +298,6 @@ type retryState struct {
 	startTime                time.Time
 }
 
-const (
-	AIProxyChannelHeader = "Aiproxy-Channel"
-)
-
-func getChannelFromHeader(header string, mc *dbmodel.ModelCaches, model string) (*dbmodel.Channel, error) {
-	channelIDInt, err := strconv.ParseInt(header, 10, 64)
-	if err != nil {
-		return nil, err
-	}
-
-	enabledChannels := mc.EnabledModel2Channels[model]
-	if len(enabledChannels) > 0 {
-		for _, channel := range enabledChannels {
-			if int64(channel.ID) == channelIDInt {
-				return channel, nil
-			}
-		}
-	}
-
-	disabledChannels := mc.DisabledModel2Channels[model]
-	if len(disabledChannels) > 0 {
-		for _, channel := range disabledChannels {
-			if int64(channel.ID) == channelIDInt {
-				return channel, nil
-			}
-		}
-	}
-	return nil, fmt.Errorf("channel %d not found for model %s", channelIDInt, model)
-}
-
 type initialChannel struct {
 	channel           *dbmodel.Channel
 	designatedChannel bool
@@ -336,16 +306,12 @@ type initialChannel struct {
 }
 
 func getInitialChannel(c *gin.Context, model string, log *log.Entry) (*initialChannel, error) {
-	mc := middleware.GetModelCaches(c)
-
-	if header := c.Request.Header.Get(AIProxyChannelHeader); header != "" && middleware.GetGroup(c).Status == dbmodel.GroupStatusInternal {
-		channel, err := getChannelFromHeader(header, mc, model)
-		if err != nil {
-			return nil, err
-		}
+	if channel := middleware.GetChannel(c); channel != nil {
 		log.Data["designated_channel"] = "true"
 		return &initialChannel{channel: channel, designatedChannel: true}, nil
 	}
+
+	mc := middleware.GetModelCaches(c)
 
 	ids, err := monitor.GetBannedChannelsWithModel(c.Request.Context(), model)
 	if err != nil {

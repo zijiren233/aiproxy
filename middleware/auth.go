@@ -3,7 +3,6 @@ package middleware
 import (
 	"fmt"
 	"net/http"
-	"slices"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -119,7 +118,7 @@ func TokenAuth(c *gin.Context) {
 
 	modelCaches := model.LoadModelCaches()
 
-	storeTokenModels(group, token, modelCaches)
+	storeTokenModels(token, modelCaches)
 
 	c.Set(ctxkey.Group, group)
 	c.Set(ctxkey.Token, token)
@@ -140,6 +139,14 @@ func GetModelCaches(c *gin.Context) *model.ModelCaches {
 	return c.MustGet(ctxkey.ModelCaches).(*model.ModelCaches)
 }
 
+func GetChannel(c *gin.Context) *model.Channel {
+	ch, exists := c.Get(ctxkey.Channel)
+	if !exists {
+		return nil
+	}
+	return ch.(*model.Channel)
+}
+
 func sliceFilter[T any](s []T, fn func(T) bool) []T {
 	i := 0
 	for _, v := range s {
@@ -151,13 +158,9 @@ func sliceFilter[T any](s []T, fn func(T) bool) []T {
 	return s[:i]
 }
 
-func storeTokenModels(group *model.GroupCache, token *model.TokenCache, modelCaches *model.ModelCaches) {
+func storeTokenModels(token *model.TokenCache, modelCaches *model.ModelCaches) {
 	if len(token.Models) == 0 {
-		if group.Status == model.GroupStatusInternal && len(modelCaches.DisabledModels) > 0 {
-			token.Models = append(slices.Clone(modelCaches.EnabledModels), modelCaches.DisabledModels...)
-		} else {
-			token.Models = modelCaches.EnabledModels
-		}
+		token.Models = modelCaches.EnabledModels
 	} else {
 		enabledModelsMap := modelCaches.EnabledModelsMap
 		token.Models = sliceFilter(token.Models, func(m string) bool {
