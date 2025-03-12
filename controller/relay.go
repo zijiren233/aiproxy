@@ -140,7 +140,7 @@ var (
 )
 
 func GetRandomChannel(c *dbmodel.ModelCaches, model string, errorRates map[int64]float64, ignoreChannel ...int64) (*dbmodel.Channel, error) {
-	return getRandomChannel(c.EnabledModel2channels[model], errorRates, ignoreChannel...)
+	return getRandomChannel(c.EnabledModel2Channels[model], errorRates, ignoreChannel...)
 }
 
 func getPriority(channel *dbmodel.Channel, errorRate float64) int32 {
@@ -243,10 +243,8 @@ func relay(c *gin.Context, mode relaymode.Mode, relayController RelayController)
 	// Setup retry state
 	retryState := initRetryState(
 		retryTimes,
-		initialChannel.channel,
+		initialChannel,
 		result.Error,
-		initialChannel.ignoreChannelIDs,
-		initialChannel.errorRates,
 	)
 
 	// Retry loop
@@ -309,7 +307,7 @@ func getChannelFromHeader(header string, mc *dbmodel.ModelCaches, requestModel s
 	if err != nil {
 		return nil, err
 	}
-	channels := mc.EnabledModel2channels[requestModel]
+	channels := mc.EnabledModel2Channels[requestModel]
 	if len(channels) == 0 {
 		return nil, fmt.Errorf("no channels found for model %s", requestModel)
 	}
@@ -322,9 +320,10 @@ func getChannelFromHeader(header string, mc *dbmodel.ModelCaches, requestModel s
 }
 
 type initialChannel struct {
-	channel          *dbmodel.Channel
-	ignoreChannelIDs []int64
-	errorRates       map[int64]float64
+	channel           *dbmodel.Channel
+	designatedChannel bool
+	ignoreChannelIDs  []int64
+	errorRates        map[int64]float64
 }
 
 func getInitialChannel(c *gin.Context, requestModel string, log *log.Entry) (*initialChannel, error) {
@@ -335,7 +334,8 @@ func getInitialChannel(c *gin.Context, requestModel string, log *log.Entry) (*in
 		if err != nil {
 			return nil, err
 		}
-		return &initialChannel{channel: channel}, nil
+		log.Data["designated_channel"] = "true"
+		return &initialChannel{channel: channel, designatedChannel: true}, nil
 	}
 
 	ids, err := monitor.GetBannedChannelsWithModel(c.Request.Context(), requestModel)
@@ -373,19 +373,23 @@ func handleRelayResult(c *gin.Context, bizErr *model.ErrorWithStatusCode, retry 
 	return false
 }
 
-func initRetryState(retryTimes int, channel *dbmodel.Channel, bizErr *model.ErrorWithStatusCode, ignoreChannelIDs []int64, errorRates map[int64]float64) *retryState {
+func initRetryState(retryTimes int, channel *initialChannel, bizErr *model.ErrorWithStatusCode) *retryState {
 	state := &retryState{
 		retryTimes:       retryTimes,
-		ignoreChannelIDs: ignoreChannelIDs,
-		errorRates:       errorRates,
+		ignoreChannelIDs: channel.ignoreChannelIDs,
+		errorRates:       channel.errorRates,
 		bizErr:           bizErr,
 		startTime:        time.Now(),
 	}
 
+	if channel.designatedChannel {
+		state.exhausted = true
+	}
+
 	if !channelHasPermission(bizErr.StatusCode) {
-		state.ignoreChannelIDs = append(state.ignoreChannelIDs, int64(channel.ID))
+		state.ignoreChannelIDs = append(state.ignoreChannelIDs, int64(channel.channel.ID))
 	} else {
-		state.lastHasPermissionChannel = channel
+		state.lastHasPermissionChannel = channel.channel
 	}
 
 	return state
@@ -401,7 +405,7 @@ func retryLoop(c *gin.Context, mode relaymode.Mode, requestModel string, state *
 			break
 		}
 
-		newChannel, err := getRetryChannel(c, mc, requestModel, state)
+		newChannel, err := getRetryChannel(mc, requestModel, state)
 		if err != nil {
 			break
 		}
@@ -439,16 +443,11 @@ func retryLoop(c *gin.Context, mode relaymode.Mode, requestModel string, state *
 	}
 }
 
-func getRetryChannel(c *gin.Context, mc *dbmodel.ModelCaches, model string, state *retryState) (*dbmodel.Channel, error) {
-	if header := c.Request.Header.Get(AIProxyChannelHeader); header != "" {
-		channel, err := getChannelFromHeader(header, mc, model)
-		if err != nil {
-			return nil, err
-		}
-		return channel, nil
-	}
-
+func getRetryChannel(mc *dbmodel.ModelCaches, model string, state *retryState) (*dbmodel.Channel, error) {
 	if state.exhausted {
+		if state.lastHasPermissionChannel == nil {
+			return nil, ErrChannelsExhausted
+		}
 		return state.lastHasPermissionChannel, nil
 	}
 
