@@ -200,6 +200,36 @@ func NewDistribute(mode relaymode.Mode) gin.HandlerFunc {
 	}
 }
 
+const (
+	AIProxyChannelHeader = "Aiproxy-Channel"
+)
+
+func getChannelFromHeader(header string, mc *model.ModelCaches, model string) (*model.Channel, error) {
+	channelIDInt, err := strconv.ParseInt(header, 10, 64)
+	if err != nil {
+		return nil, err
+	}
+
+	enabledChannels := mc.EnabledModel2Channels[model]
+	if len(enabledChannels) > 0 {
+		for _, channel := range enabledChannels {
+			if int64(channel.ID) == channelIDInt {
+				return channel, nil
+			}
+		}
+	}
+
+	disabledChannels := mc.DisabledModel2Channels[model]
+	if len(disabledChannels) > 0 {
+		for _, channel := range disabledChannels {
+			if int64(channel.ID) == channelIDInt {
+				return channel, nil
+			}
+		}
+	}
+	return nil, fmt.Errorf("channel %d not found for model %s", channelIDInt, model)
+}
+
 func distribute(c *gin.Context, mode relaymode.Mode) {
 	if config.GetDisableServe() {
 		abortLogWithMessage(c, http.StatusServiceUnavailable, "service is under maintenance")
@@ -234,9 +264,8 @@ func distribute(c *gin.Context, mode relaymode.Mode) {
 
 	SetLogModelFields(log.Data, requestModel)
 
-	token := GetToken(c)
 	mc, ok := GetModelCaches(c).ModelConfig.GetModelConfig(requestModel)
-	if !ok || len(token.Models) == 0 || !slices.Contains(token.Models, requestModel) {
+	if !ok {
 		abortLogWithMessage(c,
 			http.StatusNotFound,
 			fmt.Sprintf("The model `%s` does not exist or you do not have access to it.", requestModel),
@@ -248,6 +277,28 @@ func distribute(c *gin.Context, mode relaymode.Mode) {
 		return
 	}
 	c.Set(ctxkey.ModelConfig, mc)
+
+	if channelHeader := c.Request.Header.Get(AIProxyChannelHeader); group.Status == model.GroupStatusInternal && channelHeader != "" {
+		channel, err := getChannelFromHeader(channelHeader, GetModelCaches(c), requestModel)
+		if err != nil {
+			abortLogWithMessage(c, http.StatusBadRequest, err.Error())
+			return
+		}
+		c.Set(ctxkey.Channel, channel)
+	} else {
+		token := GetToken(c)
+		if len(token.Models) == 0 || !slices.Contains(token.Models, requestModel) {
+			abortLogWithMessage(c,
+				http.StatusNotFound,
+				fmt.Sprintf("The model `%s` does not exist or you do not have access to it.", requestModel),
+				&errorField{
+					Type: "invalid_request_error",
+					Code: "model_not_found",
+				},
+			)
+			return
+		}
+	}
 
 	if err := checkGroupModelRPMAndTPM(c, group, mc); err != nil {
 		errMsg := err.Error()

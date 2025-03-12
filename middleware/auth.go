@@ -139,6 +139,14 @@ func GetModelCaches(c *gin.Context) *model.ModelCaches {
 	return c.MustGet(ctxkey.ModelCaches).(*model.ModelCaches)
 }
 
+func GetChannel(c *gin.Context) *model.Channel {
+	ch, exists := c.Get(ctxkey.Channel)
+	if !exists {
+		return nil
+	}
+	return ch.(*model.Channel)
+}
+
 func sliceFilter[T any](s []T, fn func(T) bool) []T {
 	i := 0
 	for _, v := range s {

@@ -416,14 +416,16 @@ type ModelConfigCache interface {
 //
 //nolint:revive
 type ModelCaches struct {
-	ModelConfig                     ModelConfigCache
-	EnabledModel2channels           map[string][]*Channel
+	ModelConfig ModelConfigCache
+
+	EnabledModel2Channels           map[string][]*Channel
 	EnabledModels                   []string
 	EnabledModelsMap                map[string]struct{}
 	EnabledModelConfigs             []*ModelConfig
 	EnabledModelConfigsMap          map[string]*ModelConfig
 	EnabledChannelType2ModelConfigs map[int][]*ModelConfig
-	EnabledChannelID2channel        map[int]*Channel
+
+	DisabledModel2Channels map[string][]*Channel
 }
 
 var modelCaches atomic.Pointer[ModelCaches]
@@ -449,16 +451,11 @@ func InitModelConfigAndChannelCache() error {
 		return err
 	}
 
-	// Build channel ID to channel map
-	newEnabledChannelID2channel := buildChannelIDMap(newEnabledChannels)
-
-	// Build all channel ID to channel map
-
 	// Build model to channels map
-	newEnabledModel2channels := buildModelToChannelsMap(newEnabledChannels)
+	newEnabledModel2Channels := buildModelToChannelsMap(newEnabledChannels)
 
 	// Sort channels by priority
-	sortChannelsByPriority(newEnabledModel2channels)
+	sortChannelsByPriority(newEnabledModel2Channels)
 
 	// Build channel type to model configs map
 	newEnabledChannelType2ModelConfigs := buildChannelTypeToModelConfigsMap(newEnabledChannels, modelConfig)
@@ -466,16 +463,25 @@ func InitModelConfigAndChannelCache() error {
 	// Build enabled models and configs lists
 	newEnabledModels, newEnabledModelsMap, newEnabledModelConfigs, newEnabledModelConfigsMap := buildEnabledModelsAndConfigs(newEnabledChannelType2ModelConfigs)
 
+	newDisabledChannels, err := LoadDisabledChannels()
+	if err != nil {
+		return err
+	}
+
+	newDisabledModel2Channels := buildModelToChannelsMap(newDisabledChannels)
+
 	// Update global cache atomically
 	modelCaches.Store(&ModelCaches{
-		ModelConfig:                     modelConfig,
-		EnabledModel2channels:           newEnabledModel2channels,
+		ModelConfig: modelConfig,
+
+		EnabledModel2Channels:           newEnabledModel2Channels,
 		EnabledModels:                   newEnabledModels,
 		EnabledModelsMap:                newEnabledModelsMap,
 		EnabledModelConfigs:             newEnabledModelConfigs,
 		EnabledModelConfigsMap:          newEnabledModelConfigsMap,
 		EnabledChannelType2ModelConfigs: newEnabledChannelType2ModelConfigs,
-		EnabledChannelID2channel:        newEnabledChannelID2channel,
+
+		DisabledModel2Channels: newDisabledModel2Channels,
 	})
 
 	return nil
@@ -484,6 +490,21 @@ func InitModelConfigAndChannelCache() error {
 func LoadEnabledChannels() ([]*Channel, error) {
 	var channels []*Channel
 	err := DB.Where("status = ?", ChannelStatusEnabled).Find(&channels).Error
+	if err != nil {
+		return nil, err
+	}
+
+	for _, channel := range channels {
+		initializeChannelModels(channel)
+		initializeChannelModelMapping(channel)
+	}
+
+	return channels, nil
+}
+
+func LoadDisabledChannels() ([]*Channel, error) {
+	var channels []*Channel
+	err := DB.Where("status = ?", ChannelStatusDisabled).Find(&channels).Error
 	if err != nil {
 		return nil, err
 	}
@@ -590,6 +611,7 @@ func initializeChannelModelMapping(channel *Channel) {
 	}
 }
 
+//nolint:unused
 func buildChannelIDMap(channels []*Channel) map[int]*Channel {
 	channelMap := make(map[int]*Channel)
 	for _, channel := range channels {

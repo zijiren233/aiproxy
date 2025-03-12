@@ -8,4 +8,5 @@ const (
 	RequestID     = "X-Request-Id"
 	ModelCaches   = "model_caches"
 	ModelConfig   = "model_config"
+	Channel       = "channel"
 )
