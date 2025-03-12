@@ -302,21 +302,30 @@ const (
 	AIProxyChannelHeader = "Aiproxy-Channel"
 )
 
-func getChannelFromHeader(header string, mc *dbmodel.ModelCaches, requestModel string) (*dbmodel.Channel, error) {
+func getChannelFromHeader(header string, mc *dbmodel.ModelCaches, model string) (*dbmodel.Channel, error) {
 	channelIDInt, err := strconv.ParseInt(header, 10, 64)
 	if err != nil {
 		return nil, err
 	}
-	channels := mc.EnabledModel2Channels[requestModel]
-	if len(channels) == 0 {
-		return nil, fmt.Errorf("no channels found for model %s", requestModel)
-	}
-	for _, channel := range channels {
-		if int64(channel.ID) == channelIDInt {
-			return channel, nil
+
+	enabledChannels := mc.EnabledModel2Channels[model]
+	if len(enabledChannels) > 0 {
+		for _, channel := range enabledChannels {
+			if int64(channel.ID) == channelIDInt {
+				return channel, nil
+			}
 		}
 	}
-	return nil, fmt.Errorf("channel %d not found for model %s", channelIDInt, requestModel)
+
+	disabledChannels := mc.DisabledModel2Channels[model]
+	if len(disabledChannels) > 0 {
+		for _, channel := range disabledChannels {
+			if int64(channel.ID) == channelIDInt {
+				return channel, nil
+			}
+		}
+	}
+	return nil, fmt.Errorf("channel %d not found for model %s", channelIDInt, model)
 }
 
 type initialChannel struct {
@@ -326,11 +335,11 @@ type initialChannel struct {
 	errorRates        map[int64]float64
 }
 
-func getInitialChannel(c *gin.Context, requestModel string, log *log.Entry) (*initialChannel, error) {
+func getInitialChannel(c *gin.Context, model string, log *log.Entry) (*initialChannel, error) {
 	mc := middleware.GetModelCaches(c)
 
-	if header := c.Request.Header.Get(AIProxyChannelHeader); header != "" {
-		channel, err := getChannelFromHeader(header, mc, requestModel)
+	if header := c.Request.Header.Get(AIProxyChannelHeader); header != "" && middleware.GetGroup(c).Status == dbmodel.GroupStatusInternal {
+		channel, err := getChannelFromHeader(header, mc, model)
 		if err != nil {
 			return nil, err
 		}
@@ -338,18 +347,18 @@ func getInitialChannel(c *gin.Context, requestModel string, log *log.Entry) (*in
 		return &initialChannel{channel: channel, designatedChannel: true}, nil
 	}
 
-	ids, err := monitor.GetBannedChannelsWithModel(c.Request.Context(), requestModel)
+	ids, err := monitor.GetBannedChannelsWithModel(c.Request.Context(), model)
 	if err != nil {
-		log.Errorf("get %s auto banned channels failed: %+v", requestModel, err)
+		log.Errorf("get %s auto banned channels failed: %+v", model, err)
 	}
-	log.Debugf("%s model banned channels: %+v", requestModel, ids)
+	log.Debugf("%s model banned channels: %+v", model, ids)
 
-	errorRates, err := monitor.GetModelChannelErrorRate(c.Request.Context(), requestModel)
+	errorRates, err := monitor.GetModelChannelErrorRate(c.Request.Context(), model)
 	if err != nil {
 		log.Errorf("get channel model error rates failed: %+v", err)
 	}
 
-	channel, err := getChannelWithFallback(mc, requestModel, errorRates, ids...)
+	channel, err := getChannelWithFallback(mc, model, errorRates, ids...)
 	if err != nil {
 		return nil, err
 	}

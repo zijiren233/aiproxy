@@ -426,6 +426,7 @@ type ModelCaches struct {
 	EnabledChannelType2ModelConfigs map[int][]*ModelConfig
 
 	DisabledModel2Channels map[string][]*Channel
+	DisabledModels         []string
 }
 
 var modelCaches atomic.Pointer[ModelCaches]
@@ -463,6 +464,19 @@ func InitModelConfigAndChannelCache() error {
 	// Build enabled models and configs lists
 	newEnabledModels, newEnabledModelsMap, newEnabledModelConfigs, newEnabledModelConfigsMap := buildEnabledModelsAndConfigs(newEnabledChannelType2ModelConfigs)
 
+	newDisabledChannels, err := LoadDisabledChannels()
+	if err != nil {
+		return err
+	}
+
+	newDisabledModel2Channels := buildModelToChannelsMap(newDisabledChannels)
+
+	sortChannelsByPriority(newDisabledModel2Channels)
+
+	newDisabledChannelType2ModelConfigs := buildChannelTypeToModelConfigsMap(newDisabledChannels, modelConfig)
+
+	newDisabledModels, _, _, _ := buildEnabledModelsAndConfigs(newDisabledChannelType2ModelConfigs)
+
 	// Update global cache atomically
 	modelCaches.Store(&ModelCaches{
 		ModelConfig: modelConfig,
@@ -473,6 +487,9 @@ func InitModelConfigAndChannelCache() error {
 		EnabledModelConfigs:             newEnabledModelConfigs,
 		EnabledModelConfigsMap:          newEnabledModelConfigsMap,
 		EnabledChannelType2ModelConfigs: newEnabledChannelType2ModelConfigs,
+
+		DisabledModel2Channels: newDisabledModel2Channels,
+		DisabledModels:         newDisabledModels,
 	})
 
 	return nil
@@ -481,6 +498,21 @@ func InitModelConfigAndChannelCache() error {
 func LoadEnabledChannels() ([]*Channel, error) {
 	var channels []*Channel
 	err := DB.Where("status = ?", ChannelStatusEnabled).Find(&channels).Error
+	if err != nil {
+		return nil, err
+	}
+
+	for _, channel := range channels {
+		initializeChannelModels(channel)
+		initializeChannelModelMapping(channel)
+	}
+
+	return channels, nil
+}
+
+func LoadDisabledChannels() ([]*Channel, error) {
+	var channels []*Channel
+	err := DB.Where("status = ?", ChannelStatusDisabled).Find(&channels).Error
 	if err != nil {
 		return nil, err
 	}

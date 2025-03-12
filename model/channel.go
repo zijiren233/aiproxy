@@ -21,8 +21,9 @@ const (
 )
 
 const (
-	ChannelStatusUnknown = 0
-	ChannelStatusEnabled = 1
+	ChannelStatusUnknown  = 0
+	ChannelStatusEnabled  = 1
+	ChannelStatusDisabled = 2
 )
 
 type ChannelConfig struct {

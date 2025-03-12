@@ -3,6 +3,7 @@ package middleware
 import (
 	"fmt"
 	"net/http"
+	"slices"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -118,7 +119,7 @@ func TokenAuth(c *gin.Context) {
 
 	modelCaches := model.LoadModelCaches()
 
-	storeTokenModels(token, modelCaches)
+	storeTokenModels(group, token, modelCaches)
 
 	c.Set(ctxkey.Group, group)
 	c.Set(ctxkey.Token, token)
@@ -150,9 +151,13 @@ func sliceFilter[T any](s []T, fn func(T) bool) []T {
 	return s[:i]
 }
 
-func storeTokenModels(token *model.TokenCache, modelCaches *model.ModelCaches) {
+func storeTokenModels(group *model.GroupCache, token *model.TokenCache, modelCaches *model.ModelCaches) {
 	if len(token.Models) == 0 {
-		token.Models = modelCaches.EnabledModels
+		if group.Status == model.GroupStatusInternal && len(modelCaches.DisabledModels) > 0 {
+			token.Models = append(slices.Clone(modelCaches.EnabledModels), modelCaches.DisabledModels...)
+		} else {
+			token.Models = modelCaches.EnabledModels
+		}
 	} else {
 		enabledModelsMap := modelCaches.EnabledModelsMap
 		token.Models = sliceFilter(token.Models, func(m string) bool {
