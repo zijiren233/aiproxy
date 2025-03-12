@@ -62,18 +62,17 @@ func (a *Adaptor) ConvertRequest(meta *meta.Meta, request *http.Request) (string
 	if err != nil {
 		return "", nil, nil, err
 	}
-	meta.Set("stream", claudeReq.Stream)
 	req := Request{
 		AnthropicVersion: anthropicVersion,
-		// Model:            claudeReq.Model,
-		Messages:    claudeReq.Messages,
-		System:      claudeReq.System,
-		MaxTokens:   claudeReq.MaxTokens,
-		Temperature: claudeReq.Temperature,
-		TopP:        claudeReq.TopP,
-		TopK:        claudeReq.TopK,
-		Stream:      claudeReq.Stream,
-		Tools:       claudeReq.Tools,
+		Messages:         claudeReq.Messages,
+		System:           claudeReq.System,
+		MaxTokens:        claudeReq.MaxTokens,
+		Temperature:      claudeReq.Temperature,
+		TopP:             claudeReq.TopP,
+		TopK:             claudeReq.TopK,
+		Stream:           claudeReq.Stream,
+		Tools:            claudeReq.Tools,
+		ToolChoice:       claudeReq.ToolChoice,
 	}
 	data, err := sonic.Marshal(req)
 	if err != nil {

@@ -268,18 +268,18 @@ func parseResponse(res []byte) (resp synResp, err error) {
 				resp.IsLast = true
 			}
 		}
-		return
+		return resp, err
 	case 0xf:
 		// code := int32(binary.BigEndian.Uint32(payload[0:4]))
 		errMsg := payload[8:]
 		if messageCompression == 1 {
 			errMsg, err = gzipDecompress(errMsg)
 			if err != nil {
-				return
+				return resp, err
 			}
 		}
 		err = errors.New(conv.BytesToString(errMsg))
-		return
+		return resp, err
 	case 0xc:
 		// msgSize = int32(binary.BigEndian.Uint32(payload[0:4]))
 		// payload = payload[4:]
@@ -289,9 +289,9 @@ func parseResponse(res []byte) (resp synResp, err error) {
 		// 		return
 		// 	}
 		// }
-		return
+		return resp, err
 	default:
 		err = errors.New("wrong message type")
-		return
+		return resp, err
 	}
 }

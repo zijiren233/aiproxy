@@ -33,5 +33,5 @@ jobs:
       - name: Run Linter
         uses: golangci/golangci-lint-action@v6
         with:
-          version: v1.64.5
+          version: v1.64.6
           args: "--out-format colored-line-number --max-issues-per-linter 0 --max-same-issues 0"
