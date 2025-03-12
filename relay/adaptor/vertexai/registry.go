@@ -3,11 +3,13 @@ package vertexai
 import (
 	"io"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/model"
-	claude "github.com/labring/aiproxy/relay/adaptor/vertexai/claude"
-	gemini "github.com/labring/aiproxy/relay/adaptor/vertexai/gemini"
+	"github.com/labring/aiproxy/relay/adaptor/gemini"
+	vertexclaude "github.com/labring/aiproxy/relay/adaptor/vertexai/claude"
+	vertexgemini "github.com/labring/aiproxy/relay/adaptor/vertexai/gemini"
 	"github.com/labring/aiproxy/relay/meta"
 	relaymodel "github.com/labring/aiproxy/relay/model"
 )
@@ -19,21 +21,12 @@ const (
 	VerterAIGemini
 )
 
-var (
-	modelMapping = map[string]ModelType{}
-	modelList    = []*model.ModelConfig{}
-)
+var modelList = []*model.ModelConfig{}
 
 func init() {
-	for _, model := range claude.ModelList {
-		modelMapping[model.Model] = VerterAIClaude
-		modelList = append(modelList, model)
-	}
+	modelList = append(modelList, vertexclaude.ModelList...)
 
-	for _, model := range gemini.ModelList {
-		modelMapping[model.Model] = VerterAIGemini
-		modelList = append(modelList, model)
-	}
+	modelList = append(modelList, gemini.ModelList...)
 }
 
 type innerAIAdapter interface {
@@ -42,12 +35,11 @@ type innerAIAdapter interface {
 }
 
 func GetAdaptor(model string) innerAIAdapter {
-	adaptorType := modelMapping[model]
-	switch adaptorType {
-	case VerterAIClaude:
-		return &claude.Adaptor{}
-	case VerterAIGemini:
-		return &gemini.Adaptor{}
+	switch {
+	case strings.Contains(model, "claude"):
+		return &vertexclaude.Adaptor{}
+	case strings.Contains(model, "gemini"):
+		return &vertexgemini.Adaptor{}
 	default:
 		return nil
 	}

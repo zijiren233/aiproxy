@@ -4,6 +4,7 @@ import (
 	"errors"
 	"strings"
 
+	"github.com/bytedance/sonic"
 	"github.com/labring/aiproxy/relay/adaptor"
 )
 
@@ -18,18 +19,22 @@ func (a *Adaptor) ValidateKey(key string) error {
 }
 
 func (a *Adaptor) KeyHelp() string {
-	return "region|projectID|adcJSON"
+	return "region|adcJSON"
 }
 
 // region|projectID|adcJSON
 func getConfigFromKey(key string) (Config, error) {
-	region, after, ok := strings.Cut(key, "|")
+	region, adcJSON, ok := strings.Cut(key, "|")
 	if !ok {
 		return Config{}, errors.New("invalid key format")
 	}
-	projectID, adcJSON, ok := strings.Cut(after, "|")
-	if !ok {
-		return Config{}, errors.New("invalid key format")
+	node, err := sonic.GetFromString(adcJSON, "project_id")
+	if err != nil {
+		return Config{}, err
+	}
+	projectID, err := node.String()
+	if err != nil {
+		return Config{}, err
 	}
 	return Config{
 		Region:    region,
