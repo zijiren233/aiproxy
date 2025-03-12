@@ -852,7 +852,7 @@ var ModelList = []*model.ModelConfig{
 		Model: "gte-rerank",
 		Type:  relaymode.Rerank,
 		Owner: model.ModelOwnerAlibaba,
-		RPM:   5,
+		RPM:   300,
 		Config: model.NewModelConfig(
 			model.WithModelConfigMaxContextTokens(4000),
 			model.WithModelConfigMaxInputTokens(4000),
@@ -864,7 +864,7 @@ var ModelList = []*model.ModelConfig{
 		Type:       relaymode.Embeddings,
 		Owner:      model.ModelOwnerAlibaba,
 		InputPrice: 0.0007,
-		RPM:        30,
+		RPM:        1800,
 		Config: model.NewModelConfig(
 			model.WithModelConfigMaxInputTokens(2048),
 		),
@@ -874,7 +874,7 @@ var ModelList = []*model.ModelConfig{
 		Type:       relaymode.Embeddings,
 		Owner:      model.ModelOwnerAlibaba,
 		InputPrice: 0.0007,
-		RPM:        30,
+		RPM:        1800,
 		Config: model.NewModelConfig(
 			model.WithModelConfigMaxInputTokens(2048),
 		),
@@ -884,7 +884,7 @@ var ModelList = []*model.ModelConfig{
 		Type:       relaymode.Embeddings,
 		Owner:      model.ModelOwnerAlibaba,
 		InputPrice: 0.0007,
-		RPM:        30,
+		RPM:        1800,
 		Config: model.NewModelConfig(
 			model.WithModelConfigMaxInputTokens(8192),
 		),
