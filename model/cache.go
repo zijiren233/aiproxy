@@ -611,6 +611,7 @@ func initializeChannelModelMapping(channel *Channel) {
 	}
 }
 
+//nolint:unused
 func buildChannelIDMap(channels []*Channel) map[int]*Channel {
 	channelMap := make(map[int]*Channel)
 	for _, channel := range channels {
