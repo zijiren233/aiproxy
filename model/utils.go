@@ -198,14 +198,27 @@ func BatchRecordConsume(
 		downstreamResult,
 	)
 
-	if !downstreamResult {
-		return err
-	}
-
 	amountDecimal := decimal.NewFromFloat(amount)
 
 	batchData.Lock()
 	defer batchData.Unlock()
+
+	if channelID > 0 {
+		if _, ok := batchData.Channels[channelID]; !ok {
+			batchData.Channels[channelID] = &ChannelUpdate{}
+		}
+
+		if amount > 0 {
+			batchData.Channels[channelID].Amount = amountDecimal.
+				Add(decimal.NewFromFloat(batchData.Channels[channelID].Amount)).
+				InexactFloat64()
+		}
+		batchData.Channels[channelID].Count++
+	}
+
+	if !downstreamResult {
+		return err
+	}
 
 	if group != "" {
 		if _, ok := batchData.Groups[group]; !ok {
@@ -231,19 +244,6 @@ func BatchRecordConsume(
 				InexactFloat64()
 		}
 		batchData.Tokens[tokenID].Count++
-	}
-
-	if channelID > 0 {
-		if _, ok := batchData.Channels[channelID]; !ok {
-			batchData.Channels[channelID] = &ChannelUpdate{}
-		}
-
-		if amount > 0 {
-			batchData.Channels[channelID].Amount = amountDecimal.
-				Add(decimal.NewFromFloat(batchData.Channels[channelID].Amount)).
-				InexactFloat64()
-		}
-		batchData.Channels[channelID].Count++
 	}
 
 	return err
