@@ -421,6 +421,8 @@ func retryLoop(c *gin.Context, mode relaymode.Mode, requestModel string, state *
 			recordResult(c, state.meta, state.result, i+1, true)
 			break
 		}
+
+		i++
 	}
 
 	if state.result.Error != nil {
