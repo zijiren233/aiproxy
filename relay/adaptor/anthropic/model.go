@@ -51,7 +51,7 @@ type Request struct {
 	ToolChoice    any       `json:"tool_choice,omitempty"`
 	Temperature   *float64  `json:"temperature,omitempty"`
 	TopP          *float64  `json:"top_p,omitempty"`
-	Model         string    `json:"model"`
+	Model         string    `json:"model,omitempty"`
 	System        string    `json:"system,omitempty"`
 	Messages      []Message `json:"messages"`
 	StopSequences []string  `json:"stop_sequences,omitempty"`
