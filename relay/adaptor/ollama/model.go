@@ -12,9 +12,24 @@ type Options struct {
 }
 
 type Message struct {
-	Role    string   `json:"role,omitempty"`
-	Content string   `json:"content,omitempty"`
-	Images  []string `json:"images,omitempty"`
+	Role       string   `json:"role,omitempty"`
+	Content    string   `json:"content,omitempty"`
+	ToolCallID string   `json:"tool_call_id,omitempty"`
+	ToolCalls  []*Tool  `json:"tool_calls,omitempty"`
+	Images     []string `json:"images,omitempty"`
+}
+
+type Tool struct {
+	ID       string   `json:"id,omitempty"`
+	Type     string   `json:"type,omitempty"`
+	Function Function `json:"function"`
+}
+
+type Function struct {
+	Parameters  any            `json:"parameters,omitempty"`
+	Arguments   map[string]any `json:"arguments,omitempty"`
+	Description string         `json:"description,omitempty"`
+	Name        string         `json:"name,omitempty"`
 }
 
 type ChatRequest struct {
@@ -23,6 +38,7 @@ type ChatRequest struct {
 	Messages []Message `json:"messages,omitempty"`
 	Stream   bool      `json:"stream"`
 	Format   any       `json:"format,omitempty"`
+	Tools    []*Tool   `json:"tools,omitempty"`
 }
 
 type ChatResponse struct {
@@ -37,6 +53,7 @@ type ChatResponse struct {
 	EvalCount       int     `json:"eval_count,omitempty"`
 	EvalDuration    int     `json:"eval_duration,omitempty"`
 	Done            bool    `json:"done,omitempty"`
+	DoneReason      string  `json:"done_reason,omitempty"`
 }
 
 type EmbeddingRequest struct {

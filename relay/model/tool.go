@@ -2,7 +2,7 @@ package model
 
 type Tool struct {
 	ID       string   `json:"id,omitempty"`
-	Type     string   `json:"type,omitempty"` // when splicing claude tools stream messages, it is empty
+	Type     string   `json:"type,omitempty"`
 	Function Function `json:"function"`
 }
 
