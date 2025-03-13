@@ -20,7 +20,6 @@ import (
 	"github.com/labring/aiproxy/middleware"
 	"github.com/labring/aiproxy/relay/meta"
 	"github.com/labring/aiproxy/relay/model"
-	"github.com/labring/aiproxy/relay/relaymode"
 )
 
 const (
@@ -131,74 +130,51 @@ func StreamHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model
 			break
 		}
 
-		switch meta.Mode {
-		case relaymode.ChatCompletions:
-			node, err := sonic.Get(data)
-			if err != nil {
-				log.Error("error unmarshalling stream response: " + err.Error())
-				continue
-			}
-			streamResponse, err := GetUsageAndChoicesResponseFromNode(&node)
-			if err != nil {
-				log.Error("error unmarshalling stream response: " + err.Error())
-				continue
-			}
-			if streamResponse.Usage != nil {
-				usage = streamResponse.Usage
-				responseText.Reset()
-			}
-			for _, choice := range streamResponse.Choices {
-				if usage == nil {
+		node, err := sonic.Get(data)
+		if err != nil {
+			log.Error("error unmarshalling stream response: " + err.Error())
+			continue
+		}
+		streamResponse, err := GetUsageAndChoicesResponseFromNode(&node)
+		if err != nil {
+			log.Error("error unmarshalling stream response: " + err.Error())
+			continue
+		}
+		if streamResponse.Usage != nil {
+			usage = streamResponse.Usage
+			responseText.Reset()
+		}
+		for _, choice := range streamResponse.Choices {
+			if usage == nil {
+				if choice.Text != "" {
+					responseText.WriteString(choice.Text)
+				} else {
 					responseText.WriteString(choice.Delta.StringContent())
 				}
-				if choice.Delta.ReasoningContent != "" {
-					hasReasoningContent = true
-				}
 			}
-
-			_, err = node.Set("model", ast.NewString(meta.OriginModel))
-			if err != nil {
-				log.Error("error set model: " + err.Error())
+			if choice.Delta.ReasoningContent != "" {
+				hasReasoningContent = true
 			}
-
-			if meta.ChannelConfig.SplitThink && !hasReasoningContent {
-				respMap, err := node.Map()
-				if err != nil {
-					log.Error("error get node map: " + err.Error())
-					continue
-				}
-				StreamSplitThink(respMap, thinkSplitter, func(data map[string]any) {
-					_ = render.ObjectData(c, data)
-				})
-				continue
-			}
-
-			_ = render.ObjectData(c, &node)
-		case relaymode.Completions:
-			node, err := sonic.Get(data)
-			if err != nil {
-				log.Error("error unmarshalling stream response: " + err.Error())
-				continue
-			}
-			streamResponse, err := GetUsageAndChoicesResponseFromNode(&node)
-			if err != nil {
-				log.Error("error unmarshalling stream response: " + err.Error())
-				continue
-			}
-			if streamResponse.Usage != nil {
-				usage = streamResponse.Usage
-				responseText.Reset()
-			} else {
-				for _, choice := range streamResponse.Choices {
-					responseText.WriteString(choice.Text)
-				}
-			}
-			_, err = node.Set("model", ast.NewString(meta.OriginModel))
-			if err != nil {
-				log.Error("error set model: " + err.Error())
-			}
-			_ = render.ObjectData(c, &node)
 		}
+
+		_, err = node.Set("model", ast.NewString(meta.OriginModel))
+		if err != nil {
+			log.Error("error set model: " + err.Error())
+		}
+
+		if meta.ChannelConfig.SplitThink && !hasReasoningContent {
+			respMap, err := node.Map()
+			if err != nil {
+				log.Error("error get node map: " + err.Error())
+				continue
+			}
+			StreamSplitThink(respMap, thinkSplitter, func(data map[string]any) {
+				_ = render.ObjectData(c, data)
+			})
+			continue
+		}
+
+		_ = render.ObjectData(c, &node)
 	}
 
 	if err := scanner.Err(); err != nil {

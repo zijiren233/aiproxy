@@ -31,6 +31,8 @@ func (a *Adaptor) GetRequestURL(meta *meta.Meta) (string, error) {
 		return u + "/api/embed", nil
 	case relaymode.ChatCompletions:
 		return u + "/api/chat", nil
+	case relaymode.Completions:
+		return u + "/api/generate", nil
 	default:
 		return "", fmt.Errorf("unsupported mode: %s", meta.Mode)
 	}
@@ -48,7 +50,7 @@ func (a *Adaptor) ConvertRequest(meta *meta.Meta, request *http.Request) (string
 	switch meta.Mode {
 	case relaymode.Embeddings:
 		return ConvertEmbeddingRequest(meta, request)
-	case relaymode.ChatCompletions:
+	case relaymode.ChatCompletions, relaymode.Completions:
 		return ConvertRequest(meta, request)
 	default:
 		return "", nil, nil, fmt.Errorf("unsupported mode: %s", meta.Mode)
@@ -63,7 +65,7 @@ func (a *Adaptor) DoResponse(meta *meta.Meta, c *gin.Context, resp *http.Respons
 	switch meta.Mode {
 	case relaymode.Embeddings:
 		usage, err = EmbeddingHandler(meta, c, resp)
-	case relaymode.ChatCompletions:
+	case relaymode.ChatCompletions, relaymode.Completions:
 		if utils.IsStreamResponse(resp) {
 			usage, err = StreamHandler(meta, c, resp)
 		} else {
