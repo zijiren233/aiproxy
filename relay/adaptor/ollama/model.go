@@ -9,6 +9,7 @@ type Options struct {
 	TopK             int      `json:"top_k,omitempty"`
 	NumPredict       int      `json:"num_predict,omitempty"`
 	NumCtx           int      `json:"num_ctx,omitempty"`
+	Stop             any      `json:"stop,omitempty"`
 }
 
 type Message struct {
@@ -36,24 +37,25 @@ type ChatRequest struct {
 	Options  *Options  `json:"options,omitempty"`
 	Model    string    `json:"model,omitempty"`
 	Messages []Message `json:"messages,omitempty"`
+	Prompt   any       `json:"prompt,omitempty"`
 	Stream   bool      `json:"stream"`
 	Format   any       `json:"format,omitempty"`
 	Tools    []*Tool   `json:"tools,omitempty"`
 }
 
 type ChatResponse struct {
-	Model           string  `json:"model,omitempty"`
-	CreatedAt       string  `json:"created_at,omitempty"`
-	Response        string  `json:"response,omitempty"`
-	Error           string  `json:"error,omitempty"`
-	Message         Message `json:"message,omitempty"`
-	TotalDuration   int     `json:"total_duration,omitempty"`
-	LoadDuration    int     `json:"load_duration,omitempty"`
-	PromptEvalCount int     `json:"prompt_eval_count,omitempty"`
-	EvalCount       int     `json:"eval_count,omitempty"`
-	EvalDuration    int     `json:"eval_duration,omitempty"`
-	Done            bool    `json:"done,omitempty"`
-	DoneReason      string  `json:"done_reason,omitempty"`
+	Model           string   `json:"model,omitempty"`
+	CreatedAt       string   `json:"created_at,omitempty"`
+	Response        string   `json:"response,omitempty"`
+	Error           string   `json:"error,omitempty"`
+	Message         *Message `json:"message,omitempty"`
+	TotalDuration   int      `json:"total_duration,omitempty"`
+	LoadDuration    int      `json:"load_duration,omitempty"`
+	PromptEvalCount int      `json:"prompt_eval_count,omitempty"`
+	EvalCount       int      `json:"eval_count,omitempty"`
+	EvalDuration    int      `json:"eval_duration,omitempty"`
+	Done            bool     `json:"done,omitempty"`
+	DoneReason      string   `json:"done_reason,omitempty"`
 }
 
 type EmbeddingRequest struct {

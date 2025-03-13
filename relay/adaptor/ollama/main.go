@@ -38,10 +38,19 @@ func ConvertRequest(meta *meta.Meta, req *http.Request) (string, http.Header, io
 			PresencePenalty:  request.PresencePenalty,
 			NumPredict:       request.MaxTokens,
 			NumCtx:           request.NumCtx,
+			Stop:             request.Stop,
 		},
 		Stream:   request.Stream,
 		Messages: make([]Message, 0, len(request.Messages)),
+		Prompt:   request.Prompt,
 		Tools:    make([]*Tool, 0, len(request.Tools)),
+	}
+
+	if request.ResponseFormat != nil &&
+		request.ResponseFormat.Type == "json_schema" &&
+		request.ResponseFormat.JSONSchema != nil &&
+		request.ResponseFormat.JSONSchema.Schema != nil {
+		ollamaRequest.Format = request.ResponseFormat.JSONSchema.Schema
 	}
 
 	for _, message := range request.Messages {
@@ -104,7 +113,7 @@ func ConvertRequest(meta *meta.Meta, req *http.Request) (string, http.Header, io
 }
 
 func getToolCalls(ollamaResponse *ChatResponse) []*relaymodel.Tool {
-	if len(ollamaResponse.Message.ToolCalls) == 0 {
+	if ollamaResponse.Message == nil || len(ollamaResponse.Message.ToolCalls) == 0 {
 		return nil
 	}
 	toolCalls := make([]*relaymodel.Tool, 0, len(ollamaResponse.Message.ToolCalls))
@@ -125,14 +134,16 @@ func getToolCalls(ollamaResponse *ChatResponse) []*relaymodel.Tool {
 	return toolCalls
 }
 
-func responseOllama2OpenAI(meta *meta.Meta, response *ChatResponse) *openai.TextResponse {
+func response2OpenAI(meta *meta.Meta, response *ChatResponse) *openai.TextResponse {
 	choice := openai.TextResponseChoice{
-		Index: 0,
-		Message: relaymodel.Message{
+		Text: response.Response,
+	}
+	if response.Message != nil {
+		choice.Message = relaymodel.Message{
 			Role:      response.Message.Role,
 			Content:   response.Message.Content,
 			ToolCalls: getToolCalls(response),
-		},
+		}
 	}
 	if response.Done {
 		choice.FinishReason = response.DoneReason
@@ -152,13 +163,16 @@ func responseOllama2OpenAI(meta *meta.Meta, response *ChatResponse) *openai.Text
 	return &fullTextResponse
 }
 
-func streamResponseOllama2OpenAI(meta *meta.Meta, ollamaResponse *ChatResponse) *openai.ChatCompletionsStreamResponse {
+func streamResponse2OpenAI(meta *meta.Meta, ollamaResponse *ChatResponse) *openai.ChatCompletionsStreamResponse {
 	choice := openai.ChatCompletionsStreamResponseChoice{
-		Delta: relaymodel.Message{
+		Text: ollamaResponse.Response,
+	}
+	if ollamaResponse.Message != nil {
+		choice.Delta = relaymodel.Message{
 			Role:      ollamaResponse.Message.Role,
 			Content:   ollamaResponse.Message.Content,
 			ToolCalls: getToolCalls(ollamaResponse),
-		},
+		}
 	}
 	if ollamaResponse.Done {
 		choice.FinishReason = &ollamaResponse.DoneReason
@@ -211,7 +225,7 @@ func StreamHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*relay
 			continue
 		}
 
-		response := streamResponseOllama2OpenAI(meta, &ollamaResponse)
+		response := streamResponse2OpenAI(meta, &ollamaResponse)
 		if response.Usage != nil {
 			usage = response.Usage
 		}
@@ -321,7 +335,7 @@ func Handler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*relaymodel.
 	if ollamaResponse.Error != "" {
 		return nil, openai.ErrorWrapperWithMessage(ollamaResponse.Error, openai.ErrorTypeUpstream, resp.StatusCode)
 	}
-	fullTextResponse := responseOllama2OpenAI(meta, &ollamaResponse)
+	fullTextResponse := response2OpenAI(meta, &ollamaResponse)
 
 	if meta.ChannelConfig.SplitThink {
 		openai.SplitThinkModeld(fullTextResponse)
