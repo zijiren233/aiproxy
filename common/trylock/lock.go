@@ -21,12 +21,9 @@ func cleanMemLock() {
 
 	for now := range ticker.C {
 		memRecord.Range(func(key, value any) bool {
-			if exp, ok := value.(time.Time); ok {
-				if now.After(exp) {
-					memRecord.Delete(key)
-				}
-			} else {
-				memRecord.Delete(key)
+			exp, ok := value.(time.Time)
+			if !ok || now.After(exp) {
+				memRecord.CompareAndDelete(key, value)
 			}
 			return true
 		})
@@ -44,7 +41,7 @@ func MemLock(key string, expiration time.Duration) bool {
 		}
 		oldExpiration, ok := actual.(time.Time)
 		if !ok {
-			memRecord.Delete(key)
+			memRecord.CompareAndDelete(key, actual)
 			continue
 		}
 		if now.After(oldExpiration) {
