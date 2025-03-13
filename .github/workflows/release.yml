@@ -223,15 +223,23 @@ jobs:
       - name: Create manifest list and push
         working-directory: ${{ runner.temp }}/digests
         run: |
-          docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
-            $(printf '${{ env.GHCR_REPO }}@sha256:%s ' *)
+          TAGS=$(jq -r '.tags[]' <<< "$DOCKER_METADATA_OUTPUT_JSON")
+
+          for TAG in $TAGS; do
+            docker buildx imagetools create -t $TAG $(printf '${{ env.GHCR_REPO }}@sha256:%s ' *)
+          done
+
           if [ -n "${{ env.DOCKERHUB_REPO }}" ]; then
-            docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
-              $(printf '${{ env.DOCKERHUB_REPO }}@sha256:%s ' *)
+            for TAG in $TAGS; do
+              docker buildx imagetools create -t $TAG $(printf '${{ env.DOCKERHUB_REPO }}@sha256:%s ' *)
+            done
           fi
+
           if [ -n "${{ env.ALIYUN_REPO }}" ]; then
-            docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
-              $(printf '${{ env.ALIYUN_REPO }}@sha256:%s ' *)
+            for TAG in $TAGS; do
+              docker buildx imagetools create -t $TAG $(printf '${{ env.ALIYUN_REPO }}@sha256:%s ' *)
+              sleep 5
+            done
           fi
 
       - name: Inspect image
