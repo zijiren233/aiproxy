@@ -225,21 +225,7 @@ jobs:
         run: |
           docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
             $(printf '${{ env.GHCR_REPO }}@sha256:%s ' *)
-          if [ -n "${{ env.DOCKERHUB_REPO }}" ]; then
-            docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
-              $(printf '${{ env.DOCKERHUB_REPO }}@sha256:%s ' *)
-          fi
-          if [ -n "${{ env.ALIYUN_REPO }}" ]; then
-            docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
-              $(printf '${{ env.ALIYUN_REPO }}@sha256:%s ' *)
-          fi
 
       - name: Inspect image
         run: |
           docker buildx imagetools inspect ${{ env.GHCR_REPO }}:${{ steps.meta.outputs.version }}
-          if [ -n "${{ env.DOCKERHUB_REPO }}" ]; then
-            docker buildx imagetools inspect ${{ env.DOCKERHUB_REPO }}:${{ steps.meta.outputs.version }}
-          fi
-          if [ -n "${{ env.ALIYUN_REPO }}" ]; then
-            docker buildx imagetools inspect ${{ env.ALIYUN_REPO }}:${{ steps.meta.outputs.version }}
-          fi
