@@ -31,7 +31,7 @@ type RerankMeta struct {
 }
 
 type RerankResponse struct {
-	Meta   RerankMeta      `json:"meta"`
-	ID     string          `json:"id"`
-	Result []*RerankResult `json:"result"`
+	Meta    RerankMeta      `json:"meta"`
+	ID      string          `json:"id"`
+	Results []*RerankResult `json:"results"`
 }
