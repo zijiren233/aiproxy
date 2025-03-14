@@ -320,7 +320,7 @@ func ResponseClaude2OpenAI(meta *meta.Meta, claudeResponse *Response) *openai.Te
 
 func StreamHandler(m *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, *model.ErrorWithStatusCode) {
 	if resp.StatusCode != http.StatusOK {
-		return nil, openai.ErrorHanlder(resp)
+		return nil, ErrorHandler(resp)
 	}
 
 	defer resp.Body.Close()
@@ -424,7 +424,7 @@ func StreamHandler(m *meta.Meta, c *gin.Context, resp *http.Response) (*model.Us
 
 func Handler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, *model.ErrorWithStatusCode) {
 	if resp.StatusCode != http.StatusOK {
-		return nil, openai.ErrorHanlder(resp)
+		return nil, ErrorHandler(resp)
 	}
 
 	defer resp.Body.Close()

@@ -16,17 +16,20 @@ import (
 
 // tokenEncoderMap won't grow after initialization
 var (
-	tokenEncoderMap     = map[string]*tiktoken.Tiktoken{}
-	defaultTokenEncoder *tiktoken.Tiktoken
-	tokenEncoderLock    sync.RWMutex
+	tokenEncoderMap         = map[string]*tiktoken.Tiktoken{}
+	defaultTokenEncoder     *tiktoken.Tiktoken
+	defaultTokenEncoderOnce sync.Once
+	tokenEncoderLock        sync.RWMutex
 )
 
-func init() {
-	gpt35TokenEncoder, err := tiktoken.EncodingForModel("gpt-3.5-turbo")
-	if err != nil {
-		log.Fatal("failed to get gpt-3.5-turbo token encoder: " + err.Error())
-	}
-	defaultTokenEncoder = gpt35TokenEncoder
+func InitDefaultTokenEncoder() {
+	defaultTokenEncoderOnce.Do(func() {
+		gpt35TokenEncoder, err := tiktoken.EncodingForModel("gpt-3.5-turbo")
+		if err != nil {
+			log.Fatal("failed to get gpt-3.5-turbo token encoder: " + err.Error())
+		}
+		defaultTokenEncoder = gpt35TokenEncoder
+	})
 }
 
 func getTokenEncoder(model string) *tiktoken.Tiktoken {
@@ -36,6 +39,8 @@ func getTokenEncoder(model string) *tiktoken.Tiktoken {
 	if ok {
 		return tokenEncoder
 	}
+
+	InitDefaultTokenEncoder()
 
 	tokenEncoderLock.Lock()
 	defer tokenEncoderLock.Unlock()
