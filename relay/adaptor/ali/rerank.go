@@ -83,8 +83,8 @@ func RerankHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*relay
 				OutputTokens: 0,
 			},
 		},
-		Result: rerankResponse.Output.Results,
-		ID:     rerankResponse.RequestID,
+		Results: rerankResponse.Output.Results,
+		ID:      rerankResponse.RequestID,
 	}
 
 	var usage *relaymodel.Usage
