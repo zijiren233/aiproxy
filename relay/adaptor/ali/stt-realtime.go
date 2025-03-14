@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"io"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/bytedance/sonic"
@@ -76,6 +77,18 @@ func ConvertSTTRequest(meta *meta.Meta, request *http.Request) (string, http.Hea
 	if err != nil {
 		return "", nil, nil, err
 	}
+	format := "mp3"
+	if request.FormValue("format") != "" {
+		format = request.FormValue("format")
+	}
+	sampleRate := 24000
+	if request.FormValue("sample_rate") != "" {
+		sampleRate, err = strconv.Atoi(request.FormValue("sample_rate"))
+		if err != nil {
+			return "", nil, nil, err
+		}
+	}
+
 	sttRequest := STTMessage{
 		Header: STTHeader{
 			Action:    "run-task",
@@ -88,6 +101,10 @@ func ConvertSTTRequest(meta *meta.Meta, request *http.Request) (string, http.Hea
 			TaskGroup: "audio",
 			Function:  "recognition",
 			Input:     STTInput{},
+			Parameters: STTParameters{
+				Format:     format,
+				SampleRate: sampleRate,
+			},
 		},
 	}
 
@@ -156,9 +173,17 @@ func STTDoResponse(meta *meta.Meta, c *gin.Context, _ *http.Response) (usage *re
 		}
 		switch msg.Header.Event {
 		case "task-started":
-			err = conn.WriteMessage(websocket.BinaryMessage, audioData)
-			if err != nil {
-				return usage, openai.ErrorWrapperWithMessage("ali_wss_write_msg_failed", "ali_wss_write_msg_failed", http.StatusInternalServerError)
+			chunkSize := 3 * 1024
+			for i := 0; i < len(audioData); i += chunkSize {
+				end := i + chunkSize
+				if end > len(audioData) {
+					end = len(audioData)
+				}
+				chunk := audioData[i:end]
+				err = conn.WriteMessage(websocket.BinaryMessage, chunk)
+				if err != nil {
+					return usage, openai.ErrorWrapperWithMessage("ali_wss_write_msg_failed", "ali_wss_write_msg_failed", http.StatusInternalServerError)
+				}
 			}
 			finishMsg := STTMessage{
 				Header: STTHeader{
@@ -179,7 +204,8 @@ func STTDoResponse(meta *meta.Meta, c *gin.Context, _ *http.Response) (usage *re
 				return usage, openai.ErrorWrapperWithMessage("ali_wss_write_msg_failed", "ali_wss_write_msg_failed", http.StatusInternalServerError)
 			}
 		case "result-generated":
-			if msg.Payload.Output.STTSentence.Text != "" {
+			if msg.Payload.Output.STTSentence.EndTime != nil &&
+				msg.Payload.Output.STTSentence.Text != "" {
 				output.WriteString(msg.Payload.Output.STTSentence.Text)
 			}
 			continue
