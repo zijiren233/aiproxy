@@ -55,7 +55,7 @@ func (a *Adaptor) SetupRequestHeader(meta *meta.Meta, _ *gin.Context, req *http.
 	if err != nil {
 		return err
 	}
-	req.Header.Set("Authorization", "Bearer "+token.Token)
+	req.Header.Set("Authorization", "Bearer "+token)
 	return nil
 }
 

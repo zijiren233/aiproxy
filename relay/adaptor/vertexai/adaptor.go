@@ -104,7 +104,7 @@ func (a *Adaptor) SetupRequestHeader(meta *meta.Meta, _ *gin.Context, req *http.
 	if err != nil {
 		return err
 	}
-	token, err := getToken(context.Background(), meta.Channel.ID, config.ADCJSON)
+	token, err := getToken(context.Background(), config.ADCJSON)
 	if err != nil {
 		return err
 	}
