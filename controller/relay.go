@@ -338,10 +338,12 @@ func getInitialChannel(c *gin.Context, model string, log *log.Entry) (*initialCh
 }
 
 func handleRelayResult(c *gin.Context, bizErr *model.ErrorWithStatusCode, retry bool, retryTimes int) (done bool) {
-	if bizErr == nil || c.Request.Context().Err() != nil {
+	if bizErr == nil {
 		return true
 	}
-	if !retry || retryTimes == 0 {
+	if !retry ||
+		retryTimes == 0 ||
+		c.Request.Context().Err() != nil {
 		bizErr.Error.Message = middleware.MessageWithRequestID(c, bizErr.Error.Message)
 		c.JSON(bizErr.StatusCode, bizErr)
 		return true
