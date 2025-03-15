@@ -13,6 +13,7 @@ import (
 
 	"github.com/bytedance/sonic"
 	"github.com/patrickmn/go-cache"
+	log "github.com/sirupsen/logrus"
 )
 
 var tokenCache = cache.New(time.Hour*23, time.Minute)
@@ -31,7 +32,8 @@ func GetBearerToken(ctx context.Context, apiKey string) (string, error) {
 	}
 	tokenResponse, err := getBaiduAccessTokenHelper(ctx, apiKey)
 	if err != nil {
-		return "", err
+		log.Errorf("get baiduv2 access token failed: %v", err)
+		return "", errors.New("get baiduv2 access token failed")
 	}
 	tokenCache.Set(apiKey, tokenResponse.Token, time.Until(tokenResponse.ExpireTime.Add(-time.Minute*10)))
 	return tokenResponse.Token, nil
