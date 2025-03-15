@@ -43,6 +43,8 @@ func (a *Adaptor) GetRequestURL(meta *meta.Meta) (string, error) {
 	switch meta.Mode {
 	case relaymode.ChatCompletions:
 		return meta.Channel.BaseURL + "/chat/completions", nil
+	case relaymode.Rerank:
+		return meta.Channel.BaseURL + "/rerankers", nil
 	default:
 		return "", fmt.Errorf("unsupported mode: %s", meta.Mode)
 	}
@@ -59,7 +61,8 @@ func (a *Adaptor) SetupRequestHeader(meta *meta.Meta, _ *gin.Context, req *http.
 
 func (a *Adaptor) ConvertRequest(meta *meta.Meta, req *http.Request) (string, http.Header, io.Reader, error) {
 	switch meta.Mode {
-	case relaymode.ChatCompletions:
+	case relaymode.ChatCompletions,
+		relaymode.Rerank:
 		actModel := meta.ActualModel
 		v2Model := toV2ModelName(actModel)
 		if v2Model != actModel {
@@ -78,7 +81,8 @@ func (a *Adaptor) DoRequest(_ *meta.Meta, _ *gin.Context, req *http.Request) (*h
 
 func (a *Adaptor) DoResponse(meta *meta.Meta, c *gin.Context, resp *http.Response) (usage *relaymodel.Usage, err *relaymodel.ErrorWithStatusCode) {
 	switch meta.Mode {
-	case relaymode.ChatCompletions:
+	case relaymode.ChatCompletions,
+		relaymode.Rerank:
 		return openai.DoResponse(meta, c, resp)
 	default:
 		return nil, openai.ErrorWrapperWithMessage(
