@@ -27,14 +27,17 @@ type ApplicationDefaultCredentials struct {
 	UniverseDomain          string `json:"universe_domain"`
 }
 
-var Cache = cache.New(50*time.Minute, 55*time.Minute)
+var tokenCache = cache.New(50*time.Minute, time.Minute)
 
 const defaultScope = "https://www.googleapis.com/auth/cloud-platform"
 
-func getToken(ctx context.Context, channelID int, adcJSON string) (string, error) {
-	cacheKey := fmt.Sprintf("vertexai-token-%d", channelID)
-	if token, found := Cache.Get(cacheKey); found {
-		return token.(string), nil
+func getToken(ctx context.Context, adcJSON string) (string, error) {
+	if tokenI, found := tokenCache.Get(adcJSON); found {
+		token, ok := tokenI.(string)
+		if !ok {
+			panic(fmt.Sprintf("invalid cache value type: %T", tokenI))
+		}
+		return token, nil
 	}
 	adc := &ApplicationDefaultCredentials{}
 	if err := sonic.UnmarshalString(adcJSON, adc); err != nil {
@@ -56,8 +59,11 @@ func getToken(ctx context.Context, channelID int, adcJSON string) (string, error
 	if err != nil {
 		return "", fmt.Errorf("failed to generate access token: %w", err)
 	}
-	_ = resp
-
-	Cache.Set(cacheKey, resp.GetAccessToken(), cache.DefaultExpiration)
+	expireTime := resp.GetExpireTime()
+	expireTimeTime := time.Now().Add(time.Minute * 50)
+	if expireTime != nil {
+		expireTimeTime = expireTime.AsTime()
+	}
+	tokenCache.Set(adcJSON, resp.GetAccessToken(), time.Until(expireTimeTime.Add(-time.Minute*10)))
 	return resp.GetAccessToken(), nil
 }

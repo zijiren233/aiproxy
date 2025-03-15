@@ -9,44 +9,37 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/bytedance/sonic"
-	log "github.com/sirupsen/logrus"
+	"github.com/patrickmn/go-cache"
 )
+
+var tokenCache = cache.New(time.Hour*23, time.Minute)
+
+func GetBearerToken(ctx context.Context, apiKey string) (string, error) {
+	parts := strings.Split(apiKey, "|")
+	if len(parts) != 2 {
+		return "", errors.New("invalid baidu apikey")
+	}
+	if val, ok := tokenCache.Get(apiKey); ok {
+		token, ok := val.(string)
+		if !ok {
+			panic(fmt.Sprintf("invalid cache value type: %T", val))
+		}
+		return token, nil
+	}
+	tokenResponse, err := getBaiduAccessTokenHelper(ctx, apiKey)
+	if err != nil {
+		return "", err
+	}
+	tokenCache.Set(apiKey, tokenResponse.Token, time.Until(tokenResponse.ExpireTime.Add(-time.Minute*10)))
+	return tokenResponse.Token, nil
+}
 
 type TokenResponse struct {
 	ExpireTime time.Time `json:"expireTime"`
 	Token      string    `json:"token"`
-}
-
-var baiduTokenStore sync.Map
-
-func GetBearerToken(ctx context.Context, apiKey string) (*TokenResponse, error) {
-	parts := strings.Split(apiKey, "|")
-	if len(parts) != 2 {
-		return nil, errors.New("invalid baidu apikey")
-	}
-	if val, ok := baiduTokenStore.Load("bearer|" + apiKey); ok {
-		var tokenResponse TokenResponse
-		if tokenResponse, ok = val.(TokenResponse); ok {
-			if time.Now().Add(time.Hour).After(tokenResponse.ExpireTime) {
-				go func() {
-					_, err := getBaiduAccessTokenHelper(context.Background(), apiKey)
-					if err != nil {
-						log.Errorf("get baidu access token failed: %v", err)
-					}
-				}()
-			}
-			return &tokenResponse, nil
-		}
-	}
-	tokenResponse, err := getBaiduAccessTokenHelper(ctx, apiKey)
-	if err != nil {
-		return nil, err
-	}
-	return tokenResponse, nil
 }
 
 func getBaiduAccessTokenHelper(ctx context.Context, apiKey string) (*TokenResponse, error) {
@@ -76,7 +69,6 @@ func getBaiduAccessTokenHelper(ctx context.Context, apiKey string) (*TokenRespon
 	if err != nil {
 		return nil, err
 	}
-	baiduTokenStore.Store("bearer|"+apiKey, tokenResponse)
 	return &tokenResponse, nil
 }
 
