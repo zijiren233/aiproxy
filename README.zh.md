@@ -32,7 +32,7 @@
 - 多租户系统分离
 - 模型 RPM TPM 限制
 - Think 模型支持 `<think>` 切分到 `reasoning_content`
-- 缓存计费支持
+- 提示词缓存计费支持
 
 ## 部署
 
