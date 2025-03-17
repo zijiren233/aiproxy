@@ -92,13 +92,6 @@ func STTHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Us
 		return nil, ErrorWrapper(err, "read_response_body_failed", http.StatusInternalServerError)
 	}
 
-	var openAIErr SlimTextResponse
-	if err = sonic.Unmarshal(responseBody, &openAIErr); err == nil {
-		if openAIErr.Error.Message != "" {
-			return nil, ErrorWrapper(fmt.Errorf("type %s, code %v, message %s", openAIErr.Error.Type, openAIErr.Error.Code, openAIErr.Error.Message), "request_error", http.StatusInternalServerError)
-		}
-	}
-
 	var text string
 	switch responseFormat {
 	case "text":

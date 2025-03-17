@@ -6,10 +6,12 @@ import (
 )
 
 type PreCheckGroupBalanceReq struct {
-	InputTokens int
-	MaxTokens   int
-	InputPrice  float64
-	OutputPrice float64
+	InputTokens        int
+	MaxTokens          int
+	InputPrice         float64
+	OutputPrice        float64
+	CachedPrice        float64
+	CacheCreationPrice float64
 }
 
 func getPreConsumedAmount(req *PreCheckGroupBalanceReq) float64 {

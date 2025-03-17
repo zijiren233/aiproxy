@@ -47,7 +47,7 @@ type onlyThinkingRequest struct {
 }
 
 func ConvertRequest(meta *meta.Meta, req *http.Request) (*Request, error) {
-	var textRequest model.GeneralOpenAIRequest
+	var textRequest OpenAIRequest
 	err := common.UnmarshalBodyReusable(req, &textRequest)
 	if err != nil {
 		return nil, err
@@ -74,6 +74,7 @@ func ConvertRequest(meta *meta.Meta, req *http.Request) (*Request, error) {
 					Properties: params["properties"],
 					Required:   params["required"],
 				},
+				CacheControl: tool.CacheControl,
 			})
 		}
 	}
@@ -131,14 +132,19 @@ func ConvertRequest(meta *meta.Meta, req *http.Request) (*Request, error) {
 	}
 
 	for _, message := range textRequest.Messages {
-		if message.Role == "system" && claudeRequest.System == "" {
-			claudeRequest.System = message.StringContent()
+		if message.Role == "system" {
+			claudeRequest.System = append(claudeRequest.System, Content{
+				Type:         conetentTypeText,
+				Text:         message.StringContent(),
+				CacheControl: message.CacheControl,
+			})
 			continue
 		}
 		claudeMessage := Message{
 			Role: message.Role,
 		}
 		var content Content
+		content.CacheControl = message.CacheControl
 		if message.IsStringContent() {
 			content.Type = conetentTypeText
 			content.Text = message.StringContent()
@@ -150,13 +156,13 @@ func ConvertRequest(meta *meta.Meta, req *http.Request) (*Request, error) {
 				content.ToolUseID = message.ToolCallID
 			}
 			claudeMessage.Content = append(claudeMessage.Content, content)
-			for i := range message.ToolCalls {
+			for _, toolCall := range message.ToolCalls {
 				inputParam := make(map[string]any)
-				_ = sonic.Unmarshal(conv.StringToBytes(message.ToolCalls[i].Function.Arguments), &inputParam)
+				_ = sonic.Unmarshal(conv.StringToBytes(toolCall.Function.Arguments), &inputParam)
 				claudeMessage.Content = append(claudeMessage.Content, Content{
 					Type:  toolUseType,
-					ID:    message.ToolCalls[i].ID,
-					Name:  message.ToolCalls[i].Function.Name,
+					ID:    toolCall.ID,
+					Name:  toolCall.Function.Name,
 					Input: inputParam,
 				})
 			}
@@ -238,10 +244,14 @@ func StreamResponseClaude2OpenAI(claudeResponse *StreamResponse) *openai.ChatCom
 	case "message_delta":
 		if claudeResponse.Usage != nil {
 			openaiResponse.Usage = &model.Usage{
-				PromptTokens:     claudeResponse.Usage.InputTokens,
+				PromptTokens:     claudeResponse.Usage.InputTokens + claudeResponse.Usage.CacheReadInputTokens + claudeResponse.Usage.CacheCreationInputTokens,
 				CompletionTokens: claudeResponse.Usage.OutputTokens,
-				TotalTokens:      claudeResponse.Usage.InputTokens + claudeResponse.Usage.OutputTokens,
+				PromptTokensDetails: &model.PromptTokensDetails{
+					CachedTokens:        claudeResponse.Usage.CacheReadInputTokens,
+					CacheCreationTokens: claudeResponse.Usage.CacheCreationInputTokens,
+				},
 			}
+			openaiResponse.Usage.TotalTokens = openaiResponse.Usage.PromptTokens + openaiResponse.Usage.CompletionTokens
 		}
 		if claudeResponse.Delta != nil && claudeResponse.Delta.StopReason != nil {
 			stopReason = *claudeResponse.Delta.StopReason
@@ -310,11 +320,15 @@ func ResponseClaude2OpenAI(meta *meta.Meta, claudeResponse *Response) *openai.Te
 		Created: time.Now().Unix(),
 		Choices: []*openai.TextResponseChoice{&choice},
 		Usage: model.Usage{
-			PromptTokens:     claudeResponse.Usage.InputTokens,
+			PromptTokens:     claudeResponse.Usage.InputTokens + claudeResponse.Usage.CacheReadInputTokens + claudeResponse.Usage.CacheCreationInputTokens,
 			CompletionTokens: claudeResponse.Usage.OutputTokens,
-			TotalTokens:      claudeResponse.Usage.InputTokens + claudeResponse.Usage.OutputTokens,
+			PromptTokensDetails: &model.PromptTokensDetails{
+				CachedTokens:        claudeResponse.Usage.CacheReadInputTokens,
+				CacheCreationTokens: claudeResponse.Usage.CacheCreationInputTokens,
+			},
 		},
 	}
+	fullTextResponse.Usage.TotalTokens = fullTextResponse.Usage.PromptTokens + fullTextResponse.Usage.CompletionTokens
 	return &fullTextResponse
 }
 

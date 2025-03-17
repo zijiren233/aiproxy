@@ -309,6 +309,8 @@ func distribute(c *gin.Context, mode relaymode.Mode) {
 			NewMetaByContext(c, nil, mc.Model, mode),
 			0,
 			0,
+			0,
+			0,
 			errMsg,
 			c.ClientIP(),
 			0,

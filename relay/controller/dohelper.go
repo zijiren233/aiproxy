@@ -241,5 +241,9 @@ func updateUsageMetrics(usage *relaymodel.Usage, meta *meta.Meta, log *log.Entry
 	}
 	log.Data["t_input"] = usage.PromptTokens
 	log.Data["t_output"] = usage.CompletionTokens
+	if usage.PromptTokensDetails != nil {
+		log.Data["t_cached"] = usage.PromptTokensDetails.CachedTokens
+		log.Data["t_cache_creation"] = usage.PromptTokensDetails.CacheCreationTokens
+	}
 	log.Data["t_total"] = usage.TotalTokens
 }

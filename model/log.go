@@ -51,12 +51,16 @@ type Log struct {
 	Model                string         `gorm:"index"                                                          json:"model"`
 	RequestID            string         `gorm:"index"                                                          json:"request_id"`
 	Price                float64        `json:"price,omitempty"`
-	ID                   int            `gorm:"primaryKey"                                                     json:"id"`
 	CompletionPrice      float64        `json:"completion_price,omitempty"`
+	CachedPrice          float64        `json:"cached_price,omitempty"`
+	CacheCreationPrice   float64        `json:"cache_creation_price,omitempty"`
+	ID                   int            `gorm:"primaryKey"                                                     json:"id"`
 	TokenID              int            `gorm:"index"                                                          json:"token_id,omitempty"`
 	UsedAmount           float64        `json:"used_amount,omitempty"`
 	PromptTokens         int            `json:"prompt_tokens,omitempty"`
 	CompletionTokens     int            `json:"completion_tokens,omitempty"`
+	CachedTokens         int            `json:"cached_tokens,omitempty"`
+	CacheCreationTokens  int            `json:"cache_creation_tokens,omitempty"`
 	TotalTokens          int            `json:"total_tokens,omitempty"`
 	ChannelID            int            `gorm:"index"                                                          json:"channel,omitempty"`
 	Code                 int            `gorm:"index"                                                          json:"code,omitempty"`
@@ -259,12 +263,16 @@ func RecordConsumeLog(
 	channelID int,
 	promptTokens int,
 	completionTokens int,
+	cachedTokens int,
+	cacheCreationTokens int,
 	modelName string,
 	tokenID int,
 	tokenName string,
 	amount float64,
 	price float64,
 	completionPrice float64,
+	cachedPrice float64,
+	cacheCreationPrice float64,
 	endpoint string,
 	content string,
 	mode int,
@@ -274,28 +282,32 @@ func RecordConsumeLog(
 	downstreamResult bool,
 ) error {
 	log := &Log{
-		RequestID:        requestID,
-		RequestAt:        requestAt,
-		GroupID:          group,
-		CreatedAt:        time.Now(),
-		Code:             code,
-		PromptTokens:     promptTokens,
-		CompletionTokens: completionTokens,
-		TotalTokens:      promptTokens + completionTokens,
-		TokenID:          tokenID,
-		TokenName:        tokenName,
-		Model:            modelName,
-		Mode:             mode,
-		IP:               ip,
-		UsedAmount:       amount,
-		Price:            price,
-		CompletionPrice:  completionPrice,
-		ChannelID:        channelID,
-		Endpoint:         endpoint,
-		Content:          content,
-		RetryTimes:       retryTimes,
-		RequestDetail:    requestDetail,
-		DownstreamResult: downstreamResult,
+		RequestID:           requestID,
+		RequestAt:           requestAt,
+		GroupID:             group,
+		CreatedAt:           time.Now(),
+		Code:                code,
+		PromptTokens:        promptTokens,
+		CompletionTokens:    completionTokens,
+		TotalTokens:         promptTokens + completionTokens,
+		CachedTokens:        cachedTokens,
+		CacheCreationTokens: cacheCreationTokens,
+		TokenID:             tokenID,
+		TokenName:           tokenName,
+		Model:               modelName,
+		Mode:                mode,
+		IP:                  ip,
+		UsedAmount:          amount,
+		Price:               price,
+		CompletionPrice:     completionPrice,
+		CachedPrice:         cachedPrice,
+		CacheCreationPrice:  cacheCreationPrice,
+		ChannelID:           channelID,
+		Endpoint:            endpoint,
+		Content:             content,
+		RetryTimes:          retryTimes,
+		RequestDetail:       requestDetail,
+		DownstreamResult:    downstreamResult,
 	}
 	return LogDB.Create(log).Error
 }

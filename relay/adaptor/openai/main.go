@@ -33,11 +33,6 @@ var (
 	DoneBytes       = conv.StringToBytes(Done)
 )
 
-type UsageAndChoicesResponse struct {
-	Usage   *model.Usage
-	Choices []*ChatCompletionsStreamResponseChoice
-}
-
 const scannerBufferSize = 1024 * 1024 * 2
 
 var scannerBufferPool = sync.Pool{
@@ -59,36 +54,37 @@ func PutScannerBuffer(buf *[]byte) {
 	scannerBufferPool.Put(buf)
 }
 
-func GetUsageAndChoicesResponseFromNode(node *ast.Node) (*UsageAndChoicesResponse, error) {
+func GetUsageOrChatChoicesResponseFromNode(node *ast.Node) (*model.Usage, []*ChatCompletionsStreamResponseChoice, error) {
 	var usage *model.Usage
 	usageNode, err := node.Get("usage").Raw()
 	if err != nil {
 		if !errors.Is(err, ast.ErrNotExist) {
-			return nil, err
+			return nil, nil, err
 		}
 	} else {
 		err = sonic.UnmarshalString(usageNode, &usage)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
+	}
+
+	if usage != nil {
+		return usage, nil, nil
 	}
 
 	var choices []*ChatCompletionsStreamResponseChoice
 	choicesNode, err := node.Get("choices").Raw()
 	if err != nil {
 		if !errors.Is(err, ast.ErrNotExist) {
-			return nil, err
+			return nil, nil, err
 		}
 	} else {
 		err = sonic.UnmarshalString(choicesNode, &choices)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 	}
-	return &UsageAndChoicesResponse{
-		Usage:   usage,
-		Choices: choices,
-	}, nil
+	return nil, choices, nil
 }
 
 func StreamHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, *model.ErrorWithStatusCode) {
@@ -135,16 +131,16 @@ func StreamHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model
 			log.Error("error unmarshalling stream response: " + err.Error())
 			continue
 		}
-		streamResponse, err := GetUsageAndChoicesResponseFromNode(&node)
+		u, ch, err := GetUsageOrChatChoicesResponseFromNode(&node)
 		if err != nil {
 			log.Error("error unmarshalling stream response: " + err.Error())
 			continue
 		}
-		if streamResponse.Usage != nil {
-			usage = streamResponse.Usage
+		if u != nil {
+			usage = u
 			responseText.Reset()
 		}
-		for _, choice := range streamResponse.Choices {
+		for _, choice := range ch {
 			if usage == nil {
 				if choice.Text != "" {
 					responseText.WriteString(choice.Text)
@@ -307,48 +303,37 @@ func SplitThinkModeld(data *TextResponse) {
 	}
 }
 
-func GetSlimTextResponseFromNode(node *ast.Node) (*SlimTextResponse, error) {
-	var e model.Error
-	errorNode, err := node.Get("error").Raw()
-	if err != nil {
-		if !errors.Is(err, ast.ErrNotExist) {
-			return nil, err
-		}
-	} else {
-		err = sonic.UnmarshalString(errorNode, &e)
-		if err != nil {
-			return nil, err
-		}
-	}
-	var choices []*TextResponseChoice
-	choicesNode, err := node.Get("choices").Raw()
-	if err != nil {
-		if !errors.Is(err, ast.ErrNotExist) {
-			return nil, err
-		}
-	} else {
-		err = sonic.UnmarshalString(choicesNode, &choices)
-		if err != nil {
-			return nil, err
-		}
-	}
-	var usage model.Usage
+func GetUsageOrChoicesResponseFromNode(node *ast.Node) (*model.Usage, []*TextResponseChoice, error) {
+	var usage *model.Usage
 	usageNode, err := node.Get("usage").Raw()
 	if err != nil {
 		if !errors.Is(err, ast.ErrNotExist) {
-			return nil, err
+			return nil, nil, err
 		}
 	} else {
 		err = sonic.UnmarshalString(usageNode, &usage)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 	}
-	return &SlimTextResponse{
-		Error:   e,
-		Choices: choices,
-		Usage:   usage,
-	}, nil
+
+	if usage != nil {
+		return usage, nil, nil
+	}
+
+	var choices []*TextResponseChoice
+	choicesNode, err := node.Get("choices").Raw()
+	if err != nil {
+		if !errors.Is(err, ast.ErrNotExist) {
+			return nil, nil, err
+		}
+	} else {
+		err = sonic.UnmarshalString(choicesNode, &choices)
+		if err != nil {
+			return nil, nil, err
+		}
+	}
+	return nil, choices, nil
 }
 
 func Handler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, *model.ErrorWithStatusCode) {
@@ -369,52 +354,48 @@ func Handler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage
 	if err != nil {
 		return nil, ErrorWrapper(err, "unmarshal_response_body_failed", http.StatusInternalServerError)
 	}
-	textResponse, err := GetSlimTextResponseFromNode(&node)
+	usage, choices, err := GetUsageOrChoicesResponseFromNode(&node)
 	if err != nil {
 		return nil, ErrorWrapper(err, "unmarshal_response_body_failed", http.StatusInternalServerError)
 	}
 
-	if textResponse.Error.Type != "" {
-		return nil, ErrorWrapperWithMessage(textResponse.Error.Message, textResponse.Error.Code, http.StatusBadRequest)
-	}
-
-	if textResponse.Usage.TotalTokens == 0 || (textResponse.Usage.PromptTokens == 0 && textResponse.Usage.CompletionTokens == 0) {
+	if usage.TotalTokens == 0 || (usage.PromptTokens == 0 && usage.CompletionTokens == 0) {
 		completionTokens := 0
-		for _, choice := range textResponse.Choices {
+		for _, choice := range choices {
 			if choice.Text != "" {
 				completionTokens += CountTokenText(choice.Text, meta.ActualModel)
 				continue
 			}
 			completionTokens += CountTokenText(choice.Message.StringContent(), meta.ActualModel)
 		}
-		textResponse.Usage = model.Usage{
+		usage = &model.Usage{
 			PromptTokens:     meta.InputTokens,
 			CompletionTokens: completionTokens,
 		}
 	}
-	textResponse.Usage.TotalTokens = textResponse.Usage.PromptTokens + textResponse.Usage.CompletionTokens
+	usage.TotalTokens = usage.PromptTokens + usage.CompletionTokens
 
 	_, err = node.Set("model", ast.NewString(meta.OriginModel))
 	if err != nil {
-		return &textResponse.Usage, ErrorWrapper(err, "set_model_failed", http.StatusInternalServerError)
+		return usage, ErrorWrapper(err, "set_model_failed", http.StatusInternalServerError)
 	}
 
 	if meta.ChannelConfig.SplitThink {
 		respMap, err := node.Map()
 		if err != nil {
-			return &textResponse.Usage, ErrorWrapper(err, "unmarshal_response_body_failed", http.StatusInternalServerError)
+			return usage, ErrorWrapper(err, "unmarshal_response_body_failed", http.StatusInternalServerError)
 		}
 		SplitThink(respMap)
 	}
 
 	newData, err := sonic.Marshal(&node)
 	if err != nil {
-		return &textResponse.Usage, ErrorWrapper(err, "marshal_response_body_failed", http.StatusInternalServerError)
+		return usage, ErrorWrapper(err, "marshal_response_body_failed", http.StatusInternalServerError)
 	}
 
 	_, err = c.Writer.Write(newData)
 	if err != nil {
 		log.Warnf("write response body failed: %v", err)
 	}
-	return &textResponse.Usage, nil
+	return usage, nil
 }

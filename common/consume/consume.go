@@ -27,6 +27,8 @@ func AsyncConsume(
 	meta *meta.Meta,
 	inputPrice,
 	outputPrice float64,
+	cachedPrice float64,
+	cacheCreationPrice float64,
 	content string,
 	ip string,
 	retryTimes int,
@@ -49,6 +51,8 @@ func AsyncConsume(
 		meta,
 		inputPrice,
 		outputPrice,
+		cachedPrice,
+		cacheCreationPrice,
 		content,
 		ip,
 		retryTimes,
@@ -65,17 +69,32 @@ func Consume(
 	meta *meta.Meta,
 	inputPrice,
 	outputPrice float64,
+	cachedPrice float64,
+	cacheCreationPrice float64,
 	content string,
 	ip string,
 	retryTimes int,
 	requestDetail *model.RequestDetail,
 	downstreamResult bool,
 ) {
-	amount := CalculateAmount(usage, inputPrice, outputPrice)
+	amount := CalculateAmount(usage, inputPrice, outputPrice, cachedPrice, cacheCreationPrice)
 
 	amount = consumeAmount(ctx, amount, postGroupConsumer, meta)
 
-	err := recordConsume(meta, code, usage, inputPrice, outputPrice, content, ip, requestDetail, amount, retryTimes, downstreamResult)
+	err := recordConsume(meta,
+		code,
+		usage,
+		inputPrice,
+		outputPrice,
+		cachedPrice,
+		cacheCreationPrice,
+		content,
+		ip,
+		requestDetail,
+		amount,
+		retryTimes,
+		downstreamResult,
+	)
 	if err != nil {
 		log.Error("error batch record consume: " + err.Error())
 		notify.ErrorThrottle("recordConsume", time.Minute, "record consume failed", err.Error())
@@ -96,7 +115,7 @@ func consumeAmount(
 
 func CalculateAmount(
 	usage *relaymodel.Usage,
-	inputPrice, outputPrice float64,
+	inputPrice, outputPrice, cachedPrice, cacheCreationPrice float64,
 ) float64 {
 	if usage == nil {
 		return 0
@@ -104,10 +123,18 @@ func CalculateAmount(
 
 	promptTokens := usage.PromptTokens
 	completionTokens := usage.CompletionTokens
-	totalTokens := promptTokens + completionTokens
+	var cachedTokens int
+	var cacheCreationTokens int
+	if usage.PromptTokensDetails != nil {
+		cachedTokens = usage.PromptTokensDetails.CachedTokens
+		cacheCreationTokens = usage.PromptTokensDetails.CacheCreationTokens
+	}
 
-	if totalTokens == 0 {
-		return 0
+	if cachedPrice > 0 {
+		promptTokens -= cachedTokens
+	}
+	if cacheCreationPrice > 0 {
+		promptTokens -= cacheCreationTokens
 	}
 
 	promptAmount := decimal.NewFromInt(int64(promptTokens)).
@@ -116,8 +143,18 @@ func CalculateAmount(
 	completionAmount := decimal.NewFromInt(int64(completionTokens)).
 		Mul(decimal.NewFromFloat(outputPrice)).
 		Div(decimal.NewFromInt(model.PriceUnit))
+	cachedAmount := decimal.NewFromInt(int64(cachedTokens)).
+		Mul(decimal.NewFromFloat(cachedPrice)).
+		Div(decimal.NewFromInt(model.PriceUnit))
+	cacheCreationAmount := decimal.NewFromInt(int64(cacheCreationTokens)).
+		Mul(decimal.NewFromFloat(cacheCreationPrice)).
+		Div(decimal.NewFromInt(model.PriceUnit))
 
-	return promptAmount.Add(completionAmount).InexactFloat64()
+	return promptAmount.
+		Add(completionAmount).
+		Add(cachedAmount).
+		Add(cacheCreationAmount).
+		InexactFloat64()
 }
 
 func processGroupConsume(
@@ -152,6 +189,8 @@ func recordConsume(
 	usage *relaymodel.Usage,
 	inputPrice,
 	outputPrice float64,
+	cachedPrice float64,
+	cacheCreationPrice float64,
 	content string,
 	ip string,
 	requestDetail *model.RequestDetail,
@@ -161,9 +200,15 @@ func recordConsume(
 ) error {
 	promptTokens := 0
 	completionTokens := 0
+	cachedTokens := 0
+	cacheCreationTokens := 0
 	if usage != nil {
 		promptTokens = usage.PromptTokens
 		completionTokens = usage.CompletionTokens
+		if usage.PromptTokensDetails != nil {
+			cachedTokens = usage.PromptTokensDetails.CachedTokens
+			cacheCreationTokens = usage.PromptTokensDetails.CacheCreationTokens
+		}
 	}
 
 	var channelID int
@@ -179,12 +224,16 @@ func recordConsume(
 		channelID,
 		promptTokens,
 		completionTokens,
+		cachedTokens,
+		cacheCreationTokens,
 		meta.OriginModel,
 		meta.Token.ID,
 		meta.Token.Name,
 		amount,
 		inputPrice,
 		outputPrice,
+		cachedPrice,
+		cacheCreationPrice,
 		meta.Endpoint,
 		content,
 		int(meta.Mode),
