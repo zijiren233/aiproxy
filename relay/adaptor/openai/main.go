@@ -38,7 +38,7 @@ type UsageAndChoicesResponse struct {
 	Choices []*ChatCompletionsStreamResponseChoice
 }
 
-const scannerBufferSize = 2 * bufio.MaxScanTokenSize
+const scannerBufferSize = 1024 * 1024 * 2
 
 var scannerBufferPool = sync.Pool{
 	New: func() any {
@@ -48,11 +48,11 @@ var scannerBufferPool = sync.Pool{
 }
 
 //nolint:forcetypeassert
-func getScannerBuffer() *[]byte {
+func GetScannerBuffer() *[]byte {
 	return scannerBufferPool.Get().(*[]byte)
 }
 
-func putScannerBuffer(buf *[]byte) {
+func PutScannerBuffer(buf *[]byte) {
 	if cap(*buf) != scannerBufferSize {
 		return
 	}
@@ -103,8 +103,8 @@ func StreamHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model
 	responseText := strings.Builder{}
 
 	scanner := bufio.NewScanner(resp.Body)
-	buf := getScannerBuffer()
-	defer putScannerBuffer(buf)
+	buf := GetScannerBuffer()
+	defer PutScannerBuffer(buf)
 	scanner.Buffer(*buf, cap(*buf))
 
 	var usage *model.Usage

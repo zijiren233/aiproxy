@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"fmt"
 	"io"
 	"net/http"
 	"strings"
@@ -58,11 +59,18 @@ func buildSafetySettings() []ChatSafetySettings {
 	}
 }
 
-func buildGenerationConfig(textRequest *model.GeneralOpenAIRequest) *ChatGenerationConfig {
+func buildGenerationConfig(meta *meta.Meta, textRequest *model.GeneralOpenAIRequest) *ChatGenerationConfig {
 	config := ChatGenerationConfig{
 		Temperature:     textRequest.Temperature,
 		TopP:            textRequest.TopP,
 		MaxOutputTokens: textRequest.MaxTokens,
+	}
+
+	if strings.Contains(meta.ActualModel, "image") {
+		config.ResponseModalities = []string{
+			"Text",
+			"Image",
+		}
 	}
 
 	if textRequest.ResponseFormat != nil {
@@ -254,7 +262,7 @@ func ConvertRequest(meta *meta.Meta, req *http.Request) (string, http.Header, io
 		Contents:          contents,
 		SystemInstruction: systemContent,
 		SafetySettings:    buildSafetySettings(),
-		GenerationConfig:  buildGenerationConfig(textRequest),
+		GenerationConfig:  buildGenerationConfig(meta, textRequest),
 		Tools:             buildTools(textRequest),
 		ToolConfig:        buildToolConfig(textRequest),
 	}
@@ -312,20 +320,13 @@ type ChatPromptFeedback struct {
 	SafetyRatings []ChatSafetyRating `json:"safetyRatings"`
 }
 
-func getToolCalls(candidate *ChatCandidate, toolCallIndex int) []*model.Tool {
-	if len(candidate.Content.Parts) <= toolCallIndex {
-		return nil
-	}
-
-	var toolCalls []*model.Tool
-	item := candidate.Content.Parts[toolCallIndex]
+func getToolCall(item *Part) (*model.Tool, error) {
 	if item.FunctionCall == nil {
-		return toolCalls
+		return nil, nil
 	}
 	argsBytes, err := sonic.Marshal(item.FunctionCall.Args)
 	if err != nil {
-		log.Error("getToolCalls failed: " + err.Error())
-		return toolCalls
+		return nil, err
 	}
 	toolCall := model.Tool{
 		ID:   "call_" + random.GetUUID(),
@@ -335,8 +336,7 @@ func getToolCalls(candidate *ChatCandidate, toolCallIndex int) []*model.Tool {
 			Name:      item.FunctionCall.Name,
 		},
 	}
-	toolCalls = append(toolCalls, &toolCall)
-	return toolCalls
+	return &toolCall, nil
 }
 
 func responseGeminiChat2OpenAI(meta *meta.Meta, response *ChatResponse) *openai.TextResponse {
@@ -358,41 +358,49 @@ func responseGeminiChat2OpenAI(meta *meta.Meta, response *ChatResponse) *openai.
 		choice := openai.TextResponseChoice{
 			Index: i,
 			Message: model.Message{
-				Role: "assistant",
+				Role:    "assistant",
+				Content: "",
 			},
-			FinishReason: model.StopFinishReason,
+			FinishReason: candidate.FinishReason,
 		}
 		if len(candidate.Content.Parts) > 0 {
-			toolCallIndex := -1
-			for i, part := range candidate.Content.Parts {
+			var contents []model.MessageContent
+			var builder strings.Builder
+			hasImage := false
+			for _, part := range candidate.Content.Parts {
 				if part.FunctionCall != nil {
-					toolCallIndex = i
-					break
+					toolCall, err := getToolCall(&part)
+					if err != nil {
+						log.Error("get tool call failed: " + err.Error())
+					}
+					if toolCall != nil {
+						choice.Message.ToolCalls = append(choice.Message.ToolCalls, toolCall)
+					}
+				}
+				if part.Text != "" {
+					if hasImage {
+						contents = append(contents, model.MessageContent{
+							Type: model.ContentTypeText,
+							Text: part.Text,
+						})
+					} else {
+						builder.WriteString(part.Text)
+					}
+				}
+				if part.InlineData != nil {
+					contents = append(contents, model.MessageContent{
+						Type: model.ContentTypeImageURL,
+						ImageURL: &model.ImageURL{
+							URL: fmt.Sprintf("data:%s;base64,%s", part.InlineData.MimeType, part.InlineData.Data),
+						},
+					})
 				}
 			}
-			if toolCallIndex != -1 {
-				choice.Message.ToolCalls = getToolCalls(candidate, toolCallIndex)
-				content := strings.Builder{}
-				for i, part := range candidate.Content.Parts {
-					if i == toolCallIndex {
-						continue
-					}
-					content.WriteString(part.Text)
-				}
-				choice.Message.Content = content.String()
+			if hasImage {
+				choice.Message.Content = contents
 			} else {
-				builder := strings.Builder{}
-				for i, part := range candidate.Content.Parts {
-					if i > 0 {
-						builder.WriteString("\n")
-					}
-					builder.WriteString(part.Text)
-				}
 				choice.Message.Content = builder.String()
 			}
-		} else {
-			choice.Message.Content = ""
-			choice.FinishReason = candidate.FinishReason
 		}
 		fullTextResponse.Choices = append(fullTextResponse.Choices, &choice)
 	}
@@ -417,38 +425,55 @@ func streamResponseGeminiChat2OpenAI(meta *meta.Meta, geminiResponse *ChatRespon
 	for i, candidate := range geminiResponse.Candidates {
 		choice := openai.ChatCompletionsStreamResponseChoice{
 			Index: i,
+			Delta: model.Message{
+				Content: "",
+			},
+			FinishReason: &candidate.FinishReason,
 		}
 		if len(candidate.Content.Parts) > 0 {
-			toolCallIndex := -1
-			for i, part := range candidate.Content.Parts {
-				if part.FunctionCall != nil {
-					toolCallIndex = i
+			var contents []model.MessageContent
+			var builder strings.Builder
+			hasImage := false
+			for _, part := range candidate.Content.Parts {
+				if part.InlineData != nil {
+					hasImage = true
 					break
 				}
 			}
-			if toolCallIndex != -1 {
-				choice.Delta.ToolCalls = getToolCalls(candidate, toolCallIndex)
-				content := strings.Builder{}
-				for i, part := range candidate.Content.Parts {
-					if i == toolCallIndex {
-						continue
+			for _, part := range candidate.Content.Parts {
+				if part.FunctionCall != nil {
+					toolCall, err := getToolCall(&part)
+					if err != nil {
+						log.Error("get tool call failed: " + err.Error())
 					}
-					content.WriteString(part.Text)
+					if toolCall != nil {
+						choice.Delta.ToolCalls = append(choice.Delta.ToolCalls, toolCall)
+					}
 				}
-				choice.Delta.Content = content.String()
+				if part.Text != "" {
+					if hasImage {
+						contents = append(contents, model.MessageContent{
+							Type: model.ContentTypeText,
+							Text: part.Text,
+						})
+					} else {
+						builder.WriteString(part.Text)
+					}
+				}
+				if part.InlineData != nil {
+					contents = append(contents, model.MessageContent{
+						Type: model.ContentTypeImageURL,
+						ImageURL: &model.ImageURL{
+							URL: fmt.Sprintf("data:%s;base64,%s", part.InlineData.MimeType, part.InlineData.Data),
+						},
+					})
+				}
+			}
+			if hasImage {
+				choice.Delta.Content = contents
 			} else {
-				builder := strings.Builder{}
-				for i, part := range candidate.Content.Parts {
-					if i > 0 {
-						builder.WriteString("\n")
-					}
-					builder.WriteString(part.Text)
-				}
 				choice.Delta.Content = builder.String()
 			}
-		} else {
-			choice.Delta.Content = ""
-			choice.FinishReason = &candidate.FinishReason
 		}
 		response.Choices = append(response.Choices, &choice)
 	}
@@ -465,8 +490,11 @@ func StreamHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model
 	log := middleware.GetLogger(c)
 
 	responseText := strings.Builder{}
+
 	scanner := bufio.NewScanner(resp.Body)
-	scanner.Split(bufio.ScanLines)
+	buf := openai.GetScannerBuffer()
+	defer openai.PutScannerBuffer(buf)
+	scanner.Buffer(*buf, cap(*buf))
 
 	common.SetEventStreamHeaders(c)
 
