@@ -86,15 +86,8 @@ func ErrorHanlder(resp *http.Response) *model.ErrorWithStatusCode {
 	var errResponse GeneralErrorResponse
 	err = sonic.Unmarshal(respBody, &errResponse)
 	if err != nil {
-		var errsResp []GeneralErrorResponse
-		err = sonic.Unmarshal(respBody, &errsResp)
-		if err != nil {
-			ErrorWithStatusCode.Error.Message = conv.BytesToString(respBody)
-			return ErrorWithStatusCode
-		}
-		if len(errsResp) > 0 {
-			errResponse = errsResp[0]
-		}
+		ErrorWithStatusCode.Error.Message = conv.BytesToString(respBody)
+		return ErrorWithStatusCode
 	}
 
 	if errResponse.Error.Message != "" {
