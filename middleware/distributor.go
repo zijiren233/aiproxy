@@ -16,7 +16,6 @@ import (
 	"github.com/labring/aiproxy/common/balance"
 	"github.com/labring/aiproxy/common/config"
 	"github.com/labring/aiproxy/common/consume"
-	"github.com/labring/aiproxy/common/ctxkey"
 	"github.com/labring/aiproxy/common/notify"
 	"github.com/labring/aiproxy/common/rpmlimit"
 	"github.com/labring/aiproxy/model"
@@ -128,7 +127,7 @@ type GroupBalanceConsumer struct {
 }
 
 func GetGroupBalanceConsumerFromContext(c *gin.Context) *GroupBalanceConsumer {
-	gbcI, ok := c.Get(ctxkey.GroupBalance)
+	gbcI, ok := c.Get(GroupBalance)
 	if ok {
 		groupBalanceConsumer, ok := gbcI.(*GroupBalanceConsumer)
 		if !ok {
@@ -161,7 +160,7 @@ func GetGroupBalanceConsumer(c *gin.Context, group *model.GroupCache) (*GroupBal
 	}
 
 	gbc = &GroupBalanceConsumer{GroupBalance: groupBalance, Consumer: consumer}
-	c.Set(ctxkey.GroupBalance, gbc)
+	c.Set(GroupBalance, gbc)
 	return gbc, nil
 }
 
@@ -260,7 +259,7 @@ func distribute(c *gin.Context, mode relaymode.Mode) {
 		return
 	}
 
-	c.Set(ctxkey.OriginalModel, requestModel)
+	c.Set(RequestModel, requestModel)
 
 	SetLogModelFields(log.Data, requestModel)
 
@@ -276,7 +275,7 @@ func distribute(c *gin.Context, mode relaymode.Mode) {
 		)
 		return
 	}
-	c.Set(ctxkey.ModelConfig, mc)
+	c.Set(ModelConfig, mc)
 
 	if channelHeader := c.Request.Header.Get(AIProxyChannelHeader); group.Status == model.GroupStatusInternal && channelHeader != "" {
 		channel, err := getChannelFromHeader(channelHeader, GetModelCaches(c), requestModel)
@@ -284,7 +283,7 @@ func distribute(c *gin.Context, mode relaymode.Mode) {
 			abortLogWithMessage(c, http.StatusBadRequest, err.Error())
 			return
 		}
-		c.Set(ctxkey.Channel, channel)
+		c.Set(Channel, channel)
 	} else {
 		token := GetToken(c)
 		if len(token.Models) == 0 || !slices.Contains(token.Models, requestModel) {
@@ -306,7 +305,7 @@ func distribute(c *gin.Context, mode relaymode.Mode) {
 			nil,
 			http.StatusTooManyRequests,
 			nil,
-			NewMetaByContext(c, nil, mc.Model, mode),
+			NewMetaByContext(c, nil, mode),
 			0,
 			0,
 			0,
@@ -327,23 +326,24 @@ func distribute(c *gin.Context, mode relaymode.Mode) {
 	c.Next()
 }
 
-func GetOriginalModel(c *gin.Context) string {
-	return c.GetString(ctxkey.OriginalModel)
+func GetRequestModel(c *gin.Context) string {
+	return c.GetString(RequestModel)
 }
 
 func GetModelConfig(c *gin.Context) *model.ModelConfig {
-	return c.MustGet(ctxkey.ModelConfig).(*model.ModelConfig)
+	return c.MustGet(ModelConfig).(*model.ModelConfig)
 }
 
 func NewMetaByContext(c *gin.Context,
 	channel *model.Channel,
-	modelName string,
 	mode relaymode.Mode,
 	opts ...meta.Option,
 ) *meta.Meta {
 	requestID := GetRequestID(c)
 	group := GetGroup(c)
 	token := GetToken(c)
+	modelName := GetRequestModel(c)
+	modelConfig := GetModelConfig(c)
 	gbc := GetGroupBalanceConsumerFromContext(c)
 
 	opts = append(
@@ -359,7 +359,7 @@ func NewMetaByContext(c *gin.Context,
 		channel,
 		mode,
 		modelName,
-		GetModelConfig(c),
+		modelConfig,
 		opts...,
 	)
 }

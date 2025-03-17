@@ -136,7 +136,7 @@ func setupHTTPServer() (*http.Server, *gin.Engine) {
 	server.
 		Use(gin.RecoveryWithWriter(w)).
 		Use(middleware.NewLog(log.StandardLogger())).
-		Use(middleware.RequestID, middleware.CORS())
+		Use(middleware.RequestIDMiddleware, middleware.CORS())
 	router.SetRouter(server)
 
 	p := os.Getenv("PORT")
