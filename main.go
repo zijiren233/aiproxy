@@ -25,7 +25,6 @@ import (
 	"github.com/labring/aiproxy/controller"
 	"github.com/labring/aiproxy/middleware"
 	"github.com/labring/aiproxy/model"
-	"github.com/labring/aiproxy/relay/adaptor/openai"
 	"github.com/labring/aiproxy/router"
 	log "github.com/sirupsen/logrus"
 )
@@ -40,8 +39,6 @@ func initializeServices() error {
 	setLog(log.StandardLogger())
 
 	initializeNotifier()
-
-	openai.InitDefaultTokenEncoder()
 
 	if err := initializeBalance(); err != nil {
 		return err

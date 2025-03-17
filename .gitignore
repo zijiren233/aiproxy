@@ -1,2 +1,4 @@
 aiproxy.db*
 aiproxy
+common/tiktoken/assets/*
+!*.gitkeep

@@ -47,6 +47,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      
+      - name: Download tiktoken
+        run: |
+          bash common/tiktoken/assest.sh
 
       - name: Setup Go
         uses: actions/setup-go@v5
