@@ -12,6 +12,7 @@ import (
 )
 
 //go:embed assets
+
 var aassets embed.FS
 
 var (

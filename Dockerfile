@@ -4,7 +4,7 @@ WORKDIR /aiproxy
 
 COPY ./ ./
 
-RUN bash common/tiktoken/assest.sh
+RUN sh common/tiktoken/assest.sh
 
 RUN go build -trimpath -tags "jsoniter" -ldflags "-s -w" -o aiproxy
 
