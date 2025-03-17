@@ -29,17 +29,18 @@ func parseTimeRange(c *gin.Context) (startTime, endTime time.Time) {
 }
 
 func parseCommonParams(c *gin.Context) (params struct {
-	tokenName string
-	modelName string
-	channelID int
-	endpoint  string
-	tokenID   int
-	order     string
-	requestID string
-	mode      int
-	codeType  string
-	withBody  bool
-	ip        string
+	tokenName  string
+	modelName  string
+	channelID  int
+	endpoint   string
+	tokenID    int
+	order      string
+	requestID  string
+	mode       int
+	codeType   string
+	withBody   bool
+	ip         string
+	resultOnly bool
 },
 ) {
 	params.tokenName = c.Query("token_name")
@@ -53,6 +54,7 @@ func parseCommonParams(c *gin.Context) (params struct {
 	params.codeType = c.Query("code_type")
 	params.withBody, _ = strconv.ParseBool(c.Query("with_body"))
 	params.ip = c.Query("ip")
+	params.resultOnly, _ = strconv.ParseBool(c.Query("result_only"))
 	return
 }
 
@@ -80,6 +82,7 @@ func GetLogs(c *gin.Context) {
 		params.ip,
 		page,
 		perPage,
+		params.resultOnly,
 	)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusOK, err.Error())
@@ -116,6 +119,7 @@ func GetGroupLogs(c *gin.Context) {
 		params.ip,
 		page,
 		perPage,
+		params.resultOnly,
 	)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusOK, err.Error())
@@ -150,6 +154,7 @@ func SearchLogs(c *gin.Context) {
 		params.ip,
 		page,
 		perPage,
+		params.resultOnly,
 	)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusOK, err.Error())
@@ -188,6 +193,7 @@ func SearchGroupLogs(c *gin.Context) {
 		params.ip,
 		page,
 		perPage,
+		params.resultOnly,
 	)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusOK, err.Error())
