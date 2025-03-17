@@ -4,6 +4,8 @@ WORKDIR /aiproxy
 
 COPY ./ ./
 
+RUN apk add --no-cache curl
+
 RUN sh common/tiktoken/assest.sh
 
 RUN go build -trimpath -tags "jsoniter" -ldflags "-s -w" -o aiproxy

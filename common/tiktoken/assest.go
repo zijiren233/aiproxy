@@ -11,9 +11,8 @@ import (
 	"github.com/pkoukk/tiktoken-go"
 )
 
-//go:embed assets
-
-var aassets embed.FS
+//go:embed all:assets
+var assets embed.FS
 
 var (
 	_                tiktoken.BpeLoader = (*embedBpeLoader)(nil)
@@ -24,7 +23,7 @@ type embedBpeLoader struct{}
 
 func (e *embedBpeLoader) LoadTiktokenBpe(tiktokenBpeFile string) (map[string]int, error) {
 	embedPath := path.Join("assets", path.Base(tiktokenBpeFile))
-	contents, err := aassets.ReadFile(embedPath)
+	contents, err := assets.ReadFile(embedPath)
 	if err != nil {
 		return defaultBpeLoader.LoadTiktokenBpe(tiktokenBpeFile)
 	}
