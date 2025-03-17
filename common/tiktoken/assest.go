@@ -3,6 +3,8 @@ package tiktoken
 import (
 	"embed"
 	"encoding/base64"
+	"errors"
+	"os"
 	"path"
 	"strconv"
 	"strings"
@@ -25,7 +27,10 @@ func (e *embedBpeLoader) LoadTiktokenBpe(tiktokenBpeFile string) (map[string]int
 	embedPath := path.Join("assets", path.Base(tiktokenBpeFile))
 	contents, err := assets.ReadFile(embedPath)
 	if err != nil {
-		return defaultBpeLoader.LoadTiktokenBpe(tiktokenBpeFile)
+		if errors.Is(err, os.ErrNotExist) {
+			return defaultBpeLoader.LoadTiktokenBpe(tiktokenBpeFile)
+		}
+		return nil, err
 	}
 	bpeRanks := make(map[string]int)
 	for _, line := range strings.Split(conv.BytesToString(contents), "\n") {
