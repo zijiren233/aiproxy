@@ -1,4 +1,4 @@
-package ollama
+package xai
 
 import (
 	"io"
@@ -12,6 +12,7 @@ import (
 
 type errorResponse struct {
 	Error string `json:"error"`
+	Code  string `json:"code"`
 }
 
 func ErrorHandler(resp *http.Response) *relaymodel.ErrorWithStatusCode {
@@ -27,5 +28,5 @@ func ErrorHandler(resp *http.Response) *relaymodel.ErrorWithStatusCode {
 	if err != nil {
 		return openai.ErrorWrapperWithMessage(conv.BytesToString(data), nil, http.StatusInternalServerError)
 	}
-	return openai.ErrorWrapperWithMessage(er.Error, nil, resp.StatusCode)
+	return openai.ErrorWrapperWithMessage(er.Error, er.Code, resp.StatusCode)
 }
