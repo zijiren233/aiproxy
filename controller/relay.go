@@ -78,7 +78,8 @@ func RelayHelper(meta *meta.Meta, c *gin.Context, relayController RelayControlle
 	if result.Error.Error.Code == middleware.GroupBalanceNotEnough {
 		return result, false
 	}
-	if shouldErrorMonitor(result.Error.StatusCode) {
+	shouldRetry := shouldRetry(c, result.Error.StatusCode)
+	if shouldRetry {
 		hasPermission := channelHasPermission(result.Error.StatusCode)
 		beyondThreshold, banExecution, err := monitor.AddRequest(
 			context.Background(),
@@ -117,7 +118,7 @@ func RelayHelper(meta *meta.Meta, c *gin.Context, relayController RelayControlle
 			)
 		}
 	}
-	return result, shouldRetry(c, result.Error.StatusCode)
+	return result, shouldRetry
 }
 
 func filterChannels(channels []*dbmodel.Channel, ignoreChannel ...int64) []*dbmodel.Channel {
@@ -390,7 +391,7 @@ func retryLoop(c *gin.Context, mode relaymode.Mode, requestModel string, state *
 	for {
 		newChannel, err := getRetryChannel(mc, requestModel, state)
 		if err == nil {
-			err = prepareRetry(c, state.result.Error.StatusCode)
+			err = prepareRetry(c)
 		}
 		if err != nil {
 			if !errors.Is(err, ErrChannelsExhausted) {
@@ -446,6 +447,10 @@ func getRetryChannel(mc *dbmodel.ModelCaches, model string, state *retryState) (
 		if state.lastHasPermissionChannel == nil {
 			return nil, ErrChannelsExhausted
 		}
+		if shouldDelay(state.result.Error.StatusCode) {
+			//nolint:gosec
+			time.Sleep(time.Duration(rand.Float64()*float64(time.Second)) + time.Second)
+		}
 		return state.lastHasPermissionChannel, nil
 	}
 
@@ -455,24 +460,22 @@ func getRetryChannel(mc *dbmodel.ModelCaches, model string, state *retryState) (
 			return nil, err
 		}
 		state.exhausted = true
+		if shouldDelay(state.result.Error.StatusCode) {
+			//nolint:gosec
+			time.Sleep(time.Duration(rand.Float64()*float64(time.Second)) + time.Second)
+		}
 		return state.lastHasPermissionChannel, nil
 	}
 
 	return newChannel, nil
 }
 
-func prepareRetry(c *gin.Context, statusCode int) error {
+func prepareRetry(c *gin.Context) error {
 	requestBody, err := common.GetRequestBody(c.Request)
 	if err != nil {
 		return fmt.Errorf("get request body failed in prepare retry: %w", err)
 	}
 	c.Request.Body = io.NopCloser(bytes.NewBuffer(requestBody))
-
-	if shouldDelay(statusCode) {
-		//nolint:gosec
-		time.Sleep(time.Duration(rand.Float64()*float64(time.Second)) + time.Second)
-	}
-
 	return nil
 }
 
@@ -500,8 +503,10 @@ func handleRetryResult(ctx *gin.Context, retry bool, newChannel *dbmodel.Channel
 	return false
 }
 
+// 仅当是channel错误时，才需要记录，用户请求参数错误时，不需要记录
 func shouldRetry(_ *gin.Context, statusCode int) bool {
-	return statusCode != http.StatusBadRequest
+	return statusCode != http.StatusBadRequest &&
+		statusCode != http.StatusRequestEntityTooLarge
 }
 
 var channelNoPermissionStatusCodesMap = map[int]struct{}{
@@ -517,11 +522,6 @@ func channelHasPermission(statusCode int) bool {
 
 func shouldDelay(statusCode int) bool {
 	return statusCode == http.StatusTooManyRequests
-}
-
-// 仅当是channel错误时，才需要记录，用户请求参数错误时，不需要记录
-func shouldErrorMonitor(statusCode int) bool {
-	return statusCode != http.StatusBadRequest
 }
 
 func RelayNotImplemented(c *gin.Context) {
