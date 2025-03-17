@@ -7,7 +7,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/common/config"
-	"github.com/labring/aiproxy/common/ctxkey"
 	"github.com/labring/aiproxy/common/network"
 	"github.com/labring/aiproxy/model"
 	"github.com/labring/aiproxy/relay/meta"
@@ -120,27 +119,27 @@ func TokenAuth(c *gin.Context) {
 
 	storeTokenModels(token, modelCaches)
 
-	c.Set(ctxkey.Group, group)
-	c.Set(ctxkey.Token, token)
-	c.Set(ctxkey.ModelCaches, modelCaches)
+	c.Set(Group, group)
+	c.Set(Token, token)
+	c.Set(ModelCaches, modelCaches)
 
 	c.Next()
 }
 
 func GetGroup(c *gin.Context) *model.GroupCache {
-	return c.MustGet(ctxkey.Group).(*model.GroupCache)
+	return c.MustGet(Group).(*model.GroupCache)
 }
 
 func GetToken(c *gin.Context) *model.TokenCache {
-	return c.MustGet(ctxkey.Token).(*model.TokenCache)
+	return c.MustGet(Token).(*model.TokenCache)
 }
 
 func GetModelCaches(c *gin.Context) *model.ModelCaches {
-	return c.MustGet(ctxkey.ModelCaches).(*model.ModelCaches)
+	return c.MustGet(ModelCaches).(*model.ModelCaches)
 }
 
 func GetChannel(c *gin.Context) *model.Channel {
-	ch, exists := c.Get(ctxkey.Channel)
+	ch, exists := c.Get(Channel)
 	if !exists {
 		return nil
 	}

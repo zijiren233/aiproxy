@@ -10,7 +10,6 @@ import (
 	"github.com/bytedance/sonic"
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/common/network"
-	"github.com/labring/aiproxy/common/random"
 	"github.com/labring/aiproxy/middleware"
 	"github.com/labring/aiproxy/model"
 )
@@ -247,7 +246,6 @@ func AddGroupToken(c *gin.Context) {
 
 	token := req.ToToken()
 	token.GroupID = group
-	token.Key = random.GenerateKey()
 
 	if err := model.InsertToken(token, c.Query("auto_create_group") == "true"); err != nil {
 		middleware.ErrorResponse(c, http.StatusOK, err.Error())

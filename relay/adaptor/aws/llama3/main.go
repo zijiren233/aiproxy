@@ -13,7 +13,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/bedrockruntime/types"
 	"github.com/bytedance/sonic"
 	"github.com/gin-gonic/gin"
-	"github.com/labring/aiproxy/common/random"
 	"github.com/labring/aiproxy/common/render"
 	"github.com/labring/aiproxy/middleware"
 	"github.com/labring/aiproxy/model"
@@ -156,8 +155,8 @@ func ResponseLlama2OpenAI(llamaResponse *Response) *openai.TextResponse {
 		FinishReason: llamaResponse.StopReason,
 	}
 	fullTextResponse := openai.TextResponse{
-		ID:      "chatcmpl-" + random.GetUUID(),
-		Object:  "chat.completion",
+		ID:      openai.ChatCompletionID(),
+		Object:  relaymodel.ChatCompletion,
 		Created: time.Now().Unix(),
 		Choices: []*openai.TextResponseChoice{&choice},
 	}
@@ -227,7 +226,7 @@ func StreamHandler(meta *meta.Meta, c *gin.Context) (*relaymodel.ErrorWithStatus
 				usage.TotalTokens = usage.PromptTokens + usage.CompletionTokens
 			}
 			response := StreamResponseLlama2OpenAI(&llamaResp)
-			response.ID = "chatcmpl-" + random.GetUUID()
+			response.ID = openai.ChatCompletionID()
 			response.Model = meta.OriginModel
 			response.Created = createdTime
 			err = render.ObjectData(c, response)
@@ -257,7 +256,7 @@ func StreamResponseLlama2OpenAI(llamaResponse *StreamResponse) *openai.ChatCompl
 		choice.FinishReason = &finishReason
 	}
 	var openaiResponse openai.ChatCompletionsStreamResponse
-	openaiResponse.Object = "chat.completion.chunk"
+	openaiResponse.Object = relaymodel.ChatCompletionChunk
 	openaiResponse.Choices = []*openai.ChatCompletionsStreamResponseChoice{&choice}
 	return &openaiResponse
 }

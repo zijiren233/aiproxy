@@ -60,9 +60,9 @@ func (a *Adaptor) DoResponse(meta *meta.Meta, c *gin.Context, resp *http.Respons
 		usage, err = openai.RerankHandler(meta, c, resp)
 	default:
 		if utils.IsStreamResponse(resp) {
-			usage, err = StreamHandler(c, resp)
+			usage, err = StreamHandler(meta, c, resp)
 		} else {
-			usage, err = Handler(c, resp, meta.InputTokens, meta.ActualModel)
+			usage, err = Handler(meta, c, resp)
 		}
 	}
 	return

@@ -3,11 +3,13 @@ package model
 import (
 	"errors"
 	"fmt"
+	"math/rand/v2"
 	"strings"
 	"time"
 
 	"github.com/labring/aiproxy/common"
 	"github.com/labring/aiproxy/common/config"
+	"github.com/labring/aiproxy/common/conv"
 	log "github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -36,6 +38,26 @@ type Token struct {
 	Quota        float64         `json:"quota"`
 	UsedAmount   float64         `gorm:"index"                                     json:"used_amount"`
 	RequestCount int             `gorm:"index"                                     json:"request_count"`
+}
+
+func (t *Token) BeforeCreate(_ *gorm.DB) (err error) {
+	if t.Key == "" || len(t.Key) != 48 {
+		t.Key = generateKey()
+	}
+	return
+}
+
+const (
+	keyChars = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+)
+
+//nolint:gosec
+func generateKey() string {
+	key := make([]byte, 48)
+	for i := range key {
+		key[i] = keyChars[rand.IntN(len(keyChars))]
+	}
+	return conv.BytesToString(key)
 }
 
 func getTokenOrder(order string) string {

@@ -199,9 +199,12 @@ func ConvertRequest(meta *meta.Meta, req *http.Request) (*Request, error) {
 }
 
 // https://docs.anthropic.com/claude/reference/messages-streaming
-func StreamResponseClaude2OpenAI(claudeResponse *StreamResponse) *openai.ChatCompletionsStreamResponse {
+func StreamResponse2OpenAI(meta *meta.Meta, claudeResponse *StreamResponse) *openai.ChatCompletionsStreamResponse {
 	openaiResponse := openai.ChatCompletionsStreamResponse{
-		Object: "chat.completion.chunk",
+		ID:      openai.ChatCompletionID(),
+		Object:  model.ChatCompletionChunk,
+		Created: time.Now().Unix(),
+		Model:   meta.OriginModel,
 	}
 	var content string
 	var thinking string
@@ -276,7 +279,7 @@ func StreamResponseClaude2OpenAI(claudeResponse *StreamResponse) *openai.ChatCom
 	return &openaiResponse
 }
 
-func ResponseClaude2OpenAI(meta *meta.Meta, claudeResponse *Response) *openai.TextResponse {
+func Response2OpenAI(meta *meta.Meta, claudeResponse *Response) *openai.TextResponse {
 	var content string
 	var thinking string
 	for _, v := range claudeResponse.Content {
@@ -314,9 +317,9 @@ func ResponseClaude2OpenAI(meta *meta.Meta, claudeResponse *Response) *openai.Te
 	}
 
 	fullTextResponse := openai.TextResponse{
-		ID:      "chatcmpl-" + claudeResponse.ID,
+		ID:      openai.ChatCompletionID(),
 		Model:   meta.OriginModel,
-		Object:  "chat.completion",
+		Object:  model.ChatCompletion,
 		Created: time.Now().Unix(),
 		Choices: []*openai.TextResponseChoice{&choice},
 		Usage: model.Usage{
@@ -341,7 +344,6 @@ func StreamHandler(m *meta.Meta, c *gin.Context, resp *http.Response) (*model.Us
 
 	log := middleware.GetLogger(c)
 
-	createdTime := time.Now().Unix()
 	scanner := bufio.NewScanner(resp.Body)
 	scanner.Split(func(data []byte, atEOF bool) (advance int, token []byte, err error) {
 		if atEOF && len(data) == 0 {
@@ -359,7 +361,6 @@ func StreamHandler(m *meta.Meta, c *gin.Context, resp *http.Response) (*model.Us
 	common.SetEventStreamHeaders(c)
 
 	var usage model.Usage
-	var id string
 	var lastToolCallChoice *openai.ChatCompletionsStreamResponseChoice
 	var usageWrited bool
 
@@ -381,7 +382,7 @@ func StreamHandler(m *meta.Meta, c *gin.Context, resp *http.Response) (*model.Us
 			continue
 		}
 
-		response := StreamResponseClaude2OpenAI(&claudeResponse)
+		response := StreamResponse2OpenAI(m, &claudeResponse)
 		if response == nil {
 			continue
 		}
@@ -398,10 +399,6 @@ func StreamHandler(m *meta.Meta, c *gin.Context, resp *http.Response) (*model.Us
 				}
 			}
 		}
-
-		response.ID = id
-		response.Model = m.OriginModel
-		response.Created = createdTime
 
 		for _, choice := range response.Choices {
 			if len(choice.Delta.ToolCalls) > 0 {
@@ -423,9 +420,10 @@ func StreamHandler(m *meta.Meta, c *gin.Context, resp *http.Response) (*model.Us
 
 	if !usageWrited {
 		_ = render.ObjectData(c, &openai.ChatCompletionsStreamResponse{
+			ID:      openai.ChatCompletionID(),
 			Model:   m.OriginModel,
-			Object:  "chat.completion.chunk",
-			Created: createdTime,
+			Object:  model.ChatCompletionChunk,
+			Created: time.Now().Unix(),
 			Choices: []*openai.ChatCompletionsStreamResponseChoice{},
 			Usage:   &usage,
 		})
@@ -448,7 +446,7 @@ func Handler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage
 	if err != nil {
 		return nil, openai.ErrorWrapper(err, "unmarshal_response_body_failed", http.StatusInternalServerError)
 	}
-	fullTextResponse := ResponseClaude2OpenAI(meta, &claudeResponse)
+	fullTextResponse := Response2OpenAI(meta, &claudeResponse)
 	jsonResponse, err := sonic.Marshal(fullTextResponse)
 	if err != nil {
 		return nil, openai.ErrorWrapper(err, "marshal_response_body_failed", http.StatusInternalServerError)

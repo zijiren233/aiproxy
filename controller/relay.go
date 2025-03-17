@@ -215,7 +215,7 @@ func NewRelay(mode relaymode.Mode) func(c *gin.Context) {
 
 func relay(c *gin.Context, mode relaymode.Mode, relayController RelayController) {
 	log := middleware.GetLogger(c)
-	requestModel := middleware.GetOriginalModel(c)
+	requestModel := middleware.GetRequestModel(c)
 
 	// Get initial channel
 	initialChannel, err := getInitialChannel(c, requestModel, log)
@@ -231,7 +231,7 @@ func relay(c *gin.Context, mode relaymode.Mode, relayController RelayController)
 	}
 
 	// First attempt
-	meta := middleware.NewMetaByContext(c, initialChannel.channel, requestModel, mode)
+	meta := middleware.NewMetaByContext(c, initialChannel.channel, mode)
 	result, retry := RelayHelper(meta, c, relayController)
 
 	retryTimes := int(config.GetRetryTimes())
@@ -419,11 +419,7 @@ func retryLoop(c *gin.Context, mode relaymode.Mode, requestModel string, state *
 			state.retryTimes-i,
 		)
 
-		state.meta = middleware.NewMetaByContext(c,
-			newChannel,
-			requestModel,
-			mode,
-		)
+		state.meta = middleware.NewMetaByContext(c, newChannel, mode)
 		var retry bool
 		state.result, retry = RelayHelper(state.meta, c, relayController)
 

@@ -29,10 +29,9 @@ type Response struct {
 }
 
 type StreamResponse struct {
-	Message          *Message          `json:"message,omitempty"`
-	ErrorInformation *ErrorInformation `json:"error_information,omitempty"`
-	Event            string            `json:"event,omitempty"`
-	ConversationID   string            `json:"conversation_id,omitempty"`
-	Index            int               `json:"index,omitempty"`
-	IsFinish         bool              `json:"is_finish,omitempty"`
+	Message        *Message `json:"message,omitempty"`
+	Event          string   `json:"event,omitempty"`
+	ConversationID string   `json:"conversation_id,omitempty"`
+	Index          int      `json:"index,omitempty"`
+	IsFinish       bool     `json:"is_finish,omitempty"`
 }

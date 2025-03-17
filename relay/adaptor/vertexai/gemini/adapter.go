@@ -21,7 +21,7 @@ func (a *Adaptor) ConvertRequest(meta *meta.Meta, request *http.Request) (string
 func (a *Adaptor) DoResponse(meta *meta.Meta, c *gin.Context, resp *http.Response) (usage *relaymodel.Usage, err *relaymodel.ErrorWithStatusCode) {
 	switch meta.Mode {
 	case relaymode.Embeddings:
-		usage, err = gemini.EmbeddingHandler(c, resp)
+		usage, err = gemini.EmbeddingHandler(meta, c, resp)
 	default:
 		if utils.IsStreamResponse(resp) {
 			usage, err = gemini.StreamHandler(meta, c, resp)

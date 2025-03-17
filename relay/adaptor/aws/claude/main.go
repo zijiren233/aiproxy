@@ -136,15 +136,13 @@ func Handler(meta *meta.Meta, c *gin.Context) (*relaymodel.ErrorWithStatusCode, 
 		return utils.WrapErr(errors.Wrap(err, "unmarshal response")), nil
 	}
 
-	openaiResp := anthropic.ResponseClaude2OpenAI(meta, claudeResponse)
+	openaiResp := anthropic.Response2OpenAI(meta, claudeResponse)
 	c.JSON(http.StatusOK, openaiResp)
 	return nil, &openaiResp.Usage
 }
 
 func StreamHandler(meta *meta.Meta, c *gin.Context) (*relaymodel.ErrorWithStatusCode, *relaymodel.Usage) {
 	log := middleware.GetLogger(c)
-	createdTime := time.Now().Unix()
-	originModelName := meta.OriginModel
 	awsModelID, err := awsModelID(meta.ActualModel)
 	if err != nil {
 		return utils.WrapErr(errors.Wrap(err, "awsModelID")), nil
@@ -190,7 +188,6 @@ func StreamHandler(meta *meta.Meta, c *gin.Context) (*relaymodel.ErrorWithStatus
 
 	c.Writer.Header().Set("Content-Type", "text/event-stream")
 	var usage relaymodel.Usage
-	var id string
 	var lastToolCallChoice *openai.ChatCompletionsStreamResponseChoice
 	var usageWrited bool
 
@@ -210,7 +207,7 @@ func StreamHandler(meta *meta.Meta, c *gin.Context) (*relaymodel.ErrorWithStatus
 				return false
 			}
 
-			response := anthropic.StreamResponseClaude2OpenAI(&claudeResp)
+			response := anthropic.StreamResponse2OpenAI(meta, &claudeResp)
 			if response == nil {
 				return true
 			}
@@ -227,9 +224,6 @@ func StreamHandler(meta *meta.Meta, c *gin.Context) (*relaymodel.ErrorWithStatus
 					}
 				}
 			}
-			response.ID = id
-			response.Model = originModelName
-			response.Created = createdTime
 
 			for _, choice := range response.Choices {
 				if len(choice.Delta.ToolCalls) > 0 {
@@ -253,9 +247,10 @@ func StreamHandler(meta *meta.Meta, c *gin.Context) (*relaymodel.ErrorWithStatus
 
 	if !usageWrited {
 		_ = render.ObjectData(c, &openai.ChatCompletionsStreamResponse{
+			ID:      openai.ChatCompletionID(),
 			Model:   meta.OriginModel,
-			Object:  "chat.completion.chunk",
-			Created: createdTime,
+			Object:  relaymodel.ChatCompletionChunk,
+			Created: time.Now().Unix(),
 			Choices: []*openai.ChatCompletionsStreamResponseChoice{},
 			Usage:   &usage,
 		})
