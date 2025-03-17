@@ -31,7 +31,7 @@ Next-generation AI gateway, using OpenAI as the protocol entry point.
 - Multi-tenant system separation
 - Model RPM TPM limits
 - Think model support `<think>` split to `reasoning_content`
-- Cache billing support
+- Prompt Token Cache billing support
 
 ## Deploy
 
