@@ -44,8 +44,7 @@ func GetTokenEncoder(model string) *tiktoken.Tiktoken {
 		tokenEncoder = defaultTokenEncoder
 	}
 	if err != nil && strings.Contains(err.Error(), "no encoding for model") {
-		return tokenEncoder
+		tokenEncoderMap[model] = tokenEncoder
 	}
-	tokenEncoderMap[model] = tokenEncoder
 	return tokenEncoder
 }
