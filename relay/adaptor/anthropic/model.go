@@ -1,5 +1,31 @@
 package anthropic
 
+import relaymodel "github.com/labring/aiproxy/relay/model"
+
+type OpenAIRequest struct {
+	ToolChoice  any              `json:"tool_choice,omitempty"`
+	Stop        any              `json:"stop,omitempty"`
+	Temperature *float64         `json:"temperature,omitempty"`
+	TopP        *float64         `json:"top_p,omitempty"`
+	Model       string           `json:"model,omitempty"`
+	Messages    []*OpenaiMessage `json:"messages,omitempty"`
+	Tools       []*OpenaiTool    `json:"tools,omitempty"`
+	Seed        float64          `json:"seed,omitempty"`
+	MaxTokens   int              `json:"max_tokens,omitempty"`
+	TopK        int              `json:"top_k,omitempty"`
+	Stream      bool             `json:"stream,omitempty"`
+}
+
+type OpenaiMessage struct {
+	relaymodel.Message
+	CacheControl *CacheControl `json:"cache_control,omitempty"`
+}
+
+type OpenaiTool struct {
+	relaymodel.Tool
+	CacheControl *CacheControl `json:"cache_control,omitempty"`
+}
+
 // https://docs.anthropic.com/claude/reference/messages_post
 
 type Metadata struct {
@@ -13,16 +39,16 @@ type ImageSource struct {
 }
 
 type Content struct {
-	Type     string       `json:"type"`
-	Text     string       `json:"text,omitempty"`
-	Thinking string       `json:"thinking,omitempty"`
-	Source   *ImageSource `json:"source,omitempty"`
-	// tool_calls
-	ID        string `json:"id,omitempty"`
-	Name      string `json:"name,omitempty"`
-	Input     any    `json:"input,omitempty"`
-	Content   string `json:"content,omitempty"`
-	ToolUseID string `json:"tool_use_id,omitempty"`
+	Type         string        `json:"type"`
+	Text         string        `json:"text,omitempty"`
+	Thinking     string        `json:"thinking,omitempty"`
+	Source       *ImageSource  `json:"source,omitempty"`
+	ID           string        `json:"id,omitempty"`
+	Name         string        `json:"name,omitempty"`
+	Input        any           `json:"input,omitempty"`
+	Content      string        `json:"content,omitempty"`
+	ToolUseID    string        `json:"tool_use_id,omitempty"`
+	CacheControl *CacheControl `json:"cache_control,omitempty"`
 }
 
 type Message struct {
@@ -31,9 +57,14 @@ type Message struct {
 }
 
 type Tool struct {
-	InputSchema InputSchema `json:"input_schema"`
-	Name        string      `json:"name"`
-	Description string      `json:"description,omitempty"`
+	InputSchema  InputSchema   `json:"input_schema"`
+	Name         string        `json:"name"`
+	Description  string        `json:"description,omitempty"`
+	CacheControl *CacheControl `json:"cache_control,omitempty"`
+}
+
+type CacheControl struct {
+	Type string `json:"type"`
 }
 
 type InputSchema struct {
@@ -52,7 +83,7 @@ type Request struct {
 	Temperature   *float64  `json:"temperature,omitempty"`
 	TopP          *float64  `json:"top_p,omitempty"`
 	Model         string    `json:"model,omitempty"`
-	System        string    `json:"system,omitempty"`
+	System        []Content `json:"system,omitempty"`
 	Messages      []Message `json:"messages"`
 	StopSequences []string  `json:"stop_sequences,omitempty"`
 	Tools         []Tool    `json:"tools,omitempty"`
@@ -65,6 +96,9 @@ type Request struct {
 type Usage struct {
 	InputTokens  int `json:"input_tokens"`
 	OutputTokens int `json:"output_tokens"`
+
+	CacheCreationInputTokens int `json:"cache_creation_input_tokens"`
+	CacheReadInputTokens     int `json:"cache_read_input_tokens"`
 }
 
 type Error struct {

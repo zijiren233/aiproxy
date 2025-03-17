@@ -16,7 +16,7 @@ func RelayTextHelper(meta *meta.Meta, c *gin.Context) *HandleResult {
 			return &PreCheckGroupBalanceReq{}, nil
 		}
 
-		inputPrice, outputPrice, ok := GetModelPrice(meta.ModelConfig)
+		inputPrice, outputPrice, cachedPrice, cacheCreationPrice, ok := GetModelPrice(meta.ModelConfig)
 		if !ok {
 			return nil, fmt.Errorf("model price not found: %s", meta.OriginModel)
 		}
@@ -27,10 +27,12 @@ func RelayTextHelper(meta *meta.Meta, c *gin.Context) *HandleResult {
 		}
 
 		return &PreCheckGroupBalanceReq{
-			InputTokens: openai.GetPromptTokens(meta, textRequest),
-			MaxTokens:   textRequest.MaxTokens,
-			InputPrice:  inputPrice,
-			OutputPrice: outputPrice,
+			InputTokens:        openai.GetPromptTokens(meta, textRequest),
+			MaxTokens:          textRequest.MaxTokens,
+			InputPrice:         inputPrice,
+			OutputPrice:        outputPrice,
+			CachedPrice:        cachedPrice,
+			CacheCreationPrice: cacheCreationPrice,
 		}, nil
 	})
 }

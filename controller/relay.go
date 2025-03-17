@@ -267,7 +267,13 @@ func recordResult(c *gin.Context, meta *meta.Meta, result *controller.HandleResu
 
 	gbc := middleware.GetGroupBalanceConsumerFromContext(c)
 
-	amount := consume.CalculateAmount(result.Usage, result.InputPrice, result.OutputPrice)
+	amount := consume.CalculateAmount(
+		result.Usage,
+		result.InputPrice,
+		result.OutputPrice,
+		result.CachedPrice,
+		result.CacheCreationPrice,
+	)
 	if amount > 0 {
 		log := middleware.GetLogger(c)
 		log.Data["amount"] = strconv.FormatFloat(amount, 'f', -1, 64)
@@ -280,6 +286,8 @@ func recordResult(c *gin.Context, meta *meta.Meta, result *controller.HandleResu
 		meta,
 		result.InputPrice,
 		result.OutputPrice,
+		result.CachedPrice,
+		result.CacheCreationPrice,
 		content,
 		c.ClientIP(),
 		retryTimes,

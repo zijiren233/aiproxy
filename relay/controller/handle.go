@@ -16,11 +16,13 @@ import (
 
 // HandleResult contains all the information needed for consumption recording
 type HandleResult struct {
-	Error       *relaymodel.ErrorWithStatusCode
-	Usage       *relaymodel.Usage
-	InputPrice  float64
-	OutputPrice float64
-	Detail      *model.RequestDetail
+	Error              *relaymodel.ErrorWithStatusCode
+	Usage              *relaymodel.Usage
+	InputPrice         float64
+	OutputPrice        float64
+	CachedPrice        float64
+	CacheCreationPrice float64
+	Detail             *model.RequestDetail
 }
 
 func Handle(meta *meta.Meta, c *gin.Context, preProcess func() (*PreCheckGroupBalanceReq, error)) *HandleResult {

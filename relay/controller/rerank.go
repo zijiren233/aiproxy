@@ -18,7 +18,7 @@ func RerankHelper(meta *meta.Meta, c *gin.Context) *HandleResult {
 			return &PreCheckGroupBalanceReq{}, nil
 		}
 
-		inputPrice, outputPrice, ok := GetModelPrice(meta.ModelConfig)
+		inputPrice, outputPrice, cachedPrice, cacheCreationPrice, ok := GetModelPrice(meta.ModelConfig)
 		if !ok {
 			return nil, fmt.Errorf("model price not found: %s", meta.OriginModel)
 		}
@@ -29,9 +29,11 @@ func RerankHelper(meta *meta.Meta, c *gin.Context) *HandleResult {
 		}
 
 		return &PreCheckGroupBalanceReq{
-			InputTokens: rerankPromptTokens(rerankRequest),
-			InputPrice:  inputPrice,
-			OutputPrice: outputPrice,
+			InputTokens:        rerankPromptTokens(rerankRequest),
+			InputPrice:         inputPrice,
+			OutputPrice:        outputPrice,
+			CachedPrice:        cachedPrice,
+			CacheCreationPrice: cacheCreationPrice,
 		}, nil
 	})
 }
