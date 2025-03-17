@@ -16,7 +16,6 @@ import (
 	"github.com/labring/aiproxy/middleware"
 	"github.com/labring/aiproxy/relay/adaptor/openai"
 	"github.com/labring/aiproxy/relay/meta"
-	"github.com/labring/aiproxy/relay/model"
 	relaymodel "github.com/labring/aiproxy/relay/model"
 	"github.com/labring/aiproxy/relay/utils"
 )
@@ -151,7 +150,7 @@ func response2OpenAI(meta *meta.Meta, response *ChatResponse) *openai.TextRespon
 	fullTextResponse := openai.TextResponse{
 		ID:      openai.ChatCompletionID(),
 		Model:   meta.OriginModel,
-		Object:  model.ChatCompletion,
+		Object:  relaymodel.ChatCompletion,
 		Created: time.Now().Unix(),
 		Choices: []*openai.TextResponseChoice{&choice},
 		Usage: relaymodel.Usage{

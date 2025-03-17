@@ -40,7 +40,7 @@ type Token struct {
 	RequestCount int             `gorm:"index"                                     json:"request_count"`
 }
 
-func (t *Token) BeforeCreate(tx *gorm.DB) (err error) {
+func (t *Token) BeforeCreate(_ *gorm.DB) (err error) {
 	if t.Key == "" || len(t.Key) != 48 {
 		t.Key = generateKey()
 	}
