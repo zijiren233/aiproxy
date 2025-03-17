@@ -16,7 +16,6 @@ import (
 	"github.com/labring/aiproxy/common/config"
 	"github.com/labring/aiproxy/common/conv"
 	"github.com/labring/aiproxy/common/image"
-	"github.com/labring/aiproxy/common/random"
 	"github.com/labring/aiproxy/common/render"
 	"github.com/labring/aiproxy/middleware"
 	"github.com/labring/aiproxy/relay/adaptor/openai"
@@ -329,7 +328,7 @@ func getToolCall(item *Part) (*model.Tool, error) {
 		return nil, err
 	}
 	toolCall := model.Tool{
-		ID:   "call_" + random.GetUUID(),
+		ID:   openai.CallID(),
 		Type: "function",
 		Function: model.Function{
 			Arguments: conv.BytesToString(argsBytes),
@@ -341,9 +340,9 @@ func getToolCall(item *Part) (*model.Tool, error) {
 
 func responseGeminiChat2OpenAI(meta *meta.Meta, response *ChatResponse) *openai.TextResponse {
 	fullTextResponse := openai.TextResponse{
-		ID:      "chatcmpl-" + random.GetUUID(),
+		ID:      openai.ChatCompletionID(),
 		Model:   meta.OriginModel,
-		Object:  "chat.completion",
+		Object:  model.ChatCompletion,
 		Created: time.Now().Unix(),
 		Choices: make([]*openai.TextResponseChoice, 0, len(response.Candidates)),
 	}
@@ -409,10 +408,10 @@ func responseGeminiChat2OpenAI(meta *meta.Meta, response *ChatResponse) *openai.
 
 func streamResponseGeminiChat2OpenAI(meta *meta.Meta, geminiResponse *ChatResponse) *openai.ChatCompletionsStreamResponse {
 	response := &openai.ChatCompletionsStreamResponse{
-		ID:      "chatcmpl-" + random.GetUUID(),
+		ID:      openai.ChatCompletionID(),
 		Created: time.Now().Unix(),
 		Model:   meta.OriginModel,
-		Object:  "chat.completion.chunk",
+		Object:  model.ChatCompletionChunk,
 		Choices: make([]*openai.ChatCompletionsStreamResponseChoice, 0, len(geminiResponse.Candidates)),
 	}
 	if geminiResponse.UsageMetadata != nil {

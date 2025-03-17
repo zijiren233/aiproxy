@@ -2,7 +2,6 @@ package cohere
 
 import (
 	"bufio"
-	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -14,6 +13,7 @@ import (
 	"github.com/labring/aiproxy/common/render"
 	"github.com/labring/aiproxy/middleware"
 	"github.com/labring/aiproxy/relay/adaptor/openai"
+	"github.com/labring/aiproxy/relay/meta"
 	"github.com/labring/aiproxy/relay/model"
 )
 
@@ -73,14 +73,14 @@ func ConvertRequest(textRequest *model.GeneralOpenAIRequest) *Request {
 	return &cohereRequest
 }
 
-func StreamResponseCohere2OpenAI(cohereResponse *StreamResponse) (*openai.ChatCompletionsStreamResponse, *Response) {
+func StreamResponse2OpenAI(meta *meta.Meta, cohereResponse *StreamResponse) *openai.ChatCompletionsStreamResponse {
 	var response *Response
 	var responseText string
 	var finishReason string
 
 	switch cohereResponse.EventType {
 	case "stream-start":
-		return nil, nil
+		return nil
 	case "text-generation":
 		responseText += cohereResponse.Text
 	case "stream-end":
@@ -95,7 +95,7 @@ func StreamResponseCohere2OpenAI(cohereResponse *StreamResponse) (*openai.ChatCo
 		}
 		finishReason = *cohereResponse.Response.FinishReason
 	default:
-		return nil, nil
+		return nil
 	}
 
 	var choice openai.ChatCompletionsStreamResponseChoice
@@ -104,13 +104,24 @@ func StreamResponseCohere2OpenAI(cohereResponse *StreamResponse) (*openai.ChatCo
 	if finishReason != "" {
 		choice.FinishReason = &finishReason
 	}
-	var openaiResponse openai.ChatCompletionsStreamResponse
-	openaiResponse.Object = "chat.completion.chunk"
-	openaiResponse.Choices = []*openai.ChatCompletionsStreamResponseChoice{&choice}
-	return &openaiResponse, response
+	openaiResponse := openai.ChatCompletionsStreamResponse{
+		ID:      "chatcmpl-" + cohereResponse.GenerationID,
+		Model:   meta.OriginModel,
+		Created: time.Now().Unix(),
+		Object:  model.ChatCompletionChunk,
+		Choices: []*openai.ChatCompletionsStreamResponseChoice{&choice},
+	}
+	if response != nil {
+		openaiResponse.Usage = &model.Usage{
+			PromptTokens:     response.Meta.Tokens.InputTokens,
+			CompletionTokens: response.Meta.Tokens.OutputTokens,
+			TotalTokens:      response.Meta.Tokens.InputTokens + response.Meta.Tokens.OutputTokens,
+		}
+	}
+	return &openaiResponse
 }
 
-func ResponseCohere2OpenAI(cohereResponse *Response) *openai.TextResponse {
+func Response2OpenAI(meta *meta.Meta, cohereResponse *Response) *openai.TextResponse {
 	choice := openai.TextResponseChoice{
 		Index: 0,
 		Message: model.Message{
@@ -121,16 +132,21 @@ func ResponseCohere2OpenAI(cohereResponse *Response) *openai.TextResponse {
 		FinishReason: stopReasonCohere2OpenAI(cohereResponse.FinishReason),
 	}
 	fullTextResponse := openai.TextResponse{
-		ID:      "chatcmpl-" + cohereResponse.ResponseID,
-		Model:   "model",
-		Object:  "chat.completion",
+		ID:      openai.ChatCompletionID(),
+		Model:   meta.OriginModel,
+		Object:  model.ChatCompletion,
 		Created: time.Now().Unix(),
 		Choices: []*openai.TextResponseChoice{&choice},
+		Usage: model.Usage{
+			PromptTokens:     cohereResponse.Meta.Tokens.InputTokens,
+			CompletionTokens: cohereResponse.Meta.Tokens.OutputTokens,
+			TotalTokens:      cohereResponse.Meta.Tokens.InputTokens + cohereResponse.Meta.Tokens.OutputTokens,
+		},
 	}
 	return &fullTextResponse
 }
 
-func StreamHandler(c *gin.Context, resp *http.Response) (*model.Usage, *model.ErrorWithStatusCode) {
+func StreamHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, *model.ErrorWithStatusCode) {
 	if resp.StatusCode != http.StatusOK {
 		return nil, openai.ErrorHanlder(resp)
 	}
@@ -139,7 +155,6 @@ func StreamHandler(c *gin.Context, resp *http.Response) (*model.Usage, *model.Er
 
 	log := middleware.GetLogger(c)
 
-	createdTime := time.Now().Unix()
 	scanner := bufio.NewScanner(resp.Body)
 	scanner.Split(bufio.ScanLines)
 
@@ -157,19 +172,10 @@ func StreamHandler(c *gin.Context, resp *http.Response) (*model.Usage, *model.Er
 			continue
 		}
 
-		response, meta := StreamResponseCohere2OpenAI(&cohereResponse)
-		if meta != nil {
-			usage.PromptTokens += meta.Meta.Tokens.InputTokens
-			usage.CompletionTokens += meta.Meta.Tokens.OutputTokens
-			continue
+		response := StreamResponse2OpenAI(meta, &cohereResponse)
+		if response.Usage != nil {
+			usage = *response.Usage
 		}
-		if response == nil {
-			continue
-		}
-
-		response.ID = fmt.Sprintf("chatcmpl-%d", createdTime)
-		response.Model = c.GetString("original_model")
-		response.Created = createdTime
 
 		_ = render.ObjectData(c, response)
 	}
@@ -183,7 +189,7 @@ func StreamHandler(c *gin.Context, resp *http.Response) (*model.Usage, *model.Er
 	return &usage, nil
 }
 
-func Handler(c *gin.Context, resp *http.Response, _ int, modelName string) (*model.Usage, *model.ErrorWithStatusCode) {
+func Handler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, *model.ErrorWithStatusCode) {
 	if resp.StatusCode != http.StatusOK {
 		return nil, openai.ErrorHanlder(resp)
 	}
@@ -198,14 +204,7 @@ func Handler(c *gin.Context, resp *http.Response, _ int, modelName string) (*mod
 	if cohereResponse.ResponseID == "" {
 		return nil, openai.ErrorWrapperWithMessage(cohereResponse.Message, resp.StatusCode, resp.StatusCode)
 	}
-	fullTextResponse := ResponseCohere2OpenAI(&cohereResponse)
-	fullTextResponse.Model = modelName
-	usage := model.Usage{
-		PromptTokens:     cohereResponse.Meta.Tokens.InputTokens,
-		CompletionTokens: cohereResponse.Meta.Tokens.OutputTokens,
-		TotalTokens:      cohereResponse.Meta.Tokens.InputTokens + cohereResponse.Meta.Tokens.OutputTokens,
-	}
-	fullTextResponse.Usage = usage
+	fullTextResponse := Response2OpenAI(meta, &cohereResponse)
 	jsonResponse, err := sonic.Marshal(fullTextResponse)
 	if err != nil {
 		return nil, openai.ErrorWrapper(err, "marshal_response_body_failed", http.StatusInternalServerError)
@@ -213,5 +212,5 @@ func Handler(c *gin.Context, resp *http.Response, _ int, modelName string) (*mod
 	c.Writer.Header().Set("Content-Type", "application/json")
 	c.Writer.WriteHeader(resp.StatusCode)
 	_, _ = c.Writer.Write(jsonResponse)
-	return &usage, nil
+	return &fullTextResponse.Usage, nil
 }

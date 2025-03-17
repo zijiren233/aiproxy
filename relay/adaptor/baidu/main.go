@@ -83,7 +83,7 @@ func ConvertRequest(meta *meta.Meta, req *http.Request) (string, http.Header, io
 	return http.MethodPost, nil, bytes.NewReader(data), nil
 }
 
-func responseBaidu2OpenAI(response *ChatResponse) *openai.TextResponse {
+func response2OpenAI(meta *meta.Meta, response *ChatResponse) *openai.TextResponse {
 	choice := openai.TextResponseChoice{
 		Index: 0,
 		Message: model.Message{
@@ -94,8 +94,9 @@ func responseBaidu2OpenAI(response *ChatResponse) *openai.TextResponse {
 	}
 	fullTextResponse := openai.TextResponse{
 		ID:      response.ID,
-		Object:  "chat.completion",
+		Object:  model.ChatCompletion,
 		Created: response.Created,
+		Model:   meta.OriginModel,
 		Choices: []*openai.TextResponseChoice{&choice},
 	}
 	if response.Usage != nil {
@@ -104,7 +105,7 @@ func responseBaidu2OpenAI(response *ChatResponse) *openai.TextResponse {
 	return &fullTextResponse
 }
 
-func streamResponseBaidu2OpenAI(meta *meta.Meta, baiduResponse *ChatStreamResponse) *openai.ChatCompletionsStreamResponse {
+func streamResponse2OpenAI(meta *meta.Meta, baiduResponse *ChatStreamResponse) *openai.ChatCompletionsStreamResponse {
 	var choice openai.ChatCompletionsStreamResponseChoice
 	choice.Delta.Content = baiduResponse.Result
 	if baiduResponse.IsEnd {
@@ -113,7 +114,7 @@ func streamResponseBaidu2OpenAI(meta *meta.Meta, baiduResponse *ChatStreamRespon
 	}
 	response := openai.ChatCompletionsStreamResponse{
 		ID:      baiduResponse.ID,
-		Object:  "chat.completion.chunk",
+		Object:  model.ChatCompletionChunk,
 		Created: baiduResponse.Created,
 		Model:   meta.OriginModel,
 		Choices: []*openai.ChatCompletionsStreamResponseChoice{&choice},
@@ -150,12 +151,10 @@ func StreamHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model
 			log.Error("error unmarshalling stream response: " + err.Error())
 			continue
 		}
-		if baiduResponse.Usage != nil {
-			usage.TotalTokens = baiduResponse.Usage.TotalTokens
-			usage.PromptTokens = baiduResponse.Usage.PromptTokens
-			usage.CompletionTokens = baiduResponse.Usage.TotalTokens - baiduResponse.Usage.PromptTokens
+		response := streamResponse2OpenAI(meta, &baiduResponse)
+		if response.Usage != nil {
+			usage = *response.Usage
 		}
-		response := streamResponseBaidu2OpenAI(meta, &baiduResponse)
 		_ = render.ObjectData(c, response)
 	}
 
@@ -179,8 +178,7 @@ func Handler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage
 	if baiduResponse.Error != nil && baiduResponse.Error.ErrorCode != 0 {
 		return nil, ErrorHandler(baiduResponse.Error)
 	}
-	fullTextResponse := responseBaidu2OpenAI(&baiduResponse)
-	fullTextResponse.Model = meta.OriginModel
+	fullTextResponse := response2OpenAI(meta, &baiduResponse)
 	jsonResponse, err := sonic.Marshal(fullTextResponse)
 	if err != nil {
 		return nil, openai.ErrorWrapper(err, "marshal_response_body_failed", http.StatusInternalServerError)

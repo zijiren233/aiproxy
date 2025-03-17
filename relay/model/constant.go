@@ -7,7 +7,7 @@ const (
 )
 
 const (
-	StopFinishReason = "stop"
-	StreamObject     = "chat.completion.chunk"
-	NonStreamObject  = "chat.completion"
+	StopFinishReason    = "stop"
+	ChatCompletionChunk = "chat.completion.chunk"
+	ChatCompletion      = "chat.completion"
 )

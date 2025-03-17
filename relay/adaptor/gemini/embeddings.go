@@ -46,7 +46,7 @@ func ConvertEmbeddingRequest(meta *meta.Meta, req *http.Request) (string, http.H
 	return http.MethodPost, nil, bytes.NewReader(data), nil
 }
 
-func EmbeddingHandler(c *gin.Context, resp *http.Response) (*model.Usage, *model.ErrorWithStatusCode) {
+func EmbeddingHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, *model.ErrorWithStatusCode) {
 	if resp.StatusCode != http.StatusOK {
 		return nil, openai.ErrorHanlder(resp)
 	}
@@ -61,7 +61,7 @@ func EmbeddingHandler(c *gin.Context, resp *http.Response) (*model.Usage, *model
 	if geminiEmbeddingResponse.Error != nil {
 		return nil, openai.ErrorWrapperWithMessage(geminiEmbeddingResponse.Error.Message, geminiEmbeddingResponse.Error.Code, resp.StatusCode)
 	}
-	fullTextResponse := embeddingResponseGemini2OpenAI(&geminiEmbeddingResponse)
+	fullTextResponse := embeddingResponse2OpenAI(meta, &geminiEmbeddingResponse)
 	jsonResponse, err := sonic.Marshal(fullTextResponse)
 	if err != nil {
 		return nil, openai.ErrorWrapper(err, "marshal_response_body_failed", http.StatusInternalServerError)
@@ -72,11 +72,11 @@ func EmbeddingHandler(c *gin.Context, resp *http.Response) (*model.Usage, *model
 	return &fullTextResponse.Usage, nil
 }
 
-func embeddingResponseGemini2OpenAI(response *EmbeddingResponse) *openai.EmbeddingResponse {
+func embeddingResponse2OpenAI(meta *meta.Meta, response *EmbeddingResponse) *openai.EmbeddingResponse {
 	openAIEmbeddingResponse := openai.EmbeddingResponse{
 		Object: "list",
 		Data:   make([]*openai.EmbeddingResponseItem, 0, len(response.Embeddings)),
-		Model:  "gemini-embedding",
+		Model:  meta.OriginModel,
 		Usage:  model.Usage{TotalTokens: 0},
 	}
 	for _, item := range response.Embeddings {

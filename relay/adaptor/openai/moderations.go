@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/bytedance/sonic"
+	"github.com/bytedance/sonic/ast"
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/middleware"
 	"github.com/labring/aiproxy/relay/meta"
@@ -25,33 +26,23 @@ func ModerationsHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*
 		return nil, ErrorWrapper(err, "read_response_body_failed", http.StatusInternalServerError)
 	}
 
-	var respMap map[string]any
-	err = sonic.Unmarshal(body, &respMap)
+	node, err := sonic.Get(body)
 	if err != nil {
 		return nil, ErrorWrapper(err, "unmarshal_response_body_failed", http.StatusInternalServerError)
 	}
 
-	if _, ok := respMap["error"]; ok {
-		var errorResp ErrorResp
-		err = sonic.Unmarshal(body, &errorResp)
-		if err != nil {
-			return nil, ErrorWrapper(err, "unmarshal_response_body_failed", http.StatusInternalServerError)
-		}
-		return nil, ErrorWrapperWithMessage(errorResp.Error.Message, errorResp.Error.Code, http.StatusBadRequest)
+	if _, err := node.Set("model", ast.NewString(meta.OriginModel)); err != nil {
+		return nil, ErrorWrapper(err, "set_model_failed", http.StatusInternalServerError)
 	}
 
-	if _, ok := respMap["model"]; ok && meta.OriginModel != "" {
-		respMap["model"] = meta.OriginModel
+	newData, err := node.MarshalJSON()
+	if err != nil {
+		return nil, ErrorWrapper(err, "marshal_response_body_failed", http.StatusInternalServerError)
 	}
 
 	usage := &model.Usage{
 		PromptTokens: meta.InputTokens,
 		TotalTokens:  meta.InputTokens,
-	}
-
-	newData, err := sonic.Marshal(respMap)
-	if err != nil {
-		return usage, ErrorWrapper(err, "marshal_response_body_failed", http.StatusInternalServerError)
 	}
 
 	_, err = c.Writer.Write(newData)

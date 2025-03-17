@@ -11,12 +11,12 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/common"
 	"github.com/labring/aiproxy/common/image"
-	"github.com/labring/aiproxy/common/random"
 	"github.com/labring/aiproxy/common/render"
 	"github.com/labring/aiproxy/common/splitter"
 	"github.com/labring/aiproxy/middleware"
 	"github.com/labring/aiproxy/relay/adaptor/openai"
 	"github.com/labring/aiproxy/relay/meta"
+	"github.com/labring/aiproxy/relay/model"
 	relaymodel "github.com/labring/aiproxy/relay/model"
 	"github.com/labring/aiproxy/relay/utils"
 )
@@ -123,7 +123,7 @@ func getToolCalls(ollamaResponse *ChatResponse) []*relaymodel.Tool {
 			continue
 		}
 		toolCalls = append(toolCalls, &relaymodel.Tool{
-			ID:   "call_" + random.GetUUID(),
+			ID:   openai.CallID(),
 			Type: "function",
 			Function: relaymodel.Function{
 				Name:      tool.Function.Name,
@@ -149,9 +149,9 @@ func response2OpenAI(meta *meta.Meta, response *ChatResponse) *openai.TextRespon
 		choice.FinishReason = response.DoneReason
 	}
 	fullTextResponse := openai.TextResponse{
-		ID:      "chatcmpl-" + random.GetUUID(),
+		ID:      openai.ChatCompletionID(),
 		Model:   meta.OriginModel,
-		Object:  "chat.completion",
+		Object:  model.ChatCompletion,
 		Created: time.Now().Unix(),
 		Choices: []*openai.TextResponseChoice{&choice},
 		Usage: relaymodel.Usage{
@@ -178,8 +178,8 @@ func streamResponse2OpenAI(meta *meta.Meta, ollamaResponse *ChatResponse) *opena
 		choice.FinishReason = &ollamaResponse.DoneReason
 	}
 	response := openai.ChatCompletionsStreamResponse{
-		ID:      "chatcmpl-" + random.GetUUID(),
-		Object:  "chat.completion.chunk",
+		ID:      openai.ChatCompletionID(),
+		Object:  relaymodel.ChatCompletionChunk,
 		Created: time.Now().Unix(),
 		Model:   meta.OriginModel,
 		Choices: []*openai.ChatCompletionsStreamResponseChoice{&choice},

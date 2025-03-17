@@ -35,14 +35,13 @@ func stopReasonCoze2OpenAI(reason *string) string {
 	}
 }
 
-func StreamResponseCoze2OpenAI(cozeResponse *StreamResponse) (*openai.ChatCompletionsStreamResponse, *Response) {
-	var response *Response
+func StreamResponse2OpenAI(meta *meta.Meta, cozeResponse *StreamResponse) *openai.ChatCompletionsStreamResponse {
 	var stopReason string
 	var choice openai.ChatCompletionsStreamResponseChoice
 
 	if cozeResponse.Message != nil {
 		if cozeResponse.Message.Type != messagetype.Answer {
-			return nil, nil
+			return nil
 		}
 		choice.Delta.Content = cozeResponse.Message.Content
 	}
@@ -51,14 +50,17 @@ func StreamResponseCoze2OpenAI(cozeResponse *StreamResponse) (*openai.ChatComple
 	if finishReason != "null" {
 		choice.FinishReason = &finishReason
 	}
-	var openaiResponse openai.ChatCompletionsStreamResponse
-	openaiResponse.Object = "chat.completion.chunk"
-	openaiResponse.Choices = []*openai.ChatCompletionsStreamResponseChoice{&choice}
-	openaiResponse.ID = cozeResponse.ConversationID
-	return &openaiResponse, response
+	openaiResponse := openai.ChatCompletionsStreamResponse{
+		ID:      cozeResponse.ConversationID,
+		Model:   meta.OriginModel,
+		Created: time.Now().Unix(),
+		Object:  model.ChatCompletionChunk,
+		Choices: []*openai.ChatCompletionsStreamResponseChoice{&choice},
+	}
+	return &openaiResponse
 }
 
-func ResponseCoze2OpenAI(cozeResponse *Response) *openai.TextResponse {
+func Response2OpenAI(meta *meta.Meta, cozeResponse *Response) *openai.TextResponse {
 	var responseText string
 	for _, message := range cozeResponse.Messages {
 		if message.Type == messagetype.Answer {
@@ -76,9 +78,9 @@ func ResponseCoze2OpenAI(cozeResponse *Response) *openai.TextResponse {
 		FinishReason: model.StopFinishReason,
 	}
 	fullTextResponse := openai.TextResponse{
-		ID:      "chatcmpl-" + cozeResponse.ConversationID,
-		Model:   "coze-bot",
-		Object:  "chat.completion",
+		ID:      openai.ChatCompletionID(),
+		Model:   meta.OriginModel,
+		Object:  model.ChatCompletion,
 		Created: time.Now().Unix(),
 		Choices: []*openai.TextResponseChoice{&choice},
 	}
@@ -119,7 +121,7 @@ func StreamHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model
 			continue
 		}
 
-		response, _ := StreamResponseCoze2OpenAI(&cozeResponse)
+		response := StreamResponse2OpenAI(meta, &cozeResponse)
 		if response == nil {
 			continue
 		}
@@ -159,8 +161,7 @@ func Handler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage
 	if cozeResponse.Code != 0 {
 		return nil, openai.ErrorWrapperWithMessage(cozeResponse.Msg, cozeResponse.Code, resp.StatusCode)
 	}
-	fullTextResponse := ResponseCoze2OpenAI(&cozeResponse)
-	fullTextResponse.Model = meta.OriginModel
+	fullTextResponse := Response2OpenAI(meta, &cozeResponse)
 	jsonResponse, err := sonic.Marshal(fullTextResponse)
 	if err != nil {
 		return nil, openai.ErrorWrapper(err, "marshal_response_body_failed", http.StatusInternalServerError)
