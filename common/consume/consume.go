@@ -130,8 +130,12 @@ func CalculateAmount(
 		cacheCreationTokens = usage.PromptTokensDetails.CacheCreationTokens
 	}
 
-	promptTokens -= cachedTokens
-	promptTokens -= cacheCreationTokens
+	if cachedPrice > 0 {
+		promptTokens -= cachedTokens
+	}
+	if cacheCreationPrice > 0 {
+		promptTokens -= cacheCreationTokens
+	}
 
 	promptAmount := decimal.NewFromInt(int64(promptTokens)).
 		Mul(decimal.NewFromFloat(inputPrice)).
