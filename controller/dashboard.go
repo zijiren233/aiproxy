@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -129,8 +130,9 @@ func GetDashboard(c *gin.Context) {
 
 	start, end, timeSpan := getDashboardTime(c.Query("type"))
 	modelName := c.Query("model")
+	resultOnly, _ := strconv.ParseBool(c.Query("result_only"))
 
-	dashboards, err := model.GetDashboardData(start, end, modelName, timeSpan)
+	dashboards, err := model.GetDashboardData(start, end, modelName, timeSpan, resultOnly)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusOK, err.Error())
 		return
@@ -162,8 +164,9 @@ func GetGroupDashboard(c *gin.Context) {
 	start, end, timeSpan := getDashboardTime(c.Query("type"))
 	tokenName := c.Query("token_name")
 	modelName := c.Query("model")
+	resultOnly, _ := strconv.ParseBool(c.Query("result_only"))
 
-	dashboards, err := model.GetGroupDashboardData(group, start, end, tokenName, modelName, timeSpan)
+	dashboards, err := model.GetGroupDashboardData(group, start, end, tokenName, modelName, timeSpan, resultOnly)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusOK, "failed to get statistics")
 		return

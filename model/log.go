@@ -347,6 +347,7 @@ func buildGetLogsQuery(
 	mode int,
 	codeType CodeType,
 	ip string,
+	resultOnly bool,
 ) *gorm.DB {
 	tx := LogDB.Model(&Log{})
 	if group != "" {
@@ -390,6 +391,9 @@ func buildGetLogsQuery(
 	case CodeTypeError:
 		tx = tx.Where("code != 200")
 	}
+	if resultOnly {
+		tx = tx.Where("downstream_result = true")
+	}
 	return tx
 }
 
@@ -410,6 +414,7 @@ func getLogs(
 	ip string,
 	page int,
 	perPage int,
+	resultOnly bool,
 ) (int64, []*Log, error) {
 	var total int64
 	var logs []*Log
@@ -430,6 +435,7 @@ func getLogs(
 			mode,
 			codeType,
 			ip,
+			resultOnly,
 		).Count(&total).Error
 	})
 
@@ -447,6 +453,7 @@ func getLogs(
 			mode,
 			codeType,
 			ip,
+			resultOnly,
 		)
 		if withBody {
 			query = query.Preload("RequestDetail")
@@ -488,6 +495,7 @@ func GetLogs(
 	ip string,
 	page int,
 	perPage int,
+	resultOnly bool,
 ) (*GetLogsResult, error) {
 	var (
 		total int64
@@ -498,7 +506,7 @@ func GetLogs(
 
 	g.Go(func() error {
 		var err error
-		total, logs, err = getLogs(group, startTimestamp, endTimestamp, modelName, requestID, tokenID, tokenName, channelID, endpoint, order, mode, codeType, withBody, ip, page, perPage)
+		total, logs, err = getLogs(group, startTimestamp, endTimestamp, modelName, requestID, tokenID, tokenName, channelID, endpoint, order, mode, codeType, withBody, ip, page, perPage, resultOnly)
 		return err
 	})
 
@@ -531,6 +539,7 @@ func GetGroupLogs(
 	ip string,
 	page int,
 	perPage int,
+	resultOnly bool,
 ) (*GetGroupLogsResult, error) {
 	if group == "" {
 		return nil, errors.New("group is required")
@@ -547,7 +556,7 @@ func GetGroupLogs(
 
 	g.Go(func() error {
 		var err error
-		total, logs, err = getLogs(group, startTimestamp, endTimestamp, modelName, requestID, tokenID, tokenName, channelID, endpoint, order, mode, codeType, withBody, ip, page, perPage)
+		total, logs, err = getLogs(group, startTimestamp, endTimestamp, modelName, requestID, tokenID, tokenName, channelID, endpoint, order, mode, codeType, withBody, ip, page, perPage, resultOnly)
 		return err
 	})
 
@@ -591,6 +600,7 @@ func buildSearchLogsQuery(
 	mode int,
 	codeType CodeType,
 	ip string,
+	resultOnly bool,
 ) *gorm.DB {
 	tx := LogDB.Model(&Log{})
 	if group != "" {
@@ -629,6 +639,9 @@ func buildSearchLogsQuery(
 		tx = tx.Where("code = 200")
 	case CodeTypeError:
 		tx = tx.Where("code != 200")
+	}
+	if resultOnly {
+		tx = tx.Where("downstream_result = true")
 	}
 
 	if ip != "" {
@@ -723,6 +736,7 @@ func searchLogs(
 	ip string,
 	page int,
 	perPage int,
+	resultOnly bool,
 ) (int64, []*Log, error) {
 	var total int64
 	var logs []*Log
@@ -744,6 +758,7 @@ func searchLogs(
 			mode,
 			codeType,
 			ip,
+			resultOnly,
 		).Count(&total).Error
 	})
 
@@ -762,6 +777,7 @@ func searchLogs(
 			mode,
 			codeType,
 			ip,
+			resultOnly,
 		)
 
 		if withBody {
@@ -805,6 +821,7 @@ func SearchLogs(
 	ip string,
 	page int,
 	perPage int,
+	resultOnly bool,
 ) (*GetLogsResult, error) {
 	var (
 		total int64
@@ -815,7 +832,7 @@ func SearchLogs(
 
 	g.Go(func() error {
 		var err error
-		total, logs, err = searchLogs(group, keyword, endpoint, requestID, tokenID, tokenName, modelName, startTimestamp, endTimestamp, channelID, order, mode, codeType, withBody, ip, page, perPage)
+		total, logs, err = searchLogs(group, keyword, endpoint, requestID, tokenID, tokenName, modelName, startTimestamp, endTimestamp, channelID, order, mode, codeType, withBody, ip, page, perPage, resultOnly)
 		return err
 	})
 
@@ -849,6 +866,7 @@ func SearchGroupLogs(
 	ip string,
 	page int,
 	perPage int,
+	resultOnly bool,
 ) (*GetGroupLogsResult, error) {
 	if group == "" {
 		return nil, errors.New("group is required")
@@ -865,7 +883,7 @@ func SearchGroupLogs(
 
 	g.Go(func() error {
 		var err error
-		total, logs, err = searchLogs(group, keyword, endpoint, requestID, tokenID, tokenName, modelName, startTimestamp, endTimestamp, channelID, order, mode, codeType, withBody, ip, page, perPage)
+		total, logs, err = searchLogs(group, keyword, endpoint, requestID, tokenID, tokenName, modelName, startTimestamp, endTimestamp, channelID, order, mode, codeType, withBody, ip, page, perPage, resultOnly)
 		return err
 	})
 
@@ -950,7 +968,7 @@ func getTimeSpanFormat(t TimeSpanType) string {
 	}
 }
 
-func getChartData(group string, start, end time.Time, tokenName, modelName string, timeSpan TimeSpanType) ([]*ChartData, error) {
+func getChartData(group string, start, end time.Time, tokenName, modelName string, timeSpan TimeSpanType, resultOnly bool) ([]*ChartData, error) {
 	var chartData []*ChartData
 
 	timeSpanFormat := getTimeSpanFormat(timeSpan)
@@ -965,6 +983,9 @@ func getChartData(group string, start, end time.Time, tokenName, modelName strin
 
 	if group != "" {
 		query = query.Where("group_id = ?", group)
+	}
+	if resultOnly {
+		query = query.Where("downstream_result = true")
 	}
 
 	switch {
@@ -1081,7 +1102,7 @@ func sumUsedAmount(chartData []*ChartData) float64 {
 	return amount.InexactFloat64()
 }
 
-func getRPM(group string, end time.Time, tokenName, modelName string) (int64, error) {
+func getRPM(group string, end time.Time, tokenName, modelName string, resultOnly bool) (int64, error) {
 	query := LogDB.Model(&Log{})
 
 	if group != "" {
@@ -1093,6 +1114,9 @@ func getRPM(group string, end time.Time, tokenName, modelName string) (int64, er
 	if modelName != "" {
 		query = query.Where("model = ?", modelName)
 	}
+	if resultOnly {
+		query = query.Where("downstream_result = true")
+	}
 
 	var count int64
 	err := query.
@@ -1101,7 +1125,7 @@ func getRPM(group string, end time.Time, tokenName, modelName string) (int64, er
 	return count, err
 }
 
-func getTPM(group string, end time.Time, tokenName, modelName string) (int64, error) {
+func getTPM(group string, end time.Time, tokenName, modelName string, resultOnly bool) (int64, error) {
 	query := LogDB.Model(&Log{}).
 		Select("COALESCE(SUM(total_tokens), 0)").
 		Where("request_at >= ? AND request_at <= ?", end.Add(-time.Minute), end)
@@ -1115,13 +1139,16 @@ func getTPM(group string, end time.Time, tokenName, modelName string) (int64, er
 	if modelName != "" {
 		query = query.Where("model = ?", modelName)
 	}
+	if resultOnly {
+		query = query.Where("downstream_result = true")
+	}
 
 	var tpm int64
 	err := query.Scan(&tpm).Error
 	return tpm, err
 }
 
-func GetDashboardData(start, end time.Time, modelName string, timeSpan TimeSpanType) (*DashboardResponse, error) {
+func GetDashboardData(start, end time.Time, modelName string, timeSpan TimeSpanType, resultOnly bool) (*DashboardResponse, error) {
 	if end.IsZero() {
 		end = time.Now()
 	} else if end.Before(start) {
@@ -1138,19 +1165,19 @@ func GetDashboardData(start, end time.Time, modelName string, timeSpan TimeSpanT
 
 	g.Go(func() error {
 		var err error
-		chartData, err = getChartData("", start, end, "", modelName, timeSpan)
+		chartData, err = getChartData("", start, end, "", modelName, timeSpan, resultOnly)
 		return err
 	})
 
 	g.Go(func() error {
 		var err error
-		rpm, err = getRPM("", end, "", modelName)
+		rpm, err = getRPM("", end, "", modelName, resultOnly)
 		return err
 	})
 
 	g.Go(func() error {
 		var err error
-		tpm, err = getTPM("", end, "", modelName)
+		tpm, err = getTPM("", end, "", modelName, resultOnly)
 		return err
 	})
 
@@ -1172,7 +1199,7 @@ func GetDashboardData(start, end time.Time, modelName string, timeSpan TimeSpanT
 	}, nil
 }
 
-func GetGroupDashboardData(group string, start, end time.Time, tokenName string, modelName string, timeSpan TimeSpanType) (*GroupDashboardResponse, error) {
+func GetGroupDashboardData(group string, start, end time.Time, tokenName string, modelName string, timeSpan TimeSpanType, resultOnly bool) (*GroupDashboardResponse, error) {
 	if group == "" {
 		return nil, errors.New("group is required")
 	}
@@ -1195,7 +1222,7 @@ func GetGroupDashboardData(group string, start, end time.Time, tokenName string,
 
 	g.Go(func() error {
 		var err error
-		chartData, err = getChartData(group, start, end, tokenName, modelName, timeSpan)
+		chartData, err = getChartData(group, start, end, tokenName, modelName, timeSpan, resultOnly)
 		return err
 	})
 
@@ -1213,13 +1240,13 @@ func GetGroupDashboardData(group string, start, end time.Time, tokenName string,
 
 	g.Go(func() error {
 		var err error
-		rpm, err = getRPM(group, end, tokenName, modelName)
+		rpm, err = getRPM(group, end, tokenName, modelName, resultOnly)
 		return err
 	})
 
 	g.Go(func() error {
 		var err error
-		tpm, err = getTPM(group, end, tokenName, modelName)
+		tpm, err = getTPM(group, end, tokenName, modelName, resultOnly)
 		return err
 	})
 
