@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/labring/aiproxy/common"
+	"github.com/redis/go-redis/v9"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -16,7 +17,7 @@ const (
 	groupModelRPMHashKey = "group_model_rpm_hash:%s:%s"
 )
 
-var pushRequestScript = `
+const pushRequestLuaScript = `
 local key = KEYS[1]
 local window_seconds = tonumber(ARGV[1])
 local current_time = tonumber(ARGV[2])
@@ -60,7 +61,7 @@ redis.call('EXPIRE', key, window_seconds)
 return string.format("%d:%d", count, over_count)
 `
 
-var getRequestCountScript = `
+const getRequestCountLuaScript = `
 local pattern = KEYS[1]
 local window_seconds = tonumber(ARGV[1])
 local current_time = tonumber(ARGV[2])
@@ -97,6 +98,11 @@ end
 return total
 `
 
+var (
+	pushRequestScript     = redis.NewScript(pushRequestLuaScript)
+	getRequestCountScript = redis.NewScript(getRequestCountLuaScript)
+)
+
 func redisGetRPM(ctx context.Context, group, model string) (int64, error) {
 	if !common.RedisEnabled {
 		return 0, nil
@@ -114,10 +120,9 @@ func redisGetRPM(ctx context.Context, group, model string) (int64, error) {
 		pattern = fmt.Sprintf("group_model_rpm_hash:%s:%s", group, model)
 	}
 
-	rdb := common.RDB
-	result, err := rdb.Eval(
+	result, err := getRequestCountScript.Run(
 		ctx,
-		getRequestCountScript,
+		common.RDB,
 		[]string{pattern},
 		time.Minute.Seconds(),
 		time.Now().Unix(),
@@ -129,9 +134,9 @@ func redisGetRPM(ctx context.Context, group, model string) (int64, error) {
 }
 
 func redisPushRequest(ctx context.Context, group, model string, maxRequestNum int64, duration time.Duration) (int64, int64, error) {
-	result, err := common.RDB.Eval(
+	result, err := pushRequestScript.Run(
 		ctx,
-		pushRequestScript,
+		common.RDB,
 		[]string{fmt.Sprintf(groupModelRPMHashKey, group, model)},
 		duration.Seconds(),
 		time.Now().Unix(),
