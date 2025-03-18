@@ -21,7 +21,7 @@ func (a *Adaptor) KeyHelp() string {
 	return "key or key|api-version"
 }
 
-const defaultAPIVersion = "2024-02-01"
+const defaultAPIVersion = "2024-12-01-preview"
 
 func getTokenAndAPIVersion(key string) (string, string, error) {
 	split := strings.Split(key, "|")
