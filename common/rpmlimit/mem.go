@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -14,29 +15,48 @@ type windowCounts struct {
 
 type entry struct {
 	sync.Mutex
-	windows map[int64]*windowCounts
+	windows    map[int64]*windowCounts
+	lastAccess atomic.Value
 }
 
 type InMemoryRateLimiter struct {
 	entries sync.Map
 }
 
-var memoryRateLimiter = &InMemoryRateLimiter{}
+func newInMemoryRateLimiter() *InMemoryRateLimiter {
+	rl := &InMemoryRateLimiter{
+		entries: sync.Map{},
+	}
+	go rl.cleanupInactiveEntries(2*time.Minute, 1*time.Minute)
+	return rl
+}
+
+var memoryRateLimiter = newInMemoryRateLimiter()
 
 func (m *InMemoryRateLimiter) getEntry(group, model string) *entry {
 	key := fmt.Sprintf("%s:%s", group, model)
 	actual, _ := m.entries.LoadOrStore(key, &entry{
 		windows: make(map[int64]*windowCounts),
 	})
-	return actual.(*entry)
+	e, _ := actual.(*entry)
+	if e.lastAccess.Load() == nil {
+		e.lastAccess.CompareAndSwap(nil, time.Now())
+	}
+	return e
 }
 
-func (m *InMemoryRateLimiter) cleanup(e *entry, cutoff int64) {
-	for ts := range e.windows {
+func (m *InMemoryRateLimiter) cleanupAndCount(e *entry, cutoff int64) (int64, int64) {
+	normalCount := int64(0)
+	overCount := int64(0)
+	for ts, wc := range e.windows {
 		if ts < cutoff {
 			delete(e.windows, ts)
+		} else {
+			normalCount += wc.normal
+			overCount += wc.over
 		}
 	}
+	return normalCount, overCount
 }
 
 func (m *InMemoryRateLimiter) pushRequest(group, model string, maxReq int64, duration time.Duration) (int64, int64) {
@@ -45,17 +65,14 @@ func (m *InMemoryRateLimiter) pushRequest(group, model string, maxReq int64, dur
 	e.Lock()
 	defer e.Unlock()
 
-	now := time.Now().Unix()
-	windowStart := now
+	now := time.Now()
+
+	e.lastAccess.Store(now)
+
+	windowStart := now.Unix()
 	cutoff := windowStart - int64(duration.Seconds())
 
-	m.cleanup(e, cutoff)
-
-	var currentCount, overCount int64
-	for _, wc := range e.windows {
-		currentCount += wc.normal
-		overCount += wc.over
-	}
+	normalCount, overCount := m.cleanupAndCount(e, cutoff)
 
 	wc, exists := e.windows[windowStart]
 	if !exists {
@@ -63,41 +80,55 @@ func (m *InMemoryRateLimiter) pushRequest(group, model string, maxReq int64, dur
 		e.windows[windowStart] = wc
 	}
 
-	if maxReq == 0 || currentCount <= maxReq {
+	if maxReq == 0 || normalCount <= maxReq {
 		wc.normal++
-		currentCount++
+		normalCount++
 	} else {
 		wc.over++
 		overCount++
 	}
 
-	return currentCount, overCount
+	return normalCount, overCount
 }
 
 func (m *InMemoryRateLimiter) getRPM(group, model string, duration time.Duration) int {
 	total := 0
-	now := time.Now().Unix()
-	cutoff := now - int64(duration.Seconds())
+	cutoff := time.Now().Unix() - int64(duration.Seconds())
 
-	m.entries.Range(func(key, value interface{}) bool {
-		k := key.(string)
+	m.entries.Range(func(key, value any) bool {
+		k, _ := key.(string)
 		currentGroup, currentModel := parseKey(k)
 
 		if (group == "" || group == currentGroup) && (model == "" || model == currentModel) {
-			e := value.(*entry)
+			e, _ := value.(*entry)
 			e.Lock()
-			m.cleanup(e, cutoff)
-			var count int
-			for _, wc := range e.windows {
-				count += int(wc.normal + wc.over)
-			}
-			total += count
+			normalCount, overCount := m.cleanupAndCount(e, cutoff)
 			e.Unlock()
+			total += int(normalCount + overCount)
 		}
 		return true
 	})
 
 	return total
+}
+
+func (m *InMemoryRateLimiter) cleanupInactiveEntries(interval time.Duration, maxInactivity time.Duration) {
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+	for range ticker.C {
+		m.entries.Range(func(key, value any) bool {
+			e, _ := value.(*entry)
+			la := e.lastAccess.Load()
+			if la == nil {
+				return true
+			}
+			lastAccess, _ := la.(time.Time)
+			if time.Since(lastAccess) > maxInactivity {
+				m.entries.CompareAndDelete(key, e)
+			}
+			return true
+		})
+	}
 }
 
 func parseKey(key string) (group, model string) {
