@@ -85,12 +85,15 @@ var (
 )
 
 const (
-	XRateLimitLimitRequests     = "X-RateLimit-Limit-Requests"
+	XRateLimitLimitRequests = "X-RateLimit-Limit-Requests"
+	//nolint:gosec
 	XRateLimitLimitTokens       = "X-RateLimit-Limit-Tokens"
 	XRateLimitRemainingRequests = "X-RateLimit-Remaining-Requests"
-	XRateLimitRemainingTokens   = "X-RateLimit-Remaining-Tokens"
-	XRateLimitResetRequests     = "X-RateLimit-Reset-Requests"
-	XRateLimitResetTokens       = "X-RateLimit-Reset-Tokens"
+	//nolint:gosec
+	XRateLimitRemainingTokens = "X-RateLimit-Remaining-Tokens"
+	XRateLimitResetRequests   = "X-RateLimit-Reset-Requests"
+	//nolint:gosec
+	XRateLimitResetTokens = "X-RateLimit-Reset-Tokens"
 )
 
 func setRpmHeaders(c *gin.Context, rpm int64, remainingRequests int64) {
