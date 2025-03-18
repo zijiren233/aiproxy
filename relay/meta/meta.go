@@ -24,15 +24,15 @@ type Meta struct {
 	Token         *model.TokenCache
 	ModelConfig   *model.ModelConfig
 
-	Endpoint      string
-	RequestAt     time.Time
-	RequestID     string
-	OriginModel   string
-	ActualModel   string
-	Mode          relaymode.Mode
-	InputTokens   int
-	IsChannelTest bool
-	GroupBalance  float64
+	Endpoint    string
+	RequestAt   time.Time
+	RequestID   string
+	OriginModel string
+	ActualModel string
+	Mode        relaymode.Mode
+	InputTokens int
+	// TODO: check balance move to controller
+	CheckBalance func(amount float64) bool
 }
 
 type Option func(meta *Meta)
@@ -40,12 +40,6 @@ type Option func(meta *Meta)
 func WithEndpoint(endpoint string) Option {
 	return func(meta *Meta) {
 		meta.Endpoint = endpoint
-	}
-}
-
-func WithChannelTest(isChannelTest bool) Option {
-	return func(meta *Meta) {
-		meta.IsChannelTest = isChannelTest
 	}
 }
 
@@ -73,9 +67,9 @@ func WithToken(token *model.TokenCache) Option {
 	}
 }
 
-func WithGroupBalance(groupBalance float64) Option {
+func WithCheckBalance(checkBalance func(amount float64) bool) Option {
 	return func(meta *Meta) {
-		meta.GroupBalance = groupBalance
+		meta.CheckBalance = checkBalance
 	}
 }
 

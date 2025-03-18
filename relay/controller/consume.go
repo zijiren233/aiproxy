@@ -28,7 +28,3 @@ func getPreConsumedAmount(req *PreCheckGroupBalanceReq) float64 {
 		Div(decimal.NewFromInt(model.PriceUnit)).
 		InexactFloat64()
 }
-
-func checkGroupBalance(req *PreCheckGroupBalanceReq, groupRemainBalance float64) bool {
-	return groupRemainBalance >= getPreConsumedAmount(req)
-}

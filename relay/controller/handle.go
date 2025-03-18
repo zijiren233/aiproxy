@@ -53,7 +53,7 @@ func Handle(meta *meta.Meta, c *gin.Context, preProcess func() (*PreCheckGroupBa
 	}
 
 	// 4. Pre-check balance
-	if !meta.IsChannelTest && !checkGroupBalance(preCheckReq, meta.GroupBalance) {
+	if meta.CheckBalance != nil && !meta.CheckBalance(getPreConsumedAmount(preCheckReq)) {
 		return &HandleResult{
 			Error: openai.ErrorWrapperWithMessage(
 				fmt.Sprintf("group (%s) balance is not enough", meta.Group.ID),

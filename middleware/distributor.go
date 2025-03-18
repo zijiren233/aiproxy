@@ -122,7 +122,7 @@ func checkGroupModelRPMAndTPM(c *gin.Context, group *model.GroupCache, mc *model
 }
 
 type GroupBalanceConsumer struct {
-	GroupBalance float64
+	CheckBalance func(amount float64) bool
 	Consumer     balance.PostGroupConsumer
 }
 
@@ -144,22 +144,23 @@ func GetGroupBalanceConsumer(c *gin.Context, group *model.GroupCache) (*GroupBal
 		return gbc, nil
 	}
 
-	var groupBalance float64
-	var consumer balance.PostGroupConsumer
-
 	if group.Status == model.GroupStatusInternal {
-		groupBalance, consumer, _ = balance.MockGetGroupRemainBalance(c.Request.Context(), *group)
+		gbc = &GroupBalanceConsumer{CheckBalance: func(_ float64) bool {
+			return true
+		}, Consumer: nil}
 	} else {
 		log := GetLogger(c)
-		var err error
-		groupBalance, consumer, err = balance.GetGroupRemainBalance(c.Request.Context(), *group)
+		groupBalance, consumer, err := balance.GetGroupRemainBalance(c.Request.Context(), *group)
 		if err != nil {
 			return nil, err
 		}
 		log.Data["balance"] = strconv.FormatFloat(groupBalance, 'f', -1, 64)
+
+		gbc = &GroupBalanceConsumer{CheckBalance: func(amount float64) bool {
+			return groupBalance >= amount
+		}, Consumer: consumer}
 	}
 
-	gbc = &GroupBalanceConsumer{GroupBalance: groupBalance, Consumer: consumer}
 	c.Set(GroupBalance, gbc)
 	return gbc, nil
 }
@@ -184,7 +185,7 @@ func checkGroupBalance(c *gin.Context, group *model.GroupCache) bool {
 		return false
 	}
 
-	if gbc.GroupBalance <= 0 {
+	if !gbc.CheckBalance(0) {
 		abortLogWithMessage(c, http.StatusForbidden, fmt.Sprintf("group (%s) balance not enough", group.ID), &errorField{
 			Code: GroupBalanceNotEnough,
 		})
@@ -352,7 +353,7 @@ func NewMetaByContext(c *gin.Context,
 		meta.WithGroup(group),
 		meta.WithToken(token),
 		meta.WithEndpoint(c.Request.URL.Path),
-		meta.WithGroupBalance(gbc.GroupBalance),
+		meta.WithCheckBalance(gbc.CheckBalance),
 	)
 
 	return meta.NewMeta(

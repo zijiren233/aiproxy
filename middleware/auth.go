@@ -176,10 +176,6 @@ func SetLogFieldsFromMeta(m *meta.Meta, fields logrus.Fields) {
 	SetLogModelFields(fields, m.OriginModel)
 	SetLogActualModelFields(fields, m.ActualModel)
 
-	if m.IsChannelTest {
-		SetLogIsChannelTestField(fields, true)
-	}
-
 	SetLogGroupFields(fields, m.Group)
 	SetLogTokenFields(fields, m.Token, false)
 	SetLogChannelFields(fields, m.Channel)
@@ -187,10 +183,6 @@ func SetLogFieldsFromMeta(m *meta.Meta, fields logrus.Fields) {
 
 func SetLogModeField(fields logrus.Fields, mode relaymode.Mode) {
 	fields["mode"] = mode.String()
-}
-
-func SetLogIsChannelTestField(fields logrus.Fields, isChannelTest bool) {
-	fields["test"] = isChannelTest
 }
 
 func SetLogActualModelFields(fields logrus.Fields, actualModel string) {
