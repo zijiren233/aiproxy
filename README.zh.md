@@ -33,6 +33,7 @@
 - 模型 RPM TPM 限制
 - Think 模型支持 `<think>` 切分到 `reasoning_content`
 - 提示词缓存计费支持
+- 内敛分词器，无需额外下载 tiktoken 文件
 
 ## 部署
 
