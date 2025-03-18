@@ -1,11 +1,9 @@
 package ali
 
 import (
-	"bytes"
 	"fmt"
 	"io"
 	"net/http"
-	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/model"
@@ -73,19 +71,7 @@ func (a *Adaptor) ConvertRequest(meta *meta.Meta, req *http.Request) (string, ht
 	}
 }
 
-func ignoreTest(meta *meta.Meta) bool {
-	return meta.IsChannelTest &&
-		(strings.Contains(meta.ActualModel, "-ocr") ||
-			strings.HasPrefix(meta.ActualModel, "qwen-mt-"))
-}
-
 func (a *Adaptor) DoRequest(meta *meta.Meta, _ *gin.Context, req *http.Request) (*http.Response, error) {
-	if ignoreTest(meta) {
-		return &http.Response{
-			StatusCode: http.StatusOK,
-			Body:       io.NopCloser(bytes.NewReader(nil)),
-		}, nil
-	}
 	switch meta.Mode {
 	case relaymode.AudioSpeech:
 		return TTSDoRequest(meta, req)
@@ -99,9 +85,6 @@ func (a *Adaptor) DoRequest(meta *meta.Meta, _ *gin.Context, req *http.Request) 
 }
 
 func (a *Adaptor) DoResponse(meta *meta.Meta, c *gin.Context, resp *http.Response) (usage *relaymodel.Usage, err *relaymodel.ErrorWithStatusCode) {
-	if ignoreTest(meta) {
-		return &relaymodel.Usage{}, nil
-	}
 	switch meta.Mode {
 	case relaymode.ImagesGenerations:
 		usage, err = ImageHandler(meta, c, resp)

@@ -25,7 +25,8 @@ type ModelConfig struct {
 	Model              string                 `gorm:"primaryKey"                     json:"model"`
 	Owner              ModelOwner             `gorm:"type:varchar(255);index"        json:"owner"`
 	ImageMaxBatchSize  int                    `json:"image_batch_size,omitempty"`
-	Type               relaymode.Mode         `json:"type"` // relaymode/define.go
+	Type               relaymode.Mode         `json:"type"`
+	ExcludeFromTests   bool                   `json:"exclude_from_tests,omitempty"`
 	InputPrice         float64                `json:"input_price,omitempty"`
 	OutputPrice        float64                `json:"output_price,omitempty"`
 	CachedPrice        float64                `json:"cached_price,omitempty"`

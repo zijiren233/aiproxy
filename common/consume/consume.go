@@ -107,7 +107,7 @@ func consumeAmount(
 	postGroupConsumer balance.PostGroupConsumer,
 	meta *meta.Meta,
 ) float64 {
-	if amount > 0 {
+	if amount > 0 && postGroupConsumer != nil {
 		return processGroupConsume(ctx, amount, postGroupConsumer, meta)
 	}
 	return 0

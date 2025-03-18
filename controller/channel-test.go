@@ -33,25 +33,25 @@ import (
 const channelTestRequestID = "channel-test"
 
 var (
-	modelTypeCache     map[string]relaymode.Mode = make(map[string]relaymode.Mode)
-	modelTypeCacheOnce sync.Once
+	modelConfigCache     map[string]*model.ModelConfig = make(map[string]*model.ModelConfig)
+	modelConfigCacheOnce sync.Once
 )
 
-func guessModelType(model string) relaymode.Mode {
-	modelTypeCacheOnce.Do(func() {
+func guessModelConfig(model string) *model.ModelConfig {
+	modelConfigCacheOnce.Do(func() {
 		for _, c := range channeltype.ChannelAdaptor {
 			for _, m := range c.GetModelList() {
-				if _, ok := modelTypeCache[m.Model]; !ok {
-					modelTypeCache[m.Model] = m.Type
+				if _, ok := modelConfigCache[m.Model]; !ok {
+					modelConfigCache[m.Model] = m
 				}
 			}
 		}
 	})
 
-	if cachedType, ok := modelTypeCache[model]; ok {
-		return cachedType
+	if cachedConfig, ok := modelConfigCache[model]; ok {
+		return cachedConfig
 	}
-	return relaymode.Unknown
+	return nil
 }
 
 // testSingleModel tests a single model in the channel
@@ -61,9 +61,24 @@ func testSingleModel(mc *model.ModelCaches, channel *model.Channel, modelName st
 		return nil, errors.New(modelName + " model config not found")
 	}
 	if modelConfig.Type == relaymode.Unknown {
-		newModelConfig := *modelConfig
-		newModelConfig.Type = guessModelType(modelName)
-		modelConfig = &newModelConfig
+		newModelConfig := guessModelConfig(modelName)
+		if newModelConfig != nil {
+			modelConfig = newModelConfig
+		}
+	}
+
+	if modelConfig.ExcludeFromTests {
+		return &model.ChannelTest{
+			TestAt:      time.Now(),
+			Model:       modelName,
+			ActualModel: modelName,
+			Success:     true,
+			Code:        http.StatusOK,
+			Mode:        modelConfig.Type,
+			ChannelName: channel.Name,
+			ChannelType: channel.Type,
+			ChannelID:   channel.ID,
+		}, nil
 	}
 
 	body, mode, err := utils.BuildRequest(modelConfig)
@@ -86,7 +101,6 @@ func testSingleModel(mc *model.ModelCaches, channel *model.Channel, modelName st
 		modelName,
 		modelConfig,
 		meta.WithRequestID(channelTestRequestID),
-		meta.WithChannelTest(true),
 	)
 	relayController, ok := relayController(mode)
 	if !ok {

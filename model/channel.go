@@ -350,7 +350,7 @@ func (c *Channel) UpdateModelTest(testAt time.Time, model, actualModel string, m
 			ChannelName: c.Name,
 			Model:       model,
 			ActualModel: actualModel,
-			Mode:        int(mode),
+			Mode:        mode,
 			TestAt:      testAt,
 			Took:        took,
 			Success:     success,
