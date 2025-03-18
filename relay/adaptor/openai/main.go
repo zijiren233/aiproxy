@@ -87,7 +87,9 @@ func GetUsageOrChatChoicesResponseFromNode(node *ast.Node) (*model.Usage, []*Cha
 	return nil, choices, nil
 }
 
-func StreamHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, *model.ErrorWithStatusCode) {
+type PreHandler func(meta *meta.Meta, node *ast.Node) error
+
+func StreamHandler(meta *meta.Meta, c *gin.Context, resp *http.Response, preHandler PreHandler) (*model.Usage, *model.ErrorWithStatusCode) {
 	if resp.StatusCode != http.StatusOK {
 		return nil, ErrorHanlder(resp)
 	}
@@ -130,6 +132,13 @@ func StreamHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model
 		if err != nil {
 			log.Error("error unmarshalling stream response: " + err.Error())
 			continue
+		}
+		if preHandler != nil {
+			err := preHandler(meta, &node)
+			if err != nil {
+				log.Error("error pre handler: " + err.Error())
+				continue
+			}
 		}
 		u, ch, err := GetUsageOrChatChoicesResponseFromNode(&node)
 		if err != nil {
@@ -336,7 +345,7 @@ func GetUsageOrChoicesResponseFromNode(node *ast.Node) (*model.Usage, []*TextRes
 	return nil, choices, nil
 }
 
-func Handler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, *model.ErrorWithStatusCode) {
+func Handler(meta *meta.Meta, c *gin.Context, resp *http.Response, preHandler PreHandler) (*model.Usage, *model.ErrorWithStatusCode) {
 	if resp.StatusCode != http.StatusOK {
 		return nil, ErrorHanlder(resp)
 	}
@@ -353,6 +362,12 @@ func Handler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage
 	node, err := sonic.Get(responseBody)
 	if err != nil {
 		return nil, ErrorWrapper(err, "unmarshal_response_body_failed", http.StatusInternalServerError)
+	}
+	if preHandler != nil {
+		err := preHandler(meta, &node)
+		if err != nil {
+			return nil, ErrorWrapper(err, "pre_handler_failed", http.StatusInternalServerError)
+		}
 	}
 	usage, choices, err := GetUsageOrChoicesResponseFromNode(&node)
 	if err != nil {

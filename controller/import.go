@@ -102,6 +102,7 @@ var OneAPIChannelType2AIProxyMap = map[int]int{
 	OneAPIZhipu:                  16,
 	OneAPIAli:                    17,
 	OneAPIAI360:                  19,
+	OneAPIOpenRouter:             20,
 	OneAPITencent:                23,
 	OneAPIGemini:                 24,
 	OneAPIMoonshot:               25,

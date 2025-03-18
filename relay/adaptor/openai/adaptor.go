@@ -110,9 +110,9 @@ func DoResponse(meta *meta.Meta, c *gin.Context, resp *http.Response) (usage *re
 		fallthrough
 	case relaymode.ChatCompletions:
 		if utils.IsStreamResponse(resp) {
-			usage, err = StreamHandler(meta, c, resp)
+			usage, err = StreamHandler(meta, c, resp, nil)
 		} else {
-			usage, err = Handler(meta, c, resp)
+			usage, err = Handler(meta, c, resp, nil)
 		}
 	default:
 		return nil, ErrorWrapperWithMessage(fmt.Sprintf("unsupported mode: %s", meta.Mode), "unsupported_mode", http.StatusBadRequest)
