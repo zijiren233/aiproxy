@@ -1,93 +1,153 @@
 package rpmlimit
 
 import (
+	"fmt"
+	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
+type windowCounts struct {
+	normal int64
+	over   int64
+}
+
+type entry struct {
+	sync.Mutex
+	windows    map[int64]*windowCounts
+	lastAccess atomic.Value
+}
+
 type InMemoryRateLimiter struct {
-	store              map[string]*RateLimitWindow
-	mutex              sync.RWMutex
-	expirationDuration time.Duration
+	entries sync.Map
 }
 
-type RateLimitWindow struct {
-	timestamps []int64
-	lastAccess int64
-}
-
-func (l *InMemoryRateLimiter) Init(expirationDuration time.Duration) {
-	if l.store == nil {
-		l.mutex.Lock()
-		if l.store == nil {
-			l.store = make(map[string]*RateLimitWindow)
-			l.expirationDuration = expirationDuration
-			if expirationDuration > 0 {
-				go l.clearExpiredItems()
-			}
-		}
-		l.mutex.Unlock()
+func newInMemoryRateLimiter() *InMemoryRateLimiter {
+	rl := &InMemoryRateLimiter{
+		entries: sync.Map{},
 	}
+	go rl.cleanupInactiveEntries(2*time.Minute, 1*time.Minute)
+	return rl
 }
 
-func (l *InMemoryRateLimiter) clearExpiredItems() {
-	ticker := time.NewTicker(l.expirationDuration)
-	defer ticker.Stop()
+var memoryRateLimiter = newInMemoryRateLimiter()
 
-	for range ticker.C {
-		l.mutex.Lock()
-		now := time.Now().Unix()
-		for key, window := range l.store {
-			if now-window.lastAccess > int64(l.expirationDuration.Seconds()) {
-				delete(l.store, key)
-			}
-		}
-		l.mutex.Unlock()
+func (m *InMemoryRateLimiter) getEntry(group, model string) *entry {
+	key := fmt.Sprintf("%s:%s", group, model)
+	actual, _ := m.entries.LoadOrStore(key, &entry{
+		windows: make(map[int64]*windowCounts),
+	})
+	e, _ := actual.(*entry)
+	if e.lastAccess.Load() == nil {
+		e.lastAccess.CompareAndSwap(nil, time.Now())
 	}
+	return e
 }
 
-// Request parameter duration's unit is seconds
-func (l *InMemoryRateLimiter) Request(key string, maxRequestNum int, duration time.Duration) bool {
-	now := time.Now().Unix()
-	cutoff := now - int64(duration.Seconds())
+func (m *InMemoryRateLimiter) cleanupAndCount(e *entry, cutoff int64) (int64, int64) {
+	normalCount := int64(0)
+	overCount := int64(0)
+	for ts, wc := range e.windows {
+		if ts < cutoff {
+			delete(e.windows, ts)
+		} else {
+			normalCount += wc.normal
+			overCount += wc.over
+		}
+	}
+	return normalCount, overCount
+}
 
-	l.mutex.RLock()
-	window, exists := l.store[key]
-	l.mutex.RUnlock()
+func (m *InMemoryRateLimiter) pushRequest(group, model string, maxReq int64, duration time.Duration) (int64, int64) {
+	e := m.getEntry(group, model)
 
+	e.Lock()
+	defer e.Unlock()
+
+	now := time.Now()
+
+	e.lastAccess.Store(now)
+
+	windowStart := now.Unix()
+	cutoff := windowStart - int64(duration.Seconds())
+
+	normalCount, overCount := m.cleanupAndCount(e, cutoff)
+
+	wc, exists := e.windows[windowStart]
 	if !exists {
-		l.mutex.Lock()
-		window = &RateLimitWindow{
-			timestamps: make([]int64, 0, maxRequestNum),
-			lastAccess: now,
+		wc = &windowCounts{}
+		e.windows[windowStart] = wc
+	}
+
+	if maxReq == 0 || normalCount <= maxReq {
+		wc.normal++
+		normalCount++
+	} else {
+		wc.over++
+		overCount++
+	}
+
+	return normalCount, overCount
+}
+
+func (m *InMemoryRateLimiter) getRPM(group, model string, duration time.Duration) int {
+	total := 0
+	cutoff := time.Now().Unix() - int64(duration.Seconds())
+
+	m.entries.Range(func(key, value any) bool {
+		k, _ := key.(string)
+		currentGroup, currentModel := parseKey(k)
+
+		if (group == "" || group == currentGroup) && (model == "" || model == currentModel) {
+			e, _ := value.(*entry)
+			e.Lock()
+			normalCount, overCount := m.cleanupAndCount(e, cutoff)
+			e.Unlock()
+			total += int(normalCount + overCount)
 		}
-		l.store[key] = window
-		window.timestamps = append(window.timestamps, now)
-		l.mutex.Unlock()
 		return true
+	})
+
+	return total
+}
+
+func (m *InMemoryRateLimiter) cleanupInactiveEntries(interval time.Duration, maxInactivity time.Duration) {
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+	for range ticker.C {
+		m.entries.Range(func(key, value any) bool {
+			e, _ := value.(*entry)
+			la := e.lastAccess.Load()
+			if la == nil {
+				return true
+			}
+			lastAccess, _ := la.(time.Time)
+			if time.Since(lastAccess) > maxInactivity {
+				m.entries.CompareAndDelete(key, e)
+			}
+			return true
+		})
 	}
+}
 
-	l.mutex.Lock()
-	defer l.mutex.Unlock()
-
-	// Update last access time
-	window.lastAccess = now
-
-	// Remove expired timestamps
-	idx := 0
-	for i, ts := range window.timestamps {
-		if ts > cutoff {
-			idx = i
-			break
-		}
+func parseKey(key string) (group, model string) {
+	parts := strings.SplitN(key, ":", 2)
+	if len(parts) != 2 {
+		return "", ""
 	}
-	window.timestamps = window.timestamps[idx:]
+	return parts[0], parts[1]
+}
 
-	// Check if we can add a new request
-	if len(window.timestamps) < maxRequestNum {
-		window.timestamps = append(window.timestamps, now)
-		return true
-	}
+func MemoryPushRequest(group, model string, maxReq int64, duration time.Duration) (int64, int64) {
+	return memoryRateLimiter.pushRequest(group, model, maxReq, duration)
+}
 
-	return false
+func MemoryRateLimit(group, model string, maxReq int64, duration time.Duration) bool {
+	current, _ := memoryRateLimiter.pushRequest(group, model, maxReq, duration)
+	return current <= maxReq
+}
+
+func GetMemoryRPM(group, model string) (int64, error) {
+	return int64(memoryRateLimiter.getRPM(group, model, time.Minute)), nil
 }

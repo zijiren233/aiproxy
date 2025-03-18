@@ -21,7 +21,6 @@ import (
 	"github.com/labring/aiproxy/model"
 	"github.com/labring/aiproxy/relay/meta"
 	"github.com/labring/aiproxy/relay/relaymode"
-	log "github.com/sirupsen/logrus"
 )
 
 func calculateGroupConsumeLevelRatio(usedAmount float64) float64 {
@@ -85,25 +84,44 @@ var (
 	ErrRequestTpmLimitExceeded  = errors.New("request tpm limit exceeded, please try again later")
 )
 
+const (
+	XRateLimitLimitRequests = "X-RateLimit-Limit-Requests"
+	//nolint:gosec
+	XRateLimitLimitTokens       = "X-RateLimit-Limit-Tokens"
+	XRateLimitRemainingRequests = "X-RateLimit-Remaining-Requests"
+	//nolint:gosec
+	XRateLimitRemainingTokens = "X-RateLimit-Remaining-Tokens"
+	XRateLimitResetRequests   = "X-RateLimit-Reset-Requests"
+	//nolint:gosec
+	XRateLimitResetTokens = "X-RateLimit-Reset-Tokens"
+)
+
+func setRpmHeaders(c *gin.Context, rpm int64, remainingRequests int64) {
+	c.Header(XRateLimitLimitRequests, strconv.FormatInt(rpm, 10))
+	c.Header(XRateLimitRemainingRequests, strconv.FormatInt(remainingRequests, 10))
+	c.Header(XRateLimitResetRequests, "1m0s")
+}
+
+func setTpmHeaders(c *gin.Context, tpm int64, remainingRequests int64) {
+	c.Header(XRateLimitLimitTokens, strconv.FormatInt(tpm, 10))
+	c.Header(XRateLimitRemainingTokens, strconv.FormatInt(remainingRequests, 10))
+	c.Header(XRateLimitResetTokens, "1m0s")
+}
+
 func checkGroupModelRPMAndTPM(c *gin.Context, group *model.GroupCache, mc *model.ModelConfig) error {
+	log := GetLogger(c)
+
 	adjustedModelConfig := GetGroupAdjustedModelConfig(group, mc)
 
+	count, overLimitCount := rpmlimit.PushRequestAnyWay(c.Request.Context(), group.ID, mc.Model, adjustedModelConfig.RPM, time.Minute)
+	log.Data["rpm"] = strconv.FormatInt(count+overLimitCount, 10)
 	if adjustedModelConfig.RPM > 0 {
-		ok := rpmlimit.ForceRateLimit(
-			c.Request.Context(),
-			group.ID,
-			mc.Model,
-			adjustedModelConfig.RPM,
-			time.Minute,
-		)
-		if !ok {
+		log.Data["rpm_limit"] = strconv.FormatInt(adjustedModelConfig.RPM, 10)
+		if count > adjustedModelConfig.RPM {
+			setRpmHeaders(c, adjustedModelConfig.RPM, 0)
 			return ErrRequestRateLimitExceeded
 		}
-	} else if common.RedisEnabled {
-		_, _, err := rpmlimit.PushRequest(c.Request.Context(), group.ID, mc.Model, 1, time.Minute)
-		if err != nil {
-			log.Errorf("push request error: %s", err.Error())
-		}
+		setRpmHeaders(c, adjustedModelConfig.RPM, adjustedModelConfig.RPM-count)
 	}
 
 	if adjustedModelConfig.TPM > 0 {
@@ -113,10 +131,13 @@ func checkGroupModelRPMAndTPM(c *gin.Context, group *model.GroupCache, mc *model
 			// ignore error
 			return nil
 		}
-
+		log.Data["tpm_limit"] = strconv.FormatInt(adjustedModelConfig.TPM, 10)
+		log.Data["tpm"] = strconv.FormatInt(tpm, 10)
 		if tpm >= adjustedModelConfig.TPM {
+			setTpmHeaders(c, adjustedModelConfig.TPM, 0)
 			return ErrRequestTpmLimitExceeded
 		}
+		setTpmHeaders(c, adjustedModelConfig.TPM, adjustedModelConfig.TPM-tpm)
 	}
 	return nil
 }
