@@ -110,7 +110,7 @@ func consumeAmount(
 	if amount > 0 && postGroupConsumer != nil {
 		return processGroupConsume(ctx, amount, postGroupConsumer, meta)
 	}
-	return 0
+	return amount
 }
 
 func CalculateAmount(
