@@ -55,6 +55,7 @@ docker-compose up -d
 
 ### 基础配置
 
+- `LISTEN`: 监听地址，默认 `:3000`
 - `ADMIN_KEY`: 管理员密钥，用于管理 API 和转发 API，默认空
 - `INTERNAL_TOKEN`: 内部服务认证 token，默认空
 - `FFPROBE_ENABLED`: 是否启用 ffprobe，默认 `false`
