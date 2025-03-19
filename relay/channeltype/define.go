@@ -27,6 +27,7 @@ import (
 	"github.com/labring/aiproxy/relay/adaptor/novita"
 	"github.com/labring/aiproxy/relay/adaptor/ollama"
 	"github.com/labring/aiproxy/relay/adaptor/openai"
+	"github.com/labring/aiproxy/relay/adaptor/openrouter"
 	"github.com/labring/aiproxy/relay/adaptor/siliconflow"
 	"github.com/labring/aiproxy/relay/adaptor/stepfun"
 	"github.com/labring/aiproxy/relay/adaptor/tencent"
@@ -47,6 +48,7 @@ var ChannelAdaptor = map[int]adaptor.Adaptor{
 	17: &ali.Adaptor{},
 	18: &xunfei.Adaptor{},
 	19: &ai360.Adaptor{},
+	20: &openrouter.Adaptor{},
 	23: &tencent.Adaptor{},
 	24: &gemini.Adaptor{},
 	25: &moonshot.Adaptor{},
