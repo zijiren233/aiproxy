@@ -10,7 +10,6 @@ import (
 	"os"
 	"os/signal"
 	"runtime"
-	"strconv"
 	"sync"
 	"syscall"
 	"time"
@@ -29,10 +28,10 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-var port int
+var listen string
 
 func init() {
-	flag.IntVar(&port, "port", 3000, "http server port")
+	flag.StringVar(&listen, "listen", ":3000", "http server listen")
 }
 
 func initializeServices() error {
@@ -139,13 +138,13 @@ func setupHTTPServer() (*http.Server, *gin.Engine) {
 		Use(middleware.RequestIDMiddleware, middleware.CORS())
 	router.SetRouter(server)
 
-	p := os.Getenv("PORT")
-	if p == "" {
-		p = strconv.Itoa(port)
+	listenEnv := os.Getenv("LISTEN")
+	if listenEnv != "" {
+		listen = listenEnv
 	}
 
 	return &http.Server{
-		Addr:              ":" + p,
+		Addr:              listen,
 		ReadHeaderTimeout: 10 * time.Second,
 		Handler:           server,
 	}, server
@@ -207,7 +206,7 @@ func main() {
 	srv, _ := setupHTTPServer()
 
 	go func() {
-		log.Infof("server started on http://localhost:%s", srv.Addr[1:])
+		log.Infof("server started on %s", srv.Addr)
 		if err := srv.ListenAndServe(); err != nil &&
 			!errors.Is(err, http.ErrServerClosed) {
 			log.Fatal("failed to start HTTP server: " + err.Error())
