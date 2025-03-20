@@ -263,6 +263,8 @@ func relay(c *gin.Context, mode mode.Mode, relayController RelayController) {
 		}
 	}
 
+	meta := middleware.NewMetaByContext(c, initialChannel.channel, mode)
+
 	if relayController.GetRequestUsage != nil {
 		requestUsage, err := relayController.GetRequestUsage(c, mc)
 		if err != nil {
@@ -288,10 +290,11 @@ func relay(c *gin.Context, mode mode.Mode, relayController RelayController) {
 			)
 			return
 		}
+
+		meta.InputTokens = requestUsage.InputTokens
 	}
 
 	// First attempt
-	meta := middleware.NewMetaByContext(c, initialChannel.channel, mode)
 	result, retry := RelayHelper(meta, c, relayController.Handler)
 
 	retryTimes := int(config.GetRetryTimes())
@@ -370,9 +373,10 @@ type retryState struct {
 	errorRates               map[int64]float64
 	exhausted                bool
 
-	meta   *meta.Meta
-	price  *model.Price
-	result *controller.HandleResult
+	meta        *meta.Meta
+	price       *model.Price
+	inputTokens int
+	result      *controller.HandleResult
 }
 
 type initialChannel struct {
@@ -435,6 +439,7 @@ func initRetryState(retryTimes int, channel *initialChannel, meta *meta.Meta, re
 		meta:             meta,
 		result:           result,
 		price:            price,
+		inputTokens:      meta.InputTokens,
 	}
 
 	if channel.designatedChannel {
@@ -487,7 +492,12 @@ func retryLoop(c *gin.Context, mode mode.Mode, requestModel string, state *retry
 			state.retryTimes-i,
 		)
 
-		state.meta = middleware.NewMetaByContext(c, newChannel, mode)
+		state.meta = middleware.NewMetaByContext(
+			c,
+			newChannel,
+			mode,
+			meta.WithInputTokens(state.inputTokens),
+		)
 		var retry bool
 		state.result, retry = RelayHelper(state.meta, c, relayController)
 

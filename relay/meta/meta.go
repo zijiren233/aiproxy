@@ -30,6 +30,7 @@ type Meta struct {
 	OriginModel string
 	ActualModel string
 	Mode        mode.Mode
+	// TODO: remove this field
 	InputTokens int
 }
 
@@ -62,6 +63,12 @@ func WithGroup(group *model.GroupCache) Option {
 func WithToken(token *model.TokenCache) Option {
 	return func(meta *Meta) {
 		meta.Token = token
+	}
+}
+
+func WithInputTokens(inputTokens int) Option {
+	return func(meta *Meta) {
+		meta.InputTokens = inputTokens
 	}
 }
 
