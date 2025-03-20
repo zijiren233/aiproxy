@@ -2,7 +2,7 @@ package ali
 
 import (
 	"github.com/labring/aiproxy/model"
-	"github.com/labring/aiproxy/relay/relaymode"
+	"github.com/labring/aiproxy/relay/mode"
 )
 
 // https://help.aliyun.com/zh/model-studio/getting-started/models?spm=a2c4g.11186623.0.i12#ced16cb6cdfsy
@@ -11,7 +11,7 @@ var ModelList = []*model.ModelConfig{
 	// 通义千问-Max
 	{
 		Model:       "qwen-max",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerAlibaba,
 		InputPrice:  0.02,
 		OutputPrice: 0.06,
@@ -25,7 +25,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "qwen-max-latest",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerAlibaba,
 		InputPrice:  0.02,
 		OutputPrice: 0.06,
@@ -41,7 +41,7 @@ var ModelList = []*model.ModelConfig{
 	// 通义千问-Plus
 	{
 		Model:       "qwen-plus",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerAlibaba,
 		InputPrice:  0.0008,
 		OutputPrice: 0.002,
@@ -55,7 +55,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "qwen-plus-latest",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerAlibaba,
 		InputPrice:  0.0008,
 		OutputPrice: 0.002,
@@ -71,7 +71,7 @@ var ModelList = []*model.ModelConfig{
 	// 通义千问-Turbo
 	{
 		Model:       "qwen-turbo",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerAlibaba,
 		InputPrice:  0.0003,
 		OutputPrice: 0.0006,
@@ -85,7 +85,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "qwen-turbo-latest",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerAlibaba,
 		InputPrice:  0.0003,
 		OutputPrice: 0.0006,
@@ -101,7 +101,7 @@ var ModelList = []*model.ModelConfig{
 	// Qwen-Long
 	{
 		Model:       "qwen-long",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerAlibaba,
 		InputPrice:  0.0005,
 		OutputPrice: 0.002,
@@ -117,7 +117,7 @@ var ModelList = []*model.ModelConfig{
 	// 通义千问VL
 	{
 		Model:       "qwen-vl-max",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerAlibaba,
 		InputPrice:  0.02,
 		OutputPrice: 0.02,
@@ -132,7 +132,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "qwen-vl-max-latest",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerAlibaba,
 		InputPrice:  0.02,
 		OutputPrice: 0.02,
@@ -147,7 +147,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "qwen-vl-plus",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerAlibaba,
 		InputPrice:  0.008,
 		OutputPrice: 0.008,
@@ -162,7 +162,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "qwen-vl-plus-latest",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerAlibaba,
 		InputPrice:  0.008,
 		OutputPrice: 0.008,
@@ -179,7 +179,7 @@ var ModelList = []*model.ModelConfig{
 	// 通义千问OCR
 	{
 		Model:            "qwen-vl-ocr",
-		Type:             relaymode.ChatCompletions,
+		Type:             mode.ChatCompletions,
 		Owner:            model.ModelOwnerAlibaba,
 		InputPrice:       0.005,
 		OutputPrice:      0.005,
@@ -194,7 +194,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:            "qwen-vl-ocr-latest",
-		Type:             relaymode.ChatCompletions,
+		Type:             mode.ChatCompletions,
 		Owner:            model.ModelOwnerAlibaba,
 		InputPrice:       0.005,
 		OutputPrice:      0.005,
@@ -211,7 +211,7 @@ var ModelList = []*model.ModelConfig{
 	// 通义千问Math
 	{
 		Model:       "qwen-math-plus",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerAlibaba,
 		InputPrice:  0.004,
 		OutputPrice: 0.012,
@@ -225,7 +225,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "qwen-math-plus-latest",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerAlibaba,
 		InputPrice:  0.004,
 		OutputPrice: 0.012,
@@ -239,7 +239,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "qwen-math-turbo",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerAlibaba,
 		InputPrice:  0.002,
 		OutputPrice: 0.006,
@@ -253,7 +253,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "qwen-math-turbo-latest",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerAlibaba,
 		InputPrice:  0.002,
 		OutputPrice: 0.006,
@@ -269,7 +269,7 @@ var ModelList = []*model.ModelConfig{
 	// 通义千问Coder
 	{
 		Model:       "qwen-coder-plus",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerAlibaba,
 		InputPrice:  0.0035,
 		OutputPrice: 0.007,
@@ -283,7 +283,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "qwen-coder-plus-latest",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerAlibaba,
 		InputPrice:  0.0035,
 		OutputPrice: 0.007,
@@ -297,7 +297,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "qwen-coder-turbo",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerAlibaba,
 		InputPrice:  0.002,
 		OutputPrice: 0.006,
@@ -311,7 +311,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "qwen-coder-turbo-latest",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerAlibaba,
 		InputPrice:  0.002,
 		OutputPrice: 0.006,
@@ -327,7 +327,7 @@ var ModelList = []*model.ModelConfig{
 	// 通义千问2.5
 	{
 		Model:       "qwen2.5-72b-instruct",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerAlibaba,
 		InputPrice:  0.004,
 		OutputPrice: 0.012,
@@ -341,7 +341,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "qwen2.5-32b-instruct",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerAlibaba,
 		InputPrice:  0.0035,
 		OutputPrice: 0.007,
@@ -355,7 +355,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "qwen2.5-14b-instruct",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerAlibaba,
 		InputPrice:  0.002,
 		OutputPrice: 0.006,
@@ -369,7 +369,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "qwen2.5-7b-instruct",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerAlibaba,
 		InputPrice:  0.001,
 		OutputPrice: 0.002,
@@ -383,7 +383,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "qwen2.5-vl-72b-instruct",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerAlibaba,
 		InputPrice:  0.016,
 		OutputPrice: 0.048,
@@ -398,7 +398,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "qwen2.5-vl-7b-instruct",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerAlibaba,
 		InputPrice:  0.002,
 		OutputPrice: 0.005,
@@ -413,7 +413,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "qwen2.5-vl-3b-instruct",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerAlibaba,
 		InputPrice:  0.0012,
 		OutputPrice: 0.0036,
@@ -430,7 +430,7 @@ var ModelList = []*model.ModelConfig{
 	// 通义千问2
 	{
 		Model:       "qwen2-72b-instruct",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerAlibaba,
 		InputPrice:  0.004,
 		OutputPrice: 0.012,
@@ -444,7 +444,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "qwen2-57b-a14b-instruct",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerAlibaba,
 		InputPrice:  0.0035,
 		OutputPrice: 0.007,
@@ -458,7 +458,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "qwen2-7b-instruct",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerAlibaba,
 		InputPrice:  0.001,
 		OutputPrice: 0.002,
@@ -472,7 +472,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "qwen2-vl-72b-instruct",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerAlibaba,
 		InputPrice:  0.016,
 		OutputPrice: 0.048,
@@ -488,7 +488,7 @@ var ModelList = []*model.ModelConfig{
 	// 通义千问1.5
 	{
 		Model:       "qwen1.5-110b-chat",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerAlibaba,
 		InputPrice:  0.007,
 		OutputPrice: 0.014,
@@ -502,7 +502,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "qwen1.5-72b-chat",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerAlibaba,
 		InputPrice:  0.005,
 		OutputPrice: 0.01,
@@ -516,7 +516,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "qwen1.5-32b-chat",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerAlibaba,
 		InputPrice:  0.0035,
 		OutputPrice: 0.007,
@@ -530,7 +530,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "qwen1.5-14b-chat",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerAlibaba,
 		InputPrice:  0.002,
 		OutputPrice: 0.004,
@@ -544,7 +544,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "qwen1.5-7b-chat",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerAlibaba,
 		InputPrice:  0.001,
 		OutputPrice: 0.002,
@@ -560,7 +560,7 @@ var ModelList = []*model.ModelConfig{
 	// 通义千问
 	{
 		Model:       "qwen-72b-chat",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerAlibaba,
 		InputPrice:  0.02,
 		OutputPrice: 0.02,
@@ -574,7 +574,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "qwen-14b-chat",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerAlibaba,
 		InputPrice:  0.008,
 		OutputPrice: 0.008,
@@ -588,7 +588,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "qwen-7b-chat",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerAlibaba,
 		InputPrice:  0.006,
 		OutputPrice: 0.006,
@@ -604,7 +604,7 @@ var ModelList = []*model.ModelConfig{
 	// 通义千问数学模型
 	{
 		Model:       "qwen2.5-math-72b-instruct",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerAlibaba,
 		InputPrice:  0.004,
 		OutputPrice: 0.012,
@@ -618,7 +618,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "qwen2.5-math-7b-instruct",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerAlibaba,
 		InputPrice:  0.001,
 		OutputPrice: 0.002,
@@ -632,7 +632,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "qwen2-math-72b-instruct",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerAlibaba,
 		InputPrice:  0.004,
 		OutputPrice: 0.012,
@@ -646,7 +646,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "qwen2-math-7b-instruct",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerAlibaba,
 		InputPrice:  0.001,
 		OutputPrice: 0.002,
@@ -662,7 +662,7 @@ var ModelList = []*model.ModelConfig{
 	// 通义千问Coder
 	{
 		Model:       "qwen2.5-coder-32b-instruct",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerAlibaba,
 		InputPrice:  0.0035,
 		OutputPrice: 0.007,
@@ -676,7 +676,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "qwen2.5-coder-14b-instruct",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerAlibaba,
 		InputPrice:  0.002,
 		OutputPrice: 0.006,
@@ -690,7 +690,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "qwen2.5-coder-7b-instruct",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerAlibaba,
 		InputPrice:  0.001,
 		OutputPrice: 0.002,
@@ -705,7 +705,7 @@ var ModelList = []*model.ModelConfig{
 
 	{
 		Model:       "qwq-32b-preview",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerAlibaba,
 		InputPrice:  0.0035,
 		OutputPrice: 0.007,
@@ -718,7 +718,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "qvq-72b-preview",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerAlibaba,
 		InputPrice:  0.012,
 		OutputPrice: 0.036,
@@ -732,7 +732,7 @@ var ModelList = []*model.ModelConfig{
 
 	{
 		Model:            "qwen-mt-plus",
-		Type:             relaymode.ChatCompletions,
+		Type:             mode.ChatCompletions,
 		Owner:            model.ModelOwnerAlibaba,
 		InputPrice:       0.015,
 		OutputPrice:      0.045,
@@ -746,7 +746,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:            "qwen-mt-turbo",
-		Type:             relaymode.ChatCompletions,
+		Type:             mode.ChatCompletions,
 		Owner:            model.ModelOwnerAlibaba,
 		InputPrice:       0.001,
 		OutputPrice:      0.003,
@@ -762,32 +762,32 @@ var ModelList = []*model.ModelConfig{
 	// stable-diffusion
 	{
 		Model: "stable-diffusion-xl",
-		Type:  relaymode.ImagesGenerations,
+		Type:  mode.ImagesGenerations,
 		Owner: model.ModelOwnerStabilityAI,
 		RPM:   2,
 	},
 	{
 		Model: "stable-diffusion-v1.5",
-		Type:  relaymode.ImagesGenerations,
+		Type:  mode.ImagesGenerations,
 		Owner: model.ModelOwnerStabilityAI,
 		RPM:   2,
 	},
 	{
 		Model: "stable-diffusion-3.5-large",
-		Type:  relaymode.ImagesGenerations,
+		Type:  mode.ImagesGenerations,
 		Owner: model.ModelOwnerStabilityAI,
 		RPM:   2,
 	},
 	{
 		Model: "stable-diffusion-3.5-large-turbo",
-		Type:  relaymode.ImagesGenerations,
+		Type:  mode.ImagesGenerations,
 		Owner: model.ModelOwnerStabilityAI,
 		RPM:   2,
 	},
 
 	{
 		Model:      "sambert-v1",
-		Type:       relaymode.AudioSpeech,
+		Type:       mode.AudioSpeech,
 		Owner:      model.ModelOwnerAlibaba,
 		InputPrice: 0.1,
 		RPM:        20,
@@ -842,7 +842,7 @@ var ModelList = []*model.ModelConfig{
 
 	{
 		Model:      "paraformer-realtime-v2",
-		Type:       relaymode.AudioTranscription,
+		Type:       mode.AudioTranscription,
 		Owner:      model.ModelOwnerAlibaba,
 		RPM:        20,
 		InputPrice: 0.24,
@@ -854,7 +854,7 @@ var ModelList = []*model.ModelConfig{
 
 	{
 		Model: "gte-rerank",
-		Type:  relaymode.Rerank,
+		Type:  mode.Rerank,
 		Owner: model.ModelOwnerAlibaba,
 		RPM:   300,
 		Config: model.NewModelConfig(
@@ -865,7 +865,7 @@ var ModelList = []*model.ModelConfig{
 
 	{
 		Model:      "text-embedding-v1",
-		Type:       relaymode.Embeddings,
+		Type:       mode.Embeddings,
 		Owner:      model.ModelOwnerAlibaba,
 		InputPrice: 0.0007,
 		RPM:        1800,
@@ -875,7 +875,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:      "text-embedding-v2",
-		Type:       relaymode.Embeddings,
+		Type:       mode.Embeddings,
 		Owner:      model.ModelOwnerAlibaba,
 		InputPrice: 0.0007,
 		RPM:        1800,
@@ -885,7 +885,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:      "text-embedding-v3",
-		Type:       relaymode.Embeddings,
+		Type:       mode.Embeddings,
 		Owner:      model.ModelOwnerAlibaba,
 		InputPrice: 0.0007,
 		RPM:        1800,

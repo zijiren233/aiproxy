@@ -72,15 +72,15 @@ func EmbeddingHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*mo
 	return &fullTextResponse.Usage, nil
 }
 
-func embeddingResponse2OpenAI(meta *meta.Meta, response *EmbeddingResponse) *openai.EmbeddingResponse {
-	openAIEmbeddingResponse := openai.EmbeddingResponse{
+func embeddingResponse2OpenAI(meta *meta.Meta, response *EmbeddingResponse) *model.EmbeddingResponse {
+	openAIEmbeddingResponse := model.EmbeddingResponse{
 		Object: "list",
-		Data:   make([]*openai.EmbeddingResponseItem, 0, len(response.Embeddings)),
+		Data:   make([]*model.EmbeddingResponseItem, 0, len(response.Embeddings)),
 		Model:  meta.OriginModel,
 		Usage:  model.Usage{TotalTokens: 0},
 	}
 	for _, item := range response.Embeddings {
-		openAIEmbeddingResponse.Data = append(openAIEmbeddingResponse.Data, &openai.EmbeddingResponseItem{
+		openAIEmbeddingResponse.Data = append(openAIEmbeddingResponse.Data, &model.EmbeddingResponseItem{
 			Object:    `embedding`,
 			Index:     0,
 			Embedding: item.Values,

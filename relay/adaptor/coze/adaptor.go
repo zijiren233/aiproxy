@@ -11,8 +11,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/model"
 	"github.com/labring/aiproxy/relay/meta"
+	"github.com/labring/aiproxy/relay/mode"
 	relaymodel "github.com/labring/aiproxy/relay/model"
-	"github.com/labring/aiproxy/relay/relaymode"
 	"github.com/labring/aiproxy/relay/utils"
 )
 
@@ -38,7 +38,7 @@ func (a *Adaptor) SetupRequestHeader(meta *meta.Meta, _ *gin.Context, req *http.
 }
 
 func (a *Adaptor) ConvertRequest(meta *meta.Meta, req *http.Request) (string, http.Header, io.Reader, error) {
-	if meta.Mode != relaymode.ChatCompletions {
+	if meta.Mode != mode.ChatCompletions {
 		return "", nil, nil, errors.New("coze only support chat completions")
 	}
 	request, err := utils.UnmarshalGeneralOpenAIRequest(req)

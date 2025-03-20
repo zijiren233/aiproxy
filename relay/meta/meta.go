@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/labring/aiproxy/model"
-	"github.com/labring/aiproxy/relay/relaymode"
+	"github.com/labring/aiproxy/relay/mode"
 )
 
 type ChannelMeta struct {
@@ -29,7 +29,7 @@ type Meta struct {
 	RequestID   string
 	OriginModel string
 	ActualModel string
-	Mode        relaymode.Mode
+	Mode        mode.Mode
 	InputTokens int
 	// TODO: check balance move to controller
 	CheckBalance func(amount float64) bool
@@ -75,7 +75,7 @@ func WithCheckBalance(checkBalance func(amount float64) bool) Option {
 
 func NewMeta(
 	channel *model.Channel,
-	mode relaymode.Mode,
+	mode mode.Mode,
 	modelName string,
 	modelConfig *model.ModelConfig,
 	opts ...Option,

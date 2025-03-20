@@ -2,7 +2,7 @@ package lingyiwanwu
 
 import (
 	"github.com/labring/aiproxy/model"
-	"github.com/labring/aiproxy/relay/relaymode"
+	"github.com/labring/aiproxy/relay/mode"
 )
 
 // https://platform.lingyiwanwu.com/docs
@@ -10,7 +10,7 @@ import (
 var ModelList = []*model.ModelConfig{
 	{
 		Model:       "yi-lightning",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerLingyiWanwu,
 		InputPrice:  0.00099,
 		OutputPrice: 0.00099,
@@ -22,7 +22,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "yi-vision-v2",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerLingyiWanwu,
 		InputPrice:  0.006,
 		OutputPrice: 0.006,

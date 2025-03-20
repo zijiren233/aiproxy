@@ -33,10 +33,10 @@ func EmbeddingsHandler(c *gin.Context, resp *http.Response) (*model.ErrorWithSta
 	return nil, &fullTextResponse.Usage
 }
 
-func embeddingResponseZhipu2OpenAI(response *EmbeddingResponse) *openai.EmbeddingResponse {
-	openAIEmbeddingResponse := openai.EmbeddingResponse{
+func embeddingResponseZhipu2OpenAI(response *EmbeddingResponse) *model.EmbeddingResponse {
+	openAIEmbeddingResponse := model.EmbeddingResponse{
 		Object: "list",
-		Data:   make([]*openai.EmbeddingResponseItem, 0, len(response.Embeddings)),
+		Data:   make([]*model.EmbeddingResponseItem, 0, len(response.Embeddings)),
 		Model:  response.Model,
 		Usage: model.Usage{
 			PromptTokens:     response.PromptTokens,
@@ -46,7 +46,7 @@ func embeddingResponseZhipu2OpenAI(response *EmbeddingResponse) *openai.Embeddin
 	}
 
 	for _, item := range response.Embeddings {
-		openAIEmbeddingResponse.Data = append(openAIEmbeddingResponse.Data, &openai.EmbeddingResponseItem{
+		openAIEmbeddingResponse.Data = append(openAIEmbeddingResponse.Data, &model.EmbeddingResponseItem{
 			Object:    `embedding`,
 			Index:     item.Index,
 			Embedding: item.Embedding,

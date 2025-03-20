@@ -13,19 +13,19 @@ import (
 	"github.com/labring/aiproxy/relay/adaptor"
 	"github.com/labring/aiproxy/relay/adaptor/openai"
 	"github.com/labring/aiproxy/relay/meta"
+	"github.com/labring/aiproxy/relay/mode"
 	relaymodel "github.com/labring/aiproxy/relay/model"
-	"github.com/labring/aiproxy/relay/relaymode"
 )
 
 func GetRequestURL(meta *meta.Meta) (string, error) {
 	u := meta.Channel.BaseURL
 	switch meta.Mode {
-	case relaymode.ChatCompletions:
+	case mode.ChatCompletions:
 		if strings.HasPrefix(meta.ActualModel, "bot-") {
 			return u + "/api/v3/bots/chat/completions", nil
 		}
 		return u + "/api/v3/chat/completions", nil
-	case relaymode.Embeddings:
+	case mode.Embeddings:
 		return u + "/api/v3/embeddings", nil
 	default:
 		return "", fmt.Errorf("unsupported relay mode %d for doubao", meta.Mode)
@@ -55,7 +55,7 @@ func (a *Adaptor) ConvertRequest(meta *meta.Meta, req *http.Request) (string, ht
 	if err != nil {
 		return "", nil, nil, err
 	}
-	if meta.Mode != relaymode.ChatCompletions || meta.OriginModel != "deepseek-reasoner" {
+	if meta.Mode != mode.ChatCompletions || meta.OriginModel != "deepseek-reasoner" {
 		return method, header, body, nil
 	}
 

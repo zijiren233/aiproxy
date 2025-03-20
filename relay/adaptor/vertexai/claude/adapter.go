@@ -10,8 +10,8 @@ import (
 	"github.com/labring/aiproxy/model"
 	"github.com/labring/aiproxy/relay/adaptor/anthropic"
 	"github.com/labring/aiproxy/relay/meta"
+	"github.com/labring/aiproxy/relay/mode"
 	relaymodel "github.com/labring/aiproxy/relay/model"
-	"github.com/labring/aiproxy/relay/relaymode"
 	"github.com/labring/aiproxy/relay/utils"
 	"github.com/pkg/errors"
 )
@@ -19,32 +19,32 @@ import (
 var ModelList = []*model.ModelConfig{
 	{
 		Model: "claude-3-haiku@20240307",
-		Type:  relaymode.ChatCompletions,
+		Type:  mode.ChatCompletions,
 		Owner: model.ModelOwnerAnthropic,
 	},
 	{
 		Model: "claude-3-sonnet@20240229",
-		Type:  relaymode.ChatCompletions,
+		Type:  mode.ChatCompletions,
 		Owner: model.ModelOwnerAnthropic,
 	},
 	{
 		Model: "claude-3-opus@20240229",
-		Type:  relaymode.ChatCompletions,
+		Type:  mode.ChatCompletions,
 		Owner: model.ModelOwnerAnthropic,
 	},
 	{
 		Model: "claude-3-5-sonnet@20240620",
-		Type:  relaymode.ChatCompletions,
+		Type:  mode.ChatCompletions,
 		Owner: model.ModelOwnerAnthropic,
 	},
 	{
 		Model: "claude-3-5-sonnet-v2@20241022",
-		Type:  relaymode.ChatCompletions,
+		Type:  mode.ChatCompletions,
 		Owner: model.ModelOwnerAnthropic,
 	},
 	{
 		Model: "claude-3-5-haiku@20241022",
-		Type:  relaymode.ChatCompletions,
+		Type:  mode.ChatCompletions,
 		Owner: model.ModelOwnerAnthropic,
 	},
 }

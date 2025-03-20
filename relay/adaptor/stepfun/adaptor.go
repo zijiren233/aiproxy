@@ -8,7 +8,7 @@ import (
 	"github.com/labring/aiproxy/relay/adaptor"
 	"github.com/labring/aiproxy/relay/adaptor/openai"
 	"github.com/labring/aiproxy/relay/meta"
-	"github.com/labring/aiproxy/relay/relaymode"
+	"github.com/labring/aiproxy/relay/mode"
 )
 
 type Adaptor struct {
@@ -23,7 +23,7 @@ func (a *Adaptor) GetBaseURL() string {
 
 func (a *Adaptor) ConvertRequest(meta *meta.Meta, req *http.Request) (string, http.Header, io.Reader, error) {
 	switch meta.Mode {
-	case relaymode.AudioSpeech:
+	case mode.AudioSpeech:
 		return openai.ConvertTTSRequest(meta, req, "cixingnansheng")
 	default:
 		return a.Adaptor.ConvertRequest(meta, req)

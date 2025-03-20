@@ -2,7 +2,7 @@ package doubaoaudio
 
 import (
 	"github.com/labring/aiproxy/model"
-	"github.com/labring/aiproxy/relay/relaymode"
+	"github.com/labring/aiproxy/relay/mode"
 )
 
 // https://www.volcengine.com/docs/6561/1257543
@@ -10,7 +10,7 @@ import (
 var ModelList = []*model.ModelConfig{
 	{
 		Model:      "Doubao-tts",
-		Type:       relaymode.AudioSpeech,
+		Type:       mode.AudioSpeech,
 		Owner:      model.ModelOwnerDoubao,
 		InputPrice: 0.5,
 		RPM:        60,
@@ -99,7 +99,7 @@ var ModelList = []*model.ModelConfig{
 
 	// {
 	// 	Model:      "Doubao-stt",
-	// 	Type:       relaymode.AudioTranscription,
+	// 	Type:       mode.AudioTranscription,
 	// 	Owner:      model.ModelOwnerDoubao,
 	// 	InputPrice: 2.3,
 	// },

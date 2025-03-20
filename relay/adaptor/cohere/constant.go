@@ -2,38 +2,38 @@ package cohere
 
 import (
 	"github.com/labring/aiproxy/model"
-	"github.com/labring/aiproxy/relay/relaymode"
+	"github.com/labring/aiproxy/relay/mode"
 )
 
 var ModelList = []*model.ModelConfig{
 	{
 		Model: "command",
-		Type:  relaymode.ChatCompletions,
+		Type:  mode.ChatCompletions,
 		Owner: model.ModelOwnerCohere,
 	},
 	{
 		Model: "command-nightly",
-		Type:  relaymode.ChatCompletions,
+		Type:  mode.ChatCompletions,
 		Owner: model.ModelOwnerCohere,
 	},
 	{
 		Model: "command-light",
-		Type:  relaymode.ChatCompletions,
+		Type:  mode.ChatCompletions,
 		Owner: model.ModelOwnerCohere,
 	},
 	{
 		Model: "command-light-nightly",
-		Type:  relaymode.ChatCompletions,
+		Type:  mode.ChatCompletions,
 		Owner: model.ModelOwnerCohere,
 	},
 	{
 		Model: "command-r",
-		Type:  relaymode.ChatCompletions,
+		Type:  mode.ChatCompletions,
 		Owner: model.ModelOwnerCohere,
 	},
 	{
 		Model: "command-r-plus",
-		Type:  relaymode.ChatCompletions,
+		Type:  mode.ChatCompletions,
 		Owner: model.ModelOwnerCohere,
 	},
 }

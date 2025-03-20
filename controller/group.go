@@ -30,15 +30,16 @@ func (g *GroupResponse) MarshalJSON() ([]byte, error) {
 }
 
 // GetGroups godoc
-// @Summary      Get all groups
-// @Description  Returns a list of all groups with pagination
-// @Tags         groups
-// @Produce      json
-// @Security     ApiKeyAuth
-// @Param        page      query    int     false  "Page number"
-// @Param        per_page  query    int     false  "Items per page"
-// @Success      200       {object}  middleware.APIResponse{data=map[string]any{groups=[]GroupResponse,total=int}}
-// @Router       /api/groups [get]
+//
+//	@Summary		Get all groups
+//	@Description	Returns a list of all groups with pagination
+//	@Tags			groups
+//	@Produce		json
+//	@Security		ApiKeyAuth
+//	@Param			page		query		int	false	"Page number"
+//	@Param			per_page	query		int	false	"Items per page"
+//	@Success		200			{object}	middleware.APIResponse{data=map[string]any{groups=[]GroupResponse,total=int}}
+//	@Router			/api/groups [get]
 func GetGroups(c *gin.Context) {
 	page, perPage := parsePageParams(c)
 	order := c.DefaultQuery("order", "")
@@ -62,16 +63,17 @@ func GetGroups(c *gin.Context) {
 }
 
 // SearchGroups godoc
-// @Summary      Search groups
-// @Description  Search groups with keyword and pagination
-// @Tags         groups
-// @Produce      json
-// @Security     ApiKeyAuth
-// @Param        keyword   query    string  true   "Search keyword"
-// @Param        page      query    int     false  "Page number"
-// @Param        per_page  query    int     false  "Items per page"
-// @Success      200       {object}  middleware.APIResponse{data=map[string]any{groups=[]GroupResponse,total=int}}
-// @Router       /api/groups/search [get]
+//
+//	@Summary		Search groups
+//	@Description	Search groups with keyword and pagination
+//	@Tags			groups
+//	@Produce		json
+//	@Security		ApiKeyAuth
+//	@Param			keyword		query		string	true	"Search keyword"
+//	@Param			page		query		int		false	"Page number"
+//	@Param			per_page	query		int		false	"Items per page"
+//	@Success		200			{object}	middleware.APIResponse{data=map[string]any{groups=[]GroupResponse,total=int}}
+//	@Router			/api/groups/search [get]
 func SearchGroups(c *gin.Context) {
 	keyword := c.Query("keyword")
 	page, perPage := parsePageParams(c)
@@ -97,14 +99,15 @@ func SearchGroups(c *gin.Context) {
 }
 
 // GetGroup godoc
-// @Summary      Get a group
-// @Description  Returns detailed information about a specific group
-// @Tags         group
-// @Produce      json
-// @Security     ApiKeyAuth
-// @Param        group  path      string  true  "Group name"
-// @Success      200    {object}  middleware.APIResponse{data=GroupResponse}
-// @Router       /api/group/{group} [get]
+//
+//	@Summary		Get a group
+//	@Description	Returns detailed information about a specific group
+//	@Tags			group
+//	@Produce		json
+//	@Security		ApiKeyAuth
+//	@Param			group	path		string	true	"Group name"
+//	@Success		200		{object}	middleware.APIResponse{data=GroupResponse}
+//	@Router			/api/group/{group} [get]
 func GetGroup(c *gin.Context) {
 	group := c.Param("group")
 	if group == "" {
@@ -129,16 +132,17 @@ type UpdateGroupRPMRatioRequest struct {
 }
 
 // UpdateGroupRPMRatio godoc
-// @Summary      Update group RPM ratio
-// @Description  Updates the RPM (Requests Per Minute) ratio for a group
-// @Tags         group
-// @Accept       json
-// @Produce      json
-// @Security     ApiKeyAuth
-// @Param        group  path      string  true  "Group name"
-// @Param        data   body      object  true  "RPM ratio information"
-// @Success      200    {object}  middleware.APIResponse
-// @Router       /api/group/{group}/rpm_ratio [post]
+//
+//	@Summary		Update group RPM ratio
+//	@Description	Updates the RPM (Requests Per Minute) ratio for a group
+//	@Tags			group
+//	@Accept			json
+//	@Produce		json
+//	@Security		ApiKeyAuth
+//	@Param			group	path		string	true	"Group name"
+//	@Param			data	body		object	true	"RPM ratio information"
+//	@Success		200		{object}	middleware.APIResponse
+//	@Router			/api/group/{group}/rpm_ratio [post]
 func UpdateGroupRPMRatio(c *gin.Context) {
 	group := c.Param("group")
 	if group == "" {
@@ -164,16 +168,17 @@ type UpdateGroupRPMRequest struct {
 }
 
 // UpdateGroupRPM godoc
-// @Summary      Update group RPM
-// @Description  Updates the RPM (Requests Per Minute) for a group
-// @Tags         group
-// @Accept       json
-// @Produce      json
-// @Security     ApiKeyAuth
-// @Param        group  path      string  true  "Group name"
-// @Param        data   body      object  true  "RPM information"
-// @Success      200    {object}  middleware.APIResponse
-// @Router       /api/group/{group}/rpm [post]
+//
+//	@Summary		Update group RPM
+//	@Description	Updates the RPM (Requests Per Minute) for a group
+//	@Tags			group
+//	@Accept			json
+//	@Produce		json
+//	@Security		ApiKeyAuth
+//	@Param			group	path		string	true	"Group name"
+//	@Param			data	body		object	true	"RPM information"
+//	@Success		200		{object}	middleware.APIResponse
+//	@Router			/api/group/{group}/rpm [post]
 func UpdateGroupRPM(c *gin.Context) {
 	group := c.Param("group")
 	if group == "" {
@@ -199,16 +204,17 @@ type UpdateGroupTPMRequest struct {
 }
 
 // UpdateGroupTPM godoc
-// @Summary      Update group TPM
-// @Description  Updates the TPM (Tokens Per Minute) for a group
-// @Tags         group
-// @Accept       json
-// @Produce      json
-// @Security     ApiKeyAuth
-// @Param        group  path      string  true  "Group name"
-// @Param        data   body      object  true  "TPM information"
-// @Success      200    {object}  middleware.APIResponse
-// @Router       /api/group/{group}/tpm [post]
+//
+//	@Summary		Update group TPM
+//	@Description	Updates the TPM (Tokens Per Minute) for a group
+//	@Tags			group
+//	@Accept			json
+//	@Produce		json
+//	@Security		ApiKeyAuth
+//	@Param			group	path		string	true	"Group name"
+//	@Param			data	body		object	true	"TPM information"
+//	@Success		200		{object}	middleware.APIResponse
+//	@Router			/api/group/{group}/tpm [post]
 func UpdateGroupTPM(c *gin.Context) {
 	group := c.Param("group")
 	if group == "" {
@@ -234,16 +240,17 @@ type UpdateGroupTPMRatioRequest struct {
 }
 
 // UpdateGroupTPMRatio godoc
-// @Summary      Update group TPM ratio
-// @Description  Updates the TPM (Tokens Per Minute) ratio for a group
-// @Tags         group
-// @Accept       json
-// @Produce      json
-// @Security     ApiKeyAuth
-// @Param        group  path      string  true  "Group name"
-// @Param        data   body      object  true  "TPM ratio information"
-// @Success      200    {object}  middleware.APIResponse
-// @Router       /api/group/{group}/tpm_ratio [post]
+//
+//	@Summary		Update group TPM ratio
+//	@Description	Updates the TPM (Tokens Per Minute) ratio for a group
+//	@Tags			group
+//	@Accept			json
+//	@Produce		json
+//	@Security		ApiKeyAuth
+//	@Param			group	path		string	true	"Group name"
+//	@Param			data	body		object	true	"TPM ratio information"
+//	@Success		200		{object}	middleware.APIResponse
+//	@Router			/api/group/{group}/tpm_ratio [post]
 func UpdateGroupTPMRatio(c *gin.Context) {
 	group := c.Param("group")
 	if group == "" {
@@ -269,16 +276,17 @@ type UpdateGroupStatusRequest struct {
 }
 
 // UpdateGroupStatus godoc
-// @Summary      Update group status
-// @Description  Updates the status of a group
-// @Tags         group
-// @Accept       json
-// @Produce      json
-// @Security     ApiKeyAuth
-// @Param        group   path      string  true  "Group name"
-// @Param        status  body      object  true  "Status information"
-// @Success      200     {object}  middleware.APIResponse
-// @Router       /api/group/{group}/status [post]
+//
+//	@Summary		Update group status
+//	@Description	Updates the status of a group
+//	@Tags			group
+//	@Accept			json
+//	@Produce		json
+//	@Security		ApiKeyAuth
+//	@Param			group	path		string	true	"Group name"
+//	@Param			status	body		object	true	"Status information"
+//	@Success		200		{object}	middleware.APIResponse
+//	@Router			/api/group/{group}/status [post]
 func UpdateGroupStatus(c *gin.Context) {
 	group := c.Param("group")
 	if group == "" {
@@ -300,14 +308,15 @@ func UpdateGroupStatus(c *gin.Context) {
 }
 
 // DeleteGroup godoc
-// @Summary      Delete a group
-// @Description  Deletes a group by its name
-// @Tags         group
-// @Produce      json
-// @Security     ApiKeyAuth
-// @Param        group  path      string  true  "Group name"
-// @Success      200    {object}  middleware.APIResponse
-// @Router       /api/group/{group} [delete]
+//
+//	@Summary		Delete a group
+//	@Description	Deletes a group by its name
+//	@Tags			group
+//	@Produce		json
+//	@Security		ApiKeyAuth
+//	@Param			group	path		string	true	"Group name"
+//	@Success		200		{object}	middleware.APIResponse
+//	@Router			/api/group/{group} [delete]
 func DeleteGroup(c *gin.Context) {
 	group := c.Param("group")
 	if group == "" {
@@ -323,15 +332,16 @@ func DeleteGroup(c *gin.Context) {
 }
 
 // DeleteGroups godoc
-// @Summary      Delete multiple groups
-// @Description  Deletes multiple groups by their IDs
-// @Tags         groups
-// @Accept       json
-// @Produce      json
-// @Security     ApiKeyAuth
-// @Param        ids  body      []string  true  "Group IDs"
-// @Success      200  {object}  middleware.APIResponse
-// @Router       /api/groups/batch_delete [post]
+//
+//	@Summary		Delete multiple groups
+//	@Description	Deletes multiple groups by their IDs
+//	@Tags			groups
+//	@Accept			json
+//	@Produce		json
+//	@Security		ApiKeyAuth
+//	@Param			ids	body		[]string	true	"Group IDs"
+//	@Success		200	{object}	middleware.APIResponse
+//	@Router			/api/groups/batch_delete [post]
 func DeleteGroups(c *gin.Context) {
 	ids := []string{}
 	err := c.ShouldBindJSON(&ids)
@@ -355,16 +365,17 @@ type CreateGroupRequest struct {
 }
 
 // CreateGroup godoc
-// @Summary      Create a new group
-// @Description  Creates a new group with the given information
-// @Tags         group
-// @Accept       json
-// @Produce      json
-// @Security     ApiKeyAuth
-// @Param        group  path      string  true  "Group name"
-// @Param        data   body      object  true  "Group information"
-// @Success      200    {object}  middleware.APIResponse{data=model.Group}
-// @Router       /api/group/{group} [post]
+//
+//	@Summary		Create a new group
+//	@Description	Creates a new group with the given information
+//	@Tags			group
+//	@Accept			json
+//	@Produce		json
+//	@Security		ApiKeyAuth
+//	@Param			group	path		string	true	"Group name"
+//	@Param			data	body		object	true	"Group information"
+//	@Success		200		{object}	middleware.APIResponse{data=model.Group}
+//	@Router			/api/group/{group} [post]
 func CreateGroup(c *gin.Context) {
 	group := c.Param("group")
 	if group == "" {
@@ -392,16 +403,17 @@ func CreateGroup(c *gin.Context) {
 }
 
 // UpdateGroup godoc
-// @Summary      Update a group
-// @Description  Updates an existing group with the given information
-// @Tags         group
-// @Accept       json
-// @Produce      json
-// @Security     ApiKeyAuth
-// @Param        group  path      string  true  "Group name"
-// @Param        data   body      object  true  "Updated group information"
-// @Success      200    {object}  middleware.APIResponse{data=model.Group}
-// @Router       /api/group/{group} [put]
+//
+//	@Summary		Update a group
+//	@Description	Updates an existing group with the given information
+//	@Tags			group
+//	@Accept			json
+//	@Produce		json
+//	@Security		ApiKeyAuth
+//	@Param			group	path		string	true	"Group name"
+//	@Param			data	body		object	true	"Updated group information"
+//	@Success		200		{object}	middleware.APIResponse{data=model.Group}
+//	@Router			/api/group/{group} [put]
 func UpdateGroup(c *gin.Context) {
 	group := c.Param("group")
 	if group == "" {

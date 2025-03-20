@@ -160,14 +160,15 @@ func AddOneAPIChannel(ch OneAPIChannel) error {
 }
 
 // ImportChannelFromOneAPI godoc
-// @Summary      Import channel from OneAPI
-// @Description  Imports channels from OneAPI
-// @Tags         channels
-// @Produce      json
-// @Security     ApiKeyAuth
-// @Param        request  body      ImportChannelFromOneAPIRequest  true  "Import channel from OneAPI request"
-// @Success      200      {object}  middleware.APIResponse{data=[]error}
-// @Router       /api/channels/import/oneapi [post]
+//
+//	@Summary		Import channel from OneAPI
+//	@Description	Imports channels from OneAPI
+//	@Tags			channels
+//	@Produce		json
+//	@Security		ApiKeyAuth
+//	@Param			request	body		ImportChannelFromOneAPIRequest	true	"Import channel from OneAPI request"
+//	@Success		200		{object}	middleware.APIResponse{data=[]error}
+//	@Router			/api/channels/import/oneapi [post]
 func ImportChannelFromOneAPI(c *gin.Context) {
 	var req ImportChannelFromOneAPIRequest
 	if err := c.ShouldBindJSON(&req); err != nil {

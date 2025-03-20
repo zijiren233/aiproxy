@@ -10,7 +10,7 @@ import (
 	"github.com/labring/aiproxy/common/network"
 	"github.com/labring/aiproxy/model"
 	"github.com/labring/aiproxy/relay/meta"
-	"github.com/labring/aiproxy/relay/relaymode"
+	"github.com/labring/aiproxy/relay/mode"
 	"github.com/sirupsen/logrus"
 )
 
@@ -181,7 +181,7 @@ func SetLogFieldsFromMeta(m *meta.Meta, fields logrus.Fields) {
 	SetLogChannelFields(fields, m.Channel)
 }
 
-func SetLogModeField(fields logrus.Fields, mode relaymode.Mode) {
+func SetLogModeField(fields logrus.Fields, mode mode.Mode) {
 	fields["mode"] = mode.String()
 }
 

@@ -2,7 +2,7 @@ package tencent
 
 import (
 	"github.com/labring/aiproxy/model"
-	"github.com/labring/aiproxy/relay/relaymode"
+	"github.com/labring/aiproxy/relay/mode"
 )
 
 // https://cloud.tencent.com/document/product/1729/104753
@@ -10,7 +10,7 @@ import (
 var ModelList = []*model.ModelConfig{
 	{
 		Model:       "hunyuan-lite",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerTencent,
 		InputPrice:  0.0001,
 		OutputPrice: 0.0001,
@@ -23,7 +23,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "hunyuan-turbo-latest",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerTencent,
 		InputPrice:  0.015,
 		OutputPrice: 0.05,
@@ -37,7 +37,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "hunyuan-turbo",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerTencent,
 		InputPrice:  0.015,
 		OutputPrice: 0.05,
@@ -52,7 +52,7 @@ var ModelList = []*model.ModelConfig{
 
 	{
 		Model:       "hunyuan-pro",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerTencent,
 		InputPrice:  0.03,
 		OutputPrice: 0.10,
@@ -66,7 +66,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "hunyuan-large",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerTencent,
 		InputPrice:  0.004,
 		OutputPrice: 0.012,
@@ -80,7 +80,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "hunyuan-large-longcontext",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerTencent,
 		InputPrice:  0.006,
 		OutputPrice: 0.018,
@@ -92,7 +92,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "hunyuan-standard",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerTencent,
 		InputPrice:  0.0008,
 		OutputPrice: 0.002,
@@ -104,14 +104,14 @@ var ModelList = []*model.ModelConfig{
 	},
 	// {
 	// 	Model:       "hunyuan-standard-256K",
-	// 	Type:        relaymode.ChatCompletions,
+	// 	Type:        mode.ChatCompletions,
 	// 	Owner:       model.ModelOwnerTencent,
 	// 	InputPrice:  0.0005,
 	// 	OutputPrice: 0.002,
 	// },
 	{
 		Model:       "hunyuan-role",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerTencent,
 		InputPrice:  0.004,
 		OutputPrice: 0.008,
@@ -123,7 +123,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "hunyuan-functioncall",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerTencent,
 		InputPrice:  0.004,
 		OutputPrice: 0.008,
@@ -136,7 +136,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "hunyuan-code",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerTencent,
 		InputPrice:  0.004,
 		OutputPrice: 0.008,
@@ -149,7 +149,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "hunyuan-turbo-vision",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerTencent,
 		InputPrice:  0.08,
 		OutputPrice: 0.08,
@@ -164,7 +164,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "hunyuan-vision",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerTencent,
 		InputPrice:  0.018,
 		OutputPrice: 0.018,
@@ -180,7 +180,7 @@ var ModelList = []*model.ModelConfig{
 
 	{
 		Model:      "hunyuan-embedding",
-		Type:       relaymode.Embeddings,
+		Type:       mode.Embeddings,
 		Owner:      model.ModelOwnerTencent,
 		InputPrice: 0.0007,
 		RPM:        300,

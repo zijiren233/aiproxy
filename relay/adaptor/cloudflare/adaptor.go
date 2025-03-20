@@ -7,7 +7,7 @@ import (
 	"github.com/labring/aiproxy/model"
 	"github.com/labring/aiproxy/relay/adaptor/openai"
 	"github.com/labring/aiproxy/relay/meta"
-	"github.com/labring/aiproxy/relay/relaymode"
+	"github.com/labring/aiproxy/relay/mode"
 )
 
 type Adaptor struct {
@@ -38,9 +38,9 @@ func (a *Adaptor) GetRequestURL(meta *meta.Meta) (string, error) {
 	}
 
 	switch meta.Mode {
-	case relaymode.ChatCompletions:
+	case mode.ChatCompletions:
 		return urlPrefix + "/v1/chat/completions", nil
-	case relaymode.Embeddings:
+	case mode.Embeddings:
 		return urlPrefix + "/v1/embeddings", nil
 	default:
 		if isAIGateWay {

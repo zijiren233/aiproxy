@@ -2,7 +2,7 @@ package siliconflow
 
 import (
 	"github.com/labring/aiproxy/model"
-	"github.com/labring/aiproxy/relay/relaymode"
+	"github.com/labring/aiproxy/relay/mode"
 )
 
 // https://docs.siliconflow.cn/docs/getting-started
@@ -10,7 +10,7 @@ import (
 var ModelList = []*model.ModelConfig{
 	{
 		Model:       "BAAI/bge-reranker-v2-m3",
-		Type:        relaymode.Rerank,
+		Type:        mode.Rerank,
 		Owner:       model.ModelOwnerBAAI,
 		InputPrice:  0.0009,
 		OutputPrice: 0,
@@ -19,7 +19,7 @@ var ModelList = []*model.ModelConfig{
 
 	{
 		Model:      "BAAI/bge-large-zh-v1.5",
-		Type:       relaymode.Embeddings,
+		Type:       mode.Embeddings,
 		Owner:      model.ModelOwnerBAAI,
 		InputPrice: 0.0005,
 		RPM:        2000,
@@ -27,7 +27,7 @@ var ModelList = []*model.ModelConfig{
 
 	{
 		Model:       "fishaudio/fish-speech-1.4",
-		Type:        relaymode.AudioSpeech,
+		Type:        mode.AudioSpeech,
 		Owner:       model.ModelOwnerFishAudio,
 		OutputPrice: 0.105,
 		Config: map[model.ModelConfigKey]any{
@@ -46,13 +46,13 @@ var ModelList = []*model.ModelConfig{
 
 	{
 		Model: "FunAudioLLM/SenseVoiceSmall",
-		Type:  relaymode.AudioTranscription,
+		Type:  mode.AudioTranscription,
 		Owner: model.ModelOwnerFunAudioLLM,
 	},
 
 	{
 		Model: "stabilityai/stable-diffusion-3-5-large",
-		Type:  relaymode.ImagesGenerations,
+		Type:  mode.ImagesGenerations,
 		Owner: model.ModelOwnerStabilityAI,
 		ImagePrices: map[string]float64{
 			"1024x1024": 0,
@@ -65,7 +65,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model: "stabilityai/stable-diffusion-3-5-large-turbo",
-		Type:  relaymode.ImagesGenerations,
+		Type:  mode.ImagesGenerations,
 		Owner: model.ModelOwnerStabilityAI,
 		ImagePrices: map[string]float64{
 			"1024x1024": 0,

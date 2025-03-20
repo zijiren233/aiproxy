@@ -8,6 +8,6 @@ import (
 )
 
 func SetSwaggerRouter(router *gin.Engine) {
-	docs.SwaggerInfo.BasePath = "/api"
+	docs.SwaggerInfo.BasePath = ""
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerfiles.Handler))
 }

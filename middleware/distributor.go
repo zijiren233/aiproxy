@@ -20,7 +20,7 @@ import (
 	"github.com/labring/aiproxy/common/rpmlimit"
 	"github.com/labring/aiproxy/model"
 	"github.com/labring/aiproxy/relay/meta"
-	"github.com/labring/aiproxy/relay/relaymode"
+	"github.com/labring/aiproxy/relay/mode"
 )
 
 func calculateGroupConsumeLevelRatio(usedAmount float64) float64 {
@@ -215,7 +215,7 @@ func checkGroupBalance(c *gin.Context, group *model.GroupCache) bool {
 	return true
 }
 
-func NewDistribute(mode relaymode.Mode) gin.HandlerFunc {
+func NewDistribute(mode mode.Mode) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		distribute(c, mode)
 	}
@@ -251,7 +251,7 @@ func getChannelFromHeader(header string, mc *model.ModelCaches, model string) (*
 	return nil, fmt.Errorf("channel %d not found for model %s", channelIDInt, model)
 }
 
-func distribute(c *gin.Context, mode relaymode.Mode) {
+func distribute(c *gin.Context, mode mode.Mode) {
 	if config.GetDisableServe() {
 		abortLogWithMessage(c, http.StatusServiceUnavailable, "service is under maintenance")
 		return
@@ -358,7 +358,7 @@ func GetModelConfig(c *gin.Context) *model.ModelConfig {
 
 func NewMetaByContext(c *gin.Context,
 	channel *model.Channel,
-	mode relaymode.Mode,
+	mode mode.Mode,
 	opts ...meta.Option,
 ) *meta.Meta {
 	requestID := GetRequestID(c)
@@ -390,10 +390,10 @@ type ModelRequest struct {
 	Model string `form:"model" json:"model"`
 }
 
-func getRequestModel(c *gin.Context, mode relaymode.Mode) (string, error) {
+func getRequestModel(c *gin.Context, m mode.Mode) (string, error) {
 	path := c.Request.URL.Path
 	switch {
-	case mode == relaymode.ParsePdf:
+	case m == mode.ParsePdf:
 		query := c.Request.URL.Query()
 		model := query.Get("model")
 		if model != "" {
@@ -401,8 +401,8 @@ func getRequestModel(c *gin.Context, mode relaymode.Mode) (string, error) {
 		}
 
 		fallthrough
-	case mode == relaymode.AudioTranscription,
-		mode == relaymode.AudioTranslation:
+	case m == mode.AudioTranscription,
+		m == mode.AudioTranslation:
 		return c.Request.FormValue("model"), nil
 
 	case strings.HasPrefix(path, "/v1/engines") && strings.HasSuffix(path, "/embeddings"):

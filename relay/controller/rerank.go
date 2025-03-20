@@ -8,7 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/common/config"
 	"github.com/labring/aiproxy/relay/meta"
-	relaymodel "github.com/labring/aiproxy/relay/model"
+	model "github.com/labring/aiproxy/relay/model"
 	"github.com/labring/aiproxy/relay/utils"
 )
 
@@ -38,7 +38,7 @@ func RerankHelper(meta *meta.Meta, c *gin.Context) *HandleResult {
 	})
 }
 
-func getRerankRequest(c *gin.Context) (*relaymodel.RerankRequest, error) {
+func getRerankRequest(c *gin.Context) (*model.RerankRequest, error) {
 	rerankRequest, err := utils.UnmarshalRerankRequest(c.Request)
 	if err != nil {
 		return nil, err
@@ -56,6 +56,6 @@ func getRerankRequest(c *gin.Context) (*relaymodel.RerankRequest, error) {
 	return rerankRequest, nil
 }
 
-func rerankPromptTokens(rerankRequest *relaymodel.RerankRequest) int {
+func rerankPromptTokens(rerankRequest *model.RerankRequest) int {
 	return len(rerankRequest.Query) + len(strings.Join(rerankRequest.Documents, ""))
 }

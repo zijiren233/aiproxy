@@ -185,6 +185,9 @@ func cleanLog(ctx context.Context) {
 	}
 }
 
+// @securityDefinitions.apikey	ApiKeyAuth
+// @in							header
+// @name						Authorization
 func main() {
 	flag.Parse()
 

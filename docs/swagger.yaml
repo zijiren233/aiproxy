@@ -65,7 +65,7 @@ definitions:
       tpm:
         type: integer
       type:
-        $ref: '#/definitions/relaymode.Mode'
+        $ref: '#/definitions/mode.Mode'
       updated_at:
         type: string
     type: object
@@ -101,6 +101,52 @@ definitions:
       dsn:
         type: string
     type: object
+  controller.OpenAIModelPermission:
+    properties:
+      allow_create_engine:
+        type: boolean
+      allow_fine_tuning:
+        type: boolean
+      allow_logprobs:
+        type: boolean
+      allow_sampling:
+        type: boolean
+      allow_search_indices:
+        type: boolean
+      allow_view:
+        type: boolean
+      created:
+        type: integer
+      group:
+        type: string
+      id:
+        type: string
+      is_blocking:
+        type: boolean
+      object:
+        type: string
+      organization:
+        type: string
+    type: object
+  controller.OpenAIModels:
+    properties:
+      created:
+        type: integer
+      id:
+        type: string
+      object:
+        type: string
+      owned_by:
+        type: string
+      parent:
+        type: string
+      permission:
+        items:
+          $ref: '#/definitions/controller.OpenAIModelPermission'
+        type: array
+      root:
+        type: string
+    type: object
   controller.SaveModelConfigsRequest:
     properties:
       cache_creation_price:
@@ -133,7 +179,7 @@ definitions:
       tpm:
         type: integer
       type:
-        $ref: '#/definitions/relaymode.Mode'
+        $ref: '#/definitions/mode.Mode'
       updated_at:
         type: string
     type: object
@@ -207,6 +253,41 @@ definitions:
       success:
         type: boolean
     type: object
+  mode.Mode:
+    enum:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+    - 6
+    - 7
+    - 8
+    - 9
+    - 10
+    - 11
+    type: integer
+    x-enum-varnames:
+    - Unknown
+    - ChatCompletions
+    - Completions
+    - Embeddings
+    - Moderations
+    - ImagesGenerations
+    - Edits
+    - AudioSpeech
+    - AudioTranscription
+    - AudioTranslation
+    - Rerank
+    - ParsePdf
+  model.Audio:
+    properties:
+      format:
+        type: string
+      voice:
+        type: string
+    type: object
   model.Channel:
     properties:
       balance:
@@ -272,7 +353,7 @@ definitions:
       code:
         type: integer
       mode:
-        $ref: '#/definitions/relaymode.Mode'
+        $ref: '#/definitions/mode.Mode'
       model:
         type: string
       response:
@@ -311,6 +392,134 @@ definitions:
         type: integer
       used_amount:
         type: number
+    type: object
+  model.Document:
+    properties:
+      text:
+        type: string
+    type: object
+  model.EmbeddingRequest:
+    properties:
+      dimensions:
+        type: integer
+      encoding_format:
+        type: string
+      input:
+        type: string
+      model:
+        type: string
+    type: object
+  model.EmbeddingResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/model.EmbeddingResponseItem'
+        type: array
+      model:
+        type: string
+      object:
+        type: string
+      usage:
+        $ref: '#/definitions/model.Usage'
+    type: object
+  model.EmbeddingResponseItem:
+    properties:
+      embedding:
+        items:
+          type: number
+        type: array
+      index:
+        type: integer
+      object:
+        type: string
+    type: object
+  model.Function:
+    properties:
+      arguments:
+        type: string
+      description:
+        type: string
+      name:
+        type: string
+      parameters: {}
+    type: object
+  model.GeneralOpenAIRequest:
+    properties:
+      audio:
+        $ref: '#/definitions/model.Audio'
+      dimensions:
+        type: integer
+      encoding_format:
+        type: string
+      frequency_penalty:
+        type: number
+      function_call: {}
+      functions: {}
+      input: {}
+      instruction:
+        type: string
+      logit_bias: {}
+      logprobs:
+        type: boolean
+      max_completion_tokens:
+        type: integer
+      max_tokens:
+        type: integer
+      messages:
+        items:
+          $ref: '#/definitions/model.Message'
+        type: array
+      metadata: {}
+      modalities:
+        items:
+          type: string
+        type: array
+      model:
+        type: string
+      "n":
+        type: integer
+      num_ctx:
+        type: integer
+      parallel_tool_calls:
+        type: boolean
+      prediction: {}
+      presence_penalty:
+        type: number
+      prompt: {}
+      quality:
+        type: string
+      response_format:
+        $ref: '#/definitions/model.ResponseFormat'
+      seed:
+        type: number
+      service_tier:
+        type: string
+      size:
+        type: string
+      stop: {}
+      store:
+        type: boolean
+      stream:
+        type: boolean
+      stream_options:
+        $ref: '#/definitions/model.StreamOptions'
+      style:
+        type: string
+      temperature:
+        type: number
+      tool_choice: {}
+      tools:
+        items:
+          $ref: '#/definitions/model.Tool'
+        type: array
+      top_k:
+        type: integer
+      top_logprobs:
+        type: integer
+      top_p:
+        type: number
+      user:
+        type: string
     type: object
   model.GetGroupLogsResult:
     properties:
@@ -388,6 +597,55 @@ definitions:
       used_amount:
         type: number
     type: object
+  model.ImageData:
+    properties:
+      b64_json:
+        type: string
+      revised_prompt:
+        type: string
+      url:
+        type: string
+    type: object
+  model.ImageRequest:
+    properties:
+      model:
+        type: string
+      "n":
+        type: integer
+      prompt:
+        type: string
+      quality:
+        type: string
+      response_format:
+        type: string
+      size:
+        type: string
+      style:
+        type: string
+      user:
+        type: string
+    type: object
+  model.ImageResponse:
+    properties:
+      created:
+        type: integer
+      data:
+        items:
+          $ref: '#/definitions/model.ImageData'
+        type: array
+    type: object
+  model.JSONSchema:
+    properties:
+      description:
+        type: string
+      name:
+        type: string
+      schema:
+        additionalProperties: true
+        type: object
+      strict:
+        type: boolean
+    type: object
   model.Log:
     properties:
       cache_creation_price:
@@ -449,6 +707,22 @@ definitions:
       used_amount:
         type: number
     type: object
+  model.Message:
+    properties:
+      content: {}
+      name:
+        type: string
+      reasoning_content:
+        type: string
+      role:
+        type: string
+      tool_call_id:
+        type: string
+      tool_calls:
+        items:
+          $ref: '#/definitions/model.Tool'
+        type: array
+    type: object
   model.ModelConfig:
     properties:
       cache_creation_price:
@@ -481,7 +755,7 @@ definitions:
       tpm:
         type: integer
       type:
-        $ref: '#/definitions/relaymode.Mode'
+        $ref: '#/definitions/mode.Mode'
       updated_at:
         type: string
     type: object
@@ -567,6 +841,20 @@ definitions:
       value:
         type: string
     type: object
+  model.ParsePdfResponse:
+    properties:
+      markdown:
+        type: string
+      pages:
+        type: integer
+    type: object
+  model.PromptTokensDetails:
+    properties:
+      cache_creation_tokens:
+        type: integer
+      cached_tokens:
+        type: integer
+    type: object
   model.RequestDetail:
     properties:
       id:
@@ -581,6 +869,121 @@ definitions:
         type: string
       response_body_truncated:
         type: boolean
+    type: object
+  model.RerankMeta:
+    properties:
+      model:
+        type: string
+      tokens:
+        $ref: '#/definitions/model.RerankMetaTokens'
+    type: object
+  model.RerankMetaTokens:
+    properties:
+      input_tokens:
+        type: integer
+      output_tokens:
+        type: integer
+    type: object
+  model.RerankRequest:
+    properties:
+      documents:
+        items:
+          type: string
+        type: array
+      max_chunks_per_doc:
+        type: integer
+      model:
+        type: string
+      overlap_tokens:
+        type: integer
+      query:
+        type: string
+      return_documents:
+        type: boolean
+      top_n:
+        type: integer
+    type: object
+  model.RerankResponse:
+    properties:
+      id:
+        type: string
+      meta:
+        $ref: '#/definitions/model.RerankMeta'
+      results:
+        items:
+          $ref: '#/definitions/model.RerankResult'
+        type: array
+    type: object
+  model.RerankResult:
+    properties:
+      document:
+        $ref: '#/definitions/model.Document'
+      index:
+        type: integer
+      relevance_score:
+        type: number
+    type: object
+  model.ResponseFormat:
+    properties:
+      json_schema:
+        $ref: '#/definitions/model.JSONSchema'
+      type:
+        type: string
+    type: object
+  model.StreamOptions:
+    properties:
+      include_usage:
+        type: boolean
+    type: object
+  model.SttJSONResponse:
+    properties:
+      text:
+        type: string
+    type: object
+  model.TextResponse:
+    properties:
+      choices:
+        items:
+          $ref: '#/definitions/model.TextResponseChoice'
+        type: array
+      created:
+        type: integer
+      id:
+        type: string
+      model:
+        type: string
+      object:
+        type: string
+      usage:
+        $ref: '#/definitions/model.Usage'
+    type: object
+  model.TextResponseChoice:
+    properties:
+      finish_reason:
+        type: string
+      index:
+        type: integer
+      message:
+        $ref: '#/definitions/model.Message'
+      text:
+        type: string
+    type: object
+  model.TextToSpeechRequest:
+    properties:
+      input:
+        type: string
+      model:
+        type: string
+      response_format:
+        type: string
+      speed:
+        type: number
+      voice:
+        type: string
+    required:
+    - input
+    - model
+    - voice
     type: object
   model.Token:
     properties:
@@ -613,34 +1016,49 @@ definitions:
       used_amount:
         type: number
     type: object
-  relaymode.Mode:
-    enum:
-    - 0
-    - 1
-    - 2
-    - 3
-    - 4
-    - 5
-    - 6
-    - 7
-    - 8
-    - 9
-    - 10
-    - 11
-    type: integer
-    x-enum-varnames:
-    - Unknown
-    - ChatCompletions
-    - Completions
-    - Embeddings
-    - Moderations
-    - ImagesGenerations
-    - Edits
-    - AudioSpeech
-    - AudioTranscription
-    - AudioTranslation
-    - Rerank
-    - ParsePdf
+  model.Tool:
+    properties:
+      function:
+        $ref: '#/definitions/model.Function'
+      id:
+        type: string
+      type:
+        type: string
+    type: object
+  model.Usage:
+    properties:
+      completion_tokens:
+        type: integer
+      prompt_tokens:
+        type: integer
+      prompt_tokens_details:
+        $ref: '#/definitions/model.PromptTokensDetails'
+      total_tokens:
+        type: integer
+    type: object
+  openai.SubscriptionResponse:
+    properties:
+      access_until:
+        type: integer
+      hard_limit_usd:
+        type: number
+      has_payment_method:
+        type: boolean
+      object:
+        type: string
+      soft_limit_usd:
+        type: number
+      system_hard_limit_usd:
+        type: number
+    type: object
+  openai.UsageResponse:
+    properties:
+      object:
+        type: string
+      total_usage:
+        description: DailyCosts []OpenAIUsageDailyCost `json:"daily_costs"`
+        type: number
+    type: object
 info:
   contact: {}
 paths:
@@ -3332,4 +3750,286 @@ paths:
       summary: Search tokens
       tags:
       - tokens
+  /v1/audio/speech:
+    post:
+      description: AudioSpeech
+      parameters:
+      - description: Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.TextToSpeechRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: audio binary
+          schema:
+            type: file
+      security:
+      - ApiKeyAuth: []
+      summary: AudioSpeech
+      tags:
+      - relay
+  /v1/audio/transcription:
+    post:
+      description: AudioTranscription
+      parameters:
+      - description: Model
+        in: formData
+        name: model
+        required: true
+        type: string
+      - description: File
+        in: formData
+        name: file
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.SttJSONResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: AudioTranscription
+      tags:
+      - relay
+  /v1/audio/translation:
+    post:
+      description: AudioTranslation
+      parameters:
+      - description: Model
+        in: formData
+        name: model
+        required: true
+        type: string
+      - description: File
+        in: formData
+        name: file
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.SttJSONResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: AudioTranslation
+      tags:
+      - relay
+  /v1/chat/completions:
+    post:
+      description: ChatCompletions
+      parameters:
+      - description: Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.GeneralOpenAIRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.TextResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: ChatCompletions
+      tags:
+      - relay
+  /v1/completions:
+    post:
+      description: Completions
+      parameters:
+      - description: Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.GeneralOpenAIRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.TextResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Completions
+      tags:
+      - relay
+  /v1/dashboard/subscription:
+    get:
+      description: Get subscription
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/openai.SubscriptionResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Get subscription
+      tags:
+      - relay
+  /v1/dashboard/usage:
+    get:
+      description: Get usage
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/openai.UsageResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Get usage
+      tags:
+      - relay
+  /v1/embeddings:
+    post:
+      description: Embeddings
+      parameters:
+      - description: Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.EmbeddingRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.EmbeddingResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Embeddings
+      tags:
+      - relay
+  /v1/images/generations:
+    post:
+      description: ImagesGenerations
+      parameters:
+      - description: Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.ImageRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.ImageResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: ImagesGenerations
+      tags:
+      - relay
+  /v1/models:
+    get:
+      description: List all models
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            properties:
+              data:
+                items:
+                  $ref: '#/definitions/controller.OpenAIModels'
+                type: array
+              object:
+                type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: List models
+      tags:
+      - relay
+  /v1/models/{model}:
+    get:
+      description: Retrieve a model
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/controller.OpenAIModels'
+      security:
+      - ApiKeyAuth: []
+      summary: Retrieve model
+      tags:
+      - relay
+  /v1/parse-pdf:
+    post:
+      description: ParsePdf
+      parameters:
+      - description: Model
+        in: formData
+        name: model
+        required: true
+        type: string
+      - description: File
+        in: formData
+        name: file
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.ParsePdfResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: ParsePdf
+      tags:
+      - relay
+  /v1/rerank:
+    post:
+      description: Rerank
+      parameters:
+      - description: Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.RerankRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.RerankResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Rerank
+      tags:
+      - relay
+securityDefinitions:
+  ApiKeyAuth:
+    in: header
+    name: Authorization
+    type: apiKey
 swagger: "2.0"

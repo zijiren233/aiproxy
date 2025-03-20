@@ -4,21 +4,21 @@ import (
 	"time"
 
 	"github.com/bytedance/sonic"
-	"github.com/labring/aiproxy/relay/relaymode"
+	"github.com/labring/aiproxy/relay/mode"
 )
 
 type ChannelTest struct {
-	TestAt      time.Time      `json:"test_at"`
-	Model       string         `gorm:"primaryKey"   json:"model"`
-	ActualModel string         `json:"actual_model"`
-	Response    string         `gorm:"type:text"    json:"response"`
-	ChannelName string         `json:"channel_name"`
-	ChannelType int            `json:"channel_type"`
-	ChannelID   int            `gorm:"primaryKey"   json:"channel_id"`
-	Took        float64        `json:"took"`
-	Success     bool           `json:"success"`
-	Mode        relaymode.Mode `json:"mode"`
-	Code        int            `json:"code"`
+	TestAt      time.Time `json:"test_at"`
+	Model       string    `gorm:"primaryKey"   json:"model"`
+	ActualModel string    `json:"actual_model"`
+	Response    string    `gorm:"type:text"    json:"response"`
+	ChannelName string    `json:"channel_name"`
+	ChannelType int       `json:"channel_type"`
+	ChannelID   int       `gorm:"primaryKey"   json:"channel_id"`
+	Took        float64   `json:"took"`
+	Success     bool      `json:"success"`
+	Mode        mode.Mode `json:"mode"`
+	Code        int       `json:"code"`
 }
 
 func (ct *ChannelTest) MarshalJSON() ([]byte, error) {

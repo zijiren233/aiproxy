@@ -3,13 +3,13 @@ package utils
 import (
 	"net/http"
 
-	relaymodel "github.com/labring/aiproxy/relay/model"
+	model "github.com/labring/aiproxy/relay/model"
 )
 
-func WrapErr(err error) *relaymodel.ErrorWithStatusCode {
-	return &relaymodel.ErrorWithStatusCode{
+func WrapErr(err error) *model.ErrorWithStatusCode {
+	return &model.ErrorWithStatusCode{
 		StatusCode: http.StatusInternalServerError,
-		Error: relaymodel.Error{
+		Error: model.Error{
 			Message: err.Error(),
 		},
 	}

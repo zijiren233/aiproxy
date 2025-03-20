@@ -2,13 +2,13 @@ package openai
 
 import (
 	"github.com/labring/aiproxy/model"
-	"github.com/labring/aiproxy/relay/relaymode"
+	"github.com/labring/aiproxy/relay/mode"
 )
 
 var ModelList = []*model.ModelConfig{
 	{
 		Model:       "gpt-3.5-turbo",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerOpenAI,
 		InputPrice:  0.022,
 		OutputPrice: 0.044,
@@ -19,7 +19,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "gpt-3.5-turbo-16k",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerOpenAI,
 		InputPrice:  0.022,
 		OutputPrice: 0.044,
@@ -30,12 +30,12 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model: "gpt-3.5-turbo-instruct",
-		Type:  relaymode.ChatCompletions,
+		Type:  mode.ChatCompletions,
 		Owner: model.ModelOwnerOpenAI,
 	},
 	{
 		Model:       "gpt-4",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerOpenAI,
 		InputPrice:  0.22,
 		OutputPrice: 0.44,
@@ -46,7 +46,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "gpt-4-32k",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerOpenAI,
 		InputPrice:  0.44,
 		OutputPrice: 0.88,
@@ -57,7 +57,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "gpt-4-turbo",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerOpenAI,
 		InputPrice:  0.071,
 		OutputPrice: 0.213,
@@ -68,7 +68,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "gpt-4o",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerOpenAI,
 		InputPrice:  0.01775,
 		OutputPrice: 0.071,
@@ -80,12 +80,12 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model: "chatgpt-4o-latest",
-		Type:  relaymode.ChatCompletions,
+		Type:  mode.ChatCompletions,
 		Owner: model.ModelOwnerOpenAI,
 	},
 	{
 		Model:       "gpt-4o-mini",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerOpenAI,
 		InputPrice:  0.001065,
 		OutputPrice: 0.00426,
@@ -96,12 +96,12 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model: "gpt-4-vision-preview",
-		Type:  relaymode.ChatCompletions,
+		Type:  mode.ChatCompletions,
 		Owner: model.ModelOwnerOpenAI,
 	},
 	{
 		Model:       "o1-mini",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerOpenAI,
 		InputPrice:  0.0213,
 		OutputPrice: 0.0852,
@@ -111,7 +111,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "o1-preview",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerOpenAI,
 		InputPrice:  0.1065,
 		OutputPrice: 0.426,
@@ -122,102 +122,102 @@ var ModelList = []*model.ModelConfig{
 
 	{
 		Model: "text-embedding-ada-002",
-		Type:  relaymode.Embeddings,
+		Type:  mode.Embeddings,
 		Owner: model.ModelOwnerOpenAI,
 	},
 	{
 		Model: "text-embedding-3-small",
-		Type:  relaymode.Embeddings,
+		Type:  mode.Embeddings,
 		Owner: model.ModelOwnerOpenAI,
 	},
 	{
 		Model: "text-embedding-3-large",
-		Type:  relaymode.Embeddings,
+		Type:  mode.Embeddings,
 		Owner: model.ModelOwnerOpenAI,
 	},
 	{
 		Model: "text-curie-001",
-		Type:  relaymode.Completions,
+		Type:  mode.Completions,
 		Owner: model.ModelOwnerOpenAI,
 	},
 	{
 		Model: "text-babbage-001",
-		Type:  relaymode.Completions,
+		Type:  mode.Completions,
 		Owner: model.ModelOwnerOpenAI,
 	},
 	{
 		Model: "text-ada-001",
-		Type:  relaymode.Completions,
+		Type:  mode.Completions,
 		Owner: model.ModelOwnerOpenAI,
 	},
 	{
 		Model: "text-davinci-002",
-		Type:  relaymode.Completions,
+		Type:  mode.Completions,
 		Owner: model.ModelOwnerOpenAI,
 	},
 	{
 		Model: "text-davinci-003",
-		Type:  relaymode.Completions,
+		Type:  mode.Completions,
 		Owner: model.ModelOwnerOpenAI,
 	},
 	{
 		Model: "text-moderation-latest",
-		Type:  relaymode.Moderations,
+		Type:  mode.Moderations,
 		Owner: model.ModelOwnerOpenAI,
 	},
 	{
 		Model: "text-moderation-stable",
-		Type:  relaymode.Moderations,
+		Type:  mode.Moderations,
 		Owner: model.ModelOwnerOpenAI,
 	},
 	{
 		Model: "text-davinci-edit-001",
-		Type:  relaymode.Edits,
+		Type:  mode.Edits,
 		Owner: model.ModelOwnerOpenAI,
 	},
 	{
 		Model: "davinci-002",
-		Type:  relaymode.Completions,
+		Type:  mode.Completions,
 		Owner: model.ModelOwnerOpenAI,
 	},
 	{
 		Model: "babbage-002",
-		Type:  relaymode.Completions,
+		Type:  mode.Completions,
 		Owner: model.ModelOwnerOpenAI,
 	},
 	{
 		Model: "dall-e-2",
-		Type:  relaymode.ImagesGenerations,
+		Type:  mode.ImagesGenerations,
 		Owner: model.ModelOwnerOpenAI,
 	},
 	{
 		Model: "dall-e-3",
-		Type:  relaymode.ImagesGenerations,
+		Type:  mode.ImagesGenerations,
 		Owner: model.ModelOwnerOpenAI,
 	},
 	{
 		Model: "whisper-1",
-		Type:  relaymode.AudioTranscription,
+		Type:  mode.AudioTranscription,
 		Owner: model.ModelOwnerOpenAI,
 	},
 	{
 		Model: "tts-1",
-		Type:  relaymode.AudioSpeech,
+		Type:  mode.AudioSpeech,
 		Owner: model.ModelOwnerOpenAI,
 	},
 	{
 		Model: "tts-1-1106",
-		Type:  relaymode.AudioSpeech,
+		Type:  mode.AudioSpeech,
 		Owner: model.ModelOwnerOpenAI,
 	},
 	{
 		Model: "tts-1-hd",
-		Type:  relaymode.AudioSpeech,
+		Type:  mode.AudioSpeech,
 		Owner: model.ModelOwnerOpenAI,
 	},
 	{
 		Model: "tts-1-hd-1106",
-		Type:  relaymode.AudioSpeech,
+		Type:  mode.AudioSpeech,
 		Owner: model.ModelOwnerOpenAI,
 	},
 }

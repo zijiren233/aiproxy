@@ -9,13 +9,14 @@ import (
 )
 
 // GetModelConfigs godoc
-// @Summary      Get model configs
-// @Description  Returns a list of model configs with pagination
-// @Tags         modelconfig
-// @Produce      json
-// @Security     ApiKeyAuth
-// @Success      200  {object}  middleware.APIResponse{data=map[string]any{configs=[]model.ModelConfig,total=int}}
-// @Router       /api/modelconfigs [get]
+//
+//	@Summary		Get model configs
+//	@Description	Returns a list of model configs with pagination
+//	@Tags			modelconfig
+//	@Produce		json
+//	@Security		ApiKeyAuth
+//	@Success		200	{object}	middleware.APIResponse{data=map[string]any{configs=[]model.ModelConfig,total=int}}
+//	@Router			/api/modelconfigs [get]
 func GetModelConfigs(c *gin.Context) {
 	page, perPage := parsePageParams(c)
 	_model := c.Query("model")
@@ -31,13 +32,14 @@ func GetModelConfigs(c *gin.Context) {
 }
 
 // GetAllModelConfigs godoc
-// @Summary      Get all model configs
-// @Description  Returns a list of all model configs
-// @Tags         modelconfig
-// @Produce      json
-// @Security     ApiKeyAuth
-// @Success      200  {object}  middleware.APIResponse{data=[]model.ModelConfig}
-// @Router       /api/modelconfigs/all [get]
+//
+//	@Summary		Get all model configs
+//	@Description	Returns a list of all model configs
+//	@Tags			modelconfig
+//	@Produce		json
+//	@Security		ApiKeyAuth
+//	@Success		200	{object}	middleware.APIResponse{data=[]model.ModelConfig}
+//	@Router			/api/modelconfigs/all [get]
 func GetAllModelConfigs(c *gin.Context) {
 	configs, err := model.GetAllModelConfigs()
 	if err != nil {
@@ -52,13 +54,14 @@ type GetModelConfigsByModelsContainsRequest struct {
 }
 
 // GetModelConfigsByModelsContains godoc
-// @Summary      Get model configs by models contains
-// @Description  Returns a list of model configs by models contains
-// @Tags         modelconfig
-// @Produce      json
-// @Security     ApiKeyAuth
-// @Success      200  {object}  middleware.APIResponse{data=[]model.ModelConfig}
-// @Router       /api/modelconfigs/contains [post]
+//
+//	@Summary		Get model configs by models contains
+//	@Description	Returns a list of model configs by models contains
+//	@Tags			modelconfig
+//	@Produce		json
+//	@Security		ApiKeyAuth
+//	@Success		200	{object}	middleware.APIResponse{data=[]model.ModelConfig}
+//	@Router			/api/modelconfigs/contains [post]
 func GetModelConfigsByModelsContains(c *gin.Context) {
 	request := GetModelConfigsByModelsContainsRequest{}
 	err := c.ShouldBindJSON(&request)
@@ -75,13 +78,14 @@ func GetModelConfigsByModelsContains(c *gin.Context) {
 }
 
 // SearchModelConfigs godoc
-// @Summary      Search model configs
-// @Description  Returns a list of model configs by keyword
-// @Tags         modelconfig
-// @Produce      json
-// @Security     ApiKeyAuth
-// @Success      200  {object}  middleware.APIResponse{data=map[string]any{configs=[]model.ModelConfig,total=int}}
-// @Router       /api/modelconfigs/search [get]
+//
+//	@Summary		Search model configs
+//	@Description	Returns a list of model configs by keyword
+//	@Tags			modelconfig
+//	@Produce		json
+//	@Security		ApiKeyAuth
+//	@Success		200	{object}	middleware.APIResponse{data=map[string]any{configs=[]model.ModelConfig,total=int}}
+//	@Router			/api/modelconfigs/search [get]
 func SearchModelConfigs(c *gin.Context) {
 	keyword := c.Query("keyword")
 	page, perPage := parsePageParams(c)
@@ -105,14 +109,15 @@ type SaveModelConfigsRequest struct {
 }
 
 // SaveModelConfigs godoc
-// @Summary      Save model configs
-// @Description  Saves a list of model configs
-// @Tags         modelconfig
-// @Produce      json
-// @Security     ApiKeyAuth
-// @Param        configs  body      []SaveModelConfigsRequest  true  "Model configs"
-// @Success      200  {object}  middleware.APIResponse
-// @Router       /api/model_configs [post]
+//
+//	@Summary		Save model configs
+//	@Description	Saves a list of model configs
+//	@Tags			modelconfig
+//	@Produce		json
+//	@Security		ApiKeyAuth
+//	@Param			configs	body		[]SaveModelConfigsRequest	true	"Model configs"
+//	@Success		200		{object}	middleware.APIResponse
+//	@Router			/api/model_configs [post]
 func SaveModelConfigs(c *gin.Context) {
 	var configs []*SaveModelConfigsRequest
 	if err := c.ShouldBindJSON(&configs); err != nil {
@@ -132,14 +137,15 @@ func SaveModelConfigs(c *gin.Context) {
 }
 
 // SaveModelConfig godoc
-// @Summary      Save model config
-// @Description  Saves a model config
-// @Tags         modelconfig
-// @Produce      json
-// @Security     ApiKeyAuth
-// @Param        config  body      SaveModelConfigsRequest  true  "Model config"
-// @Success      200  {object}  middleware.APIResponse
-// @Router       /api/model_config [post]
+//
+//	@Summary		Save model config
+//	@Description	Saves a model config
+//	@Tags			modelconfig
+//	@Produce		json
+//	@Security		ApiKeyAuth
+//	@Param			config	body		SaveModelConfigsRequest	true	"Model config"
+//	@Success		200		{object}	middleware.APIResponse
+//	@Router			/api/model_config [post]
 func SaveModelConfig(c *gin.Context) {
 	var config SaveModelConfigsRequest
 	if err := c.ShouldBindJSON(&config); err != nil {
@@ -155,14 +161,15 @@ func SaveModelConfig(c *gin.Context) {
 }
 
 // DeleteModelConfig godoc
-// @Summary      Delete model config
-// @Description  Deletes a model config
-// @Tags         modelconfig
-// @Produce      json
-// @Security     ApiKeyAuth
-// @Param        model  path      string  true  "Model name"
-// @Success      200  {object}  middleware.APIResponse
-// @Router       /api/model_config/{model} [delete]
+//
+//	@Summary		Delete model config
+//	@Description	Deletes a model config
+//	@Tags			modelconfig
+//	@Produce		json
+//	@Security		ApiKeyAuth
+//	@Param			model	path		string	true	"Model name"
+//	@Success		200		{object}	middleware.APIResponse
+//	@Router			/api/model_config/{model} [delete]
 func DeleteModelConfig(c *gin.Context) {
 	_model := c.Param("model")
 	err := model.DeleteModelConfig(_model)
@@ -174,14 +181,15 @@ func DeleteModelConfig(c *gin.Context) {
 }
 
 // DeleteModelConfigs godoc
-// @Summary      Delete model configs
-// @Description  Deletes a list of model configs
-// @Tags         modelconfig
-// @Produce      json
-// @Security     ApiKeyAuth
-// @Param        models  body      []string  true  "Model names"
-// @Success      200  {object}  middleware.APIResponse
-// @Router       /api/model_configs/batch_delete [post]
+//
+//	@Summary		Delete model configs
+//	@Description	Deletes a list of model configs
+//	@Tags			modelconfig
+//	@Produce		json
+//	@Security		ApiKeyAuth
+//	@Param			models	body		[]string	true	"Model names"
+//	@Success		200		{object}	middleware.APIResponse
+//	@Router			/api/model_configs/batch_delete [post]
 func DeleteModelConfigs(c *gin.Context) {
 	models := []string{}
 	err := c.ShouldBindJSON(&models)
@@ -198,14 +206,15 @@ func DeleteModelConfigs(c *gin.Context) {
 }
 
 // GetModelConfig godoc
-// @Summary      Get model config
-// @Description  Returns a model config
-// @Tags         modelconfig
-// @Produce      json
-// @Security     ApiKeyAuth
-// @Param        model  path      string  true  "Model name"
-// @Success      200  {object}  middleware.APIResponse{data=model.ModelConfig}
-// @Router       /api/model_config/{model} [get]
+//
+//	@Summary		Get model config
+//	@Description	Returns a model config
+//	@Tags			modelconfig
+//	@Produce		json
+//	@Security		ApiKeyAuth
+//	@Param			model	path		string	true	"Model name"
+//	@Success		200		{object}	middleware.APIResponse{data=model.ModelConfig}
+//	@Router			/api/model_config/{model} [get]
 func GetModelConfig(c *gin.Context) {
 	_model := c.Param("model")
 	config, err := model.GetModelConfig(_model)

@@ -16,12 +16,12 @@ import (
 	"github.com/labring/aiproxy/middleware"
 	"github.com/labring/aiproxy/relay/adaptor/openai"
 	"github.com/labring/aiproxy/relay/meta"
-	relaymodel "github.com/labring/aiproxy/relay/model"
+	"github.com/labring/aiproxy/relay/model"
 	"github.com/labring/aiproxy/relay/utils"
 )
 
 func ConvertRequest(meta *meta.Meta, req *http.Request) (string, http.Header, io.Reader, error) {
-	var request relaymodel.GeneralOpenAIRequest
+	var request model.GeneralOpenAIRequest
 	err := common.UnmarshalBodyReusable(req, &request)
 	if err != nil {
 		return "", nil, nil, err
@@ -58,9 +58,9 @@ func ConvertRequest(meta *meta.Meta, req *http.Request) (string, http.Header, io
 		var contentText string
 		for _, part := range openaiContent {
 			switch part.Type {
-			case relaymodel.ContentTypeText:
+			case model.ContentTypeText:
 				contentText = part.Text
-			case relaymodel.ContentTypeImageURL:
+			case model.ContentTypeImageURL:
 				_, data, err := image.GetImageFromURL(req.Context(), part.ImageURL.URL)
 				if err != nil {
 					return "", nil, nil, err
@@ -111,20 +111,20 @@ func ConvertRequest(meta *meta.Meta, req *http.Request) (string, http.Header, io
 	return http.MethodPost, nil, bytes.NewReader(data), nil
 }
 
-func getToolCalls(ollamaResponse *ChatResponse) []*relaymodel.Tool {
+func getToolCalls(ollamaResponse *ChatResponse) []*model.Tool {
 	if ollamaResponse.Message == nil || len(ollamaResponse.Message.ToolCalls) == 0 {
 		return nil
 	}
-	toolCalls := make([]*relaymodel.Tool, 0, len(ollamaResponse.Message.ToolCalls))
+	toolCalls := make([]*model.Tool, 0, len(ollamaResponse.Message.ToolCalls))
 	for _, tool := range ollamaResponse.Message.ToolCalls {
 		argString, err := sonic.MarshalString(tool.Function.Arguments)
 		if err != nil {
 			continue
 		}
-		toolCalls = append(toolCalls, &relaymodel.Tool{
+		toolCalls = append(toolCalls, &model.Tool{
 			ID:   openai.CallID(),
 			Type: "function",
-			Function: relaymodel.Function{
+			Function: model.Function{
 				Name:      tool.Function.Name,
 				Arguments: argString,
 			},
@@ -133,12 +133,12 @@ func getToolCalls(ollamaResponse *ChatResponse) []*relaymodel.Tool {
 	return toolCalls
 }
 
-func response2OpenAI(meta *meta.Meta, response *ChatResponse) *openai.TextResponse {
-	choice := openai.TextResponseChoice{
+func response2OpenAI(meta *meta.Meta, response *ChatResponse) *model.TextResponse {
+	choice := model.TextResponseChoice{
 		Text: response.Response,
 	}
 	if response.Message != nil {
-		choice.Message = relaymodel.Message{
+		choice.Message = model.Message{
 			Role:      response.Message.Role,
 			Content:   response.Message.Content,
 			ToolCalls: getToolCalls(response),
@@ -147,13 +147,13 @@ func response2OpenAI(meta *meta.Meta, response *ChatResponse) *openai.TextRespon
 	if response.Done {
 		choice.FinishReason = response.DoneReason
 	}
-	fullTextResponse := openai.TextResponse{
+	fullTextResponse := model.TextResponse{
 		ID:      openai.ChatCompletionID(),
 		Model:   meta.OriginModel,
-		Object:  relaymodel.ChatCompletion,
+		Object:  model.ChatCompletion,
 		Created: time.Now().Unix(),
-		Choices: []*openai.TextResponseChoice{&choice},
-		Usage: relaymodel.Usage{
+		Choices: []*model.TextResponseChoice{&choice},
+		Usage: model.Usage{
 			PromptTokens:     response.PromptEvalCount,
 			CompletionTokens: response.EvalCount,
 			TotalTokens:      response.PromptEvalCount + response.EvalCount,
@@ -162,12 +162,12 @@ func response2OpenAI(meta *meta.Meta, response *ChatResponse) *openai.TextRespon
 	return &fullTextResponse
 }
 
-func streamResponse2OpenAI(meta *meta.Meta, ollamaResponse *ChatResponse) *openai.ChatCompletionsStreamResponse {
-	choice := openai.ChatCompletionsStreamResponseChoice{
+func streamResponse2OpenAI(meta *meta.Meta, ollamaResponse *ChatResponse) *model.ChatCompletionsStreamResponse {
+	choice := model.ChatCompletionsStreamResponseChoice{
 		Text: ollamaResponse.Response,
 	}
 	if ollamaResponse.Message != nil {
-		choice.Delta = relaymodel.Message{
+		choice.Delta = model.Message{
 			Role:      ollamaResponse.Message.Role,
 			Content:   ollamaResponse.Message.Content,
 			ToolCalls: getToolCalls(ollamaResponse),
@@ -176,16 +176,16 @@ func streamResponse2OpenAI(meta *meta.Meta, ollamaResponse *ChatResponse) *opena
 	if ollamaResponse.Done {
 		choice.FinishReason = &ollamaResponse.DoneReason
 	}
-	response := openai.ChatCompletionsStreamResponse{
+	response := model.ChatCompletionsStreamResponse{
 		ID:      openai.ChatCompletionID(),
-		Object:  relaymodel.ChatCompletionChunk,
+		Object:  model.ChatCompletionChunk,
 		Created: time.Now().Unix(),
 		Model:   meta.OriginModel,
-		Choices: []*openai.ChatCompletionsStreamResponseChoice{&choice},
+		Choices: []*model.ChatCompletionsStreamResponseChoice{&choice},
 	}
 
 	if ollamaResponse.EvalCount != 0 {
-		response.Usage = &relaymodel.Usage{
+		response.Usage = &model.Usage{
 			PromptTokens:     ollamaResponse.PromptEvalCount,
 			CompletionTokens: ollamaResponse.EvalCount,
 			TotalTokens:      ollamaResponse.PromptEvalCount + ollamaResponse.EvalCount,
@@ -195,7 +195,7 @@ func streamResponse2OpenAI(meta *meta.Meta, ollamaResponse *ChatResponse) *opena
 	return &response
 }
 
-func StreamHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*relaymodel.Usage, *relaymodel.ErrorWithStatusCode) {
+func StreamHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, *model.ErrorWithStatusCode) {
 	if resp.StatusCode != http.StatusOK {
 		return nil, ErrorHandler(resp)
 	}
@@ -204,7 +204,7 @@ func StreamHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*relay
 
 	log := middleware.GetLogger(c)
 
-	var usage *relaymodel.Usage
+	var usage *model.Usage
 	scanner := bufio.NewScanner(resp.Body)
 
 	common.SetEventStreamHeaders(c)
@@ -230,7 +230,7 @@ func StreamHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*relay
 		}
 
 		if meta.ChannelConfig.SplitThink {
-			openai.StreamSplitThinkModeld(response, thinkSplitter, func(data *openai.ChatCompletionsStreamResponse) {
+			openai.StreamSplitThinkModeld(response, thinkSplitter, func(data *model.ChatCompletionsStreamResponse) {
 				_ = render.ObjectData(c, data)
 			})
 			continue
@@ -271,7 +271,7 @@ func ConvertEmbeddingRequest(meta *meta.Meta, req *http.Request) (string, http.H
 	return http.MethodPost, nil, bytes.NewReader(data), nil
 }
 
-func EmbeddingHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*relaymodel.Usage, *relaymodel.ErrorWithStatusCode) {
+func EmbeddingHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, *model.ErrorWithStatusCode) {
 	if resp.StatusCode != http.StatusOK {
 		return nil, ErrorHandler(resp)
 	}
@@ -299,18 +299,18 @@ func EmbeddingHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*re
 	return &fullTextResponse.Usage, nil
 }
 
-func embeddingResponseOllama2OpenAI(meta *meta.Meta, response *EmbeddingResponse) *openai.EmbeddingResponse {
-	openAIEmbeddingResponse := openai.EmbeddingResponse{
+func embeddingResponseOllama2OpenAI(meta *meta.Meta, response *EmbeddingResponse) *model.EmbeddingResponse {
+	openAIEmbeddingResponse := model.EmbeddingResponse{
 		Object: "list",
-		Data:   make([]*openai.EmbeddingResponseItem, 0, len(response.Embeddings)),
+		Data:   make([]*model.EmbeddingResponseItem, 0, len(response.Embeddings)),
 		Model:  meta.OriginModel,
-		Usage: relaymodel.Usage{
+		Usage: model.Usage{
 			PromptTokens: response.PromptEvalCount,
 			TotalTokens:  response.PromptEvalCount,
 		},
 	}
 	for i, embedding := range response.Embeddings {
-		openAIEmbeddingResponse.Data = append(openAIEmbeddingResponse.Data, &openai.EmbeddingResponseItem{
+		openAIEmbeddingResponse.Data = append(openAIEmbeddingResponse.Data, &model.EmbeddingResponseItem{
 			Object:    "embedding",
 			Index:     i,
 			Embedding: embedding,
@@ -319,7 +319,7 @@ func embeddingResponseOllama2OpenAI(meta *meta.Meta, response *EmbeddingResponse
 	return &openAIEmbeddingResponse
 }
 
-func Handler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*relaymodel.Usage, *relaymodel.ErrorWithStatusCode) {
+func Handler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, *model.ErrorWithStatusCode) {
 	if resp.StatusCode != http.StatusOK {
 		return nil, ErrorHandler(resp)
 	}

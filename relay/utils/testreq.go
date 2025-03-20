@@ -7,8 +7,8 @@ import (
 
 	"github.com/bytedance/sonic"
 	"github.com/labring/aiproxy/model"
+	"github.com/labring/aiproxy/relay/mode"
 	relaymodel "github.com/labring/aiproxy/relay/model"
-	"github.com/labring/aiproxy/relay/relaymode"
 )
 
 type UnsupportedModelTypeError struct {
@@ -23,56 +23,56 @@ func NewErrUnsupportedModelType(modelType string) *UnsupportedModelTypeError {
 	return &UnsupportedModelTypeError{ModelType: modelType}
 }
 
-func BuildRequest(modelConfig *model.ModelConfig) (io.Reader, relaymode.Mode, error) {
+func BuildRequest(modelConfig *model.ModelConfig) (io.Reader, mode.Mode, error) {
 	switch modelConfig.Type {
-	case relaymode.ChatCompletions:
+	case mode.ChatCompletions:
 		body, err := BuildChatCompletionRequest(modelConfig.Model)
 		if err != nil {
-			return nil, relaymode.Unknown, err
+			return nil, mode.Unknown, err
 		}
-		return body, relaymode.ChatCompletions, nil
-	case relaymode.Completions:
-		return nil, relaymode.Unknown, NewErrUnsupportedModelType("completions")
-	case relaymode.Embeddings:
+		return body, mode.ChatCompletions, nil
+	case mode.Completions:
+		return nil, mode.Unknown, NewErrUnsupportedModelType("completions")
+	case mode.Embeddings:
 		body, err := BuildEmbeddingsRequest(modelConfig.Model)
 		if err != nil {
-			return nil, relaymode.Unknown, err
+			return nil, mode.Unknown, err
 		}
-		return body, relaymode.Embeddings, nil
-	case relaymode.Moderations:
+		return body, mode.Embeddings, nil
+	case mode.Moderations:
 		body, err := BuildModerationsRequest(modelConfig.Model)
 		if err != nil {
-			return nil, relaymode.Unknown, err
+			return nil, mode.Unknown, err
 		}
-		return body, relaymode.Moderations, nil
-	case relaymode.ImagesGenerations:
+		return body, mode.Moderations, nil
+	case mode.ImagesGenerations:
 		body, err := BuildImagesGenerationsRequest(modelConfig)
 		if err != nil {
-			return nil, relaymode.Unknown, err
+			return nil, mode.Unknown, err
 		}
-		return body, relaymode.ImagesGenerations, nil
-	case relaymode.Edits:
-		return nil, relaymode.Unknown, NewErrUnsupportedModelType("edits")
-	case relaymode.AudioSpeech:
+		return body, mode.ImagesGenerations, nil
+	case mode.Edits:
+		return nil, mode.Unknown, NewErrUnsupportedModelType("edits")
+	case mode.AudioSpeech:
 		body, err := BuildAudioSpeechRequest(modelConfig.Model)
 		if err != nil {
-			return nil, relaymode.Unknown, err
+			return nil, mode.Unknown, err
 		}
-		return body, relaymode.AudioSpeech, nil
-	case relaymode.AudioTranscription:
-		return nil, relaymode.Unknown, NewErrUnsupportedModelType("audio transcription")
-	case relaymode.AudioTranslation:
-		return nil, relaymode.Unknown, NewErrUnsupportedModelType("audio translation")
-	case relaymode.Rerank:
+		return body, mode.AudioSpeech, nil
+	case mode.AudioTranscription:
+		return nil, mode.Unknown, NewErrUnsupportedModelType("audio transcription")
+	case mode.AudioTranslation:
+		return nil, mode.Unknown, NewErrUnsupportedModelType("audio translation")
+	case mode.Rerank:
 		body, err := BuildRerankRequest(modelConfig.Model)
 		if err != nil {
-			return nil, relaymode.Unknown, err
+			return nil, mode.Unknown, err
 		}
-		return body, relaymode.Rerank, nil
-	case relaymode.ParsePdf:
-		return nil, relaymode.Unknown, NewErrUnsupportedModelType("parse pdf")
+		return body, mode.Rerank, nil
+	case mode.ParsePdf:
+		return nil, mode.Unknown, NewErrUnsupportedModelType("parse pdf")
 	default:
-		return nil, relaymode.Unknown, NewErrUnsupportedModelType(modelConfig.Type.String())
+		return nil, mode.Unknown, NewErrUnsupportedModelType(modelConfig.Type.String())
 	}
 }
 

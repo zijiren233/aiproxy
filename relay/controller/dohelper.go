@@ -18,8 +18,8 @@ import (
 	"github.com/labring/aiproxy/relay/adaptor"
 	"github.com/labring/aiproxy/relay/adaptor/openai"
 	"github.com/labring/aiproxy/relay/meta"
+	"github.com/labring/aiproxy/relay/mode"
 	relaymodel "github.com/labring/aiproxy/relay/model"
-	"github.com/labring/aiproxy/relay/relaymode"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -115,7 +115,7 @@ func DoHelper(
 
 func getRequestBody(meta *meta.Meta, c *gin.Context, detail *model.RequestDetail) *relaymodel.ErrorWithStatusCode {
 	switch meta.Mode {
-	case relaymode.AudioTranscription, relaymode.AudioTranslation:
+	case mode.AudioTranscription, mode.AudioTranslation:
 		return nil
 	default:
 		reqBody, err := common.GetRequestBody(c.Request)

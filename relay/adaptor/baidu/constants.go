@@ -2,13 +2,13 @@ package baidu
 
 import (
 	"github.com/labring/aiproxy/model"
-	"github.com/labring/aiproxy/relay/relaymode"
+	"github.com/labring/aiproxy/relay/mode"
 )
 
 var ModelList = []*model.ModelConfig{
 	{
 		Model:       "BLOOMZ-7B",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerBaidu,
 		InputPrice:  0.004,
 		OutputPrice: 0.004,
@@ -19,7 +19,7 @@ var ModelList = []*model.ModelConfig{
 
 	{
 		Model:       "Embedding-V1",
-		Type:        relaymode.Embeddings,
+		Type:        mode.Embeddings,
 		Owner:       model.ModelOwnerBaidu,
 		InputPrice:  0.0005,
 		OutputPrice: 0,
@@ -27,7 +27,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "bge-large-zh",
-		Type:        relaymode.Embeddings,
+		Type:        mode.Embeddings,
 		Owner:       model.ModelOwnerBAAI,
 		InputPrice:  0.0005,
 		OutputPrice: 0,
@@ -35,7 +35,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "bge-large-en",
-		Type:        relaymode.Embeddings,
+		Type:        mode.Embeddings,
 		Owner:       model.ModelOwnerBAAI,
 		InputPrice:  0.0005,
 		OutputPrice: 0,
@@ -43,7 +43,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "tao-8k",
-		Type:        relaymode.Embeddings,
+		Type:        mode.Embeddings,
 		Owner:       model.ModelOwnerBaidu,
 		InputPrice:  0.0005,
 		OutputPrice: 0,
@@ -52,7 +52,7 @@ var ModelList = []*model.ModelConfig{
 
 	{
 		Model:       "bce-reranker-base_v1",
-		Type:        relaymode.Rerank,
+		Type:        mode.Rerank,
 		Owner:       model.ModelOwnerBaidu,
 		InputPrice:  0.0005,
 		OutputPrice: 0,
@@ -61,7 +61,7 @@ var ModelList = []*model.ModelConfig{
 
 	{
 		Model: "Stable-Diffusion-XL",
-		Type:  relaymode.ImagesGenerations,
+		Type:  mode.ImagesGenerations,
 		Owner: model.ModelOwnerStabilityAI,
 		ImagePrices: map[string]float64{
 			"768x768":   0.06,

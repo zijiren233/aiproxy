@@ -4,7 +4,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/controller"
 	"github.com/labring/aiproxy/middleware"
-	"github.com/labring/aiproxy/relay/relaymode"
 )
 
 func SetRelayRouter(router *gin.Engine) {
@@ -26,64 +25,52 @@ func SetRelayRouter(router *gin.Engine) {
 	{
 		relayRouter.POST(
 			"/completions",
-			middleware.NewDistribute(relaymode.Completions),
-			controller.NewRelay(relaymode.Completions),
+			controller.Completions()...,
 		)
 
 		relayRouter.POST(
 			"/chat/completions",
-			middleware.NewDistribute(relaymode.ChatCompletions),
-			controller.NewRelay(relaymode.ChatCompletions),
+			controller.ChatCompletions()...,
 		)
 		relayRouter.POST(
 			"/edits",
-			middleware.NewDistribute(relaymode.Edits),
-			controller.NewRelay(relaymode.Edits),
+			controller.Edits()...,
 		)
 		relayRouter.POST(
 			"/images/generations",
-			middleware.NewDistribute(relaymode.ImagesGenerations),
-			controller.NewRelay(relaymode.ImagesGenerations),
+			controller.ImagesGenerations()...,
 		)
 		relayRouter.POST(
 			"/embeddings",
-			middleware.NewDistribute(relaymode.Embeddings),
-			controller.NewRelay(relaymode.Embeddings),
+			controller.Embeddings()...,
 		)
 		relayRouter.POST(
 			"/engines/:model/embeddings",
-			middleware.NewDistribute(relaymode.Embeddings),
-			controller.NewRelay(relaymode.Embeddings),
+			controller.Embeddings()...,
 		)
 		relayRouter.POST(
 			"/audio/transcriptions",
-			middleware.NewDistribute(relaymode.AudioTranscription),
-			controller.NewRelay(relaymode.AudioTranscription),
+			controller.AudioTranscription()...,
 		)
 		relayRouter.POST(
 			"/audio/translations",
-			middleware.NewDistribute(relaymode.AudioTranslation),
-			controller.NewRelay(relaymode.AudioTranslation),
+			controller.AudioTranslation()...,
 		)
 		relayRouter.POST(
 			"/audio/speech",
-			middleware.NewDistribute(relaymode.AudioSpeech),
-			controller.NewRelay(relaymode.AudioSpeech),
+			controller.AudioSpeech()...,
 		)
 		relayRouter.POST(
 			"/rerank",
-			middleware.NewDistribute(relaymode.Rerank),
-			controller.NewRelay(relaymode.Rerank),
+			controller.Rerank()...,
 		)
 		relayRouter.POST(
 			"/moderations",
-			middleware.NewDistribute(relaymode.Moderations),
-			controller.NewRelay(relaymode.Moderations),
+			controller.Moderations()...,
 		)
 		relayRouter.POST(
 			"/parse/pdf",
-			middleware.NewDistribute(relaymode.ParsePdf),
-			controller.NewRelay(relaymode.ParsePdf),
+			controller.ParsePdf()...,
 		)
 
 		relayRouter.POST("/images/edits", controller.RelayNotImplemented)

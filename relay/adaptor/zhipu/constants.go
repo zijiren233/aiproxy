@@ -2,13 +2,13 @@ package zhipu
 
 import (
 	"github.com/labring/aiproxy/model"
-	"github.com/labring/aiproxy/relay/relaymode"
+	"github.com/labring/aiproxy/relay/mode"
 )
 
 var ModelList = []*model.ModelConfig{
 	{
 		Model:       "glm-3-turbo",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerChatGLM,
 		InputPrice:  0.001,
 		OutputPrice: 0.001,
@@ -20,7 +20,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "glm-4",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerChatGLM,
 		InputPrice:  0.1,
 		OutputPrice: 0.1,
@@ -33,7 +33,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "glm-4-plus",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerChatGLM,
 		InputPrice:  0.05,
 		OutputPrice: 0.05,
@@ -46,7 +46,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "glm-4-air",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerChatGLM,
 		InputPrice:  0.001,
 		OutputPrice: 0.001,
@@ -59,7 +59,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "glm-4-airx",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerChatGLM,
 		InputPrice:  0.01,
 		OutputPrice: 0.01,
@@ -72,7 +72,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "glm-4-long",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerChatGLM,
 		InputPrice:  0.001,
 		OutputPrice: 0.001,
@@ -85,7 +85,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "glm-4-flashx",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerChatGLM,
 		InputPrice:  0.0001,
 		OutputPrice: 0.0001,
@@ -98,7 +98,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "glm-4-flash",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerChatGLM,
 		InputPrice:  0.0001,
 		OutputPrice: 0.0001,
@@ -111,7 +111,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "glm-4v-flash",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerChatGLM,
 		InputPrice:  0.0001,
 		OutputPrice: 0.0001,
@@ -124,7 +124,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "glm-4v",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerChatGLM,
 		InputPrice:  0.05,
 		OutputPrice: 0.05,
@@ -137,7 +137,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "glm-4v-plus",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerChatGLM,
 		InputPrice:  0.01,
 		OutputPrice: 0.01,
@@ -151,7 +151,7 @@ var ModelList = []*model.ModelConfig{
 
 	{
 		Model:       "charglm-4",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerChatGLM,
 		InputPrice:  0.001,
 		OutputPrice: 0.001,
@@ -163,7 +163,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "codegeex-4",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerChatGLM,
 		InputPrice:  0.0001,
 		OutputPrice: 0.0001,
@@ -176,7 +176,7 @@ var ModelList = []*model.ModelConfig{
 
 	{
 		Model:      "embedding-2",
-		Type:       relaymode.Embeddings,
+		Type:       mode.Embeddings,
 		Owner:      model.ModelOwnerChatGLM,
 		InputPrice: 0.0005,
 		RPM:        60,
@@ -186,7 +186,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:      "embedding-3",
-		Type:       relaymode.Embeddings,
+		Type:       mode.Embeddings,
 		Owner:      model.ModelOwnerChatGLM,
 		InputPrice: 0.0005,
 		RPM:        600,
@@ -197,7 +197,7 @@ var ModelList = []*model.ModelConfig{
 
 	{
 		Model:             "cogview-3",
-		Type:              relaymode.ImagesGenerations,
+		Type:              mode.ImagesGenerations,
 		Owner:             model.ModelOwnerChatGLM,
 		ImageMaxBatchSize: 1,
 		ImagePrices: map[string]float64{
@@ -210,7 +210,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:             "cogview-3-plus",
-		Type:              relaymode.ImagesGenerations,
+		Type:              mode.ImagesGenerations,
 		Owner:             model.ModelOwnerChatGLM,
 		ImageMaxBatchSize: 1,
 		ImagePrices: map[string]float64{

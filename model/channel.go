@@ -11,7 +11,7 @@ import (
 	"github.com/labring/aiproxy/common"
 	"github.com/labring/aiproxy/common/config"
 	"github.com/labring/aiproxy/monitor"
-	"github.com/labring/aiproxy/relay/relaymode"
+	"github.com/labring/aiproxy/relay/mode"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
@@ -330,7 +330,7 @@ func ClearLastTestErrorAt(id int) error {
 	return HandleUpdateResult(result, ErrChannelNotFound)
 }
 
-func (c *Channel) UpdateModelTest(testAt time.Time, model, actualModel string, mode relaymode.Mode, took float64, success bool, response string, code int) (*ChannelTest, error) {
+func (c *Channel) UpdateModelTest(testAt time.Time, model, actualModel string, mode mode.Mode, took float64, success bool, response string, code int) (*ChannelTest, error) {
 	var ct *ChannelTest
 	err := DB.Transaction(func(tx *gorm.DB) error {
 		if !success {

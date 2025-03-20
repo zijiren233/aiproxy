@@ -7,14 +7,14 @@ import (
 	"github.com/bytedance/sonic"
 	"github.com/labring/aiproxy/common/conv"
 	"github.com/labring/aiproxy/relay/adaptor/openai"
-	relaymodel "github.com/labring/aiproxy/relay/model"
+	model "github.com/labring/aiproxy/relay/model"
 )
 
 type errorResponse struct {
 	Error string `json:"error"`
 }
 
-func ErrorHandler(resp *http.Response) *relaymodel.ErrorWithStatusCode {
+func ErrorHandler(resp *http.Response) *model.ErrorWithStatusCode {
 	defer resp.Body.Close()
 
 	data, err := io.ReadAll(resp.Body)

@@ -2,43 +2,43 @@ package ollama
 
 import (
 	"github.com/labring/aiproxy/model"
-	"github.com/labring/aiproxy/relay/relaymode"
+	"github.com/labring/aiproxy/relay/mode"
 )
 
 var ModelList = []*model.ModelConfig{
 	{
 		Model: "codellama:7b-instruct",
-		Type:  relaymode.ChatCompletions,
+		Type:  mode.ChatCompletions,
 		Owner: model.ModelOwnerMeta,
 	},
 	{
 		Model: "llama2:7b",
-		Type:  relaymode.ChatCompletions,
+		Type:  mode.ChatCompletions,
 		Owner: model.ModelOwnerMeta,
 	},
 	{
 		Model: "llama2:latest",
-		Type:  relaymode.ChatCompletions,
+		Type:  mode.ChatCompletions,
 		Owner: model.ModelOwnerMeta,
 	},
 	{
 		Model: "llama3:latest",
-		Type:  relaymode.ChatCompletions,
+		Type:  mode.ChatCompletions,
 		Owner: model.ModelOwnerMeta,
 	},
 	{
 		Model: "phi3:latest",
-		Type:  relaymode.ChatCompletions,
+		Type:  mode.ChatCompletions,
 		Owner: model.ModelOwnerMicrosoft,
 	},
 	{
 		Model: "qwen:0.5b-chat",
-		Type:  relaymode.ChatCompletions,
+		Type:  mode.ChatCompletions,
 		Owner: model.ModelOwnerAlibaba,
 	},
 	{
 		Model: "qwen:7b",
-		Type:  relaymode.ChatCompletions,
+		Type:  mode.ChatCompletions,
 		Owner: model.ModelOwnerAlibaba,
 	},
 }

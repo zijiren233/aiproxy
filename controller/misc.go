@@ -11,12 +11,13 @@ type StatusData struct {
 }
 
 // GetStatus godoc
-// @Summary      Get status
-// @Description  Returns the status of the server
-// @Tags         misc
-// @Produce      json
-// @Success      200  {object}  middleware.APIResponse{data=StatusData}
-// @Router       /api/status [get]
+//
+//	@Summary		Get status
+//	@Description	Returns the status of the server
+//	@Tags			misc
+//	@Produce		json
+//	@Success		200	{object}	middleware.APIResponse{data=StatusData}
+//	@Router			/api/status [get]
 func GetStatus(c *gin.Context) {
 	middleware.SuccessResponse(c, &StatusData{
 		StartTime: common.StartTime,

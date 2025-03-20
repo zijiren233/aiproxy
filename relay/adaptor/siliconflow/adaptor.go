@@ -8,8 +8,8 @@ import (
 	"github.com/labring/aiproxy/relay/adaptor"
 	"github.com/labring/aiproxy/relay/adaptor/openai"
 	"github.com/labring/aiproxy/relay/meta"
+	"github.com/labring/aiproxy/relay/mode"
 	relaymodel "github.com/labring/aiproxy/relay/model"
-	"github.com/labring/aiproxy/relay/relaymode"
 )
 
 var _ adaptor.Adaptor = (*Adaptor)(nil)
@@ -39,7 +39,7 @@ func (a *Adaptor) DoResponse(meta *meta.Meta, c *gin.Context, resp *http.Respons
 		return nil, err
 	}
 	switch meta.Mode {
-	case relaymode.AudioSpeech:
+	case mode.AudioSpeech:
 		size := c.Writer.Size()
 		usage = &relaymodel.Usage{
 			CompletionTokens: size,

@@ -13,7 +13,7 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/labring/aiproxy/relay/adaptor/openai"
 	"github.com/labring/aiproxy/relay/meta"
-	relaymodel "github.com/labring/aiproxy/relay/model"
+	model "github.com/labring/aiproxy/relay/model"
 )
 
 type STTMessage struct {
@@ -145,7 +145,7 @@ func STTDoRequest(meta *meta.Meta, req *http.Request) (*http.Response, error) {
 	}, nil
 }
 
-func STTDoResponse(meta *meta.Meta, c *gin.Context, _ *http.Response) (usage *relaymodel.Usage, err *relaymodel.ErrorWithStatusCode) {
+func STTDoResponse(meta *meta.Meta, c *gin.Context, _ *http.Response) (usage *model.Usage, err *model.ErrorWithStatusCode) {
 	audioData := meta.MustGet("audio_data").([]byte)
 	taskID := meta.MustGet("task_id").(string)
 
@@ -154,7 +154,7 @@ func STTDoResponse(meta *meta.Meta, c *gin.Context, _ *http.Response) (usage *re
 
 	output := strings.Builder{}
 
-	usage = &relaymodel.Usage{}
+	usage = &model.Usage{}
 
 	for {
 		messageType, data, err := conn.ReadMessage()

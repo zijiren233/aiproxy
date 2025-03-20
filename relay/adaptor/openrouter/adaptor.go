@@ -9,8 +9,8 @@ import (
 	"github.com/labring/aiproxy/model"
 	"github.com/labring/aiproxy/relay/adaptor/openai"
 	"github.com/labring/aiproxy/relay/meta"
+	"github.com/labring/aiproxy/relay/mode"
 	relaymodel "github.com/labring/aiproxy/relay/model"
-	"github.com/labring/aiproxy/relay/relaymode"
 	"github.com/labring/aiproxy/relay/utils"
 )
 
@@ -90,7 +90,7 @@ func handlerPreHandler(_ *meta.Meta, node *ast.Node) error {
 
 func (a *Adaptor) DoResponse(meta *meta.Meta, c *gin.Context, resp *http.Response) (usage *relaymodel.Usage, err *relaymodel.ErrorWithStatusCode) {
 	switch meta.Mode {
-	case relaymode.ChatCompletions:
+	case mode.ChatCompletions:
 		if utils.IsStreamResponse(resp) {
 			usage, err = openai.StreamHandler(meta, c, resp, streamPreHandler)
 		} else {

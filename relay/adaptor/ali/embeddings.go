@@ -12,7 +12,7 @@ import (
 	"github.com/labring/aiproxy/middleware"
 	"github.com/labring/aiproxy/relay/adaptor/openai"
 	"github.com/labring/aiproxy/relay/meta"
-	relaymodel "github.com/labring/aiproxy/relay/model"
+	model "github.com/labring/aiproxy/relay/model"
 )
 
 // Deprecated: Use openai.ConvertRequest instead
@@ -55,16 +55,16 @@ func ConvertEmbeddingsRequest(meta *meta.Meta, req *http.Request) (string, http.
 	return http.MethodPost, nil, bytes.NewReader(jsonData), nil
 }
 
-func embeddingResponse2OpenAI(meta *meta.Meta, response *EmbeddingResponse) *openai.EmbeddingResponse {
-	openAIEmbeddingResponse := openai.EmbeddingResponse{
+func embeddingResponse2OpenAI(meta *meta.Meta, response *EmbeddingResponse) *model.EmbeddingResponse {
+	openAIEmbeddingResponse := model.EmbeddingResponse{
 		Object: "list",
-		Data:   make([]*openai.EmbeddingResponseItem, 0, 1),
+		Data:   make([]*model.EmbeddingResponseItem, 0, 1),
 		Model:  meta.OriginModel,
 		Usage:  response.Usage,
 	}
 
 	for i, embedding := range response.Output.Embeddings {
-		openAIEmbeddingResponse.Data = append(openAIEmbeddingResponse.Data, &openai.EmbeddingResponseItem{
+		openAIEmbeddingResponse.Data = append(openAIEmbeddingResponse.Data, &model.EmbeddingResponseItem{
 			Object:    "embedding",
 			Index:     i,
 			Embedding: embedding.Embedding,
@@ -73,7 +73,7 @@ func embeddingResponse2OpenAI(meta *meta.Meta, response *EmbeddingResponse) *ope
 	return &openAIEmbeddingResponse
 }
 
-func EmbeddingsHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*relaymodel.Usage, *relaymodel.ErrorWithStatusCode) {
+func EmbeddingsHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, *model.ErrorWithStatusCode) {
 	defer resp.Body.Close()
 
 	log := middleware.GetLogger(c)

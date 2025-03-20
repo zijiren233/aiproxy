@@ -2,7 +2,7 @@ package baiduv2
 
 import (
 	"github.com/labring/aiproxy/model"
-	"github.com/labring/aiproxy/relay/relaymode"
+	"github.com/labring/aiproxy/relay/mode"
 )
 
 // https://cloud.baidu.com/doc/WENXINWORKSHOP/s/Fm2vrveyu
@@ -10,7 +10,7 @@ import (
 var ModelList = []*model.ModelConfig{
 	{
 		Model:       "ERNIE-4.0-8K-Latest",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerBaidu,
 		InputPrice:  0.03,
 		OutputPrice: 0.09,
@@ -24,7 +24,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "ERNIE-4.0-8K-Preview",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerBaidu,
 		InputPrice:  0.03,
 		OutputPrice: 0.09,
@@ -38,7 +38,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "ERNIE-4.0-8K",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerBaidu,
 		InputPrice:  0.03,
 		OutputPrice: 0.09,
@@ -52,7 +52,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "ERNIE-4.0-Turbo-8K-Latest",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerBaidu,
 		InputPrice:  0.02,
 		OutputPrice: 0.06,
@@ -66,7 +66,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "ERNIE-4.0-Turbo-8K-Preview",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerBaidu,
 		InputPrice:  0.02,
 		OutputPrice: 0.06,
@@ -80,7 +80,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "ERNIE-4.0-Turbo-8K",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerBaidu,
 		InputPrice:  0.02,
 		OutputPrice: 0.06,
@@ -94,7 +94,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "ERNIE-4.0-Turbo-128K",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerBaidu,
 		InputPrice:  0.02,
 		OutputPrice: 0.06,
@@ -108,7 +108,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "ERNIE-3.5-8K-Preview",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerBaidu,
 		InputPrice:  0.0008,
 		OutputPrice: 0.002,
@@ -122,7 +122,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "ERNIE-3.5-8K",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerBaidu,
 		InputPrice:  0.0008,
 		OutputPrice: 0.002,
@@ -136,7 +136,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "ERNIE-3.5-128K",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerBaidu,
 		InputPrice:  0.0008,
 		OutputPrice: 0.002,
@@ -150,7 +150,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "ERNIE-Speed-8K",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerBaidu,
 		InputPrice:  0.0001,
 		OutputPrice: 0.0001,
@@ -163,7 +163,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "ERNIE-Speed-128K",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerBaidu,
 		InputPrice:  0.0001,
 		OutputPrice: 0.0001,
@@ -176,7 +176,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "ERNIE-Speed-Pro-128K",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerBaidu,
 		InputPrice:  0.0003,
 		OutputPrice: 0.0006,
@@ -189,7 +189,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "ERNIE-Lite-8K",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerBaidu,
 		InputPrice:  0.0001,
 		OutputPrice: 0.0001,
@@ -202,7 +202,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "ERNIE-Lite-Pro-128K",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerBaidu,
 		InputPrice:  0.0002,
 		OutputPrice: 0.0004,
@@ -216,7 +216,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "ERNIE-Tiny-8K",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerBaidu,
 		InputPrice:  0.0001,
 		OutputPrice: 0.0001,
@@ -229,7 +229,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "ERNIE-Character-8K",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerBaidu,
 		InputPrice:  0.0003,
 		OutputPrice: 0.0006,
@@ -242,7 +242,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "ERNIE-Character-Fiction-8K",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerBaidu,
 		InputPrice:  0.0003,
 		OutputPrice: 0.0006,
@@ -255,7 +255,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "ERNIE-Novel-8K",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerBaidu,
 		InputPrice:  0.04,
 		OutputPrice: 0.12,
@@ -269,7 +269,7 @@ var ModelList = []*model.ModelConfig{
 
 	{
 		Model:       "DeepSeek-V3",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerDeepSeek,
 		InputPrice:  0.0008,
 		OutputPrice: 0.0016,
@@ -281,7 +281,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "DeepSeek-R1",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerDeepSeek,
 		InputPrice:  0.002,
 		OutputPrice: 0.008,

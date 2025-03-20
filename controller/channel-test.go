@@ -25,7 +25,7 @@ import (
 	"github.com/labring/aiproxy/monitor"
 	"github.com/labring/aiproxy/relay/channeltype"
 	"github.com/labring/aiproxy/relay/meta"
-	"github.com/labring/aiproxy/relay/relaymode"
+	"github.com/labring/aiproxy/relay/mode"
 	"github.com/labring/aiproxy/relay/utils"
 	log "github.com/sirupsen/logrus"
 )
@@ -60,7 +60,7 @@ func testSingleModel(mc *model.ModelCaches, channel *model.Channel, modelName st
 	if !ok {
 		return nil, errors.New(modelName + " model config not found")
 	}
-	if modelConfig.Type == relaymode.Unknown {
+	if modelConfig.Type == mode.Unknown {
 		newModelConfig := guessModelConfig(modelName)
 		if newModelConfig != nil {
 			modelConfig = newModelConfig
@@ -81,7 +81,7 @@ func testSingleModel(mc *model.ModelCaches, channel *model.Channel, modelName st
 		}, nil
 	}
 
-	body, mode, err := utils.BuildRequest(modelConfig)
+	body, m, err := utils.BuildRequest(modelConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -97,14 +97,14 @@ func testSingleModel(mc *model.ModelCaches, channel *model.Channel, modelName st
 
 	meta := meta.NewMeta(
 		channel,
-		mode,
+		m,
 		modelName,
 		modelConfig,
 		meta.WithRequestID(channelTestRequestID),
 	)
-	relayController, ok := relayController(mode)
+	relayController, ok := relayController(m)
 	if !ok {
-		return nil, fmt.Errorf("relay mode %d not implemented", mode)
+		return nil, fmt.Errorf("relay mode %d not implemented", m)
 	}
 	result := relayController(meta, newc)
 	success := result.Error == nil
@@ -112,8 +112,8 @@ func testSingleModel(mc *model.ModelCaches, channel *model.Channel, modelName st
 	var code int
 	if success {
 		switch meta.Mode {
-		case relaymode.AudioSpeech,
-			relaymode.ImagesGenerations:
+		case mode.AudioSpeech,
+			mode.ImagesGenerations:
 			respStr = ""
 		default:
 			respStr = w.Body.String()
@@ -136,15 +136,15 @@ func testSingleModel(mc *model.ModelCaches, channel *model.Channel, modelName st
 	)
 }
 
-// @Summary      Test channel model
-// @Description  Tests a single model in the channel
-// @Tags         channel
-// @Produce      json
-// @Security     ApiKeyAuth
-// @Param        id  path      int  true  "Channel ID"
-// @Param        model  path      string  true  "Model name"
-// @Success      200  {object}  middleware.APIResponse{data=model.ChannelTest}
-// @Router       /api/channel/{id}/{model} [get]
+// @Summary		Test channel model
+// @Description	Tests a single model in the channel
+// @Tags			channel
+// @Produce		json
+// @Security		ApiKeyAuth
+// @Param			id		path		int		true	"Channel ID"
+// @Param			model	path		string	true	"Model name"
+// @Success		200		{object}	middleware.APIResponse{data=model.ChannelTest}
+// @Router			/api/channel/{id}/{model} [get]
 //
 //nolint:goconst
 func TestChannel(c *gin.Context) {
@@ -242,14 +242,14 @@ func processTestResult(mc *model.ModelCaches, channel *model.Channel, modelName 
 	return result
 }
 
-// @Summary      Test channel models
-// @Description  Tests all models in the channel
-// @Tags         channel
-// @Produce      json
-// @Security     ApiKeyAuth
-// @Param        id  path      int  true  "Channel ID"
-// @Success      200  {object}  middleware.APIResponse{data=[]TestResult}
-// @Router       /api/channel/{id}/models [get]
+// @Summary		Test channel models
+// @Description	Tests all models in the channel
+// @Tags			channel
+// @Produce		json
+// @Security		ApiKeyAuth
+// @Param			id	path		int	true	"Channel ID"
+// @Success		200	{object}	middleware.APIResponse{data=[]TestResult}
+// @Router			/api/channel/{id}/models [get]
 func TestChannelModels(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
@@ -336,13 +336,13 @@ func TestChannelModels(c *gin.Context) {
 	}
 }
 
-// @Summary      Test all channels
-// @Description  Tests all channels
-// @Tags         channel
-// @Produce      json
-// @Security     ApiKeyAuth
-// @Success      200  {object}  middleware.APIResponse{data=[]TestResult}
-// @Router       /api/channels/test [get]
+// @Summary		Test all channels
+// @Description	Tests all channels
+// @Tags			channel
+// @Produce		json
+// @Security		ApiKeyAuth
+// @Success		200	{object}	middleware.APIResponse{data=[]TestResult}
+// @Router			/api/channels/test [get]
 func TestAllChannels(c *gin.Context) {
 	testDisabled := c.Query("test_disabled") == "true"
 	var channels []*model.Channel

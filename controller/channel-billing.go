@@ -9,14 +9,11 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/labring/aiproxy/common/balance"
 	"github.com/labring/aiproxy/common/notify"
 	"github.com/labring/aiproxy/middleware"
 	"github.com/labring/aiproxy/model"
 	"github.com/labring/aiproxy/relay/adaptor"
-	"github.com/labring/aiproxy/relay/adaptor/openai"
 	"github.com/labring/aiproxy/relay/channeltype"
-	log "github.com/sirupsen/logrus"
 )
 
 // https://github.com/labring/aiproxy/issues/79
@@ -44,14 +41,15 @@ func updateChannelBalance(channel *model.Channel) (float64, error) {
 }
 
 // UpdateChannelBalance godoc
-// @Summary      Update channel balance
-// @Description  Updates the balance for a single channel
-// @Tags         channel
-// @Produce      json
-// @Security     ApiKeyAuth
-// @Param        id  path      int  true  "Channel ID"
-// @Success      200  {object}  middleware.APIResponse{data=float64}
-// @Router       /api/channel/{id}/balance [get]
+//
+//	@Summary		Update channel balance
+//	@Description	Updates the balance for a single channel
+//	@Tags			channel
+//	@Produce		json
+//	@Security		ApiKeyAuth
+//	@Param			id	path		int	true	"Channel ID"
+//	@Success		200	{object}	middleware.APIResponse{data=float64}
+//	@Router			/api/channel/{id}/balance [get]
 func UpdateChannelBalance(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
@@ -111,13 +109,14 @@ func updateAllChannelsBalance() error {
 }
 
 // UpdateAllChannelsBalance godoc
-// @Summary      Update all channels balance
-// @Description  Updates the balance for all channels
-// @Tags         channel
-// @Produce      json
-// @Security     ApiKeyAuth
-// @Success      200  {object}  middleware.APIResponse
-// @Router       /api/channels/balance [get]
+//
+//	@Summary		Update all channels balance
+//	@Description	Updates the balance for all channels
+//	@Tags			channel
+//	@Produce		json
+//	@Security		ApiKeyAuth
+//	@Success		200	{object}	middleware.APIResponse
+//	@Router			/api/channels/balance [get]
 func UpdateAllChannelsBalance(c *gin.Context) {
 	err := updateAllChannelsBalance()
 	if err != nil {
@@ -132,33 +131,4 @@ func UpdateChannelsBalance(frequency time.Duration) {
 		time.Sleep(frequency)
 		_ = updateAllChannelsBalance()
 	}
-}
-
-func GetSubscription(c *gin.Context) {
-	group := middleware.GetGroup(c)
-	b, _, err := balance.GetGroupRemainBalance(c, *group)
-	if err != nil {
-		if errors.Is(err, balance.ErrNoRealNameUsedAmountLimit) {
-			middleware.ErrorResponse(c, http.StatusForbidden, err.Error())
-			return
-		}
-		log.Errorf("get group (%s) balance failed: %s", group.ID, err)
-		middleware.ErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("get group (%s) balance failed", group.ID))
-		return
-	}
-	token := middleware.GetToken(c)
-	quota := token.Quota
-	if quota <= 0 {
-		quota = b
-	}
-	c.JSON(http.StatusOK, openai.SubscriptionResponse{
-		HardLimitUSD:       quota + token.UsedAmount,
-		SoftLimitUSD:       b,
-		SystemHardLimitUSD: quota + token.UsedAmount,
-	})
-}
-
-func GetUsage(c *gin.Context) {
-	token := middleware.GetToken(c)
-	c.JSON(http.StatusOK, openai.UsageResponse{TotalUsage: token.UsedAmount * 100})
 }

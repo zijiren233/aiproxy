@@ -2,7 +2,7 @@ package gemini
 
 import (
 	"github.com/labring/aiproxy/model"
-	"github.com/labring/aiproxy/relay/relaymode"
+	"github.com/labring/aiproxy/relay/mode"
 )
 
 // https://ai.google.dev/models/gemini
@@ -11,7 +11,7 @@ import (
 var ModelList = []*model.ModelConfig{
 	{
 		Model:       "gemini-1.5-pro",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerGoogle,
 		InputPrice:  0.0025,
 		OutputPrice: 0.01,
@@ -25,7 +25,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "gemini-1.5-flash",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerGoogle,
 		InputPrice:  0.00015,
 		OutputPrice: 0.0006,
@@ -39,7 +39,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "gemini-1.5-flash-8b",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerGoogle,
 		InputPrice:  0.000075,
 		OutputPrice: 0.0003,
@@ -53,7 +53,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "gemini-2.0-flash",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerGoogle,
 		InputPrice:  0.0001,
 		OutputPrice: 0.0004,
@@ -67,7 +67,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "gemini-2.0-flash-lite-preview",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerGoogle,
 		InputPrice:  0.000075,
 		OutputPrice: 0.0003,
@@ -81,7 +81,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "gemini-2.0-flash-thinking-exp",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerGoogle,
 		InputPrice:  0.0001,
 		OutputPrice: 0.0004,
@@ -94,7 +94,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "gemini-2.0-pro-exp",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerGoogle,
 		InputPrice:  0.0025,
 		OutputPrice: 0.01,
@@ -109,7 +109,7 @@ var ModelList = []*model.ModelConfig{
 
 	{
 		Model:      "text-embedding-004",
-		Type:       relaymode.Embeddings,
+		Type:       mode.Embeddings,
 		Owner:      model.ModelOwnerGoogle,
 		InputPrice: 0.0001,
 		RPM:        1500,

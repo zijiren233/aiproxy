@@ -2,7 +2,7 @@ package doubao
 
 import (
 	"github.com/labring/aiproxy/model"
-	"github.com/labring/aiproxy/relay/relaymode"
+	"github.com/labring/aiproxy/relay/mode"
 )
 
 // https://console.volcengine.com/ark/region:ark+cn-beijing/model
@@ -10,7 +10,7 @@ import (
 var ModelList = []*model.ModelConfig{
 	{
 		Model:       "Doubao-1.5-vision-pro-32k",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerDoubao,
 		InputPrice:  0.003,
 		OutputPrice: 0.009,
@@ -22,7 +22,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "Doubao-1.5-pro-32k",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerDoubao,
 		InputPrice:  0.0008,
 		OutputPrice: 0.0020,
@@ -35,7 +35,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "Doubao-1.5-pro-256k",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerDoubao,
 		InputPrice:  0.005,
 		OutputPrice: 0.009,
@@ -48,7 +48,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "Doubao-1.5-lite-32k",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerDoubao,
 		InputPrice:  0.0003,
 		OutputPrice: 0.0006,
@@ -62,7 +62,7 @@ var ModelList = []*model.ModelConfig{
 
 	{
 		Model:       "Doubao-vision-lite-32k",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerDoubao,
 		InputPrice:  0.008,
 		OutputPrice: 0.008,
@@ -74,7 +74,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "Doubao-vision-pro-32k",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerDoubao,
 		InputPrice:  0.02,
 		OutputPrice: 0.02,
@@ -86,7 +86,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "Doubao-pro-256k",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerDoubao,
 		InputPrice:  0.0050,
 		OutputPrice: 0.0090,
@@ -98,7 +98,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "Doubao-pro-128k",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerDoubao,
 		InputPrice:  0.0050,
 		OutputPrice: 0.0090,
@@ -111,7 +111,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "Doubao-pro-32k",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerDoubao,
 		InputPrice:  0.0008,
 		OutputPrice: 0.0020,
@@ -124,7 +124,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "Doubao-pro-4k",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerDoubao,
 		InputPrice:  0.0008,
 		OutputPrice: 0.0020,
@@ -137,7 +137,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "Doubao-lite-128k",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerDoubao,
 		InputPrice:  0.0008,
 		OutputPrice: 0.0010,
@@ -150,7 +150,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "Doubao-lite-32k",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerDoubao,
 		InputPrice:  0.0003,
 		OutputPrice: 0.0006,
@@ -163,7 +163,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "Doubao-lite-4k",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerDoubao,
 		InputPrice:  0.0003,
 		OutputPrice: 0.0006,
@@ -177,7 +177,7 @@ var ModelList = []*model.ModelConfig{
 
 	{
 		Model:      "Doubao-embedding",
-		Type:       relaymode.Embeddings,
+		Type:       mode.Embeddings,
 		Owner:      model.ModelOwnerDoubao,
 		InputPrice: 0.0005,
 		RPM:        1200,
@@ -187,7 +187,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:      "Doubao-embedding-large",
-		Type:       relaymode.Embeddings,
+		Type:       mode.Embeddings,
 		Owner:      model.ModelOwnerDoubao,
 		InputPrice: 0.0007,
 		RPM:        1000,
