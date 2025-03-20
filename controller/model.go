@@ -121,14 +121,39 @@ func init() {
 	slices.SortStableFunc(builtinModels, SortBuiltinModelConfigsFunc)
 }
 
+// BuiltinModels godoc
+// @Summary      Get builtin models
+// @Description  Returns a list of builtin models
+// @Tags         model
+// @Produce      json
+// @Security     ApiKeyAuth
+// @Success      200  {object}  middleware.APIResponse{data=[]BuiltinModelConfig}
+// @Router       /api/models/builtin [get]
 func BuiltinModels(c *gin.Context) {
 	middleware.SuccessResponse(c, builtinModels)
 }
 
+// ChannelBuiltinModels godoc
+// @Summary      Get channel builtin models
+// @Description  Returns a list of channel builtin models
+// @Tags         model
+// @Produce      json
+// @Security     ApiKeyAuth
+// @Success      200  {object}  middleware.APIResponse{data=map[int][]BuiltinModelConfig}
+// @Router       /api/models/builtin/channel [get]
 func ChannelBuiltinModels(c *gin.Context) {
 	middleware.SuccessResponse(c, builtinChannelID2Models)
 }
 
+// ChannelBuiltinModelsByType godoc
+// @Summary      Get channel builtin models by type
+// @Description  Returns a list of channel builtin models by type
+// @Tags         model
+// @Produce      json
+// @Security     ApiKeyAuth
+// @Param        type  path      string  true  "Channel type"
+// @Success      200  {object}  middleware.APIResponse{data=[]BuiltinModelConfig}
+// @Router       /api/models/builtin/channel/{type} [get]
 func ChannelBuiltinModelsByType(c *gin.Context) {
 	channelType := c.Param("type")
 	if channelType == "" {
@@ -143,6 +168,14 @@ func ChannelBuiltinModelsByType(c *gin.Context) {
 	middleware.SuccessResponse(c, builtinChannelID2Models[channelTypeInt])
 }
 
+// ChannelDefaultModelsAndMapping godoc
+// @Summary      Get channel default models and mapping
+// @Description  Returns a list of channel default models and mapping
+// @Tags         model
+// @Produce      json
+// @Security     ApiKeyAuth
+// @Success      200  {object}  middleware.APIResponse{data=map[string]any{models=[]string,mapping=map[string]string}}
+// @Router       /api/models/default [get]
 func ChannelDefaultModelsAndMapping(c *gin.Context) {
 	middleware.SuccessResponse(c, gin.H{
 		"models":  config.GetDefaultChannelModels(),
@@ -150,6 +183,15 @@ func ChannelDefaultModelsAndMapping(c *gin.Context) {
 	})
 }
 
+// ChannelDefaultModelsAndMappingByType godoc
+// @Summary      Get channel default models and mapping by type
+// @Description  Returns a list of channel default models and mapping by type
+// @Tags         model
+// @Produce      json
+// @Security     ApiKeyAuth
+// @Param        type  path      string  true  "Channel type"
+// @Success      200  {object}  middleware.APIResponse{data=map[string]any{models=[]string,mapping=map[string]string}}
+// @Router       /api/models/default/{type} [get]
 func ChannelDefaultModelsAndMappingByType(c *gin.Context) {
 	channelType := c.Param("type")
 	if channelType == "" {
@@ -167,14 +209,39 @@ func ChannelDefaultModelsAndMappingByType(c *gin.Context) {
 	})
 }
 
+// EnabledModels godoc
+// @Summary      Get enabled models
+// @Description  Returns a list of enabled models
+// @Tags         model
+// @Produce      json
+// @Security     ApiKeyAuth
+// @Success      200  {object}  middleware.APIResponse{data=[]model.ModelConfig}
+// @Router       /api/models/enabled [get]
 func EnabledModels(c *gin.Context) {
 	middleware.SuccessResponse(c, model.LoadModelCaches().EnabledModelConfigs)
 }
 
+// ChannelEnabledModels godoc
+// @Summary      Get channel enabled models
+// @Description  Returns a list of channel enabled models
+// @Tags         model
+// @Produce      json
+// @Security     ApiKeyAuth
+// @Success      200  {object}  middleware.APIResponse{data=map[int][]model.ModelConfig}
+// @Router       /api/models/enabled/channel [get]
 func ChannelEnabledModels(c *gin.Context) {
 	middleware.SuccessResponse(c, model.LoadModelCaches().EnabledChannelType2ModelConfigs)
 }
 
+// ChannelEnabledModelsByType godoc
+// @Summary      Get channel enabled models by type
+// @Description  Returns a list of channel enabled models by type
+// @Tags         model
+// @Produce      json
+// @Security     ApiKeyAuth
+// @Param        type  path      string  true  "Channel type"
+// @Success      200  {object}  middleware.APIResponse{data=[]model.ModelConfig}
+// @Router       /api/models/enabled/channel/{type} [get]
 func ChannelEnabledModelsByType(c *gin.Context) {
 	channelTypeStr := c.Param("type")
 	if channelTypeStr == "" {

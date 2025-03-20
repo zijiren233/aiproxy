@@ -136,6 +136,16 @@ func testSingleModel(mc *model.ModelCaches, channel *model.Channel, modelName st
 	)
 }
 
+// @Summary      Test channel model
+// @Description  Tests a single model in the channel
+// @Tags         channel
+// @Produce      json
+// @Security     ApiKeyAuth
+// @Param        id  path      int  true  "Channel ID"
+// @Param        model  path      string  true  "Model name"
+// @Success      200  {object}  middleware.APIResponse{data=model.ChannelTest}
+// @Router       /api/channel/{id}/{model} [get]
+//
 //nolint:goconst
 func TestChannel(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
@@ -193,13 +203,13 @@ func TestChannel(c *gin.Context) {
 	})
 }
 
-type testResult struct {
+type TestResult struct {
 	Data    *model.ChannelTest `json:"data,omitempty"`
 	Message string             `json:"message,omitempty"`
 	Success bool               `json:"success"`
 }
 
-func processTestResult(mc *model.ModelCaches, channel *model.Channel, modelName string, returnSuccess bool, successResponseBody bool) *testResult {
+func processTestResult(mc *model.ModelCaches, channel *model.Channel, modelName string, returnSuccess bool, successResponseBody bool) *TestResult {
 	ct, err := testSingleModel(mc, channel, modelName)
 
 	e := &utils.UnsupportedModelTypeError{}
@@ -208,7 +218,7 @@ func processTestResult(mc *model.ModelCaches, channel *model.Channel, modelName 
 		return nil
 	}
 
-	result := &testResult{
+	result := &TestResult{
 		Success: err == nil,
 	}
 	if err != nil {
@@ -232,6 +242,14 @@ func processTestResult(mc *model.ModelCaches, channel *model.Channel, modelName 
 	return result
 }
 
+// @Summary      Test channel models
+// @Description  Tests all models in the channel
+// @Tags         channel
+// @Produce      json
+// @Security     ApiKeyAuth
+// @Param        id  path      int  true  "Channel ID"
+// @Success      200  {object}  middleware.APIResponse{data=[]TestResult}
+// @Router       /api/channel/{id}/models [get]
 func TestChannelModels(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
@@ -259,7 +277,7 @@ func TestChannelModels(c *gin.Context) {
 		common.SetEventStreamHeaders(c)
 	}
 
-	results := make([]*testResult, 0)
+	results := make([]*TestResult, 0)
 	resultsMutex := sync.Mutex{}
 	hasError := atomic.Bool{}
 
@@ -318,6 +336,13 @@ func TestChannelModels(c *gin.Context) {
 	}
 }
 
+// @Summary      Test all channels
+// @Description  Tests all channels
+// @Tags         channel
+// @Produce      json
+// @Security     ApiKeyAuth
+// @Success      200  {object}  middleware.APIResponse{data=[]TestResult}
+// @Router       /api/channels/test [get]
 func TestAllChannels(c *gin.Context) {
 	testDisabled := c.Query("test_disabled") == "true"
 	var channels []*model.Channel
@@ -342,7 +367,7 @@ func TestAllChannels(c *gin.Context) {
 		common.SetEventStreamHeaders(c)
 	}
 
-	results := make([]*testResult, 0)
+	results := make([]*TestResult, 0)
 	resultsMutex := sync.Mutex{}
 	hasErrorMap := make(map[int]*atomic.Bool)
 

@@ -125,6 +125,14 @@ func fillGaps(data []*model.ChartData, start, end time.Time, t model.TimeSpanTyp
 	return result
 }
 
+// GetDashboard godoc
+// @Summary      Get dashboard data
+// @Description  Returns the general dashboard data including usage statistics and metrics
+// @Tags         dashboard
+// @Produce      json
+// @Security     ApiKeyAuth
+// @Success      200  {object}  middleware.APIResponse{data=model.DashboardResponse}
+// @Router       /api/dashboard [get]
 func GetDashboard(c *gin.Context) {
 	log := middleware.GetLogger(c)
 
@@ -152,6 +160,15 @@ func GetDashboard(c *gin.Context) {
 	middleware.SuccessResponse(c, dashboards)
 }
 
+// GetGroupDashboard godoc
+// @Summary      Get dashboard data for a specific group
+// @Description  Returns dashboard data and metrics specific to the given group
+// @Tags         dashboard
+// @Produce      json
+// @Security     ApiKeyAuth
+// @Param        group  path      string  true  "Group name or ID"
+// @Success      200    {object}  middleware.APIResponse{data=model.GroupDashboardResponse}
+// @Router       /api/dashboard/{group} [get]
 func GetGroupDashboard(c *gin.Context) {
 	log := middleware.GetLogger(c)
 
@@ -186,6 +203,15 @@ func GetGroupDashboard(c *gin.Context) {
 	middleware.SuccessResponse(c, dashboards)
 }
 
+// GetGroupDashboardModels godoc
+// @Summary      Get model usage data for a specific group
+// @Description  Returns model-specific metrics and usage data for the given group
+// @Tags         dashboard
+// @Produce      json
+// @Security     ApiKeyAuth
+// @Param        group  path      string  true  "Group name or ID"
+// @Success      200    {object}  middleware.APIResponse{data=[]model.ModelConfig}
+// @Router       /api/dashboard/{group}/models [get]
 func GetGroupDashboardModels(c *gin.Context) {
 	group := c.Param("group")
 	if group == "" {
@@ -210,6 +236,14 @@ func GetGroupDashboardModels(c *gin.Context) {
 	middleware.SuccessResponse(c, newEnabledModelConfigs)
 }
 
+// GetModelCostRank godoc
+// @Summary      Get model cost ranking data
+// @Description  Returns ranking data for models based on cost
+// @Tags         dashboard
+// @Produce      json
+// @Security     ApiKeyAuth
+// @Success      200  {object}  middleware.APIResponse{data=[]model.ModelCostRank}
+// @Router       /api/model_cost_rank [get]
 func GetModelCostRank(c *gin.Context) {
 	startTime, endTime := parseTimeRange(c)
 	models, err := model.GetModelCostRank("", startTime, endTime)
@@ -220,6 +254,15 @@ func GetModelCostRank(c *gin.Context) {
 	middleware.SuccessResponse(c, models)
 }
 
+// GetGroupModelCostRank godoc
+// @Summary      Get model cost ranking data for a specific group
+// @Description  Returns model cost ranking data specific to the given group
+// @Tags         dashboard
+// @Produce      json
+// @Security     ApiKeyAuth
+// @Param        group  path      string  true  "Group name or ID"
+// @Success      200    {object}  middleware.APIResponse{data=[]model.ModelCostRank}
+// @Router       /api/model_cost_rank/{group} [get]
 func GetGroupModelCostRank(c *gin.Context) {
 	group := c.Param("group")
 	if group == "" {

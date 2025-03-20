@@ -43,6 +43,15 @@ func updateChannelBalance(channel *model.Channel) (float64, error) {
 	return 0, nil
 }
 
+// UpdateChannelBalance godoc
+// @Summary      Update channel balance
+// @Description  Updates the balance for a single channel
+// @Tags         channel
+// @Produce      json
+// @Security     ApiKeyAuth
+// @Param        id  path      int  true  "Channel ID"
+// @Success      200  {object}  middleware.APIResponse{data=float64}
+// @Router       /api/channel/{id}/balance [get]
 func UpdateChannelBalance(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
@@ -69,11 +78,7 @@ func UpdateChannelBalance(c *gin.Context) {
 		})
 		return
 	}
-	c.JSON(http.StatusOK, middleware.APIResponse{
-		Success: true,
-		Message: "",
-		Data:    balance,
-	})
+	middleware.SuccessResponse(c, balance)
 }
 
 func updateAllChannelsBalance() error {
@@ -105,6 +110,14 @@ func updateAllChannelsBalance() error {
 	return nil
 }
 
+// UpdateAllChannelsBalance godoc
+// @Summary      Update all channels balance
+// @Description  Updates the balance for all channels
+// @Tags         channel
+// @Produce      json
+// @Security     ApiKeyAuth
+// @Success      200  {object}  middleware.APIResponse
+// @Router       /api/channels/balance [get]
 func UpdateAllChannelsBalance(c *gin.Context) {
 	err := updateAllChannelsBalance()
 	if err != nil {
@@ -121,7 +134,6 @@ func UpdateChannelsBalance(frequency time.Duration) {
 	}
 }
 
-// subscription
 func GetSubscription(c *gin.Context) {
 	group := middleware.GetGroup(c)
 	b, _, err := balance.GetGroupRemainBalance(c, *group)
