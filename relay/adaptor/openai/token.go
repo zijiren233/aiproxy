@@ -4,7 +4,6 @@ import (
 	"errors"
 	"math"
 	"strings"
-	"unicode/utf8"
 
 	"github.com/labring/aiproxy/common/config"
 	"github.com/labring/aiproxy/common/image"
@@ -194,9 +193,6 @@ func CountTokenInput(input any, model string) int {
 func CountTokenText(text string, model string) int {
 	if !config.GetBillingEnabled() {
 		return 0
-	}
-	if strings.HasPrefix(model, "tts") {
-		return utf8.RuneCountInString(text)
 	}
 	return getTokenNum(intertiktoken.GetTokenEncoder(model), text)
 }

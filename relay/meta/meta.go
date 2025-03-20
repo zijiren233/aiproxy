@@ -31,8 +31,6 @@ type Meta struct {
 	ActualModel string
 	Mode        mode.Mode
 	InputTokens int
-	// TODO: check balance move to controller
-	CheckBalance func(amount float64) bool
 }
 
 type Option func(meta *Meta)
@@ -64,12 +62,6 @@ func WithGroup(group *model.GroupCache) Option {
 func WithToken(token *model.TokenCache) Option {
 	return func(meta *Meta) {
 		meta.Token = token
-	}
-}
-
-func WithCheckBalance(checkBalance func(amount float64) bool) Option {
-	return func(meta *Meta) {
-		meta.CheckBalance = checkBalance
 	}
 }
 

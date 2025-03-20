@@ -9,24 +9,28 @@ import (
 
 var ModelList = []*model.ModelConfig{
 	{
-		Model:       "yi-lightning",
-		Type:        mode.ChatCompletions,
-		Owner:       model.ModelOwnerLingyiWanwu,
-		InputPrice:  0.00099,
-		OutputPrice: 0.00099,
-		RPM:         60,
+		Model: "yi-lightning",
+		Type:  mode.ChatCompletions,
+		Owner: model.ModelOwnerLingyiWanwu,
+		Price: model.Price{
+			InputPrice:  0.00099,
+			OutputPrice: 0.00099,
+		},
+		RPM: 60,
 		Config: model.NewModelConfig(
 			model.WithModelConfigMaxContextTokens(16384),
 			model.WithModelConfigToolChoice(true),
 		),
 	},
 	{
-		Model:       "yi-vision-v2",
-		Type:        mode.ChatCompletions,
-		Owner:       model.ModelOwnerLingyiWanwu,
-		InputPrice:  0.006,
-		OutputPrice: 0.006,
-		RPM:         60,
+		Model: "yi-vision-v2",
+		Type:  mode.ChatCompletions,
+		Owner: model.ModelOwnerLingyiWanwu,
+		Price: model.Price{
+			InputPrice:  0.006,
+			OutputPrice: 0.006,
+		},
+		RPM: 60,
 		Config: model.NewModelConfig(
 			model.WithModelConfigMaxContextTokens(16384),
 			model.WithModelConfigVision(true),

@@ -38,6 +38,21 @@ func (d *RequestDetail) BeforeSave(_ *gorm.DB) (err error) {
 	return
 }
 
+type Price struct {
+	InputPrice         float64 `json:"input_price,omitempty"`
+	OutputPrice        float64 `json:"output_price,omitempty"`
+	CachedPrice        float64 `json:"cached_price,omitempty"`
+	CacheCreationPrice float64 `json:"cache_creation_price,omitempty"`
+}
+
+type Usage struct {
+	InputTokens         int `json:"input_tokens,omitempty"`
+	OutputTokens        int `json:"output_tokens,omitempty"`
+	CachedTokens        int `json:"cached_tokens,omitempty"`
+	CacheCreationTokens int `json:"cache_creation_tokens,omitempty"`
+	TotalTokens         int `json:"total_tokens,omitempty"`
+}
+
 type Log struct {
 	RequestDetail        *RequestDetail `gorm:"foreignKey:LogID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"request_detail,omitempty"`
 	RequestAt            time.Time      `gorm:"index"                                                          json:"request_at"`
@@ -50,24 +65,17 @@ type Log struct {
 	GroupID              string         `gorm:"index"                                                          json:"group,omitempty"`
 	Model                string         `gorm:"index"                                                          json:"model"`
 	RequestID            string         `gorm:"index"                                                          json:"request_id"`
-	Price                float64        `json:"price,omitempty"`
-	CompletionPrice      float64        `json:"completion_price,omitempty"`
-	CachedPrice          float64        `json:"cached_price,omitempty"`
-	CacheCreationPrice   float64        `json:"cache_creation_price,omitempty"`
 	ID                   int            `gorm:"primaryKey"                                                     json:"id"`
 	TokenID              int            `gorm:"index"                                                          json:"token_id,omitempty"`
-	UsedAmount           float64        `json:"used_amount,omitempty"`
-	PromptTokens         int            `json:"prompt_tokens,omitempty"`
-	CompletionTokens     int            `json:"completion_tokens,omitempty"`
-	CachedTokens         int            `json:"cached_tokens,omitempty"`
-	CacheCreationTokens  int            `json:"cache_creation_tokens,omitempty"`
-	TotalTokens          int            `json:"total_tokens,omitempty"`
 	ChannelID            int            `gorm:"index"                                                          json:"channel,omitempty"`
 	Code                 int            `gorm:"index"                                                          json:"code,omitempty"`
 	Mode                 int            `json:"mode,omitempty"`
 	IP                   string         `gorm:"index"                                                          json:"ip,omitempty"`
 	RetryTimes           int            `json:"retry_times,omitempty"`
 	DownstreamResult     bool           `json:"downstream_result,omitempty"`
+	Price                Price          `gorm:"embedded"                                                       json:"price,omitempty"`
+	Usage                Usage          `gorm:"embedded"                                                       json:"usage,omitempty"`
+	UsedAmount           float64        `json:"used_amount,omitempty"`
 }
 
 func CreateLogIndexes(db *gorm.DB) error {
@@ -261,18 +269,9 @@ func RecordConsumeLog(
 	group string,
 	code int,
 	channelID int,
-	promptTokens int,
-	completionTokens int,
-	cachedTokens int,
-	cacheCreationTokens int,
 	modelName string,
 	tokenID int,
 	tokenName string,
-	amount float64,
-	price float64,
-	completionPrice float64,
-	cachedPrice float64,
-	cacheCreationPrice float64,
 	endpoint string,
 	content string,
 	mode int,
@@ -280,34 +279,30 @@ func RecordConsumeLog(
 	retryTimes int,
 	requestDetail *RequestDetail,
 	downstreamResult bool,
+	usage Usage,
+	modelPrice Price,
+	amount float64,
 ) error {
 	log := &Log{
-		RequestID:           requestID,
-		RequestAt:           requestAt,
-		GroupID:             group,
-		CreatedAt:           time.Now(),
-		Code:                code,
-		PromptTokens:        promptTokens,
-		CompletionTokens:    completionTokens,
-		TotalTokens:         promptTokens + completionTokens,
-		CachedTokens:        cachedTokens,
-		CacheCreationTokens: cacheCreationTokens,
-		TokenID:             tokenID,
-		TokenName:           tokenName,
-		Model:               modelName,
-		Mode:                mode,
-		IP:                  ip,
-		UsedAmount:          amount,
-		Price:               price,
-		CompletionPrice:     completionPrice,
-		CachedPrice:         cachedPrice,
-		CacheCreationPrice:  cacheCreationPrice,
-		ChannelID:           channelID,
-		Endpoint:            endpoint,
-		Content:             content,
-		RetryTimes:          retryTimes,
-		RequestDetail:       requestDetail,
-		DownstreamResult:    downstreamResult,
+		RequestID:        requestID,
+		RequestAt:        requestAt,
+		GroupID:          group,
+		CreatedAt:        time.Now(),
+		Code:             code,
+		TokenID:          tokenID,
+		TokenName:        tokenName,
+		Model:            modelName,
+		Mode:             mode,
+		IP:               ip,
+		ChannelID:        channelID,
+		Endpoint:         endpoint,
+		Content:          content,
+		RetryTimes:       retryTimes,
+		RequestDetail:    requestDetail,
+		DownstreamResult: downstreamResult,
+		Price:            modelPrice,
+		Usage:            usage,
+		UsedAmount:       amount,
 	}
 	return LogDB.Create(log).Error
 }

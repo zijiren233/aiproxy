@@ -10,12 +10,14 @@ import (
 var ModelList = []*model.ModelConfig{
 	// 通义千问-Max
 	{
-		Model:       "qwen-max",
-		Type:        mode.ChatCompletions,
-		Owner:       model.ModelOwnerAlibaba,
-		InputPrice:  0.02,
-		OutputPrice: 0.06,
-		RPM:         1200,
+		Model: "qwen-max",
+		Type:  mode.ChatCompletions,
+		Owner: model.ModelOwnerAlibaba,
+		Price: model.Price{
+			InputPrice:  0.02,
+			OutputPrice: 0.06,
+		},
+		RPM: 1200,
 		Config: model.NewModelConfig(
 			model.WithModelConfigMaxContextTokens(32768),
 			model.WithModelConfigMaxInputTokens(30720),
@@ -24,12 +26,14 @@ var ModelList = []*model.ModelConfig{
 		),
 	},
 	{
-		Model:       "qwen-max-latest",
-		Type:        mode.ChatCompletions,
-		Owner:       model.ModelOwnerAlibaba,
-		InputPrice:  0.02,
-		OutputPrice: 0.06,
-		RPM:         1200,
+		Model: "qwen-max-latest",
+		Type:  mode.ChatCompletions,
+		Owner: model.ModelOwnerAlibaba,
+		Price: model.Price{
+			InputPrice:  0.02,
+			OutputPrice: 0.06,
+		},
+		RPM: 1200,
 		Config: model.NewModelConfig(
 			model.WithModelConfigMaxContextTokens(32768),
 			model.WithModelConfigMaxInputTokens(30720),
@@ -40,12 +44,14 @@ var ModelList = []*model.ModelConfig{
 
 	// 通义千问-Plus
 	{
-		Model:       "qwen-plus",
-		Type:        mode.ChatCompletions,
-		Owner:       model.ModelOwnerAlibaba,
-		InputPrice:  0.0008,
-		OutputPrice: 0.002,
-		RPM:         1200,
+		Model: "qwen-plus",
+		Type:  mode.ChatCompletions,
+		Owner: model.ModelOwnerAlibaba,
+		Price: model.Price{
+			InputPrice:  0.0008,
+			OutputPrice: 0.002,
+		},
+		RPM: 1200,
 		Config: model.NewModelConfig(
 			model.WithModelConfigMaxContextTokens(131072),
 			model.WithModelConfigMaxInputTokens(129024),
@@ -54,12 +60,14 @@ var ModelList = []*model.ModelConfig{
 		),
 	},
 	{
-		Model:       "qwen-plus-latest",
-		Type:        mode.ChatCompletions,
-		Owner:       model.ModelOwnerAlibaba,
-		InputPrice:  0.0008,
-		OutputPrice: 0.002,
-		RPM:         1200,
+		Model: "qwen-plus-latest",
+		Type:  mode.ChatCompletions,
+		Owner: model.ModelOwnerAlibaba,
+		Price: model.Price{
+			InputPrice:  0.0008,
+			OutputPrice: 0.002,
+		},
+		RPM: 1200,
 		Config: model.NewModelConfig(
 			model.WithModelConfigMaxContextTokens(32000),
 			model.WithModelConfigMaxInputTokens(30000),
@@ -70,12 +78,14 @@ var ModelList = []*model.ModelConfig{
 
 	// 通义千问-Turbo
 	{
-		Model:       "qwen-turbo",
-		Type:        mode.ChatCompletions,
-		Owner:       model.ModelOwnerAlibaba,
-		InputPrice:  0.0003,
-		OutputPrice: 0.0006,
-		RPM:         1200,
+		Model: "qwen-turbo",
+		Type:  mode.ChatCompletions,
+		Owner: model.ModelOwnerAlibaba,
+		Price: model.Price{
+			InputPrice:  0.0003,
+			OutputPrice: 0.0006,
+		},
+		RPM: 1200,
 		Config: model.NewModelConfig(
 			model.WithModelConfigMaxContextTokens(131072),
 			model.WithModelConfigMaxInputTokens(129024),
@@ -84,12 +94,14 @@ var ModelList = []*model.ModelConfig{
 		),
 	},
 	{
-		Model:       "qwen-turbo-latest",
-		Type:        mode.ChatCompletions,
-		Owner:       model.ModelOwnerAlibaba,
-		InputPrice:  0.0003,
-		OutputPrice: 0.0006,
-		RPM:         1200,
+		Model: "qwen-turbo-latest",
+		Type:  mode.ChatCompletions,
+		Owner: model.ModelOwnerAlibaba,
+		Price: model.Price{
+			InputPrice:  0.0003,
+			OutputPrice: 0.0006,
+		},
+		RPM: 1200,
 		Config: model.NewModelConfig(
 			model.WithModelConfigMaxContextTokens(1000000),
 			model.WithModelConfigMaxInputTokens(1000000),
@@ -100,12 +112,14 @@ var ModelList = []*model.ModelConfig{
 
 	// Qwen-Long
 	{
-		Model:       "qwen-long",
-		Type:        mode.ChatCompletions,
-		Owner:       model.ModelOwnerAlibaba,
-		InputPrice:  0.0005,
-		OutputPrice: 0.002,
-		RPM:         1200,
+		Model: "qwen-long",
+		Type:  mode.ChatCompletions,
+		Owner: model.ModelOwnerAlibaba,
+		Price: model.Price{
+			InputPrice:  0.0005,
+			OutputPrice: 0.002,
+		},
+		RPM: 1200,
 		Config: model.NewModelConfig(
 			model.WithModelConfigMaxContextTokens(1000000),
 			model.WithModelConfigMaxInputTokens(1000000),
@@ -116,12 +130,14 @@ var ModelList = []*model.ModelConfig{
 
 	// 通义千问VL
 	{
-		Model:       "qwen-vl-max",
-		Type:        mode.ChatCompletions,
-		Owner:       model.ModelOwnerAlibaba,
-		InputPrice:  0.02,
-		OutputPrice: 0.02,
-		RPM:         1200,
+		Model: "qwen-vl-max",
+		Type:  mode.ChatCompletions,
+		Owner: model.ModelOwnerAlibaba,
+		Price: model.Price{
+			InputPrice:  0.02,
+			OutputPrice: 0.02,
+		},
+		RPM: 1200,
 		Config: model.NewModelConfig(
 			model.WithModelConfigMaxContextTokens(32000),
 			model.WithModelConfigMaxInputTokens(30000),
@@ -131,12 +147,14 @@ var ModelList = []*model.ModelConfig{
 		),
 	},
 	{
-		Model:       "qwen-vl-max-latest",
-		Type:        mode.ChatCompletions,
-		Owner:       model.ModelOwnerAlibaba,
-		InputPrice:  0.02,
-		OutputPrice: 0.02,
-		RPM:         1200,
+		Model: "qwen-vl-max-latest",
+		Type:  mode.ChatCompletions,
+		Owner: model.ModelOwnerAlibaba,
+		Price: model.Price{
+			InputPrice:  0.02,
+			OutputPrice: 0.02,
+		},
+		RPM: 1200,
 		Config: model.NewModelConfig(
 			model.WithModelConfigMaxContextTokens(32000),
 			model.WithModelConfigMaxInputTokens(30000),
@@ -146,12 +164,14 @@ var ModelList = []*model.ModelConfig{
 		),
 	},
 	{
-		Model:       "qwen-vl-plus",
-		Type:        mode.ChatCompletions,
-		Owner:       model.ModelOwnerAlibaba,
-		InputPrice:  0.008,
-		OutputPrice: 0.008,
-		RPM:         1200,
+		Model: "qwen-vl-plus",
+		Type:  mode.ChatCompletions,
+		Owner: model.ModelOwnerAlibaba,
+		Price: model.Price{
+			InputPrice:  0.008,
+			OutputPrice: 0.008,
+		},
+		RPM: 1200,
 		Config: model.NewModelConfig(
 			model.WithModelConfigMaxContextTokens(8000),
 			model.WithModelConfigMaxInputTokens(6000),
@@ -161,12 +181,14 @@ var ModelList = []*model.ModelConfig{
 		),
 	},
 	{
-		Model:       "qwen-vl-plus-latest",
-		Type:        mode.ChatCompletions,
-		Owner:       model.ModelOwnerAlibaba,
-		InputPrice:  0.008,
-		OutputPrice: 0.008,
-		RPM:         1200,
+		Model: "qwen-vl-plus-latest",
+		Type:  mode.ChatCompletions,
+		Owner: model.ModelOwnerAlibaba,
+		Price: model.Price{
+			InputPrice:  0.008,
+			OutputPrice: 0.008,
+		},
+		RPM: 1200,
 		Config: model.NewModelConfig(
 			model.WithModelConfigMaxContextTokens(32000),
 			model.WithModelConfigMaxInputTokens(30000),
@@ -178,11 +200,13 @@ var ModelList = []*model.ModelConfig{
 
 	// 通义千问OCR
 	{
-		Model:            "qwen-vl-ocr",
-		Type:             mode.ChatCompletions,
-		Owner:            model.ModelOwnerAlibaba,
-		InputPrice:       0.005,
-		OutputPrice:      0.005,
+		Model: "qwen-vl-ocr",
+		Type:  mode.ChatCompletions,
+		Owner: model.ModelOwnerAlibaba,
+		Price: model.Price{
+			InputPrice:  0.005,
+			OutputPrice: 0.005,
+		},
 		RPM:              600,
 		ExcludeFromTests: true,
 		Config: model.NewModelConfig(
@@ -193,11 +217,13 @@ var ModelList = []*model.ModelConfig{
 		),
 	},
 	{
-		Model:            "qwen-vl-ocr-latest",
-		Type:             mode.ChatCompletions,
-		Owner:            model.ModelOwnerAlibaba,
-		InputPrice:       0.005,
-		OutputPrice:      0.005,
+		Model: "qwen-vl-ocr-latest",
+		Type:  mode.ChatCompletions,
+		Owner: model.ModelOwnerAlibaba,
+		Price: model.Price{
+			InputPrice:  0.005,
+			OutputPrice: 0.005,
+		},
 		RPM:              600,
 		ExcludeFromTests: true,
 		Config: model.NewModelConfig(
@@ -210,12 +236,14 @@ var ModelList = []*model.ModelConfig{
 
 	// 通义千问Math
 	{
-		Model:       "qwen-math-plus",
-		Type:        mode.ChatCompletions,
-		Owner:       model.ModelOwnerAlibaba,
-		InputPrice:  0.004,
-		OutputPrice: 0.012,
-		RPM:         1200,
+		Model: "qwen-math-plus",
+		Type:  mode.ChatCompletions,
+		Owner: model.ModelOwnerAlibaba,
+		Price: model.Price{
+			InputPrice:  0.004,
+			OutputPrice: 0.012,
+		},
+		RPM: 1200,
 		Config: model.NewModelConfig(
 			model.WithModelConfigMaxContextTokens(4096),
 			model.WithModelConfigMaxInputTokens(3072),
@@ -224,12 +252,14 @@ var ModelList = []*model.ModelConfig{
 		),
 	},
 	{
-		Model:       "qwen-math-plus-latest",
-		Type:        mode.ChatCompletions,
-		Owner:       model.ModelOwnerAlibaba,
-		InputPrice:  0.004,
-		OutputPrice: 0.012,
-		RPM:         1200,
+		Model: "qwen-math-plus-latest",
+		Type:  mode.ChatCompletions,
+		Owner: model.ModelOwnerAlibaba,
+		Price: model.Price{
+			InputPrice:  0.004,
+			OutputPrice: 0.012,
+		},
+		RPM: 1200,
 		Config: model.NewModelConfig(
 			model.WithModelConfigMaxContextTokens(4096),
 			model.WithModelConfigMaxInputTokens(3072),
@@ -238,12 +268,14 @@ var ModelList = []*model.ModelConfig{
 		),
 	},
 	{
-		Model:       "qwen-math-turbo",
-		Type:        mode.ChatCompletions,
-		Owner:       model.ModelOwnerAlibaba,
-		InputPrice:  0.002,
-		OutputPrice: 0.006,
-		RPM:         1200,
+		Model: "qwen-math-turbo",
+		Type:  mode.ChatCompletions,
+		Owner: model.ModelOwnerAlibaba,
+		Price: model.Price{
+			InputPrice:  0.002,
+			OutputPrice: 0.006,
+		},
+		RPM: 1200,
 		Config: model.NewModelConfig(
 			model.WithModelConfigMaxContextTokens(4096),
 			model.WithModelConfigMaxInputTokens(3072),
@@ -252,12 +284,14 @@ var ModelList = []*model.ModelConfig{
 		),
 	},
 	{
-		Model:       "qwen-math-turbo-latest",
-		Type:        mode.ChatCompletions,
-		Owner:       model.ModelOwnerAlibaba,
-		InputPrice:  0.002,
-		OutputPrice: 0.006,
-		RPM:         1200,
+		Model: "qwen-math-turbo-latest",
+		Type:  mode.ChatCompletions,
+		Owner: model.ModelOwnerAlibaba,
+		Price: model.Price{
+			InputPrice:  0.002,
+			OutputPrice: 0.006,
+		},
+		RPM: 1200,
 		Config: model.NewModelConfig(
 			model.WithModelConfigMaxContextTokens(4096),
 			model.WithModelConfigMaxInputTokens(3072),
@@ -268,12 +302,14 @@ var ModelList = []*model.ModelConfig{
 
 	// 通义千问Coder
 	{
-		Model:       "qwen-coder-plus",
-		Type:        mode.ChatCompletions,
-		Owner:       model.ModelOwnerAlibaba,
-		InputPrice:  0.0035,
-		OutputPrice: 0.007,
-		RPM:         1200,
+		Model: "qwen-coder-plus",
+		Type:  mode.ChatCompletions,
+		Owner: model.ModelOwnerAlibaba,
+		Price: model.Price{
+			InputPrice:  0.0035,
+			OutputPrice: 0.007,
+		},
+		RPM: 1200,
 		Config: model.NewModelConfig(
 			model.WithModelConfigMaxContextTokens(131072),
 			model.WithModelConfigMaxInputTokens(129024),
@@ -282,12 +318,14 @@ var ModelList = []*model.ModelConfig{
 		),
 	},
 	{
-		Model:       "qwen-coder-plus-latest",
-		Type:        mode.ChatCompletions,
-		Owner:       model.ModelOwnerAlibaba,
-		InputPrice:  0.0035,
-		OutputPrice: 0.007,
-		RPM:         1200,
+		Model: "qwen-coder-plus-latest",
+		Type:  mode.ChatCompletions,
+		Owner: model.ModelOwnerAlibaba,
+		Price: model.Price{
+			InputPrice:  0.0035,
+			OutputPrice: 0.007,
+		},
+		RPM: 1200,
 		Config: model.NewModelConfig(
 			model.WithModelConfigMaxContextTokens(131072),
 			model.WithModelConfigMaxInputTokens(129024),
@@ -296,12 +334,14 @@ var ModelList = []*model.ModelConfig{
 		),
 	},
 	{
-		Model:       "qwen-coder-turbo",
-		Type:        mode.ChatCompletions,
-		Owner:       model.ModelOwnerAlibaba,
-		InputPrice:  0.002,
-		OutputPrice: 0.006,
-		RPM:         1200,
+		Model: "qwen-coder-turbo",
+		Type:  mode.ChatCompletions,
+		Owner: model.ModelOwnerAlibaba,
+		Price: model.Price{
+			InputPrice:  0.002,
+			OutputPrice: 0.006,
+		},
+		RPM: 1200,
 		Config: model.NewModelConfig(
 			model.WithModelConfigMaxContextTokens(131072),
 			model.WithModelConfigMaxInputTokens(129024),
@@ -310,12 +350,14 @@ var ModelList = []*model.ModelConfig{
 		),
 	},
 	{
-		Model:       "qwen-coder-turbo-latest",
-		Type:        mode.ChatCompletions,
-		Owner:       model.ModelOwnerAlibaba,
-		InputPrice:  0.002,
-		OutputPrice: 0.006,
-		RPM:         1200,
+		Model: "qwen-coder-turbo-latest",
+		Type:  mode.ChatCompletions,
+		Owner: model.ModelOwnerAlibaba,
+		Price: model.Price{
+			InputPrice:  0.002,
+			OutputPrice: 0.006,
+		},
+		RPM: 1200,
 		Config: model.NewModelConfig(
 			model.WithModelConfigMaxContextTokens(131072),
 			model.WithModelConfigMaxInputTokens(129024),
@@ -326,12 +368,14 @@ var ModelList = []*model.ModelConfig{
 
 	// 通义千问2.5
 	{
-		Model:       "qwen2.5-72b-instruct",
-		Type:        mode.ChatCompletions,
-		Owner:       model.ModelOwnerAlibaba,
-		InputPrice:  0.004,
-		OutputPrice: 0.012,
-		RPM:         1200,
+		Model: "qwen2.5-72b-instruct",
+		Type:  mode.ChatCompletions,
+		Owner: model.ModelOwnerAlibaba,
+		Price: model.Price{
+			InputPrice:  0.004,
+			OutputPrice: 0.012,
+		},
+		RPM: 1200,
 		Config: model.NewModelConfig(
 			model.WithModelConfigMaxContextTokens(131072),
 			model.WithModelConfigMaxInputTokens(129024),
@@ -340,12 +384,14 @@ var ModelList = []*model.ModelConfig{
 		),
 	},
 	{
-		Model:       "qwen2.5-32b-instruct",
-		Type:        mode.ChatCompletions,
-		Owner:       model.ModelOwnerAlibaba,
-		InputPrice:  0.0035,
-		OutputPrice: 0.007,
-		RPM:         1200,
+		Model: "qwen2.5-32b-instruct",
+		Type:  mode.ChatCompletions,
+		Owner: model.ModelOwnerAlibaba,
+		Price: model.Price{
+			InputPrice:  0.0035,
+			OutputPrice: 0.007,
+		},
+		RPM: 1200,
 		Config: model.NewModelConfig(
 			model.WithModelConfigMaxContextTokens(131072),
 			model.WithModelConfigMaxInputTokens(129024),
@@ -354,12 +400,14 @@ var ModelList = []*model.ModelConfig{
 		),
 	},
 	{
-		Model:       "qwen2.5-14b-instruct",
-		Type:        mode.ChatCompletions,
-		Owner:       model.ModelOwnerAlibaba,
-		InputPrice:  0.002,
-		OutputPrice: 0.006,
-		RPM:         1200,
+		Model: "qwen2.5-14b-instruct",
+		Type:  mode.ChatCompletions,
+		Owner: model.ModelOwnerAlibaba,
+		Price: model.Price{
+			InputPrice:  0.002,
+			OutputPrice: 0.006,
+		},
+		RPM: 1200,
 		Config: model.NewModelConfig(
 			model.WithModelConfigMaxContextTokens(131072),
 			model.WithModelConfigMaxInputTokens(129024),
@@ -368,12 +416,14 @@ var ModelList = []*model.ModelConfig{
 		),
 	},
 	{
-		Model:       "qwen2.5-7b-instruct",
-		Type:        mode.ChatCompletions,
-		Owner:       model.ModelOwnerAlibaba,
-		InputPrice:  0.001,
-		OutputPrice: 0.002,
-		RPM:         1200,
+		Model: "qwen2.5-7b-instruct",
+		Type:  mode.ChatCompletions,
+		Owner: model.ModelOwnerAlibaba,
+		Price: model.Price{
+			InputPrice:  0.001,
+			OutputPrice: 0.002,
+		},
+		RPM: 1200,
 		Config: model.NewModelConfig(
 			model.WithModelConfigMaxContextTokens(131072),
 			model.WithModelConfigMaxInputTokens(129024),
@@ -382,27 +432,14 @@ var ModelList = []*model.ModelConfig{
 		),
 	},
 	{
-		Model:       "qwen2.5-vl-72b-instruct",
-		Type:        mode.ChatCompletions,
-		Owner:       model.ModelOwnerAlibaba,
-		InputPrice:  0.016,
-		OutputPrice: 0.048,
-		RPM:         60,
-		Config: model.NewModelConfig(
-			model.WithModelConfigMaxContextTokens(131072),
-			model.WithModelConfigMaxInputTokens(129024),
-			model.WithModelConfigMaxOutputTokens(8192),
-			model.WithModelConfigVision(true),
-			model.WithModelConfigToolChoice(true),
-		),
-	},
-	{
-		Model:       "qwen2.5-vl-7b-instruct",
-		Type:        mode.ChatCompletions,
-		Owner:       model.ModelOwnerAlibaba,
-		InputPrice:  0.002,
-		OutputPrice: 0.005,
-		RPM:         1200,
+		Model: "qwen2.5-vl-72b-instruct",
+		Type:  mode.ChatCompletions,
+		Owner: model.ModelOwnerAlibaba,
+		Price: model.Price{
+			InputPrice:  0.016,
+			OutputPrice: 0.048,
+		},
+		RPM: 60,
 		Config: model.NewModelConfig(
 			model.WithModelConfigMaxContextTokens(131072),
 			model.WithModelConfigMaxInputTokens(129024),
@@ -412,12 +449,31 @@ var ModelList = []*model.ModelConfig{
 		),
 	},
 	{
-		Model:       "qwen2.5-vl-3b-instruct",
-		Type:        mode.ChatCompletions,
-		Owner:       model.ModelOwnerAlibaba,
-		InputPrice:  0.0012,
-		OutputPrice: 0.0036,
-		RPM:         1200,
+		Model: "qwen2.5-vl-7b-instruct",
+		Type:  mode.ChatCompletions,
+		Owner: model.ModelOwnerAlibaba,
+		Price: model.Price{
+			InputPrice:  0.002,
+			OutputPrice: 0.005,
+		},
+		RPM: 1200,
+		Config: model.NewModelConfig(
+			model.WithModelConfigMaxContextTokens(131072),
+			model.WithModelConfigMaxInputTokens(129024),
+			model.WithModelConfigMaxOutputTokens(8192),
+			model.WithModelConfigVision(true),
+			model.WithModelConfigToolChoice(true),
+		),
+	},
+	{
+		Model: "qwen2.5-vl-3b-instruct",
+		Type:  mode.ChatCompletions,
+		Owner: model.ModelOwnerAlibaba,
+		Price: model.Price{
+			InputPrice:  0.0012,
+			OutputPrice: 0.0036,
+		},
+		RPM: 1200,
 		Config: model.NewModelConfig(
 			model.WithModelConfigMaxContextTokens(131072),
 			model.WithModelConfigMaxInputTokens(129024),
@@ -429,12 +485,14 @@ var ModelList = []*model.ModelConfig{
 
 	// 通义千问2
 	{
-		Model:       "qwen2-72b-instruct",
-		Type:        mode.ChatCompletions,
-		Owner:       model.ModelOwnerAlibaba,
-		InputPrice:  0.004,
-		OutputPrice: 0.012,
-		RPM:         60,
+		Model: "qwen2-72b-instruct",
+		Type:  mode.ChatCompletions,
+		Owner: model.ModelOwnerAlibaba,
+		Price: model.Price{
+			InputPrice:  0.004,
+			OutputPrice: 0.012,
+		},
+		RPM: 60,
 		Config: model.NewModelConfig(
 			model.WithModelConfigMaxContextTokens(131072),
 			model.WithModelConfigMaxInputTokens(128000),
@@ -443,12 +501,14 @@ var ModelList = []*model.ModelConfig{
 		),
 	},
 	{
-		Model:       "qwen2-57b-a14b-instruct",
-		Type:        mode.ChatCompletions,
-		Owner:       model.ModelOwnerAlibaba,
-		InputPrice:  0.0035,
-		OutputPrice: 0.007,
-		RPM:         60,
+		Model: "qwen2-57b-a14b-instruct",
+		Type:  mode.ChatCompletions,
+		Owner: model.ModelOwnerAlibaba,
+		Price: model.Price{
+			InputPrice:  0.0035,
+			OutputPrice: 0.007,
+		},
+		RPM: 60,
 		Config: model.NewModelConfig(
 			model.WithModelConfigMaxContextTokens(65536),
 			model.WithModelConfigMaxInputTokens(63488),
@@ -457,12 +517,14 @@ var ModelList = []*model.ModelConfig{
 		),
 	},
 	{
-		Model:       "qwen2-7b-instruct",
-		Type:        mode.ChatCompletions,
-		Owner:       model.ModelOwnerAlibaba,
-		InputPrice:  0.001,
-		OutputPrice: 0.002,
-		RPM:         60,
+		Model: "qwen2-7b-instruct",
+		Type:  mode.ChatCompletions,
+		Owner: model.ModelOwnerAlibaba,
+		Price: model.Price{
+			InputPrice:  0.001,
+			OutputPrice: 0.002,
+		},
+		RPM: 60,
 		Config: model.NewModelConfig(
 			model.WithModelConfigMaxContextTokens(131072),
 			model.WithModelConfigMaxInputTokens(128000),
@@ -471,12 +533,14 @@ var ModelList = []*model.ModelConfig{
 		),
 	},
 	{
-		Model:       "qwen2-vl-72b-instruct",
-		Type:        mode.ChatCompletions,
-		Owner:       model.ModelOwnerAlibaba,
-		InputPrice:  0.016,
-		OutputPrice: 0.048,
-		RPM:         60,
+		Model: "qwen2-vl-72b-instruct",
+		Type:  mode.ChatCompletions,
+		Owner: model.ModelOwnerAlibaba,
+		Price: model.Price{
+			InputPrice:  0.016,
+			OutputPrice: 0.048,
+		},
+		RPM: 60,
 		Config: model.NewModelConfig(
 			model.WithModelConfigMaxContextTokens(32768),
 			model.WithModelConfigMaxInputTokens(30720),
@@ -487,12 +551,14 @@ var ModelList = []*model.ModelConfig{
 
 	// 通义千问1.5
 	{
-		Model:       "qwen1.5-110b-chat",
-		Type:        mode.ChatCompletions,
-		Owner:       model.ModelOwnerAlibaba,
-		InputPrice:  0.007,
-		OutputPrice: 0.014,
-		RPM:         10,
+		Model: "qwen1.5-110b-chat",
+		Type:  mode.ChatCompletions,
+		Owner: model.ModelOwnerAlibaba,
+		Price: model.Price{
+			InputPrice:  0.007,
+			OutputPrice: 0.014,
+		},
+		RPM: 10,
 		Config: model.NewModelConfig(
 			model.WithModelConfigMaxContextTokens(32000),
 			model.WithModelConfigMaxInputTokens(30000),
@@ -501,12 +567,14 @@ var ModelList = []*model.ModelConfig{
 		),
 	},
 	{
-		Model:       "qwen1.5-72b-chat",
-		Type:        mode.ChatCompletions,
-		Owner:       model.ModelOwnerAlibaba,
-		InputPrice:  0.005,
-		OutputPrice: 0.01,
-		RPM:         120,
+		Model: "qwen1.5-72b-chat",
+		Type:  mode.ChatCompletions,
+		Owner: model.ModelOwnerAlibaba,
+		Price: model.Price{
+			InputPrice:  0.005,
+			OutputPrice: 0.01,
+		},
+		RPM: 120,
 		Config: model.NewModelConfig(
 			model.WithModelConfigMaxContextTokens(32000),
 			model.WithModelConfigMaxInputTokens(30000),
@@ -515,12 +583,14 @@ var ModelList = []*model.ModelConfig{
 		),
 	},
 	{
-		Model:       "qwen1.5-32b-chat",
-		Type:        mode.ChatCompletions,
-		Owner:       model.ModelOwnerAlibaba,
-		InputPrice:  0.0035,
-		OutputPrice: 0.007,
-		RPM:         10,
+		Model: "qwen1.5-32b-chat",
+		Type:  mode.ChatCompletions,
+		Owner: model.ModelOwnerAlibaba,
+		Price: model.Price{
+			InputPrice:  0.0035,
+			OutputPrice: 0.007,
+		},
+		RPM: 10,
 		Config: model.NewModelConfig(
 			model.WithModelConfigMaxContextTokens(32000),
 			model.WithModelConfigMaxInputTokens(30000),
@@ -529,12 +599,14 @@ var ModelList = []*model.ModelConfig{
 		),
 	},
 	{
-		Model:       "qwen1.5-14b-chat",
-		Type:        mode.ChatCompletions,
-		Owner:       model.ModelOwnerAlibaba,
-		InputPrice:  0.002,
-		OutputPrice: 0.004,
-		RPM:         120,
+		Model: "qwen1.5-14b-chat",
+		Type:  mode.ChatCompletions,
+		Owner: model.ModelOwnerAlibaba,
+		Price: model.Price{
+			InputPrice:  0.002,
+			OutputPrice: 0.004,
+		},
+		RPM: 120,
 		Config: model.NewModelConfig(
 			model.WithModelConfigMaxContextTokens(8000),
 			model.WithModelConfigMaxInputTokens(6000),
@@ -543,12 +615,14 @@ var ModelList = []*model.ModelConfig{
 		),
 	},
 	{
-		Model:       "qwen1.5-7b-chat",
-		Type:        mode.ChatCompletions,
-		Owner:       model.ModelOwnerAlibaba,
-		InputPrice:  0.001,
-		OutputPrice: 0.002,
-		RPM:         120,
+		Model: "qwen1.5-7b-chat",
+		Type:  mode.ChatCompletions,
+		Owner: model.ModelOwnerAlibaba,
+		Price: model.Price{
+			InputPrice:  0.001,
+			OutputPrice: 0.002,
+		},
+		RPM: 120,
 		Config: model.NewModelConfig(
 			model.WithModelConfigMaxContextTokens(8000),
 			model.WithModelConfigMaxInputTokens(6000),
@@ -559,12 +633,14 @@ var ModelList = []*model.ModelConfig{
 
 	// 通义千问
 	{
-		Model:       "qwen-72b-chat",
-		Type:        mode.ChatCompletions,
-		Owner:       model.ModelOwnerAlibaba,
-		InputPrice:  0.02,
-		OutputPrice: 0.02,
-		RPM:         80,
+		Model: "qwen-72b-chat",
+		Type:  mode.ChatCompletions,
+		Owner: model.ModelOwnerAlibaba,
+		Price: model.Price{
+			InputPrice:  0.02,
+			OutputPrice: 0.02,
+		},
+		RPM: 80,
 		Config: model.NewModelConfig(
 			model.WithModelConfigMaxContextTokens(32000),
 			model.WithModelConfigMaxInputTokens(30000),
@@ -573,12 +649,14 @@ var ModelList = []*model.ModelConfig{
 		),
 	},
 	{
-		Model:       "qwen-14b-chat",
-		Type:        mode.ChatCompletions,
-		Owner:       model.ModelOwnerAlibaba,
-		InputPrice:  0.008,
-		OutputPrice: 0.008,
-		RPM:         300,
+		Model: "qwen-14b-chat",
+		Type:  mode.ChatCompletions,
+		Owner: model.ModelOwnerAlibaba,
+		Price: model.Price{
+			InputPrice:  0.008,
+			OutputPrice: 0.008,
+		},
+		RPM: 300,
 		Config: model.NewModelConfig(
 			model.WithModelConfigMaxContextTokens(8000),
 			model.WithModelConfigMaxInputTokens(6000),
@@ -587,12 +665,14 @@ var ModelList = []*model.ModelConfig{
 		),
 	},
 	{
-		Model:       "qwen-7b-chat",
-		Type:        mode.ChatCompletions,
-		Owner:       model.ModelOwnerAlibaba,
-		InputPrice:  0.006,
-		OutputPrice: 0.006,
-		RPM:         300,
+		Model: "qwen-7b-chat",
+		Type:  mode.ChatCompletions,
+		Owner: model.ModelOwnerAlibaba,
+		Price: model.Price{
+			InputPrice:  0.006,
+			OutputPrice: 0.006,
+		},
+		RPM: 300,
 		Config: model.NewModelConfig(
 			model.WithModelConfigMaxContextTokens(7500),
 			model.WithModelConfigMaxInputTokens(6000),
@@ -603,12 +683,14 @@ var ModelList = []*model.ModelConfig{
 
 	// 通义千问数学模型
 	{
-		Model:       "qwen2.5-math-72b-instruct",
-		Type:        mode.ChatCompletions,
-		Owner:       model.ModelOwnerAlibaba,
-		InputPrice:  0.004,
-		OutputPrice: 0.012,
-		RPM:         1200,
+		Model: "qwen2.5-math-72b-instruct",
+		Type:  mode.ChatCompletions,
+		Owner: model.ModelOwnerAlibaba,
+		Price: model.Price{
+			InputPrice:  0.004,
+			OutputPrice: 0.012,
+		},
+		RPM: 1200,
 		Config: model.NewModelConfig(
 			model.WithModelConfigMaxContextTokens(4096),
 			model.WithModelConfigMaxInputTokens(3072),
@@ -617,12 +699,14 @@ var ModelList = []*model.ModelConfig{
 		),
 	},
 	{
-		Model:       "qwen2.5-math-7b-instruct",
-		Type:        mode.ChatCompletions,
-		Owner:       model.ModelOwnerAlibaba,
-		InputPrice:  0.001,
-		OutputPrice: 0.002,
-		RPM:         1200,
+		Model: "qwen2.5-math-7b-instruct",
+		Type:  mode.ChatCompletions,
+		Owner: model.ModelOwnerAlibaba,
+		Price: model.Price{
+			InputPrice:  0.001,
+			OutputPrice: 0.002,
+		},
+		RPM: 1200,
 		Config: model.NewModelConfig(
 			model.WithModelConfigMaxContextTokens(4096),
 			model.WithModelConfigMaxInputTokens(3072),
@@ -631,12 +715,14 @@ var ModelList = []*model.ModelConfig{
 		),
 	},
 	{
-		Model:       "qwen2-math-72b-instruct",
-		Type:        mode.ChatCompletions,
-		Owner:       model.ModelOwnerAlibaba,
-		InputPrice:  0.004,
-		OutputPrice: 0.012,
-		RPM:         10,
+		Model: "qwen2-math-72b-instruct",
+		Type:  mode.ChatCompletions,
+		Owner: model.ModelOwnerAlibaba,
+		Price: model.Price{
+			InputPrice:  0.004,
+			OutputPrice: 0.012,
+		},
+		RPM: 10,
 		Config: model.NewModelConfig(
 			model.WithModelConfigMaxContextTokens(4096),
 			model.WithModelConfigMaxInputTokens(3072),
@@ -645,12 +731,14 @@ var ModelList = []*model.ModelConfig{
 		),
 	},
 	{
-		Model:       "qwen2-math-7b-instruct",
-		Type:        mode.ChatCompletions,
-		Owner:       model.ModelOwnerAlibaba,
-		InputPrice:  0.001,
-		OutputPrice: 0.002,
-		RPM:         10,
+		Model: "qwen2-math-7b-instruct",
+		Type:  mode.ChatCompletions,
+		Owner: model.ModelOwnerAlibaba,
+		Price: model.Price{
+			InputPrice:  0.001,
+			OutputPrice: 0.002,
+		},
+		RPM: 10,
 		Config: model.NewModelConfig(
 			model.WithModelConfigMaxContextTokens(4096),
 			model.WithModelConfigMaxInputTokens(3072),
@@ -661,12 +749,14 @@ var ModelList = []*model.ModelConfig{
 
 	// 通义千问Coder
 	{
-		Model:       "qwen2.5-coder-32b-instruct",
-		Type:        mode.ChatCompletions,
-		Owner:       model.ModelOwnerAlibaba,
-		InputPrice:  0.0035,
-		OutputPrice: 0.007,
-		RPM:         1200,
+		Model: "qwen2.5-coder-32b-instruct",
+		Type:  mode.ChatCompletions,
+		Owner: model.ModelOwnerAlibaba,
+		Price: model.Price{
+			InputPrice:  0.0035,
+			OutputPrice: 0.007,
+		},
+		RPM: 1200,
 		Config: model.NewModelConfig(
 			model.WithModelConfigMaxContextTokens(131072),
 			model.WithModelConfigMaxInputTokens(129024),
@@ -675,12 +765,14 @@ var ModelList = []*model.ModelConfig{
 		),
 	},
 	{
-		Model:       "qwen2.5-coder-14b-instruct",
-		Type:        mode.ChatCompletions,
-		Owner:       model.ModelOwnerAlibaba,
-		InputPrice:  0.002,
-		OutputPrice: 0.006,
-		RPM:         1200,
+		Model: "qwen2.5-coder-14b-instruct",
+		Type:  mode.ChatCompletions,
+		Owner: model.ModelOwnerAlibaba,
+		Price: model.Price{
+			InputPrice:  0.002,
+			OutputPrice: 0.006,
+		},
+		RPM: 1200,
 		Config: model.NewModelConfig(
 			model.WithModelConfigMaxContextTokens(131072),
 			model.WithModelConfigMaxInputTokens(129024),
@@ -689,12 +781,14 @@ var ModelList = []*model.ModelConfig{
 		),
 	},
 	{
-		Model:       "qwen2.5-coder-7b-instruct",
-		Type:        mode.ChatCompletions,
-		Owner:       model.ModelOwnerAlibaba,
-		InputPrice:  0.001,
-		OutputPrice: 0.002,
-		RPM:         1200,
+		Model: "qwen2.5-coder-7b-instruct",
+		Type:  mode.ChatCompletions,
+		Owner: model.ModelOwnerAlibaba,
+		Price: model.Price{
+			InputPrice:  0.001,
+			OutputPrice: 0.002,
+		},
+		RPM: 1200,
 		Config: model.NewModelConfig(
 			model.WithModelConfigMaxContextTokens(131072),
 			model.WithModelConfigMaxInputTokens(129024),
@@ -704,12 +798,14 @@ var ModelList = []*model.ModelConfig{
 	},
 
 	{
-		Model:       "qwq-32b-preview",
-		Type:        mode.ChatCompletions,
-		Owner:       model.ModelOwnerAlibaba,
-		InputPrice:  0.0035,
-		OutputPrice: 0.007,
-		RPM:         1200,
+		Model: "qwq-32b-preview",
+		Type:  mode.ChatCompletions,
+		Owner: model.ModelOwnerAlibaba,
+		Price: model.Price{
+			InputPrice:  0.0035,
+			OutputPrice: 0.007,
+		},
+		RPM: 1200,
 		Config: model.NewModelConfig(
 			model.WithModelConfigMaxContextTokens(32768),
 			model.WithModelConfigMaxInputTokens(30720),
@@ -717,12 +813,14 @@ var ModelList = []*model.ModelConfig{
 		),
 	},
 	{
-		Model:       "qvq-72b-preview",
-		Type:        mode.ChatCompletions,
-		Owner:       model.ModelOwnerAlibaba,
-		InputPrice:  0.012,
-		OutputPrice: 0.036,
-		RPM:         60,
+		Model: "qvq-72b-preview",
+		Type:  mode.ChatCompletions,
+		Owner: model.ModelOwnerAlibaba,
+		Price: model.Price{
+			InputPrice:  0.012,
+			OutputPrice: 0.036,
+		},
+		RPM: 60,
 		Config: model.NewModelConfig(
 			model.WithModelConfigMaxContextTokens(32768),
 			model.WithModelConfigMaxInputTokens(16384),
@@ -731,11 +829,13 @@ var ModelList = []*model.ModelConfig{
 	},
 
 	{
-		Model:            "qwen-mt-plus",
-		Type:             mode.ChatCompletions,
-		Owner:            model.ModelOwnerAlibaba,
-		InputPrice:       0.015,
-		OutputPrice:      0.045,
+		Model: "qwen-mt-plus",
+		Type:  mode.ChatCompletions,
+		Owner: model.ModelOwnerAlibaba,
+		Price: model.Price{
+			InputPrice:  0.015,
+			OutputPrice: 0.045,
+		},
 		RPM:              60,
 		ExcludeFromTests: true,
 		Config: model.NewModelConfig(
@@ -745,11 +845,13 @@ var ModelList = []*model.ModelConfig{
 		),
 	},
 	{
-		Model:            "qwen-mt-turbo",
-		Type:             mode.ChatCompletions,
-		Owner:            model.ModelOwnerAlibaba,
-		InputPrice:       0.001,
-		OutputPrice:      0.003,
+		Model: "qwen-mt-turbo",
+		Type:  mode.ChatCompletions,
+		Owner: model.ModelOwnerAlibaba,
+		Price: model.Price{
+			InputPrice:  0.001,
+			OutputPrice: 0.003,
+		},
 		RPM:              60,
 		ExcludeFromTests: true,
 		Config: model.NewModelConfig(
@@ -786,11 +888,13 @@ var ModelList = []*model.ModelConfig{
 	},
 
 	{
-		Model:      "sambert-v1",
-		Type:       mode.AudioSpeech,
-		Owner:      model.ModelOwnerAlibaba,
-		InputPrice: 0.1,
-		RPM:        20,
+		Model: "sambert-v1",
+		Type:  mode.AudioSpeech,
+		Owner: model.ModelOwnerAlibaba,
+		Price: model.Price{
+			InputPrice: 0.1,
+		},
+		RPM: 20,
 		Config: model.NewModelConfig(
 			model.WithModelConfigMaxInputTokens(10000),
 			model.WithModelConfigSupportFormats([]string{"mp3", "wav", "pcm"}),
@@ -841,11 +945,13 @@ var ModelList = []*model.ModelConfig{
 	},
 
 	{
-		Model:      "paraformer-realtime-v2",
-		Type:       mode.AudioTranscription,
-		Owner:      model.ModelOwnerAlibaba,
-		RPM:        20,
-		InputPrice: 0.24,
+		Model: "paraformer-realtime-v2",
+		Type:  mode.AudioTranscription,
+		Owner: model.ModelOwnerAlibaba,
+		RPM:   20,
+		Price: model.Price{
+			InputPrice: 0.24,
+		},
 		Config: model.NewModelConfig(
 			model.WithModelConfigMaxInputTokens(10000),
 			model.WithModelConfigSupportFormats([]string{"pcm", "wav", "opus", "speex", "aac", "amr"}),
@@ -864,31 +970,37 @@ var ModelList = []*model.ModelConfig{
 	},
 
 	{
-		Model:      "text-embedding-v1",
-		Type:       mode.Embeddings,
-		Owner:      model.ModelOwnerAlibaba,
-		InputPrice: 0.0007,
-		RPM:        1800,
+		Model: "text-embedding-v1",
+		Type:  mode.Embeddings,
+		Owner: model.ModelOwnerAlibaba,
+		Price: model.Price{
+			InputPrice: 0.0007,
+		},
+		RPM: 1800,
 		Config: model.NewModelConfig(
 			model.WithModelConfigMaxInputTokens(2048),
 		),
 	},
 	{
-		Model:      "text-embedding-v2",
-		Type:       mode.Embeddings,
-		Owner:      model.ModelOwnerAlibaba,
-		InputPrice: 0.0007,
-		RPM:        1800,
+		Model: "text-embedding-v2",
+		Type:  mode.Embeddings,
+		Owner: model.ModelOwnerAlibaba,
+		Price: model.Price{
+			InputPrice: 0.0007,
+		},
+		RPM: 1800,
 		Config: model.NewModelConfig(
 			model.WithModelConfigMaxInputTokens(2048),
 		),
 	},
 	{
-		Model:      "text-embedding-v3",
-		Type:       mode.Embeddings,
-		Owner:      model.ModelOwnerAlibaba,
-		InputPrice: 0.0007,
-		RPM:        1800,
+		Model: "text-embedding-v3",
+		Type:  mode.Embeddings,
+		Owner: model.ModelOwnerAlibaba,
+		Price: model.Price{
+			InputPrice: 0.0007,
+		},
+		RPM: 1800,
 		Config: model.NewModelConfig(
 			model.WithModelConfigMaxInputTokens(8192),
 		),

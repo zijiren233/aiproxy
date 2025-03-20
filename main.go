@@ -210,6 +210,7 @@ func main() {
 
 	go func() {
 		log.Infof("server started on %s", srv.Addr)
+		log.Infof("swagger server started on %s/swagger/index.html", srv.Addr)
 		if err := srv.ListenAndServe(); err != nil &&
 			!errors.Is(err, http.ErrServerClosed) {
 			log.Fatal("failed to start HTTP server: " + err.Error())

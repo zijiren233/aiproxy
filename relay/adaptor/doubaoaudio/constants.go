@@ -9,11 +9,13 @@ import (
 
 var ModelList = []*model.ModelConfig{
 	{
-		Model:      "Doubao-tts",
-		Type:       mode.AudioSpeech,
-		Owner:      model.ModelOwnerDoubao,
-		InputPrice: 0.5,
-		RPM:        60,
+		Model: "Doubao-tts",
+		Type:  mode.AudioSpeech,
+		Owner: model.ModelOwnerDoubao,
+		Price: model.Price{
+			InputPrice: 0.5,
+		},
+		RPM: 60,
 		Config: model.NewModelConfig(
 			model.WithModelConfigSupportFormats([]string{
 				"pcm",

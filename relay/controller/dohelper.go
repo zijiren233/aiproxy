@@ -78,7 +78,6 @@ func DoHelper(
 	*model.RequestDetail,
 	*relaymodel.ErrorWithStatusCode,
 ) {
-	log := middleware.GetLogger(c)
 	detail := model.RequestDetail{}
 
 	// 1. Get request body
@@ -108,7 +107,7 @@ func DoHelper(
 	}
 
 	// 5. Update usage metrics
-	updateUsageMetrics(usage, meta, log)
+	updateUsageMetrics(usage, meta, middleware.GetLogger(c))
 
 	return usage, &detail, nil
 }
@@ -239,11 +238,19 @@ func updateUsageMetrics(usage *relaymodel.Usage, meta *meta.Meta, log *log.Entry
 	if usage.TotalTokens == 0 {
 		usage.TotalTokens = usage.PromptTokens + usage.CompletionTokens
 	}
-	log.Data["t_input"] = usage.PromptTokens
-	log.Data["t_output"] = usage.CompletionTokens
+	if usage.PromptTokens > 0 {
+		log.Data["t_input"] = usage.PromptTokens
+	}
+	if usage.CompletionTokens > 0 {
+		log.Data["t_output"] = usage.CompletionTokens
+	}
 	if usage.PromptTokensDetails != nil {
-		log.Data["t_cached"] = usage.PromptTokensDetails.CachedTokens
-		log.Data["t_cache_creation"] = usage.PromptTokensDetails.CacheCreationTokens
+		if usage.PromptTokensDetails.CachedTokens > 0 {
+			log.Data["t_cached"] = usage.PromptTokensDetails.CachedTokens
+		}
+		if usage.PromptTokensDetails.CacheCreationTokens > 0 {
+			log.Data["t_cache_creation"] = usage.PromptTokensDetails.CacheCreationTokens
+		}
 	}
 	log.Data["t_total"] = usage.TotalTokens
 }

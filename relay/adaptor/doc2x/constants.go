@@ -7,10 +7,12 @@ import (
 
 var ModelList = []*model.ModelConfig{
 	{
-		Model:      "pdf",
-		Type:       mode.ParsePdf,
-		Owner:      model.ModelOwnerDoc2x,
-		InputPrice: 20,
-		RPM:        10,
+		Model: "pdf",
+		Type:  mode.ParsePdf,
+		Owner: model.ModelOwnerDoc2x,
+		Price: model.Price{
+			InputPrice: 20,
+		},
+		RPM: 10,
 	},
 }

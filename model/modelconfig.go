@@ -18,21 +18,17 @@ const (
 
 //nolint:revive
 type ModelConfig struct {
-	CreatedAt          time.Time              `gorm:"index;autoCreateTime"           json:"created_at"`
-	UpdatedAt          time.Time              `gorm:"index;autoUpdateTime"           json:"updated_at"`
-	Config             map[ModelConfigKey]any `gorm:"serializer:fastjson;type:text"  json:"config,omitempty"`
-	ImagePrices        map[string]float64     `gorm:"serializer:fastjson;type:text"  json:"image_prices,omitempty"`
-	Model              string                 `gorm:"primaryKey"                     json:"model"`
-	Owner              ModelOwner             `gorm:"type:varchar(255);index"        json:"owner"`
-	ImageMaxBatchSize  int                    `json:"image_batch_size,omitempty"`
-	Type               mode.Mode              `json:"type"`
-	ExcludeFromTests   bool                   `json:"exclude_from_tests,omitempty"`
-	InputPrice         float64                `json:"input_price,omitempty"`
-	OutputPrice        float64                `json:"output_price,omitempty"`
-	CachedPrice        float64                `json:"cached_price,omitempty"`
-	CacheCreationPrice float64                `json:"cache_creation_price,omitempty"`
-	RPM                int64                  `json:"rpm,omitempty"`
-	TPM                int64                  `json:"tpm,omitempty"`
+	CreatedAt        time.Time              `gorm:"index;autoCreateTime"          json:"created_at"`
+	UpdatedAt        time.Time              `gorm:"index;autoUpdateTime"          json:"updated_at"`
+	Config           map[ModelConfigKey]any `gorm:"serializer:fastjson;type:text" json:"config,omitempty"`
+	ImagePrices      map[string]float64     `gorm:"serializer:fastjson;type:text" json:"image_prices,omitempty"`
+	Model            string                 `gorm:"primaryKey"                    json:"model"`
+	Owner            ModelOwner             `gorm:"type:varchar(255);index"       json:"owner"`
+	Type             mode.Mode              `json:"type"`
+	ExcludeFromTests bool                   `json:"exclude_from_tests,omitempty"`
+	RPM              int64                  `json:"rpm,omitempty"`
+	TPM              int64                  `json:"tpm,omitempty"`
+	Price
 }
 
 func NewDefaultModelConfig(model string) *ModelConfig {

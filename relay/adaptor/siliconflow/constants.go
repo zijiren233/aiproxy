@@ -9,27 +9,23 @@ import (
 
 var ModelList = []*model.ModelConfig{
 	{
-		Model:       "BAAI/bge-reranker-v2-m3",
-		Type:        mode.Rerank,
-		Owner:       model.ModelOwnerBAAI,
-		InputPrice:  0.0009,
-		OutputPrice: 0,
-		RPM:         2000,
+		Model: "BAAI/bge-reranker-v2-m3",
+		Type:  mode.Rerank,
+		Owner: model.ModelOwnerBAAI,
+		RPM:   2000,
 	},
 
 	{
-		Model:      "BAAI/bge-large-zh-v1.5",
-		Type:       mode.Embeddings,
-		Owner:      model.ModelOwnerBAAI,
-		InputPrice: 0.0005,
-		RPM:        2000,
+		Model: "BAAI/bge-large-zh-v1.5",
+		Type:  mode.Embeddings,
+		Owner: model.ModelOwnerBAAI,
+		RPM:   2000,
 	},
 
 	{
-		Model:       "fishaudio/fish-speech-1.4",
-		Type:        mode.AudioSpeech,
-		Owner:       model.ModelOwnerFishAudio,
-		OutputPrice: 0.105,
+		Model: "fishaudio/fish-speech-1.4",
+		Type:  mode.AudioSpeech,
+		Owner: model.ModelOwnerFishAudio,
 		Config: map[model.ModelConfigKey]any{
 			model.ModelConfigSupportVoicesKey: []string{
 				"fishaudio/fish-speech-1.4:alex",

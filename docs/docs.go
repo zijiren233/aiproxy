@@ -5386,9 +5386,6 @@ const docTemplate = `{
                 "exclude_from_tests": {
                     "type": "boolean"
                 },
-                "image_batch_size": {
-                    "type": "integer"
-                },
                 "image_prices": {
                     "type": "object",
                     "additionalProperties": {
@@ -5559,9 +5556,6 @@ const docTemplate = `{
                 "exclude_from_tests": {
                     "type": "boolean"
                 },
-                "image_batch_size": {
-                    "type": "integer"
-                },
                 "image_prices": {
                     "type": "object",
                     "additionalProperties": {
@@ -5686,6 +5680,43 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "status": {
+                    "type": "integer"
+                }
+            }
+        },
+        "github_com_labring_aiproxy_model.Usage": {
+            "type": "object",
+            "properties": {
+                "cache_creation_tokens": {
+                    "type": "integer"
+                },
+                "cached_tokens": {
+                    "type": "integer"
+                },
+                "input_tokens": {
+                    "type": "integer"
+                },
+                "output_tokens": {
+                    "type": "integer"
+                },
+                "total_tokens": {
+                    "type": "integer"
+                }
+            }
+        },
+        "github_com_labring_aiproxy_relay_model.Usage": {
+            "type": "object",
+            "properties": {
+                "completion_tokens": {
+                    "type": "integer"
+                },
+                "prompt_tokens": {
+                    "type": "integer"
+                },
+                "prompt_tokens_details": {
+                    "$ref": "#/definitions/model.PromptTokensDetails"
+                },
+                "total_tokens": {
                     "type": "integer"
                 }
             }
@@ -5945,7 +5976,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "usage": {
-                    "$ref": "#/definitions/model.Usage"
+                    "$ref": "#/definitions/github_com_labring_aiproxy_relay_model.Usage"
                 }
             }
         },
@@ -6288,28 +6319,10 @@ const docTemplate = `{
         "model.Log": {
             "type": "object",
             "properties": {
-                "cache_creation_price": {
-                    "type": "number"
-                },
-                "cache_creation_tokens": {
-                    "type": "integer"
-                },
-                "cached_price": {
-                    "type": "number"
-                },
-                "cached_tokens": {
-                    "type": "integer"
-                },
                 "channel": {
                     "type": "integer"
                 },
                 "code": {
-                    "type": "integer"
-                },
-                "completion_price": {
-                    "type": "number"
-                },
-                "completion_tokens": {
                     "type": "integer"
                 },
                 "content": {
@@ -6340,10 +6353,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "price": {
-                    "type": "number"
-                },
-                "prompt_tokens": {
-                    "type": "integer"
+                    "$ref": "#/definitions/model.Price"
                 },
                 "request_at": {
                     "type": "string"
@@ -6369,8 +6379,8 @@ const docTemplate = `{
                 "token_name": {
                     "type": "string"
                 },
-                "total_tokens": {
-                    "type": "integer"
+                "usage": {
+                    "$ref": "#/definitions/github_com_labring_aiproxy_model.Usage"
                 },
                 "used_amount": {
                     "type": "number"
@@ -6419,9 +6429,6 @@ const docTemplate = `{
                 },
                 "exclude_from_tests": {
                     "type": "boolean"
-                },
-                "image_batch_size": {
-                    "type": "integer"
                 },
                 "image_prices": {
                     "type": "object",
@@ -6557,6 +6564,23 @@ const docTemplate = `{
                 },
                 "pages": {
                     "type": "integer"
+                }
+            }
+        },
+        "model.Price": {
+            "type": "object",
+            "properties": {
+                "cache_creation_price": {
+                    "type": "number"
+                },
+                "cached_price": {
+                    "type": "number"
+                },
+                "input_price": {
+                    "type": "number"
+                },
+                "output_price": {
+                    "type": "number"
                 }
             }
         },
@@ -6725,7 +6749,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "usage": {
-                    "$ref": "#/definitions/model.Usage"
+                    "$ref": "#/definitions/github_com_labring_aiproxy_relay_model.Usage"
                 }
             }
         },
@@ -6829,23 +6853,6 @@ const docTemplate = `{
                 },
                 "type": {
                     "type": "string"
-                }
-            }
-        },
-        "model.Usage": {
-            "type": "object",
-            "properties": {
-                "completion_tokens": {
-                    "type": "integer"
-                },
-                "prompt_tokens": {
-                    "type": "integer"
-                },
-                "prompt_tokens_details": {
-                    "$ref": "#/definitions/model.PromptTokensDetails"
-                },
-                "total_tokens": {
-                    "type": "integer"
                 }
             }
         },

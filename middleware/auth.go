@@ -69,7 +69,7 @@ func TokenAuth(c *gin.Context) {
 		var err error
 		token, err = model.ValidateAndGetToken(key)
 		if err != nil {
-			abortLogWithMessage(c, http.StatusUnauthorized, err.Error(), &errorField{
+			AbortLogWithMessage(c, http.StatusUnauthorized, err.Error(), &ErrorField{
 				Code: "invalid_token",
 			})
 			return
@@ -80,10 +80,10 @@ func TokenAuth(c *gin.Context) {
 
 	if len(token.Subnets) > 0 {
 		if ok, err := network.IsIPInSubnets(c.ClientIP(), token.Subnets); err != nil {
-			abortLogWithMessage(c, http.StatusInternalServerError, err.Error())
+			AbortLogWithMessage(c, http.StatusInternalServerError, err.Error())
 			return
 		} else if !ok {
-			abortLogWithMessage(c, http.StatusForbidden,
+			AbortLogWithMessage(c, http.StatusForbidden,
 				fmt.Sprintf("token (%s[%d]) can only be used in the specified subnets: %v, current ip: %s",
 					token.Name,
 					token.ID,
@@ -104,11 +104,11 @@ func TokenAuth(c *gin.Context) {
 		var err error
 		group, err = model.CacheGetGroup(token.Group)
 		if err != nil {
-			abortLogWithMessage(c, http.StatusInternalServerError, fmt.Sprintf("failed to get group: %v", err))
+			AbortLogWithMessage(c, http.StatusInternalServerError, fmt.Sprintf("failed to get group: %v", err))
 			return
 		}
 		if group.Status != model.GroupStatusEnabled && group.Status != model.GroupStatusInternal {
-			abortLogWithMessage(c, http.StatusForbidden, "group is disabled")
+			AbortLogWithMessage(c, http.StatusForbidden, "group is disabled")
 			return
 		}
 	}
