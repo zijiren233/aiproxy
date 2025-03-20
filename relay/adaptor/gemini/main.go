@@ -338,7 +338,7 @@ func getToolCall(item *Part) (*model.Tool, error) {
 	return &toolCall, nil
 }
 
-func responseGeminiChat2OpenAI(meta *meta.Meta, response *ChatResponse) *model.TextResponse {
+func responseChat2OpenAI(meta *meta.Meta, response *ChatResponse) *model.TextResponse {
 	fullTextResponse := model.TextResponse{
 		ID:      openai.ChatCompletionID(),
 		Model:   meta.OriginModel,
@@ -366,6 +366,12 @@ func responseGeminiChat2OpenAI(meta *meta.Meta, response *ChatResponse) *model.T
 			var contents []model.MessageContent
 			var builder strings.Builder
 			hasImage := false
+			for _, part := range candidate.Content.Parts {
+				if part.InlineData != nil {
+					hasImage = true
+					break
+				}
+			}
 			for _, part := range candidate.Content.Parts {
 				if part.FunctionCall != nil {
 					toolCall, err := getToolCall(&part)
@@ -406,7 +412,7 @@ func responseGeminiChat2OpenAI(meta *meta.Meta, response *ChatResponse) *model.T
 	return &fullTextResponse
 }
 
-func streamResponseGeminiChat2OpenAI(meta *meta.Meta, geminiResponse *ChatResponse) *model.ChatCompletionsStreamResponse {
+func streamResponseChat2OpenAI(meta *meta.Meta, geminiResponse *ChatResponse) *model.ChatCompletionsStreamResponse {
 	response := &model.ChatCompletionsStreamResponse{
 		ID:      openai.ChatCompletionID(),
 		Created: time.Now().Unix(),
@@ -518,7 +524,7 @@ func StreamHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model
 			log.Error("error unmarshalling stream response: " + err.Error())
 			continue
 		}
-		response := streamResponseGeminiChat2OpenAI(meta, &geminiResponse)
+		response := streamResponseChat2OpenAI(meta, &geminiResponse)
 		if response.Usage != nil {
 			usage = *response.Usage
 		}
@@ -549,7 +555,7 @@ func Handler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage
 	if err != nil {
 		return nil, openai.ErrorWrapper(err, "unmarshal_response_body_failed", http.StatusInternalServerError)
 	}
-	fullTextResponse := responseGeminiChat2OpenAI(meta, &geminiResponse)
+	fullTextResponse := responseChat2OpenAI(meta, &geminiResponse)
 	jsonResponse, err := sonic.Marshal(fullTextResponse)
 	if err != nil {
 		return nil, openai.ErrorWrapper(err, "marshal_response_body_failed", http.StatusInternalServerError)
