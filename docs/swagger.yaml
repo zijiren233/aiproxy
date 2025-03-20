@@ -3760,11 +3760,34 @@ paths:
         required: true
         schema:
           $ref: '#/definitions/model.TextToSpeechRequest'
+      - description: Optional Aiproxy-Channel header
+        in: header
+        name: Aiproxy-Channel
+        type: string
       produces:
       - application/json
       responses:
         "200":
           description: audio binary
+          headers:
+            X-RateLimit-Limit-Requests:
+              description: X-RateLimit-Limit-Requests
+              type: integer
+            X-RateLimit-Limit-Tokens:
+              description: X-RateLimit-Limit-Tokens
+              type: integer
+            X-RateLimit-Remaining-Requests:
+              description: X-RateLimit-Remaining-Requests
+              type: integer
+            X-RateLimit-Remaining-Tokens:
+              description: X-RateLimit-Remaining-Tokens
+              type: integer
+            X-RateLimit-Reset-Requests:
+              description: X-RateLimit-Reset-Requests
+              type: string
+            X-RateLimit-Reset-Tokens:
+              description: X-RateLimit-Reset-Tokens
+              type: string
           schema:
             type: file
       security:
@@ -3786,11 +3809,34 @@ paths:
         name: file
         required: true
         type: file
+      - description: Optional Aiproxy-Channel header
+        in: header
+        name: Aiproxy-Channel
+        type: string
       produces:
       - application/json
       responses:
         "200":
           description: OK
+          headers:
+            X-RateLimit-Limit-Requests:
+              description: X-RateLimit-Limit-Requests
+              type: integer
+            X-RateLimit-Limit-Tokens:
+              description: X-RateLimit-Limit-Tokens
+              type: integer
+            X-RateLimit-Remaining-Requests:
+              description: X-RateLimit-Remaining-Requests
+              type: integer
+            X-RateLimit-Remaining-Tokens:
+              description: X-RateLimit-Remaining-Tokens
+              type: integer
+            X-RateLimit-Reset-Requests:
+              description: X-RateLimit-Reset-Requests
+              type: string
+            X-RateLimit-Reset-Tokens:
+              description: X-RateLimit-Reset-Tokens
+              type: string
           schema:
             $ref: '#/definitions/model.SttJSONResponse'
       security:
@@ -3812,11 +3858,34 @@ paths:
         name: file
         required: true
         type: file
+      - description: Optional Aiproxy-Channel header
+        in: header
+        name: Aiproxy-Channel
+        type: string
       produces:
       - application/json
       responses:
         "200":
           description: OK
+          headers:
+            X-RateLimit-Limit-Requests:
+              description: X-RateLimit-Limit-Requests
+              type: integer
+            X-RateLimit-Limit-Tokens:
+              description: X-RateLimit-Limit-Tokens
+              type: integer
+            X-RateLimit-Remaining-Requests:
+              description: X-RateLimit-Remaining-Requests
+              type: integer
+            X-RateLimit-Remaining-Tokens:
+              description: X-RateLimit-Remaining-Tokens
+              type: integer
+            X-RateLimit-Reset-Requests:
+              description: X-RateLimit-Reset-Requests
+              type: string
+            X-RateLimit-Reset-Tokens:
+              description: X-RateLimit-Reset-Tokens
+              type: string
           schema:
             $ref: '#/definitions/model.SttJSONResponse'
       security:
@@ -3834,11 +3903,34 @@ paths:
         required: true
         schema:
           $ref: '#/definitions/model.GeneralOpenAIRequest'
+      - description: Optional Aiproxy-Channel header
+        in: header
+        name: Aiproxy-Channel
+        type: string
       produces:
       - application/json
       responses:
         "200":
           description: OK
+          headers:
+            X-RateLimit-Limit-Requests:
+              description: X-RateLimit-Limit-Requests
+              type: integer
+            X-RateLimit-Limit-Tokens:
+              description: X-RateLimit-Limit-Tokens
+              type: integer
+            X-RateLimit-Remaining-Requests:
+              description: X-RateLimit-Remaining-Requests
+              type: integer
+            X-RateLimit-Remaining-Tokens:
+              description: X-RateLimit-Remaining-Tokens
+              type: integer
+            X-RateLimit-Reset-Requests:
+              description: X-RateLimit-Reset-Requests
+              type: string
+            X-RateLimit-Reset-Tokens:
+              description: X-RateLimit-Reset-Tokens
+              type: string
           schema:
             $ref: '#/definitions/model.TextResponse'
       security:
@@ -3856,11 +3948,34 @@ paths:
         required: true
         schema:
           $ref: '#/definitions/model.GeneralOpenAIRequest'
+      - description: Optional Aiproxy-Channel header
+        in: header
+        name: Aiproxy-Channel
+        type: string
       produces:
       - application/json
       responses:
         "200":
           description: OK
+          headers:
+            X-RateLimit-Limit-Requests:
+              description: X-RateLimit-Limit-Requests
+              type: integer
+            X-RateLimit-Limit-Tokens:
+              description: X-RateLimit-Limit-Tokens
+              type: integer
+            X-RateLimit-Remaining-Requests:
+              description: X-RateLimit-Remaining-Requests
+              type: integer
+            X-RateLimit-Remaining-Tokens:
+              description: X-RateLimit-Remaining-Tokens
+              type: integer
+            X-RateLimit-Reset-Requests:
+              description: X-RateLimit-Reset-Requests
+              type: string
+            X-RateLimit-Reset-Tokens:
+              description: X-RateLimit-Reset-Tokens
+              type: string
           schema:
             $ref: '#/definitions/model.TextResponse'
       security:
@@ -3908,11 +4023,34 @@ paths:
         required: true
         schema:
           $ref: '#/definitions/model.EmbeddingRequest'
+      - description: Optional Aiproxy-Channel header
+        in: header
+        name: Aiproxy-Channel
+        type: string
       produces:
       - application/json
       responses:
         "200":
           description: OK
+          headers:
+            X-RateLimit-Limit-Requests:
+              description: X-RateLimit-Limit-Requests
+              type: integer
+            X-RateLimit-Limit-Tokens:
+              description: X-RateLimit-Limit-Tokens
+              type: integer
+            X-RateLimit-Remaining-Requests:
+              description: X-RateLimit-Remaining-Requests
+              type: integer
+            X-RateLimit-Remaining-Tokens:
+              description: X-RateLimit-Remaining-Tokens
+              type: integer
+            X-RateLimit-Reset-Requests:
+              description: X-RateLimit-Reset-Requests
+              type: string
+            X-RateLimit-Reset-Tokens:
+              description: X-RateLimit-Reset-Tokens
+              type: string
           schema:
             $ref: '#/definitions/model.EmbeddingResponse'
       security:
@@ -3930,11 +4068,34 @@ paths:
         required: true
         schema:
           $ref: '#/definitions/model.ImageRequest'
+      - description: Optional Aiproxy-Channel header
+        in: header
+        name: Aiproxy-Channel
+        type: string
       produces:
       - application/json
       responses:
         "200":
           description: OK
+          headers:
+            X-RateLimit-Limit-Requests:
+              description: X-RateLimit-Limit-Requests
+              type: integer
+            X-RateLimit-Limit-Tokens:
+              description: X-RateLimit-Limit-Tokens
+              type: integer
+            X-RateLimit-Remaining-Requests:
+              description: X-RateLimit-Remaining-Requests
+              type: integer
+            X-RateLimit-Remaining-Tokens:
+              description: X-RateLimit-Remaining-Tokens
+              type: integer
+            X-RateLimit-Reset-Requests:
+              description: X-RateLimit-Reset-Requests
+              type: string
+            X-RateLimit-Reset-Tokens:
+              description: X-RateLimit-Reset-Tokens
+              type: string
           schema:
             $ref: '#/definitions/model.ImageResponse'
       security:
@@ -3993,11 +4154,34 @@ paths:
         name: file
         required: true
         type: file
+      - description: Optional Aiproxy-Channel header
+        in: header
+        name: Aiproxy-Channel
+        type: string
       produces:
       - application/json
       responses:
         "200":
           description: OK
+          headers:
+            X-RateLimit-Limit-Requests:
+              description: X-RateLimit-Limit-Requests
+              type: integer
+            X-RateLimit-Limit-Tokens:
+              description: X-RateLimit-Limit-Tokens
+              type: integer
+            X-RateLimit-Remaining-Requests:
+              description: X-RateLimit-Remaining-Requests
+              type: integer
+            X-RateLimit-Remaining-Tokens:
+              description: X-RateLimit-Remaining-Tokens
+              type: integer
+            X-RateLimit-Reset-Requests:
+              description: X-RateLimit-Reset-Requests
+              type: string
+            X-RateLimit-Reset-Tokens:
+              description: X-RateLimit-Reset-Tokens
+              type: string
           schema:
             $ref: '#/definitions/model.ParsePdfResponse'
       security:
@@ -4015,11 +4199,34 @@ paths:
         required: true
         schema:
           $ref: '#/definitions/model.RerankRequest'
+      - description: Optional Aiproxy-Channel header
+        in: header
+        name: Aiproxy-Channel
+        type: string
       produces:
       - application/json
       responses:
         "200":
           description: OK
+          headers:
+            X-RateLimit-Limit-Requests:
+              description: X-RateLimit-Limit-Requests
+              type: integer
+            X-RateLimit-Limit-Tokens:
+              description: X-RateLimit-Limit-Tokens
+              type: integer
+            X-RateLimit-Remaining-Requests:
+              description: X-RateLimit-Remaining-Requests
+              type: integer
+            X-RateLimit-Remaining-Tokens:
+              description: X-RateLimit-Remaining-Tokens
+              type: integer
+            X-RateLimit-Reset-Requests:
+              description: X-RateLimit-Reset-Requests
+              type: string
+            X-RateLimit-Reset-Tokens:
+              description: X-RateLimit-Reset-Tokens
+              type: string
           schema:
             $ref: '#/definitions/model.RerankResponse'
       security:

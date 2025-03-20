@@ -16,8 +16,15 @@ import (
 //	@Tags			relay
 //	@Produce		json
 //	@Security		ApiKeyAuth
-//	@Param			request	body		model.GeneralOpenAIRequest	true	"Request"
-//	@Success		200		{object}	model.TextResponse
+//	@Param			request			body		model.GeneralOpenAIRequest	true	"Request"
+//	@Param			Aiproxy-Channel	header		string						false	"Optional Aiproxy-Channel header"
+//	@Success		200				{object}	model.TextResponse
+//	@Header			all				{integer}	X-RateLimit-Limit-Requests		"X-RateLimit-Limit-Requests"
+//	@Header			all				{integer}	X-RateLimit-Limit-Tokens		"X-RateLimit-Limit-Tokens"
+//	@Header			all				{integer}	X-RateLimit-Remaining-Requests	"X-RateLimit-Remaining-Requests"
+//	@Header			all				{integer}	X-RateLimit-Remaining-Tokens	"X-RateLimit-Remaining-Tokens"
+//	@Header			all				{string}	X-RateLimit-Reset-Requests		"X-RateLimit-Reset-Requests"
+//	@Header			all				{string}	X-RateLimit-Reset-Tokens		"X-RateLimit-Reset-Tokens"
 //	@Router			/v1/completions [post]
 func Completions() []gin.HandlerFunc {
 	return []gin.HandlerFunc{
@@ -33,8 +40,15 @@ func Completions() []gin.HandlerFunc {
 //	@Tags			relay
 //	@Produce		json
 //	@Security		ApiKeyAuth
-//	@Param			request	body		model.GeneralOpenAIRequest	true	"Request"
-//	@Success		200		{object}	model.TextResponse			|		model.ChatCompletionsStreamResponse
+//	@Param			request			body		model.GeneralOpenAIRequest		true	"Request"
+//	@Param			Aiproxy-Channel	header		string							false	"Optional Aiproxy-Channel header"
+//	@Success		200				{object}	model.TextResponse				|		model.ChatCompletionsStreamResponse
+//	@Header			all				{integer}	X-RateLimit-Limit-Requests		"X-RateLimit-Limit-Requests"
+//	@Header			all				{integer}	X-RateLimit-Limit-Tokens		"X-RateLimit-Limit-Tokens"
+//	@Header			all				{integer}	X-RateLimit-Remaining-Requests	"X-RateLimit-Remaining-Requests"
+//	@Header			all				{integer}	X-RateLimit-Remaining-Tokens	"X-RateLimit-Remaining-Tokens"
+//	@Header			all				{string}	X-RateLimit-Reset-Requests		"X-RateLimit-Reset-Requests"
+//	@Header			all				{string}	X-RateLimit-Reset-Tokens		"X-RateLimit-Reset-Tokens"
 //	@Router			/v1/chat/completions [post]
 func ChatCompletions() []gin.HandlerFunc {
 	return []gin.HandlerFunc{
@@ -50,8 +64,15 @@ func ChatCompletions() []gin.HandlerFunc {
 //	@Tags			relay
 //	@Produce		json
 //	@Security		ApiKeyAuth
-//	@Param			request	body		model.EmbeddingRequest	true	"Request"
-//	@Success		200		{object}	model.EmbeddingResponse
+//	@Param			request			body		model.EmbeddingRequest	true	"Request"
+//	@Param			Aiproxy-Channel	header		string					false	"Optional Aiproxy-Channel header"
+//	@Success		200				{object}	model.EmbeddingResponse
+//	@Header			all				{integer}	X-RateLimit-Limit-Requests		"X-RateLimit-Limit-Requests"
+//	@Header			all				{integer}	X-RateLimit-Limit-Tokens		"X-RateLimit-Limit-Tokens"
+//	@Header			all				{integer}	X-RateLimit-Remaining-Requests	"X-RateLimit-Remaining-Requests"
+//	@Header			all				{integer}	X-RateLimit-Remaining-Tokens	"X-RateLimit-Remaining-Tokens"
+//	@Header			all				{string}	X-RateLimit-Reset-Requests		"X-RateLimit-Reset-Requests"
+//	@Header			all				{string}	X-RateLimit-Reset-Tokens		"X-RateLimit-Reset-Tokens"
 //	@Router			/v1/embeddings [post]
 func Embeddings() []gin.HandlerFunc {
 	return []gin.HandlerFunc{
@@ -74,8 +95,15 @@ func Edits() []gin.HandlerFunc {
 //	@Tags			relay
 //	@Produce		json
 //	@Security		ApiKeyAuth
-//	@Param			request	body		model.ImageRequest	true	"Request"
-//	@Success		200		{object}	model.ImageResponse
+//	@Param			request			body		model.ImageRequest	true	"Request"
+//	@Param			Aiproxy-Channel	header		string				false	"Optional Aiproxy-Channel header"
+//	@Success		200				{object}	model.ImageResponse
+//	@Header			all				{integer}	X-RateLimit-Limit-Requests		"X-RateLimit-Limit-Requests"
+//	@Header			all				{integer}	X-RateLimit-Limit-Tokens		"X-RateLimit-Limit-Tokens"
+//	@Header			all				{integer}	X-RateLimit-Remaining-Requests	"X-RateLimit-Remaining-Requests"
+//	@Header			all				{integer}	X-RateLimit-Remaining-Tokens	"X-RateLimit-Remaining-Tokens"
+//	@Header			all				{string}	X-RateLimit-Reset-Requests		"X-RateLimit-Reset-Requests"
+//	@Header			all				{string}	X-RateLimit-Reset-Tokens		"X-RateLimit-Reset-Tokens"
 //	@Router			/v1/images/generations [post]
 func ImagesGenerations() []gin.HandlerFunc {
 	return []gin.HandlerFunc{
@@ -91,8 +119,15 @@ func ImagesGenerations() []gin.HandlerFunc {
 //	@Tags			relay
 //	@Produce		json
 //	@Security		ApiKeyAuth
-//	@Param			request	body	model.TextToSpeechRequest	true	"Request"
-//	@Success		200		{file}	file						"audio binary"
+//	@Param			request			body		model.TextToSpeechRequest		true	"Request"
+//	@Param			Aiproxy-Channel	header		string							false	"Optional Aiproxy-Channel header"
+//	@Success		200				{file}		file							"audio binary"
+//	@Header			all				{integer}	X-RateLimit-Limit-Requests		"X-RateLimit-Limit-Requests"
+//	@Header			all				{integer}	X-RateLimit-Limit-Tokens		"X-RateLimit-Limit-Tokens"
+//	@Header			all				{integer}	X-RateLimit-Remaining-Requests	"X-RateLimit-Remaining-Requests"
+//	@Header			all				{integer}	X-RateLimit-Remaining-Tokens	"X-RateLimit-Remaining-Tokens"
+//	@Header			all				{string}	X-RateLimit-Reset-Requests		"X-RateLimit-Reset-Requests"
+//	@Header			all				{string}	X-RateLimit-Reset-Tokens		"X-RateLimit-Reset-Tokens"
 //	@Router			/v1/audio/speech [post]
 func AudioSpeech() []gin.HandlerFunc {
 	return []gin.HandlerFunc{
@@ -108,9 +143,16 @@ func AudioSpeech() []gin.HandlerFunc {
 //	@Tags			relay
 //	@Produce		json
 //	@Security		ApiKeyAuth
-//	@Param			model	formData	string	true	"Model"
-//	@Param			file	formData	file	true	"File"
-//	@Success		200		{object}	model.SttJSONResponse
+//	@Param			model			formData	string	true	"Model"
+//	@Param			file			formData	file	true	"File"
+//	@Param			Aiproxy-Channel	header		string	false	"Optional Aiproxy-Channel header"
+//	@Success		200				{object}	model.SttJSONResponse
+//	@Header			all				{integer}	X-RateLimit-Limit-Requests		"X-RateLimit-Limit-Requests"
+//	@Header			all				{integer}	X-RateLimit-Limit-Tokens		"X-RateLimit-Limit-Tokens"
+//	@Header			all				{integer}	X-RateLimit-Remaining-Requests	"X-RateLimit-Remaining-Requests"
+//	@Header			all				{integer}	X-RateLimit-Remaining-Tokens	"X-RateLimit-Remaining-Tokens"
+//	@Header			all				{string}	X-RateLimit-Reset-Requests		"X-RateLimit-Reset-Requests"
+//	@Header			all				{string}	X-RateLimit-Reset-Tokens		"X-RateLimit-Reset-Tokens"
 //	@Router			/v1/audio/transcription [post]
 func AudioTranscription() []gin.HandlerFunc {
 	return []gin.HandlerFunc{
@@ -126,9 +168,16 @@ func AudioTranscription() []gin.HandlerFunc {
 //	@Tags			relay
 //	@Produce		json
 //	@Security		ApiKeyAuth
-//	@Param			model	formData	string	true	"Model"
-//	@Param			file	formData	file	true	"File"
-//	@Success		200		{object}	model.SttJSONResponse
+//	@Param			model			formData	string	true	"Model"
+//	@Param			file			formData	file	true	"File"
+//	@Param			Aiproxy-Channel	header		string	false	"Optional Aiproxy-Channel header"
+//	@Success		200				{object}	model.SttJSONResponse
+//	@Header			all				{integer}	X-RateLimit-Limit-Requests		"X-RateLimit-Limit-Requests"
+//	@Header			all				{integer}	X-RateLimit-Limit-Tokens		"X-RateLimit-Limit-Tokens"
+//	@Header			all				{integer}	X-RateLimit-Remaining-Requests	"X-RateLimit-Remaining-Requests"
+//	@Header			all				{integer}	X-RateLimit-Remaining-Tokens	"X-RateLimit-Remaining-Tokens"
+//	@Header			all				{string}	X-RateLimit-Reset-Requests		"X-RateLimit-Reset-Requests"
+//	@Header			all				{string}	X-RateLimit-Reset-Tokens		"X-RateLimit-Reset-Tokens"
 //	@Router			/v1/audio/translation [post]
 func AudioTranslation() []gin.HandlerFunc {
 	return []gin.HandlerFunc{
@@ -151,8 +200,15 @@ func Moderations() []gin.HandlerFunc {
 //	@Tags			relay
 //	@Produce		json
 //	@Security		ApiKeyAuth
-//	@Param			request	body		model.RerankRequest	true	"Request"
-//	@Success		200		{object}	model.RerankResponse
+//	@Param			request			body		model.RerankRequest	true	"Request"
+//	@Param			Aiproxy-Channel	header		string				false	"Optional Aiproxy-Channel header"
+//	@Success		200				{object}	model.RerankResponse
+//	@Header			all				{integer}	X-RateLimit-Limit-Requests		"X-RateLimit-Limit-Requests"
+//	@Header			all				{integer}	X-RateLimit-Limit-Tokens		"X-RateLimit-Limit-Tokens"
+//	@Header			all				{integer}	X-RateLimit-Remaining-Requests	"X-RateLimit-Remaining-Requests"
+//	@Header			all				{integer}	X-RateLimit-Remaining-Tokens	"X-RateLimit-Remaining-Tokens"
+//	@Header			all				{string}	X-RateLimit-Reset-Requests		"X-RateLimit-Reset-Requests"
+//	@Header			all				{string}	X-RateLimit-Reset-Tokens		"X-RateLimit-Reset-Tokens"
 //	@Router			/v1/rerank [post]
 func Rerank() []gin.HandlerFunc {
 	return []gin.HandlerFunc{
@@ -168,9 +224,16 @@ func Rerank() []gin.HandlerFunc {
 //	@Tags			relay
 //	@Produce		json
 //	@Security		ApiKeyAuth
-//	@Param			model	formData	string	true	"Model"
-//	@Param			file	formData	file	true	"File"
-//	@Success		200		{object}	model.ParsePdfResponse
+//	@Param			model			formData	string	true	"Model"
+//	@Param			file			formData	file	true	"File"
+//	@Param			Aiproxy-Channel	header		string	false	"Optional Aiproxy-Channel header"
+//	@Success		200				{object}	model.ParsePdfResponse
+//	@Header			all				{integer}	X-RateLimit-Limit-Requests		"X-RateLimit-Limit-Requests"
+//	@Header			all				{integer}	X-RateLimit-Limit-Tokens		"X-RateLimit-Limit-Tokens"
+//	@Header			all				{integer}	X-RateLimit-Remaining-Requests	"X-RateLimit-Remaining-Requests"
+//	@Header			all				{integer}	X-RateLimit-Remaining-Tokens	"X-RateLimit-Remaining-Tokens"
+//	@Header			all				{string}	X-RateLimit-Reset-Requests		"X-RateLimit-Reset-Requests"
+//	@Header			all				{string}	X-RateLimit-Reset-Tokens		"X-RateLimit-Reset-Tokens"
 //	@Router			/v1/parse-pdf [post]
 func ParsePdf() []gin.HandlerFunc {
 	return []gin.HandlerFunc{
