@@ -54,6 +54,7 @@ docker-compose up -d
 
 ### Basic Configuration
 
+- `LISTEN`: The listen address, default is `:3000`
 - `ADMIN_KEY`: The admin key for the AI Proxy Service, admin key is used to admin api and relay api, default is empty
 - `INTERNAL_TOKEN`: Internal token for service authentication, default is empty
 - `FFPROBE_ENABLED`: Whether to enable ffprobe, default is `false`
