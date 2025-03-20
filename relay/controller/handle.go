@@ -23,7 +23,6 @@ type HandleResult struct {
 func Handle(meta *meta.Meta, c *gin.Context) *HandleResult {
 	log := middleware.GetLogger(c)
 
-	// 1. Get adaptor
 	adaptor, ok := channeltype.GetAdaptor(meta.Channel.Type)
 	if !ok {
 		log.Errorf("invalid (%s[%d]) channel type: %d", meta.Channel.Name, meta.Channel.ID, meta.Channel.Type)
@@ -33,7 +32,6 @@ func Handle(meta *meta.Meta, c *gin.Context) *HandleResult {
 		}
 	}
 
-	// 5. Do request
 	usage, detail, respErr := DoHelper(adaptor, c, meta)
 	if respErr != nil {
 		var logDetail *model.RequestDetail

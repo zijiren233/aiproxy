@@ -52,9 +52,6 @@ func relayController(m mode.Mode) RelayController {
 	c := RelayController{
 		Handler: relayHandler,
 	}
-	if !config.GetBillingEnabled() {
-		return c
-	}
 	switch m {
 	case mode.ImagesGenerations, mode.Edits:
 		c.GetRequestPrice = controller.GetImageRequestPrice
@@ -84,8 +81,8 @@ func relayController(m mode.Mode) RelayController {
 	return c
 }
 
-func RelayHelper(meta *meta.Meta, c *gin.Context, relayController RelayHandler) (*controller.HandleResult, bool) {
-	result := relayController(meta, c)
+func RelayHelper(meta *meta.Meta, c *gin.Context, handel RelayHandler) (*controller.HandleResult, bool) {
+	result := handel(meta, c)
 	if result.Error == nil {
 		if _, _, err := monitor.AddRequest(
 			context.Background(),
@@ -96,9 +93,6 @@ func RelayHelper(meta *meta.Meta, c *gin.Context, relayController RelayHandler) 
 		); err != nil {
 			log.Errorf("add request failed: %+v", err)
 		}
-		return result, false
-	}
-	if result.Error.Error.Code == middleware.GroupBalanceNotEnough {
 		return result, false
 	}
 	shouldRetry := shouldRetry(c, result.Error.StatusCode)
@@ -241,49 +235,41 @@ func relay(c *gin.Context, mode mode.Mode, relayController RelayController) {
 	// Get initial channel
 	initialChannel, err := getInitialChannel(c, requestModel, log)
 	if err != nil || initialChannel == nil || initialChannel.channel == nil {
-		c.JSON(http.StatusServiceUnavailable, gin.H{
-			"error": &relaymodel.Error{
-				Message: "the upstream load is saturated, please try again later",
-				Code:    "upstream_load_saturated",
-				Type:    middleware.ErrorTypeAIPROXY,
-			},
-		})
+		middleware.AbortLogWithMessage(c,
+			http.StatusServiceUnavailable,
+			"the upstream load is saturated, please try again later",
+		)
 		return
 	}
 
+	billingEnabled := config.GetBillingEnabled()
+
 	price := &model.Price{}
-	if relayController.GetRequestPrice != nil {
+	if billingEnabled && relayController.GetRequestPrice != nil {
 		price, err = relayController.GetRequestPrice(c, mc)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": &relaymodel.Error{
-					Message: "get request price failed: " + err.Error(),
-					Code:    "get_request_price_failed",
-					Type:    middleware.ErrorTypeAIPROXY,
-				},
-			})
+			middleware.AbortLogWithMessage(c,
+				http.StatusInternalServerError,
+				"get request price failed: "+err.Error(),
+			)
+			return
 		}
 	}
 
 	meta := middleware.NewMetaByContext(c, initialChannel.channel, mode)
 
-	if relayController.GetRequestUsage != nil {
+	if billingEnabled && relayController.GetRequestUsage != nil {
 		requestUsage, err := relayController.GetRequestUsage(c, mc)
 		if err != nil {
-			middleware.AbortLogWithMessage(
-				c,
+			middleware.AbortLogWithMessage(c,
 				http.StatusInternalServerError,
 				"get request usage failed: "+err.Error(),
-				&middleware.ErrorField{
-					Code: "get_request_usage_failed",
-				},
 			)
 			return
 		}
 		gbc := middleware.GetGroupBalanceConsumerFromContext(c)
 		if !gbc.CheckBalance(getPreConsumedAmount(requestUsage, price)) {
-			middleware.AbortLogWithMessage(
-				c,
+			middleware.AbortLogWithMessage(c,
 				http.StatusForbidden,
 				fmt.Sprintf("group (%s) balance not enough", gbc.Group),
 				&middleware.ErrorField{
@@ -589,6 +575,7 @@ var channelNoPermissionStatusCodesMap = map[int]struct{}{
 	http.StatusUnauthorized:    {},
 	http.StatusPaymentRequired: {},
 	http.StatusForbidden:       {},
+	http.StatusNotFound:        {},
 }
 
 func channelHasPermission(statusCode int) bool {
