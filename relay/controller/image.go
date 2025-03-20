@@ -51,7 +51,7 @@ func GetImageRequestPrice(c *gin.Context, mc *model.ModelConfig) (*model.Price, 
 	}, nil
 }
 
-func GetImageRequestUsage(c *gin.Context, mc *model.ModelConfig) (*model.Usage, error) {
+func GetImageRequestUsage(c *gin.Context, _ *model.ModelConfig) (*model.Usage, error) {
 	imageRequest, err := getImageRequest(c)
 	if err != nil {
 		return nil, err

@@ -7,11 +7,11 @@ import (
 	"github.com/labring/aiproxy/relay/utils"
 )
 
-func GetEmbedRequestPrice(c *gin.Context, mc *model.ModelConfig) (*model.Price, error) {
+func GetEmbedRequestPrice(_ *gin.Context, mc *model.ModelConfig) (*model.Price, error) {
 	return &mc.Price, nil
 }
 
-func GetEmbedRequestUsage(c *gin.Context, mc *model.ModelConfig) (*model.Usage, error) {
+func GetEmbedRequestUsage(c *gin.Context, _ *model.ModelConfig) (*model.Usage, error) {
 	textRequest, err := utils.UnmarshalGeneralOpenAIRequest(c.Request)
 	if err != nil {
 		return nil, err
