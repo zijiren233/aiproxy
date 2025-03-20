@@ -42,13 +42,15 @@ type RelayController struct {
 	Handler         RelayHandler
 }
 
+func relayHandler(meta *meta.Meta, c *gin.Context) *controller.HandleResult {
+	log := middleware.GetLogger(c)
+	middleware.SetLogFieldsFromMeta(meta, log.Data)
+	return controller.Handle(meta, c)
+}
+
 func relayController(m mode.Mode) RelayController {
 	c := RelayController{
-		Handler: func(meta *meta.Meta, c *gin.Context) *controller.HandleResult {
-			log := middleware.GetLogger(c)
-			middleware.SetLogFieldsFromMeta(meta, log.Data)
-			return controller.Handle(meta, c)
-		},
+		Handler: relayHandler,
 	}
 	if !config.GetBillingEnabled() {
 		return c
