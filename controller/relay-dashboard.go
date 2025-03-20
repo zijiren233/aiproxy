@@ -12,13 +12,15 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// @Summary		Get subscription
-// @Description	Get subscription
-// @Tags			relay
-// @Produce		json
-// @Security		ApiKeyAuth
-// @Success		200	{object}	openai.SubscriptionResponse
-// @Router			/v1/dashboard/subscription [get]
+// GetSubscription godoc
+//
+//	@Summary		Get subscription
+//	@Description	Get subscription
+//	@Tags			relay
+//	@Produce		json
+//	@Security		ApiKeyAuth
+//	@Success		200	{object}	openai.SubscriptionResponse
+//	@Router			/v1/dashboard/subscription [get]
 func GetSubscription(c *gin.Context) {
 	group := middleware.GetGroup(c)
 	b, _, err := balance.GetGroupRemainBalance(c, *group)
@@ -43,13 +45,15 @@ func GetSubscription(c *gin.Context) {
 	})
 }
 
-// @Summary		Get usage
-// @Description	Get usage
-// @Tags			relay
-// @Produce		json
-// @Security		ApiKeyAuth
-// @Success		200	{object}	openai.UsageResponse
-// @Router			/v1/dashboard/usage [get]
+// GetUsage godoc
+//
+//	@Summary		Get usage
+//	@Description	Get usage
+//	@Tags			relay
+//	@Produce		json
+//	@Security		ApiKeyAuth
+//	@Success		200	{object}	openai.UsageResponse
+//	@Router			/v1/dashboard/usage [get]
 func GetUsage(c *gin.Context) {
 	token := middleware.GetToken(c)
 	c.JSON(http.StatusOK, openai.UsageResponse{TotalUsage: token.UsedAmount * 100})

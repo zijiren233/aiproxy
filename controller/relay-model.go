@@ -10,13 +10,15 @@ import (
 	model "github.com/labring/aiproxy/relay/model"
 )
 
-// @Summary		List models
-// @Description	List all models
-// @Tags			relay
-// @Produce		json
-// @Security		ApiKeyAuth
-// @Success		200	{object}	object{object=string,data=[]OpenAIModels}
-// @Router			/v1/models [get]
+// ListModels godoc
+//
+//	@Summary		List models
+//	@Description	List all models
+//	@Tags			relay
+//	@Produce		json
+//	@Security		ApiKeyAuth
+//	@Success		200	{object}	object{object=string,data=[]OpenAIModels}
+//	@Router			/v1/models [get]
 func ListModels(c *gin.Context) {
 	enabledModelConfigsMap := middleware.GetModelCaches(c).EnabledModelConfigsMap
 	token := middleware.GetToken(c)
@@ -43,13 +45,15 @@ func ListModels(c *gin.Context) {
 	})
 }
 
-// @Summary		Retrieve model
-// @Description	Retrieve a model
-// @Tags			relay
-// @Produce		json
-// @Security		ApiKeyAuth
-// @Success		200	{object}	OpenAIModels
-// @Router			/v1/models/{model} [get]
+// RetrieveModel godoc
+//
+//	@Summary		Retrieve model
+//	@Description	Retrieve a model
+//	@Tags			relay
+//	@Produce		json
+//	@Security		ApiKeyAuth
+//	@Success		200	{object}	OpenAIModels
+//	@Router			/v1/models/{model} [get]
 func RetrieveModel(c *gin.Context) {
 	modelName := c.Param("model")
 	enabledModelConfigsMap := middleware.GetModelCaches(c).EnabledModelConfigsMap

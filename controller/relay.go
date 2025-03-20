@@ -9,14 +9,16 @@ import (
 	_ "github.com/labring/aiproxy/relay/model"
 )
 
-// @Summary		Completions
-// @Description	Completions
-// @Tags			relay
-// @Produce		json
-// @Security		ApiKeyAuth
-// @Param			request	body		model.GeneralOpenAIRequest	true	"Request"
-// @Success		200		{object}	model.TextResponse
-// @Router			/v1/completions [post]
+// Completions godoc
+//
+//	@Summary		Completions
+//	@Description	Completions
+//	@Tags			relay
+//	@Produce		json
+//	@Security		ApiKeyAuth
+//	@Param			request	body		model.GeneralOpenAIRequest	true	"Request"
+//	@Success		200		{object}	model.TextResponse
+//	@Router			/v1/completions [post]
 func Completions() []gin.HandlerFunc {
 	return []gin.HandlerFunc{
 		middleware.NewDistribute(mode.Completions),
@@ -24,14 +26,16 @@ func Completions() []gin.HandlerFunc {
 	}
 }
 
-// @Summary		ChatCompletions
-// @Description	ChatCompletions
-// @Tags			relay
-// @Produce		json
-// @Security		ApiKeyAuth
-// @Param			request	body		model.GeneralOpenAIRequest	true	"Request"
-// @Success		200		{object}	model.TextResponse			|		model.ChatCompletionsStreamResponse
-// @Router			/v1/chat/completions [post]
+// ChatCompletions godoc
+//
+//	@Summary		ChatCompletions
+//	@Description	ChatCompletions
+//	@Tags			relay
+//	@Produce		json
+//	@Security		ApiKeyAuth
+//	@Param			request	body		model.GeneralOpenAIRequest	true	"Request"
+//	@Success		200		{object}	model.TextResponse			|		model.ChatCompletionsStreamResponse
+//	@Router			/v1/chat/completions [post]
 func ChatCompletions() []gin.HandlerFunc {
 	return []gin.HandlerFunc{
 		middleware.NewDistribute(mode.ChatCompletions),
@@ -39,14 +43,16 @@ func ChatCompletions() []gin.HandlerFunc {
 	}
 }
 
-// @Summary		Embeddings
-// @Description	Embeddings
-// @Tags			relay
-// @Produce		json
-// @Security		ApiKeyAuth
-// @Param			request	body		model.EmbeddingRequest	true	"Request"
-// @Success		200		{object}	model.EmbeddingResponse
-// @Router			/v1/embeddings [post]
+// Embeddings godoc
+//
+//	@Summary		Embeddings
+//	@Description	Embeddings
+//	@Tags			relay
+//	@Produce		json
+//	@Security		ApiKeyAuth
+//	@Param			request	body		model.EmbeddingRequest	true	"Request"
+//	@Success		200		{object}	model.EmbeddingResponse
+//	@Router			/v1/embeddings [post]
 func Embeddings() []gin.HandlerFunc {
 	return []gin.HandlerFunc{
 		middleware.NewDistribute(mode.Embeddings),
@@ -61,14 +67,16 @@ func Edits() []gin.HandlerFunc {
 	}
 }
 
-// @Summary		ImagesGenerations
-// @Description	ImagesGenerations
-// @Tags			relay
-// @Produce		json
-// @Security		ApiKeyAuth
-// @Param			request	body		model.ImageRequest	true	"Request"
-// @Success		200		{object}	model.ImageResponse
-// @Router			/v1/images/generations [post]
+// ImagesGenerations godoc
+//
+//	@Summary		ImagesGenerations
+//	@Description	ImagesGenerations
+//	@Tags			relay
+//	@Produce		json
+//	@Security		ApiKeyAuth
+//	@Param			request	body		model.ImageRequest	true	"Request"
+//	@Success		200		{object}	model.ImageResponse
+//	@Router			/v1/images/generations [post]
 func ImagesGenerations() []gin.HandlerFunc {
 	return []gin.HandlerFunc{
 		middleware.NewDistribute(mode.ImagesGenerations),
@@ -76,14 +84,16 @@ func ImagesGenerations() []gin.HandlerFunc {
 	}
 }
 
-// @Summary		AudioSpeech
-// @Description	AudioSpeech
-// @Tags			relay
-// @Produce		json
-// @Security		ApiKeyAuth
-// @Param			request	body	model.TextToSpeechRequest	true	"Request"
-// @Success		200		{file}	file						"audio binary"
-// @Router			/v1/audio/speech [post]
+// AudioSpeech godoc
+//
+//	@Summary		AudioSpeech
+//	@Description	AudioSpeech
+//	@Tags			relay
+//	@Produce		json
+//	@Security		ApiKeyAuth
+//	@Param			request	body	model.TextToSpeechRequest	true	"Request"
+//	@Success		200		{file}	file						"audio binary"
+//	@Router			/v1/audio/speech [post]
 func AudioSpeech() []gin.HandlerFunc {
 	return []gin.HandlerFunc{
 		middleware.NewDistribute(mode.AudioSpeech),
@@ -91,15 +101,17 @@ func AudioSpeech() []gin.HandlerFunc {
 	}
 }
 
-// @Summary		AudioTranscription
-// @Description	AudioTranscription
-// @Tags			relay
-// @Produce		json
-// @Security		ApiKeyAuth
-// @Param			model	formData	string	true	"Model"
-// @Param			file	formData	file	true	"File"
-// @Success		200		{object}	model.SttJSONResponse
-// @Router			/v1/audio/transcription [post]
+// AudioTranscription godoc
+//
+//	@Summary		AudioTranscription
+//	@Description	AudioTranscription
+//	@Tags			relay
+//	@Produce		json
+//	@Security		ApiKeyAuth
+//	@Param			model	formData	string	true	"Model"
+//	@Param			file	formData	file	true	"File"
+//	@Success		200		{object}	model.SttJSONResponse
+//	@Router			/v1/audio/transcription [post]
 func AudioTranscription() []gin.HandlerFunc {
 	return []gin.HandlerFunc{
 		middleware.NewDistribute(mode.AudioTranscription),
@@ -107,15 +119,17 @@ func AudioTranscription() []gin.HandlerFunc {
 	}
 }
 
-// @Summary		AudioTranslation
-// @Description	AudioTranslation
-// @Tags			relay
-// @Produce		json
-// @Security		ApiKeyAuth
-// @Param			model	formData	string	true	"Model"
-// @Param			file	formData	file	true	"File"
-// @Success		200		{object}	model.SttJSONResponse
-// @Router			/v1/audio/translation [post]
+// AudioTranslation godoc
+//
+//	@Summary		AudioTranslation
+//	@Description	AudioTranslation
+//	@Tags			relay
+//	@Produce		json
+//	@Security		ApiKeyAuth
+//	@Param			model	formData	string	true	"Model"
+//	@Param			file	formData	file	true	"File"
+//	@Success		200		{object}	model.SttJSONResponse
+//	@Router			/v1/audio/translation [post]
 func AudioTranslation() []gin.HandlerFunc {
 	return []gin.HandlerFunc{
 		middleware.NewDistribute(mode.AudioTranslation),
@@ -130,14 +144,16 @@ func Moderations() []gin.HandlerFunc {
 	}
 }
 
-// @Summary		Rerank
-// @Description	Rerank
-// @Tags			relay
-// @Produce		json
-// @Security		ApiKeyAuth
-// @Param			request	body		model.RerankRequest	true	"Request"
-// @Success		200		{object}	model.RerankResponse
-// @Router			/v1/rerank [post]
+// Rerank godoc
+//
+//	@Summary		Rerank
+//	@Description	Rerank
+//	@Tags			relay
+//	@Produce		json
+//	@Security		ApiKeyAuth
+//	@Param			request	body		model.RerankRequest	true	"Request"
+//	@Success		200		{object}	model.RerankResponse
+//	@Router			/v1/rerank [post]
 func Rerank() []gin.HandlerFunc {
 	return []gin.HandlerFunc{
 		middleware.NewDistribute(mode.Rerank),
@@ -145,15 +161,17 @@ func Rerank() []gin.HandlerFunc {
 	}
 }
 
-// @Summary		ParsePdf
-// @Description	ParsePdf
-// @Tags			relay
-// @Produce		json
-// @Security		ApiKeyAuth
-// @Param			model	formData	string	true	"Model"
-// @Param			file	formData	file	true	"File"
-// @Success		200		{object}	model.ParsePdfResponse
-// @Router			/v1/parse-pdf [post]
+// ParsePdf godoc
+//
+//	@Summary		ParsePdf
+//	@Description	ParsePdf
+//	@Tags			relay
+//	@Produce		json
+//	@Security		ApiKeyAuth
+//	@Param			model	formData	string	true	"Model"
+//	@Param			file	formData	file	true	"File"
+//	@Success		200		{object}	model.ParsePdfResponse
+//	@Router			/v1/parse-pdf [post]
 func ParsePdf() []gin.HandlerFunc {
 	return []gin.HandlerFunc{
 		middleware.NewDistribute(mode.ParsePdf),
