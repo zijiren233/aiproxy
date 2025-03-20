@@ -11,8 +11,8 @@ import (
 	"github.com/labring/aiproxy/model"
 	"github.com/labring/aiproxy/relay/adaptor/openai"
 	"github.com/labring/aiproxy/relay/meta"
+	"github.com/labring/aiproxy/relay/mode"
 	relaymodel "github.com/labring/aiproxy/relay/model"
-	"github.com/labring/aiproxy/relay/relaymode"
 	"github.com/labring/aiproxy/relay/utils"
 )
 
@@ -57,13 +57,13 @@ func (a *Adaptor) GetRequestURL(meta *meta.Meta) (string, error) {
 	// Get API path suffix based on mode
 	var pathSuffix string
 	switch meta.Mode {
-	case relaymode.ChatCompletions:
+	case mode.ChatCompletions:
 		pathSuffix = "chat"
-	case relaymode.Embeddings:
+	case mode.Embeddings:
 		pathSuffix = "embeddings"
-	case relaymode.Rerank:
+	case mode.Rerank:
 		pathSuffix = "reranker"
-	case relaymode.ImagesGenerations:
+	case mode.ImagesGenerations:
 		pathSuffix = "text2image"
 	}
 
@@ -91,14 +91,14 @@ func (a *Adaptor) SetupRequestHeader(meta *meta.Meta, _ *gin.Context, req *http.
 
 func (a *Adaptor) ConvertRequest(meta *meta.Meta, req *http.Request) (string, http.Header, io.Reader, error) {
 	switch meta.Mode {
-	case relaymode.Embeddings:
+	case mode.Embeddings:
 		meta.Set(openai.MetaEmbeddingsPatchInputToSlices, true)
 		return openai.ConvertRequest(meta, req)
-	case relaymode.Rerank:
+	case mode.Rerank:
 		return openai.ConvertRequest(meta, req)
-	case relaymode.ImagesGenerations:
+	case mode.ImagesGenerations:
 		return openai.ConvertRequest(meta, req)
-	case relaymode.ChatCompletions:
+	case mode.ChatCompletions:
 		return ConvertRequest(meta, req)
 	default:
 		return "", nil, nil, fmt.Errorf("unsupported mode: %s", meta.Mode)
@@ -111,13 +111,13 @@ func (a *Adaptor) DoRequest(_ *meta.Meta, _ *gin.Context, req *http.Request) (*h
 
 func (a *Adaptor) DoResponse(meta *meta.Meta, c *gin.Context, resp *http.Response) (usage *relaymodel.Usage, err *relaymodel.ErrorWithStatusCode) {
 	switch meta.Mode {
-	case relaymode.Embeddings:
+	case mode.Embeddings:
 		usage, err = EmbeddingsHandler(meta, c, resp)
-	case relaymode.Rerank:
+	case mode.Rerank:
 		usage, err = RerankHandler(meta, c, resp)
-	case relaymode.ImagesGenerations:
+	case mode.ImagesGenerations:
 		usage, err = ImageHandler(meta, c, resp)
-	case relaymode.ChatCompletions:
+	case mode.ChatCompletions:
 		if utils.IsStreamResponse(resp) {
 			err, usage = StreamHandler(meta, c, resp)
 		} else {

@@ -19,8 +19,8 @@ import (
 	"github.com/labring/aiproxy/relay/adaptor/aws/utils"
 	"github.com/labring/aiproxy/relay/adaptor/openai"
 	"github.com/labring/aiproxy/relay/meta"
+	"github.com/labring/aiproxy/relay/mode"
 	relaymodel "github.com/labring/aiproxy/relay/model"
-	"github.com/labring/aiproxy/relay/relaymode"
 	"github.com/pkg/errors"
 )
 
@@ -36,7 +36,7 @@ var AwsModelIDMap = map[string]awsModelItem{
 	"claude-instant-1.2": {
 		ModelConfig: model.ModelConfig{
 			Model: "claude-instant-1.2",
-			Type:  relaymode.ChatCompletions,
+			Type:  mode.ChatCompletions,
 			Owner: model.ModelOwnerAnthropic,
 		},
 		ID: "anthropic.claude-instant-v1",
@@ -44,7 +44,7 @@ var AwsModelIDMap = map[string]awsModelItem{
 	"claude-2.0": {
 		ModelConfig: model.ModelConfig{
 			Model: "claude-2.0",
-			Type:  relaymode.ChatCompletions,
+			Type:  mode.ChatCompletions,
 			Owner: model.ModelOwnerAnthropic,
 		},
 		ID: "anthropic.claude-v2",
@@ -52,7 +52,7 @@ var AwsModelIDMap = map[string]awsModelItem{
 	"claude-2.1": {
 		ModelConfig: model.ModelConfig{
 			Model: "claude-2.1",
-			Type:  relaymode.ChatCompletions,
+			Type:  mode.ChatCompletions,
 			Owner: model.ModelOwnerAnthropic,
 		},
 		ID: "anthropic.claude-v2:1",
@@ -60,7 +60,7 @@ var AwsModelIDMap = map[string]awsModelItem{
 	"claude-3-haiku-20240307": {
 		ModelConfig: model.ModelConfig{
 			Model: "claude-3-haiku-20240307",
-			Type:  relaymode.ChatCompletions,
+			Type:  mode.ChatCompletions,
 			Owner: model.ModelOwnerAnthropic,
 		},
 		ID: "anthropic.claude-3-haiku-20240307-v1:0",
@@ -68,7 +68,7 @@ var AwsModelIDMap = map[string]awsModelItem{
 	"claude-3-5-sonnet-latest": {
 		ModelConfig: model.ModelConfig{
 			Model: "claude-3-5-sonnet-latest",
-			Type:  relaymode.ChatCompletions,
+			Type:  mode.ChatCompletions,
 			Owner: model.ModelOwnerAnthropic,
 		},
 		ID: "anthropic.claude-3-5-sonnet-20241022-v2:0",
@@ -76,7 +76,7 @@ var AwsModelIDMap = map[string]awsModelItem{
 	"claude-3-5-haiku-20241022": {
 		ModelConfig: model.ModelConfig{
 			Model: "claude-3-5-haiku-20241022",
-			Type:  relaymode.ChatCompletions,
+			Type:  mode.ChatCompletions,
 			Owner: model.ModelOwnerAnthropic,
 		},
 		ID: "anthropic.claude-3-5-haiku-20241022-v1:0",
@@ -188,7 +188,7 @@ func StreamHandler(meta *meta.Meta, c *gin.Context) (*relaymodel.ErrorWithStatus
 
 	c.Writer.Header().Set("Content-Type", "text/event-stream")
 	var usage relaymodel.Usage
-	var lastToolCallChoice *openai.ChatCompletionsStreamResponseChoice
+	var lastToolCallChoice *relaymodel.ChatCompletionsStreamResponseChoice
 	var usageWrited bool
 
 	c.Stream(func(_ io.Writer) bool {
@@ -246,12 +246,12 @@ func StreamHandler(meta *meta.Meta, c *gin.Context) (*relaymodel.ErrorWithStatus
 	})
 
 	if !usageWrited {
-		_ = render.ObjectData(c, &openai.ChatCompletionsStreamResponse{
+		_ = render.ObjectData(c, &relaymodel.ChatCompletionsStreamResponse{
 			ID:      openai.ChatCompletionID(),
 			Model:   meta.OriginModel,
 			Object:  relaymodel.ChatCompletionChunk,
 			Created: time.Now().Unix(),
-			Choices: []*openai.ChatCompletionsStreamResponseChoice{},
+			Choices: []*relaymodel.ChatCompletionsStreamResponseChoice{},
 			Usage:   &usage,
 		})
 	}

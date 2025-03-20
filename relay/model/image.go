@@ -10,3 +10,14 @@ type ImageRequest struct {
 	User           string `json:"user,omitempty"`
 	N              int    `json:"n,omitempty"`
 }
+
+type ImageData struct {
+	URL           string `json:"url,omitempty"`
+	B64Json       string `json:"b64_json,omitempty"`
+	RevisedPrompt string `json:"revised_prompt,omitempty"`
+}
+
+type ImageResponse struct {
+	Data    []*ImageData `json:"data"`
+	Created int64        `json:"created"`
+}

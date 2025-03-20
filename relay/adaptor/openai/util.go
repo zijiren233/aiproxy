@@ -3,13 +3,13 @@ package openai
 import (
 	"github.com/labring/aiproxy/middleware"
 	"github.com/labring/aiproxy/relay/meta"
-	relaymodel "github.com/labring/aiproxy/relay/model"
-	"github.com/labring/aiproxy/relay/relaymode"
+	"github.com/labring/aiproxy/relay/mode"
+	model "github.com/labring/aiproxy/relay/model"
 )
 
-func ErrorWrapper(err error, code any, statusCode int) *relaymodel.ErrorWithStatusCode {
-	return &relaymodel.ErrorWithStatusCode{
-		Error: relaymodel.Error{
+func ErrorWrapper(err error, code any, statusCode int) *model.ErrorWithStatusCode {
+	return &model.ErrorWithStatusCode{
+		Error: model.Error{
 			Message: err.Error(),
 			Type:    middleware.ErrorTypeAIPROXY,
 			Code:    code,
@@ -18,9 +18,9 @@ func ErrorWrapper(err error, code any, statusCode int) *relaymodel.ErrorWithStat
 	}
 }
 
-func ErrorWrapperWithMessage(message string, code any, statusCode int) *relaymodel.ErrorWithStatusCode {
-	return &relaymodel.ErrorWithStatusCode{
-		Error: relaymodel.Error{
+func ErrorWrapperWithMessage(message string, code any, statusCode int) *model.ErrorWithStatusCode {
+	return &model.ErrorWithStatusCode{
+		Error: model.Error{
 			Message: message,
 			Type:    middleware.ErrorTypeAIPROXY,
 			Code:    code,
@@ -29,13 +29,13 @@ func ErrorWrapperWithMessage(message string, code any, statusCode int) *relaymod
 	}
 }
 
-func GetPromptTokens(meta *meta.Meta, textRequest *relaymodel.GeneralOpenAIRequest) int {
+func GetPromptTokens(meta *meta.Meta, textRequest *model.GeneralOpenAIRequest) int {
 	switch meta.Mode {
-	case relaymode.ChatCompletions:
+	case mode.ChatCompletions:
 		return CountTokenMessages(textRequest.Messages, textRequest.Model)
-	case relaymode.Completions:
+	case mode.Completions:
 		return CountTokenInput(textRequest.Prompt, textRequest.Model)
-	case relaymode.Moderations:
+	case mode.Moderations:
 		return CountTokenInput(textRequest.Input, textRequest.Model)
 	}
 	return 0

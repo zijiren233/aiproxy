@@ -2,13 +2,13 @@ package deepseek
 
 import (
 	"github.com/labring/aiproxy/model"
-	"github.com/labring/aiproxy/relay/relaymode"
+	"github.com/labring/aiproxy/relay/mode"
 )
 
 var ModelList = []*model.ModelConfig{
 	{
 		Model:       "deepseek-chat",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerDeepSeek,
 		InputPrice:  0.001,
 		OutputPrice: 0.002,
@@ -22,7 +22,7 @@ var ModelList = []*model.ModelConfig{
 
 	{
 		Model:       "deepseek-reasoner",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerDeepSeek,
 		InputPrice:  0.004,
 		OutputPrice: 0.016,

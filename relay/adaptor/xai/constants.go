@@ -2,13 +2,13 @@ package xai
 
 import (
 	"github.com/labring/aiproxy/model"
-	"github.com/labring/aiproxy/relay/relaymode"
+	"github.com/labring/aiproxy/relay/mode"
 )
 
 var ModelList = []*model.ModelConfig{
 	{
 		Model:       "grok-3",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerXAI,
 		InputPrice:  0.002,
 		OutputPrice: 0.01,
@@ -20,7 +20,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "grok-3-deepsearch",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerXAI,
 		InputPrice:  0.01,
 		OutputPrice: 0.05,
@@ -32,7 +32,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "grok-3-reasoner",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerXAI,
 		InputPrice:  0.004,
 		OutputPrice: 0.02,
@@ -43,7 +43,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "grok-2-1212",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerXAI,
 		InputPrice:  0.002,
 		OutputPrice: 0.01,
@@ -54,7 +54,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "grok-2-vision-1212",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerXAI,
 		InputPrice:  0.06,
 		OutputPrice: 0.06,
@@ -66,7 +66,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "grok-beta",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerXAI,
 		InputPrice:  0.03,
 		OutputPrice: 0.12,
@@ -77,7 +77,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "grok-vision-beta",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerXAI,
 		InputPrice:  0.06,
 		OutputPrice: 0.06,

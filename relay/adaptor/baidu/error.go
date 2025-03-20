@@ -5,12 +5,12 @@ import (
 	"strconv"
 
 	"github.com/labring/aiproxy/relay/adaptor/openai"
-	relaymodel "github.com/labring/aiproxy/relay/model"
+	model "github.com/labring/aiproxy/relay/model"
 )
 
 // https://cloud.baidu.com/doc/WENXINWORKSHOP/s/tlmyncueh
 
-func ErrorHandler(baiduError *Error) *relaymodel.ErrorWithStatusCode {
+func ErrorHandler(baiduError *Error) *model.ErrorWithStatusCode {
 	switch baiduError.ErrorCode {
 	case 13, 14, 100, 110:
 		return openai.ErrorWrapperWithMessage(

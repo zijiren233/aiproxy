@@ -10,8 +10,8 @@ import (
 	"github.com/labring/aiproxy/model"
 	"github.com/labring/aiproxy/relay/adaptor/openai"
 	"github.com/labring/aiproxy/relay/meta"
+	"github.com/labring/aiproxy/relay/mode"
 	relaymodel "github.com/labring/aiproxy/relay/model"
-	"github.com/labring/aiproxy/relay/relaymode"
 	"github.com/labring/aiproxy/relay/utils"
 )
 
@@ -27,11 +27,11 @@ func (a *Adaptor) GetRequestURL(meta *meta.Meta) (string, error) {
 	// https://github.com/ollama/ollama/blob/main/docs/api.md
 	u := meta.Channel.BaseURL
 	switch meta.Mode {
-	case relaymode.Embeddings:
+	case mode.Embeddings:
 		return u + "/api/embed", nil
-	case relaymode.ChatCompletions:
+	case mode.ChatCompletions:
 		return u + "/api/chat", nil
-	case relaymode.Completions:
+	case mode.Completions:
 		return u + "/api/generate", nil
 	default:
 		return "", fmt.Errorf("unsupported mode: %s", meta.Mode)
@@ -48,9 +48,9 @@ func (a *Adaptor) ConvertRequest(meta *meta.Meta, request *http.Request) (string
 		return "", nil, nil, errors.New("request is nil")
 	}
 	switch meta.Mode {
-	case relaymode.Embeddings:
+	case mode.Embeddings:
 		return ConvertEmbeddingRequest(meta, request)
-	case relaymode.ChatCompletions, relaymode.Completions:
+	case mode.ChatCompletions, mode.Completions:
 		return ConvertRequest(meta, request)
 	default:
 		return "", nil, nil, fmt.Errorf("unsupported mode: %s", meta.Mode)
@@ -63,9 +63,9 @@ func (a *Adaptor) DoRequest(_ *meta.Meta, _ *gin.Context, req *http.Request) (*h
 
 func (a *Adaptor) DoResponse(meta *meta.Meta, c *gin.Context, resp *http.Response) (usage *relaymodel.Usage, err *relaymodel.ErrorWithStatusCode) {
 	switch meta.Mode {
-	case relaymode.Embeddings:
+	case mode.Embeddings:
 		usage, err = EmbeddingHandler(meta, c, resp)
-	case relaymode.ChatCompletions, relaymode.Completions:
+	case mode.ChatCompletions, mode.Completions:
 		if utils.IsStreamResponse(resp) {
 			usage, err = StreamHandler(meta, c, resp)
 		} else {

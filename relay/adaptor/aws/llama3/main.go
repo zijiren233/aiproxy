@@ -19,8 +19,8 @@ import (
 	"github.com/labring/aiproxy/relay/adaptor/aws/utils"
 	"github.com/labring/aiproxy/relay/adaptor/openai"
 	"github.com/labring/aiproxy/relay/meta"
+	"github.com/labring/aiproxy/relay/mode"
 	relaymodel "github.com/labring/aiproxy/relay/model"
-	"github.com/labring/aiproxy/relay/relaymode"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
@@ -37,7 +37,7 @@ var AwsModelIDMap = map[string]awsModelItem{
 	"llama3-8b-8192": {
 		ModelConfig: model.ModelConfig{
 			Model: "llama3-8b-8192",
-			Type:  relaymode.ChatCompletions,
+			Type:  mode.ChatCompletions,
 			Owner: model.ModelOwnerMeta,
 		},
 		ID: "meta.llama3-8b-instruct-v1:0",
@@ -45,7 +45,7 @@ var AwsModelIDMap = map[string]awsModelItem{
 	"llama3-70b-8192": {
 		ModelConfig: model.ModelConfig{
 			Model: "llama3-70b-8192",
-			Type:  relaymode.ChatCompletions,
+			Type:  mode.ChatCompletions,
 			Owner: model.ModelOwnerMeta,
 		},
 		ID: "meta.llama3-70b-instruct-v1:0",
@@ -140,12 +140,12 @@ func Handler(meta *meta.Meta, c *gin.Context) (*relaymodel.ErrorWithStatusCode, 
 	return nil, &usage
 }
 
-func ResponseLlama2OpenAI(llamaResponse *Response) *openai.TextResponse {
+func ResponseLlama2OpenAI(llamaResponse *Response) *relaymodel.TextResponse {
 	var responseText string
 	if len(llamaResponse.Generation) > 0 {
 		responseText = llamaResponse.Generation
 	}
-	choice := openai.TextResponseChoice{
+	choice := relaymodel.TextResponseChoice{
 		Index: 0,
 		Message: relaymodel.Message{
 			Role:    "assistant",
@@ -154,11 +154,11 @@ func ResponseLlama2OpenAI(llamaResponse *Response) *openai.TextResponse {
 		},
 		FinishReason: llamaResponse.StopReason,
 	}
-	fullTextResponse := openai.TextResponse{
+	fullTextResponse := relaymodel.TextResponse{
 		ID:      openai.ChatCompletionID(),
 		Object:  relaymodel.ChatCompletion,
 		Created: time.Now().Unix(),
-		Choices: []*openai.TextResponseChoice{&choice},
+		Choices: []*relaymodel.TextResponseChoice{&choice},
 	}
 	return &fullTextResponse
 }
@@ -247,16 +247,16 @@ func StreamHandler(meta *meta.Meta, c *gin.Context) (*relaymodel.ErrorWithStatus
 	return nil, &usage
 }
 
-func StreamResponseLlama2OpenAI(llamaResponse *StreamResponse) *openai.ChatCompletionsStreamResponse {
-	var choice openai.ChatCompletionsStreamResponseChoice
+func StreamResponseLlama2OpenAI(llamaResponse *StreamResponse) *relaymodel.ChatCompletionsStreamResponse {
+	var choice relaymodel.ChatCompletionsStreamResponseChoice
 	choice.Delta.Content = llamaResponse.Generation
 	choice.Delta.Role = "assistant"
 	finishReason := llamaResponse.StopReason
 	if finishReason != "null" {
 		choice.FinishReason = &finishReason
 	}
-	var openaiResponse openai.ChatCompletionsStreamResponse
+	var openaiResponse relaymodel.ChatCompletionsStreamResponse
 	openaiResponse.Object = relaymodel.ChatCompletionChunk
-	openaiResponse.Choices = []*openai.ChatCompletionsStreamResponseChoice{&choice}
+	openaiResponse.Choices = []*relaymodel.ChatCompletionsStreamResponseChoice{&choice}
 	return &openaiResponse
 }

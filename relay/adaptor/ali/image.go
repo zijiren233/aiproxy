@@ -166,8 +166,8 @@ func asyncTaskWait(ctx context.Context, taskID string, key string) (*TaskRespons
 	return nil, errors.New("aliAsyncTaskWait timeout")
 }
 
-func responseAli2OpenAIImage(ctx context.Context, response *TaskResponse, responseFormat string) *openai.ImageResponse {
-	imageResponse := openai.ImageResponse{
+func responseAli2OpenAIImage(ctx context.Context, response *TaskResponse, responseFormat string) *model.ImageResponse {
+	imageResponse := model.ImageResponse{
 		Created: time.Now().Unix(),
 	}
 
@@ -189,7 +189,7 @@ func responseAli2OpenAIImage(ctx context.Context, response *TaskResponse, respon
 			b64Json = data.B64Image
 		}
 
-		imageResponse.Data = append(imageResponse.Data, &openai.ImageData{
+		imageResponse.Data = append(imageResponse.Data, &model.ImageData{
 			URL:           data.URL,
 			B64Json:       b64Json,
 			RevisedPrompt: "",

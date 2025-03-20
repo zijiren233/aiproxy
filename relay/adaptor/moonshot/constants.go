@@ -2,13 +2,13 @@ package moonshot
 
 import (
 	"github.com/labring/aiproxy/model"
-	"github.com/labring/aiproxy/relay/relaymode"
+	"github.com/labring/aiproxy/relay/mode"
 )
 
 var ModelList = []*model.ModelConfig{
 	{
 		Model:       "moonshot-v1-8k",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerMoonshot,
 		InputPrice:  0.012,
 		OutputPrice: 0.012,
@@ -20,7 +20,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "moonshot-v1-32k",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerMoonshot,
 		InputPrice:  0.024,
 		OutputPrice: 0.024,
@@ -32,7 +32,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "moonshot-v1-128k",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerMoonshot,
 		InputPrice:  0.06,
 		OutputPrice: 0.06,
@@ -45,7 +45,7 @@ var ModelList = []*model.ModelConfig{
 
 	{
 		Model:       "moonshot-v1-8k-vision-preview",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerMoonshot,
 		InputPrice:  0.012,
 		OutputPrice: 0.012,
@@ -58,7 +58,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "moonshot-v1-32k-vision-preview",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerMoonshot,
 		InputPrice:  0.024,
 		OutputPrice: 0.024,
@@ -71,7 +71,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "moonshot-v1-128k-vision-preview",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerMoonshot,
 		InputPrice:  0.06,
 		OutputPrice: 0.06,

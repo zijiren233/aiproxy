@@ -73,7 +73,7 @@ func ConvertRequest(textRequest *model.GeneralOpenAIRequest) *Request {
 	return &cohereRequest
 }
 
-func StreamResponse2OpenAI(meta *meta.Meta, cohereResponse *StreamResponse) *openai.ChatCompletionsStreamResponse {
+func StreamResponse2OpenAI(meta *meta.Meta, cohereResponse *StreamResponse) *model.ChatCompletionsStreamResponse {
 	var response *Response
 	var responseText string
 	var finishReason string
@@ -98,18 +98,18 @@ func StreamResponse2OpenAI(meta *meta.Meta, cohereResponse *StreamResponse) *ope
 		return nil
 	}
 
-	var choice openai.ChatCompletionsStreamResponseChoice
+	var choice model.ChatCompletionsStreamResponseChoice
 	choice.Delta.Content = responseText
 	choice.Delta.Role = "assistant"
 	if finishReason != "" {
 		choice.FinishReason = &finishReason
 	}
-	openaiResponse := openai.ChatCompletionsStreamResponse{
+	openaiResponse := model.ChatCompletionsStreamResponse{
 		ID:      "chatcmpl-" + cohereResponse.GenerationID,
 		Model:   meta.OriginModel,
 		Created: time.Now().Unix(),
 		Object:  model.ChatCompletionChunk,
-		Choices: []*openai.ChatCompletionsStreamResponseChoice{&choice},
+		Choices: []*model.ChatCompletionsStreamResponseChoice{&choice},
 	}
 	if response != nil {
 		openaiResponse.Usage = &model.Usage{
@@ -121,8 +121,8 @@ func StreamResponse2OpenAI(meta *meta.Meta, cohereResponse *StreamResponse) *ope
 	return &openaiResponse
 }
 
-func Response2OpenAI(meta *meta.Meta, cohereResponse *Response) *openai.TextResponse {
-	choice := openai.TextResponseChoice{
+func Response2OpenAI(meta *meta.Meta, cohereResponse *Response) *model.TextResponse {
+	choice := model.TextResponseChoice{
 		Index: 0,
 		Message: model.Message{
 			Role:    "assistant",
@@ -131,12 +131,12 @@ func Response2OpenAI(meta *meta.Meta, cohereResponse *Response) *openai.TextResp
 		},
 		FinishReason: stopReasonCohere2OpenAI(cohereResponse.FinishReason),
 	}
-	fullTextResponse := openai.TextResponse{
+	fullTextResponse := model.TextResponse{
 		ID:      openai.ChatCompletionID(),
 		Model:   meta.OriginModel,
 		Object:  model.ChatCompletion,
 		Created: time.Now().Unix(),
-		Choices: []*openai.TextResponseChoice{&choice},
+		Choices: []*model.TextResponseChoice{&choice},
 		Usage: model.Usage{
 			PromptTokens:     cohereResponse.Meta.Tokens.InputTokens,
 			CompletionTokens: cohereResponse.Meta.Tokens.OutputTokens,

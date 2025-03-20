@@ -14,7 +14,7 @@ import (
 	"github.com/labring/aiproxy/middleware"
 	"github.com/labring/aiproxy/relay/adaptor/openai"
 	"github.com/labring/aiproxy/relay/meta"
-	relaymodel "github.com/labring/aiproxy/relay/model"
+	model "github.com/labring/aiproxy/relay/model"
 	"github.com/labring/aiproxy/relay/utils"
 )
 
@@ -190,13 +190,13 @@ func TTSDoRequest(meta *meta.Meta, req *http.Request) (*http.Response, error) {
 	}, nil
 }
 
-func TTSDoResponse(meta *meta.Meta, c *gin.Context, _ *http.Response) (usage *relaymodel.Usage, err *relaymodel.ErrorWithStatusCode) {
+func TTSDoResponse(meta *meta.Meta, c *gin.Context, _ *http.Response) (usage *model.Usage, err *model.ErrorWithStatusCode) {
 	log := middleware.GetLogger(c)
 
 	conn := meta.MustGet("ws_conn").(*websocket.Conn)
 	defer conn.Close()
 
-	usage = &relaymodel.Usage{}
+	usage = &model.Usage{}
 
 	for {
 		messageType, data, err := conn.ReadMessage()

@@ -338,13 +338,13 @@ func getToolCall(item *Part) (*model.Tool, error) {
 	return &toolCall, nil
 }
 
-func responseGeminiChat2OpenAI(meta *meta.Meta, response *ChatResponse) *openai.TextResponse {
-	fullTextResponse := openai.TextResponse{
+func responseGeminiChat2OpenAI(meta *meta.Meta, response *ChatResponse) *model.TextResponse {
+	fullTextResponse := model.TextResponse{
 		ID:      openai.ChatCompletionID(),
 		Model:   meta.OriginModel,
 		Object:  model.ChatCompletion,
 		Created: time.Now().Unix(),
-		Choices: make([]*openai.TextResponseChoice, 0, len(response.Candidates)),
+		Choices: make([]*model.TextResponseChoice, 0, len(response.Candidates)),
 	}
 	if response.UsageMetadata != nil {
 		fullTextResponse.Usage = model.Usage{
@@ -354,7 +354,7 @@ func responseGeminiChat2OpenAI(meta *meta.Meta, response *ChatResponse) *openai.
 		}
 	}
 	for i, candidate := range response.Candidates {
-		choice := openai.TextResponseChoice{
+		choice := model.TextResponseChoice{
 			Index: i,
 			Message: model.Message{
 				Role:    "assistant",
@@ -406,13 +406,13 @@ func responseGeminiChat2OpenAI(meta *meta.Meta, response *ChatResponse) *openai.
 	return &fullTextResponse
 }
 
-func streamResponseGeminiChat2OpenAI(meta *meta.Meta, geminiResponse *ChatResponse) *openai.ChatCompletionsStreamResponse {
-	response := &openai.ChatCompletionsStreamResponse{
+func streamResponseGeminiChat2OpenAI(meta *meta.Meta, geminiResponse *ChatResponse) *model.ChatCompletionsStreamResponse {
+	response := &model.ChatCompletionsStreamResponse{
 		ID:      openai.ChatCompletionID(),
 		Created: time.Now().Unix(),
 		Model:   meta.OriginModel,
 		Object:  model.ChatCompletionChunk,
-		Choices: make([]*openai.ChatCompletionsStreamResponseChoice, 0, len(geminiResponse.Candidates)),
+		Choices: make([]*model.ChatCompletionsStreamResponseChoice, 0, len(geminiResponse.Candidates)),
 	}
 	if geminiResponse.UsageMetadata != nil {
 		response.Usage = &model.Usage{
@@ -422,7 +422,7 @@ func streamResponseGeminiChat2OpenAI(meta *meta.Meta, geminiResponse *ChatRespon
 		}
 	}
 	for i, candidate := range geminiResponse.Candidates {
-		choice := openai.ChatCompletionsStreamResponseChoice{
+		choice := model.ChatCompletionsStreamResponseChoice{
 			Index: i,
 			Delta: model.Message{
 				Content: "",

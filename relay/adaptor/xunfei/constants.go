@@ -2,7 +2,7 @@ package xunfei
 
 import (
 	"github.com/labring/aiproxy/model"
-	"github.com/labring/aiproxy/relay/relaymode"
+	"github.com/labring/aiproxy/relay/mode"
 )
 
 // https://www.xfyun.cn/doc/spark/HTTP%E8%B0%83%E7%94%A8%E6%96%87%E6%A1%A3.html#_1-%E6%8E%A5%E5%8F%A3%E8%AF%B4%E6%98%8E
@@ -10,7 +10,7 @@ import (
 var ModelList = []*model.ModelConfig{
 	{
 		Model:       "SparkDesk-4.0-Ultra",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerXunfei,
 		InputPrice:  0.14,
 		OutputPrice: 0.14,
@@ -22,7 +22,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "SparkDesk-Lite",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerXunfei,
 		InputPrice:  0.001,
 		OutputPrice: 0.001,
@@ -33,7 +33,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "SparkDesk-Max",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerXunfei,
 		InputPrice:  0.06,
 		OutputPrice: 0.06,
@@ -45,7 +45,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "SparkDesk-Max-32k",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerXunfei,
 		InputPrice:  0.09,
 		OutputPrice: 0.09,
@@ -57,7 +57,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "SparkDesk-Pro",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerXunfei,
 		InputPrice:  0.014,
 		OutputPrice: 0.014,
@@ -68,7 +68,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "SparkDesk-Pro-128K",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerXunfei,
 		InputPrice:  0.026,
 		OutputPrice: 0.026,

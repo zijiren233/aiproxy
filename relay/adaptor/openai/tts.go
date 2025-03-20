@@ -11,7 +11,7 @@ import (
 	"github.com/labring/aiproxy/common"
 	"github.com/labring/aiproxy/middleware"
 	"github.com/labring/aiproxy/relay/meta"
-	relaymodel "github.com/labring/aiproxy/relay/model"
+	model "github.com/labring/aiproxy/relay/model"
 )
 
 func ConvertTTSRequest(meta *meta.Meta, req *http.Request, defaultVoice string) (string, http.Header, io.Reader, error) {
@@ -54,7 +54,7 @@ func ConvertTTSRequest(meta *meta.Meta, req *http.Request, defaultVoice string) 
 	return http.MethodPost, nil, bytes.NewReader(jsonData), nil
 }
 
-func TTSHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*relaymodel.Usage, *relaymodel.ErrorWithStatusCode) {
+func TTSHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, *model.ErrorWithStatusCode) {
 	if resp.StatusCode != http.StatusOK {
 		return nil, ErrorHanlder(resp)
 	}
@@ -71,7 +71,7 @@ func TTSHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*relaymod
 	if err != nil {
 		log.Warnf("write response body failed: %v", err)
 	}
-	return &relaymodel.Usage{
+	return &model.Usage{
 		PromptTokens:     meta.InputTokens,
 		CompletionTokens: 0,
 		TotalTokens:      meta.InputTokens,

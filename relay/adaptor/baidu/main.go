@@ -83,8 +83,8 @@ func ConvertRequest(meta *meta.Meta, req *http.Request) (string, http.Header, io
 	return http.MethodPost, nil, bytes.NewReader(data), nil
 }
 
-func response2OpenAI(meta *meta.Meta, response *ChatResponse) *openai.TextResponse {
-	choice := openai.TextResponseChoice{
+func response2OpenAI(meta *meta.Meta, response *ChatResponse) *model.TextResponse {
+	choice := model.TextResponseChoice{
 		Index: 0,
 		Message: model.Message{
 			Role:    "assistant",
@@ -92,12 +92,12 @@ func response2OpenAI(meta *meta.Meta, response *ChatResponse) *openai.TextRespon
 		},
 		FinishReason: model.StopFinishReason,
 	}
-	fullTextResponse := openai.TextResponse{
+	fullTextResponse := model.TextResponse{
 		ID:      response.ID,
 		Object:  model.ChatCompletion,
 		Created: response.Created,
 		Model:   meta.OriginModel,
-		Choices: []*openai.TextResponseChoice{&choice},
+		Choices: []*model.TextResponseChoice{&choice},
 	}
 	if response.Usage != nil {
 		fullTextResponse.Usage = *response.Usage
@@ -105,19 +105,19 @@ func response2OpenAI(meta *meta.Meta, response *ChatResponse) *openai.TextRespon
 	return &fullTextResponse
 }
 
-func streamResponse2OpenAI(meta *meta.Meta, baiduResponse *ChatStreamResponse) *openai.ChatCompletionsStreamResponse {
-	var choice openai.ChatCompletionsStreamResponseChoice
+func streamResponse2OpenAI(meta *meta.Meta, baiduResponse *ChatStreamResponse) *model.ChatCompletionsStreamResponse {
+	var choice model.ChatCompletionsStreamResponseChoice
 	choice.Delta.Content = baiduResponse.Result
 	if baiduResponse.IsEnd {
 		finishReason := model.StopFinishReason
 		choice.FinishReason = &finishReason
 	}
-	response := openai.ChatCompletionsStreamResponse{
+	response := model.ChatCompletionsStreamResponse{
 		ID:      baiduResponse.ID,
 		Object:  model.ChatCompletionChunk,
 		Created: baiduResponse.Created,
 		Model:   meta.OriginModel,
-		Choices: []*openai.ChatCompletionsStreamResponseChoice{&choice},
+		Choices: []*model.ChatCompletionsStreamResponseChoice{&choice},
 		Usage:   baiduResponse.Usage,
 	}
 	return &response

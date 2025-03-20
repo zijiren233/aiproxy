@@ -13,8 +13,8 @@ import (
 	"github.com/labring/aiproxy/model"
 	"github.com/labring/aiproxy/relay/adaptor"
 	"github.com/labring/aiproxy/relay/meta"
+	"github.com/labring/aiproxy/relay/mode"
 	relaymodel "github.com/labring/aiproxy/relay/model"
-	"github.com/labring/aiproxy/relay/relaymode"
 	"github.com/labring/aiproxy/relay/utils"
 )
 
@@ -33,25 +33,25 @@ func (a *Adaptor) GetRequestURL(meta *meta.Meta) (string, error) {
 
 	var path string
 	switch meta.Mode {
-	case relaymode.ChatCompletions:
+	case mode.ChatCompletions:
 		path = "/chat/completions"
-	case relaymode.Completions:
+	case mode.Completions:
 		path = "/completions"
-	case relaymode.Embeddings:
+	case mode.Embeddings:
 		path = "/embeddings"
-	case relaymode.Moderations:
+	case mode.Moderations:
 		path = "/moderations"
-	case relaymode.ImagesGenerations:
+	case mode.ImagesGenerations:
 		path = "/images/generations"
-	case relaymode.Edits:
+	case mode.Edits:
 		path = "/edits"
-	case relaymode.AudioSpeech:
+	case mode.AudioSpeech:
 		path = "/audio/speech"
-	case relaymode.AudioTranscription:
+	case mode.AudioTranscription:
 		path = "/audio/transcriptions"
-	case relaymode.AudioTranslation:
+	case mode.AudioTranslation:
 		path = "/audio/translations"
-	case relaymode.Rerank:
+	case mode.Rerank:
 		path = "/rerank"
 	default:
 		return "", fmt.Errorf("unsupported mode: %s", meta.Mode)
@@ -74,20 +74,20 @@ func ConvertRequest(meta *meta.Meta, req *http.Request) (string, http.Header, io
 		return "", nil, nil, errors.New("request is nil")
 	}
 	switch meta.Mode {
-	case relaymode.Moderations:
+	case mode.Moderations:
 		meta.Set(MetaEmbeddingsPatchInputToSlices, true)
 		return ConvertEmbeddingsRequest(meta, req)
-	case relaymode.Embeddings, relaymode.Completions:
+	case mode.Embeddings, mode.Completions:
 		return ConvertEmbeddingsRequest(meta, req)
-	case relaymode.ChatCompletions:
+	case mode.ChatCompletions:
 		return ConvertTextRequest(meta, req, meta.GetBool(DoNotPatchStreamOptionsIncludeUsageMetaKey))
-	case relaymode.ImagesGenerations:
+	case mode.ImagesGenerations:
 		return ConvertImageRequest(meta, req)
-	case relaymode.AudioTranscription, relaymode.AudioTranslation:
+	case mode.AudioTranscription, mode.AudioTranslation:
 		return ConvertSTTRequest(meta, req)
-	case relaymode.AudioSpeech:
+	case mode.AudioSpeech:
 		return ConvertTTSRequest(meta, req, "")
-	case relaymode.Rerank:
+	case mode.Rerank:
 		return ConvertRerankRequest(meta, req)
 	default:
 		return "", nil, nil, fmt.Errorf("unsupported mode: %s", meta.Mode)
@@ -96,19 +96,19 @@ func ConvertRequest(meta *meta.Meta, req *http.Request) (string, http.Header, io
 
 func DoResponse(meta *meta.Meta, c *gin.Context, resp *http.Response) (usage *relaymodel.Usage, err *relaymodel.ErrorWithStatusCode) {
 	switch meta.Mode {
-	case relaymode.ImagesGenerations:
+	case mode.ImagesGenerations:
 		usage, err = ImageHandler(meta, c, resp)
-	case relaymode.AudioTranscription, relaymode.AudioTranslation:
+	case mode.AudioTranscription, mode.AudioTranslation:
 		usage, err = STTHandler(meta, c, resp)
-	case relaymode.AudioSpeech:
+	case mode.AudioSpeech:
 		usage, err = TTSHandler(meta, c, resp)
-	case relaymode.Rerank:
+	case mode.Rerank:
 		usage, err = RerankHandler(meta, c, resp)
-	case relaymode.Moderations:
+	case mode.Moderations:
 		usage, err = ModerationsHandler(meta, c, resp)
-	case relaymode.Embeddings, relaymode.Completions:
+	case mode.Embeddings, mode.Completions:
 		fallthrough
-	case relaymode.ChatCompletions:
+	case mode.ChatCompletions:
 		if utils.IsStreamResponse(resp) {
 			usage, err = StreamHandler(meta, c, resp, nil)
 		} else {

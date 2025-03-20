@@ -59,12 +59,12 @@ func ImageHandler(_ *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usa
 	return usage, nil
 }
 
-func ToOpenAIImageResponse(imageResponse *ImageResponse) *openai.ImageResponse {
-	response := &openai.ImageResponse{
+func ToOpenAIImageResponse(imageResponse *ImageResponse) *model.ImageResponse {
+	response := &model.ImageResponse{
 		Created: imageResponse.Created,
 	}
 	for _, data := range imageResponse.Data {
-		response.Data = append(response.Data, &openai.ImageData{
+		response.Data = append(response.Data, &model.ImageData{
 			B64Json: data.B64Image,
 		})
 	}

@@ -7,4 +7,5 @@ import (
 func SetRouter(router *gin.Engine) {
 	SetAPIRouter(router)
 	SetRelayRouter(router)
+	SetSwaggerRouter(router)
 }

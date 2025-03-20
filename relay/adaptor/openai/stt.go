@@ -137,7 +137,7 @@ func getTextFromVTT(body []byte) (string, error) {
 }
 
 func getTextFromVerboseJSON(body []byte) (string, error) {
-	var whisperResponse WhisperVerboseJSONResponse
+	var whisperResponse model.SttVerboseJSONResponse
 	if err := sonic.Unmarshal(body, &whisperResponse); err != nil {
 		return "", fmt.Errorf("unmarshal_response_body_failed err :%w", err)
 	}
@@ -170,7 +170,7 @@ func getTextFromText(body []byte) string {
 }
 
 func getTextFromJSON(body []byte) (string, error) {
-	var whisperResponse WhisperJSONResponse
+	var whisperResponse model.SttJSONResponse
 	if err := sonic.Unmarshal(body, &whisperResponse); err != nil {
 		return "", fmt.Errorf("unmarshal_response_body_failed err :%w", err)
 	}

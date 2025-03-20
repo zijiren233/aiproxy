@@ -54,7 +54,7 @@ func PutScannerBuffer(buf *[]byte) {
 	scannerBufferPool.Put(buf)
 }
 
-func GetUsageOrChatChoicesResponseFromNode(node *ast.Node) (*model.Usage, []*ChatCompletionsStreamResponseChoice, error) {
+func GetUsageOrChatChoicesResponseFromNode(node *ast.Node) (*model.Usage, []*model.ChatCompletionsStreamResponseChoice, error) {
 	var usage *model.Usage
 	usageNode, err := node.Get("usage").Raw()
 	if err != nil {
@@ -72,7 +72,7 @@ func GetUsageOrChatChoicesResponseFromNode(node *ast.Node) (*model.Usage, []*Cha
 		return usage, nil, nil
 	}
 
-	var choices []*ChatCompletionsStreamResponseChoice
+	var choices []*model.ChatCompletionsStreamResponseChoice
 	choicesNode, err := node.Get("choices").Raw()
 	if err != nil {
 		if !errors.Is(err, ast.ErrNotExist) {
@@ -243,7 +243,7 @@ func StreamSplitThink(data map[string]any, thinkSplitter *splitter.Splitter, ren
 	}
 }
 
-func StreamSplitThinkModeld(data *ChatCompletionsStreamResponse, thinkSplitter *splitter.Splitter, renderCallback func(data *ChatCompletionsStreamResponse)) {
+func StreamSplitThinkModeld(data *model.ChatCompletionsStreamResponse, thinkSplitter *splitter.Splitter, renderCallback func(data *model.ChatCompletionsStreamResponse)) {
 	choices := data.Choices
 	// only support one choice
 	if len(data.Choices) != 1 {
@@ -299,7 +299,7 @@ func SplitThink(data map[string]any) {
 	}
 }
 
-func SplitThinkModeld(data *TextResponse) {
+func SplitThinkModeld(data *model.TextResponse) {
 	choices := data.Choices
 	for _, choice := range choices {
 		content, ok := choice.Message.Content.(string)
@@ -312,7 +312,7 @@ func SplitThinkModeld(data *TextResponse) {
 	}
 }
 
-func GetUsageOrChoicesResponseFromNode(node *ast.Node) (*model.Usage, []*TextResponseChoice, error) {
+func GetUsageOrChoicesResponseFromNode(node *ast.Node) (*model.Usage, []*model.TextResponseChoice, error) {
 	var usage *model.Usage
 	usageNode, err := node.Get("usage").Raw()
 	if err != nil {
@@ -330,7 +330,7 @@ func GetUsageOrChoicesResponseFromNode(node *ast.Node) (*model.Usage, []*TextRes
 		return usage, nil, nil
 	}
 
-	var choices []*TextResponseChoice
+	var choices []*model.TextResponseChoice
 	choicesNode, err := node.Get("choices").Raw()
 	if err != nil {
 		if !errors.Is(err, ast.ErrNotExist) {

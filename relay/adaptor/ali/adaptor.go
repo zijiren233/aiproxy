@@ -9,8 +9,8 @@ import (
 	"github.com/labring/aiproxy/model"
 	"github.com/labring/aiproxy/relay/adaptor/openai"
 	"github.com/labring/aiproxy/relay/meta"
+	"github.com/labring/aiproxy/relay/mode"
 	relaymodel "github.com/labring/aiproxy/relay/model"
-	"github.com/labring/aiproxy/relay/relaymode"
 	"github.com/labring/aiproxy/relay/utils"
 )
 
@@ -30,17 +30,17 @@ func (a *Adaptor) GetRequestURL(meta *meta.Meta) (string, error) {
 		u = baseURL
 	}
 	switch meta.Mode {
-	case relaymode.ImagesGenerations:
+	case mode.ImagesGenerations:
 		return u + "/api/v1/services/aigc/text2image/image-synthesis", nil
-	case relaymode.ChatCompletions:
+	case mode.ChatCompletions:
 		return u + "/compatible-mode/v1/chat/completions", nil
-	case relaymode.Completions:
+	case mode.Completions:
 		return u + "/compatible-mode/v1/completions", nil
-	case relaymode.Embeddings:
+	case mode.Embeddings:
 		return u + "/compatible-mode/v1/embeddings", nil
-	case relaymode.AudioSpeech, relaymode.AudioTranscription:
+	case mode.AudioSpeech, mode.AudioTranscription:
 		return u + "/api-ws/v1/inference", nil
-	case relaymode.Rerank:
+	case mode.Rerank:
 		return u + "/api/v1/services/rerank/text-rerank/text-rerank", nil
 	default:
 		return "", fmt.Errorf("unsupported mode: %s", meta.Mode)
@@ -56,15 +56,15 @@ func (a *Adaptor) SetupRequestHeader(meta *meta.Meta, _ *gin.Context, req *http.
 
 func (a *Adaptor) ConvertRequest(meta *meta.Meta, req *http.Request) (string, http.Header, io.Reader, error) {
 	switch meta.Mode {
-	case relaymode.ImagesGenerations:
+	case mode.ImagesGenerations:
 		return ConvertImageRequest(meta, req)
-	case relaymode.Rerank:
+	case mode.Rerank:
 		return ConvertRerankRequest(meta, req)
-	case relaymode.ChatCompletions, relaymode.Completions, relaymode.Embeddings:
+	case mode.ChatCompletions, mode.Completions, mode.Embeddings:
 		return openai.ConvertRequest(meta, req)
-	case relaymode.AudioSpeech:
+	case mode.AudioSpeech:
 		return ConvertTTSRequest(meta, req)
-	case relaymode.AudioTranscription:
+	case mode.AudioTranscription:
 		return ConvertSTTRequest(meta, req)
 	default:
 		return "", nil, nil, fmt.Errorf("unsupported mode: %s", meta.Mode)
@@ -73,11 +73,11 @@ func (a *Adaptor) ConvertRequest(meta *meta.Meta, req *http.Request) (string, ht
 
 func (a *Adaptor) DoRequest(meta *meta.Meta, _ *gin.Context, req *http.Request) (*http.Response, error) {
 	switch meta.Mode {
-	case relaymode.AudioSpeech:
+	case mode.AudioSpeech:
 		return TTSDoRequest(meta, req)
-	case relaymode.AudioTranscription:
+	case mode.AudioTranscription:
 		return STTDoRequest(meta, req)
-	case relaymode.ChatCompletions:
+	case mode.ChatCompletions:
 		fallthrough
 	default:
 		return utils.DoRequest(req)
@@ -86,15 +86,15 @@ func (a *Adaptor) DoRequest(meta *meta.Meta, _ *gin.Context, req *http.Request) 
 
 func (a *Adaptor) DoResponse(meta *meta.Meta, c *gin.Context, resp *http.Response) (usage *relaymodel.Usage, err *relaymodel.ErrorWithStatusCode) {
 	switch meta.Mode {
-	case relaymode.ImagesGenerations:
+	case mode.ImagesGenerations:
 		usage, err = ImageHandler(meta, c, resp)
-	case relaymode.ChatCompletions, relaymode.Completions, relaymode.Embeddings:
+	case mode.ChatCompletions, mode.Completions, mode.Embeddings:
 		usage, err = openai.DoResponse(meta, c, resp)
-	case relaymode.Rerank:
+	case mode.Rerank:
 		usage, err = RerankHandler(meta, c, resp)
-	case relaymode.AudioSpeech:
+	case mode.AudioSpeech:
 		usage, err = TTSDoResponse(meta, c, resp)
-	case relaymode.AudioTranscription:
+	case mode.AudioTranscription:
 		usage, err = STTDoResponse(meta, c, resp)
 	default:
 		return nil, openai.ErrorWrapperWithMessage(fmt.Sprintf("unsupported mode: %s", meta.Mode), "unsupported_mode", http.StatusBadRequest)

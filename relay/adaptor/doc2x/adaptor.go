@@ -10,8 +10,8 @@ import (
 	"github.com/labring/aiproxy/relay/adaptor"
 	"github.com/labring/aiproxy/relay/adaptor/openai"
 	"github.com/labring/aiproxy/relay/meta"
+	"github.com/labring/aiproxy/relay/mode"
 	relaymodel "github.com/labring/aiproxy/relay/model"
-	"github.com/labring/aiproxy/relay/relaymode"
 	"github.com/labring/aiproxy/relay/utils"
 )
 
@@ -27,7 +27,7 @@ func (a *Adaptor) GetBaseURL() string {
 
 func (a *Adaptor) GetRequestURL(meta *meta.Meta) (string, error) {
 	switch meta.Mode {
-	case relaymode.ParsePdf:
+	case mode.ParsePdf:
 		return meta.Channel.BaseURL + "/api/v2/parse/pdf", nil
 	default:
 		return "", fmt.Errorf("unsupported mode: %s", meta.Mode)
@@ -36,7 +36,7 @@ func (a *Adaptor) GetRequestURL(meta *meta.Meta) (string, error) {
 
 func (a *Adaptor) ConvertRequest(meta *meta.Meta, req *http.Request) (string, http.Header, io.Reader, error) {
 	switch meta.Mode {
-	case relaymode.ParsePdf:
+	case mode.ParsePdf:
 		return ConvertParsePdfRequest(meta, req)
 	default:
 		return "", nil, nil, fmt.Errorf("unsupported mode: %s", meta.Mode)
@@ -49,7 +49,7 @@ func (a *Adaptor) DoRequest(_ *meta.Meta, _ *gin.Context, req *http.Request) (*h
 
 func (a *Adaptor) DoResponse(meta *meta.Meta, c *gin.Context, resp *http.Response) (*relaymodel.Usage, *relaymodel.ErrorWithStatusCode) {
 	switch meta.Mode {
-	case relaymode.ParsePdf:
+	case mode.ParsePdf:
 		return HandleParsePdfResponse(meta, c, resp)
 	default:
 		return nil, openai.ErrorWrapperWithMessage(fmt.Sprintf("unsupported mode: %s", meta.Mode), "unsupported_mode", http.StatusBadRequest)

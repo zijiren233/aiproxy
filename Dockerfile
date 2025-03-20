@@ -8,6 +8,10 @@ RUN apk add --no-cache curl
 
 RUN sh common/tiktoken/assest.sh
 
+RUN go install github.com/swaggo/swag/cmd/swag@latest
+
+RUN swag init
+
 RUN go build -trimpath -tags "jsoniter" -ldflags "-s -w" -o aiproxy
 
 FROM alpine:latest

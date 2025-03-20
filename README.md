@@ -33,6 +33,7 @@ Next-generation AI gateway, using OpenAI as the protocol entry point.
 - Think model support `<think>` split to `reasoning_content`
 - Prompt Token Cache billing support
 - Inline tiktoken, no need to download tiktoken file
+- API `Swagger` documentation support `http://host:port/swagger/index.html`
 
 ## Deploy
 

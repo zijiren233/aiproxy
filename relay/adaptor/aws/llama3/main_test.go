@@ -4,12 +4,12 @@ import (
 	"testing"
 
 	aws "github.com/labring/aiproxy/relay/adaptor/aws/llama3"
-	relaymodel "github.com/labring/aiproxy/relay/model"
+	model "github.com/labring/aiproxy/relay/model"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestRenderPrompt(t *testing.T) {
-	messages := []*relaymodel.Message{
+	messages := []*model.Message{
 		{
 			Role:    "user",
 			Content: "What's your name?",
@@ -20,7 +20,7 @@ func TestRenderPrompt(t *testing.T) {
 `
 	assert.Equal(t, expected, prompt)
 
-	messages = []*relaymodel.Message{
+	messages = []*model.Message{
 		{
 			Role:    "system",
 			Content: "Your name is Kat. You are a detective.",

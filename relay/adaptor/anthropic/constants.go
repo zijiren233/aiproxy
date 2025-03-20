@@ -2,13 +2,13 @@ package anthropic
 
 import (
 	"github.com/labring/aiproxy/model"
-	"github.com/labring/aiproxy/relay/relaymode"
+	"github.com/labring/aiproxy/relay/mode"
 )
 
 var ModelList = []*model.ModelConfig{
 	{
 		Model:       "claude-3-haiku-20240307",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerAnthropic,
 		InputPrice:  0.0025,
 		OutputPrice: 0.0125,
@@ -19,7 +19,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "claude-3-opus-20240229",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerAnthropic,
 		InputPrice:  0.015,
 		OutputPrice: 0.075,
@@ -30,7 +30,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "claude-3-5-haiku-20241022",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerAnthropic,
 		InputPrice:  0.0008,
 		OutputPrice: 0.004,
@@ -42,7 +42,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "claude-3-5-sonnet-20240620",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerAnthropic,
 		InputPrice:  0.003,
 		OutputPrice: 0.015,
@@ -54,7 +54,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "claude-3-5-sonnet-20241022",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerAnthropic,
 		InputPrice:  0.003,
 		OutputPrice: 0.015,
@@ -66,7 +66,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "claude-3-5-sonnet-latest",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerAnthropic,
 		InputPrice:  0.003,
 		OutputPrice: 0.015,

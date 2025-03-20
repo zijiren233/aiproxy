@@ -45,7 +45,7 @@ func RerankHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model
 	if err != nil {
 		return nil, ErrorWrapper(err, "read_response_body_failed", http.StatusInternalServerError)
 	}
-	var rerankResponse SlimRerankResponse
+	var rerankResponse model.SlimRerankResponse
 	err = sonic.Unmarshal(responseBody, &rerankResponse)
 	if err != nil {
 		return nil, ErrorWrapper(err, "unmarshal_response_body_failed", http.StatusInternalServerError)

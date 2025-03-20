@@ -2,13 +2,13 @@ package baichuan
 
 import (
 	"github.com/labring/aiproxy/model"
-	"github.com/labring/aiproxy/relay/relaymode"
+	"github.com/labring/aiproxy/relay/mode"
 )
 
 var ModelList = []*model.ModelConfig{
 	{
 		Model:       "Baichuan4-Turbo",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerBaichuan,
 		InputPrice:  0.015,
 		OutputPrice: 0.015,
@@ -18,7 +18,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "Baichuan4-Air",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerBaichuan,
 		InputPrice:  0.00098,
 		OutputPrice: 0.00098,
@@ -28,7 +28,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "Baichuan4",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerBaichuan,
 		InputPrice:  0.1,
 		OutputPrice: 0.1,
@@ -38,7 +38,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "Baichuan3-Turbo",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerBaichuan,
 		InputPrice:  0.012,
 		OutputPrice: 0.012,
@@ -48,7 +48,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "Baichuan3-Turbo-128k",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerBaichuan,
 		InputPrice:  0.024,
 		OutputPrice: 0.024,
@@ -59,7 +59,7 @@ var ModelList = []*model.ModelConfig{
 
 	{
 		Model:      "Baichuan-Text-Embedding",
-		Type:       relaymode.Embeddings,
+		Type:       mode.Embeddings,
 		Owner:      model.ModelOwnerBaichuan,
 		InputPrice: 0.0005,
 		Config: model.NewModelConfig(

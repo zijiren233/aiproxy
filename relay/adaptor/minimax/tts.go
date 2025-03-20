@@ -14,7 +14,7 @@ import (
 	"github.com/labring/aiproxy/middleware"
 	"github.com/labring/aiproxy/relay/adaptor/openai"
 	"github.com/labring/aiproxy/relay/meta"
-	relaymodel "github.com/labring/aiproxy/relay/model"
+	model "github.com/labring/aiproxy/relay/model"
 	"github.com/labring/aiproxy/relay/utils"
 )
 
@@ -105,7 +105,7 @@ type TTSResponse struct {
 	Data      TTSData      `json:"data"`
 }
 
-func TTSHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*relaymodel.Usage, *relaymodel.ErrorWithStatusCode) {
+func TTSHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, *model.ErrorWithStatusCode) {
 	if resp.StatusCode != http.StatusOK {
 		return nil, openai.ErrorHanlder(resp)
 	}
@@ -148,13 +148,13 @@ func TTSHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*relaymod
 		usageCharacters = result.ExtraInfo.UsageCharacters
 	}
 
-	return &relaymodel.Usage{
+	return &model.Usage{
 		PromptTokens: usageCharacters,
 		TotalTokens:  usageCharacters,
 	}, nil
 }
 
-func ttsStreamHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*relaymodel.Usage, *relaymodel.ErrorWithStatusCode) {
+func ttsStreamHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, *model.ErrorWithStatusCode) {
 	defer resp.Body.Close()
 
 	resp.Header.Set("Content-Type", "application/octet-stream")
@@ -197,7 +197,7 @@ func ttsStreamHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*re
 		}
 	}
 
-	return &relaymodel.Usage{
+	return &model.Usage{
 		PromptTokens: usageCharacters,
 		TotalTokens:  usageCharacters,
 	}, nil

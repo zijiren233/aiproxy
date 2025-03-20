@@ -2,7 +2,7 @@ package minimax
 
 import (
 	"github.com/labring/aiproxy/model"
-	"github.com/labring/aiproxy/relay/relaymode"
+	"github.com/labring/aiproxy/relay/mode"
 )
 
 // https://www.minimaxi.com/document/guides/chat-model/V2?id=65e0736ab2845de20908e2dd
@@ -10,7 +10,7 @@ import (
 var ModelList = []*model.ModelConfig{
 	{
 		Model:       "abab7-chat-preview",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerMiniMax,
 		InputPrice:  0.01,
 		OutputPrice: 0.01,
@@ -22,7 +22,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "abab6.5s-chat",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerMiniMax,
 		InputPrice:  0.001,
 		OutputPrice: 0.001,
@@ -34,7 +34,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "abab6.5g-chat",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerMiniMax,
 		InputPrice:  0.005,
 		OutputPrice: 0.005,
@@ -46,7 +46,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "abab6.5t-chat",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerMiniMax,
 		InputPrice:  0.005,
 		OutputPrice: 0.005,
@@ -58,7 +58,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "abab5.5s-chat",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerMiniMax,
 		InputPrice:  0.005,
 		OutputPrice: 0.005,
@@ -70,7 +70,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "abab5.5-chat",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerMiniMax,
 		InputPrice:  0.015,
 		OutputPrice: 0.015,
@@ -83,7 +83,7 @@ var ModelList = []*model.ModelConfig{
 
 	{
 		Model:      "speech-01-turbo",
-		Type:       relaymode.AudioSpeech,
+		Type:       mode.AudioSpeech,
 		Owner:      model.ModelOwnerMiniMax,
 		InputPrice: 0.2,
 		RPM:        20,

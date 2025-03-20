@@ -8,8 +8,8 @@ import (
 	"github.com/labring/aiproxy/relay/adaptor"
 	"github.com/labring/aiproxy/relay/adaptor/openai"
 	"github.com/labring/aiproxy/relay/meta"
+	"github.com/labring/aiproxy/relay/mode"
 	relaymodel "github.com/labring/aiproxy/relay/model"
-	"github.com/labring/aiproxy/relay/relaymode"
 )
 
 type Adaptor struct {
@@ -24,7 +24,7 @@ func (a *Adaptor) GetBaseURL() string {
 
 func (a *Adaptor) DoResponse(meta *meta.Meta, c *gin.Context, resp *http.Response) (usage *relaymodel.Usage, err *relaymodel.ErrorWithStatusCode) {
 	switch meta.Mode {
-	case relaymode.Embeddings:
+	case mode.Embeddings:
 		err, usage = EmbeddingsHandler(c, resp)
 	default:
 		usage, err = openai.DoResponse(meta, c, resp)

@@ -1,6 +1,6 @@
 package ali
 
-import relaymodel "github.com/labring/aiproxy/relay/model"
+import model "github.com/labring/aiproxy/relay/model"
 
 type ImageRequest struct {
 	Input struct {
@@ -38,8 +38,8 @@ type TaskResponse struct {
 			Failed    int `json:"FAILED,omitempty"`
 		} `json:"task_metrics,omitempty"`
 	} `json:"output,omitempty"`
-	Usage      relaymodel.Usage `json:"usage"`
-	StatusCode int              `json:"status_code,omitempty"`
+	Usage      model.Usage `json:"usage"`
+	StatusCode int         `json:"status_code,omitempty"`
 }
 
 type EmbeddingRequest struct {
@@ -62,7 +62,7 @@ type EmbeddingResponse struct {
 	Output struct {
 		Embeddings []Embedding `json:"embeddings"`
 	} `json:"output"`
-	Usage relaymodel.Usage `json:"usage"`
+	Usage model.Usage `json:"usage"`
 }
 
 type Error struct {

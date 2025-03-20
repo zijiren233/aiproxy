@@ -103,7 +103,17 @@ func buildTokenResponses(tokens []*model.Token) []*TokenResponse {
 	return responses
 }
 
-// Token list handlers
+// GetTokens godoc
+//
+//	@Summary		Get all tokens
+//	@Description	Returns a paginated list of all tokens
+//	@Tags			tokens
+//	@Produce		json
+//	@Security		ApiKeyAuth
+//	@Param			page		query		int	false	"Page number"
+//	@Param			per_page	query		int	false	"Items per page"
+//	@Success		200			{object}	middleware.APIResponse{data=map[string]any{tokens=[]TokenResponse,total=int}}
+//	@Router			/api/tokens [get]
 func GetTokens(c *gin.Context) {
 	page, perPage := parsePageParams(c)
 	group := c.Query("group")
@@ -122,6 +132,16 @@ func GetTokens(c *gin.Context) {
 	})
 }
 
+// GetGroupTokens godoc
+//
+//	@Summary		Get all tokens for a specific group
+//	@Description	Returns a paginated list of all tokens for a specific group
+//	@Tags			tokens
+//	@Produce		json
+//	@Security		ApiKeyAuth
+//	@Param			group	path		string	true	"Group name"
+//	@Success		200		{object}	middleware.APIResponse{data=map[string]any{tokens=[]TokenResponse,total=int}}
+//	@Router			/api/tokens/{group} [get]
 func GetGroupTokens(c *gin.Context) {
 	group := c.Param("group")
 	if group == "" {
@@ -145,6 +165,21 @@ func GetGroupTokens(c *gin.Context) {
 	})
 }
 
+// SearchTokens godoc
+//
+//	@Summary		Search tokens
+//	@Description	Returns a paginated list of tokens based on search criteria
+//	@Tags			tokens
+//	@Produce		json
+//	@Security		ApiKeyAuth
+//	@Param			keyword	query		string	false	"Keyword"
+//	@Param			order	query		string	false	"Order"
+//	@Param			name	query		string	false	"Name"
+//	@Param			key		query		string	false	"Key"
+//	@Param			status	query		int		false	"Status"
+//	@Param			group	query		string	false	"Group"
+//	@Success		200		{object}	middleware.APIResponse{data=map[string]any{tokens=[]TokenResponse,total=int}}
+//	@Router			/api/tokens/search [get]
 func SearchTokens(c *gin.Context) {
 	page, perPage := parsePageParams(c)
 	keyword := c.Query("keyword")
@@ -166,6 +201,16 @@ func SearchTokens(c *gin.Context) {
 	})
 }
 
+// SearchGroupTokens godoc
+//
+//	@Summary		Search tokens for a specific group
+//	@Description	Returns a paginated list of tokens for a specific group based on search criteria
+//	@Tags			tokens
+//	@Produce		json
+//	@Security		ApiKeyAuth
+//	@Param			group	path		string	true	"Group name"
+//	@Success		200		{object}	middleware.APIResponse{data=map[string]any{tokens=[]TokenResponse,total=int}}
+//	@Router			/api/token/{group}/search [get]
 func SearchGroupTokens(c *gin.Context) {
 	group := c.Param("group")
 	if group == "" {
@@ -192,7 +237,16 @@ func SearchGroupTokens(c *gin.Context) {
 	})
 }
 
-// Single token handlers
+// GetToken godoc
+//
+//	@Summary		Get token by ID
+//	@Description	Returns detailed information about a specific token
+//	@Tags			tokens
+//	@Produce		json
+//	@Security		ApiKeyAuth
+//	@Param			id	path		int	true	"Token ID"
+//	@Success		200	{object}	middleware.APIResponse{data=TokenResponse}
+//	@Router			/api/tokens/{id} [get]
 func GetToken(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
@@ -209,6 +263,17 @@ func GetToken(c *gin.Context) {
 	middleware.SuccessResponse(c, buildTokenResponse(token))
 }
 
+// GetGroupToken godoc
+//
+//	@Summary		Get token by ID for a specific group
+//	@Description	Returns detailed information about a specific token for a specific group
+//	@Tags			tokens
+//	@Produce		json
+//	@Security		ApiKeyAuth
+//	@Param			group	path		string	true	"Group name"
+//	@Param			id		path		int		true	"Token ID"
+//	@Success		200		{object}	middleware.APIResponse{data=TokenResponse}
+//	@Router			/api/token/{group}/{id} [get]
 func GetGroupToken(c *gin.Context) {
 	group := c.Param("group")
 	if group == "" {
@@ -231,6 +296,18 @@ func GetGroupToken(c *gin.Context) {
 	middleware.SuccessResponse(c, buildTokenResponse(token))
 }
 
+// AddGroupToken godoc
+//
+//	@Summary		Add group token
+//	@Description	Adds a new token to a specific group
+//	@Tags			token
+//	@Accept			json
+//	@Produce		json
+//	@Security		ApiKeyAuth
+//	@Param			group	path		string		true	"Group name"
+//	@Param			token	body		model.Token	true	"Token information"
+//	@Success		200		{object}	middleware.APIResponse{data=TokenResponse}
+//	@Router			/api/token/{group} [post]
 func AddGroupToken(c *gin.Context) {
 	group := c.Param("group")
 	var req AddTokenRequest
@@ -255,7 +332,16 @@ func AddGroupToken(c *gin.Context) {
 	middleware.SuccessResponse(c, &TokenResponse{Token: token})
 }
 
-// Delete handlers
+// DeleteToken godoc
+//
+//	@Summary		Delete token
+//	@Description	Deletes a specific token by ID
+//	@Tags			tokens
+//	@Produce		json
+//	@Security		ApiKeyAuth
+//	@Param			id	path		int	true	"Token ID"
+//	@Success		200	{object}	middleware.APIResponse
+//	@Router			/api/tokens/{id} [delete]
 func DeleteToken(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
@@ -271,6 +357,17 @@ func DeleteToken(c *gin.Context) {
 	middleware.SuccessResponse(c, nil)
 }
 
+// DeleteTokens godoc
+//
+//	@Summary		Delete multiple tokens
+//	@Description	Deletes multiple tokens by their IDs
+//	@Tags			tokens
+//	@Accept			json
+//	@Produce		json
+//	@Security		ApiKeyAuth
+//	@Param			ids	body		[]int	true	"Token IDs"
+//	@Success		200	{object}	middleware.APIResponse
+//	@Router			/api/tokens/batch_delete [post]
 func DeleteTokens(c *gin.Context) {
 	var ids []int
 	if err := c.ShouldBindJSON(&ids); err != nil {
@@ -286,6 +383,17 @@ func DeleteTokens(c *gin.Context) {
 	middleware.SuccessResponse(c, nil)
 }
 
+// DeleteGroupToken godoc
+//
+//	@Summary		Delete group token
+//	@Description	Deletes a specific token from a group
+//	@Tags			token
+//	@Produce		json
+//	@Security		ApiKeyAuth
+//	@Param			group	path		string	true	"Group name"
+//	@Param			id		path		int		true	"Token ID"
+//	@Success		200		{object}	middleware.APIResponse
+//	@Router			/api/token/{group}/{id} [delete]
 func DeleteGroupToken(c *gin.Context) {
 	group := c.Param("group")
 	id, err := strconv.Atoi(c.Param("id"))
@@ -302,6 +410,17 @@ func DeleteGroupToken(c *gin.Context) {
 	middleware.SuccessResponse(c, nil)
 }
 
+// DeleteGroupTokens godoc
+//
+//	@Summary		Delete group tokens
+//	@Description	Deletes multiple tokens from a specific group
+//	@Tags			token
+//	@Produce		json
+//	@Security		ApiKeyAuth
+//	@Param			group	path		string	true	"Group name"
+//	@Param			ids		body		[]int	true	"Token IDs"
+//	@Success		200		{object}	middleware.APIResponse
+//	@Router			/api/token/{group}/batch_delete [post]
 func DeleteGroupTokens(c *gin.Context) {
 	group := c.Param("group")
 	var ids []int
@@ -318,7 +437,18 @@ func DeleteGroupTokens(c *gin.Context) {
 	middleware.SuccessResponse(c, nil)
 }
 
-// Update handlers
+// UpdateToken godoc
+//
+//	@Summary		Update token
+//	@Description	Updates an existing token's information
+//	@Tags			tokens
+//	@Accept			json
+//	@Produce		json
+//	@Security		ApiKeyAuth
+//	@Param			id		path		int			true	"Token ID"
+//	@Param			token	body		model.Token	true	"Updated token information"
+//	@Success		200		{object}	middleware.APIResponse{data=TokenResponse}
+//	@Router			/api/tokens/{id} [put]
 func UpdateToken(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
@@ -347,6 +477,19 @@ func UpdateToken(c *gin.Context) {
 	middleware.SuccessResponse(c, &TokenResponse{Token: token})
 }
 
+// UpdateGroupToken godoc
+//
+//	@Summary		Update group token
+//	@Description	Updates an existing token in a specific group
+//	@Tags			token
+//	@Accept			json
+//	@Produce		json
+//	@Security		ApiKeyAuth
+//	@Param			group	path		string		true	"Group name"
+//	@Param			id		path		int			true	"Token ID"
+//	@Param			token	body		model.Token	true	"Updated token information"
+//	@Success		200		{object}	middleware.APIResponse{data=TokenResponse}
+//	@Router			/api/token/{group}/{id} [put]
 func UpdateGroupToken(c *gin.Context) {
 	group := c.Param("group")
 	id, err := strconv.Atoi(c.Param("id"))
@@ -376,6 +519,18 @@ func UpdateGroupToken(c *gin.Context) {
 	middleware.SuccessResponse(c, &TokenResponse{Token: token})
 }
 
+// UpdateTokenStatus godoc
+//
+//	@Summary		Update token status
+//	@Description	Updates the status of a specific token
+//	@Tags			tokens
+//	@Accept			json
+//	@Produce		json
+//	@Security		ApiKeyAuth
+//	@Param			id		path		int							true	"Token ID"
+//	@Param			status	body		UpdateTokenStatusRequest	true	"Status information"
+//	@Success		200		{object}	middleware.APIResponse
+//	@Router			/api/tokens/{id}/status [post]
 func UpdateTokenStatus(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
@@ -397,6 +552,19 @@ func UpdateTokenStatus(c *gin.Context) {
 	middleware.SuccessResponse(c, nil)
 }
 
+// UpdateGroupTokenStatus godoc
+//
+//	@Summary		Update group token status
+//	@Description	Updates the status of a token in a specific group
+//	@Tags			token
+//	@Accept			json
+//	@Produce		json
+//	@Security		ApiKeyAuth
+//	@Param			group	path		string						true	"Group name"
+//	@Param			id		path		int							true	"Token ID"
+//	@Param			status	body		UpdateTokenStatusRequest	true	"Status information"
+//	@Success		200		{object}	middleware.APIResponse
+//	@Router			/api/token/{group}/{id}/status [post]
 func UpdateGroupTokenStatus(c *gin.Context) {
 	group := c.Param("group")
 	id, err := strconv.Atoi(c.Param("id"))
@@ -419,6 +587,18 @@ func UpdateGroupTokenStatus(c *gin.Context) {
 	middleware.SuccessResponse(c, nil)
 }
 
+// UpdateTokenName godoc
+//
+//	@Summary		Update token name
+//	@Description	Updates the name of a specific token
+//	@Tags			tokens
+//	@Accept			json
+//	@Produce		json
+//	@Security		ApiKeyAuth
+//	@Param			id		path		int						true	"Token ID"
+//	@Param			name	body		UpdateTokenNameRequest	true	"Name information"
+//	@Success		200		{object}	middleware.APIResponse
+//	@Router			/api/tokens/{id}/name [post]
 func UpdateTokenName(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
@@ -440,6 +620,19 @@ func UpdateTokenName(c *gin.Context) {
 	middleware.SuccessResponse(c, nil)
 }
 
+// UpdateGroupTokenName godoc
+//
+//	@Summary		Update group token name
+//	@Description	Updates the name of a token in a specific group
+//	@Tags			token
+//	@Accept			json
+//	@Produce		json
+//	@Security		ApiKeyAuth
+//	@Param			group	path		string					true	"Group name"
+//	@Param			id		path		int						true	"Token ID"
+//	@Param			name	body		UpdateTokenNameRequest	true	"Name information"
+//	@Success		200		{object}	middleware.APIResponse
+//	@Router			/api/token/{group}/{id}/name [post]
 func UpdateGroupTokenName(c *gin.Context) {
 	group := c.Param("group")
 	id, err := strconv.Atoi(c.Param("id"))

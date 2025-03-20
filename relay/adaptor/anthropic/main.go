@@ -199,8 +199,8 @@ func ConvertRequest(meta *meta.Meta, req *http.Request) (*Request, error) {
 }
 
 // https://docs.anthropic.com/claude/reference/messages-streaming
-func StreamResponse2OpenAI(meta *meta.Meta, claudeResponse *StreamResponse) *openai.ChatCompletionsStreamResponse {
-	openaiResponse := openai.ChatCompletionsStreamResponse{
+func StreamResponse2OpenAI(meta *meta.Meta, claudeResponse *StreamResponse) *model.ChatCompletionsStreamResponse {
+	openaiResponse := model.ChatCompletionsStreamResponse{
 		ID:      openai.ChatCompletionID(),
 		Object:  model.ChatCompletionChunk,
 		Created: time.Now().Unix(),
@@ -261,7 +261,7 @@ func StreamResponse2OpenAI(meta *meta.Meta, claudeResponse *StreamResponse) *ope
 		}
 	}
 
-	var choice openai.ChatCompletionsStreamResponseChoice
+	var choice model.ChatCompletionsStreamResponseChoice
 	choice.Delta.Content = content
 	choice.Delta.ReasoningContent = thinking
 
@@ -274,12 +274,12 @@ func StreamResponse2OpenAI(meta *meta.Meta, claudeResponse *StreamResponse) *ope
 	if finishReason != "null" {
 		choice.FinishReason = &finishReason
 	}
-	openaiResponse.Choices = []*openai.ChatCompletionsStreamResponseChoice{&choice}
+	openaiResponse.Choices = []*model.ChatCompletionsStreamResponseChoice{&choice}
 
 	return &openaiResponse
 }
 
-func Response2OpenAI(meta *meta.Meta, claudeResponse *Response) *openai.TextResponse {
+func Response2OpenAI(meta *meta.Meta, claudeResponse *Response) *model.TextResponse {
 	var content string
 	var thinking string
 	for _, v := range claudeResponse.Content {
@@ -304,7 +304,7 @@ func Response2OpenAI(meta *meta.Meta, claudeResponse *Response) *openai.TextResp
 			})
 		}
 	}
-	choice := openai.TextResponseChoice{
+	choice := model.TextResponseChoice{
 		Index: 0,
 		Message: model.Message{
 			Role:             "assistant",
@@ -316,12 +316,12 @@ func Response2OpenAI(meta *meta.Meta, claudeResponse *Response) *openai.TextResp
 		FinishReason: stopReasonClaude2OpenAI(claudeResponse.StopReason),
 	}
 
-	fullTextResponse := openai.TextResponse{
+	fullTextResponse := model.TextResponse{
 		ID:      openai.ChatCompletionID(),
 		Model:   meta.OriginModel,
 		Object:  model.ChatCompletion,
 		Created: time.Now().Unix(),
-		Choices: []*openai.TextResponseChoice{&choice},
+		Choices: []*model.TextResponseChoice{&choice},
 		Usage: model.Usage{
 			PromptTokens:     claudeResponse.Usage.InputTokens + claudeResponse.Usage.CacheReadInputTokens + claudeResponse.Usage.CacheCreationInputTokens,
 			CompletionTokens: claudeResponse.Usage.OutputTokens,
@@ -361,7 +361,7 @@ func StreamHandler(m *meta.Meta, c *gin.Context, resp *http.Response) (*model.Us
 	common.SetEventStreamHeaders(c)
 
 	var usage model.Usage
-	var lastToolCallChoice *openai.ChatCompletionsStreamResponseChoice
+	var lastToolCallChoice *model.ChatCompletionsStreamResponseChoice
 	var usageWrited bool
 
 	for scanner.Scan() {
@@ -419,12 +419,12 @@ func StreamHandler(m *meta.Meta, c *gin.Context, resp *http.Response) (*model.Us
 	usage.TotalTokens = usage.PromptTokens + usage.CompletionTokens
 
 	if !usageWrited {
-		_ = render.ObjectData(c, &openai.ChatCompletionsStreamResponse{
+		_ = render.ObjectData(c, &model.ChatCompletionsStreamResponse{
 			ID:      openai.ChatCompletionID(),
 			Model:   m.OriginModel,
 			Object:  model.ChatCompletionChunk,
 			Created: time.Now().Unix(),
-			Choices: []*openai.ChatCompletionsStreamResponseChoice{},
+			Choices: []*model.ChatCompletionsStreamResponseChoice{},
 			Usage:   &usage,
 		})
 	}

@@ -9,8 +9,8 @@ import (
 	"github.com/labring/aiproxy/model"
 	"github.com/labring/aiproxy/relay/adaptor/openai"
 	"github.com/labring/aiproxy/relay/meta"
+	"github.com/labring/aiproxy/relay/mode"
 	relaymodel "github.com/labring/aiproxy/relay/model"
-	"github.com/labring/aiproxy/relay/relaymode"
 	"github.com/labring/aiproxy/relay/utils"
 )
 
@@ -39,7 +39,7 @@ func getRequestURL(meta *meta.Meta, action string) string {
 func (a *Adaptor) GetRequestURL(meta *meta.Meta) (string, error) {
 	var action string
 	switch meta.Mode {
-	case relaymode.Embeddings:
+	case mode.Embeddings:
 		action = "batchEmbedContents"
 	default:
 		action = "generateContent"
@@ -58,9 +58,9 @@ func (a *Adaptor) SetupRequestHeader(meta *meta.Meta, _ *gin.Context, req *http.
 
 func (a *Adaptor) ConvertRequest(meta *meta.Meta, req *http.Request) (string, http.Header, io.Reader, error) {
 	switch meta.Mode {
-	case relaymode.Embeddings:
+	case mode.Embeddings:
 		return ConvertEmbeddingRequest(meta, req)
-	case relaymode.ChatCompletions:
+	case mode.ChatCompletions:
 		return ConvertRequest(meta, req)
 	default:
 		return "", nil, nil, fmt.Errorf("unsupported mode: %s", meta.Mode)
@@ -73,9 +73,9 @@ func (a *Adaptor) DoRequest(_ *meta.Meta, _ *gin.Context, req *http.Request) (*h
 
 func (a *Adaptor) DoResponse(meta *meta.Meta, c *gin.Context, resp *http.Response) (usage *relaymodel.Usage, err *relaymodel.ErrorWithStatusCode) {
 	switch meta.Mode {
-	case relaymode.Embeddings:
+	case mode.Embeddings:
 		usage, err = EmbeddingHandler(meta, c, resp)
-	case relaymode.ChatCompletions:
+	case mode.ChatCompletions:
 		if utils.IsStreamResponse(resp) {
 			usage, err = StreamHandler(meta, c, resp)
 		} else {

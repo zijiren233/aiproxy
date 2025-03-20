@@ -2,13 +2,13 @@ package stepfun
 
 import (
 	"github.com/labring/aiproxy/model"
-	"github.com/labring/aiproxy/relay/relaymode"
+	"github.com/labring/aiproxy/relay/mode"
 )
 
 var ModelList = []*model.ModelConfig{
 	{
 		Model:       "step-1-8k",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerStepFun,
 		InputPrice:  0.005,
 		OutputPrice: 0.02,
@@ -20,7 +20,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "step-1-32k",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerStepFun,
 		InputPrice:  0.015,
 		OutputPrice: 0.07,
@@ -32,7 +32,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "step-1-128k",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerStepFun,
 		InputPrice:  0.04,
 		OutputPrice: 0.2,
@@ -44,7 +44,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "step-1-256k",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerStepFun,
 		InputPrice:  0.95,
 		OutputPrice: 0.3,
@@ -56,7 +56,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "step-1-flash",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerStepFun,
 		InputPrice:  0.001,
 		OutputPrice: 0.004,
@@ -68,7 +68,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "step-2-16k",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerStepFun,
 		InputPrice:  0.038,
 		OutputPrice: 0.12,
@@ -80,7 +80,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "step-1v-8k",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerStepFun,
 		InputPrice:  0.005,
 		OutputPrice: 0.02,
@@ -93,7 +93,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "step-1v-32k",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerStepFun,
 		InputPrice:  0.015,
 		OutputPrice: 0.07,
@@ -106,7 +106,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model:       "step-1.5v-mini",
-		Type:        relaymode.ChatCompletions,
+		Type:        mode.ChatCompletions,
 		Owner:       model.ModelOwnerStepFun,
 		InputPrice:  0.008,
 		OutputPrice: 0.035,
@@ -120,7 +120,7 @@ var ModelList = []*model.ModelConfig{
 
 	{
 		Model:      "step-tts-mini",
-		Type:       relaymode.AudioSpeech,
+		Type:       mode.AudioSpeech,
 		Owner:      model.ModelOwnerStepFun,
 		InputPrice: 0.09,
 		RPM:        60,
@@ -141,7 +141,7 @@ var ModelList = []*model.ModelConfig{
 
 	{
 		Model:      "step-asr",
-		Type:       relaymode.AudioTranscription,
+		Type:       mode.AudioTranscription,
 		Owner:      model.ModelOwnerStepFun,
 		InputPrice: 0.09,
 		RPM:        60,
@@ -149,7 +149,7 @@ var ModelList = []*model.ModelConfig{
 
 	{
 		Model:             "step-1x-medium",
-		Type:              relaymode.ImagesGenerations,
+		Type:              mode.ImagesGenerations,
 		Owner:             model.ModelOwnerStepFun,
 		RPM:               60,
 		ImageMaxBatchSize: 1,

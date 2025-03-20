@@ -1,6 +1,6 @@
 package anthropic
 
-import relaymodel "github.com/labring/aiproxy/relay/model"
+import model "github.com/labring/aiproxy/relay/model"
 
 type OpenAIRequest struct {
 	ToolChoice  any              `json:"tool_choice,omitempty"`
@@ -17,12 +17,12 @@ type OpenAIRequest struct {
 }
 
 type OpenaiMessage struct {
-	relaymodel.Message
+	model.Message
 	CacheControl *CacheControl `json:"cache_control,omitempty"`
 }
 
 type OpenaiTool struct {
-	relaymodel.Tool
+	model.Tool
 	CacheControl *CacheControl `json:"cache_control,omitempty"`
 }
 

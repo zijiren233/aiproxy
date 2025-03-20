@@ -35,9 +35,9 @@ func stopReasonCoze2OpenAI(reason *string) string {
 	}
 }
 
-func StreamResponse2OpenAI(meta *meta.Meta, cozeResponse *StreamResponse) *openai.ChatCompletionsStreamResponse {
+func StreamResponse2OpenAI(meta *meta.Meta, cozeResponse *StreamResponse) *model.ChatCompletionsStreamResponse {
 	var stopReason string
-	var choice openai.ChatCompletionsStreamResponseChoice
+	var choice model.ChatCompletionsStreamResponseChoice
 
 	if cozeResponse.Message != nil {
 		if cozeResponse.Message.Type != messagetype.Answer {
@@ -50,17 +50,17 @@ func StreamResponse2OpenAI(meta *meta.Meta, cozeResponse *StreamResponse) *opena
 	if finishReason != "null" {
 		choice.FinishReason = &finishReason
 	}
-	openaiResponse := openai.ChatCompletionsStreamResponse{
+	openaiResponse := model.ChatCompletionsStreamResponse{
 		ID:      cozeResponse.ConversationID,
 		Model:   meta.OriginModel,
 		Created: time.Now().Unix(),
 		Object:  model.ChatCompletionChunk,
-		Choices: []*openai.ChatCompletionsStreamResponseChoice{&choice},
+		Choices: []*model.ChatCompletionsStreamResponseChoice{&choice},
 	}
 	return &openaiResponse
 }
 
-func Response2OpenAI(meta *meta.Meta, cozeResponse *Response) *openai.TextResponse {
+func Response2OpenAI(meta *meta.Meta, cozeResponse *Response) *model.TextResponse {
 	var responseText string
 	for _, message := range cozeResponse.Messages {
 		if message.Type == messagetype.Answer {
@@ -68,7 +68,7 @@ func Response2OpenAI(meta *meta.Meta, cozeResponse *Response) *openai.TextRespon
 			break
 		}
 	}
-	choice := openai.TextResponseChoice{
+	choice := model.TextResponseChoice{
 		Index: 0,
 		Message: model.Message{
 			Role:    "assistant",
@@ -77,12 +77,12 @@ func Response2OpenAI(meta *meta.Meta, cozeResponse *Response) *openai.TextRespon
 		},
 		FinishReason: model.StopFinishReason,
 	}
-	fullTextResponse := openai.TextResponse{
+	fullTextResponse := model.TextResponse{
 		ID:      openai.ChatCompletionID(),
 		Model:   meta.OriginModel,
 		Object:  model.ChatCompletion,
 		Created: time.Now().Unix(),
-		Choices: []*openai.TextResponseChoice{&choice},
+		Choices: []*model.TextResponseChoice{&choice},
 	}
 	return &fullTextResponse
 }

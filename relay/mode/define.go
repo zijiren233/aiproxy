@@ -1,4 +1,4 @@
-package relaymode
+package mode
 
 import "fmt"
 

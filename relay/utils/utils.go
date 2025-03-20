@@ -5,11 +5,11 @@ import (
 	"strings"
 
 	"github.com/labring/aiproxy/common"
-	relaymodel "github.com/labring/aiproxy/relay/model"
+	model "github.com/labring/aiproxy/relay/model"
 )
 
-func UnmarshalGeneralOpenAIRequest(req *http.Request) (*relaymodel.GeneralOpenAIRequest, error) {
-	var request relaymodel.GeneralOpenAIRequest
+func UnmarshalGeneralOpenAIRequest(req *http.Request) (*model.GeneralOpenAIRequest, error) {
+	var request model.GeneralOpenAIRequest
 	err := common.UnmarshalBodyReusable(req, &request)
 	if err != nil {
 		return nil, err
@@ -17,8 +17,8 @@ func UnmarshalGeneralOpenAIRequest(req *http.Request) (*relaymodel.GeneralOpenAI
 	return &request, nil
 }
 
-func UnmarshalImageRequest(req *http.Request) (*relaymodel.ImageRequest, error) {
-	var request relaymodel.ImageRequest
+func UnmarshalImageRequest(req *http.Request) (*model.ImageRequest, error) {
+	var request model.ImageRequest
 	err := common.UnmarshalBodyReusable(req, &request)
 	if err != nil {
 		return nil, err
@@ -26,8 +26,8 @@ func UnmarshalImageRequest(req *http.Request) (*relaymodel.ImageRequest, error) 
 	return &request, nil
 }
 
-func UnmarshalRerankRequest(req *http.Request) (*relaymodel.RerankRequest, error) {
-	var request relaymodel.RerankRequest
+func UnmarshalRerankRequest(req *http.Request) (*model.RerankRequest, error) {
+	var request model.RerankRequest
 	err := common.UnmarshalBodyReusable(req, &request)
 	if err != nil {
 		return nil, err
@@ -35,8 +35,8 @@ func UnmarshalRerankRequest(req *http.Request) (*relaymodel.RerankRequest, error
 	return &request, nil
 }
 
-func UnmarshalTTSRequest(req *http.Request) (*relaymodel.TextToSpeechRequest, error) {
-	var request relaymodel.TextToSpeechRequest
+func UnmarshalTTSRequest(req *http.Request) (*model.TextToSpeechRequest, error) {
+	var request model.TextToSpeechRequest
 	err := common.UnmarshalBodyReusable(req, &request)
 	if err != nil {
 		return nil, err

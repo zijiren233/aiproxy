@@ -10,8 +10,8 @@ import (
 	"github.com/labring/aiproxy/relay/adaptor"
 	"github.com/labring/aiproxy/relay/adaptor/openai"
 	"github.com/labring/aiproxy/relay/meta"
+	"github.com/labring/aiproxy/relay/mode"
 	relaymodel "github.com/labring/aiproxy/relay/model"
-	"github.com/labring/aiproxy/relay/relaymode"
 )
 
 type Adaptor struct {
@@ -43,11 +43,11 @@ func (a *Adaptor) GetRequestURL(meta *meta.Meta) (string, error) {
 		return "", err
 	}
 	switch meta.Mode {
-	case relaymode.ChatCompletions:
+	case mode.ChatCompletions:
 		return meta.Channel.BaseURL + "/text/chatcompletion_v2", nil
-	case relaymode.Embeddings:
+	case mode.Embeddings:
 		return fmt.Sprintf("%s/embeddings?GroupId=%s", meta.Channel.BaseURL, groupID), nil
-	case relaymode.AudioSpeech:
+	case mode.AudioSpeech:
 		return fmt.Sprintf("%s/t2a_v2?GroupId=%s", meta.Channel.BaseURL, groupID), nil
 	default:
 		return a.Adaptor.GetRequestURL(meta)
@@ -56,10 +56,10 @@ func (a *Adaptor) GetRequestURL(meta *meta.Meta) (string, error) {
 
 func (a *Adaptor) ConvertRequest(meta *meta.Meta, req *http.Request) (string, http.Header, io.Reader, error) {
 	switch meta.Mode {
-	case relaymode.ChatCompletions:
+	case mode.ChatCompletions:
 		meta.Set(openai.DoNotPatchStreamOptionsIncludeUsageMetaKey, true)
 		return a.Adaptor.ConvertRequest(meta, req)
-	case relaymode.AudioSpeech:
+	case mode.AudioSpeech:
 		return ConvertTTSRequest(meta, req)
 	default:
 		return a.Adaptor.ConvertRequest(meta, req)
@@ -68,7 +68,7 @@ func (a *Adaptor) ConvertRequest(meta *meta.Meta, req *http.Request) (string, ht
 
 func (a *Adaptor) DoResponse(meta *meta.Meta, c *gin.Context, resp *http.Response) (usage *relaymodel.Usage, err *relaymodel.ErrorWithStatusCode) {
 	switch meta.Mode {
-	case relaymode.AudioSpeech:
+	case mode.AudioSpeech:
 		return TTSHandler(meta, c, resp)
 	default:
 		return a.Adaptor.DoResponse(meta, c, resp)
