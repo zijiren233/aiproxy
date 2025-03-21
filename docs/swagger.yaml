@@ -35,10 +35,6 @@ definitions:
     type: object
   controller.BuiltinModelConfig:
     properties:
-      cache_creation_price:
-        type: number
-      cached_price:
-        type: number
       config:
         additionalProperties: {}
         type: object
@@ -50,14 +46,12 @@ definitions:
         additionalProperties:
           type: number
         type: object
-      input_price:
-        type: number
       model:
         type: string
-      output_price:
-        type: number
       owner:
         $ref: '#/definitions/model.ModelOwner'
+      price:
+        $ref: '#/definitions/model.Price'
       rpm:
         type: integer
       tpm:
@@ -147,10 +141,6 @@ definitions:
     type: object
   controller.SaveModelConfigsRequest:
     properties:
-      cache_creation_price:
-        type: number
-      cached_price:
-        type: number
       config:
         additionalProperties: {}
         type: object
@@ -162,14 +152,12 @@ definitions:
         additionalProperties:
           type: number
         type: object
-      input_price:
-        type: number
       model:
         type: string
-      output_price:
-        type: number
       owner:
         $ref: '#/definitions/model.ModelOwner'
+      price:
+        $ref: '#/definitions/model.Price'
       rpm:
         type: integer
       tpm:
@@ -731,10 +719,6 @@ definitions:
     type: object
   model.ModelConfig:
     properties:
-      cache_creation_price:
-        type: number
-      cached_price:
-        type: number
       config:
         additionalProperties: {}
         type: object
@@ -746,14 +730,12 @@ definitions:
         additionalProperties:
           type: number
         type: object
-      input_price:
-        type: number
       model:
         type: string
-      output_price:
-        type: number
       owner:
         $ref: '#/definitions/model.ModelOwner'
+      price:
+        $ref: '#/definitions/model.Price'
       rpm:
         type: integer
       tpm:
@@ -2496,6 +2478,36 @@ paths:
       tags:
       - modelconfig
   /api/model_configs:
+    get:
+      description: Returns a list of model configs with pagination
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/middleware.APIResponse'
+            - properties:
+                data:
+                  additionalProperties:
+                    allOf:
+                    - {}
+                    - properties:
+                        configs:
+                          items:
+                            $ref: '#/definitions/model.ModelConfig'
+                          type: array
+                        total:
+                          type: integer
+                      type: object
+                  type: object
+              type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Get model configs
+      tags:
+      - modelconfig
     post:
       description: Saves a list of model configs
       parameters:
@@ -2517,6 +2529,28 @@ paths:
       security:
       - ApiKeyAuth: []
       summary: Save model configs
+      tags:
+      - modelconfig
+  /api/model_configs/all:
+    get:
+      description: Returns a list of all model configs
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/middleware.APIResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/model.ModelConfig'
+                  type: array
+              type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Get all model configs
       tags:
       - modelconfig
   /api/model_configs/batch_delete:
@@ -2541,6 +2575,59 @@ paths:
       security:
       - ApiKeyAuth: []
       summary: Delete model configs
+      tags:
+      - modelconfig
+  /api/model_configs/contains:
+    post:
+      description: Returns a list of model configs by models contains
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/middleware.APIResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/model.ModelConfig'
+                  type: array
+              type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Get model configs by models contains
+      tags:
+      - modelconfig
+  /api/model_configs/search:
+    get:
+      description: Returns a list of model configs by keyword
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/middleware.APIResponse'
+            - properties:
+                data:
+                  additionalProperties:
+                    allOf:
+                    - {}
+                    - properties:
+                        configs:
+                          items:
+                            $ref: '#/definitions/model.ModelConfig'
+                          type: array
+                        total:
+                          type: integer
+                      type: object
+                  type: object
+              type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Search model configs
       tags:
       - modelconfig
   /api/model_cost_rank:
@@ -2593,112 +2680,6 @@ paths:
       summary: Get model cost ranking data for a specific group
       tags:
       - dashboard
-  /api/modelconfigs:
-    get:
-      description: Returns a list of model configs with pagination
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            allOf:
-            - $ref: '#/definitions/middleware.APIResponse'
-            - properties:
-                data:
-                  additionalProperties:
-                    allOf:
-                    - {}
-                    - properties:
-                        configs:
-                          items:
-                            $ref: '#/definitions/model.ModelConfig'
-                          type: array
-                        total:
-                          type: integer
-                      type: object
-                  type: object
-              type: object
-      security:
-      - ApiKeyAuth: []
-      summary: Get model configs
-      tags:
-      - modelconfig
-  /api/modelconfigs/all:
-    get:
-      description: Returns a list of all model configs
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            allOf:
-            - $ref: '#/definitions/middleware.APIResponse'
-            - properties:
-                data:
-                  items:
-                    $ref: '#/definitions/model.ModelConfig'
-                  type: array
-              type: object
-      security:
-      - ApiKeyAuth: []
-      summary: Get all model configs
-      tags:
-      - modelconfig
-  /api/modelconfigs/contains:
-    post:
-      description: Returns a list of model configs by models contains
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            allOf:
-            - $ref: '#/definitions/middleware.APIResponse'
-            - properties:
-                data:
-                  items:
-                    $ref: '#/definitions/model.ModelConfig'
-                  type: array
-              type: object
-      security:
-      - ApiKeyAuth: []
-      summary: Get model configs by models contains
-      tags:
-      - modelconfig
-  /api/modelconfigs/search:
-    get:
-      description: Returns a list of model configs by keyword
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            allOf:
-            - $ref: '#/definitions/middleware.APIResponse'
-            - properties:
-                data:
-                  additionalProperties:
-                    allOf:
-                    - {}
-                    - properties:
-                        configs:
-                          items:
-                            $ref: '#/definitions/model.ModelConfig'
-                          type: array
-                        total:
-                          type: integer
-                      type: object
-                  type: object
-              type: object
-      security:
-      - ApiKeyAuth: []
-      summary: Search model configs
-      tags:
-      - modelconfig
   /api/models/builtin:
     get:
       description: Returns a list of builtin models

@@ -29,7 +29,7 @@ func getImageRequest(c *gin.Context) (*relaymodel.ImageRequest, error) {
 
 func GetImageSizePrice(modelConfig *model.ModelConfig, size string) (float64, bool) {
 	if len(modelConfig.ImagePrices) == 0 {
-		return modelConfig.InputPrice, true
+		return modelConfig.Price.InputPrice, true
 	}
 	price, ok := modelConfig.ImagePrices[size]
 	return price, ok

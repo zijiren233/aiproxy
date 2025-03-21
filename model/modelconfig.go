@@ -28,7 +28,7 @@ type ModelConfig struct {
 	ExcludeFromTests bool                   `json:"exclude_from_tests,omitempty"`
 	RPM              int64                  `json:"rpm,omitempty"`
 	TPM              int64                  `json:"tpm,omitempty"`
-	Price
+	Price            Price                  `gorm:"embedded"                      json:"price,omitempty"`
 }
 
 func NewDefaultModelConfig(model string) *ModelConfig {

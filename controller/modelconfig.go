@@ -16,7 +16,7 @@ import (
 //	@Produce		json
 //	@Security		ApiKeyAuth
 //	@Success		200	{object}	middleware.APIResponse{data=map[string]any{configs=[]model.ModelConfig,total=int}}
-//	@Router			/api/modelconfigs [get]
+//	@Router			/api/model_configs [get]
 func GetModelConfigs(c *gin.Context) {
 	page, perPage := parsePageParams(c)
 	_model := c.Query("model")
@@ -39,7 +39,7 @@ func GetModelConfigs(c *gin.Context) {
 //	@Produce		json
 //	@Security		ApiKeyAuth
 //	@Success		200	{object}	middleware.APIResponse{data=[]model.ModelConfig}
-//	@Router			/api/modelconfigs/all [get]
+//	@Router			/api/model_configs/all [get]
 func GetAllModelConfigs(c *gin.Context) {
 	configs, err := model.GetAllModelConfigs()
 	if err != nil {
@@ -61,7 +61,7 @@ type GetModelConfigsByModelsContainsRequest struct {
 //	@Produce		json
 //	@Security		ApiKeyAuth
 //	@Success		200	{object}	middleware.APIResponse{data=[]model.ModelConfig}
-//	@Router			/api/modelconfigs/contains [post]
+//	@Router			/api/model_configs/contains [post]
 func GetModelConfigsByModelsContains(c *gin.Context) {
 	request := GetModelConfigsByModelsContainsRequest{}
 	err := c.ShouldBindJSON(&request)
@@ -85,7 +85,7 @@ func GetModelConfigsByModelsContains(c *gin.Context) {
 //	@Produce		json
 //	@Security		ApiKeyAuth
 //	@Success		200	{object}	middleware.APIResponse{data=map[string]any{configs=[]model.ModelConfig,total=int}}
-//	@Router			/api/modelconfigs/search [get]
+//	@Router			/api/model_configs/search [get]
 func SearchModelConfigs(c *gin.Context) {
 	keyword := c.Query("keyword")
 	page, perPage := parsePageParams(c)
