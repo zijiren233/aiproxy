@@ -9,8 +9,8 @@ import (
 func recordConsume(
 	meta *meta.Meta,
 	code int,
-	usage *relaymodel.Usage,
-	modelPrice *model.Price,
+	usage relaymodel.Usage,
+	modelPrice model.Price,
 	content string,
 	ip string,
 	requestDetail *model.RequestDetail,
@@ -22,13 +22,11 @@ func recordConsume(
 	completionTokens := 0
 	cachedTokens := 0
 	cacheCreationTokens := 0
-	if usage != nil {
-		promptTokens = usage.PromptTokens
-		completionTokens = usage.CompletionTokens
-		if usage.PromptTokensDetails != nil {
-			cachedTokens = usage.PromptTokensDetails.CachedTokens
-			cacheCreationTokens = usage.PromptTokensDetails.CacheCreationTokens
-		}
+	promptTokens = usage.PromptTokens
+	completionTokens = usage.CompletionTokens
+	if usage.PromptTokensDetails != nil {
+		cachedTokens = usage.PromptTokensDetails.CachedTokens
+		cacheCreationTokens = usage.PromptTokensDetails.CacheCreationTokens
 	}
 
 	var channelID int

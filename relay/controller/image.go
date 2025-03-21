@@ -35,29 +35,29 @@ func GetImageSizePrice(modelConfig *model.ModelConfig, size string) (float64, bo
 	return price, ok
 }
 
-func GetImageRequestPrice(c *gin.Context, mc *model.ModelConfig) (*model.Price, error) {
+func GetImageRequestPrice(c *gin.Context, mc *model.ModelConfig) (model.Price, error) {
 	imageRequest, err := getImageRequest(c)
 	if err != nil {
-		return nil, err
+		return model.Price{}, err
 	}
 
 	imageCostPrice, ok := GetImageSizePrice(mc, imageRequest.Size)
 	if !ok {
-		return nil, fmt.Errorf("invalid image size: %s", imageRequest.Size)
+		return model.Price{}, fmt.Errorf("invalid image size: %s", imageRequest.Size)
 	}
 
-	return &model.Price{
+	return model.Price{
 		InputPrice: imageCostPrice,
 	}, nil
 }
 
-func GetImageRequestUsage(c *gin.Context, _ *model.ModelConfig) (*model.Usage, error) {
+func GetImageRequestUsage(c *gin.Context, _ *model.ModelConfig) (model.Usage, error) {
 	imageRequest, err := getImageRequest(c)
 	if err != nil {
-		return nil, err
+		return model.Usage{}, err
 	}
 
-	return &model.Usage{
+	return model.Usage{
 		InputTokens: imageRequest.N,
 	}, nil
 }

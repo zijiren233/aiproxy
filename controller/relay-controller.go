@@ -32,8 +32,8 @@ import (
 
 type (
 	RelayHandler    func(*meta.Meta, *gin.Context) *controller.HandleResult
-	GetRequestUsage func(*gin.Context, *model.ModelConfig) (*model.Usage, error)
-	GetRequestPrice func(*gin.Context, *model.ModelConfig) (*model.Price, error)
+	GetRequestUsage func(*gin.Context, *model.ModelConfig) (model.Usage, error)
+	GetRequestPrice func(*gin.Context, *model.ModelConfig) (model.Price, error)
 )
 
 type RelayController struct {
@@ -244,7 +244,7 @@ func relay(c *gin.Context, mode mode.Mode, relayController RelayController) {
 
 	billingEnabled := config.GetBillingEnabled()
 
-	price := &model.Price{}
+	price := model.Price{}
 	if billingEnabled && relayController.GetRequestPrice != nil {
 		price, err = relayController.GetRequestPrice(c, mc)
 		if err != nil {
@@ -304,8 +304,8 @@ func relay(c *gin.Context, mode mode.Mode, relayController RelayController) {
 	retryLoop(c, mode, requestModel, retryState, relayController.Handler, log)
 }
 
-func getPreConsumedAmount(usage *model.Usage, price *model.Price) float64 {
-	if usage == nil || price == nil || price.InputPrice == 0 || (usage.InputTokens == 0) {
+func getPreConsumedAmount(usage model.Usage, price model.Price) float64 {
+	if usage.InputTokens == 0 || price.InputPrice == 0 {
 		return 0
 	}
 	return decimal.
@@ -316,7 +316,7 @@ func getPreConsumedAmount(usage *model.Usage, price *model.Price) float64 {
 }
 
 // recordResult records the consumption for the final result
-func recordResult(c *gin.Context, meta *meta.Meta, price *model.Price, result *controller.HandleResult, retryTimes int, downstreamResult bool) {
+func recordResult(c *gin.Context, meta *meta.Meta, price model.Price, result *controller.HandleResult, retryTimes int, downstreamResult bool) {
 	code := http.StatusOK
 	content := ""
 	if result.Error != nil {
@@ -362,7 +362,7 @@ type retryState struct {
 	exhausted                bool
 
 	meta        *meta.Meta
-	price       *model.Price
+	price       model.Price
 	inputTokens int
 	result      *controller.HandleResult
 }
@@ -419,7 +419,7 @@ func handleRelayResult(c *gin.Context, bizErr *relaymodel.ErrorWithStatusCode, r
 	return false
 }
 
-func initRetryState(retryTimes int, channel *initialChannel, meta *meta.Meta, result *controller.HandleResult, price *model.Price) *retryState {
+func initRetryState(retryTimes int, channel *initialChannel, meta *meta.Meta, result *controller.HandleResult, price model.Price) *retryState {
 	state := &retryState{
 		retryTimes:       retryTimes,
 		ignoreChannelIDs: channel.ignoreChannelIDs,

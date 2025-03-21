@@ -32,16 +32,16 @@ func rerankPromptTokens(rerankRequest *relaymodel.RerankRequest) int {
 	return len(rerankRequest.Query) + len(strings.Join(rerankRequest.Documents, ""))
 }
 
-func GetRerankRequestPrice(_ *gin.Context, mc *model.ModelConfig) (*model.Price, error) {
-	return &mc.Price, nil
+func GetRerankRequestPrice(_ *gin.Context, mc *model.ModelConfig) (model.Price, error) {
+	return mc.Price, nil
 }
 
-func GetRerankRequestUsage(c *gin.Context, _ *model.ModelConfig) (*model.Usage, error) {
+func GetRerankRequestUsage(c *gin.Context, _ *model.ModelConfig) (model.Usage, error) {
 	rerankRequest, err := getRerankRequest(c)
 	if err != nil {
-		return nil, err
+		return model.Usage{}, err
 	}
-	return &model.Usage{
+	return model.Usage{
 		InputTokens: rerankPromptTokens(rerankRequest),
 	}, nil
 }

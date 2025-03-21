@@ -16,7 +16,7 @@ import (
 // HandleResult contains all the information needed for consumption recording
 type HandleResult struct {
 	Error  *relaymodel.ErrorWithStatusCode
-	Usage  *relaymodel.Usage
+	Usage  relaymodel.Usage
 	Detail *model.RequestDetail
 }
 

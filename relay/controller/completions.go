@@ -7,17 +7,17 @@ import (
 	"github.com/labring/aiproxy/relay/utils"
 )
 
-func GetCompletionsRequestPrice(_ *gin.Context, mc *model.ModelConfig) (*model.Price, error) {
-	return &mc.Price, nil
+func GetCompletionsRequestPrice(_ *gin.Context, mc *model.ModelConfig) (model.Price, error) {
+	return mc.Price, nil
 }
 
-func GetCompletionsRequestUsage(c *gin.Context, _ *model.ModelConfig) (*model.Usage, error) {
+func GetCompletionsRequestUsage(c *gin.Context, _ *model.ModelConfig) (model.Usage, error) {
 	textRequest, err := utils.UnmarshalGeneralOpenAIRequest(c.Request)
 	if err != nil {
-		return nil, err
+		return model.Usage{}, err
 	}
 
-	return &model.Usage{
+	return model.Usage{
 		InputTokens: openai.CountTokenInput(textRequest.Prompt, textRequest.Model),
 	}, nil
 }

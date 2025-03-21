@@ -8,17 +8,17 @@ import (
 	"github.com/labring/aiproxy/relay/utils"
 )
 
-func GetTTSRequestPrice(_ *gin.Context, mc *model.ModelConfig) (*model.Price, error) {
-	return &mc.Price, nil
+func GetTTSRequestPrice(_ *gin.Context, mc *model.ModelConfig) (model.Price, error) {
+	return mc.Price, nil
 }
 
-func GetTTSRequestUsage(c *gin.Context, _ *model.ModelConfig) (*model.Usage, error) {
+func GetTTSRequestUsage(c *gin.Context, _ *model.ModelConfig) (model.Usage, error) {
 	ttsRequest, err := utils.UnmarshalTTSRequest(c.Request)
 	if err != nil {
-		return nil, err
+		return model.Usage{}, err
 	}
 
-	return &model.Usage{
+	return model.Usage{
 		InputTokens: utf8.RuneCountInString(ttsRequest.Input),
 	}, nil
 }

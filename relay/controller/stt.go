@@ -13,26 +13,26 @@ import (
 	"github.com/labring/aiproxy/model"
 )
 
-func GetSTTRequestPrice(_ *gin.Context, mc *model.ModelConfig) (*model.Price, error) {
-	return &mc.Price, nil
+func GetSTTRequestPrice(_ *gin.Context, mc *model.ModelConfig) (model.Price, error) {
+	return mc.Price, nil
 }
 
-func GetSTTRequestUsage(c *gin.Context, _ *model.ModelConfig) (*model.Usage, error) {
+func GetSTTRequestUsage(c *gin.Context, _ *model.ModelConfig) (model.Usage, error) {
 	audioFile, err := c.FormFile("file")
 	if err != nil {
-		return nil, fmt.Errorf("failed to get audio file: %w", err)
+		return model.Usage{}, fmt.Errorf("failed to get audio file: %w", err)
 	}
 
 	duration, err := getAudioDuration(audioFile)
 	if err != nil {
-		return nil, err
+		return model.Usage{}, err
 	}
 
 	durationInt := int(math.Ceil(duration))
 	log := middleware.GetLogger(c)
 	log.Data["duration"] = durationInt
 
-	return &model.Usage{
+	return model.Usage{
 		InputTokens: durationInt,
 	}, nil
 }

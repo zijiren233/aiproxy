@@ -24,8 +24,8 @@ func AsyncConsume(
 	postGroupConsumer balance.PostGroupConsumer,
 	code int,
 	meta *meta.Meta,
-	usage *relaymodel.Usage,
-	modelPrice *model.Price,
+	usage relaymodel.Usage,
+	modelPrice model.Price,
 	content string,
 	ip string,
 	retryTimes int,
@@ -44,8 +44,8 @@ func AsyncConsume(
 		context.Background(),
 		postGroupConsumer,
 		code,
-		usage,
 		meta,
+		usage,
 		modelPrice,
 		content,
 		ip,
@@ -59,9 +59,9 @@ func Consume(
 	ctx context.Context,
 	postGroupConsumer balance.PostGroupConsumer,
 	code int,
-	usage *relaymodel.Usage,
 	meta *meta.Meta,
-	modelPrice *model.Price,
+	usage relaymodel.Usage,
+	modelPrice model.Price,
 	content string,
 	ip string,
 	retryTimes int,
@@ -102,13 +102,9 @@ func consumeAmount(
 }
 
 func CalculateAmount(
-	usage *relaymodel.Usage,
-	modelPrice *model.Price,
+	usage relaymodel.Usage,
+	modelPrice model.Price,
 ) float64 {
-	if usage == nil {
-		return 0
-	}
-
 	promptTokens := usage.PromptTokens
 	completionTokens := usage.CompletionTokens
 	var cachedTokens int
