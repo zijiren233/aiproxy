@@ -18,15 +18,14 @@ func recordConsume(
 	retryTimes int,
 	downstreamResult bool,
 ) error {
-	promptTokens := 0
-	completionTokens := 0
-	cachedTokens := 0
-	cacheCreationTokens := 0
-	promptTokens = usage.PromptTokens
-	completionTokens = usage.CompletionTokens
+	us := model.Usage{
+		InputTokens:  usage.PromptTokens,
+		OutputTokens: usage.CompletionTokens,
+		TotalTokens:  usage.PromptTokens + usage.CompletionTokens,
+	}
 	if usage.PromptTokensDetails != nil {
-		cachedTokens = usage.PromptTokensDetails.CachedTokens
-		cacheCreationTokens = usage.PromptTokensDetails.CacheCreationTokens
+		us.CachedTokens = usage.PromptTokensDetails.CachedTokens
+		us.CacheCreationTokens = usage.PromptTokensDetails.CacheCreationTokens
 	}
 
 	var channelID int
@@ -50,19 +49,8 @@ func recordConsume(
 		retryTimes,
 		requestDetail,
 		downstreamResult,
-		model.Usage{
-			InputTokens:         promptTokens,
-			OutputTokens:        completionTokens,
-			TotalTokens:         promptTokens + completionTokens,
-			CachedTokens:        cachedTokens,
-			CacheCreationTokens: cacheCreationTokens,
-		},
-		model.Price{
-			InputPrice:         modelPrice.InputPrice,
-			OutputPrice:        modelPrice.OutputPrice,
-			CachedPrice:        modelPrice.CachedPrice,
-			CacheCreationPrice: modelPrice.CacheCreationPrice,
-		},
+		us,
+		modelPrice,
 		amount,
 	)
 }
