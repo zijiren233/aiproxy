@@ -110,8 +110,11 @@ func buildTokenResponses(tokens []*model.Token) []*TokenResponse {
 //	@Tags			tokens
 //	@Produce		json
 //	@Security		ApiKeyAuth
-//	@Param			page		query		int	false	"Page number"
-//	@Param			per_page	query		int	false	"Items per page"
+//	@Param			p			query		int		false	"Page number"
+//	@Param			per_page	query		int		false	"Items per page"
+//	@Param			group		query		string	false	"Group name"
+//	@Param			order		query		string	false	"Order"
+//	@Param			status		query		int		false	"Status"
 //	@Success		200			{object}	middleware.APIResponse{data=map[string]any{tokens=[]TokenResponse,total=int}}
 //	@Router			/api/tokens [get]
 func GetTokens(c *gin.Context) {
@@ -139,8 +142,12 @@ func GetTokens(c *gin.Context) {
 //	@Tags			tokens
 //	@Produce		json
 //	@Security		ApiKeyAuth
-//	@Param			group	path		string	true	"Group name"
-//	@Success		200		{object}	middleware.APIResponse{data=map[string]any{tokens=[]TokenResponse,total=int}}
+//	@Param			group		path		string	true	"Group name"
+//	@Param			p			query		int		false	"Page number"
+//	@Param			per_page	query		int		false	"Items per page"
+//	@Param			order		query		string	false	"Order"
+//	@Param			status		query		int		false	"Status"
+//	@Success		200			{object}	middleware.APIResponse{data=map[string]any{tokens=[]TokenResponse,total=int}}
 //	@Router			/api/tokens/{group} [get]
 func GetGroupTokens(c *gin.Context) {
 	group := c.Param("group")
@@ -172,13 +179,15 @@ func GetGroupTokens(c *gin.Context) {
 //	@Tags			tokens
 //	@Produce		json
 //	@Security		ApiKeyAuth
-//	@Param			keyword	query		string	false	"Keyword"
-//	@Param			order	query		string	false	"Order"
-//	@Param			name	query		string	false	"Name"
-//	@Param			key		query		string	false	"Key"
-//	@Param			status	query		int		false	"Status"
-//	@Param			group	query		string	false	"Group"
-//	@Success		200		{object}	middleware.APIResponse{data=map[string]any{tokens=[]TokenResponse,total=int}}
+//	@Param			keyword		query		string	false	"Keyword"
+//	@Param			p			query		int		false	"Page number"
+//	@Param			per_page	query		int		false	"Items per page"
+//	@Param			order		query		string	false	"Order"
+//	@Param			name		query		string	false	"Name"
+//	@Param			key			query		string	false	"Key"
+//	@Param			status		query		int		false	"Status"
+//	@Param			group		query		string	false	"Group"
+//	@Success		200			{object}	middleware.APIResponse{data=map[string]any{tokens=[]TokenResponse,total=int}}
 //	@Router			/api/tokens/search [get]
 func SearchTokens(c *gin.Context) {
 	page, perPage := parsePageParams(c)
@@ -205,11 +214,17 @@ func SearchTokens(c *gin.Context) {
 //
 //	@Summary		Search tokens for a specific group
 //	@Description	Returns a paginated list of tokens for a specific group based on search criteria
-//	@Tags			tokens
+//	@Tags			token
 //	@Produce		json
 //	@Security		ApiKeyAuth
-//	@Param			group	path		string	true	"Group name"
-//	@Success		200		{object}	middleware.APIResponse{data=map[string]any{tokens=[]TokenResponse,total=int}}
+//	@Param			group		path		string	true	"Group name"
+//	@Param			p			query		int		false	"Page number"
+//	@Param			per_page	query		int		false	"Items per page"
+//	@Param			order		query		string	false	"Order"
+//	@Param			name		query		string	false	"Name"
+//	@Param			key			query		string	false	"Key"
+//	@Param			status		query		int		false	"Status"
+//	@Success		200			{object}	middleware.APIResponse{data=map[string]any{tokens=[]TokenResponse,total=int}}
 //	@Router			/api/token/{group}/search [get]
 func SearchGroupTokens(c *gin.Context) {
 	group := c.Param("group")
@@ -225,7 +240,7 @@ func SearchGroupTokens(c *gin.Context) {
 	key := c.Query("key")
 	status, _ := strconv.Atoi(c.Query("status"))
 
-	tokens, total, err := model.SearchTokens(group, keyword, page, perPage, order, status, name, key)
+	tokens, total, err := model.SearchGroupTokens(group, keyword, page, perPage, order, status, name, key)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusOK, err.Error())
 		return
@@ -267,7 +282,7 @@ func GetToken(c *gin.Context) {
 //
 //	@Summary		Get token by ID for a specific group
 //	@Description	Returns detailed information about a specific token for a specific group
-//	@Tags			tokens
+//	@Tags			token
 //	@Produce		json
 //	@Security		ApiKeyAuth
 //	@Param			group	path		string	true	"Group name"

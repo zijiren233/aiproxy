@@ -3265,7 +3265,7 @@ paths:
       - ApiKeyAuth: []
       summary: Get token by ID for a specific group
       tags:
-      - tokens
+      - token
     put:
       consumes:
       - application/json
@@ -3411,6 +3411,30 @@ paths:
         name: group
         required: true
         type: string
+      - description: Page number
+        in: query
+        name: p
+        type: integer
+      - description: Items per page
+        in: query
+        name: per_page
+        type: integer
+      - description: Order
+        in: query
+        name: order
+        type: string
+      - description: Name
+        in: query
+        name: name
+        type: string
+      - description: Key
+        in: query
+        name: key
+        type: string
+      - description: Status
+        in: query
+        name: status
+        type: integer
       produces:
       - application/json
       responses:
@@ -3438,18 +3462,30 @@ paths:
       - ApiKeyAuth: []
       summary: Search tokens for a specific group
       tags:
-      - tokens
+      - token
   /api/tokens:
     get:
       description: Returns a paginated list of all tokens
       parameters:
       - description: Page number
         in: query
-        name: page
+        name: p
         type: integer
       - description: Items per page
         in: query
         name: per_page
+        type: integer
+      - description: Group name
+        in: query
+        name: group
+        type: string
+      - description: Order
+        in: query
+        name: order
+        type: string
+      - description: Status
+        in: query
+        name: status
         type: integer
       produces:
       - application/json
@@ -3488,6 +3524,22 @@ paths:
         name: group
         required: true
         type: string
+      - description: Page number
+        in: query
+        name: p
+        type: integer
+      - description: Items per page
+        in: query
+        name: per_page
+        type: integer
+      - description: Order
+        in: query
+        name: order
+        type: string
+      - description: Status
+        in: query
+        name: status
+        type: integer
       produces:
       - application/json
       responses:
@@ -3687,6 +3739,14 @@ paths:
         in: query
         name: keyword
         type: string
+      - description: Page number
+        in: query
+        name: p
+        type: integer
+      - description: Items per page
+        in: query
+        name: per_page
+        type: integer
       - description: Order
         in: query
         name: order

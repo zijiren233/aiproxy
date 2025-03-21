@@ -150,20 +150,100 @@ func SearchTokens(group string, keyword string, page int, perPage int, order str
 		var values []interface{}
 
 		if group == "" {
-			conditions = append(conditions, "group_id = ?")
-			values = append(values, keyword)
+			if common.UsingPostgreSQL {
+				conditions = append(conditions, "group_id ILIKE ?")
+			} else {
+				conditions = append(conditions, "group_id LIKE ?")
+			}
+			values = append(values, "%"+keyword+"%")
 		}
+		if name == "" {
+			if common.UsingPostgreSQL {
+				conditions = append(conditions, "name ILIKE ?")
+			} else {
+				conditions = append(conditions, "name LIKE ?")
+			}
+			values = append(values, "%"+keyword+"%")
+		}
+		if key == "" {
+			if common.UsingPostgreSQL {
+				conditions = append(conditions, "key ILIKE ?")
+			} else {
+				conditions = append(conditions, "key LIKE ?")
+			}
+			values = append(values, "%"+keyword+"%")
+		}
+
 		if status == 0 {
 			conditions = append(conditions, "status = ?")
 			values = append(values, String2Int(keyword))
 		}
+
+		if common.UsingPostgreSQL {
+			conditions = append(conditions, "models ILIKE ?")
+		} else {
+			conditions = append(conditions, "models LIKE ?")
+		}
+		values = append(values, "%"+keyword+"%")
+
+		if len(conditions) > 0 {
+			tx = tx.Where(fmt.Sprintf("(%s)", strings.Join(conditions, " OR ")), values...)
+		}
+	}
+
+	err = tx.Count(&total).Error
+	if err != nil {
+		return nil, 0, err
+	}
+	if total <= 0 {
+		return nil, 0, nil
+	}
+	limit, offset := toLimitOffset(page, perPage)
+	err = tx.Order(getTokenOrder(order)).Limit(limit).Offset(offset).Find(&tokens).Error
+	return tokens, total, err
+}
+
+func SearchGroupTokens(group string, keyword string, page int, perPage int, order string, status int, name string, key string) (tokens []*Token, total int64, err error) {
+	if group == "" {
+		return nil, 0, errors.New("group is empty")
+	}
+
+	tx := DB.Model(&Token{}).
+		Where("group_id = ?", group)
+	if name != "" {
+		tx = tx.Where("name = ?", name)
+	}
+	if key != "" {
+		tx = tx.Where("key = ?", key)
+	}
+	if status != 0 {
+		tx = tx.Where("status = ?", status)
+	}
+
+	if keyword != "" {
+		var conditions []string
+		var values []interface{}
+
 		if name == "" {
-			conditions = append(conditions, "name = ?")
-			values = append(values, keyword)
+			if common.UsingPostgreSQL {
+				conditions = append(conditions, "name ILIKE ?")
+			} else {
+				conditions = append(conditions, "name LIKE ?")
+			}
+			values = append(values, "%"+keyword+"%")
 		}
 		if key == "" {
-			conditions = append(conditions, "key = ?")
-			values = append(values, keyword)
+			if common.UsingPostgreSQL {
+				conditions = append(conditions, "key ILIKE ?")
+			} else {
+				conditions = append(conditions, "key LIKE ?")
+			}
+			values = append(values, "%"+keyword+"%")
+		}
+
+		if status == 0 {
+			conditions = append(conditions, "status = ?")
+			values = append(values, String2Int(keyword))
 		}
 
 		if common.UsingPostgreSQL {
