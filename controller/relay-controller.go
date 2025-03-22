@@ -157,7 +157,7 @@ var (
 	ErrChannelsExhausted = errors.New("channels exhausted")
 )
 
-func GetRandomChannel(mc *model.ModelCaches, availableSet []string, modelName string, errorRates map[int64]float64, ignoreChannel ...int64) (*model.Channel, error) {
+func GetRandomChannel(mc *model.ModelCaches, availableSet []string, modelName string, errorRates map[int64]float64, ignoreChannel ...int64) (*model.Channel, []*model.Channel, error) {
 	channelMap := make(map[int]*model.Channel)
 	for _, set := range availableSet {
 		for _, channel := range mc.EnabledModel2ChannelsBySet[set][modelName] {
@@ -168,7 +168,8 @@ func GetRandomChannel(mc *model.ModelCaches, availableSet []string, modelName st
 	for _, channel := range channelMap {
 		migratedChannels = append(migratedChannels, channel)
 	}
-	return getRandomChannel(migratedChannels, errorRates, ignoreChannel...)
+	channel, err := getRandomChannel(migratedChannels, errorRates, ignoreChannel...)
+	return channel, migratedChannels, err
 }
 
 func getPriority(channel *model.Channel, errorRate float64) int32 {
@@ -219,15 +220,16 @@ func getRandomChannel(channels []*model.Channel, errorRates map[int64]float64, i
 	return channels[rand.IntN(len(channels))], nil
 }
 
-func getChannelWithFallback(cache *model.ModelCaches, availableSet []string, modelName string, errorRates map[int64]float64, ignoreChannelIDs ...int64) (*model.Channel, error) {
-	channel, err := GetRandomChannel(cache, availableSet, modelName, errorRates, ignoreChannelIDs...)
+func getChannelWithFallback(cache *model.ModelCaches, availableSet []string, modelName string, errorRates map[int64]float64, ignoreChannelIDs ...int64) (*model.Channel, []*model.Channel, error) {
+	channel, migratedChannels, err := GetRandomChannel(cache, availableSet, modelName, errorRates, ignoreChannelIDs...)
 	if err == nil {
-		return channel, nil
+		return channel, migratedChannels, nil
 	}
 	if !errors.Is(err, ErrChannelsExhausted) {
-		return nil, err
+		return nil, migratedChannels, err
 	}
-	return GetRandomChannel(cache, availableSet, modelName, errorRates)
+	channel, migratedChannels, err = GetRandomChannel(cache, availableSet, modelName, errorRates)
+	return channel, migratedChannels, err
 }
 
 func NewRelay(mode mode.Mode) func(c *gin.Context) {
@@ -371,11 +373,11 @@ type retryState struct {
 	errorRates               map[int64]float64
 	exhausted                bool
 
-	meta         *meta.Meta
-	price        model.Price
-	inputTokens  int
-	result       *controller.HandleResult
-	availableSet []string
+	meta             *meta.Meta
+	price            model.Price
+	inputTokens      int
+	result           *controller.HandleResult
+	migratedChannels []*model.Channel
 }
 
 type initialChannel struct {
@@ -383,7 +385,7 @@ type initialChannel struct {
 	designatedChannel bool
 	ignoreChannelIDs  []int64
 	errorRates        map[int64]float64
-	availableSet      []string
+	migratedChannels  []*model.Channel
 }
 
 func getInitialChannel(c *gin.Context, modelName string, log *log.Entry) (*initialChannel, error) {
@@ -408,7 +410,7 @@ func getInitialChannel(c *gin.Context, modelName string, log *log.Entry) (*initi
 	group := middleware.GetGroup(c)
 	availableSet := group.GetAvailableSets()
 
-	channel, err := getChannelWithFallback(mc, availableSet, modelName, errorRates, ids...)
+	channel, migratedChannels, err := getChannelWithFallback(mc, availableSet, modelName, errorRates, ids...)
 	if err != nil {
 		return nil, err
 	}
@@ -417,7 +419,7 @@ func getInitialChannel(c *gin.Context, modelName string, log *log.Entry) (*initi
 		channel:          channel,
 		ignoreChannelIDs: ids,
 		errorRates:       errorRates,
-		availableSet:     availableSet,
+		migratedChannels: migratedChannels,
 	}, nil
 }
 
@@ -444,7 +446,7 @@ func initRetryState(retryTimes int, channel *initialChannel, meta *meta.Meta, re
 		result:           result,
 		price:            price,
 		inputTokens:      meta.InputTokens,
-		availableSet:     channel.availableSet,
+		migratedChannels: channel.migratedChannels,
 	}
 
 	if channel.designatedChannel {
@@ -533,7 +535,7 @@ func getRetryChannel(mc *model.ModelCaches, modelName string, state *retryState)
 		return state.lastHasPermissionChannel, nil
 	}
 
-	newChannel, err := GetRandomChannel(mc, state.availableSet, modelName, state.errorRates, state.ignoreChannelIDs...)
+	newChannel, err := getRandomChannel(state.migratedChannels, state.errorRates, state.ignoreChannelIDs...)
 	if err != nil {
 		if !errors.Is(err, ErrChannelsExhausted) || state.lastHasPermissionChannel == nil {
 			return nil, err
