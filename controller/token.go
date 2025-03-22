@@ -320,9 +320,10 @@ func GetGroupToken(c *gin.Context) {
 //	@Accept			json
 //	@Produce		json
 //	@Security		ApiKeyAuth
-//	@Param			group	path		string			true	"Group name"
-//	@Param			token	body		AddTokenRequest	true	"Token information"
-//	@Success		200		{object}	middleware.APIResponse{data=TokenResponse}
+//	@Param			group				path		string			true	"Group name"
+//	@Param			auto_create_group	query		bool			false	"Auto create group"
+//	@Param			token				body		AddTokenRequest	true	"Token information"
+//	@Success		200					{object}	middleware.APIResponse{data=TokenResponse}
 //	@Router			/api/token/{group} [post]
 func AddGroupToken(c *gin.Context) {
 	group := c.Param("group")
