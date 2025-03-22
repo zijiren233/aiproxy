@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/labring/aiproxy/common"
 	"github.com/labring/aiproxy/common/rpmlimit"
 	"github.com/labring/aiproxy/middleware"
 	"github.com/labring/aiproxy/model"
@@ -147,7 +146,7 @@ func GetDashboard(c *gin.Context) {
 	modelName := c.Query("model")
 	resultOnly, _ := strconv.ParseBool(c.Query("result_only"))
 
-	dashboards, err := model.GetDashboardData(start, end, modelName, timeSpan, resultOnly)
+	dashboards, err := model.GetDashboardData(group, start, end, modelName, timeSpan, resultOnly, false)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusOK, err.Error())
 		return
@@ -155,13 +154,11 @@ func GetDashboard(c *gin.Context) {
 
 	dashboards.ChartData = fillGaps(dashboards.ChartData, start, end, timeSpan)
 
-	if common.RedisEnabled {
-		rpm, err := rpmlimit.GetRPM(c.Request.Context(), group, modelName)
-		if err != nil {
-			log.Errorf("failed to get rpm: %v", err)
-		} else {
-			dashboards.RPM = rpm
-		}
+	rpm, err := rpmlimit.GetRPM(c.Request.Context(), group, modelName)
+	if err != nil {
+		log.Errorf("failed to get rpm: %v", err)
+	} else {
+		dashboards.RPM = rpm
 	}
 
 	middleware.SuccessResponse(c, dashboards)
@@ -174,7 +171,7 @@ func GetDashboard(c *gin.Context) {
 //	@Tags			dashboard
 //	@Produce		json
 //	@Security		ApiKeyAuth
-//	@Param			group		path		string	true	"Group or *"
+//	@Param			group		path		string	true	"Group"
 //	@Param			type		query		string	false	"Type of time span (day, week, month, two_week)"
 //	@Param			token_name	query		string	false	"Token name"
 //	@Param			model		query		string	false	"Model or *"
@@ -185,8 +182,8 @@ func GetGroupDashboard(c *gin.Context) {
 	log := middleware.GetLogger(c)
 
 	group := c.Param("group")
-	if group == "" {
-		middleware.ErrorResponse(c, http.StatusOK, "invalid parameter")
+	if group == "" || group == "*" {
+		middleware.ErrorResponse(c, http.StatusOK, "invalid group parameter")
 		return
 	}
 
@@ -195,7 +192,9 @@ func GetGroupDashboard(c *gin.Context) {
 	modelName := c.Query("model")
 	resultOnly, _ := strconv.ParseBool(c.Query("result_only"))
 
-	dashboards, err := model.GetGroupDashboardData(group, start, end, tokenName, modelName, timeSpan, resultOnly)
+	needRPM := tokenName != ""
+
+	dashboards, err := model.GetGroupDashboardData(group, start, end, tokenName, modelName, timeSpan, resultOnly, needRPM)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusOK, "failed to get statistics")
 		return
@@ -203,7 +202,7 @@ func GetGroupDashboard(c *gin.Context) {
 
 	dashboards.ChartData = fillGaps(dashboards.ChartData, start, end, timeSpan)
 
-	if common.RedisEnabled && tokenName == "" {
+	if !needRPM {
 		rpm, err := rpmlimit.GetRPM(c.Request.Context(), group, modelName)
 		if err != nil {
 			log.Errorf("failed to get rpm: %v", err)
@@ -227,8 +226,8 @@ func GetGroupDashboard(c *gin.Context) {
 //	@Router			/api/dashboard/{group}/models [get]
 func GetGroupDashboardModels(c *gin.Context) {
 	group := c.Param("group")
-	if group == "" {
-		middleware.ErrorResponse(c, http.StatusOK, "invalid parameter")
+	if group == "" || group == "*" {
+		middleware.ErrorResponse(c, http.StatusOK, "invalid group parameter")
 		return
 	}
 	groupCache, err := model.CacheGetGroup(group)
@@ -264,13 +263,15 @@ func GetGroupDashboardModels(c *gin.Context) {
 //	@Tags			dashboard
 //	@Produce		json
 //	@Security		ApiKeyAuth
+//	@Param			group			query		string	false	"Group or *"
 //	@Param			start_timestamp	query		int64	false	"Start timestamp"
 //	@Param			end_timestamp	query		int64	false	"End timestamp"
 //	@Success		200				{object}	middleware.APIResponse{data=[]model.ModelCostRank}
 //	@Router			/api/model_cost_rank [get]
 func GetModelCostRank(c *gin.Context) {
+	group := c.Query("group")
 	startTime, endTime := parseTimeRange(c)
-	models, err := model.GetModelCostRank("", startTime, endTime)
+	models, err := model.GetModelCostRank(group, startTime, endTime)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusOK, err.Error())
 		return
@@ -292,8 +293,8 @@ func GetModelCostRank(c *gin.Context) {
 //	@Router			/api/model_cost_rank/{group} [get]
 func GetGroupModelCostRank(c *gin.Context) {
 	group := c.Param("group")
-	if group == "" {
-		middleware.ErrorResponse(c, http.StatusOK, "group is required")
+	if group == "" || group == "*" {
+		middleware.ErrorResponse(c, http.StatusOK, "invalid group parameter")
 		return
 	}
 	startTime, endTime := parseTimeRange(c)

@@ -65,6 +65,7 @@ func parseCommonParams(c *gin.Context) (params struct {
 //	@Tags			logs
 //	@Produce		json
 //	@Security		ApiKeyAuth
+//	@Param			group			query		string	false	"Group or *"
 //	@Param			page			query		int		false	"Page number"
 //	@Param			per_page		query		int		false	"Items per page"
 //	@Param			start_timestamp	query		int		false	"Start timestamp (milliseconds)"
@@ -143,8 +144,8 @@ func GetLogs(c *gin.Context) {
 //	@Router			/api/log/{group} [get]
 func GetGroupLogs(c *gin.Context) {
 	group := c.Param("group")
-	if group == "" {
-		middleware.ErrorResponse(c, http.StatusOK, "group is required")
+	if group == "" || group == "*" {
+		middleware.ErrorResponse(c, http.StatusOK, "invalid group parameter")
 		return
 	}
 
@@ -185,6 +186,8 @@ func GetGroupLogs(c *gin.Context) {
 //	@Tags			logs
 //	@Produce		json
 //	@Security		ApiKeyAuth
+//	@Param			group			query		string	false	"Group or *"
+//	@Param			keyword			query		string	true	"Keyword"
 //	@Param			page			query		int		false	"Page number"
 //	@Param			per_page		query		int		false	"Items per page"
 //	@Param			start_timestamp	query		int		false	"Start timestamp (milliseconds)"
@@ -209,7 +212,7 @@ func SearchLogs(c *gin.Context) {
 	params := parseCommonParams(c)
 
 	keyword := c.Query("keyword")
-	group := c.Query("group_id")
+	group := c.Query("group")
 
 	result, err := model.SearchLogs(
 		group,
@@ -246,6 +249,7 @@ func SearchLogs(c *gin.Context) {
 //	@Produce		json
 //	@Security		ApiKeyAuth
 //	@Param			group			path		string	true	"Group name"
+//	@Param			keyword			query		string	true	"Keyword"
 //	@Param			page			query		int		false	"Page number"
 //	@Param			per_page		query		int		false	"Items per page"
 //	@Param			start_timestamp	query		int		false	"Start timestamp (milliseconds)"
@@ -266,8 +270,8 @@ func SearchLogs(c *gin.Context) {
 //	@Router			/api/log/{group}/search [get]
 func SearchGroupLogs(c *gin.Context) {
 	group := c.Param("group")
-	if group == "" {
-		middleware.ErrorResponse(c, http.StatusOK, "group is required")
+	if group == "" || group == "*" {
+		middleware.ErrorResponse(c, http.StatusOK, "invalid group parameter")
 		return
 	}
 
@@ -303,6 +307,52 @@ func SearchGroupLogs(c *gin.Context) {
 	middleware.SuccessResponse(c, result)
 }
 
+// GetUsedModels godoc
+//
+//	@Summary		Get used models
+//	@Description	Get a list of models that have been used in logs
+//	@Tags			logs
+//	@Produce		json
+//	@Security		ApiKeyAuth
+//	@Param			group	query		string	false	"Group or *"
+//	@Success		200		{object}	middleware.APIResponse{data=[]string}
+//	@Router			/api/logs/used/models [get]
+func GetUsedModels(c *gin.Context) {
+	group := c.Query("group")
+	startTime, endTime := parseTimeRange(c)
+	models, err := model.GetUsedModels(group, startTime, endTime)
+	if err != nil {
+		middleware.ErrorResponse(c, http.StatusOK, err.Error())
+		return
+	}
+	middleware.SuccessResponse(c, models)
+}
+
+// GetGroupUsedModels godoc
+//
+//	@Summary		Get group used models
+//	@Description	Get a list of models that have been used in a specific group's logs
+//	@Tags			log
+//	@Produce		json
+//	@Security		ApiKeyAuth
+//	@Param			group	path		string	true	"Group name"
+//	@Success		200		{object}	middleware.APIResponse{data=[]string}
+//	@Router			/api/log/{group}/used/models [get]
+func GetGroupUsedModels(c *gin.Context) {
+	group := c.Param("group")
+	if group == "" || group == "*" {
+		middleware.ErrorResponse(c, http.StatusOK, "invalid group parameter")
+		return
+	}
+	startTime, endTime := parseTimeRange(c)
+	models, err := model.GetUsedModels(group, startTime, endTime)
+	if err != nil {
+		middleware.ErrorResponse(c, http.StatusOK, err.Error())
+		return
+	}
+	middleware.SuccessResponse(c, models)
+}
+
 // GetLogDetail godoc
 //
 //	@Summary		Get log detail
@@ -323,25 +373,6 @@ func GetLogDetail(c *gin.Context) {
 	middleware.SuccessResponse(c, log)
 }
 
-// GetUsedModels godoc
-//
-//	@Summary		Get used models
-//	@Description	Get a list of models that have been used in logs
-//	@Tags			logs
-//	@Produce		json
-//	@Security		ApiKeyAuth
-//	@Success		200	{object}	middleware.APIResponse{data=[]string}
-//	@Router			/api/logs/used/models [get]
-func GetUsedModels(c *gin.Context) {
-	startTime, endTime := parseTimeRange(c)
-	models, err := model.GetUsedModels("", startTime, endTime)
-	if err != nil {
-		middleware.ErrorResponse(c, http.StatusOK, err.Error())
-		return
-	}
-	middleware.SuccessResponse(c, models)
-}
-
 // GetGroupLogDetail godoc
 //
 //	@Summary		Get group log detail
@@ -355,8 +386,8 @@ func GetUsedModels(c *gin.Context) {
 //	@Router			/api/log/{group}/detail/{log_id} [get]
 func GetGroupLogDetail(c *gin.Context) {
 	group := c.Param("group")
-	if group == "" {
-		middleware.ErrorResponse(c, http.StatusOK, "group is required")
+	if group == "" || group == "*" {
+		middleware.ErrorResponse(c, http.StatusOK, "invalid group parameter")
 		return
 	}
 	logID, _ := strconv.Atoi(c.Param("log_id"))
@@ -368,29 +399,25 @@ func GetGroupLogDetail(c *gin.Context) {
 	middleware.SuccessResponse(c, log)
 }
 
-// GetGroupUsedModels godoc
+// GetUsedTokenNames godoc
 //
-//	@Summary		Get group used models
-//	@Description	Get a list of models that have been used in a specific group's logs
-//	@Tags			log
+//	@Summary		Get used token names
+//	@Description	Get a list of token names that have been used in logs
+//	@Tags			logs
 //	@Produce		json
 //	@Security		ApiKeyAuth
-//	@Param			group	path		string	true	"Group name"
+//	@Param			group	query		string	false	"Group or *"
 //	@Success		200		{object}	middleware.APIResponse{data=[]string}
-//	@Router			/api/log/{group}/used/models [get]
-func GetGroupUsedModels(c *gin.Context) {
-	group := c.Param("group")
-	if group == "" {
-		middleware.ErrorResponse(c, http.StatusOK, "group is required")
-		return
-	}
+//	@Router			/api/logs/used/token_names [get]
+func GetUsedTokenNames(c *gin.Context) {
+	group := c.Query("group")
 	startTime, endTime := parseTimeRange(c)
-	models, err := model.GetUsedModels(group, startTime, endTime)
+	tokenNames, err := model.GetUsedTokenNames(group, startTime, endTime)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusOK, err.Error())
 		return
 	}
-	middleware.SuccessResponse(c, models)
+	middleware.SuccessResponse(c, tokenNames)
 }
 
 // GetGroupUsedTokenNames godoc
@@ -405,8 +432,8 @@ func GetGroupUsedModels(c *gin.Context) {
 //	@Router			/api/log/{group}/used/token_names [get]
 func GetGroupUsedTokenNames(c *gin.Context) {
 	group := c.Param("group")
-	if group == "" {
-		middleware.ErrorResponse(c, http.StatusOK, "group is required")
+	if group == "" || group == "*" {
+		middleware.ErrorResponse(c, http.StatusOK, "invalid group parameter")
 		return
 	}
 	startTime, endTime := parseTimeRange(c)
