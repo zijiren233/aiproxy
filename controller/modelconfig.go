@@ -15,7 +15,8 @@ import (
 //	@Tags			modelconfig
 //	@Produce		json
 //	@Security		ApiKeyAuth
-//	@Success		200	{object}	middleware.APIResponse{data=map[string]any{configs=[]model.ModelConfig,total=int}}
+//	@Param			model	query		string	false	"Model name"
+//	@Success		200		{object}	middleware.APIResponse{data=map[string]any{configs=[]model.ModelConfig,total=int}}
 //	@Router			/api/model_configs [get]
 func GetModelConfigs(c *gin.Context) {
 	page, perPage := parsePageParams(c)
@@ -60,7 +61,8 @@ type GetModelConfigsByModelsContainsRequest struct {
 //	@Tags			modelconfig
 //	@Produce		json
 //	@Security		ApiKeyAuth
-//	@Success		200	{object}	middleware.APIResponse{data=[]model.ModelConfig}
+//	@Param			models	body		GetModelConfigsByModelsContainsRequest	true	"Models"
+//	@Success		200		{object}	middleware.APIResponse{data=[]model.ModelConfig}
 //	@Router			/api/model_configs/contains [post]
 func GetModelConfigsByModelsContains(c *gin.Context) {
 	request := GetModelConfigsByModelsContainsRequest{}
@@ -84,7 +86,12 @@ func GetModelConfigsByModelsContains(c *gin.Context) {
 //	@Tags			modelconfig
 //	@Produce		json
 //	@Security		ApiKeyAuth
-//	@Success		200	{object}	middleware.APIResponse{data=map[string]any{configs=[]model.ModelConfig,total=int}}
+//	@Param			keyword		query		string	false	"Keyword"
+//	@Param			model		query		string	false	"Model name"
+//	@Param			owner		query		string	false	"Owner"
+//	@Param			page		query		int		false	"Page"
+//	@Param			per_page	query		int		false	"Per page"
+//	@Success		200			{object}	middleware.APIResponse{data=map[string]any{configs=[]model.ModelConfig,total=int}}
 //	@Router			/api/model_configs/search [get]
 func SearchModelConfigs(c *gin.Context) {
 	keyword := c.Query("keyword")

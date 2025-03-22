@@ -247,8 +247,11 @@ func processTestResult(mc *model.ModelCaches, channel *model.Channel, modelName 
 //	@Tags			channel
 //	@Produce		json
 //	@Security		ApiKeyAuth
-//	@Param			id	path		int	true	"Channel ID"
-//	@Success		200	{object}	middleware.APIResponse{data=[]TestResult}
+//	@Param			id				path		int		true	"Channel ID"
+//	@Param			return_success	query		bool	false	"Return success"
+//	@Param			success_body	query		bool	false	"Success body"
+//	@Param			stream			query		bool	false	"Stream"
+//	@Success		200				{object}	middleware.APIResponse{data=[]TestResult}
 //	@Router			/api/channel/{id}/models [get]
 func TestChannelModels(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
@@ -343,9 +346,13 @@ func TestChannelModels(c *gin.Context) {
 //	@Tags			channel
 //	@Produce		json
 //	@Security		ApiKeyAuth
-//	@Success		200	{object}	middleware.APIResponse{data=[]TestResult}
+//	@Param			test_disabled	query		bool	false	"Test disabled"
+//	@Param			return_success	query		bool	false	"Return success"
+//	@Param			success_body	query		bool	false	"Success body"
+//	@Param			stream			query		bool	false	"Stream"
+//	@Success		200				{object}	middleware.APIResponse{data=[]TestResult}
 //
-// @Router			/api/channels/test [get]
+//	@Router			/api/channels/test [get]
 func TestAllChannels(c *gin.Context) {
 	testDisabled := c.Query("test_disabled") == "true"
 	var channels []*model.Channel

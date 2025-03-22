@@ -37,6 +37,23 @@ definitions:
       type:
         type: integer
     type: object
+  controller.AddTokenRequest:
+    properties:
+      expiredAt:
+        type: integer
+      models:
+        items:
+          type: string
+        type: array
+      name:
+        type: string
+      quota:
+        type: number
+      subnets:
+        items:
+          type: string
+        type: array
+    type: object
   controller.BuiltinModelConfig:
     properties:
       config:
@@ -64,6 +81,32 @@ definitions:
         $ref: '#/definitions/mode.Mode'
       updated_at:
         type: string
+    type: object
+  controller.CreateGroupRequest:
+    properties:
+      available_set:
+        items:
+          type: string
+        type: array
+      rpm:
+        additionalProperties:
+          type: integer
+        type: object
+      rpm_ratio:
+        type: number
+      tpm:
+        additionalProperties:
+          type: integer
+        type: object
+      tpm_ratio:
+        type: number
+    type: object
+  controller.GetModelConfigsByModelsContainsRequest:
+    properties:
+      models:
+        items:
+          type: string
+        type: array
     type: object
   controller.GroupResponse:
     properties:
@@ -226,6 +269,35 @@ definitions:
     properties:
       status:
         type: integer
+    type: object
+  controller.UpdateGroupRPMRatioRequest:
+    properties:
+      rpm_ratio:
+        type: number
+    type: object
+  controller.UpdateGroupRPMRequest:
+    properties:
+      rpm:
+        additionalProperties:
+          type: integer
+        type: object
+    type: object
+  controller.UpdateGroupStatusRequest:
+    properties:
+      status:
+        type: integer
+    type: object
+  controller.UpdateGroupTPMRatioRequest:
+    properties:
+      tpm_ratio:
+        type: number
+    type: object
+  controller.UpdateGroupTPMRequest:
+    properties:
+      tpm:
+        additionalProperties:
+          type: integer
+        type: object
     type: object
   controller.UpdateTokenNameRequest:
     properties:
@@ -998,37 +1070,6 @@ definitions:
     - model
     - voice
     type: object
-  model.Token:
-    properties:
-      created_at:
-        type: string
-      expired_at:
-        type: string
-      group:
-        type: string
-      id:
-        type: integer
-      key:
-        type: string
-      models:
-        items:
-          type: string
-        type: array
-      name:
-        type: string
-      quota:
-        type: number
-      request_count:
-        type: integer
-      status:
-        type: integer
-      subnets:
-        items:
-          type: string
-        type: array
-      used_amount:
-        type: number
-    type: object
   model.Tool:
     properties:
       function:
@@ -1233,6 +1274,18 @@ paths:
         name: id
         required: true
         type: integer
+      - description: Return success
+        in: query
+        name: return_success
+        type: boolean
+      - description: Success body
+        in: query
+        name: success_body
+        type: boolean
+      - description: Stream
+        in: query
+        name: stream
+        type: boolean
       produces:
       - application/json
       responses:
@@ -1533,6 +1586,23 @@ paths:
   /api/channels/test:
     get:
       description: Tests all channels
+      parameters:
+      - description: Test disabled
+        in: query
+        name: test_disabled
+        type: boolean
+      - description: Return success
+        in: query
+        name: return_success
+        type: boolean
+      - description: Success body
+        in: query
+        name: success_body
+        type: boolean
+      - description: Stream
+        in: query
+        name: stream
+        type: boolean
       produces:
       - application/json
       responses:
@@ -1600,6 +1670,19 @@ paths:
     get:
       description: Returns the general dashboard data including usage statistics and
         metrics
+      parameters:
+      - description: Type of time span (day, week, month, two_week)
+        in: query
+        name: type
+        type: string
+      - description: Model name
+        in: query
+        name: model
+        type: string
+      - description: Only return result
+        in: query
+        name: result_only
+        type: boolean
       produces:
       - application/json
       responses:
@@ -1626,6 +1709,22 @@ paths:
         name: group
         required: true
         type: string
+      - description: Type of time span (day, week, month, two_week)
+        in: query
+        name: type
+        type: string
+      - description: Token name
+        in: query
+        name: token_name
+        type: string
+      - description: Model name
+        in: query
+        name: model
+        type: string
+      - description: Only return result
+        in: query
+        name: result_only
+        type: boolean
       produces:
       - application/json
       responses:
@@ -1732,7 +1831,7 @@ paths:
         name: data
         required: true
         schema:
-          type: object
+          $ref: '#/definitions/controller.CreateGroupRequest'
       produces:
       - application/json
       responses:
@@ -1765,7 +1864,7 @@ paths:
         name: data
         required: true
         schema:
-          type: object
+          $ref: '#/definitions/controller.CreateGroupRequest'
       produces:
       - application/json
       responses:
@@ -1799,7 +1898,7 @@ paths:
         name: data
         required: true
         schema:
-          type: object
+          $ref: '#/definitions/controller.UpdateGroupRPMRequest'
       produces:
       - application/json
       responses:
@@ -1828,7 +1927,7 @@ paths:
         name: data
         required: true
         schema:
-          type: object
+          $ref: '#/definitions/controller.UpdateGroupRPMRatioRequest'
       produces:
       - application/json
       responses:
@@ -1857,7 +1956,7 @@ paths:
         name: status
         required: true
         schema:
-          type: object
+          $ref: '#/definitions/controller.UpdateGroupStatusRequest'
       produces:
       - application/json
       responses:
@@ -1886,7 +1985,7 @@ paths:
         name: data
         required: true
         schema:
-          type: object
+          $ref: '#/definitions/controller.UpdateGroupTPMRequest'
       produces:
       - application/json
       responses:
@@ -1915,7 +2014,7 @@ paths:
         name: data
         required: true
         schema:
-          type: object
+          $ref: '#/definitions/controller.UpdateGroupTPMRatioRequest'
       produces:
       - application/json
       responses:
@@ -2011,6 +2110,14 @@ paths:
         in: query
         name: per_page
         type: integer
+      - description: Status
+        in: query
+        name: status
+        type: integer
+      - description: Order
+        in: query
+        name: order
+        type: string
       produces:
       - application/json
       responses:
@@ -2058,12 +2165,60 @@ paths:
         type: integer
       - description: Start timestamp (milliseconds)
         in: query
-        name: start_time
+        name: start_timestamp
         type: integer
       - description: End timestamp (milliseconds)
         in: query
-        name: end_time
+        name: end_timestamp
         type: integer
+      - description: Token name
+        in: query
+        name: token_name
+        type: string
+      - description: Model name
+        in: query
+        name: model_name
+        type: string
+      - description: Channel ID
+        in: query
+        name: channel
+        type: integer
+      - description: Endpoint
+        in: query
+        name: endpoint
+        type: string
+      - description: Token ID
+        in: query
+        name: token_id
+        type: integer
+      - description: Order
+        in: query
+        name: order
+        type: string
+      - description: Request ID
+        in: query
+        name: request_id
+        type: string
+      - description: Mode
+        in: query
+        name: mode
+        type: integer
+      - description: Code type
+        in: query
+        name: code_type
+        type: string
+      - description: With body
+        in: query
+        name: with_body
+        type: boolean
+      - description: IP
+        in: query
+        name: ip
+        type: string
+      - description: Result only
+        in: query
+        name: result_only
+        type: boolean
       produces:
       - application/json
       responses:
@@ -2131,11 +2286,11 @@ paths:
         type: integer
       - description: Start timestamp (milliseconds)
         in: query
-        name: start_time
+        name: start_timestamp
         type: integer
       - description: End timestamp (milliseconds)
         in: query
-        name: end_time
+        name: end_timestamp
         type: integer
       - description: Filter by token name
         in: query
@@ -2143,12 +2298,48 @@ paths:
         type: string
       - description: Filter by model name
         in: query
-        name: model
+        name: model_name
         type: string
-      - description: Filter by status
+      - description: Filter by channel
         in: query
-        name: status
+        name: channel
         type: integer
+      - description: Filter by endpoint
+        in: query
+        name: endpoint
+        type: string
+      - description: Filter by token id
+        in: query
+        name: token_id
+        type: integer
+      - description: Order
+        in: query
+        name: order
+        type: string
+      - description: Request ID
+        in: query
+        name: request_id
+        type: string
+      - description: Mode
+        in: query
+        name: mode
+        type: integer
+      - description: Code type
+        in: query
+        name: code_type
+        type: string
+      - description: With body
+        in: query
+        name: with_body
+        type: boolean
+      - description: IP
+        in: query
+        name: ip
+        type: string
+      - description: Result only
+        in: query
+        name: result_only
+        type: boolean
       produces:
       - application/json
       responses:
@@ -2227,6 +2418,12 @@ paths:
   /api/logs:
     delete:
       description: Deletes logs older than the specified retention period
+      parameters:
+      - description: Timestamp (milliseconds)
+        in: query
+        name: timestamp
+        required: true
+        type: integer
       produces:
       - application/json
       responses:
@@ -2257,12 +2454,60 @@ paths:
         type: integer
       - description: Start timestamp (milliseconds)
         in: query
-        name: start_time
+        name: start_timestamp
         type: integer
       - description: End timestamp (milliseconds)
         in: query
-        name: end_time
+        name: end_timestamp
         type: integer
+      - description: Token name
+        in: query
+        name: token_name
+        type: string
+      - description: Model name
+        in: query
+        name: model_name
+        type: string
+      - description: Channel ID
+        in: query
+        name: channel
+        type: integer
+      - description: Endpoint
+        in: query
+        name: endpoint
+        type: string
+      - description: Token ID
+        in: query
+        name: token_id
+        type: integer
+      - description: Order
+        in: query
+        name: order
+        type: string
+      - description: Mode
+        in: query
+        name: mode
+        type: integer
+      - description: Request ID
+        in: query
+        name: request_id
+        type: string
+      - description: Code type
+        in: query
+        name: code_type
+        type: string
+      - description: With body
+        in: query
+        name: with_body
+        type: boolean
+      - description: IP
+        in: query
+        name: ip
+        type: string
+      - description: Result only
+        in: query
+        name: result_only
+        type: boolean
       produces:
       - application/json
       responses:
@@ -2294,12 +2539,44 @@ paths:
         type: integer
       - description: Start timestamp (milliseconds)
         in: query
-        name: start_time
+        name: start_timestamp
         type: integer
       - description: End timestamp (milliseconds)
         in: query
-        name: end_time
+        name: end_timestamp
         type: integer
+      - description: Keyword
+        in: query
+        name: keyword
+        type: string
+      - description: Group
+        in: query
+        name: group
+        type: string
+      - description: Token name
+        in: query
+        name: token_name
+        type: string
+      - description: Model name
+        in: query
+        name: model_name
+        type: string
+      - description: Content
+        in: query
+        name: content
+        type: string
+      - description: Token ID
+        in: query
+        name: token_id
+        type: integer
+      - description: Order
+        in: query
+        name: order
+        type: string
+      - description: Request ID
+        in: query
+        name: request_id
+        type: string
       produces:
       - application/json
       responses:
@@ -2368,11 +2645,11 @@ paths:
         type: integer
       - description: Start timestamp (milliseconds)
         in: query
-        name: start_time
+        name: start_timestamp
         type: integer
       - description: End timestamp (milliseconds)
         in: query
-        name: end_time
+        name: end_timestamp
         type: integer
       - description: Filter by token name
         in: query
@@ -2380,12 +2657,48 @@ paths:
         type: string
       - description: Filter by model name
         in: query
-        name: model
+        name: model_name
         type: string
-      - description: Filter by status
+      - description: Filter by channel
         in: query
-        name: status
+        name: channel
         type: integer
+      - description: Filter by endpoint
+        in: query
+        name: endpoint
+        type: string
+      - description: Filter by token id
+        in: query
+        name: token_id
+        type: integer
+      - description: Order
+        in: query
+        name: order
+        type: string
+      - description: Request ID
+        in: query
+        name: request_id
+        type: string
+      - description: Mode
+        in: query
+        name: mode
+        type: integer
+      - description: Code type
+        in: query
+        name: code_type
+        type: string
+      - description: With body
+        in: query
+        name: with_body
+        type: boolean
+      - description: IP
+        in: query
+        name: ip
+        type: string
+      - description: Result only
+        in: query
+        name: result_only
+        type: boolean
       produces:
       - application/json
       responses:
@@ -2496,6 +2809,11 @@ paths:
   /api/model_configs:
     get:
       description: Returns a list of model configs with pagination
+      parameters:
+      - description: Model name
+        in: query
+        name: model
+        type: string
       produces:
       - application/json
       responses:
@@ -2596,6 +2914,13 @@ paths:
   /api/model_configs/contains:
     post:
       description: Returns a list of model configs by models contains
+      parameters:
+      - description: Models
+        in: body
+        name: models
+        required: true
+        schema:
+          $ref: '#/definitions/controller.GetModelConfigsByModelsContainsRequest'
       produces:
       - application/json
       responses:
@@ -2618,6 +2943,27 @@ paths:
   /api/model_configs/search:
     get:
       description: Returns a list of model configs by keyword
+      parameters:
+      - description: Keyword
+        in: query
+        name: keyword
+        type: string
+      - description: Model name
+        in: query
+        name: model
+        type: string
+      - description: Owner
+        in: query
+        name: owner
+        type: string
+      - description: Page
+        in: query
+        name: page
+        type: integer
+      - description: Per page
+        in: query
+        name: per_page
+        type: integer
       produces:
       - application/json
       responses:
@@ -2649,6 +2995,15 @@ paths:
   /api/model_cost_rank:
     get:
       description: Returns ranking data for models based on cost
+      parameters:
+      - description: Start timestamp
+        in: query
+        name: start_timestamp
+        type: integer
+      - description: End timestamp
+        in: query
+        name: end_timestamp
+        type: integer
       produces:
       - application/json
       responses:
@@ -2677,6 +3032,14 @@ paths:
         name: group
         required: true
         type: string
+      - description: Start timestamp
+        in: query
+        name: start_timestamp
+        type: integer
+      - description: End timestamp
+        in: query
+        name: end_timestamp
+        type: integer
       produces:
       - application/json
       responses:
@@ -2872,8 +3235,8 @@ paths:
       produces:
       - application/json
       responses:
-        "204":
-          description: No Content
+        "200":
+          description: OK
           schema:
             $ref: '#/definitions/middleware.APIResponse'
       security:
@@ -2916,8 +3279,8 @@ paths:
       produces:
       - application/json
       responses:
-        "204":
-          description: No Content
+        "200":
+          description: OK
           schema:
             $ref: '#/definitions/middleware.APIResponse'
       security:
@@ -2971,8 +3334,8 @@ paths:
       produces:
       - application/json
       responses:
-        "204":
-          description: No Content
+        "200":
+          description: OK
           schema:
             $ref: '#/definitions/middleware.APIResponse'
       security:
@@ -3048,7 +3411,7 @@ paths:
       summary: Get options
       tags:
       - option
-    put:
+    post:
       description: Updates multiple options
       parameters:
       - description: Options
@@ -3069,6 +3432,49 @@ paths:
       security:
       - ApiKeyAuth: []
       summary: Update options
+      tags:
+      - option
+  /api/options/:
+    post:
+      description: Updates a single option
+      parameters:
+      - description: Option value
+        in: body
+        name: value
+        required: true
+        schema:
+          $ref: '#/definitions/model.Option'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/middleware.APIResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Update option
+      tags:
+      - option
+    put:
+      description: Updates a single option
+      parameters:
+      - description: Option value
+        in: body
+        name: value
+        required: true
+        schema:
+          $ref: '#/definitions/model.Option'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/middleware.APIResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Update option
       tags:
       - option
   /api/options/{key}:
@@ -3098,7 +3504,7 @@ paths:
       tags:
       - option
     put:
-      description: Updates a single option
+      description: Updates a single option by key
       parameters:
       - description: Option key
         in: path
@@ -3120,7 +3526,7 @@ paths:
             $ref: '#/definitions/middleware.APIResponse'
       security:
       - ApiKeyAuth: []
-      summary: Update option
+      summary: Update option by key
       tags:
       - option
   /api/status:
@@ -3157,7 +3563,7 @@ paths:
         name: token
         required: true
         schema:
-          $ref: '#/definitions/model.Token'
+          $ref: '#/definitions/controller.AddTokenRequest'
       produces:
       - application/json
       responses:
@@ -3252,7 +3658,7 @@ paths:
         name: token
         required: true
         schema:
-          $ref: '#/definitions/model.Token'
+          $ref: '#/definitions/controller.AddTokenRequest'
       produces:
       - application/json
       responses:
@@ -3377,9 +3783,13 @@ paths:
         name: group
         required: true
         type: string
+      - description: Keyword
+        in: query
+        name: keyword
+        type: string
       - description: Page number
         in: query
-        name: p
+        name: page
         type: integer
       - description: Items per page
         in: query
@@ -3435,7 +3845,7 @@ paths:
       parameters:
       - description: Page number
         in: query
-        name: p
+        name: page
         type: integer
       - description: Items per page
         in: query
@@ -3492,7 +3902,7 @@ paths:
         type: string
       - description: Page number
         in: query
-        name: p
+        name: page
         type: integer
       - description: Items per page
         in: query
@@ -3595,7 +4005,7 @@ paths:
         name: token
         required: true
         schema:
-          $ref: '#/definitions/model.Token'
+          $ref: '#/definitions/controller.AddTokenRequest'
       produces:
       - application/json
       responses:
@@ -3707,7 +4117,7 @@ paths:
         type: string
       - description: Page number
         in: query
-        name: p
+        name: page
         type: integer
       - description: Items per page
         in: query

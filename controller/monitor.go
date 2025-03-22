@@ -38,13 +38,12 @@ func GetAllChannelModelErrorRates(c *gin.Context) {
 //	@Success		200	{object}	middleware.APIResponse{data=[]map[string]float64}
 //	@Router			/api/monitor/{id} [get]
 func GetChannelModelErrorRates(c *gin.Context) {
-	channelID := c.Param("id")
-	channelIDInt, err := strconv.ParseInt(channelID, 10, 64)
+	channelID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusOK, "Invalid channel ID")
 		return
 	}
-	rates, err := monitor.GetChannelModelErrorRates(c.Request.Context(), channelIDInt)
+	rates, err := monitor.GetChannelModelErrorRates(c.Request.Context(), channelID)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusOK, err.Error())
 		return
@@ -59,7 +58,7 @@ func GetChannelModelErrorRates(c *gin.Context) {
 //	@Tags			monitor
 //	@Produce		json
 //	@Security		ApiKeyAuth
-//	@Success		204	{object}	middleware.APIResponse
+//	@Success		200	{object}	middleware.APIResponse
 //	@Router			/api/monitor [delete]
 func ClearAllModelErrors(c *gin.Context) {
 	err := monitor.ClearAllModelErrors(c.Request.Context())
@@ -78,16 +77,15 @@ func ClearAllModelErrors(c *gin.Context) {
 //	@Produce		json
 //	@Security		ApiKeyAuth
 //	@Param			id	path		int	true	"Channel ID"
-//	@Success		204	{object}	middleware.APIResponse
+//	@Success		200	{object}	middleware.APIResponse
 //	@Router			/api/monitor/{id} [delete]
 func ClearChannelAllModelErrors(c *gin.Context) {
-	channelID := c.Param("id")
-	channelIDInt, err := strconv.ParseInt(channelID, 10, 64)
+	channelID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusOK, "Invalid channel ID")
 		return
 	}
-	err = monitor.ClearChannelAllModelErrors(c.Request.Context(), int(channelIDInt))
+	err = monitor.ClearChannelAllModelErrors(c.Request.Context(), int(channelID))
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusOK, err.Error())
 		return
@@ -104,17 +102,16 @@ func ClearChannelAllModelErrors(c *gin.Context) {
 //	@Security		ApiKeyAuth
 //	@Param			id		path		int		true	"Channel ID"
 //	@Param			model	path		string	true	"Model name"
-//	@Success		204		{object}	middleware.APIResponse
+//	@Success		200		{object}	middleware.APIResponse
 //	@Router			/api/monitor/{id}/{model} [delete]
 func ClearChannelModelErrors(c *gin.Context) {
-	channelID := c.Param("id")
 	model := c.Param("model")
-	channelIDInt, err := strconv.ParseInt(channelID, 10, 64)
+	channelID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusOK, "Invalid channel ID")
 		return
 	}
-	err = monitor.ClearChannelModelErrors(c.Request.Context(), model, int(channelIDInt))
+	err = monitor.ClearChannelModelErrors(c.Request.Context(), model, int(channelID))
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusOK, err.Error())
 		return

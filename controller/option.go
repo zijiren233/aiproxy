@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"io"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -61,10 +62,10 @@ func GetOption(c *gin.Context) {
 //	@Tags			option
 //	@Produce		json
 //	@Security		ApiKeyAuth
-//	@Param			key		path		string	true	"Option key"
-//	@Param			value	body		string	true	"Option value"
+//	@Param			value	body		model.Option	true	"Option value"
 //	@Success		200		{object}	middleware.APIResponse
-//	@Router			/api/options/{key} [put]
+//	@Router			/api/options/ [put]
+//	@Router			/api/options/ [post]
 func UpdateOption(c *gin.Context) {
 	var option model.Option
 	err := c.BindJSON(&option)
@@ -73,6 +74,32 @@ func UpdateOption(c *gin.Context) {
 		return
 	}
 	err = model.UpdateOption(option.Key, option.Value)
+	if err != nil {
+		middleware.ErrorResponse(c, http.StatusOK, err.Error())
+		return
+	}
+	middleware.SuccessResponse(c, nil)
+}
+
+// UpdateOptionByKey godoc
+//
+//	@Summary		Update option by key
+//	@Description	Updates a single option by key
+//	@Tags			option
+//	@Produce		json
+//	@Security		ApiKeyAuth
+//	@Param			key		path		string	true	"Option key"
+//	@Param			value	body		string	true	"Option value"
+//	@Success		200		{object}	middleware.APIResponse
+//	@Router			/api/options/{key} [put]
+func UpdateOptionByKey(c *gin.Context) {
+	key := c.Param("key")
+	body, err := io.ReadAll(c.Request.Body)
+	if err != nil {
+		middleware.ErrorResponse(c, http.StatusOK, err.Error())
+		return
+	}
+	err = model.UpdateOption(key, string(body))
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusOK, err.Error())
 		return
@@ -89,7 +116,7 @@ func UpdateOption(c *gin.Context) {
 //	@Security		ApiKeyAuth
 //	@Param			options	body		map[string]string	true	"Options"
 //	@Success		200		{object}	middleware.APIResponse
-//	@Router			/api/options [put]
+//	@Router			/api/options [post]
 func UpdateOptions(c *gin.Context) {
 	var options map[string]string
 	err := c.BindJSON(&options)
