@@ -256,6 +256,24 @@ const docTemplate = `{
                         "name": "id",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Return success",
+                        "name": "return_success",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Success body",
+                        "name": "success_body",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Stream",
+                        "name": "stream",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -812,6 +830,32 @@ const docTemplate = `{
                     "channel"
                 ],
                 "summary": "Test all channels",
+                "parameters": [
+                    {
+                        "type": "boolean",
+                        "description": "Test disabled",
+                        "name": "test_disabled",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Return success",
+                        "name": "return_success",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Success body",
+                        "name": "success_body",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Stream",
+                        "name": "stream",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -932,6 +976,26 @@ const docTemplate = `{
                     "dashboard"
                 ],
                 "summary": "Get dashboard data",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Type of time span (day, week, month, two_week)",
+                        "name": "type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Model name",
+                        "name": "model",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Only return result",
+                        "name": "result_only",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -976,6 +1040,30 @@ const docTemplate = `{
                         "name": "group",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Type of time span (day, week, month, two_week)",
+                        "name": "type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Token name",
+                        "name": "token_name",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Model name",
+                        "name": "model",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Only return result",
+                        "name": "result_only",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -1125,7 +1213,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "type": "object"
+                            "$ref": "#/definitions/controller.CreateGroupRequest"
                         }
                     }
                 ],
@@ -1181,7 +1269,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "type": "object"
+                            "$ref": "#/definitions/controller.CreateGroupRequest"
                         }
                     }
                 ],
@@ -1271,7 +1359,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "type": "object"
+                            "$ref": "#/definitions/controller.UpdateGroupRPMRequest"
                         }
                     }
                 ],
@@ -1317,7 +1405,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "type": "object"
+                            "$ref": "#/definitions/controller.UpdateGroupRPMRatioRequest"
                         }
                     }
                 ],
@@ -1363,7 +1451,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "type": "object"
+                            "$ref": "#/definitions/controller.UpdateGroupStatusRequest"
                         }
                     }
                 ],
@@ -1409,7 +1497,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "type": "object"
+                            "$ref": "#/definitions/controller.UpdateGroupTPMRequest"
                         }
                     }
                 ],
@@ -1455,7 +1543,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "type": "object"
+                            "$ref": "#/definitions/controller.UpdateGroupTPMRatioRequest"
                         }
                     }
                 ],
@@ -1615,6 +1703,18 @@ const docTemplate = `{
                         "description": "Items per page",
                         "name": "per_page",
                         "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Status",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Order",
+                        "name": "order",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -1696,13 +1796,85 @@ const docTemplate = `{
                     {
                         "type": "integer",
                         "description": "Start timestamp (milliseconds)",
-                        "name": "start_time",
+                        "name": "start_timestamp",
                         "in": "query"
                     },
                     {
                         "type": "integer",
                         "description": "End timestamp (milliseconds)",
-                        "name": "end_time",
+                        "name": "end_timestamp",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Token name",
+                        "name": "token_name",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Model name",
+                        "name": "model_name",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Channel ID",
+                        "name": "channel",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Endpoint",
+                        "name": "endpoint",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Token ID",
+                        "name": "token_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Order",
+                        "name": "order",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Request ID",
+                        "name": "request_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Mode",
+                        "name": "mode",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Code type",
+                        "name": "code_type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "With body",
+                        "name": "with_body",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "IP",
+                        "name": "ip",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Result only",
+                        "name": "result_only",
                         "in": "query"
                     }
                 ],
@@ -1819,13 +1991,13 @@ const docTemplate = `{
                     {
                         "type": "integer",
                         "description": "Start timestamp (milliseconds)",
-                        "name": "start_time",
+                        "name": "start_timestamp",
                         "in": "query"
                     },
                     {
                         "type": "integer",
                         "description": "End timestamp (milliseconds)",
-                        "name": "end_time",
+                        "name": "end_timestamp",
                         "in": "query"
                     },
                     {
@@ -1837,13 +2009,67 @@ const docTemplate = `{
                     {
                         "type": "string",
                         "description": "Filter by model name",
-                        "name": "model",
+                        "name": "model_name",
                         "in": "query"
                     },
                     {
                         "type": "integer",
-                        "description": "Filter by status",
-                        "name": "status",
+                        "description": "Filter by channel",
+                        "name": "channel",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by endpoint",
+                        "name": "endpoint",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Filter by token id",
+                        "name": "token_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Order",
+                        "name": "order",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Request ID",
+                        "name": "request_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Mode",
+                        "name": "mode",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Code type",
+                        "name": "code_type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "With body",
+                        "name": "with_body",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "IP",
+                        "name": "ip",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Result only",
+                        "name": "result_only",
                         "in": "query"
                     }
                 ],
@@ -1998,13 +2224,85 @@ const docTemplate = `{
                     {
                         "type": "integer",
                         "description": "Start timestamp (milliseconds)",
-                        "name": "start_time",
+                        "name": "start_timestamp",
                         "in": "query"
                     },
                     {
                         "type": "integer",
                         "description": "End timestamp (milliseconds)",
-                        "name": "end_time",
+                        "name": "end_timestamp",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Token name",
+                        "name": "token_name",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Model name",
+                        "name": "model_name",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Channel ID",
+                        "name": "channel",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Endpoint",
+                        "name": "endpoint",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Token ID",
+                        "name": "token_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Order",
+                        "name": "order",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Mode",
+                        "name": "mode",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Request ID",
+                        "name": "request_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Code type",
+                        "name": "code_type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "With body",
+                        "name": "with_body",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "IP",
+                        "name": "ip",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Result only",
+                        "name": "result_only",
                         "in": "query"
                     }
                 ],
@@ -2043,6 +2341,15 @@ const docTemplate = `{
                     "logs"
                 ],
                 "summary": "Delete historical logs",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Timestamp (milliseconds)",
+                        "name": "timestamp",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -2096,13 +2403,61 @@ const docTemplate = `{
                     {
                         "type": "integer",
                         "description": "Start timestamp (milliseconds)",
-                        "name": "start_time",
+                        "name": "start_timestamp",
                         "in": "query"
                     },
                     {
                         "type": "integer",
                         "description": "End timestamp (milliseconds)",
-                        "name": "end_time",
+                        "name": "end_timestamp",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Keyword",
+                        "name": "keyword",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Group",
+                        "name": "group",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Token name",
+                        "name": "token_name",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Model name",
+                        "name": "model_name",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Content",
+                        "name": "content",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Token ID",
+                        "name": "token_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Order",
+                        "name": "order",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Request ID",
+                        "name": "request_id",
                         "in": "query"
                     }
                 ],
@@ -2224,13 +2579,13 @@ const docTemplate = `{
                     {
                         "type": "integer",
                         "description": "Start timestamp (milliseconds)",
-                        "name": "start_time",
+                        "name": "start_timestamp",
                         "in": "query"
                     },
                     {
                         "type": "integer",
                         "description": "End timestamp (milliseconds)",
-                        "name": "end_time",
+                        "name": "end_timestamp",
                         "in": "query"
                     },
                     {
@@ -2242,13 +2597,67 @@ const docTemplate = `{
                     {
                         "type": "string",
                         "description": "Filter by model name",
-                        "name": "model",
+                        "name": "model_name",
                         "in": "query"
                     },
                     {
                         "type": "integer",
-                        "description": "Filter by status",
-                        "name": "status",
+                        "description": "Filter by channel",
+                        "name": "channel",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by endpoint",
+                        "name": "endpoint",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Filter by token id",
+                        "name": "token_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Order",
+                        "name": "order",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Request ID",
+                        "name": "request_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Mode",
+                        "name": "mode",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Code type",
+                        "name": "code_type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "With body",
+                        "name": "with_body",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "IP",
+                        "name": "ip",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Result only",
+                        "name": "result_only",
                         "in": "query"
                     }
                 ],
@@ -2443,6 +2852,14 @@ const docTemplate = `{
                     "modelconfig"
                 ],
                 "summary": "Get model configs",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Model name",
+                        "name": "model",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -2615,6 +3032,17 @@ const docTemplate = `{
                     "modelconfig"
                 ],
                 "summary": "Get model configs by models contains",
+                "parameters": [
+                    {
+                        "description": "Models",
+                        "name": "models",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/controller.GetModelConfigsByModelsContainsRequest"
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -2655,6 +3083,38 @@ const docTemplate = `{
                     "modelconfig"
                 ],
                 "summary": "Search model configs",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Keyword",
+                        "name": "keyword",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Model name",
+                        "name": "model",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Owner",
+                        "name": "owner",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Per page",
+                        "name": "per_page",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -2711,6 +3171,20 @@ const docTemplate = `{
                     "dashboard"
                 ],
                 "summary": "Get model cost ranking data",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Start timestamp",
+                        "name": "start_timestamp",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "End timestamp",
+                        "name": "end_timestamp",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -2758,6 +3232,18 @@ const docTemplate = `{
                         "name": "group",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Start timestamp",
+                        "name": "start_timestamp",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "End timestamp",
+                        "name": "end_timestamp",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -3144,8 +3630,8 @@ const docTemplate = `{
                 ],
                 "summary": "Clear all model errors",
                 "responses": {
-                    "204": {
-                        "description": "No Content",
+                    "200": {
+                        "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/middleware.APIResponse"
                         }
@@ -3311,8 +3797,8 @@ const docTemplate = `{
                     }
                 ],
                 "responses": {
-                    "204": {
-                        "description": "No Content",
+                    "200": {
+                        "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/middleware.APIResponse"
                         }
@@ -3352,8 +3838,8 @@ const docTemplate = `{
                     }
                 ],
                 "responses": {
-                    "204": {
-                        "description": "No Content",
+                    "200": {
+                        "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/middleware.APIResponse"
                         }
@@ -3400,7 +3886,7 @@ const docTemplate = `{
                     }
                 }
             },
-            "put": {
+            "post": {
                 "security": [
                     {
                         "ApiKeyAuth": []
@@ -3425,6 +3911,76 @@ const docTemplate = `{
                             "additionalProperties": {
                                 "type": "string"
                             }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/options/": {
+            "put": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Updates a single option",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "option"
+                ],
+                "summary": "Update option",
+                "parameters": [
+                    {
+                        "description": "Option value",
+                        "name": "value",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.Option"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.APIResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Updates a single option",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "option"
+                ],
+                "summary": "Update option",
+                "parameters": [
+                    {
+                        "description": "Option value",
+                        "name": "value",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.Option"
                         }
                     }
                 ],
@@ -3489,14 +4045,14 @@ const docTemplate = `{
                         "ApiKeyAuth": []
                     }
                 ],
-                "description": "Updates a single option",
+                "description": "Updates a single option by key",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
                     "option"
                 ],
-                "summary": "Update option",
+                "summary": "Update option by key",
                 "parameters": [
                     {
                         "type": "string",
@@ -3589,7 +4145,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/model.Token"
+                            "$ref": "#/definitions/controller.AddTokenRequest"
                         }
                     }
                 ],
@@ -3685,9 +4241,15 @@ const docTemplate = `{
                         "required": true
                     },
                     {
+                        "type": "string",
+                        "description": "Keyword",
+                        "name": "keyword",
+                        "in": "query"
+                    },
+                    {
                         "type": "integer",
                         "description": "Page number",
-                        "name": "p",
+                        "name": "page",
                         "in": "query"
                     },
                     {
@@ -3852,7 +4414,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/model.Token"
+                            "$ref": "#/definitions/controller.AddTokenRequest"
                         }
                     }
                 ],
@@ -4042,7 +4604,7 @@ const docTemplate = `{
                     {
                         "type": "integer",
                         "description": "Page number",
-                        "name": "p",
+                        "name": "page",
                         "in": "query"
                     },
                     {
@@ -4178,7 +4740,7 @@ const docTemplate = `{
                     {
                         "type": "integer",
                         "description": "Page number",
-                        "name": "p",
+                        "name": "page",
                         "in": "query"
                     },
                     {
@@ -4285,7 +4847,7 @@ const docTemplate = `{
                     {
                         "type": "integer",
                         "description": "Page number",
-                        "name": "p",
+                        "name": "page",
                         "in": "query"
                     },
                     {
@@ -4424,7 +4986,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/model.Token"
+                            "$ref": "#/definitions/controller.AddTokenRequest"
                         }
                     }
                 ],
@@ -5372,6 +5934,32 @@ const docTemplate = `{
                 }
             }
         },
+        "controller.AddTokenRequest": {
+            "type": "object",
+            "properties": {
+                "expiredAt": {
+                    "type": "integer"
+                },
+                "models": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "name": {
+                    "type": "string"
+                },
+                "quota": {
+                    "type": "number"
+                },
+                "subnets": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
         "controller.BuiltinModelConfig": {
             "type": "object",
             "properties": {
@@ -5411,6 +5999,46 @@ const docTemplate = `{
                 },
                 "updated_at": {
                     "type": "string"
+                }
+            }
+        },
+        "controller.CreateGroupRequest": {
+            "type": "object",
+            "properties": {
+                "available_set": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "rpm": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "integer"
+                    }
+                },
+                "rpm_ratio": {
+                    "type": "number"
+                },
+                "tpm": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "integer"
+                    }
+                },
+                "tpm_ratio": {
+                    "type": "number"
+                }
+            }
+        },
+        "controller.GetModelConfigsByModelsContainsRequest": {
+            "type": "object",
+            "properties": {
+                "models": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 }
             }
         },
@@ -5658,6 +6286,52 @@ const docTemplate = `{
             "properties": {
                 "status": {
                     "type": "integer"
+                }
+            }
+        },
+        "controller.UpdateGroupRPMRatioRequest": {
+            "type": "object",
+            "properties": {
+                "rpm_ratio": {
+                    "type": "number"
+                }
+            }
+        },
+        "controller.UpdateGroupRPMRequest": {
+            "type": "object",
+            "properties": {
+                "rpm": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "integer"
+                    }
+                }
+            }
+        },
+        "controller.UpdateGroupStatusRequest": {
+            "type": "object",
+            "properties": {
+                "status": {
+                    "type": "integer"
+                }
+            }
+        },
+        "controller.UpdateGroupTPMRatioRequest": {
+            "type": "object",
+            "properties": {
+                "tpm_ratio": {
+                    "type": "number"
+                }
+            }
+        },
+        "controller.UpdateGroupTPMRequest": {
+            "type": "object",
+            "properties": {
+                "tpm": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "integer"
+                    }
                 }
             }
         },
@@ -6788,53 +7462,6 @@ const docTemplate = `{
                 },
                 "voice": {
                     "type": "string"
-                }
-            }
-        },
-        "model.Token": {
-            "type": "object",
-            "properties": {
-                "created_at": {
-                    "type": "string"
-                },
-                "expired_at": {
-                    "type": "string"
-                },
-                "group": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "key": {
-                    "type": "string"
-                },
-                "models": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "name": {
-                    "type": "string"
-                },
-                "quota": {
-                    "type": "number"
-                },
-                "request_count": {
-                    "type": "integer"
-                },
-                "status": {
-                    "type": "integer"
-                },
-                "subnets": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "used_amount": {
-                    "type": "number"
                 }
             }
         },

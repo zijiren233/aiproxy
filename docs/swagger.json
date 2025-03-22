@@ -245,6 +245,24 @@
                         "name": "id",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Return success",
+                        "name": "return_success",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Success body",
+                        "name": "success_body",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Stream",
+                        "name": "stream",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -801,6 +819,32 @@
                     "channel"
                 ],
                 "summary": "Test all channels",
+                "parameters": [
+                    {
+                        "type": "boolean",
+                        "description": "Test disabled",
+                        "name": "test_disabled",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Return success",
+                        "name": "return_success",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Success body",
+                        "name": "success_body",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Stream",
+                        "name": "stream",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -921,6 +965,26 @@
                     "dashboard"
                 ],
                 "summary": "Get dashboard data",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Type of time span (day, week, month, two_week)",
+                        "name": "type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Model name",
+                        "name": "model",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Only return result",
+                        "name": "result_only",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -965,6 +1029,30 @@
                         "name": "group",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Type of time span (day, week, month, two_week)",
+                        "name": "type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Token name",
+                        "name": "token_name",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Model name",
+                        "name": "model",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Only return result",
+                        "name": "result_only",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -1114,7 +1202,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "type": "object"
+                            "$ref": "#/definitions/controller.CreateGroupRequest"
                         }
                     }
                 ],
@@ -1170,7 +1258,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "type": "object"
+                            "$ref": "#/definitions/controller.CreateGroupRequest"
                         }
                     }
                 ],
@@ -1260,7 +1348,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "type": "object"
+                            "$ref": "#/definitions/controller.UpdateGroupRPMRequest"
                         }
                     }
                 ],
@@ -1306,7 +1394,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "type": "object"
+                            "$ref": "#/definitions/controller.UpdateGroupRPMRatioRequest"
                         }
                     }
                 ],
@@ -1352,7 +1440,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "type": "object"
+                            "$ref": "#/definitions/controller.UpdateGroupStatusRequest"
                         }
                     }
                 ],
@@ -1398,7 +1486,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "type": "object"
+                            "$ref": "#/definitions/controller.UpdateGroupTPMRequest"
                         }
                     }
                 ],
@@ -1444,7 +1532,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "type": "object"
+                            "$ref": "#/definitions/controller.UpdateGroupTPMRatioRequest"
                         }
                     }
                 ],
@@ -1604,6 +1692,18 @@
                         "description": "Items per page",
                         "name": "per_page",
                         "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Status",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Order",
+                        "name": "order",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -1685,13 +1785,85 @@
                     {
                         "type": "integer",
                         "description": "Start timestamp (milliseconds)",
-                        "name": "start_time",
+                        "name": "start_timestamp",
                         "in": "query"
                     },
                     {
                         "type": "integer",
                         "description": "End timestamp (milliseconds)",
-                        "name": "end_time",
+                        "name": "end_timestamp",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Token name",
+                        "name": "token_name",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Model name",
+                        "name": "model_name",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Channel ID",
+                        "name": "channel",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Endpoint",
+                        "name": "endpoint",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Token ID",
+                        "name": "token_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Order",
+                        "name": "order",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Request ID",
+                        "name": "request_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Mode",
+                        "name": "mode",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Code type",
+                        "name": "code_type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "With body",
+                        "name": "with_body",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "IP",
+                        "name": "ip",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Result only",
+                        "name": "result_only",
                         "in": "query"
                     }
                 ],
@@ -1808,13 +1980,13 @@
                     {
                         "type": "integer",
                         "description": "Start timestamp (milliseconds)",
-                        "name": "start_time",
+                        "name": "start_timestamp",
                         "in": "query"
                     },
                     {
                         "type": "integer",
                         "description": "End timestamp (milliseconds)",
-                        "name": "end_time",
+                        "name": "end_timestamp",
                         "in": "query"
                     },
                     {
@@ -1826,13 +1998,67 @@
                     {
                         "type": "string",
                         "description": "Filter by model name",
-                        "name": "model",
+                        "name": "model_name",
                         "in": "query"
                     },
                     {
                         "type": "integer",
-                        "description": "Filter by status",
-                        "name": "status",
+                        "description": "Filter by channel",
+                        "name": "channel",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by endpoint",
+                        "name": "endpoint",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Filter by token id",
+                        "name": "token_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Order",
+                        "name": "order",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Request ID",
+                        "name": "request_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Mode",
+                        "name": "mode",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Code type",
+                        "name": "code_type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "With body",
+                        "name": "with_body",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "IP",
+                        "name": "ip",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Result only",
+                        "name": "result_only",
                         "in": "query"
                     }
                 ],
@@ -1987,13 +2213,85 @@
                     {
                         "type": "integer",
                         "description": "Start timestamp (milliseconds)",
-                        "name": "start_time",
+                        "name": "start_timestamp",
                         "in": "query"
                     },
                     {
                         "type": "integer",
                         "description": "End timestamp (milliseconds)",
-                        "name": "end_time",
+                        "name": "end_timestamp",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Token name",
+                        "name": "token_name",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Model name",
+                        "name": "model_name",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Channel ID",
+                        "name": "channel",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Endpoint",
+                        "name": "endpoint",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Token ID",
+                        "name": "token_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Order",
+                        "name": "order",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Mode",
+                        "name": "mode",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Request ID",
+                        "name": "request_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Code type",
+                        "name": "code_type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "With body",
+                        "name": "with_body",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "IP",
+                        "name": "ip",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Result only",
+                        "name": "result_only",
                         "in": "query"
                     }
                 ],
@@ -2032,6 +2330,15 @@
                     "logs"
                 ],
                 "summary": "Delete historical logs",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Timestamp (milliseconds)",
+                        "name": "timestamp",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -2085,13 +2392,61 @@
                     {
                         "type": "integer",
                         "description": "Start timestamp (milliseconds)",
-                        "name": "start_time",
+                        "name": "start_timestamp",
                         "in": "query"
                     },
                     {
                         "type": "integer",
                         "description": "End timestamp (milliseconds)",
-                        "name": "end_time",
+                        "name": "end_timestamp",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Keyword",
+                        "name": "keyword",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Group",
+                        "name": "group",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Token name",
+                        "name": "token_name",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Model name",
+                        "name": "model_name",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Content",
+                        "name": "content",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Token ID",
+                        "name": "token_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Order",
+                        "name": "order",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Request ID",
+                        "name": "request_id",
                         "in": "query"
                     }
                 ],
@@ -2213,13 +2568,13 @@
                     {
                         "type": "integer",
                         "description": "Start timestamp (milliseconds)",
-                        "name": "start_time",
+                        "name": "start_timestamp",
                         "in": "query"
                     },
                     {
                         "type": "integer",
                         "description": "End timestamp (milliseconds)",
-                        "name": "end_time",
+                        "name": "end_timestamp",
                         "in": "query"
                     },
                     {
@@ -2231,13 +2586,67 @@
                     {
                         "type": "string",
                         "description": "Filter by model name",
-                        "name": "model",
+                        "name": "model_name",
                         "in": "query"
                     },
                     {
                         "type": "integer",
-                        "description": "Filter by status",
-                        "name": "status",
+                        "description": "Filter by channel",
+                        "name": "channel",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by endpoint",
+                        "name": "endpoint",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Filter by token id",
+                        "name": "token_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Order",
+                        "name": "order",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Request ID",
+                        "name": "request_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Mode",
+                        "name": "mode",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Code type",
+                        "name": "code_type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "With body",
+                        "name": "with_body",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "IP",
+                        "name": "ip",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Result only",
+                        "name": "result_only",
                         "in": "query"
                     }
                 ],
@@ -2432,6 +2841,14 @@
                     "modelconfig"
                 ],
                 "summary": "Get model configs",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Model name",
+                        "name": "model",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -2604,6 +3021,17 @@
                     "modelconfig"
                 ],
                 "summary": "Get model configs by models contains",
+                "parameters": [
+                    {
+                        "description": "Models",
+                        "name": "models",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/controller.GetModelConfigsByModelsContainsRequest"
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -2644,6 +3072,38 @@
                     "modelconfig"
                 ],
                 "summary": "Search model configs",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Keyword",
+                        "name": "keyword",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Model name",
+                        "name": "model",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Owner",
+                        "name": "owner",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Per page",
+                        "name": "per_page",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -2700,6 +3160,20 @@
                     "dashboard"
                 ],
                 "summary": "Get model cost ranking data",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Start timestamp",
+                        "name": "start_timestamp",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "End timestamp",
+                        "name": "end_timestamp",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -2747,6 +3221,18 @@
                         "name": "group",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Start timestamp",
+                        "name": "start_timestamp",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "End timestamp",
+                        "name": "end_timestamp",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -3133,8 +3619,8 @@
                 ],
                 "summary": "Clear all model errors",
                 "responses": {
-                    "204": {
-                        "description": "No Content",
+                    "200": {
+                        "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/middleware.APIResponse"
                         }
@@ -3300,8 +3786,8 @@
                     }
                 ],
                 "responses": {
-                    "204": {
-                        "description": "No Content",
+                    "200": {
+                        "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/middleware.APIResponse"
                         }
@@ -3341,8 +3827,8 @@
                     }
                 ],
                 "responses": {
-                    "204": {
-                        "description": "No Content",
+                    "200": {
+                        "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/middleware.APIResponse"
                         }
@@ -3389,7 +3875,7 @@
                     }
                 }
             },
-            "put": {
+            "post": {
                 "security": [
                     {
                         "ApiKeyAuth": []
@@ -3414,6 +3900,76 @@
                             "additionalProperties": {
                                 "type": "string"
                             }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/options/": {
+            "put": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Updates a single option",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "option"
+                ],
+                "summary": "Update option",
+                "parameters": [
+                    {
+                        "description": "Option value",
+                        "name": "value",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.Option"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.APIResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Updates a single option",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "option"
+                ],
+                "summary": "Update option",
+                "parameters": [
+                    {
+                        "description": "Option value",
+                        "name": "value",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.Option"
                         }
                     }
                 ],
@@ -3478,14 +4034,14 @@
                         "ApiKeyAuth": []
                     }
                 ],
-                "description": "Updates a single option",
+                "description": "Updates a single option by key",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
                     "option"
                 ],
-                "summary": "Update option",
+                "summary": "Update option by key",
                 "parameters": [
                     {
                         "type": "string",
@@ -3578,7 +4134,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/model.Token"
+                            "$ref": "#/definitions/controller.AddTokenRequest"
                         }
                     }
                 ],
@@ -3674,9 +4230,15 @@
                         "required": true
                     },
                     {
+                        "type": "string",
+                        "description": "Keyword",
+                        "name": "keyword",
+                        "in": "query"
+                    },
+                    {
                         "type": "integer",
                         "description": "Page number",
-                        "name": "p",
+                        "name": "page",
                         "in": "query"
                     },
                     {
@@ -3841,7 +4403,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/model.Token"
+                            "$ref": "#/definitions/controller.AddTokenRequest"
                         }
                     }
                 ],
@@ -4031,7 +4593,7 @@
                     {
                         "type": "integer",
                         "description": "Page number",
-                        "name": "p",
+                        "name": "page",
                         "in": "query"
                     },
                     {
@@ -4167,7 +4729,7 @@
                     {
                         "type": "integer",
                         "description": "Page number",
-                        "name": "p",
+                        "name": "page",
                         "in": "query"
                     },
                     {
@@ -4274,7 +4836,7 @@
                     {
                         "type": "integer",
                         "description": "Page number",
-                        "name": "p",
+                        "name": "page",
                         "in": "query"
                     },
                     {
@@ -4413,7 +4975,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/model.Token"
+                            "$ref": "#/definitions/controller.AddTokenRequest"
                         }
                     }
                 ],
@@ -5361,6 +5923,32 @@
                 }
             }
         },
+        "controller.AddTokenRequest": {
+            "type": "object",
+            "properties": {
+                "expiredAt": {
+                    "type": "integer"
+                },
+                "models": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "name": {
+                    "type": "string"
+                },
+                "quota": {
+                    "type": "number"
+                },
+                "subnets": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
         "controller.BuiltinModelConfig": {
             "type": "object",
             "properties": {
@@ -5400,6 +5988,46 @@
                 },
                 "updated_at": {
                     "type": "string"
+                }
+            }
+        },
+        "controller.CreateGroupRequest": {
+            "type": "object",
+            "properties": {
+                "available_set": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "rpm": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "integer"
+                    }
+                },
+                "rpm_ratio": {
+                    "type": "number"
+                },
+                "tpm": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "integer"
+                    }
+                },
+                "tpm_ratio": {
+                    "type": "number"
+                }
+            }
+        },
+        "controller.GetModelConfigsByModelsContainsRequest": {
+            "type": "object",
+            "properties": {
+                "models": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 }
             }
         },
@@ -5647,6 +6275,52 @@
             "properties": {
                 "status": {
                     "type": "integer"
+                }
+            }
+        },
+        "controller.UpdateGroupRPMRatioRequest": {
+            "type": "object",
+            "properties": {
+                "rpm_ratio": {
+                    "type": "number"
+                }
+            }
+        },
+        "controller.UpdateGroupRPMRequest": {
+            "type": "object",
+            "properties": {
+                "rpm": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "integer"
+                    }
+                }
+            }
+        },
+        "controller.UpdateGroupStatusRequest": {
+            "type": "object",
+            "properties": {
+                "status": {
+                    "type": "integer"
+                }
+            }
+        },
+        "controller.UpdateGroupTPMRatioRequest": {
+            "type": "object",
+            "properties": {
+                "tpm_ratio": {
+                    "type": "number"
+                }
+            }
+        },
+        "controller.UpdateGroupTPMRequest": {
+            "type": "object",
+            "properties": {
+                "tpm": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "integer"
+                    }
                 }
             }
         },
@@ -6777,53 +7451,6 @@
                 },
                 "voice": {
                     "type": "string"
-                }
-            }
-        },
-        "model.Token": {
-            "type": "object",
-            "properties": {
-                "created_at": {
-                    "type": "string"
-                },
-                "expired_at": {
-                    "type": "string"
-                },
-                "group": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "key": {
-                    "type": "string"
-                },
-                "models": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "name": {
-                    "type": "string"
-                },
-                "quota": {
-                    "type": "number"
-                },
-                "request_count": {
-                    "type": "integer"
-                },
-                "status": {
-                    "type": "integer"
-                },
-                "subnets": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "used_amount": {
-                    "type": "number"
                 }
             }
         },

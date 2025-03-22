@@ -67,7 +67,9 @@ func SetAPIRouter(router *gin.Engine) {
 			optionRoute.GET("/", controller.GetOptions)
 			optionRoute.GET("/:key", controller.GetOption)
 			optionRoute.PUT("/", controller.UpdateOption)
-			optionRoute.PUT("/batch", controller.UpdateOptions)
+			optionRoute.POST("/", controller.UpdateOption)
+			optionRoute.PUT("/:key", controller.UpdateOptionByKey)
+			optionRoute.POST("/batch", controller.UpdateOptions)
 		}
 
 		channelsRoute := apiRouter.Group("/channels")

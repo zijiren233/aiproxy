@@ -65,11 +65,23 @@ func parseCommonParams(c *gin.Context) (params struct {
 //	@Tags			logs
 //	@Produce		json
 //	@Security		ApiKeyAuth
-//	@Param			page		query		int	false	"Page number"
-//	@Param			per_page	query		int	false	"Items per page"
-//	@Param			start_time	query		int	false	"Start timestamp (milliseconds)"
-//	@Param			end_time	query		int	false	"End timestamp (milliseconds)"
-//	@Success		200			{object}	middleware.APIResponse{data=model.GetLogsResult}
+//	@Param			page			query		int		false	"Page number"
+//	@Param			per_page		query		int		false	"Items per page"
+//	@Param			start_timestamp	query		int		false	"Start timestamp (milliseconds)"
+//	@Param			end_timestamp	query		int		false	"End timestamp (milliseconds)"
+//	@Param			token_name		query		string	false	"Token name"
+//	@Param			model_name		query		string	false	"Model name"
+//	@Param			channel			query		int		false	"Channel ID"
+//	@Param			endpoint		query		string	false	"Endpoint"
+//	@Param			token_id		query		int		false	"Token ID"
+//	@Param			order			query		string	false	"Order"
+//	@Param			mode			query		int		false	"Mode"
+//	@Param			request_id		query		string	false	"Request ID"
+//	@Param			code_type		query		string	false	"Code type"
+//	@Param			with_body		query		bool	false	"With body"
+//	@Param			ip				query		string	false	"IP"
+//	@Param			result_only		query		bool	false	"Result only"
+//	@Success		200				{object}	middleware.APIResponse{data=model.GetLogsResult}
 //	@Router			/api/logs [get]
 func GetLogs(c *gin.Context) {
 	page, perPage := parsePageParams(c)
@@ -110,12 +122,24 @@ func GetLogs(c *gin.Context) {
 //	@Tags			log
 //	@Produce		json
 //	@Security		ApiKeyAuth
-//	@Param			group		path		string	true	"Group name"
-//	@Param			page		query		int		false	"Page number"
-//	@Param			per_page	query		int		false	"Items per page"
-//	@Param			start_time	query		int		false	"Start timestamp (milliseconds)"
-//	@Param			end_time	query		int		false	"End timestamp (milliseconds)"
-//	@Success		200			{object}	middleware.APIResponse{data=model.GetGroupLogsResult}
+//	@Param			group			path		string	true	"Group name"
+//	@Param			page			query		int		false	"Page number"
+//	@Param			per_page		query		int		false	"Items per page"
+//	@Param			start_timestamp	query		int		false	"Start timestamp (milliseconds)"
+//	@Param			end_timestamp	query		int		false	"End timestamp (milliseconds)"
+//	@Param			token_name		query		string	false	"Token name"
+//	@Param			model_name		query		string	false	"Model name"
+//	@Param			channel			query		int		false	"Channel ID"
+//	@Param			endpoint		query		string	false	"Endpoint"
+//	@Param			token_id		query		int		false	"Token ID"
+//	@Param			order			query		string	false	"Order"
+//	@Param			request_id		query		string	false	"Request ID"
+//	@Param			mode			query		int		false	"Mode"
+//	@Param			code_type		query		string	false	"Code type"
+//	@Param			with_body		query		bool	false	"With body"
+//	@Param			ip				query		string	false	"IP"
+//	@Param			result_only		query		bool	false	"Result only"
+//	@Success		200				{object}	middleware.APIResponse{data=model.GetGroupLogsResult}
 //	@Router			/api/log/{group} [get]
 func GetGroupLogs(c *gin.Context) {
 	group := c.Param("group")
@@ -161,14 +185,23 @@ func GetGroupLogs(c *gin.Context) {
 //	@Tags			logs
 //	@Produce		json
 //	@Security		ApiKeyAuth
-//	@Param			page		query		int		false	"Page number"
-//	@Param			per_page	query		int		false	"Items per page"
-//	@Param			start_time	query		int		false	"Start timestamp (milliseconds)"
-//	@Param			end_time	query		int		false	"End timestamp (milliseconds)"
-//	@Param			token_name	query		string	false	"Filter by token name"
-//	@Param			model		query		string	false	"Filter by model name"
-//	@Param			status		query		int		false	"Filter by status"
-//	@Success		200			{object}	middleware.APIResponse{data=model.GetLogsResult}
+//	@Param			page			query		int		false	"Page number"
+//	@Param			per_page		query		int		false	"Items per page"
+//	@Param			start_timestamp	query		int		false	"Start timestamp (milliseconds)"
+//	@Param			end_timestamp	query		int		false	"End timestamp (milliseconds)"
+//	@Param			token_name		query		string	false	"Filter by token name"
+//	@Param			model_name		query		string	false	"Filter by model name"
+//	@Param			channel			query		int		false	"Filter by channel"
+//	@Param			endpoint		query		string	false	"Filter by endpoint"
+//	@Param			token_id		query		int		false	"Filter by token id"
+//	@Param			order			query		string	false	"Order"
+//	@Param			request_id		query		string	false	"Request ID"
+//	@Param			mode			query		int		false	"Mode"
+//	@Param			code_type		query		string	false	"Code type"
+//	@Param			with_body		query		bool	false	"With body"
+//	@Param			ip				query		string	false	"IP"
+//	@Param			result_only		query		bool	false	"Result only"
+//	@Success		200				{object}	middleware.APIResponse{data=model.GetLogsResult}
 //	@Router			/api/logs/search [get]
 func SearchLogs(c *gin.Context) {
 	page, perPage := parsePageParams(c)
@@ -212,15 +245,24 @@ func SearchLogs(c *gin.Context) {
 //	@Tags			log
 //	@Produce		json
 //	@Security		ApiKeyAuth
-//	@Param			group		path		string	true	"Group name"
-//	@Param			page		query		int		false	"Page number"
-//	@Param			per_page	query		int		false	"Items per page"
-//	@Param			start_time	query		int		false	"Start timestamp (milliseconds)"
-//	@Param			end_time	query		int		false	"End timestamp (milliseconds)"
-//	@Param			token_name	query		string	false	"Filter by token name"
-//	@Param			model		query		string	false	"Filter by model name"
-//	@Param			status		query		int		false	"Filter by status"
-//	@Success		200			{object}	middleware.APIResponse{data=model.GetGroupLogsResult}
+//	@Param			group			path		string	true	"Group name"
+//	@Param			page			query		int		false	"Page number"
+//	@Param			per_page		query		int		false	"Items per page"
+//	@Param			start_timestamp	query		int		false	"Start timestamp (milliseconds)"
+//	@Param			end_timestamp	query		int		false	"End timestamp (milliseconds)"
+//	@Param			token_name		query		string	false	"Filter by token name"
+//	@Param			model_name		query		string	false	"Filter by model name"
+//	@Param			channel			query		int		false	"Filter by channel"
+//	@Param			endpoint		query		string	false	"Filter by endpoint"
+//	@Param			token_id		query		int		false	"Filter by token id"
+//	@Param			order			query		string	false	"Order"
+//	@Param			request_id		query		string	false	"Request ID"
+//	@Param			mode			query		int		false	"Mode"
+//	@Param			code_type		query		string	false	"Code type"
+//	@Param			with_body		query		bool	false	"With body"
+//	@Param			ip				query		string	false	"IP"
+//	@Param			result_only		query		bool	false	"Result only"
+//	@Success		200				{object}	middleware.APIResponse{data=model.GetGroupLogsResult}
 //	@Router			/api/log/{group}/search [get]
 func SearchGroupLogs(c *gin.Context) {
 	group := c.Param("group")
@@ -383,7 +425,8 @@ func GetGroupUsedTokenNames(c *gin.Context) {
 //	@Tags			logs
 //	@Produce		json
 //	@Security		ApiKeyAuth
-//	@Success		200	{object}	middleware.APIResponse{data=int}
+//	@Param			timestamp	query		int	true	"Timestamp (milliseconds)"
+//	@Success		200			{object}	middleware.APIResponse{data=int}
 //	@Router			/api/logs [delete]
 func DeleteHistoryLogs(c *gin.Context) {
 	timestamp, _ := strconv.ParseInt(c.Query("timestamp"), 10, 64)
@@ -406,29 +449,27 @@ func DeleteHistoryLogs(c *gin.Context) {
 //	@Tags			logs
 //	@Produce		json
 //	@Security		ApiKeyAuth
-//	@Param			page		query		int	false	"Page number"
-//	@Param			per_page	query		int	false	"Items per page"
-//	@Param			start_time	query		int	false	"Start timestamp (milliseconds)"
-//	@Param			end_time	query		int	false	"End timestamp (milliseconds)"
-//	@Success		200			{object}	middleware.APIResponse{data=map[string]any{logs=[]model.RequestDetail,total=int}}
+//	@Param			page			query		int		false	"Page number"
+//	@Param			per_page		query		int		false	"Items per page"
+//	@Param			start_timestamp	query		int		false	"Start timestamp (milliseconds)"
+//	@Param			end_timestamp	query		int		false	"End timestamp (milliseconds)"
+//	@Param			keyword			query		string	false	"Keyword"
+//	@Param			group			query		string	false	"Group"
+//	@Param			token_name		query		string	false	"Token name"
+//	@Param			model_name		query		string	false	"Model name"
+//	@Param			content			query		string	false	"Content"
+//	@Param			token_id		query		int		false	"Token ID"
+//	@Param			order			query		string	false	"Order"
+//	@Param			request_id		query		string	false	"Request ID"
+//	@Success		200				{object}	middleware.APIResponse{data=map[string]any{logs=[]model.RequestDetail,total=int}}
 //	@Router			/api/logs/consume_error [get]
 func SearchConsumeError(c *gin.Context) {
 	keyword := c.Query("keyword")
 	group := c.Query("group")
 	tokenName := c.Query("token_name")
 	modelName := c.Query("model_name")
-	content := c.Query("content")
 	tokenID, _ := strconv.Atoi(c.Query("token_id"))
-	usedAmount, _ := strconv.ParseFloat(c.Query("used_amount"), 64)
-
-	page, _ := strconv.Atoi(c.Query("page"))
-	perPage, _ := strconv.Atoi(c.Query("per_page"))
-	if perPage <= 0 {
-		perPage = 10
-	} else if perPage > 100 {
-		perPage = 100
-	}
-
+	page, perPage := parsePageParams(c)
 	order := c.Query("order")
 	requestID := c.Query("request_id")
 
@@ -438,8 +479,6 @@ func SearchConsumeError(c *gin.Context) {
 		group,
 		tokenName,
 		modelName,
-		content,
-		usedAmount,
 		tokenID,
 		page,
 		perPage,

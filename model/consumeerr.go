@@ -48,7 +48,7 @@ func CreateConsumeError(requestID string, requestAt time.Time, group string, tok
 	}).Error
 }
 
-func SearchConsumeError(keyword string, requestID string, group string, tokenName string, model string, content string, usedAmount float64, tokenID int, page int, perPage int, order string) ([]*ConsumeError, int64, error) {
+func SearchConsumeError(keyword string, requestID string, group string, tokenName string, model string, tokenID int, page int, perPage int, order string) ([]*ConsumeError, int64, error) {
 	tx := LogDB.Model(&ConsumeError{})
 
 	// Handle exact match conditions for non-zero values
@@ -63,12 +63,6 @@ func SearchConsumeError(keyword string, requestID string, group string, tokenNam
 	}
 	if model != "" {
 		tx = tx.Where("model = ?", model)
-	}
-	if content != "" {
-		tx = tx.Where("content = ?", content)
-	}
-	if usedAmount > 0 {
-		tx = tx.Where("used_amount = ?", usedAmount)
 	}
 	if tokenID != 0 {
 		tx = tx.Where("token_id = ?", tokenID)
@@ -112,14 +106,6 @@ func SearchConsumeError(keyword string, requestID string, group string, tokenNam
 				conditions = append(conditions, "model ILIKE ?")
 			} else {
 				conditions = append(conditions, "model LIKE ?")
-			}
-			values = append(values, "%"+keyword+"%")
-		}
-		if content == "" {
-			if common.UsingPostgreSQL {
-				conditions = append(conditions, "content ILIKE ?")
-			} else {
-				conditions = append(conditions, "content LIKE ?")
 			}
 			values = append(values, "%"+keyword+"%")
 		}

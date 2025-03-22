@@ -110,7 +110,7 @@ func buildTokenResponses(tokens []*model.Token) []*TokenResponse {
 //	@Tags			tokens
 //	@Produce		json
 //	@Security		ApiKeyAuth
-//	@Param			p			query		int		false	"Page number"
+//	@Param			page		query		int		false	"Page number"
 //	@Param			per_page	query		int		false	"Items per page"
 //	@Param			group		query		string	false	"Group name"
 //	@Param			order		query		string	false	"Order"
@@ -143,7 +143,7 @@ func GetTokens(c *gin.Context) {
 //	@Produce		json
 //	@Security		ApiKeyAuth
 //	@Param			group		path		string	true	"Group name"
-//	@Param			p			query		int		false	"Page number"
+//	@Param			page		query		int		false	"Page number"
 //	@Param			per_page	query		int		false	"Items per page"
 //	@Param			order		query		string	false	"Order"
 //	@Param			status		query		int		false	"Status"
@@ -180,7 +180,7 @@ func GetGroupTokens(c *gin.Context) {
 //	@Produce		json
 //	@Security		ApiKeyAuth
 //	@Param			keyword		query		string	false	"Keyword"
-//	@Param			p			query		int		false	"Page number"
+//	@Param			page		query		int		false	"Page number"
 //	@Param			per_page	query		int		false	"Items per page"
 //	@Param			order		query		string	false	"Order"
 //	@Param			name		query		string	false	"Name"
@@ -218,7 +218,8 @@ func SearchTokens(c *gin.Context) {
 //	@Produce		json
 //	@Security		ApiKeyAuth
 //	@Param			group		path		string	true	"Group name"
-//	@Param			p			query		int		false	"Page number"
+//	@Param			keyword		query		string	false	"Keyword"
+//	@Param			page		query		int		false	"Page number"
 //	@Param			per_page	query		int		false	"Items per page"
 //	@Param			order		query		string	false	"Order"
 //	@Param			name		query		string	false	"Name"
@@ -319,8 +320,8 @@ func GetGroupToken(c *gin.Context) {
 //	@Accept			json
 //	@Produce		json
 //	@Security		ApiKeyAuth
-//	@Param			group	path		string		true	"Group name"
-//	@Param			token	body		model.Token	true	"Token information"
+//	@Param			group	path		string			true	"Group name"
+//	@Param			token	body		AddTokenRequest	true	"Token information"
 //	@Success		200		{object}	middleware.APIResponse{data=TokenResponse}
 //	@Router			/api/token/{group} [post]
 func AddGroupToken(c *gin.Context) {
@@ -460,8 +461,8 @@ func DeleteGroupTokens(c *gin.Context) {
 //	@Accept			json
 //	@Produce		json
 //	@Security		ApiKeyAuth
-//	@Param			id		path		int			true	"Token ID"
-//	@Param			token	body		model.Token	true	"Updated token information"
+//	@Param			id		path		int				true	"Token ID"
+//	@Param			token	body		AddTokenRequest	true	"Updated token information"
 //	@Success		200		{object}	middleware.APIResponse{data=TokenResponse}
 //	@Router			/api/tokens/{id} [put]
 func UpdateToken(c *gin.Context) {
@@ -500,9 +501,9 @@ func UpdateToken(c *gin.Context) {
 //	@Accept			json
 //	@Produce		json
 //	@Security		ApiKeyAuth
-//	@Param			group	path		string		true	"Group name"
-//	@Param			id		path		int			true	"Token ID"
-//	@Param			token	body		model.Token	true	"Updated token information"
+//	@Param			group	path		string			true	"Group name"
+//	@Param			id		path		int				true	"Token ID"
+//	@Param			token	body		AddTokenRequest	true	"Updated token information"
 //	@Success		200		{object}	middleware.APIResponse{data=TokenResponse}
 //	@Router			/api/token/{group}/{id} [put]
 func UpdateGroupToken(c *gin.Context) {
