@@ -9,44 +9,32 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/common/audio"
-	"github.com/labring/aiproxy/common/config"
 	"github.com/labring/aiproxy/middleware"
-	"github.com/labring/aiproxy/relay/meta"
+	"github.com/labring/aiproxy/model"
 )
 
-func RelaySTTHelper(meta *meta.Meta, c *gin.Context) *HandleResult {
-	return Handle(meta, c, func() (*PreCheckGroupBalanceReq, error) {
-		if !config.GetBillingEnabled() {
-			return &PreCheckGroupBalanceReq{}, nil
-		}
+func GetSTTRequestPrice(_ *gin.Context, mc *model.ModelConfig) (model.Price, error) {
+	return mc.Price, nil
+}
 
-		inputPrice, outputPrice, cachedPrice, cacheCreationPrice, ok := GetModelPrice(meta.ModelConfig)
-		if !ok {
-			return nil, fmt.Errorf("model price not found: %s", meta.OriginModel)
-		}
+func GetSTTRequestUsage(c *gin.Context, _ *model.ModelConfig) (model.Usage, error) {
+	audioFile, err := c.FormFile("file")
+	if err != nil {
+		return model.Usage{}, fmt.Errorf("failed to get audio file: %w", err)
+	}
 
-		audioFile, err := c.FormFile("file")
-		if err != nil {
-			return nil, fmt.Errorf("failed to get audio file: %w", err)
-		}
+	duration, err := getAudioDuration(audioFile)
+	if err != nil {
+		return model.Usage{}, err
+	}
 
-		duration, err := getAudioDuration(audioFile)
-		if err != nil {
-			return nil, err
-		}
+	durationInt := int(math.Ceil(duration))
+	log := middleware.GetLogger(c)
+	log.Data["duration"] = durationInt
 
-		durationInt := int(math.Ceil(duration))
-		log := middleware.GetLogger(c)
-		log.Data["duration"] = durationInt
-
-		return &PreCheckGroupBalanceReq{
-			InputTokens:        durationInt,
-			InputPrice:         inputPrice,
-			OutputPrice:        outputPrice,
-			CachedPrice:        cachedPrice,
-			CacheCreationPrice: cacheCreationPrice,
-		}, nil
-	})
+	return model.Usage{
+		InputTokens: durationInt,
+	}, nil
 }
 
 func getAudioDuration(audioFile *multipart.FileHeader) (float64, error) {

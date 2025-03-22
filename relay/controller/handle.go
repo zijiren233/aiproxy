@@ -1,7 +1,6 @@
 package controller
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -16,19 +15,14 @@ import (
 
 // HandleResult contains all the information needed for consumption recording
 type HandleResult struct {
-	Error              *relaymodel.ErrorWithStatusCode
-	Usage              *relaymodel.Usage
-	InputPrice         float64
-	OutputPrice        float64
-	CachedPrice        float64
-	CacheCreationPrice float64
-	Detail             *model.RequestDetail
+	Error  *relaymodel.ErrorWithStatusCode
+	Usage  relaymodel.Usage
+	Detail *model.RequestDetail
 }
 
-func Handle(meta *meta.Meta, c *gin.Context, preProcess func() (*PreCheckGroupBalanceReq, error)) *HandleResult {
+func Handle(meta *meta.Meta, c *gin.Context) *HandleResult {
 	log := middleware.GetLogger(c)
 
-	// 1. Get adaptor
 	adaptor, ok := channeltype.GetAdaptor(meta.Channel.Type)
 	if !ok {
 		log.Errorf("invalid (%s[%d]) channel type: %d", meta.Channel.Name, meta.Channel.ID, meta.Channel.Type)
@@ -38,34 +32,6 @@ func Handle(meta *meta.Meta, c *gin.Context, preProcess func() (*PreCheckGroupBa
 		}
 	}
 
-	// 3. Pre-process request
-	preCheckReq, err := preProcess()
-	if err != nil {
-		log.Errorf("pre-process request failed: %s", err.Error())
-		detail := &model.RequestDetail{}
-		if err := getRequestBody(meta, c, detail); err != nil {
-			log.Errorf("get request body failed: %v", err.Error)
-		}
-		return &HandleResult{
-			Error:  openai.ErrorWrapper(err, "invalid_request", http.StatusBadRequest),
-			Detail: detail,
-		}
-	}
-
-	// 4. Pre-check balance
-	if meta.CheckBalance != nil && !meta.CheckBalance(getPreConsumedAmount(preCheckReq)) {
-		return &HandleResult{
-			Error: openai.ErrorWrapperWithMessage(
-				fmt.Sprintf("group (%s) balance is not enough", meta.Group.ID),
-				middleware.GroupBalanceNotEnough,
-				http.StatusForbidden,
-			),
-		}
-	}
-
-	meta.InputTokens = preCheckReq.InputTokens
-
-	// 5. Do request
 	usage, detail, respErr := DoHelper(adaptor, c, meta)
 	if respErr != nil {
 		var logDetail *model.RequestDetail
@@ -82,18 +48,14 @@ func Handle(meta *meta.Meta, c *gin.Context, preProcess func() (*PreCheckGroupBa
 		}
 
 		return &HandleResult{
-			Error:       respErr,
-			Usage:       usage,
-			InputPrice:  preCheckReq.InputPrice,
-			OutputPrice: preCheckReq.OutputPrice,
-			Detail:      detail,
+			Error:  respErr,
+			Usage:  usage,
+			Detail: detail,
 		}
 	}
 
 	return &HandleResult{
-		Usage:       usage,
-		InputPrice:  preCheckReq.InputPrice,
-		OutputPrice: preCheckReq.OutputPrice,
-		Detail:      detail,
+		Usage:  usage,
+		Detail: detail,
 	}
 }

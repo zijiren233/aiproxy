@@ -35,10 +35,6 @@ definitions:
     type: object
   controller.BuiltinModelConfig:
     properties:
-      cache_creation_price:
-        type: number
-      cached_price:
-        type: number
       config:
         additionalProperties: {}
         type: object
@@ -46,20 +42,16 @@ definitions:
         type: string
       exclude_from_tests:
         type: boolean
-      image_batch_size:
-        type: integer
       image_prices:
         additionalProperties:
           type: number
         type: object
-      input_price:
-        type: number
       model:
         type: string
-      output_price:
-        type: number
       owner:
         $ref: '#/definitions/model.ModelOwner'
+      price:
+        $ref: '#/definitions/model.Price'
       rpm:
         type: integer
       tpm:
@@ -149,10 +141,6 @@ definitions:
     type: object
   controller.SaveModelConfigsRequest:
     properties:
-      cache_creation_price:
-        type: number
-      cached_price:
-        type: number
       config:
         additionalProperties: {}
         type: object
@@ -160,20 +148,16 @@ definitions:
         type: string
       exclude_from_tests:
         type: boolean
-      image_batch_size:
-        type: integer
       image_prices:
         additionalProperties:
           type: number
         type: object
-      input_price:
-        type: number
       model:
         type: string
-      output_price:
-        type: number
       owner:
         $ref: '#/definitions/model.ModelOwner'
+      price:
+        $ref: '#/definitions/model.Price'
       rpm:
         type: integer
       tpm:
@@ -243,6 +227,30 @@ definitions:
   controller.UpdateTokenStatusRequest:
     properties:
       status:
+        type: integer
+    type: object
+  github_com_labring_aiproxy_model.Usage:
+    properties:
+      cache_creation_tokens:
+        type: integer
+      cached_tokens:
+        type: integer
+      input_tokens:
+        type: integer
+      output_tokens:
+        type: integer
+      total_tokens:
+        type: integer
+    type: object
+  github_com_labring_aiproxy_relay_model.Usage:
+    properties:
+      completion_tokens:
+        type: integer
+      prompt_tokens:
+        type: integer
+      prompt_tokens_details:
+        $ref: '#/definitions/model.PromptTokensDetails'
+      total_tokens:
         type: integer
     type: object
   middleware.APIResponse:
@@ -420,7 +428,7 @@ definitions:
       object:
         type: string
       usage:
-        $ref: '#/definitions/model.Usage'
+        $ref: '#/definitions/github_com_labring_aiproxy_relay_model.Usage'
     type: object
   model.EmbeddingResponseItem:
     properties:
@@ -648,21 +656,9 @@ definitions:
     type: object
   model.Log:
     properties:
-      cache_creation_price:
-        type: number
-      cache_creation_tokens:
-        type: integer
-      cached_price:
-        type: number
-      cached_tokens:
-        type: integer
       channel:
         type: integer
       code:
-        type: integer
-      completion_price:
-        type: number
-      completion_tokens:
         type: integer
       content:
         type: string
@@ -683,9 +679,7 @@ definitions:
       model:
         type: string
       price:
-        type: number
-      prompt_tokens:
-        type: integer
+        $ref: '#/definitions/model.Price'
       request_at:
         type: string
       request_detail:
@@ -702,8 +696,8 @@ definitions:
         type: integer
       token_name:
         type: string
-      total_tokens:
-        type: integer
+      usage:
+        $ref: '#/definitions/github_com_labring_aiproxy_model.Usage'
       used_amount:
         type: number
     type: object
@@ -725,10 +719,6 @@ definitions:
     type: object
   model.ModelConfig:
     properties:
-      cache_creation_price:
-        type: number
-      cached_price:
-        type: number
       config:
         additionalProperties: {}
         type: object
@@ -736,20 +726,16 @@ definitions:
         type: string
       exclude_from_tests:
         type: boolean
-      image_batch_size:
-        type: integer
       image_prices:
         additionalProperties:
           type: number
         type: object
-      input_price:
-        type: number
       model:
         type: string
-      output_price:
-        type: number
       owner:
         $ref: '#/definitions/model.ModelOwner'
+      price:
+        $ref: '#/definitions/model.Price'
       rpm:
         type: integer
       tpm:
@@ -847,6 +833,17 @@ definitions:
         type: string
       pages:
         type: integer
+    type: object
+  model.Price:
+    properties:
+      cache_creation_price:
+        type: number
+      cached_price:
+        type: number
+      input_price:
+        type: number
+      output_price:
+        type: number
     type: object
   model.PromptTokensDetails:
     properties:
@@ -955,7 +952,7 @@ definitions:
       object:
         type: string
       usage:
-        $ref: '#/definitions/model.Usage'
+        $ref: '#/definitions/github_com_labring_aiproxy_relay_model.Usage'
     type: object
   model.TextResponseChoice:
     properties:
@@ -1024,17 +1021,6 @@ definitions:
         type: string
       type:
         type: string
-    type: object
-  model.Usage:
-    properties:
-      completion_tokens:
-        type: integer
-      prompt_tokens:
-        type: integer
-      prompt_tokens_details:
-        $ref: '#/definitions/model.PromptTokensDetails'
-      total_tokens:
-        type: integer
     type: object
   openai.SubscriptionResponse:
     properties:
@@ -2492,6 +2478,36 @@ paths:
       tags:
       - modelconfig
   /api/model_configs:
+    get:
+      description: Returns a list of model configs with pagination
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/middleware.APIResponse'
+            - properties:
+                data:
+                  additionalProperties:
+                    allOf:
+                    - {}
+                    - properties:
+                        configs:
+                          items:
+                            $ref: '#/definitions/model.ModelConfig'
+                          type: array
+                        total:
+                          type: integer
+                      type: object
+                  type: object
+              type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Get model configs
+      tags:
+      - modelconfig
     post:
       description: Saves a list of model configs
       parameters:
@@ -2513,6 +2529,28 @@ paths:
       security:
       - ApiKeyAuth: []
       summary: Save model configs
+      tags:
+      - modelconfig
+  /api/model_configs/all:
+    get:
+      description: Returns a list of all model configs
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/middleware.APIResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/model.ModelConfig'
+                  type: array
+              type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Get all model configs
       tags:
       - modelconfig
   /api/model_configs/batch_delete:
@@ -2537,6 +2575,59 @@ paths:
       security:
       - ApiKeyAuth: []
       summary: Delete model configs
+      tags:
+      - modelconfig
+  /api/model_configs/contains:
+    post:
+      description: Returns a list of model configs by models contains
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/middleware.APIResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/model.ModelConfig'
+                  type: array
+              type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Get model configs by models contains
+      tags:
+      - modelconfig
+  /api/model_configs/search:
+    get:
+      description: Returns a list of model configs by keyword
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/middleware.APIResponse'
+            - properties:
+                data:
+                  additionalProperties:
+                    allOf:
+                    - {}
+                    - properties:
+                        configs:
+                          items:
+                            $ref: '#/definitions/model.ModelConfig'
+                          type: array
+                        total:
+                          type: integer
+                      type: object
+                  type: object
+              type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Search model configs
       tags:
       - modelconfig
   /api/model_cost_rank:
@@ -2589,112 +2680,6 @@ paths:
       summary: Get model cost ranking data for a specific group
       tags:
       - dashboard
-  /api/modelconfigs:
-    get:
-      description: Returns a list of model configs with pagination
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            allOf:
-            - $ref: '#/definitions/middleware.APIResponse'
-            - properties:
-                data:
-                  additionalProperties:
-                    allOf:
-                    - {}
-                    - properties:
-                        configs:
-                          items:
-                            $ref: '#/definitions/model.ModelConfig'
-                          type: array
-                        total:
-                          type: integer
-                      type: object
-                  type: object
-              type: object
-      security:
-      - ApiKeyAuth: []
-      summary: Get model configs
-      tags:
-      - modelconfig
-  /api/modelconfigs/all:
-    get:
-      description: Returns a list of all model configs
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            allOf:
-            - $ref: '#/definitions/middleware.APIResponse'
-            - properties:
-                data:
-                  items:
-                    $ref: '#/definitions/model.ModelConfig'
-                  type: array
-              type: object
-      security:
-      - ApiKeyAuth: []
-      summary: Get all model configs
-      tags:
-      - modelconfig
-  /api/modelconfigs/contains:
-    post:
-      description: Returns a list of model configs by models contains
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            allOf:
-            - $ref: '#/definitions/middleware.APIResponse'
-            - properties:
-                data:
-                  items:
-                    $ref: '#/definitions/model.ModelConfig'
-                  type: array
-              type: object
-      security:
-      - ApiKeyAuth: []
-      summary: Get model configs by models contains
-      tags:
-      - modelconfig
-  /api/modelconfigs/search:
-    get:
-      description: Returns a list of model configs by keyword
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            allOf:
-            - $ref: '#/definitions/middleware.APIResponse'
-            - properties:
-                data:
-                  additionalProperties:
-                    allOf:
-                    - {}
-                    - properties:
-                        configs:
-                          items:
-                            $ref: '#/definitions/model.ModelConfig'
-                          type: array
-                        total:
-                          type: integer
-                      type: object
-                  type: object
-              type: object
-      security:
-      - ApiKeyAuth: []
-      summary: Search model configs
-      tags:
-      - modelconfig
   /api/models/builtin:
     get:
       description: Returns a list of builtin models
@@ -3280,7 +3265,7 @@ paths:
       - ApiKeyAuth: []
       summary: Get token by ID for a specific group
       tags:
-      - tokens
+      - token
     put:
       consumes:
       - application/json
@@ -3426,6 +3411,30 @@ paths:
         name: group
         required: true
         type: string
+      - description: Page number
+        in: query
+        name: p
+        type: integer
+      - description: Items per page
+        in: query
+        name: per_page
+        type: integer
+      - description: Order
+        in: query
+        name: order
+        type: string
+      - description: Name
+        in: query
+        name: name
+        type: string
+      - description: Key
+        in: query
+        name: key
+        type: string
+      - description: Status
+        in: query
+        name: status
+        type: integer
       produces:
       - application/json
       responses:
@@ -3453,18 +3462,30 @@ paths:
       - ApiKeyAuth: []
       summary: Search tokens for a specific group
       tags:
-      - tokens
+      - token
   /api/tokens:
     get:
       description: Returns a paginated list of all tokens
       parameters:
       - description: Page number
         in: query
-        name: page
+        name: p
         type: integer
       - description: Items per page
         in: query
         name: per_page
+        type: integer
+      - description: Group name
+        in: query
+        name: group
+        type: string
+      - description: Order
+        in: query
+        name: order
+        type: string
+      - description: Status
+        in: query
+        name: status
         type: integer
       produces:
       - application/json
@@ -3503,6 +3524,22 @@ paths:
         name: group
         required: true
         type: string
+      - description: Page number
+        in: query
+        name: p
+        type: integer
+      - description: Items per page
+        in: query
+        name: per_page
+        type: integer
+      - description: Order
+        in: query
+        name: order
+        type: string
+      - description: Status
+        in: query
+        name: status
+        type: integer
       produces:
       - application/json
       responses:
@@ -3702,6 +3739,14 @@ paths:
         in: query
         name: keyword
         type: string
+      - description: Page number
+        in: query
+        name: p
+        type: integer
+      - description: Items per page
+        in: query
+        name: per_page
+        type: integer
       - description: Order
         in: query
         name: order

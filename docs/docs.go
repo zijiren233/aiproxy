@@ -2429,6 +2429,60 @@ const docTemplate = `{
             }
         },
         "/api/model_configs": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Returns a list of model configs with pagination",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "modelconfig"
+                ],
+                "summary": "Get model configs",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/middleware.APIResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "additionalProperties": {
+                                                "allOf": [
+                                                    {},
+                                                    {
+                                                        "type": "object",
+                                                        "properties": {
+                                                            "configs": {
+                                                                "type": "array",
+                                                                "items": {
+                                                                    "$ref": "#/definitions/model.ModelConfig"
+                                                                }
+                                                            },
+                                                            "total": {
+                                                                "type": "integer"
+                                                            }
+                                                        }
+                                                    }
+                                                ]
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            },
             "post": {
                 "security": [
                     {
@@ -2462,6 +2516,46 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/middleware.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/model_configs/all": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Returns a list of all model configs",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "modelconfig"
+                ],
+                "summary": "Get all model configs",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/middleware.APIResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/model.ModelConfig"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     }
                 }
@@ -2501,6 +2595,102 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/middleware.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/model_configs/contains": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Returns a list of model configs by models contains",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "modelconfig"
+                ],
+                "summary": "Get model configs by models contains",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/middleware.APIResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/model.ModelConfig"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/api/model_configs/search": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Returns a list of model configs by keyword",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "modelconfig"
+                ],
+                "summary": "Search model configs",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/middleware.APIResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "additionalProperties": {
+                                                "allOf": [
+                                                    {},
+                                                    {
+                                                        "type": "object",
+                                                        "properties": {
+                                                            "configs": {
+                                                                "type": "array",
+                                                                "items": {
+                                                                    "$ref": "#/definitions/model.ModelConfig"
+                                                                }
+                                                            },
+                                                            "total": {
+                                                                "type": "integer"
+                                                            }
+                                                        }
+                                                    }
+                                                ]
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     }
                 }
@@ -2585,198 +2775,6 @@ const docTemplate = `{
                                             "type": "array",
                                             "items": {
                                                 "$ref": "#/definitions/model.ModelCostRank"
-                                            }
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    }
-                }
-            }
-        },
-        "/api/modelconfigs": {
-            "get": {
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ],
-                "description": "Returns a list of model configs with pagination",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "modelconfig"
-                ],
-                "summary": "Get model configs",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/middleware.APIResponse"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "type": "object",
-                                            "additionalProperties": {
-                                                "allOf": [
-                                                    {},
-                                                    {
-                                                        "type": "object",
-                                                        "properties": {
-                                                            "configs": {
-                                                                "type": "array",
-                                                                "items": {
-                                                                    "$ref": "#/definitions/model.ModelConfig"
-                                                                }
-                                                            },
-                                                            "total": {
-                                                                "type": "integer"
-                                                            }
-                                                        }
-                                                    }
-                                                ]
-                                            }
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    }
-                }
-            }
-        },
-        "/api/modelconfigs/all": {
-            "get": {
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ],
-                "description": "Returns a list of all model configs",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "modelconfig"
-                ],
-                "summary": "Get all model configs",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/middleware.APIResponse"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "type": "array",
-                                            "items": {
-                                                "$ref": "#/definitions/model.ModelConfig"
-                                            }
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    }
-                }
-            }
-        },
-        "/api/modelconfigs/contains": {
-            "post": {
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ],
-                "description": "Returns a list of model configs by models contains",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "modelconfig"
-                ],
-                "summary": "Get model configs by models contains",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/middleware.APIResponse"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "type": "array",
-                                            "items": {
-                                                "$ref": "#/definitions/model.ModelConfig"
-                                            }
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    }
-                }
-            }
-        },
-        "/api/modelconfigs/search": {
-            "get": {
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ],
-                "description": "Returns a list of model configs by keyword",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "modelconfig"
-                ],
-                "summary": "Search model configs",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/middleware.APIResponse"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "type": "object",
-                                            "additionalProperties": {
-                                                "allOf": [
-                                                    {},
-                                                    {
-                                                        "type": "object",
-                                                        "properties": {
-                                                            "configs": {
-                                                                "type": "array",
-                                                                "items": {
-                                                                    "$ref": "#/definitions/model.ModelConfig"
-                                                                }
-                                                            },
-                                                            "total": {
-                                                                "type": "integer"
-                                                            }
-                                                        }
-                                                    }
-                                                ]
                                             }
                                         }
                                     }
@@ -3764,7 +3762,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "tokens"
+                    "token"
                 ],
                 "summary": "Search tokens for a specific group",
                 "parameters": [
@@ -3774,6 +3772,42 @@ const docTemplate = `{
                         "name": "group",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page number",
+                        "name": "p",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Items per page",
+                        "name": "per_page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Order",
+                        "name": "order",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Name",
+                        "name": "name",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Key",
+                        "name": "key",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Status",
+                        "name": "status",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -3829,7 +3863,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "tokens"
+                    "token"
                 ],
                 "summary": "Get token by ID for a specific group",
                 "parameters": [
@@ -4097,13 +4131,31 @@ const docTemplate = `{
                     {
                         "type": "integer",
                         "description": "Page number",
-                        "name": "page",
+                        "name": "p",
                         "in": "query"
                     },
                     {
                         "type": "integer",
                         "description": "Items per page",
                         "name": "per_page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Group name",
+                        "name": "group",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Order",
+                        "name": "order",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Status",
+                        "name": "status",
                         "in": "query"
                     }
                 ],
@@ -4213,6 +4265,18 @@ const docTemplate = `{
                         "in": "query"
                     },
                     {
+                        "type": "integer",
+                        "description": "Page number",
+                        "name": "p",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Items per page",
+                        "name": "per_page",
+                        "in": "query"
+                    },
+                    {
                         "type": "string",
                         "description": "Order",
                         "name": "order",
@@ -4306,6 +4370,30 @@ const docTemplate = `{
                         "name": "group",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page number",
+                        "name": "p",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Items per page",
+                        "name": "per_page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Order",
+                        "name": "order",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Status",
+                        "name": "status",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -5370,12 +5458,6 @@ const docTemplate = `{
         "controller.BuiltinModelConfig": {
             "type": "object",
             "properties": {
-                "cache_creation_price": {
-                    "type": "number"
-                },
-                "cached_price": {
-                    "type": "number"
-                },
                 "config": {
                     "type": "object",
                     "additionalProperties": {}
@@ -5386,26 +5468,20 @@ const docTemplate = `{
                 "exclude_from_tests": {
                     "type": "boolean"
                 },
-                "image_batch_size": {
-                    "type": "integer"
-                },
                 "image_prices": {
                     "type": "object",
                     "additionalProperties": {
                         "type": "number"
                     }
                 },
-                "input_price": {
-                    "type": "number"
-                },
                 "model": {
                     "type": "string"
                 },
-                "output_price": {
-                    "type": "number"
-                },
                 "owner": {
                     "$ref": "#/definitions/model.ModelOwner"
+                },
+                "price": {
+                    "$ref": "#/definitions/model.Price"
                 },
                 "rpm": {
                     "type": "integer"
@@ -5543,12 +5619,6 @@ const docTemplate = `{
         "controller.SaveModelConfigsRequest": {
             "type": "object",
             "properties": {
-                "cache_creation_price": {
-                    "type": "number"
-                },
-                "cached_price": {
-                    "type": "number"
-                },
                 "config": {
                     "type": "object",
                     "additionalProperties": {}
@@ -5559,26 +5629,20 @@ const docTemplate = `{
                 "exclude_from_tests": {
                     "type": "boolean"
                 },
-                "image_batch_size": {
-                    "type": "integer"
-                },
                 "image_prices": {
                     "type": "object",
                     "additionalProperties": {
                         "type": "number"
                     }
                 },
-                "input_price": {
-                    "type": "number"
-                },
                 "model": {
                     "type": "string"
                 },
-                "output_price": {
-                    "type": "number"
-                },
                 "owner": {
                     "$ref": "#/definitions/model.ModelOwner"
+                },
+                "price": {
+                    "$ref": "#/definitions/model.Price"
                 },
                 "rpm": {
                     "type": "integer"
@@ -5686,6 +5750,43 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "status": {
+                    "type": "integer"
+                }
+            }
+        },
+        "github_com_labring_aiproxy_model.Usage": {
+            "type": "object",
+            "properties": {
+                "cache_creation_tokens": {
+                    "type": "integer"
+                },
+                "cached_tokens": {
+                    "type": "integer"
+                },
+                "input_tokens": {
+                    "type": "integer"
+                },
+                "output_tokens": {
+                    "type": "integer"
+                },
+                "total_tokens": {
+                    "type": "integer"
+                }
+            }
+        },
+        "github_com_labring_aiproxy_relay_model.Usage": {
+            "type": "object",
+            "properties": {
+                "completion_tokens": {
+                    "type": "integer"
+                },
+                "prompt_tokens": {
+                    "type": "integer"
+                },
+                "prompt_tokens_details": {
+                    "$ref": "#/definitions/model.PromptTokensDetails"
+                },
+                "total_tokens": {
                     "type": "integer"
                 }
             }
@@ -5945,7 +6046,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "usage": {
-                    "$ref": "#/definitions/model.Usage"
+                    "$ref": "#/definitions/github_com_labring_aiproxy_relay_model.Usage"
                 }
             }
         },
@@ -6288,28 +6389,10 @@ const docTemplate = `{
         "model.Log": {
             "type": "object",
             "properties": {
-                "cache_creation_price": {
-                    "type": "number"
-                },
-                "cache_creation_tokens": {
-                    "type": "integer"
-                },
-                "cached_price": {
-                    "type": "number"
-                },
-                "cached_tokens": {
-                    "type": "integer"
-                },
                 "channel": {
                     "type": "integer"
                 },
                 "code": {
-                    "type": "integer"
-                },
-                "completion_price": {
-                    "type": "number"
-                },
-                "completion_tokens": {
                     "type": "integer"
                 },
                 "content": {
@@ -6340,10 +6423,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "price": {
-                    "type": "number"
-                },
-                "prompt_tokens": {
-                    "type": "integer"
+                    "$ref": "#/definitions/model.Price"
                 },
                 "request_at": {
                     "type": "string"
@@ -6369,8 +6449,8 @@ const docTemplate = `{
                 "token_name": {
                     "type": "string"
                 },
-                "total_tokens": {
-                    "type": "integer"
+                "usage": {
+                    "$ref": "#/definitions/github_com_labring_aiproxy_model.Usage"
                 },
                 "used_amount": {
                     "type": "number"
@@ -6404,12 +6484,6 @@ const docTemplate = `{
         "model.ModelConfig": {
             "type": "object",
             "properties": {
-                "cache_creation_price": {
-                    "type": "number"
-                },
-                "cached_price": {
-                    "type": "number"
-                },
                 "config": {
                     "type": "object",
                     "additionalProperties": {}
@@ -6420,26 +6494,20 @@ const docTemplate = `{
                 "exclude_from_tests": {
                     "type": "boolean"
                 },
-                "image_batch_size": {
-                    "type": "integer"
-                },
                 "image_prices": {
                     "type": "object",
                     "additionalProperties": {
                         "type": "number"
                     }
                 },
-                "input_price": {
-                    "type": "number"
-                },
                 "model": {
                     "type": "string"
                 },
-                "output_price": {
-                    "type": "number"
-                },
                 "owner": {
                     "$ref": "#/definitions/model.ModelOwner"
+                },
+                "price": {
+                    "$ref": "#/definitions/model.Price"
                 },
                 "rpm": {
                     "type": "integer"
@@ -6557,6 +6625,23 @@ const docTemplate = `{
                 },
                 "pages": {
                     "type": "integer"
+                }
+            }
+        },
+        "model.Price": {
+            "type": "object",
+            "properties": {
+                "cache_creation_price": {
+                    "type": "number"
+                },
+                "cached_price": {
+                    "type": "number"
+                },
+                "input_price": {
+                    "type": "number"
+                },
+                "output_price": {
+                    "type": "number"
                 }
             }
         },
@@ -6725,7 +6810,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "usage": {
-                    "$ref": "#/definitions/model.Usage"
+                    "$ref": "#/definitions/github_com_labring_aiproxy_relay_model.Usage"
                 }
             }
         },
@@ -6829,23 +6914,6 @@ const docTemplate = `{
                 },
                 "type": {
                     "type": "string"
-                }
-            }
-        },
-        "model.Usage": {
-            "type": "object",
-            "properties": {
-                "completion_tokens": {
-                    "type": "integer"
-                },
-                "prompt_tokens": {
-                    "type": "integer"
-                },
-                "prompt_tokens_details": {
-                    "$ref": "#/definitions/model.PromptTokensDetails"
-                },
-                "total_tokens": {
-                    "type": "integer"
                 }
             }
         },

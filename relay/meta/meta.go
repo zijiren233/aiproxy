@@ -30,9 +30,8 @@ type Meta struct {
 	OriginModel string
 	ActualModel string
 	Mode        mode.Mode
+	// TODO: remove this field
 	InputTokens int
-	// TODO: check balance move to controller
-	CheckBalance func(amount float64) bool
 }
 
 type Option func(meta *Meta)
@@ -67,9 +66,9 @@ func WithToken(token *model.TokenCache) Option {
 	}
 }
 
-func WithCheckBalance(checkBalance func(amount float64) bool) Option {
+func WithInputTokens(inputTokens int) Option {
 	return func(meta *Meta) {
-		meta.CheckBalance = checkBalance
+		meta.InputTokens = inputTokens
 	}
 }
 

@@ -21,6 +21,7 @@ import (
 	"github.com/labring/aiproxy/model"
 	"github.com/labring/aiproxy/relay/meta"
 	"github.com/labring/aiproxy/relay/mode"
+	relaymodel "github.com/labring/aiproxy/relay/model"
 )
 
 func calculateGroupConsumeLevelRatio(usedAmount float64) float64 {
@@ -143,6 +144,7 @@ func checkGroupModelRPMAndTPM(c *gin.Context, group *model.GroupCache, mc *model
 }
 
 type GroupBalanceConsumer struct {
+	Group        string
 	CheckBalance func(amount float64) bool
 	Consumer     balance.PostGroupConsumer
 }
@@ -166,9 +168,13 @@ func GetGroupBalanceConsumer(c *gin.Context, group *model.GroupCache) (*GroupBal
 	}
 
 	if group.Status == model.GroupStatusInternal {
-		gbc = &GroupBalanceConsumer{CheckBalance: func(_ float64) bool {
-			return true
-		}, Consumer: nil}
+		gbc = &GroupBalanceConsumer{
+			Group: group.ID,
+			CheckBalance: func(_ float64) bool {
+				return true
+			},
+			Consumer: nil,
+		}
 	} else {
 		log := GetLogger(c)
 		groupBalance, consumer, err := balance.GetGroupRemainBalance(c.Request.Context(), *group)
@@ -177,9 +183,13 @@ func GetGroupBalanceConsumer(c *gin.Context, group *model.GroupCache) (*GroupBal
 		}
 		log.Data["balance"] = strconv.FormatFloat(groupBalance, 'f', -1, 64)
 
-		gbc = &GroupBalanceConsumer{CheckBalance: func(amount float64) bool {
-			return groupBalance >= amount
-		}, Consumer: consumer}
+		gbc = &GroupBalanceConsumer{
+			Group: group.ID,
+			CheckBalance: func(amount float64) bool {
+				return groupBalance >= amount
+			},
+			Consumer: consumer,
+		}
 	}
 
 	c.Set(GroupBalance, gbc)
@@ -194,20 +204,20 @@ func checkGroupBalance(c *gin.Context, group *model.GroupCache) bool {
 	gbc, err := GetGroupBalanceConsumer(c, group)
 	if err != nil {
 		if errors.Is(err, balance.ErrNoRealNameUsedAmountLimit) {
-			abortLogWithMessage(c, http.StatusForbidden, err.Error(), &errorField{
+			AbortLogWithMessage(c, http.StatusForbidden, err.Error(), &ErrorField{
 				Code: "no_real_name_used_amount_limit",
 			})
 			return false
 		}
 		notify.ErrorThrottle("balance", time.Minute, fmt.Sprintf("get group (%s) balance error", group.ID), err.Error())
-		abortWithMessage(c, http.StatusInternalServerError, fmt.Sprintf("get group (%s) balance error", group.ID), &errorField{
+		AbortWithMessage(c, http.StatusInternalServerError, fmt.Sprintf("get group (%s) balance error", group.ID), &ErrorField{
 			Code: "get_group_balance_error",
 		})
 		return false
 	}
 
 	if !gbc.CheckBalance(0) {
-		abortLogWithMessage(c, http.StatusForbidden, fmt.Sprintf("group (%s) balance not enough", group.ID), &errorField{
+		AbortLogWithMessage(c, http.StatusForbidden, fmt.Sprintf("group (%s) balance not enough", group.ID), &ErrorField{
 			Code: GroupBalanceNotEnough,
 		})
 		return false
@@ -253,7 +263,7 @@ func getChannelFromHeader(header string, mc *model.ModelCaches, model string) (*
 
 func distribute(c *gin.Context, mode mode.Mode) {
 	if config.GetDisableServe() {
-		abortLogWithMessage(c, http.StatusServiceUnavailable, "service is under maintenance")
+		AbortLogWithMessage(c, http.StatusServiceUnavailable, "service is under maintenance")
 		return
 	}
 
@@ -267,14 +277,14 @@ func distribute(c *gin.Context, mode mode.Mode) {
 
 	requestModel, err := getRequestModel(c, mode)
 	if err != nil {
-		abortLogWithMessage(c, http.StatusInternalServerError, err.Error(), &errorField{
+		AbortLogWithMessage(c, http.StatusInternalServerError, err.Error(), &ErrorField{
 			Type: "invalid_request_error",
 			Code: "get_request_model_error",
 		})
 		return
 	}
 	if requestModel == "" {
-		abortLogWithMessage(c, http.StatusBadRequest, "no model provided", &errorField{
+		AbortLogWithMessage(c, http.StatusBadRequest, "no model provided", &ErrorField{
 			Type: "invalid_request_error",
 			Code: "no_model_provided",
 		})
@@ -287,10 +297,10 @@ func distribute(c *gin.Context, mode mode.Mode) {
 
 	mc, ok := GetModelCaches(c).ModelConfig.GetModelConfig(requestModel)
 	if !ok {
-		abortLogWithMessage(c,
+		AbortLogWithMessage(c,
 			http.StatusNotFound,
 			fmt.Sprintf("The model `%s` does not exist or you do not have access to it.", requestModel),
-			&errorField{
+			&ErrorField{
 				Type: "invalid_request_error",
 				Code: "model_not_found",
 			},
@@ -302,17 +312,17 @@ func distribute(c *gin.Context, mode mode.Mode) {
 	if channelHeader := c.Request.Header.Get(AIProxyChannelHeader); group.Status == model.GroupStatusInternal && channelHeader != "" {
 		channel, err := getChannelFromHeader(channelHeader, GetModelCaches(c), requestModel)
 		if err != nil {
-			abortLogWithMessage(c, http.StatusBadRequest, err.Error())
+			AbortLogWithMessage(c, http.StatusBadRequest, err.Error())
 			return
 		}
 		c.Set(Channel, channel)
 	} else {
 		token := GetToken(c)
 		if len(token.Models) == 0 || !slices.Contains(token.Models, requestModel) {
-			abortLogWithMessage(c,
+			AbortLogWithMessage(c,
 				http.StatusNotFound,
 				fmt.Sprintf("The model `%s` does not exist or you do not have access to it.", requestModel),
-				&errorField{
+				&ErrorField{
 					Type: "invalid_request_error",
 					Code: "model_not_found",
 				},
@@ -326,19 +336,16 @@ func distribute(c *gin.Context, mode mode.Mode) {
 		consume.AsyncConsume(
 			nil,
 			http.StatusTooManyRequests,
-			nil,
 			NewMetaByContext(c, nil, mode),
-			0,
-			0,
-			0,
-			0,
+			relaymodel.Usage{},
+			model.Price{},
 			errMsg,
 			c.ClientIP(),
 			0,
 			nil,
 			true,
 		)
-		abortLogWithMessage(c, http.StatusTooManyRequests, errMsg, &errorField{
+		AbortLogWithMessage(c, http.StatusTooManyRequests, errMsg, &ErrorField{
 			Type: "invalid_request_error",
 			Code: "request_rate_limit_exceeded",
 		})
@@ -366,7 +373,6 @@ func NewMetaByContext(c *gin.Context,
 	token := GetToken(c)
 	modelName := GetRequestModel(c)
 	modelConfig := GetModelConfig(c)
-	gbc := GetGroupBalanceConsumerFromContext(c)
 
 	opts = append(
 		opts,
@@ -374,7 +380,6 @@ func NewMetaByContext(c *gin.Context,
 		meta.WithGroup(group),
 		meta.WithToken(token),
 		meta.WithEndpoint(c.Request.URL.Path),
-		meta.WithCheckBalance(gbc.CheckBalance),
 	)
 
 	return meta.NewMeta(

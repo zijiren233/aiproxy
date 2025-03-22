@@ -5,27 +5,12 @@ import (
 	"fmt"
 
 	"github.com/gin-gonic/gin"
-	"github.com/labring/aiproxy/common/config"
 	"github.com/labring/aiproxy/model"
-	"github.com/labring/aiproxy/relay/meta"
 	relaymodel "github.com/labring/aiproxy/relay/model"
 	"github.com/labring/aiproxy/relay/utils"
 )
 
-func validateImageMaxBatchSize(modelConfig *model.ModelConfig, batchSize int) error {
-	if batchSize <= 1 {
-		return nil
-	}
-	if modelConfig.ImageMaxBatchSize <= 0 {
-		return nil
-	}
-	if batchSize > modelConfig.ImageMaxBatchSize {
-		return fmt.Errorf("batch size %d is greater than the maximum batch size %d", batchSize, modelConfig.ImageMaxBatchSize)
-	}
-	return nil
-}
-
-func getImageRequest(meta *meta.Meta, c *gin.Context) (*relaymodel.ImageRequest, error) {
+func getImageRequest(c *gin.Context) (*relaymodel.ImageRequest, error) {
 	imageRequest, err := utils.UnmarshalImageRequest(c.Request)
 	if err != nil {
 		return nil, err
@@ -39,31 +24,40 @@ func getImageRequest(meta *meta.Meta, c *gin.Context) (*relaymodel.ImageRequest,
 	if imageRequest.N == 0 {
 		imageRequest.N = 1
 	}
-	if err := validateImageMaxBatchSize(meta.ModelConfig, imageRequest.N); err != nil {
-		return nil, err
-	}
 	return imageRequest, nil
 }
 
-func RelayImageHelper(meta *meta.Meta, c *gin.Context) *HandleResult {
-	return Handle(meta, c, func() (*PreCheckGroupBalanceReq, error) {
-		if !config.GetBillingEnabled() {
-			return &PreCheckGroupBalanceReq{}, nil
-		}
+func GetImageSizePrice(modelConfig *model.ModelConfig, size string) (float64, bool) {
+	if len(modelConfig.ImagePrices) == 0 {
+		return modelConfig.Price.InputPrice, true
+	}
+	price, ok := modelConfig.ImagePrices[size]
+	return price, ok
+}
 
-		imageRequest, err := getImageRequest(meta, c)
-		if err != nil {
-			return nil, err
-		}
+func GetImageRequestPrice(c *gin.Context, mc *model.ModelConfig) (model.Price, error) {
+	imageRequest, err := getImageRequest(c)
+	if err != nil {
+		return model.Price{}, err
+	}
 
-		imageCostPrice, ok := GetImageSizePrice(meta.ModelConfig, imageRequest.Size)
-		if !ok {
-			return nil, fmt.Errorf("invalid image size: %s", imageRequest.Size)
-		}
+	imageCostPrice, ok := GetImageSizePrice(mc, imageRequest.Size)
+	if !ok {
+		return model.Price{}, fmt.Errorf("invalid image size: %s", imageRequest.Size)
+	}
 
-		return &PreCheckGroupBalanceReq{
-			InputTokens: imageRequest.N,
-			InputPrice:  imageCostPrice,
-		}, nil
-	})
+	return model.Price{
+		InputPrice: imageCostPrice,
+	}, nil
+}
+
+func GetImageRequestUsage(c *gin.Context, _ *model.ModelConfig) (model.Usage, error) {
+	imageRequest, err := getImageRequest(c)
+	if err != nil {
+		return model.Usage{}, err
+	}
+
+	return model.Usage{
+		InputTokens: imageRequest.N,
+	}, nil
 }

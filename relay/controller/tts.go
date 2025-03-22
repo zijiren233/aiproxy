@@ -1,37 +1,24 @@
 package controller
 
 import (
-	"fmt"
+	"unicode/utf8"
 
 	"github.com/gin-gonic/gin"
-	"github.com/labring/aiproxy/common/config"
-	"github.com/labring/aiproxy/relay/adaptor/openai"
-	"github.com/labring/aiproxy/relay/meta"
+	"github.com/labring/aiproxy/model"
 	"github.com/labring/aiproxy/relay/utils"
 )
 
-func RelayTTSHelper(meta *meta.Meta, c *gin.Context) *HandleResult {
-	return Handle(meta, c, func() (*PreCheckGroupBalanceReq, error) {
-		if !config.GetBillingEnabled() {
-			return &PreCheckGroupBalanceReq{}, nil
-		}
+func GetTTSRequestPrice(_ *gin.Context, mc *model.ModelConfig) (model.Price, error) {
+	return mc.Price, nil
+}
 
-		inputPrice, outputPrice, cachedPrice, cacheCreationPrice, ok := GetModelPrice(meta.ModelConfig)
-		if !ok {
-			return nil, fmt.Errorf("model price not found: %s", meta.OriginModel)
-		}
+func GetTTSRequestUsage(c *gin.Context, _ *model.ModelConfig) (model.Usage, error) {
+	ttsRequest, err := utils.UnmarshalTTSRequest(c.Request)
+	if err != nil {
+		return model.Usage{}, err
+	}
 
-		ttsRequest, err := utils.UnmarshalTTSRequest(c.Request)
-		if err != nil {
-			return nil, err
-		}
-
-		return &PreCheckGroupBalanceReq{
-			InputTokens:        openai.CountTokenText(ttsRequest.Input, meta.ActualModel),
-			InputPrice:         inputPrice,
-			OutputPrice:        outputPrice,
-			CachedPrice:        cachedPrice,
-			CacheCreationPrice: cacheCreationPrice,
-		}, nil
-	})
+	return model.Usage{
+		InputTokens: utf8.RuneCountInString(ttsRequest.Input),
+	}, nil
 }

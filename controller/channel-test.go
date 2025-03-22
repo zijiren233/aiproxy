@@ -102,11 +102,7 @@ func testSingleModel(mc *model.ModelCaches, channel *model.Channel, modelName st
 		modelConfig,
 		meta.WithRequestID(channelTestRequestID),
 	)
-	relayController, ok := relayController(m)
-	if !ok {
-		return nil, fmt.Errorf("relay mode %d not implemented", m)
-	}
-	result := relayController(meta, newc)
+	result := relayHandler(meta, newc)
 	success := result.Error == nil
 	var respStr string
 	var code int

@@ -74,29 +74,28 @@ func DoHelper(
 	c *gin.Context,
 	meta *meta.Meta,
 ) (
-	*relaymodel.Usage,
+	relaymodel.Usage,
 	*model.RequestDetail,
 	*relaymodel.ErrorWithStatusCode,
 ) {
-	log := middleware.GetLogger(c)
 	detail := model.RequestDetail{}
 
 	// 1. Get request body
 	if err := getRequestBody(meta, c, &detail); err != nil {
-		return nil, nil, err
+		return relaymodel.Usage{}, nil, err
 	}
 
 	// 2. Convert and prepare request
 	resp, err := prepareAndDoRequest(a, c, meta)
 	if err != nil {
-		return nil, &detail, err
+		return relaymodel.Usage{}, &detail, err
 	}
 
 	// 3. Handle error response
 	if resp == nil {
 		relayErr := openai.ErrorWrapperWithMessage("response is nil", openai.ErrorCodeBadResponse, http.StatusInternalServerError)
 		detail.ResponseBody = relayErr.JSONOrEmpty()
-		return nil, &detail, relayErr
+		return relaymodel.Usage{}, &detail, relayErr
 	}
 
 	defer resp.Body.Close()
@@ -104,11 +103,11 @@ func DoHelper(
 	// 4. Handle success response
 	usage, relayErr := handleResponse(a, c, meta, resp, &detail)
 	if relayErr != nil {
-		return nil, &detail, relayErr
+		return relaymodel.Usage{}, &detail, relayErr
 	}
 
 	// 5. Update usage metrics
-	updateUsageMetrics(usage, meta, log)
+	updateUsageMetrics(usage, middleware.GetLogger(c))
 
 	return usage, &detail, nil
 }
@@ -203,7 +202,7 @@ func doRequest(a adaptor.Adaptor, c *gin.Context, meta *meta.Meta, req *http.Req
 	return resp, nil
 }
 
-func handleResponse(a adaptor.Adaptor, c *gin.Context, meta *meta.Meta, resp *http.Response, detail *model.RequestDetail) (*relaymodel.Usage, *relaymodel.ErrorWithStatusCode) {
+func handleResponse(a adaptor.Adaptor, c *gin.Context, meta *meta.Meta, resp *http.Response, detail *model.RequestDetail) (relaymodel.Usage, *relaymodel.ErrorWithStatusCode) {
 	buf := getBuffer()
 	defer putBuffer(buf)
 
@@ -226,24 +225,37 @@ func handleResponse(a adaptor.Adaptor, c *gin.Context, meta *meta.Meta, resp *ht
 		detail.ResponseBody = rw.body.String()
 	}
 
-	return usage, relayErr
+	if usage != nil {
+		return *usage, relayErr
+	}
+
+	if relayErr != nil {
+		return relaymodel.Usage{}, relayErr
+	}
+
+	return relaymodel.Usage{
+		PromptTokens: meta.InputTokens,
+		TotalTokens:  meta.InputTokens,
+	}, nil
 }
 
-func updateUsageMetrics(usage *relaymodel.Usage, meta *meta.Meta, log *log.Entry) {
-	if usage == nil {
-		usage = &relaymodel.Usage{
-			PromptTokens: meta.InputTokens,
-			TotalTokens:  meta.InputTokens,
-		}
-	}
+func updateUsageMetrics(usage relaymodel.Usage, log *log.Entry) {
 	if usage.TotalTokens == 0 {
 		usage.TotalTokens = usage.PromptTokens + usage.CompletionTokens
 	}
-	log.Data["t_input"] = usage.PromptTokens
-	log.Data["t_output"] = usage.CompletionTokens
+	if usage.PromptTokens > 0 {
+		log.Data["t_input"] = usage.PromptTokens
+	}
+	if usage.CompletionTokens > 0 {
+		log.Data["t_output"] = usage.CompletionTokens
+	}
 	if usage.PromptTokensDetails != nil {
-		log.Data["t_cached"] = usage.PromptTokensDetails.CachedTokens
-		log.Data["t_cache_creation"] = usage.PromptTokensDetails.CacheCreationTokens
+		if usage.PromptTokensDetails.CachedTokens > 0 {
+			log.Data["t_cached"] = usage.PromptTokensDetails.CachedTokens
+		}
+		if usage.PromptTokensDetails.CacheCreationTokens > 0 {
+			log.Data["t_cache_creation"] = usage.PromptTokensDetails.CacheCreationTokens
+		}
 	}
 	log.Data["t_total"] = usage.TotalTokens
 }
