@@ -150,17 +150,6 @@ func GetChannel(c *gin.Context) *model.Channel {
 	return ch.(*model.Channel)
 }
 
-func sliceFilter[T any](s []T, fn func(T) bool) []T {
-	i := 0
-	for _, v := range s {
-		if fn(v) {
-			s[i] = v
-			i++
-		}
-	}
-	return s[:i]
-}
-
 func SetLogFieldsFromMeta(m *meta.Meta, fields logrus.Fields) {
 	SetLogRequestIDField(fields, m.RequestID)
 
