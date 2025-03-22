@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/labring/aiproxy/common"
 	"github.com/labring/aiproxy/common/rpmlimit"
 	"github.com/labring/aiproxy/middleware"
 	"github.com/labring/aiproxy/model"
@@ -147,7 +146,7 @@ func GetDashboard(c *gin.Context) {
 	modelName := c.Query("model")
 	resultOnly, _ := strconv.ParseBool(c.Query("result_only"))
 
-	dashboards, err := model.GetDashboardData(start, end, modelName, timeSpan, resultOnly)
+	dashboards, err := model.GetDashboardData(start, end, modelName, timeSpan, resultOnly, false)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusOK, err.Error())
 		return
@@ -155,13 +154,11 @@ func GetDashboard(c *gin.Context) {
 
 	dashboards.ChartData = fillGaps(dashboards.ChartData, start, end, timeSpan)
 
-	if common.RedisEnabled {
-		rpm, err := rpmlimit.GetRPM(c.Request.Context(), group, modelName)
-		if err != nil {
-			log.Errorf("failed to get rpm: %v", err)
-		} else {
-			dashboards.RPM = rpm
-		}
+	rpm, err := rpmlimit.GetRPM(c.Request.Context(), group, modelName)
+	if err != nil {
+		log.Errorf("failed to get rpm: %v", err)
+	} else {
+		dashboards.RPM = rpm
 	}
 
 	middleware.SuccessResponse(c, dashboards)
@@ -195,7 +192,9 @@ func GetGroupDashboard(c *gin.Context) {
 	modelName := c.Query("model")
 	resultOnly, _ := strconv.ParseBool(c.Query("result_only"))
 
-	dashboards, err := model.GetGroupDashboardData(group, start, end, tokenName, modelName, timeSpan, resultOnly)
+	needRPM := tokenName != ""
+
+	dashboards, err := model.GetGroupDashboardData(group, start, end, tokenName, modelName, timeSpan, resultOnly, needRPM)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusOK, "failed to get statistics")
 		return
@@ -203,7 +202,7 @@ func GetGroupDashboard(c *gin.Context) {
 
 	dashboards.ChartData = fillGaps(dashboards.ChartData, start, end, timeSpan)
 
-	if common.RedisEnabled && tokenName == "" {
+	if !needRPM {
 		rpm, err := rpmlimit.GetRPM(c.Request.Context(), group, modelName)
 		if err != nil {
 			log.Errorf("failed to get rpm: %v", err)

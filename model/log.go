@@ -1155,7 +1155,14 @@ func getTPM(group string, end time.Time, tokenName, modelName string, resultOnly
 	return tpm, err
 }
 
-func GetDashboardData(start, end time.Time, modelName string, timeSpan TimeSpanType, resultOnly bool) (*DashboardResponse, error) {
+func GetDashboardData(
+	start,
+	end time.Time,
+	modelName string,
+	timeSpan TimeSpanType,
+	resultOnly bool,
+	needRPM bool,
+) (*DashboardResponse, error) {
 	if end.IsZero() {
 		end = time.Now()
 	} else if end.Before(start) {
@@ -1176,11 +1183,13 @@ func GetDashboardData(start, end time.Time, modelName string, timeSpan TimeSpanT
 		return err
 	})
 
-	g.Go(func() error {
-		var err error
-		rpm, err = getRPM("", end, "", modelName, resultOnly)
-		return err
-	})
+	if needRPM {
+		g.Go(func() error {
+			var err error
+			rpm, err = getRPM("", end, "", modelName, resultOnly)
+			return err
+		})
+	}
 
 	g.Go(func() error {
 		var err error
@@ -1206,7 +1215,15 @@ func GetDashboardData(start, end time.Time, modelName string, timeSpan TimeSpanT
 	}, nil
 }
 
-func GetGroupDashboardData(group string, start, end time.Time, tokenName string, modelName string, timeSpan TimeSpanType, resultOnly bool) (*GroupDashboardResponse, error) {
+func GetGroupDashboardData(
+	group string,
+	start, end time.Time,
+	tokenName string,
+	modelName string,
+	timeSpan TimeSpanType,
+	resultOnly bool,
+	needRPM bool,
+) (*GroupDashboardResponse, error) {
 	if group == "" {
 		return nil, errors.New("group is required")
 	}
@@ -1245,11 +1262,13 @@ func GetGroupDashboardData(group string, start, end time.Time, tokenName string,
 		return err
 	})
 
-	g.Go(func() error {
-		var err error
-		rpm, err = getRPM(group, end, tokenName, modelName, resultOnly)
-		return err
-	})
+	if needRPM {
+		g.Go(func() error {
+			var err error
+			rpm, err = getRPM(group, end, tokenName, modelName, resultOnly)
+			return err
+		})
+	}
 
 	g.Go(func() error {
 		var err error
