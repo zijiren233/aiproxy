@@ -313,7 +313,7 @@ func relay(c *gin.Context, mode mode.Mode, relayController RelayController) {
 	)
 
 	// Retry loop
-	retryLoop(c, mode, requestModel, retryState, relayController.Handler, log)
+	retryLoop(c, mode, retryState, relayController.Handler, log)
 }
 
 func getPreConsumedAmount(usage model.Usage, price model.Price) float64 {
@@ -462,14 +462,12 @@ func initRetryState(retryTimes int, channel *initialChannel, meta *meta.Meta, re
 	return state
 }
 
-func retryLoop(c *gin.Context, mode mode.Mode, requestModel string, state *retryState, relayController RelayHandler, log *log.Entry) {
-	mc := middleware.GetModelCaches(c)
-
+func retryLoop(c *gin.Context, mode mode.Mode, state *retryState, relayController RelayHandler, log *log.Entry) {
 	// do not use for i := range state.retryTimes, because the retryTimes is constant
 	i := 0
 
 	for {
-		newChannel, err := getRetryChannel(mc, requestModel, state)
+		newChannel, err := getRetryChannel(state)
 		if err == nil {
 			err = prepareRetry(c)
 		}
@@ -523,7 +521,7 @@ func retryLoop(c *gin.Context, mode mode.Mode, requestModel string, state *retry
 	}
 }
 
-func getRetryChannel(mc *model.ModelCaches, modelName string, state *retryState) (*model.Channel, error) {
+func getRetryChannel(state *retryState) (*model.Channel, error) {
 	if state.exhausted {
 		if state.lastHasPermissionChannel == nil {
 			return nil, ErrChannelsExhausted
