@@ -1671,6 +1671,10 @@ paths:
       description: Returns the general dashboard data including usage statistics and
         metrics
       parameters:
+      - description: Group or *
+        in: query
+        name: group
+        type: string
       - description: Type of time span (day, week, month, two_week)
         in: query
         name: type
@@ -1704,7 +1708,7 @@ paths:
     get:
       description: Returns dashboard data and metrics specific to the given group
       parameters:
-      - description: Group name or ID
+      - description: Group or *
         in: path
         name: group
         required: true
@@ -1717,7 +1721,7 @@ paths:
         in: query
         name: token_name
         type: string
-      - description: Model name
+      - description: Model or *
         in: query
         name: model
         type: string
@@ -1746,7 +1750,7 @@ paths:
     get:
       description: Returns model-specific metrics and usage data for the given group
       parameters:
-      - description: Group name or ID
+      - description: Group
         in: path
         name: group
         required: true
@@ -3027,7 +3031,7 @@ paths:
     get:
       description: Returns model cost ranking data specific to the given group
       parameters:
-      - description: Group name or ID
+      - description: Group
         in: path
         name: group
         required: true

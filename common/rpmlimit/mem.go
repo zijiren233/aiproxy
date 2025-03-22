@@ -99,7 +99,8 @@ func (m *InMemoryRateLimiter) getRPM(group, model string, duration time.Duration
 		k, _ := key.(string)
 		currentGroup, currentModel := parseKey(k)
 
-		if (group == "" || group == currentGroup) && (model == "" || model == currentModel) {
+		if (group == "*" || group == currentGroup) &&
+			(model == "" || model == "*" || model == currentModel) {
 			e, _ := value.(*entry)
 			e.Lock()
 			normalCount, overCount := m.cleanupAndCount(e, cutoff)

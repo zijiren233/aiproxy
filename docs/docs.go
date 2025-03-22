@@ -979,6 +979,12 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
+                        "description": "Group or *",
+                        "name": "group",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
                         "description": "Type of time span (day, week, month, two_week)",
                         "name": "type",
                         "in": "query"
@@ -1036,7 +1042,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Group name or ID",
+                        "description": "Group or *",
                         "name": "group",
                         "in": "path",
                         "required": true
@@ -1055,7 +1061,7 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "Model name",
+                        "description": "Model or *",
                         "name": "model",
                         "in": "query"
                     },
@@ -1106,7 +1112,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Group name or ID",
+                        "description": "Group",
                         "name": "group",
                         "in": "path",
                         "required": true
@@ -3228,7 +3234,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Group name or ID",
+                        "description": "Group",
                         "name": "group",
                         "in": "path",
                         "required": true
