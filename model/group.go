@@ -23,16 +23,17 @@ const (
 )
 
 type Group struct {
-	CreatedAt    time.Time        `json:"created_at"`
-	ID           string           `gorm:"primaryKey"                    json:"id"`
-	Tokens       []*Token         `gorm:"foreignKey:GroupID"            json:"-"`
-	Status       int              `gorm:"default:1;index"               json:"status"`
-	UsedAmount   float64          `gorm:"index"                         json:"used_amount"`
-	RPMRatio     float64          `gorm:"index"                         json:"rpm_ratio"`
-	RPM          map[string]int64 `gorm:"serializer:fastjson;type:text" json:"rpm"`
-	TPMRatio     float64          `gorm:"index"                         json:"tpm_ratio"`
-	TPM          map[string]int64 `gorm:"serializer:fastjson;type:text" json:"tpm"`
-	RequestCount int              `gorm:"index"                         json:"request_count"`
+	CreatedAt     time.Time        `json:"created_at"`
+	ID            string           `gorm:"primaryKey"                    json:"id"`
+	Tokens        []*Token         `gorm:"foreignKey:GroupID"            json:"-"`
+	Status        int              `gorm:"default:1;index"               json:"status"`
+	RPMRatio      float64          `gorm:"index"                         json:"rpm_ratio"`
+	RPM           map[string]int64 `gorm:"serializer:fastjson;type:text" json:"rpm"`
+	TPMRatio      float64          `gorm:"index"                         json:"tpm_ratio"`
+	TPM           map[string]int64 `gorm:"serializer:fastjson;type:text" json:"tpm"`
+	UsedAmount    float64          `gorm:"index"                         json:"used_amount"`
+	RequestCount  int              `gorm:"index"                         json:"request_count"`
+	AvailableSets []string         `gorm:"serializer:fastjson;type:text" json:"available_sets"`
 }
 
 func (g *Group) BeforeDelete(tx *gorm.DB) (err error) {
@@ -144,7 +145,13 @@ func UpdateGroup(id string, group *Group) (err error) {
 	result := DB.
 		Clauses(clause.Returning{}).
 		Where("id = ?", id).
-		Select("rpm_ratio", "rpm", "tpm_ratio", "tpm").
+		Select(
+			"rpm_ratio",
+			"rpm",
+			"tpm_ratio",
+			"tpm",
+			"available_sets",
+		).
 		Updates(group)
 	return HandleUpdateResult(result, ErrGroupNotFound)
 }
@@ -248,8 +255,10 @@ func SearchGroup(keyword string, page int, perPage int, order string, status int
 	}
 	if common.UsingPostgreSQL {
 		tx = tx.Where("id ILIKE ?", "%"+keyword+"%")
+		tx = tx.Where("available_sets ILIKE ?", "%"+keyword+"%")
 	} else {
 		tx = tx.Where("id LIKE ?", "%"+keyword+"%")
+		tx = tx.Where("available_sets LIKE ?", "%"+keyword+"%")
 	}
 	err = tx.Count(&total).Error
 	if err != nil {

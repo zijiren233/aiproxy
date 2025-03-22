@@ -28,6 +28,10 @@ definitions:
         type: string
       priority:
         type: integer
+      sets:
+        items:
+          type: string
+        type: array
       status:
         type: integer
       type:
@@ -65,6 +69,10 @@ definitions:
     properties:
       accessed_at:
         type: string
+      available_sets:
+        items:
+          type: string
+        type: array
       created_at:
         type: string
       id:
@@ -336,6 +344,10 @@ definitions:
         type: integer
       request_count:
         type: integer
+      sets:
+        items:
+          type: string
+        type: array
       status:
         type: integer
       type:
@@ -557,6 +569,10 @@ definitions:
     type: object
   model.Group:
     properties:
+      available_sets:
+        items:
+          type: string
+        type: array
       created_at:
         type: string
       id:
@@ -2839,28 +2855,6 @@ paths:
             - $ref: '#/definitions/middleware.APIResponse'
             - properties:
                 data:
-                  items:
-                    $ref: '#/definitions/model.ModelConfig'
-                  type: array
-              type: object
-      security:
-      - ApiKeyAuth: []
-      summary: Get enabled models
-      tags:
-      - model
-  /api/models/enabled/channel:
-    get:
-      description: Returns a list of channel enabled models
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            allOf:
-            - $ref: '#/definitions/middleware.APIResponse'
-            - properties:
-                data:
                   additionalProperties:
                     items:
                       $ref: '#/definitions/model.ModelConfig'
@@ -2869,35 +2863,7 @@ paths:
               type: object
       security:
       - ApiKeyAuth: []
-      summary: Get channel enabled models
-      tags:
-      - model
-  /api/models/enabled/channel/{type}:
-    get:
-      description: Returns a list of channel enabled models by type
-      parameters:
-      - description: Channel type
-        in: path
-        name: type
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            allOf:
-            - $ref: '#/definitions/middleware.APIResponse'
-            - properties:
-                data:
-                  items:
-                    $ref: '#/definitions/model.ModelConfig'
-                  type: array
-              type: object
-      security:
-      - ApiKeyAuth: []
-      summary: Get channel enabled models by type
+      summary: Get enabled models
       tags:
       - model
   /api/monitor:

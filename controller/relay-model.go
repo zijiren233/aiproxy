@@ -3,7 +3,6 @@ package controller
 import (
 	"fmt"
 	"net/http"
-	"slices"
 
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/middleware"
@@ -23,9 +22,9 @@ func ListModels(c *gin.Context) {
 	enabledModelConfigsMap := middleware.GetModelCaches(c).EnabledModelConfigsMap
 	token := middleware.GetToken(c)
 
-	availableOpenAIModels := make([]*OpenAIModels, 0, len(token.Models))
+	availableOpenAIModels := make([]*OpenAIModels, 0)
 
-	for _, model := range token.Models {
+	token.Range(func(model string) bool {
 		if mc, ok := enabledModelConfigsMap[model]; ok {
 			availableOpenAIModels = append(availableOpenAIModels, &OpenAIModels{
 				ID:         model,
@@ -37,7 +36,8 @@ func ListModels(c *gin.Context) {
 				Parent:     nil,
 			})
 		}
-	}
+		return true
+	})
 
 	c.JSON(http.StatusOK, gin.H{
 		"object": "list",
@@ -61,7 +61,7 @@ func RetrieveModel(c *gin.Context) {
 	mc, ok := enabledModelConfigsMap[modelName]
 	if ok {
 		token := middleware.GetToken(c)
-		ok = slices.Contains(token.Models, modelName)
+		ok = token.ContainsModel(modelName)
 	}
 
 	if !ok {

@@ -60,16 +60,70 @@ func (t redisTime) MarshalBinary() ([]byte, error) {
 }
 
 type TokenCache struct {
-	ExpiredAt  redisTime        `json:"expired_at"  redis:"e"`
-	Group      string           `json:"group"       redis:"g"`
-	Key        string           `json:"-"           redis:"-"`
-	Name       string           `json:"name"        redis:"n"`
-	Subnets    redisStringSlice `json:"subnets"     redis:"s"`
-	Models     redisStringSlice `json:"models"      redis:"m"`
-	ID         int              `json:"id"          redis:"i"`
-	Status     int              `json:"status"      redis:"st"`
-	Quota      float64          `json:"quota"       redis:"q"`
-	UsedAmount float64          `json:"used_amount" redis:"u"`
+	ExpiredAt     redisTime        `json:"expired_at"  redis:"e"`
+	Group         string           `json:"group"       redis:"g"`
+	Key           string           `json:"-"           redis:"-"`
+	Name          string           `json:"name"        redis:"n"`
+	Subnets       redisStringSlice `json:"subnets"     redis:"s"`
+	Models        redisStringSlice `json:"models"      redis:"m"`
+	ID            int              `json:"id"          redis:"i"`
+	Status        int              `json:"status"      redis:"st"`
+	Quota         float64          `json:"quota"       redis:"q"`
+	UsedAmount    float64          `json:"used_amount" redis:"u"`
+	availableSets []string
+	modelsBySet   map[string][]string
+}
+
+func (t *TokenCache) SetAvailableSets(availableSets []string) {
+	t.availableSets = availableSets
+}
+
+func (t *TokenCache) SetModelsBySet(modelsBySet map[string][]string) {
+	t.modelsBySet = modelsBySet
+}
+
+func (t *TokenCache) ContainsModel(model string) bool {
+	if len(t.Models) != 0 {
+		if !slices.Contains(t.Models, model) {
+			return false
+		}
+	}
+	return containsModel(model, t.availableSets, t.modelsBySet)
+}
+
+func containsModel(model string, sets []string, modelsBySet map[string][]string) bool {
+	for _, set := range sets {
+		if slices.Contains(modelsBySet[set], model) {
+			return true
+		}
+	}
+	return false
+}
+
+func (t *TokenCache) Range(fn func(model string) bool) {
+	ranged := make(map[string]struct{})
+	if len(t.Models) != 0 {
+		for _, model := range t.Models {
+			if _, ok := ranged[model]; !ok && containsModel(model, t.availableSets, t.modelsBySet) {
+				if !fn(model) {
+					return
+				}
+			}
+			ranged[model] = struct{}{}
+		}
+		return
+	}
+
+	for _, set := range t.availableSets {
+		for _, model := range t.modelsBySet[set] {
+			if _, ok := ranged[model]; !ok {
+				if !fn(model) {
+					return
+				}
+			}
+			ranged[model] = struct{}{}
+		}
+	}
 }
 
 func (t *Token) ToTokenCache() *TokenCache {
@@ -204,24 +258,33 @@ func (r redisMapStringInt64) MarshalBinary() ([]byte, error) {
 }
 
 type GroupCache struct {
-	ID         string              `json:"-"           redis:"-"`
-	Status     int                 `json:"status"      redis:"st"`
-	UsedAmount float64             `json:"used_amount" redis:"ua"`
-	RPMRatio   float64             `json:"rpm_ratio"   redis:"rpm_r"`
-	RPM        redisMapStringInt64 `json:"rpm"         redis:"rpm"`
-	TPMRatio   float64             `json:"tpm_ratio"   redis:"tpm_r"`
-	TPM        redisMapStringInt64 `json:"tpm"         redis:"tpm"`
+	ID            string              `json:"-"              redis:"-"`
+	Status        int                 `json:"status"         redis:"st"`
+	UsedAmount    float64             `json:"used_amount"    redis:"ua"`
+	RPMRatio      float64             `json:"rpm_ratio"      redis:"rpm_r"`
+	RPM           redisMapStringInt64 `json:"rpm"            redis:"rpm"`
+	TPMRatio      float64             `json:"tpm_ratio"      redis:"tpm_r"`
+	TPM           redisMapStringInt64 `json:"tpm"            redis:"tpm"`
+	AvailableSets redisStringSlice    `json:"available_sets" redis:"ass"`
+}
+
+func (g *GroupCache) GetAvailableSets() []string {
+	if len(g.AvailableSets) == 0 {
+		return []string{ChannelDefaultSet}
+	}
+	return g.AvailableSets
 }
 
 func (g *Group) ToGroupCache() *GroupCache {
 	return &GroupCache{
-		ID:         g.ID,
-		Status:     g.Status,
-		UsedAmount: g.UsedAmount,
-		RPMRatio:   g.RPMRatio,
-		RPM:        g.RPM,
-		TPMRatio:   g.TPMRatio,
-		TPM:        g.TPM,
+		ID:            g.ID,
+		Status:        g.Status,
+		UsedAmount:    g.UsedAmount,
+		RPMRatio:      g.RPMRatio,
+		RPM:           g.RPM,
+		TPMRatio:      g.TPMRatio,
+		TPM:           g.TPM,
+		AvailableSets: g.AvailableSets,
 	}
 }
 
@@ -418,14 +481,12 @@ type ModelConfigCache interface {
 type ModelCaches struct {
 	ModelConfig ModelConfigCache
 
-	EnabledModel2Channels           map[string][]*Channel
-	EnabledModels                   []string
-	EnabledModelsMap                map[string]struct{}
-	EnabledModelConfigs             []*ModelConfig
-	EnabledModelConfigsMap          map[string]*ModelConfig
-	EnabledChannelType2ModelConfigs map[int][]*ModelConfig
+	EnabledModelsBySet       map[string][]string
+	EnabledModelConfigsBySet map[string][]*ModelConfig
+	EnabledModelConfigsMap   map[string]*ModelConfig
 
-	DisabledModel2Channels map[string][]*Channel
+	EnabledModel2ChannelsBySet  map[string]map[string][]*Channel
+	DisabledModel2ChannelsBySet map[string]map[string][]*Channel
 }
 
 var modelCaches atomic.Pointer[ModelCaches]
@@ -445,43 +506,40 @@ func InitModelConfigAndChannelCache() error {
 		return err
 	}
 
-	// Load enabled newEnabledChannels from database
-	newEnabledChannels, err := LoadEnabledChannels()
+	// Load enabled channels from database
+	enabledChannels, err := LoadEnabledChannels()
 	if err != nil {
 		return err
 	}
 
-	// Build model to channels map
-	newEnabledModel2Channels := buildModelToChannelsMap(newEnabledChannels)
+	// Build model to channels map by set
+	enabledModel2ChannelsBySet := buildModelToChannelsBySetMap(enabledChannels)
 
-	// Sort channels by priority
-	sortChannelsByPriority(newEnabledModel2Channels)
+	// Sort channels by priority within each set
+	sortChannelsByPriorityBySet(enabledModel2ChannelsBySet)
 
-	// Build channel type to model configs map
-	newEnabledChannelType2ModelConfigs := buildChannelTypeToModelConfigsMap(newEnabledChannels, modelConfig)
+	// Build enabled models and configs by set
+	enabledModelsBySet, enabledModelConfigsBySet, enabledModelConfigsMap := buildEnabledModelsBySet(enabledModel2ChannelsBySet, modelConfig)
 
-	// Build enabled models and configs lists
-	newEnabledModels, newEnabledModelsMap, newEnabledModelConfigs, newEnabledModelConfigsMap := buildEnabledModelsAndConfigs(newEnabledChannelType2ModelConfigs)
-
-	newDisabledChannels, err := LoadDisabledChannels()
+	// Load disabled channels
+	disabledChannels, err := LoadDisabledChannels()
 	if err != nil {
 		return err
 	}
 
-	newDisabledModel2Channels := buildModelToChannelsMap(newDisabledChannels)
+	// Build disabled model to channels map by set
+	disabledModel2ChannelsBySet := buildModelToChannelsBySetMap(disabledChannels)
 
 	// Update global cache atomically
 	modelCaches.Store(&ModelCaches{
 		ModelConfig: modelConfig,
 
-		EnabledModel2Channels:           newEnabledModel2Channels,
-		EnabledModels:                   newEnabledModels,
-		EnabledModelsMap:                newEnabledModelsMap,
-		EnabledModelConfigs:             newEnabledModelConfigs,
-		EnabledModelConfigsMap:          newEnabledModelConfigsMap,
-		EnabledChannelType2ModelConfigs: newEnabledChannelType2ModelConfigs,
+		EnabledModelsBySet:       enabledModelsBySet,
+		EnabledModelConfigsBySet: enabledModelConfigsBySet,
+		EnabledModelConfigsMap:   enabledModelConfigsMap,
 
-		DisabledModel2Channels: newDisabledModel2Channels,
+		EnabledModel2ChannelsBySet:  enabledModel2ChannelsBySet,
+		DisabledModel2ChannelsBySet: disabledModel2ChannelsBySet,
 	})
 
 	return nil
@@ -611,81 +669,70 @@ func initializeChannelModelMapping(channel *Channel) {
 	}
 }
 
-//nolint:unused
-func buildChannelIDMap(channels []*Channel) map[int]*Channel {
-	channelMap := make(map[int]*Channel)
-	for _, channel := range channels {
-		channelMap[channel.ID] = channel
-	}
-	return channelMap
-}
-
-func buildModelToChannelsMap(channels []*Channel) map[string][]*Channel {
-	modelMap := make(map[string][]*Channel)
-	for _, channel := range channels {
-		for _, model := range channel.Models {
-			modelMap[model] = append(modelMap[model], channel)
-		}
-	}
-	return modelMap
-}
-
-func sortChannelsByPriority(modelMap map[string][]*Channel) {
-	for _, channels := range modelMap {
-		sort.Slice(channels, func(i, j int) bool {
-			return channels[i].GetPriority() > channels[j].GetPriority()
-		})
-	}
-}
-
-func buildChannelTypeToModelConfigsMap(channels []*Channel, modelConfigMap ModelConfigCache) map[int][]*ModelConfig {
-	typeMap := make(map[int][]*ModelConfig)
+func buildModelToChannelsBySetMap(channels []*Channel) map[string]map[string][]*Channel {
+	modelMapBySet := make(map[string]map[string][]*Channel)
 
 	for _, channel := range channels {
-		if _, ok := typeMap[channel.Type]; !ok {
-			typeMap[channel.Type] = make([]*ModelConfig, 0, len(channel.Models))
-		}
-		configs := typeMap[channel.Type]
+		sets := channel.GetSets()
+		for _, set := range sets {
+			if _, ok := modelMapBySet[set]; !ok {
+				modelMapBySet[set] = make(map[string][]*Channel)
+			}
 
-		for _, model := range channel.Models {
-			if config, ok := modelConfigMap.GetModelConfig(model); ok {
-				configs = append(configs, config)
+			for _, model := range channel.Models {
+				modelMapBySet[set][model] = append(modelMapBySet[set][model], channel)
 			}
 		}
-		typeMap[channel.Type] = configs
 	}
 
-	for key, configs := range typeMap {
-		slices.SortStableFunc(configs, SortModelConfigsFunc)
-		typeMap[key] = slices.CompactFunc(configs, func(e1, e2 *ModelConfig) bool {
-			return e1.Model == e2.Model
-		})
-	}
-	return typeMap
+	return modelMapBySet
 }
 
-func buildEnabledModelsAndConfigs(typeMap map[int][]*ModelConfig) ([]string, map[string]struct{}, []*ModelConfig, map[string]*ModelConfig) {
-	models := make([]string, 0)
-	configs := make([]*ModelConfig, 0)
-	appended := make(map[string]struct{})
+func sortChannelsByPriorityBySet(modelMapBySet map[string]map[string][]*Channel) {
+	for _, modelMap := range modelMapBySet {
+		for _, channels := range modelMap {
+			sort.Slice(channels, func(i, j int) bool {
+				return channels[i].GetPriority() > channels[j].GetPriority()
+			})
+		}
+	}
+}
+
+func buildEnabledModelsBySet(modelMapBySet map[string]map[string][]*Channel, modelConfigCache ModelConfigCache) (
+	map[string][]string,
+	map[string][]*ModelConfig,
+	map[string]*ModelConfig,
+) {
+	modelsBySet := make(map[string][]string)
+	modelConfigsBySet := make(map[string][]*ModelConfig)
 	modelConfigsMap := make(map[string]*ModelConfig)
 
-	for _, modelConfigs := range typeMap {
-		for _, config := range modelConfigs {
-			if _, ok := appended[config.Model]; ok {
+	for set, modelMap := range modelMapBySet {
+		models := make([]string, 0)
+		configs := make([]*ModelConfig, 0)
+		appended := make(map[string]struct{})
+
+		for model := range modelMap {
+			if _, ok := appended[model]; ok {
 				continue
 			}
-			models = append(models, config.Model)
-			configs = append(configs, config)
-			appended[config.Model] = struct{}{}
-			modelConfigsMap[config.Model] = config
+
+			if config, ok := modelConfigCache.GetModelConfig(model); ok {
+				models = append(models, model)
+				configs = append(configs, config)
+				appended[model] = struct{}{}
+				modelConfigsMap[model] = config
+			}
 		}
+
+		slices.Sort(models)
+		slices.SortStableFunc(configs, SortModelConfigsFunc)
+
+		modelsBySet[set] = models
+		modelConfigsBySet[set] = configs
 	}
 
-	slices.Sort(models)
-	slices.SortStableFunc(configs, SortModelConfigsFunc)
-
-	return models, appended, configs, modelConfigsMap
+	return modelsBySet, modelConfigsBySet, modelConfigsMap
 }
 
 func SortModelConfigsFunc(i, j *ModelConfig) int {

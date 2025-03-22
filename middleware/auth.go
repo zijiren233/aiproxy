@@ -2,7 +2,9 @@ package middleware
 
 import (
 	"fmt"
+	"maps"
 	"net/http"
+	"slices"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -95,10 +97,13 @@ func TokenAuth(c *gin.Context) {
 		}
 	}
 
+	modelCaches := model.LoadModelCaches()
+
 	var group *model.GroupCache
 	if useInternalToken {
 		group = &model.GroupCache{
-			Status: model.GroupStatusInternal,
+			Status:        model.GroupStatusInternal,
+			AvailableSets: slices.AppendSeq(make([]string, 0, len(modelCaches.EnabledModelsBySet)), maps.Keys(modelCaches.EnabledModelsBySet)),
 		}
 	} else {
 		var err error
@@ -115,9 +120,8 @@ func TokenAuth(c *gin.Context) {
 
 	SetLogGroupFields(log.Data, group)
 
-	modelCaches := model.LoadModelCaches()
-
-	storeTokenModels(token, modelCaches)
+	token.SetAvailableSets(group.GetAvailableSets())
+	token.SetModelsBySet(modelCaches.EnabledModelsBySet)
 
 	c.Set(Group, group)
 	c.Set(Token, token)
@@ -155,18 +159,6 @@ func sliceFilter[T any](s []T, fn func(T) bool) []T {
 		}
 	}
 	return s[:i]
-}
-
-func storeTokenModels(token *model.TokenCache, modelCaches *model.ModelCaches) {
-	if len(token.Models) == 0 {
-		token.Models = modelCaches.EnabledModels
-	} else {
-		enabledModelsMap := modelCaches.EnabledModelsMap
-		token.Models = sliceFilter(token.Models, func(m string) bool {
-			_, ok := enabledModelsMap[m]
-			return ok
-		})
-	}
 }
 
 func SetLogFieldsFromMeta(m *meta.Meta, fields logrus.Fields) {

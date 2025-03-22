@@ -60,9 +60,9 @@ func SortBuiltinModelConfigsFunc(i, j *BuiltinModelConfig) int {
 }
 
 var (
-	builtinModels           []*BuiltinModelConfig
-	builtinModelsMap        map[string]*OpenAIModels
-	builtinChannelID2Models map[int][]*BuiltinModelConfig
+	builtinModels             []*BuiltinModelConfig
+	builtinModelsMap          map[string]*OpenAIModels
+	builtinChannelType2Models map[int][]*BuiltinModelConfig
 )
 
 var permission = []OpenAIModelPermission{
@@ -83,12 +83,12 @@ var permission = []OpenAIModelPermission{
 }
 
 func init() {
-	builtinChannelID2Models = make(map[int][]*BuiltinModelConfig)
+	builtinChannelType2Models = make(map[int][]*BuiltinModelConfig)
 	builtinModelsMap = make(map[string]*OpenAIModels)
 	// https://platform.openai.com/docs/models/model-endpoint-compatibility
 	for i, adaptor := range channeltype.ChannelAdaptor {
 		modelNames := adaptor.GetModelList()
-		builtinChannelID2Models[i] = make([]*BuiltinModelConfig, len(modelNames))
+		builtinChannelType2Models[i] = make([]*BuiltinModelConfig, len(modelNames))
 		for idx, _model := range modelNames {
 			if _model.Owner == "" {
 				_model.Owner = model.ModelOwner(adaptor.GetChannelName())
@@ -107,10 +107,10 @@ func init() {
 			} else if v.OwnedBy != string(_model.Owner) {
 				log.Fatalf("model %s owner mismatch, expect %s, actual %s", _model.Model, string(_model.Owner), v.OwnedBy)
 			}
-			builtinChannelID2Models[i][idx] = (*BuiltinModelConfig)(_model)
+			builtinChannelType2Models[i][idx] = (*BuiltinModelConfig)(_model)
 		}
 	}
-	for _, models := range builtinChannelID2Models {
+	for _, models := range builtinChannelType2Models {
 		sort.Slice(models, func(i, j int) bool {
 			return models[i].Model < models[j].Model
 		})
@@ -142,7 +142,7 @@ func BuiltinModels(c *gin.Context) {
 //	@Success		200	{object}	middleware.APIResponse{data=map[int][]BuiltinModelConfig}
 //	@Router			/api/models/builtin/channel [get]
 func ChannelBuiltinModels(c *gin.Context) {
-	middleware.SuccessResponse(c, builtinChannelID2Models)
+	middleware.SuccessResponse(c, builtinChannelType2Models)
 }
 
 // ChannelBuiltinModelsByType godoc
@@ -166,7 +166,7 @@ func ChannelBuiltinModelsByType(c *gin.Context) {
 		middleware.ErrorResponse(c, http.StatusOK, "invalid type")
 		return
 	}
-	middleware.SuccessResponse(c, builtinChannelID2Models[channelTypeInt])
+	middleware.SuccessResponse(c, builtinChannelType2Models[channelTypeInt])
 }
 
 // ChannelDefaultModelsAndMapping godoc
@@ -219,45 +219,8 @@ func ChannelDefaultModelsAndMappingByType(c *gin.Context) {
 //	@Tags			model
 //	@Produce		json
 //	@Security		ApiKeyAuth
-//	@Success		200	{object}	middleware.APIResponse{data=[]model.ModelConfig}
+//	@Success		200	{object}	middleware.APIResponse{data=map[string][]model.ModelConfig}
 //	@Router			/api/models/enabled [get]
 func EnabledModels(c *gin.Context) {
-	middleware.SuccessResponse(c, model.LoadModelCaches().EnabledModelConfigs)
-}
-
-// ChannelEnabledModels godoc
-//
-//	@Summary		Get channel enabled models
-//	@Description	Returns a list of channel enabled models
-//	@Tags			model
-//	@Produce		json
-//	@Security		ApiKeyAuth
-//	@Success		200	{object}	middleware.APIResponse{data=map[int][]model.ModelConfig}
-//	@Router			/api/models/enabled/channel [get]
-func ChannelEnabledModels(c *gin.Context) {
-	middleware.SuccessResponse(c, model.LoadModelCaches().EnabledChannelType2ModelConfigs)
-}
-
-// ChannelEnabledModelsByType godoc
-//
-//	@Summary		Get channel enabled models by type
-//	@Description	Returns a list of channel enabled models by type
-//	@Tags			model
-//	@Produce		json
-//	@Security		ApiKeyAuth
-//	@Param			type	path		string	true	"Channel type"
-//	@Success		200		{object}	middleware.APIResponse{data=[]model.ModelConfig}
-//	@Router			/api/models/enabled/channel/{type} [get]
-func ChannelEnabledModelsByType(c *gin.Context) {
-	channelTypeStr := c.Param("type")
-	if channelTypeStr == "" {
-		middleware.ErrorResponse(c, http.StatusOK, "type is required")
-		return
-	}
-	channelTypeInt, err := strconv.Atoi(channelTypeStr)
-	if err != nil {
-		middleware.ErrorResponse(c, http.StatusOK, "invalid type")
-		return
-	}
-	middleware.SuccessResponse(c, model.LoadModelCaches().EnabledChannelType2ModelConfigs[channelTypeInt])
+	middleware.SuccessResponse(c, model.LoadModelCaches().EnabledModelConfigsBySet)
 }
