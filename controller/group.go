@@ -358,10 +358,11 @@ func DeleteGroups(c *gin.Context) {
 }
 
 type CreateGroupRequest struct {
-	RPM      map[string]int64 `json:"rpm"`
-	RPMRatio float64          `json:"rpm_ratio"`
-	TPM      map[string]int64 `json:"tpm"`
-	TPMRatio float64          `json:"tpm_ratio"`
+	RPM          map[string]int64 `json:"rpm"`
+	RPMRatio     float64          `json:"rpm_ratio"`
+	TPM          map[string]int64 `json:"tpm"`
+	TPMRatio     float64          `json:"tpm_ratio"`
+	AvailableSet []string         `json:"available_set"`
 }
 
 // CreateGroup godoc
@@ -389,11 +390,12 @@ func CreateGroup(c *gin.Context) {
 		return
 	}
 	g := &model.Group{
-		ID:       group,
-		RPMRatio: req.RPMRatio,
-		RPM:      req.RPM,
-		TPMRatio: req.TPMRatio,
-		TPM:      req.TPM,
+		ID:            group,
+		RPMRatio:      req.RPMRatio,
+		RPM:           req.RPM,
+		TPMRatio:      req.TPMRatio,
+		TPM:           req.TPM,
+		AvailableSets: req.AvailableSet,
 	}
 	if err := model.CreateGroup(g); err != nil {
 		middleware.ErrorResponse(c, http.StatusOK, err.Error())
@@ -427,10 +429,11 @@ func UpdateGroup(c *gin.Context) {
 		return
 	}
 	g := &model.Group{
-		RPMRatio: req.RPMRatio,
-		RPM:      req.RPM,
-		TPMRatio: req.TPMRatio,
-		TPM:      req.TPM,
+		RPMRatio:      req.RPMRatio,
+		RPM:           req.RPM,
+		TPMRatio:      req.TPMRatio,
+		TPM:           req.TPM,
+		AvailableSets: req.AvailableSet,
 	}
 	err = model.UpdateGroup(group, g)
 	if err != nil {

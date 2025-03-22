@@ -3071,101 +3071,12 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "type": "array",
-                                            "items": {
-                                                "$ref": "#/definitions/model.ModelConfig"
-                                            }
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    }
-                }
-            }
-        },
-        "/api/models/enabled/channel": {
-            "get": {
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ],
-                "description": "Returns a list of channel enabled models",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "model"
-                ],
-                "summary": "Get channel enabled models",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/middleware.APIResponse"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
                                             "type": "object",
                                             "additionalProperties": {
                                                 "type": "array",
                                                 "items": {
                                                     "$ref": "#/definitions/model.ModelConfig"
                                                 }
-                                            }
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    }
-                }
-            }
-        },
-        "/api/models/enabled/channel/{type}": {
-            "get": {
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ],
-                "description": "Returns a list of channel enabled models by type",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "model"
-                ],
-                "summary": "Get channel enabled models by type",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Channel type",
-                        "name": "type",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/middleware.APIResponse"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "type": "array",
-                                            "items": {
-                                                "$ref": "#/definitions/model.ModelConfig"
                                             }
                                         }
                                     }
@@ -5447,6 +5358,12 @@ const docTemplate = `{
                 "priority": {
                     "type": "integer"
                 },
+                "sets": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
                 "status": {
                     "type": "integer"
                 },
@@ -5502,6 +5419,12 @@ const docTemplate = `{
             "properties": {
                 "accessed_at": {
                     "type": "string"
+                },
+                "available_sets": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 },
                 "created_at": {
                     "type": "string"
@@ -5905,6 +5828,12 @@ const docTemplate = `{
                 "request_count": {
                     "type": "integer"
                 },
+                "sets": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
                 "status": {
                     "type": "integer"
                 },
@@ -6238,6 +6167,12 @@ const docTemplate = `{
         "model.Group": {
             "type": "object",
             "properties": {
+                "available_sets": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
                 "created_at": {
                     "type": "string"
                 },

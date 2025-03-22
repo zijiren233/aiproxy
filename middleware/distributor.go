@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -235,29 +234,32 @@ const (
 	AIProxyChannelHeader = "Aiproxy-Channel"
 )
 
-func getChannelFromHeader(header string, mc *model.ModelCaches, model string) (*model.Channel, error) {
+func getChannelFromHeader(header string, mc *model.ModelCaches, availableSet []string, model string) (*model.Channel, error) {
 	channelIDInt, err := strconv.ParseInt(header, 10, 64)
 	if err != nil {
 		return nil, err
 	}
 
-	enabledChannels := mc.EnabledModel2Channels[model]
-	if len(enabledChannels) > 0 {
-		for _, channel := range enabledChannels {
-			if int64(channel.ID) == channelIDInt {
-				return channel, nil
+	for _, set := range availableSet {
+		enabledChannels := mc.EnabledModel2ChannelsBySet[set][model]
+		if len(enabledChannels) > 0 {
+			for _, channel := range enabledChannels {
+				if int64(channel.ID) == channelIDInt {
+					return channel, nil
+				}
+			}
+		}
+
+		disabledChannels := mc.DisabledModel2ChannelsBySet[set][model]
+		if len(disabledChannels) > 0 {
+			for _, channel := range disabledChannels {
+				if int64(channel.ID) == channelIDInt {
+					return channel, nil
+				}
 			}
 		}
 	}
 
-	disabledChannels := mc.DisabledModel2Channels[model]
-	if len(disabledChannels) > 0 {
-		for _, channel := range disabledChannels {
-			if int64(channel.ID) == channelIDInt {
-				return channel, nil
-			}
-		}
-	}
 	return nil, fmt.Errorf("channel %d not found for model %s", channelIDInt, model)
 }
 
@@ -310,7 +312,7 @@ func distribute(c *gin.Context, mode mode.Mode) {
 	c.Set(ModelConfig, mc)
 
 	if channelHeader := c.Request.Header.Get(AIProxyChannelHeader); group.Status == model.GroupStatusInternal && channelHeader != "" {
-		channel, err := getChannelFromHeader(channelHeader, GetModelCaches(c), requestModel)
+		channel, err := getChannelFromHeader(channelHeader, GetModelCaches(c), group.GetAvailableSets(), requestModel)
 		if err != nil {
 			AbortLogWithMessage(c, http.StatusBadRequest, err.Error())
 			return
@@ -318,7 +320,7 @@ func distribute(c *gin.Context, mode mode.Mode) {
 		c.Set(Channel, channel)
 	} else {
 		token := GetToken(c)
-		if len(token.Models) == 0 || !slices.Contains(token.Models, requestModel) {
+		if !token.ContainsModel(requestModel) {
 			AbortLogWithMessage(c,
 				http.StatusNotFound,
 				fmt.Sprintf("The model `%s` does not exist or you do not have access to it.", requestModel),

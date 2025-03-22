@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"slices"
 	"strconv"
 	"time"
 
@@ -224,17 +225,25 @@ func GetGroupDashboardModels(c *gin.Context) {
 	groupCache, err := model.CacheGetGroup(group)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			middleware.SuccessResponse(c, model.LoadModelCaches().EnabledModelConfigs)
+			middleware.SuccessResponse(c, model.LoadModelCaches().EnabledModelConfigsBySet[model.ChannelDefaultSet])
 		} else {
 			middleware.ErrorResponse(c, http.StatusOK, fmt.Sprintf("failed to get group: %v", err))
 		}
 		return
 	}
 
-	enabledModelConfigs := model.LoadModelCaches().EnabledModelConfigs
-	newEnabledModelConfigs := make([]*model.ModelConfig, len(enabledModelConfigs))
-	for i, mc := range enabledModelConfigs {
-		newEnabledModelConfigs[i] = middleware.GetGroupAdjustedModelConfig(groupCache, mc)
+	availableSet := groupCache.GetAvailableSets()
+	enabledModelConfigs := model.LoadModelCaches().EnabledModelConfigsBySet
+	newEnabledModelConfigs := make([]*model.ModelConfig, 0)
+	for _, set := range availableSet {
+		for _, mc := range enabledModelConfigs[set] {
+			if slices.ContainsFunc(newEnabledModelConfigs, func(m *model.ModelConfig) bool {
+				return m.Model == mc.Model
+			}) {
+				continue
+			}
+			newEnabledModelConfigs = append(newEnabledModelConfigs, middleware.GetGroupAdjustedModelConfig(groupCache, mc))
+		}
 	}
 	middleware.SuccessResponse(c, newEnabledModelConfigs)
 }

@@ -26,6 +26,10 @@ const (
 	ChannelStatusDisabled = 2
 )
 
+const (
+	ChannelDefaultSet = "default"
+)
+
 type ChannelConfig struct {
 	SplitThink bool `json:"split_think"`
 }
@@ -50,6 +54,14 @@ type Channel struct {
 	EnabledAutoBalanceCheck bool              `json:"enabled_auto_balance_check"`
 	BalanceThreshold        float64           `json:"balance_threshold"`
 	Config                  *ChannelConfig    `gorm:"serializer:fastjson;type:text"      json:"config,omitempty"`
+	Sets                    []string          `gorm:"serializer:fastjson;type:text"      json:"sets,omitempty"`
+}
+
+func (c *Channel) GetSets() []string {
+	if len(c.Sets) == 0 {
+		return []string{ChannelDefaultSet}
+	}
+	return c.Sets
 }
 
 func (c *Channel) BeforeDelete(tx *gorm.DB) (err error) {
@@ -257,6 +269,13 @@ func SearchChannels(keyword string, page int, perPage int, id int, name string, 
 		}
 		values = append(values, "%"+keyword+"%")
 
+		if common.UsingPostgreSQL {
+			conditions = append(conditions, "sets ILIKE ?")
+		} else {
+			conditions = append(conditions, "sets LIKE ?")
+		}
+		values = append(values, "%"+keyword+"%")
+
 		if len(conditions) > 0 {
 			tx = tx.Where(fmt.Sprintf("(%s)", strings.Join(conditions, " OR ")), values...)
 		}
@@ -318,7 +337,9 @@ func UpdateChannel(channel *Channel) (err error) {
 			"priority",
 			"config",
 			"enabled_auto_balance_check",
-			"balance_threshold").
+			"balance_threshold",
+			"sets",
+		).
 		Clauses(clause.Returning{}).
 		Where("id = ?", channel.ID).
 		Updates(channel)

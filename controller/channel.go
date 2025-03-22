@@ -205,6 +205,7 @@ type AddChannelRequest struct {
 	Type         int                  `json:"type"`
 	Priority     int32                `json:"priority"`
 	Status       int                  `json:"status"`
+	Sets         []string             `json:"sets"`
 }
 
 func (r *AddChannelRequest) ToChannel() (*model.Channel, error) {
@@ -232,6 +233,7 @@ func (r *AddChannelRequest) ToChannel() (*model.Channel, error) {
 		Priority:     r.Priority,
 		Status:       r.Status,
 		Config:       r.Config,
+		Sets:         slices.Clone(r.Sets),
 	}, nil
 }
 
