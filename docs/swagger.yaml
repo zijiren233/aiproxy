@@ -1708,7 +1708,7 @@ paths:
     get:
       description: Returns dashboard data and metrics specific to the given group
       parameters:
-      - description: Group or *
+      - description: Group
         in: path
         name: group
         required: true
@@ -3000,6 +3000,10 @@ paths:
     get:
       description: Returns ranking data for models based on cost
       parameters:
+      - description: Group or *
+        in: query
+        name: group
+        type: string
       - description: Start timestamp
         in: query
         name: start_timestamp
@@ -3562,6 +3566,10 @@ paths:
         name: group
         required: true
         type: string
+      - description: Auto create group
+        in: query
+        name: auto_create_group
+        type: boolean
       - description: Token information
         in: body
         name: token

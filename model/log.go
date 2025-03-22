@@ -988,9 +988,12 @@ func getChartData(group string, start, end time.Time, tokenName, modelName strin
 		Group("timestamp").
 		Order("timestamp ASC")
 
-	if group != "" {
+	if group == "" {
+		query = query.Where("group_id IS NULL OR group_id = ''")
+	} else if group != "*" {
 		query = query.Where("group_id = ?", group)
 	}
+
 	if resultOnly {
 		query = query.Where("downstream_result = true")
 	}
@@ -1112,7 +1115,9 @@ func sumUsedAmount(chartData []*ChartData) float64 {
 func getRPM(group string, end time.Time, tokenName, modelName string, resultOnly bool) (int64, error) {
 	query := LogDB.Model(&Log{})
 
-	if group != "" {
+	if group == "" {
+		query = query.Where("group_id IS NULL OR group_id = ''")
+	} else if group != "*" {
 		query = query.Where("group_id = ?", group)
 	}
 	if tokenName != "" {
@@ -1137,7 +1142,9 @@ func getTPM(group string, end time.Time, tokenName, modelName string, resultOnly
 		Select("COALESCE(SUM(total_tokens), 0)").
 		Where("request_at >= ? AND request_at <= ?", end.Add(-time.Minute), end)
 
-	if group != "" {
+	if group == "" {
+		query = query.Where("group_id IS NULL OR group_id = ''")
+	} else if group != "*" {
 		query = query.Where("group_id = ?", group)
 	}
 	if tokenName != "" {
@@ -1156,6 +1163,7 @@ func getTPM(group string, end time.Time, tokenName, modelName string, resultOnly
 }
 
 func GetDashboardData(
+	group string,
 	start,
 	end time.Time,
 	modelName string,
@@ -1179,21 +1187,21 @@ func GetDashboardData(
 
 	g.Go(func() error {
 		var err error
-		chartData, err = getChartData("", start, end, "", modelName, timeSpan, resultOnly)
+		chartData, err = getChartData(group, start, end, "", modelName, timeSpan, resultOnly)
 		return err
 	})
 
 	if needRPM {
 		g.Go(func() error {
 			var err error
-			rpm, err = getRPM("", end, "", modelName, resultOnly)
+			rpm, err = getRPM(group, end, "", modelName, resultOnly)
 			return err
 		})
 	}
 
 	g.Go(func() error {
 		var err error
-		tpm, err = getTPM("", end, "", modelName, resultOnly)
+		tpm, err = getTPM(group, end, "", modelName, resultOnly)
 		return err
 	})
 
@@ -1224,7 +1232,7 @@ func GetGroupDashboardData(
 	resultOnly bool,
 	needRPM bool,
 ) (*GroupDashboardResponse, error) {
-	if group == "" {
+	if group == "" || group == "*" {
 		return nil, errors.New("group is required")
 	}
 
@@ -1341,7 +1349,9 @@ func GetModelCostRank(group string, start, end time.Time) ([]*ModelCostRank, err
 		Group("model").
 		Order("used_amount DESC")
 
-	if group != "" {
+	if group == "" {
+		query = query.Where("group_id IS NULL OR group_id = ''")
+	} else if group != "*" {
 		query = query.Where("group_id = ?", group)
 	}
 

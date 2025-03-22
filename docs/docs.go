@@ -1042,7 +1042,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Group or *",
+                        "description": "Group",
                         "name": "group",
                         "in": "path",
                         "required": true
@@ -3179,6 +3179,12 @@ const docTemplate = `{
                 "summary": "Get model cost ranking data",
                 "parameters": [
                     {
+                        "type": "string",
+                        "description": "Group or *",
+                        "name": "group",
+                        "in": "query"
+                    },
+                    {
                         "type": "integer",
                         "description": "Start timestamp",
                         "name": "start_timestamp",
@@ -4144,6 +4150,12 @@ const docTemplate = `{
                         "name": "group",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Auto create group",
+                        "name": "auto_create_group",
+                        "in": "query"
                     },
                     {
                         "description": "Token information",
