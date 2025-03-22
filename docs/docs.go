@@ -1983,6 +1983,13 @@ const docTemplate = `{
                         "required": true
                     },
                     {
+                        "type": "string",
+                        "description": "Keyword",
+                        "name": "keyword",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
                         "type": "integer",
                         "description": "Page number",
                         "name": "page",
@@ -2215,6 +2222,12 @@ const docTemplate = `{
                 ],
                 "summary": "Get all logs",
                 "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Group or *",
+                        "name": "group",
+                        "in": "query"
+                    },
                     {
                         "type": "integer",
                         "description": "Page number",
@@ -2571,6 +2584,19 @@ const docTemplate = `{
                 "summary": "Search logs",
                 "parameters": [
                     {
+                        "type": "string",
+                        "description": "Group or *",
+                        "name": "group",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Keyword",
+                        "name": "keyword",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
                         "type": "integer",
                         "description": "Page number",
                         "name": "page",
@@ -2704,6 +2730,62 @@ const docTemplate = `{
                     "logs"
                 ],
                 "summary": "Get used models",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Group or *",
+                        "name": "group",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/middleware.APIResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "string"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/api/logs/used/token_names": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Get a list of token names that have been used in logs",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "logs"
+                ],
+                "summary": "Get used token names",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Group or *",
+                        "name": "group",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",

@@ -133,6 +133,7 @@ func SetAPIRouter(router *gin.Engine) {
 			logsRoute.GET("/consume_error", controller.SearchConsumeError)
 			logsRoute.GET("/detail/:log_id", controller.GetLogDetail)
 			logsRoute.GET("/used/models", controller.GetUsedModels)
+			logsRoute.GET("/used/token_names", controller.GetUsedTokenNames)
 		}
 		logRoute := apiRouter.Group("/log")
 		{

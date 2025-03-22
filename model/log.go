@@ -201,8 +201,8 @@ func GetLogDetail(logID int) (*RequestDetail, error) {
 }
 
 func GetGroupLogDetail(logID int, group string) (*RequestDetail, error) {
-	if group == "" {
-		return nil, errors.New("group is required")
+	if group == "" || group == "*" {
+		return nil, errors.New("invalid group parameter")
 	}
 	var detail RequestDetail
 	err := LogDB.
@@ -357,9 +357,13 @@ func buildGetLogsQuery(
 	resultOnly bool,
 ) *gorm.DB {
 	tx := LogDB.Model(&Log{})
-	if group != "" {
+
+	if group == "" {
+		tx = tx.Where("group_id IS NULL OR group_id = ''")
+	} else if group != "*" {
 		tx = tx.Where("group_id = ?", group)
 	}
+
 	switch {
 	case !startTimestamp.IsZero() && !endTimestamp.IsZero():
 		tx = tx.Where("request_at BETWEEN ? AND ?", startTimestamp, endTimestamp)
@@ -504,20 +508,8 @@ func GetLogs(
 	perPage int,
 	resultOnly bool,
 ) (*GetLogsResult, error) {
-	var (
-		total int64
-		logs  []*Log
-	)
-
-	g := new(errgroup.Group)
-
-	g.Go(func() error {
-		var err error
-		total, logs, err = getLogs(group, startTimestamp, endTimestamp, modelName, requestID, tokenID, tokenName, channelID, endpoint, order, mode, codeType, withBody, ip, page, perPage, resultOnly)
-		return err
-	})
-
-	if err := g.Wait(); err != nil {
+	total, logs, err := getLogs(group, startTimestamp, endTimestamp, modelName, requestID, tokenID, tokenName, channelID, endpoint, order, mode, codeType, withBody, ip, page, perPage, resultOnly)
+	if err != nil {
 		return nil, err
 	}
 
@@ -610,7 +602,10 @@ func buildSearchLogsQuery(
 	resultOnly bool,
 ) *gorm.DB {
 	tx := LogDB.Model(&Log{})
-	if group != "" {
+
+	if group == "" {
+		tx = tx.Where("group_id IS NULL OR group_id = ''")
+	} else if group != "*" {
 		tx = tx.Where("group_id = ?", group)
 	}
 
@@ -830,20 +825,8 @@ func SearchLogs(
 	perPage int,
 	resultOnly bool,
 ) (*GetLogsResult, error) {
-	var (
-		total int64
-		logs  []*Log
-	)
-
-	g := new(errgroup.Group)
-
-	g.Go(func() error {
-		var err error
-		total, logs, err = searchLogs(group, keyword, endpoint, requestID, tokenID, tokenName, modelName, startTimestamp, endTimestamp, channelID, order, mode, codeType, withBody, ip, page, perPage, resultOnly)
-		return err
-	})
-
-	if err := g.Wait(); err != nil {
+	total, logs, err := searchLogs(group, keyword, endpoint, requestID, tokenID, tokenName, modelName, startTimestamp, endTimestamp, channelID, order, mode, codeType, withBody, ip, page, perPage, resultOnly)
+	if err != nil {
 		return nil, err
 	}
 
@@ -1024,9 +1007,6 @@ func GetUsedModels(group string, start, end time.Time) ([]string, error) {
 }
 
 func GetUsedTokenNames(group string, start, end time.Time) ([]string, error) {
-	if group == "" {
-		return nil, errors.New("group is required")
-	}
 	return getLogGroupByValues[string]("token_name", group, start, end)
 }
 
@@ -1064,7 +1044,9 @@ func getLogGroupByValues[T cmp.Ordered](field string, group string, start, end t
 	query := LogDB.
 		Model(&Log{})
 
-	if group != "" {
+	if group == "" {
+		query = query.Where("group_id IS NULL OR group_id = ''")
+	} else if group != "*" {
 		query = query.Where("group_id = ?", group)
 	}
 

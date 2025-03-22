@@ -2280,6 +2280,11 @@ paths:
         name: group
         required: true
         type: string
+      - description: Keyword
+        in: query
+        name: keyword
+        required: true
+        type: string
       - description: Page number
         in: query
         name: page
@@ -2448,6 +2453,10 @@ paths:
     get:
       description: Returns a paginated list of all logs with optional filters
       parameters:
+      - description: Group or *
+        in: query
+        name: group
+        type: string
       - description: Page number
         in: query
         name: page
@@ -2639,6 +2648,15 @@ paths:
     get:
       description: Search logs with various filters
       parameters:
+      - description: Group or *
+        in: query
+        name: group
+        type: string
+      - description: Keyword
+        in: query
+        name: keyword
+        required: true
+        type: string
       - description: Page number
         in: query
         name: page
@@ -2723,6 +2741,11 @@ paths:
   /api/logs/used/models:
     get:
       description: Get a list of models that have been used in logs
+      parameters:
+      - description: Group or *
+        in: query
+        name: group
+        type: string
       produces:
       - application/json
       responses:
@@ -2740,6 +2763,33 @@ paths:
       security:
       - ApiKeyAuth: []
       summary: Get used models
+      tags:
+      - logs
+  /api/logs/used/token_names:
+    get:
+      description: Get a list of token names that have been used in logs
+      parameters:
+      - description: Group or *
+        in: query
+        name: group
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/middleware.APIResponse'
+            - properties:
+                data:
+                  items:
+                    type: string
+                  type: array
+              type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Get used token names
       tags:
       - logs
   /api/model_config:
