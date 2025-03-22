@@ -133,6 +133,7 @@ func fillGaps(data []*model.ChartData, start, end time.Time, t model.TimeSpanTyp
 //	@Tags			dashboard
 //	@Produce		json
 //	@Security		ApiKeyAuth
+//	@Param			group		query		string	false	"Group or *"
 //	@Param			type		query		string	false	"Type of time span (day, week, month, two_week)"
 //	@Param			model		query		string	false	"Model name"
 //	@Param			result_only	query		bool	false	"Only return result"
@@ -141,6 +142,7 @@ func fillGaps(data []*model.ChartData, start, end time.Time, t model.TimeSpanTyp
 func GetDashboard(c *gin.Context) {
 	log := middleware.GetLogger(c)
 
+	group := c.Query("group")
 	start, end, timeSpan := getDashboardTime(c.Query("type"))
 	modelName := c.Query("model")
 	resultOnly, _ := strconv.ParseBool(c.Query("result_only"))
@@ -154,7 +156,7 @@ func GetDashboard(c *gin.Context) {
 	dashboards.ChartData = fillGaps(dashboards.ChartData, start, end, timeSpan)
 
 	if common.RedisEnabled {
-		rpm, err := rpmlimit.GetRPM(c.Request.Context(), "", modelName)
+		rpm, err := rpmlimit.GetRPM(c.Request.Context(), group, modelName)
 		if err != nil {
 			log.Errorf("failed to get rpm: %v", err)
 		} else {
@@ -172,10 +174,10 @@ func GetDashboard(c *gin.Context) {
 //	@Tags			dashboard
 //	@Produce		json
 //	@Security		ApiKeyAuth
-//	@Param			group		path		string	true	"Group name or ID"
+//	@Param			group		path		string	true	"Group or *"
 //	@Param			type		query		string	false	"Type of time span (day, week, month, two_week)"
 //	@Param			token_name	query		string	false	"Token name"
-//	@Param			model		query		string	false	"Model name"
+//	@Param			model		query		string	false	"Model or *"
 //	@Param			result_only	query		bool	false	"Only return result"
 //	@Success		200			{object}	middleware.APIResponse{data=model.GroupDashboardResponse}
 //	@Router			/api/dashboard/{group} [get]
@@ -220,7 +222,7 @@ func GetGroupDashboard(c *gin.Context) {
 //	@Tags			dashboard
 //	@Produce		json
 //	@Security		ApiKeyAuth
-//	@Param			group	path		string	true	"Group name or ID"
+//	@Param			group	path		string	true	"Group"
 //	@Success		200		{object}	middleware.APIResponse{data=[]model.ModelConfig}
 //	@Router			/api/dashboard/{group}/models [get]
 func GetGroupDashboardModels(c *gin.Context) {
@@ -283,7 +285,7 @@ func GetModelCostRank(c *gin.Context) {
 //	@Tags			dashboard
 //	@Produce		json
 //	@Security		ApiKeyAuth
-//	@Param			group			path		string	true	"Group name or ID"
+//	@Param			group			path		string	true	"Group"
 //	@Param			start_timestamp	query		int64	false	"Start timestamp"
 //	@Param			end_timestamp	query		int64	false	"End timestamp"
 //	@Success		200				{object}	middleware.APIResponse{data=[]model.ModelCostRank}

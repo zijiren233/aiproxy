@@ -110,12 +110,9 @@ func redisGetRPM(ctx context.Context, group, model string) (int64, error) {
 
 	var pattern string
 	switch {
-	case group == "" && model == "":
-		pattern = "group_model_rpm_hash:*:*"
-	case group == "":
-		pattern = "group_model_rpm_hash:*:" + model
 	case model == "":
-		pattern = fmt.Sprintf("group_model_rpm_hash:%s:*", group)
+		model = "*"
+		fallthrough
 	default:
 		pattern = fmt.Sprintf("group_model_rpm_hash:%s:%s", group, model)
 	}
