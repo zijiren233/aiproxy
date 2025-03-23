@@ -26,11 +26,13 @@ func (a *Adaptor) GetRequestURL(meta *meta.Meta) (string, error) {
 	return meta.Channel.BaseURL + "/messages", nil
 }
 
+const AnthropicVersion = "2023-06-01"
+
 func (a *Adaptor) SetupRequestHeader(meta *meta.Meta, c *gin.Context, req *http.Request) error {
 	req.Header.Set("X-Api-Key", meta.Channel.Key)
 	anthropicVersion := c.Request.Header.Get("Anthropic-Version")
 	if anthropicVersion == "" {
-		anthropicVersion = "2023-06-01"
+		anthropicVersion = AnthropicVersion
 	}
 	req.Header.Set("Anthropic-Version", anthropicVersion)
 	req.Header.Set("Anthropic-Beta", "messages-2023-12-15")
