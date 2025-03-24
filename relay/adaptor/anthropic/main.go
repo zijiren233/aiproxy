@@ -374,6 +374,8 @@ func StreamHandler(m *meta.Meta, c *gin.Context, resp *http.Response) (*model.Us
 
 	common.SetEventStreamHeaders(c)
 
+	responseText := strings.Builder{}
+
 	var usage model.Usage
 	var lastToolCallChoice *model.ChatCompletionsStreamResponseChoice
 	var usageWrited bool
@@ -401,16 +403,25 @@ func StreamHandler(m *meta.Meta, c *gin.Context, resp *http.Response) (*model.Us
 			continue
 		}
 		if response.Usage != nil {
+			if response.Usage.PromptTokens == 0 {
+				response.Usage.PromptTokens = m.InputTokens
+				response.Usage.TotalTokens += m.InputTokens
+			}
 			usage = *response.Usage
 			usageWrited = true
+			responseText.Reset()
+		} else if !usageWrited {
+			for _, choice := range response.Choices {
+				responseText.WriteString(choice.Delta.StringContent())
+			}
+		}
 
-			if lastToolCallChoice != nil && len(lastToolCallChoice.Delta.ToolCalls) > 0 {
-				lastArgs := &lastToolCallChoice.Delta.ToolCalls[len(lastToolCallChoice.Delta.ToolCalls)-1].Function
-				if len(lastArgs.Arguments) == 0 { // compatible with OpenAI sending an empty object `{}` when no arguments.
-					lastArgs.Arguments = "{}"
-					response.Choices[len(response.Choices)-1].Delta.Content = nil
-					response.Choices[len(response.Choices)-1].Delta.ToolCalls = lastToolCallChoice.Delta.ToolCalls
-				}
+		if lastToolCallChoice != nil && len(lastToolCallChoice.Delta.ToolCalls) > 0 {
+			lastArgs := &lastToolCallChoice.Delta.ToolCalls[len(lastToolCallChoice.Delta.ToolCalls)-1].Function
+			if len(lastArgs.Arguments) == 0 { // compatible with OpenAI sending an empty object `{}` when no arguments.
+				lastArgs.Arguments = "{}"
+				response.Choices[len(response.Choices)-1].Delta.Content = nil
+				response.Choices[len(response.Choices)-1].Delta.ToolCalls = lastToolCallChoice.Delta.ToolCalls
 			}
 		}
 
@@ -426,13 +437,10 @@ func StreamHandler(m *meta.Meta, c *gin.Context, resp *http.Response) (*model.Us
 		log.Error("error reading stream: " + err.Error())
 	}
 
-	if usage.CompletionTokens == 0 && usage.PromptTokens == 0 {
-		usage.PromptTokens = m.InputTokens
-	}
-
-	usage.TotalTokens = usage.PromptTokens + usage.CompletionTokens
-
 	if !usageWrited {
+		usage.PromptTokens = m.InputTokens
+		usage.CompletionTokens = openai.CountTokenText(responseText.String(), m.OriginModel)
+		usage.TotalTokens = usage.PromptTokens + usage.CompletionTokens
 		_ = render.ObjectData(c, &model.ChatCompletionsStreamResponse{
 			ID:      openai.ChatCompletionID(),
 			Model:   m.OriginModel,
