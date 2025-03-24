@@ -137,6 +137,7 @@ func migrateDB() error {
 		&Channel{},
 		&ChannelTest{},
 		&Token{},
+		&GroupModelConfig{},
 		&Group{},
 		&Option{},
 		&ModelConfig{},

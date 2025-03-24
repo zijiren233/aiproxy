@@ -23,21 +23,26 @@ const (
 )
 
 type Group struct {
-	CreatedAt     time.Time        `json:"created_at"`
-	ID            string           `gorm:"primaryKey"                    json:"id"`
-	Tokens        []*Token         `gorm:"foreignKey:GroupID"            json:"-"`
-	Status        int              `gorm:"default:1;index"               json:"status"`
-	RPMRatio      float64          `gorm:"index"                         json:"rpm_ratio"`
-	RPM           map[string]int64 `gorm:"serializer:fastjson;type:text" json:"rpm"`
-	TPMRatio      float64          `gorm:"index"                         json:"tpm_ratio"`
-	TPM           map[string]int64 `gorm:"serializer:fastjson;type:text" json:"tpm"`
-	UsedAmount    float64          `gorm:"index"                         json:"used_amount"`
-	RequestCount  int              `gorm:"index"                         json:"request_count"`
-	AvailableSets []string         `gorm:"serializer:fastjson;type:text" json:"available_sets"`
+	CreatedAt         time.Time          `json:"created_at"`
+	ID                string             `gorm:"primaryKey"                    json:"id"`
+	Tokens            []Token            `gorm:"foreignKey:GroupID"            json:"-"`
+	GroupModelConfigs []GroupModelConfig `gorm:"foreignKey:GroupID"            json:"group_model_configs,omitempty"`
+	Status            int                `gorm:"default:1;index"               json:"status"`
+	RPMRatio          float64            `gorm:"index"                         json:"rpm_ratio,omitempty"`
+	RPM               map[string]int64   `gorm:"serializer:fastjson;type:text" json:"rpm"`
+	TPMRatio          float64            `gorm:"index"                         json:"tpm_ratio,omitempty"`
+	TPM               map[string]int64   `gorm:"serializer:fastjson;type:text" json:"tpm"`
+	UsedAmount        float64            `gorm:"index"                         json:"used_amount"`
+	RequestCount      int                `gorm:"index"                         json:"request_count"`
+	AvailableSets     []string           `gorm:"serializer:fastjson;type:text" json:"available_sets,omitempty"`
 }
 
 func (g *Group) BeforeDelete(tx *gorm.DB) (err error) {
-	return tx.Model(&Token{}).Where("group_id = ?", g.ID).Delete(&Token{}).Error
+	err = tx.Model(&Token{}).Where("group_id = ?", g.ID).Delete(&Token{}).Error
+	if err != nil {
+		return err
+	}
+	return tx.Model(&GroupModelConfig{}).Where("group_id = ?", g.ID).Delete(&GroupModelConfig{}).Error
 }
 
 func getGroupOrder(order string) string {
@@ -70,16 +75,25 @@ func GetGroups(page int, perPage int, order string, onlyDisabled bool) (groups [
 		return nil, 0, nil
 	}
 	limit, offset := toLimitOffset(page, perPage)
-	err = tx.Order(getGroupOrder(order)).Limit(limit).Offset(offset).Find(&groups).Error
+	err = tx.
+		Order(getGroupOrder(order)).
+		Limit(limit).
+		Offset(offset).
+		Find(&groups).
+		Error
 	return groups, total, err
 }
 
-func GetGroupByID(id string) (*Group, error) {
+func GetGroupByID(id string, preloadGroupModelConfigs bool) (*Group, error) {
 	if id == "" {
 		return nil, errors.New("group id is empty")
 	}
-	group := Group{ID: id}
-	err := DB.First(&group, "id = ?", id).Error
+	group := Group{}
+	tx := DB.Where("id = ?", id)
+	if preloadGroupModelConfigs {
+		tx = tx.Preload("GroupModelConfigs")
+	}
+	err := tx.First(&group).Error
 	return &group, HandleNotFound(err, ErrGroupNotFound)
 }
 
@@ -254,11 +268,9 @@ func SearchGroup(keyword string, page int, perPage int, order string, status int
 		tx = tx.Where("status = ?", status)
 	}
 	if common.UsingPostgreSQL {
-		tx = tx.Where("id ILIKE ?", "%"+keyword+"%")
-		tx = tx.Where("available_sets ILIKE ?", "%"+keyword+"%")
+		tx = tx.Where("id ILIKE ? OR available_sets ILIKE ?", "%"+keyword+"%", "%"+keyword+"%")
 	} else {
-		tx = tx.Where("id LIKE ?", "%"+keyword+"%")
-		tx = tx.Where("available_sets LIKE ?", "%"+keyword+"%")
+		tx = tx.Where("id LIKE ? OR available_sets LIKE ?", "%"+keyword+"%", "%"+keyword+"%")
 	}
 	err = tx.Count(&total).Error
 	if err != nil {
@@ -268,7 +280,12 @@ func SearchGroup(keyword string, page int, perPage int, order string, status int
 		return nil, 0, nil
 	}
 	limit, offset := toLimitOffset(page, perPage)
-	err = tx.Order(getGroupOrder(order)).Limit(limit).Offset(offset).Find(&groups).Error
+	err = tx.
+		Order(getGroupOrder(order)).
+		Limit(limit).
+		Offset(offset).
+		Find(&groups).
+		Error
 	return groups, total, err
 }
 

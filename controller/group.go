@@ -116,7 +116,7 @@ func GetGroup(c *gin.Context) {
 		middleware.ErrorResponse(c, http.StatusOK, "group id is empty")
 		return
 	}
-	_group, err := model.GetGroupByID(group)
+	_group, err := model.GetGroupByID(group, false)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusOK, err.Error())
 		return
@@ -158,78 +158,6 @@ func UpdateGroupRPMRatio(c *gin.Context) {
 		return
 	}
 	err = model.UpdateGroupRPMRatio(group, req.RPMRatio)
-	if err != nil {
-		middleware.ErrorResponse(c, http.StatusOK, err.Error())
-		return
-	}
-	middleware.SuccessResponse(c, nil)
-}
-
-type UpdateGroupRPMRequest struct {
-	RPM map[string]int64 `json:"rpm"`
-}
-
-// UpdateGroupRPM godoc
-//
-//	@Summary		Update group RPM
-//	@Description	Updates the RPM (Requests Per Minute) for a group
-//	@Tags			group
-//	@Accept			json
-//	@Produce		json
-//	@Security		ApiKeyAuth
-//	@Param			group	path		string					true	"Group name"
-//	@Param			data	body		UpdateGroupRPMRequest	true	"RPM information"
-//	@Success		200		{object}	middleware.APIResponse
-//	@Router			/api/group/{group}/rpm [post]
-func UpdateGroupRPM(c *gin.Context) {
-	group := c.Param("group")
-	if group == "" {
-		middleware.ErrorResponse(c, http.StatusOK, "invalid parameter")
-		return
-	}
-	req := UpdateGroupRPMRequest{}
-	err := sonic.ConfigDefault.NewDecoder(c.Request.Body).Decode(&req)
-	if err != nil {
-		middleware.ErrorResponse(c, http.StatusOK, "invalid parameter")
-		return
-	}
-	err = model.UpdateGroupRPM(group, req.RPM)
-	if err != nil {
-		middleware.ErrorResponse(c, http.StatusOK, err.Error())
-		return
-	}
-	middleware.SuccessResponse(c, nil)
-}
-
-type UpdateGroupTPMRequest struct {
-	TPM map[string]int64 `json:"tpm"`
-}
-
-// UpdateGroupTPM godoc
-//
-//	@Summary		Update group TPM
-//	@Description	Updates the TPM (Tokens Per Minute) for a group
-//	@Tags			group
-//	@Accept			json
-//	@Produce		json
-//	@Security		ApiKeyAuth
-//	@Param			group	path		string					true	"Group name"
-//	@Param			data	body		UpdateGroupTPMRequest	true	"TPM information"
-//	@Success		200		{object}	middleware.APIResponse
-//	@Router			/api/group/{group}/tpm [post]
-func UpdateGroupTPM(c *gin.Context) {
-	group := c.Param("group")
-	if group == "" {
-		middleware.ErrorResponse(c, http.StatusOK, "invalid parameter")
-		return
-	}
-	req := UpdateGroupTPMRequest{}
-	err := sonic.ConfigDefault.NewDecoder(c.Request.Body).Decode(&req)
-	if err != nil {
-		middleware.ErrorResponse(c, http.StatusOK, "invalid parameter")
-		return
-	}
-	err = model.UpdateGroupTPM(group, req.TPM)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusOK, err.Error())
 		return
@@ -360,11 +288,9 @@ func DeleteGroups(c *gin.Context) {
 }
 
 type CreateGroupRequest struct {
-	RPM          map[string]int64 `json:"rpm"`
-	RPMRatio     float64          `json:"rpm_ratio"`
-	TPM          map[string]int64 `json:"tpm"`
-	TPMRatio     float64          `json:"tpm_ratio"`
-	AvailableSet []string         `json:"available_set"`
+	RPMRatio     float64  `json:"rpm_ratio"`
+	TPMRatio     float64  `json:"tpm_ratio"`
+	AvailableSet []string `json:"available_set"`
 }
 
 // CreateGroup godoc
@@ -394,9 +320,7 @@ func CreateGroup(c *gin.Context) {
 	g := &model.Group{
 		ID:            group,
 		RPMRatio:      req.RPMRatio,
-		RPM:           req.RPM,
 		TPMRatio:      req.TPMRatio,
-		TPM:           req.TPM,
 		AvailableSets: req.AvailableSet,
 	}
 	if err := model.CreateGroup(g); err != nil {
@@ -432,9 +356,7 @@ func UpdateGroup(c *gin.Context) {
 	}
 	g := &model.Group{
 		RPMRatio:      req.RPMRatio,
-		RPM:           req.RPM,
 		TPMRatio:      req.TPMRatio,
-		TPM:           req.TPM,
 		AvailableSets: req.AvailableSet,
 	}
 	err = model.UpdateGroup(group, g)
@@ -443,4 +365,184 @@ func UpdateGroup(c *gin.Context) {
 		return
 	}
 	middleware.SuccessResponse(c, g)
+}
+
+type SaveGroupModelConfigRequest struct {
+	Model       string             `json:"model"`
+	RPM         int64              `json:"rpm"`
+	TPM         int64              `json:"tpm"`
+	ImagePrices map[string]float64 `json:"image_prices"`
+	Price       model.Price        `json:"price"`
+}
+
+// SaveGroupModelConfig godoc
+//
+//	@Summary		Save group model config
+//	@Description	Save group model config
+//	@Tags			group
+//	@Accept			json
+//	@Produce		json
+//	@Security		ApiKeyAuth
+//	@Param			group	path		string						true	"Group name"
+//	@Param			data	body		SaveGroupModelConfigRequest	true	"Group model config information"
+//	@Success		200		{object}	middleware.APIResponse
+//	@Router			/api/group/{group}/model_config [post]
+func SaveGroupModelConfig(c *gin.Context) {
+	group := c.Param("group")
+	if group == "" {
+		middleware.ErrorResponse(c, http.StatusOK, "invalid parameter")
+		return
+	}
+
+	req := SaveGroupModelConfigRequest{}
+	err := c.ShouldBindJSON(&req)
+	if err != nil {
+		middleware.ErrorResponse(c, http.StatusOK, "invalid parameter")
+		return
+	}
+	modelConfig := model.GroupModelConfig{
+		GroupID:     group,
+		Model:       req.Model,
+		RPM:         req.RPM,
+		TPM:         req.TPM,
+		ImagePrices: req.ImagePrices,
+		Price:       req.Price,
+	}
+	err = model.SaveGroupModelConfig(&modelConfig)
+	if err != nil {
+		middleware.ErrorResponse(c, http.StatusOK, err.Error())
+		return
+	}
+	middleware.SuccessResponse(c, nil)
+}
+
+// DeleteGroupModelConfig godoc
+//
+//	@Summary		Delete group model config
+//	@Description	Delete group model config
+//	@Tags			group
+//	@Produce		json
+//	@Security		ApiKeyAuth
+//	@Param			group	path		string	true	"Group name"
+//	@Param			model	path		string	true	"Model name"
+//	@Success		200		{object}	middleware.APIResponse
+//	@Router			/api/group/{group}/model_config/{model} [delete]
+func DeleteGroupModelConfig(c *gin.Context) {
+	group := c.Param("group")
+	if group == "" {
+		middleware.ErrorResponse(c, http.StatusOK, "invalid parameter")
+		return
+	}
+	modelName := c.Param("model")
+	if modelName == "" {
+		middleware.ErrorResponse(c, http.StatusOK, "invalid parameter")
+		return
+	}
+	err := model.DeleteGroupModelConfig(group, modelName)
+	if err != nil {
+		middleware.ErrorResponse(c, http.StatusOK, err.Error())
+		return
+	}
+	middleware.SuccessResponse(c, nil)
+}
+
+// GetGroupModelConfigs godoc
+//
+//	@Summary		Get group model configs
+//	@Description	Get group model configs
+//	@Tags			group
+//	@Produce		json
+//	@Security		ApiKeyAuth
+//	@Param			group	path		string	true	"Group name"
+//	@Success		200		{object}	middleware.APIResponse{data=[]model.GroupModelConfig}
+//	@Router			/api/group/{group}/model_configs [get]
+func GetGroupModelConfigs(c *gin.Context) {
+	group := c.Param("group")
+	if group == "" {
+		middleware.ErrorResponse(c, http.StatusOK, "invalid parameter")
+		return
+	}
+	modelConfigs, err := model.GetGroupModelConfigs(group)
+	if err != nil {
+		middleware.ErrorResponse(c, http.StatusOK, err.Error())
+		return
+	}
+	middleware.SuccessResponse(c, modelConfigs)
+}
+
+// GetGroupModelConfig godoc
+//
+//	@Summary		Get group model config
+//	@Description	Get group model config
+//	@Tags			group
+//	@Produce		json
+//	@Security		ApiKeyAuth
+//	@Param			group	path		string	true	"Group name"
+//	@Param			model	path		string	true	"Model name"
+//	@Success		200		{object}	middleware.APIResponse{data=model.GroupModelConfig}
+//	@Router			/api/group/{group}/model_config/{model} [get]
+func GetGroupModelConfig(c *gin.Context) {
+	group := c.Param("group")
+	if group == "" {
+		middleware.ErrorResponse(c, http.StatusOK, "invalid parameter")
+		return
+	}
+	modelName := c.Param("model")
+	if modelName == "" {
+		middleware.ErrorResponse(c, http.StatusOK, "invalid parameter")
+		return
+	}
+	modelConfig, err := model.GetGroupModelConfig(group, modelName)
+	if err != nil {
+		middleware.ErrorResponse(c, http.StatusOK, err.Error())
+		return
+	}
+	middleware.SuccessResponse(c, modelConfig)
+}
+
+// UpdateGroupModelConfig godoc
+//
+//	@Summary		Update group model config
+//	@Description	Update group model config
+//	@Tags			group
+//	@Accept			json
+//	@Produce		json
+//	@Security		ApiKeyAuth
+//	@Param			group	path		string						true	"Group name"
+//	@Param			model	path		string						true	"Model name"
+//	@Param			data	body		SaveGroupModelConfigRequest	true	"Group model config information"
+//	@Success		200		{object}	middleware.APIResponse
+//	@Router			/api/group/{group}/model_config/{model} [put]
+func UpdateGroupModelConfig(c *gin.Context) {
+	group := c.Param("group")
+	if group == "" {
+		middleware.ErrorResponse(c, http.StatusOK, "invalid parameter")
+		return
+	}
+	modelName := c.Param("model")
+	if modelName == "" {
+		middleware.ErrorResponse(c, http.StatusOK, "invalid parameter")
+		return
+	}
+
+	req := SaveGroupModelConfigRequest{}
+	err := c.ShouldBindJSON(&req)
+	if err != nil {
+		middleware.ErrorResponse(c, http.StatusOK, "invalid parameter")
+		return
+	}
+	modelConfig := model.GroupModelConfig{
+		GroupID:     group,
+		Model:       req.Model,
+		RPM:         req.RPM,
+		TPM:         req.TPM,
+		ImagePrices: req.ImagePrices,
+		Price:       req.Price,
+	}
+	err = model.SaveGroupModelConfig(&modelConfig)
+	if err != nil {
+		middleware.ErrorResponse(c, http.StatusOK, err.Error())
+		return
+	}
+	middleware.SuccessResponse(c, nil)
 }

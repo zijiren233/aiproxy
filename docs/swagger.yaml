@@ -88,16 +88,8 @@ definitions:
         items:
           type: string
         type: array
-      rpm:
-        additionalProperties:
-          type: integer
-        type: object
       rpm_ratio:
         type: number
-      tpm:
-        additionalProperties:
-          type: integer
-        type: object
       tpm_ratio:
         type: number
     type: object
@@ -118,6 +110,10 @@ definitions:
         type: array
       created_at:
         type: string
+      group_model_configs:
+        items:
+          $ref: '#/definitions/model.GroupModelConfig'
+        type: array
       id:
         type: string
       request_count:
@@ -189,6 +185,21 @@ definitions:
         type: array
       root:
         type: string
+    type: object
+  controller.SaveGroupModelConfigRequest:
+    properties:
+      image_prices:
+        additionalProperties:
+          type: number
+        type: object
+      model:
+        type: string
+      price:
+        $ref: '#/definitions/model.Price'
+      rpm:
+        type: integer
+      tpm:
+        type: integer
     type: object
   controller.SaveModelConfigsRequest:
     properties:
@@ -275,13 +286,6 @@ definitions:
       rpm_ratio:
         type: number
     type: object
-  controller.UpdateGroupRPMRequest:
-    properties:
-      rpm:
-        additionalProperties:
-          type: integer
-        type: object
-    type: object
   controller.UpdateGroupStatusRequest:
     properties:
       status:
@@ -291,13 +295,6 @@ definitions:
     properties:
       tpm_ratio:
         type: number
-    type: object
-  controller.UpdateGroupTPMRequest:
-    properties:
-      tpm:
-        additionalProperties:
-          type: integer
-        type: object
     type: object
   controller.UpdateTokenNameRequest:
     properties:
@@ -657,6 +654,10 @@ definitions:
         type: array
       created_at:
         type: string
+      group_model_configs:
+        items:
+          $ref: '#/definitions/model.GroupModelConfig'
+        type: array
       id:
         type: string
       request_count:
@@ -702,6 +703,23 @@ definitions:
         type: integer
       used_amount:
         type: number
+    type: object
+  model.GroupModelConfig:
+    properties:
+      group_id:
+        type: string
+      image_prices:
+        additionalProperties:
+          type: number
+        type: object
+      model:
+        type: string
+      price:
+        $ref: '#/definitions/model.Price'
+      rpm:
+        type: integer
+      tpm:
+        type: integer
     type: object
   model.ImageData:
     properties:
@@ -1906,23 +1924,23 @@ paths:
       summary: Update a group
       tags:
       - group
-  /api/group/{group}/rpm:
+  /api/group/{group}/model_config:
     post:
       consumes:
       - application/json
-      description: Updates the RPM (Requests Per Minute) for a group
+      description: Save group model config
       parameters:
       - description: Group name
         in: path
         name: group
         required: true
         type: string
-      - description: RPM information
+      - description: Group model config information
         in: body
         name: data
         required: true
         schema:
-          $ref: '#/definitions/controller.UpdateGroupRPMRequest'
+          $ref: '#/definitions/controller.SaveGroupModelConfigRequest'
       produces:
       - application/json
       responses:
@@ -1932,7 +1950,124 @@ paths:
             $ref: '#/definitions/middleware.APIResponse'
       security:
       - ApiKeyAuth: []
-      summary: Update group RPM
+      summary: Save group model config
+      tags:
+      - group
+  /api/group/{group}/model_config/{model}:
+    delete:
+      description: Delete group model config
+      parameters:
+      - description: Group name
+        in: path
+        name: group
+        required: true
+        type: string
+      - description: Model name
+        in: path
+        name: model
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/middleware.APIResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Delete group model config
+      tags:
+      - group
+    get:
+      description: Get group model config
+      parameters:
+      - description: Group name
+        in: path
+        name: group
+        required: true
+        type: string
+      - description: Model name
+        in: path
+        name: model
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/middleware.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.GroupModelConfig'
+              type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Get group model config
+      tags:
+      - group
+    put:
+      consumes:
+      - application/json
+      description: Update group model config
+      parameters:
+      - description: Group name
+        in: path
+        name: group
+        required: true
+        type: string
+      - description: Model name
+        in: path
+        name: model
+        required: true
+        type: string
+      - description: Group model config information
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/controller.SaveGroupModelConfigRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/middleware.APIResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Update group model config
+      tags:
+      - group
+  /api/group/{group}/model_configs:
+    get:
+      description: Get group model configs
+      parameters:
+      - description: Group name
+        in: path
+        name: group
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/middleware.APIResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/model.GroupModelConfig'
+                  type: array
+              type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Get group model configs
       tags:
       - group
   /api/group/{group}/rpm_ratio:
@@ -1991,35 +2126,6 @@ paths:
       security:
       - ApiKeyAuth: []
       summary: Update group status
-      tags:
-      - group
-  /api/group/{group}/tpm:
-    post:
-      consumes:
-      - application/json
-      description: Updates the TPM (Tokens Per Minute) for a group
-      parameters:
-      - description: Group name
-        in: path
-        name: group
-        required: true
-        type: string
-      - description: TPM information
-        in: body
-        name: data
-        required: true
-        schema:
-          $ref: '#/definitions/controller.UpdateGroupTPMRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/middleware.APIResponse'
-      security:
-      - ApiKeyAuth: []
-      summary: Update group TPM
       tags:
       - group
   /api/group/{group}/tpm_ratio:

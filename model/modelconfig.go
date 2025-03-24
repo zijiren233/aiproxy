@@ -21,13 +21,13 @@ type ModelConfig struct {
 	CreatedAt        time.Time              `gorm:"index;autoCreateTime"          json:"created_at"`
 	UpdatedAt        time.Time              `gorm:"index;autoUpdateTime"          json:"updated_at"`
 	Config           map[ModelConfigKey]any `gorm:"serializer:fastjson;type:text" json:"config,omitempty"`
-	ImagePrices      map[string]float64     `gorm:"serializer:fastjson;type:text" json:"image_prices,omitempty"`
 	Model            string                 `gorm:"primaryKey"                    json:"model"`
 	Owner            ModelOwner             `gorm:"type:varchar(255);index"       json:"owner"`
 	Type             mode.Mode              `json:"type"`
 	ExcludeFromTests bool                   `json:"exclude_from_tests,omitempty"`
 	RPM              int64                  `json:"rpm,omitempty"`
 	TPM              int64                  `json:"tpm,omitempty"`
+	ImagePrices      map[string]float64     `gorm:"serializer:fastjson;type:text" json:"image_prices,omitempty"`
 	Price            Price                  `gorm:"embedded"                      json:"price,omitempty"`
 }
 
@@ -35,6 +35,15 @@ func NewDefaultModelConfig(model string) *ModelConfig {
 	return &ModelConfig{
 		Model: model,
 	}
+}
+
+func (c *ModelConfig) LoadFromGroupModelConfig(groupModelConfig GroupModelConfig) ModelConfig {
+	newC := *c
+	newC.RPM = groupModelConfig.RPM
+	newC.TPM = groupModelConfig.TPM
+	newC.ImagePrices = groupModelConfig.ImagePrices
+	newC.Price = groupModelConfig.Price
+	return newC
 }
 
 func (c *ModelConfig) MarshalJSON() ([]byte, error) {

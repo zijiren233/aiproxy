@@ -242,15 +242,15 @@ func GetGroupDashboardModels(c *gin.Context) {
 
 	availableSet := groupCache.GetAvailableSets()
 	enabledModelConfigs := model.LoadModelCaches().EnabledModelConfigsBySet
-	newEnabledModelConfigs := make([]*model.ModelConfig, 0)
+	newEnabledModelConfigs := make([]model.ModelConfig, 0)
 	for _, set := range availableSet {
 		for _, mc := range enabledModelConfigs[set] {
-			if slices.ContainsFunc(newEnabledModelConfigs, func(m *model.ModelConfig) bool {
+			if slices.ContainsFunc(newEnabledModelConfigs, func(m model.ModelConfig) bool {
 				return m.Model == mc.Model
 			}) {
 				continue
 			}
-			newEnabledModelConfigs = append(newEnabledModelConfigs, middleware.GetGroupAdjustedModelConfig(groupCache, mc))
+			newEnabledModelConfigs = append(newEnabledModelConfigs, middleware.GetGroupAdjustedModelConfig(groupCache, *mc))
 		}
 	}
 	middleware.SuccessResponse(c, newEnabledModelConfigs)

@@ -1333,14 +1333,14 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/group/{group}/rpm": {
+        "/api/group/{group}/model_config": {
             "post": {
                 "security": [
                     {
                         "ApiKeyAuth": []
                     }
                 ],
-                "description": "Updates the RPM (Requests Per Minute) for a group",
+                "description": "Save group model config",
                 "consumes": [
                     "application/json"
                 ],
@@ -1350,7 +1350,7 @@ const docTemplate = `{
                 "tags": [
                     "group"
                 ],
-                "summary": "Update group RPM",
+                "summary": "Save group model config",
                 "parameters": [
                     {
                         "type": "string",
@@ -1360,12 +1360,12 @@ const docTemplate = `{
                         "required": true
                     },
                     {
-                        "description": "RPM information",
+                        "description": "Group model config information",
                         "name": "data",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/controller.UpdateGroupRPMRequest"
+                            "$ref": "#/definitions/controller.SaveGroupModelConfigRequest"
                         }
                     }
                 ],
@@ -1374,6 +1374,198 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/middleware.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/group/{group}/model_config/{model}": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Get group model config",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "group"
+                ],
+                "summary": "Get group model config",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Group name",
+                        "name": "group",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Model name",
+                        "name": "model",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/middleware.APIResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/model.GroupModelConfig"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Update group model config",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "group"
+                ],
+                "summary": "Update group model config",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Group name",
+                        "name": "group",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Model name",
+                        "name": "model",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Group model config information",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/controller.SaveGroupModelConfigRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.APIResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Delete group model config",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "group"
+                ],
+                "summary": "Delete group model config",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Group name",
+                        "name": "group",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Model name",
+                        "name": "model",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/group/{group}/model_configs": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Get group model configs",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "group"
+                ],
+                "summary": "Get group model configs",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Group name",
+                        "name": "group",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/middleware.APIResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/model.GroupModelConfig"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     }
                 }
@@ -1458,52 +1650,6 @@ const docTemplate = `{
                         "required": true,
                         "schema": {
                             "$ref": "#/definitions/controller.UpdateGroupStatusRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/middleware.APIResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/group/{group}/tpm": {
-            "post": {
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ],
-                "description": "Updates the TPM (Tokens Per Minute) for a group",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "group"
-                ],
-                "summary": "Update group TPM",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Group name",
-                        "name": "group",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "TPM information",
-                        "name": "data",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/controller.UpdateGroupTPMRequest"
                         }
                     }
                 ],
@@ -6111,20 +6257,8 @@ const docTemplate = `{
                         "type": "string"
                     }
                 },
-                "rpm": {
-                    "type": "object",
-                    "additionalProperties": {
-                        "type": "integer"
-                    }
-                },
                 "rpm_ratio": {
                     "type": "number"
-                },
-                "tpm": {
-                    "type": "object",
-                    "additionalProperties": {
-                        "type": "integer"
-                    }
                 },
                 "tpm_ratio": {
                     "type": "number"
@@ -6156,6 +6290,12 @@ const docTemplate = `{
                 },
                 "created_at": {
                     "type": "string"
+                },
+                "group_model_configs": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.GroupModelConfig"
+                    }
                 },
                 "id": {
                     "type": "string"
@@ -6264,6 +6404,29 @@ const docTemplate = `{
                 },
                 "root": {
                     "type": "string"
+                }
+            }
+        },
+        "controller.SaveGroupModelConfigRequest": {
+            "type": "object",
+            "properties": {
+                "image_prices": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "number"
+                    }
+                },
+                "model": {
+                    "type": "string"
+                },
+                "price": {
+                    "$ref": "#/definitions/model.Price"
+                },
+                "rpm": {
+                    "type": "integer"
+                },
+                "tpm": {
+                    "type": "integer"
                 }
             }
         },
@@ -6397,17 +6560,6 @@ const docTemplate = `{
                 }
             }
         },
-        "controller.UpdateGroupRPMRequest": {
-            "type": "object",
-            "properties": {
-                "rpm": {
-                    "type": "object",
-                    "additionalProperties": {
-                        "type": "integer"
-                    }
-                }
-            }
-        },
         "controller.UpdateGroupStatusRequest": {
             "type": "object",
             "properties": {
@@ -6421,17 +6573,6 @@ const docTemplate = `{
             "properties": {
                 "tpm_ratio": {
                     "type": "number"
-                }
-            }
-        },
-        "controller.UpdateGroupTPMRequest": {
-            "type": "object",
-            "properties": {
-                "tpm": {
-                    "type": "object",
-                    "additionalProperties": {
-                        "type": "integer"
-                    }
                 }
             }
         },
@@ -6965,6 +7106,12 @@ const docTemplate = `{
                 "created_at": {
                     "type": "string"
                 },
+                "group_model_configs": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.GroupModelConfig"
+                    }
+                },
                 "id": {
                     "type": "string"
                 },
@@ -7032,6 +7179,32 @@ const docTemplate = `{
                 },
                 "used_amount": {
                     "type": "number"
+                }
+            }
+        },
+        "model.GroupModelConfig": {
+            "type": "object",
+            "properties": {
+                "group_id": {
+                    "type": "string"
+                },
+                "image_prices": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "number"
+                    }
+                },
+                "model": {
+                    "type": "string"
+                },
+                "price": {
+                    "$ref": "#/definitions/model.Price"
+                },
+                "rpm": {
+                    "type": "integer"
+                },
+                "tpm": {
+                    "type": "integer"
                 }
             }
         },
