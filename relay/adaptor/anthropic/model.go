@@ -23,7 +23,11 @@ type OpenaiMessage struct {
 
 type OpenaiTool struct {
 	model.Tool
-	CacheControl *CacheControl `json:"cache_control,omitempty"`
+	Name            string        `json:"name,omitempty"`
+	DisplayWidthPx  int           `json:"display_width_px,omitempty"`
+	DisplayHeightPx int           `json:"display_height_px,omitempty"`
+	DisplayNumber   int           `json:"display_number,omitempty"`
+	CacheControl    *CacheControl `json:"cache_control,omitempty"`
 }
 
 // https://docs.anthropic.com/claude/reference/messages_post
@@ -57,10 +61,14 @@ type Message struct {
 }
 
 type Tool struct {
-	InputSchema  InputSchema   `json:"input_schema"`
-	Name         string        `json:"name"`
-	Description  string        `json:"description,omitempty"`
-	CacheControl *CacheControl `json:"cache_control,omitempty"`
+	InputSchema     *InputSchema  `json:"input_schema,omitempty"`
+	Name            string        `json:"name"`
+	Description     string        `json:"description,omitempty"`
+	Type            string        `json:"type"`
+	DisplayWidthPx  int           `json:"display_width_px,omitempty"`
+	DisplayHeightPx int           `json:"display_height_px,omitempty"`
+	DisplayNumber   int           `json:"display_number,omitempty"`
+	CacheControl    *CacheControl `json:"cache_control,omitempty"`
 }
 
 type CacheControl struct {

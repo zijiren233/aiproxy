@@ -64,18 +64,32 @@ func ConvertRequest(meta *meta.Meta, req *http.Request) (*Request, error) {
 	claudeTools := make([]Tool, 0, len(textRequest.Tools))
 
 	for _, tool := range textRequest.Tools {
-		if params, ok := tool.Function.Parameters.(map[string]any); ok {
-			t, _ := params["type"].(string)
+		if tool.Type != "function" {
 			claudeTools = append(claudeTools, Tool{
-				Name:        tool.Function.Name,
-				Description: tool.Function.Description,
-				InputSchema: InputSchema{
-					Type:       t,
-					Properties: params["properties"],
-					Required:   params["required"],
-				},
-				CacheControl: tool.CacheControl,
+				Type:            tool.Type,
+				Name:            tool.Name,
+				DisplayWidthPx:  tool.DisplayWidthPx,
+				DisplayHeightPx: tool.DisplayHeightPx,
+				DisplayNumber:   tool.DisplayNumber,
+				CacheControl:    tool.CacheControl,
 			})
+		} else {
+			if params, ok := tool.Function.Parameters.(map[string]any); ok {
+				t, _ := params["type"].(string)
+				if t == "" {
+					t = "object"
+				}
+				claudeTools = append(claudeTools, Tool{
+					Name:        tool.Function.Name,
+					Description: tool.Function.Description,
+					InputSchema: &InputSchema{
+						Type:       t,
+						Properties: params["properties"],
+						Required:   params["required"],
+					},
+					CacheControl: tool.CacheControl,
+				})
+			}
 		}
 	}
 
