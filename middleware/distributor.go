@@ -57,25 +57,21 @@ func getGroupPMRatio(group *model.GroupCache) (float64, float64) {
 	return groupRPMRatio, groupTPMRatio
 }
 
-func GetGroupAdjustedModelConfig(group *model.GroupCache, mc *model.ModelConfig) *model.ModelConfig {
-	rpm := mc.RPM
-	tpm := mc.TPM
-	if group.RPM != nil && group.RPM[mc.Model] > 0 {
-		rpm = group.RPM[mc.Model]
-	}
-	if group.TPM != nil && group.TPM[mc.Model] > 0 {
-		tpm = group.TPM[mc.Model]
+func GetGroupAdjustedModelConfig(group *model.GroupCache, mc model.ModelConfig) model.ModelConfig {
+	if groupModelConfig, ok := group.ModelConfigs[mc.Model]; ok {
+		mc = mc.LoadFromGroupModelConfig(groupModelConfig)
+	} else {
+		if group.RPM != nil && group.RPM[mc.Model] > 0 {
+			mc.RPM = group.RPM[mc.Model]
+		}
+		if group.TPM != nil && group.TPM[mc.Model] > 0 {
+			mc.TPM = group.TPM[mc.Model]
+		}
 	}
 	rpmRatio, tpmRatio := getGroupPMRatio(group)
 	groupConsumeLevelRatio := calculateGroupConsumeLevelRatio(group.UsedAmount)
-	rpm = int64(float64(rpm) * rpmRatio * groupConsumeLevelRatio)
-	tpm = int64(float64(tpm) * tpmRatio * groupConsumeLevelRatio)
-	if rpm != mc.RPM || tpm != mc.TPM {
-		newMc := *mc
-		newMc.RPM = rpm
-		newMc.TPM = tpm
-		return &newMc
-	}
+	mc.RPM = int64(float64(mc.RPM) * rpmRatio * groupConsumeLevelRatio)
+	mc.TPM = int64(float64(mc.TPM) * tpmRatio * groupConsumeLevelRatio)
 	return mc
 }
 
@@ -111,7 +107,7 @@ func setTpmHeaders(c *gin.Context, tpm int64, remainingRequests int64) {
 func checkGroupModelRPMAndTPM(c *gin.Context, group *model.GroupCache, mc *model.ModelConfig) error {
 	log := GetLogger(c)
 
-	adjustedModelConfig := GetGroupAdjustedModelConfig(group, mc)
+	adjustedModelConfig := GetGroupAdjustedModelConfig(group, *mc)
 
 	count, overLimitCount := rpmlimit.PushRequestAnyWay(c.Request.Context(), group.ID, mc.Model, adjustedModelConfig.RPM, time.Minute)
 	log.Data["rpm"] = strconv.FormatInt(count+overLimitCount, 10)

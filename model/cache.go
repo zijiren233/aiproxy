@@ -257,15 +257,31 @@ func (r redisMapStringInt64) MarshalBinary() ([]byte, error) {
 	return sonic.Marshal(r)
 }
 
+type redisGroupModelConfigMap map[string]GroupModelConfig
+
+var (
+	_ redis.Scanner            = (*redisGroupModelConfigMap)(nil)
+	_ encoding.BinaryMarshaler = (*redisGroupModelConfigMap)(nil)
+)
+
+func (r *redisGroupModelConfigMap) ScanRedis(value string) error {
+	return sonic.UnmarshalString(value, r)
+}
+
+func (r redisGroupModelConfigMap) MarshalBinary() ([]byte, error) {
+	return sonic.Marshal(r)
+}
+
 type GroupCache struct {
-	ID            string              `json:"-"              redis:"-"`
-	Status        int                 `json:"status"         redis:"st"`
-	UsedAmount    float64             `json:"used_amount"    redis:"ua"`
-	RPMRatio      float64             `json:"rpm_ratio"      redis:"rpm_r"`
-	RPM           redisMapStringInt64 `json:"rpm"            redis:"rpm"`
-	TPMRatio      float64             `json:"tpm_ratio"      redis:"tpm_r"`
-	TPM           redisMapStringInt64 `json:"tpm"            redis:"tpm"`
-	AvailableSets redisStringSlice    `json:"available_sets" redis:"ass"`
+	ID            string                   `json:"-"              redis:"-"`
+	Status        int                      `json:"status"         redis:"st"`
+	UsedAmount    float64                  `json:"used_amount"    redis:"ua"`
+	RPMRatio      float64                  `json:"rpm_ratio"      redis:"rpm_r"`
+	RPM           redisMapStringInt64      `json:"rpm"            redis:"rpm"`
+	TPMRatio      float64                  `json:"tpm_ratio"      redis:"tpm_r"`
+	TPM           redisMapStringInt64      `json:"tpm"            redis:"tpm"`
+	AvailableSets redisStringSlice         `json:"available_sets" redis:"ass"`
+	ModelConfigs  redisGroupModelConfigMap `json:"model_configs"  redis:"mc"`
 }
 
 func (g *GroupCache) GetAvailableSets() []string {
@@ -276,6 +292,10 @@ func (g *GroupCache) GetAvailableSets() []string {
 }
 
 func (g *Group) ToGroupCache() *GroupCache {
+	modelConfigs := make(redisGroupModelConfigMap, len(g.GroupModelConfigs))
+	for _, modelConfig := range g.GroupModelConfigs {
+		modelConfigs[modelConfig.Model] = modelConfig
+	}
 	return &GroupCache{
 		ID:            g.ID,
 		Status:        g.Status,
@@ -285,6 +305,7 @@ func (g *Group) ToGroupCache() *GroupCache {
 		TPMRatio:      g.TPMRatio,
 		TPM:           g.TPM,
 		AvailableSets: g.AvailableSets,
+		ModelConfigs:  modelConfigs,
 	}
 }
 
@@ -389,7 +410,7 @@ func CacheSetGroup(group *GroupCache) error {
 
 func CacheGetGroup(id string) (*GroupCache, error) {
 	if !common.RedisEnabled {
-		group, err := GetGroupByID(id)
+		group, err := GetGroupByID(id, true)
 		if err != nil {
 			return nil, err
 		}
@@ -406,7 +427,7 @@ func CacheGetGroup(id string) (*GroupCache, error) {
 		log.Errorf("get group (%s) from redis error: %s", id, err.Error())
 	}
 
-	group, err := GetGroupByID(id)
+	group, err := GetGroupByID(id, true)
 	if err != nil {
 		return nil, err
 	}
@@ -440,20 +461,20 @@ func CacheUpdateGroupUsedAmountOnlyIncrease(id string, amount float64) error {
 }
 
 //nolint:gosec
-func CacheGetGroupModelTPM(id string, model string) (int64, error) {
+func CacheGetGroupModelTPM(group string, model string) (int64, error) {
 	if !common.RedisEnabled {
-		return GetGroupModelTPM(id, model)
+		return GetGroupModelTPM(group, model)
 	}
 
-	cacheKey := fmt.Sprintf(GroupModelTPMKey, id)
+	cacheKey := fmt.Sprintf(GroupModelTPMKey, group)
 	tpm, err := common.RDB.HGet(context.Background(), cacheKey, model).Int64()
 	if err == nil {
 		return tpm, nil
 	} else if !errors.Is(err, redis.Nil) {
-		log.Errorf("get group model tpm (%s:%s) from redis error: %s", id, model, err.Error())
+		log.Errorf("get group model tpm (%s:%s) from redis error: %s", group, model, err.Error())
 	}
 
-	tpm, err = GetGroupModelTPM(id, model)
+	tpm, err = GetGroupModelTPM(group, model)
 	if err != nil {
 		return 0, err
 	}
@@ -464,7 +485,7 @@ func CacheGetGroupModelTPM(id string, model string) (int64, error) {
 	pipe.Expire(context.Background(), cacheKey, 2*time.Second+time.Duration(rand.Int64N(3))*time.Second)
 	_, err = pipe.Exec(context.Background())
 	if err != nil {
-		log.Errorf("set group model tpm (%s:%s) to redis error: %s", id, model, err.Error())
+		log.Errorf("set group model tpm (%s:%s) to redis error: %s", group, model, err.Error())
 	}
 
 	return tpm, nil

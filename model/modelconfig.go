@@ -21,13 +21,13 @@ type ModelConfig struct {
 	CreatedAt        time.Time              `gorm:"index;autoCreateTime"          json:"created_at"`
 	UpdatedAt        time.Time              `gorm:"index;autoUpdateTime"          json:"updated_at"`
 	Config           map[ModelConfigKey]any `gorm:"serializer:fastjson;type:text" json:"config,omitempty"`
-	ImagePrices      map[string]float64     `gorm:"serializer:fastjson;type:text" json:"image_prices,omitempty"`
 	Model            string                 `gorm:"primaryKey"                    json:"model"`
 	Owner            ModelOwner             `gorm:"type:varchar(255);index"       json:"owner"`
 	Type             mode.Mode              `json:"type"`
 	ExcludeFromTests bool                   `json:"exclude_from_tests,omitempty"`
 	RPM              int64                  `json:"rpm,omitempty"`
 	TPM              int64                  `json:"tpm,omitempty"`
+	ImagePrices      map[string]float64     `gorm:"serializer:fastjson;type:text" json:"image_prices,omitempty"`
 	Price            Price                  `gorm:"embedded"                      json:"price,omitempty"`
 }
 
@@ -37,17 +37,35 @@ func NewDefaultModelConfig(model string) *ModelConfig {
 	}
 }
 
+func (c *ModelConfig) LoadFromGroupModelConfig(groupModelConfig GroupModelConfig) ModelConfig {
+	newC := *c
+	if groupModelConfig.OverrideLimit {
+		newC.RPM = groupModelConfig.RPM
+		newC.TPM = groupModelConfig.TPM
+	}
+	if groupModelConfig.OverridePrice {
+		newC.ImagePrices = groupModelConfig.ImagePrices
+		newC.Price = groupModelConfig.Price
+	}
+	return newC
+}
+
 func (c *ModelConfig) MarshalJSON() ([]byte, error) {
 	type Alias ModelConfig
-	return sonic.Marshal(&struct {
+	a := &struct {
 		*Alias
 		CreatedAt int64 `json:"created_at,omitempty"`
 		UpdatedAt int64 `json:"updated_at,omitempty"`
 	}{
-		Alias:     (*Alias)(c),
-		CreatedAt: c.CreatedAt.UnixMilli(),
-		UpdatedAt: c.UpdatedAt.UnixMilli(),
-	})
+		Alias: (*Alias)(c),
+	}
+	if !c.CreatedAt.IsZero() {
+		a.CreatedAt = c.CreatedAt.UnixMilli()
+	}
+	if !c.UpdatedAt.IsZero() {
+		a.UpdatedAt = c.UpdatedAt.UnixMilli()
+	}
+	return sonic.Marshal(a)
 }
 
 func (c *ModelConfig) MaxContextTokens() (int, bool) {
@@ -91,25 +109,41 @@ func GetModelConfigs(page int, perPage int, model string) (configs []*ModelConfi
 		return nil, 0, nil
 	}
 	limit, offset := toLimitOffset(page, perPage)
-	err = tx.Order("created_at desc").Limit(limit).Offset(offset).Find(&configs).Error
+	err = tx.
+		Order("created_at desc").
+		Omit("created_at", "updated_at").
+		Limit(limit).
+		Offset(offset).
+		Find(&configs).
+		Error
 	return configs, total, err
 }
 
 func GetAllModelConfigs() (configs []*ModelConfig, err error) {
 	tx := DB.Model(&ModelConfig{})
-	err = tx.Order("created_at desc").Find(&configs).Error
+	err = tx.Order("created_at desc").
+		Omit("created_at", "updated_at").
+		Find(&configs).
+		Error
 	return configs, err
 }
 
 func GetModelConfigsByModels(models []string) (configs []*ModelConfig, err error) {
 	tx := DB.Model(&ModelConfig{}).Where("model IN (?)", models)
-	err = tx.Order("created_at desc").Find(&configs).Error
+	err = tx.Order("created_at desc").
+		Omit("created_at", "updated_at").
+		Find(&configs).
+		Error
 	return configs, err
 }
 
 func GetModelConfig(model string) (*ModelConfig, error) {
 	config := &ModelConfig{}
-	err := DB.Model(&ModelConfig{}).Where("model = ?", model).First(config).Error
+	err := DB.Model(&ModelConfig{}).
+		Where("model = ?", model).
+		Omit("created_at", "updated_at").
+		First(config).
+		Error
 	return config, HandleNotFound(err, ErrModelConfigNotFound)
 }
 
@@ -155,7 +189,12 @@ func SearchModelConfigs(keyword string, page int, perPage int, model string, own
 		return nil, 0, nil
 	}
 	limit, offset := toLimitOffset(page, perPage)
-	err = tx.Order("created_at desc").Limit(limit).Offset(offset).Find(&configs).Error
+	err = tx.Order("created_at desc").
+		Omit("created_at", "updated_at").
+		Limit(limit).
+		Offset(offset).
+		Find(&configs).
+		Error
 	return configs, total, err
 }
 

@@ -57,9 +57,19 @@ func SetAPIRouter(router *gin.Engine) {
 			groupRoute.DELETE("/:group", controller.DeleteGroup)
 			groupRoute.POST("/:group/status", controller.UpdateGroupStatus)
 			groupRoute.POST("/:group/rpm_ratio", controller.UpdateGroupRPMRatio)
-			groupRoute.POST("/:group/rpm", controller.UpdateGroupRPM)
 			groupRoute.POST("/:group/tpm_ratio", controller.UpdateGroupTPMRatio)
-			groupRoute.POST("/:group/tpm", controller.UpdateGroupTPM)
+
+			groupModelConfigRoute := groupRoute.Group("/:group/model_config")
+			{
+				groupModelConfigRoute.GET("/", controller.GetGroupModelConfigs)
+				groupModelConfigRoute.POST("/", controller.SaveGroupModelConfigs)
+				groupModelConfigRoute.PUT("/", controller.UpdateGroupModelConfigs)
+				groupModelConfigRoute.DELETE("/", controller.DeleteGroupModelConfigs)
+				groupModelConfigRoute.POST("/:model", controller.SaveGroupModelConfig)
+				groupModelConfigRoute.PUT("/:model", controller.UpdateGroupModelConfig)
+				groupModelConfigRoute.DELETE("/:model", controller.DeleteGroupModelConfig)
+				groupModelConfigRoute.GET("/:model", controller.GetGroupModelConfig)
+			}
 		}
 
 		optionRoute := apiRouter.Group("/option")

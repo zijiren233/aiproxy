@@ -156,7 +156,9 @@ func StreamHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model
 	log := middleware.GetLogger(c)
 
 	scanner := bufio.NewScanner(resp.Body)
-	scanner.Split(bufio.ScanLines)
+	buf := openai.GetScannerBuffer()
+	defer openai.PutScannerBuffer(buf)
+	scanner.Buffer(*buf, cap(*buf))
 
 	common.SetEventStreamHeaders(c)
 	var usage model.Usage
