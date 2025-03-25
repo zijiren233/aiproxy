@@ -169,42 +169,42 @@ func ConvertRequest(meta *meta.Meta, req *http.Request) (*Request, error) {
 				content.ToolUseID = message.ToolCallID
 			}
 			claudeMessage.Content = append(claudeMessage.Content, content)
-			for _, toolCall := range message.ToolCalls {
-				inputParam := make(map[string]any)
-				_ = sonic.Unmarshal(conv.StringToBytes(toolCall.Function.Arguments), &inputParam)
-				claudeMessage.Content = append(claudeMessage.Content, Content{
-					Type:  toolUseType,
-					ID:    toolCall.ID,
-					Name:  toolCall.Function.Name,
-					Input: inputParam,
-				})
-			}
-			claudeRequest.Messages = append(claudeRequest.Messages, claudeMessage)
-			continue
-		}
-		var contents []Content
-		openaiContent := message.ParseContent()
-		for _, part := range openaiContent {
-			var content Content
-			switch part.Type {
-			case model.ContentTypeText:
-				content.Type = conetentTypeText
-				content.Text = part.Text
-			case model.ContentTypeImageURL:
-				content.Type = conetentTypeImage
-				content.Source = &ImageSource{
-					Type: "base64",
+		} else {
+			var contents []Content
+			openaiContent := message.ParseContent()
+			for _, part := range openaiContent {
+				var content Content
+				switch part.Type {
+				case model.ContentTypeText:
+					content.Type = conetentTypeText
+					content.Text = part.Text
+				case model.ContentTypeImageURL:
+					content.Type = conetentTypeImage
+					content.Source = &ImageSource{
+						Type: "base64",
+					}
+					mimeType, data, err := image.GetImageFromURL(req.Context(), part.ImageURL.URL)
+					if err != nil {
+						return nil, err
+					}
+					content.Source.MediaType = mimeType
+					content.Source.Data = data
 				}
-				mimeType, data, err := image.GetImageFromURL(req.Context(), part.ImageURL.URL)
-				if err != nil {
-					return nil, err
-				}
-				content.Source.MediaType = mimeType
-				content.Source.Data = data
+				contents = append(contents, content)
 			}
-			contents = append(contents, content)
+			claudeMessage.Content = contents
 		}
-		claudeMessage.Content = contents
+
+		for _, toolCall := range message.ToolCalls {
+			inputParam := make(map[string]any)
+			_ = sonic.UnmarshalString(toolCall.Function.Arguments, &inputParam)
+			claudeMessage.Content = append(claudeMessage.Content, Content{
+				Type:  toolUseType,
+				ID:    toolCall.ID,
+				Name:  toolCall.Function.Name,
+				Input: inputParam,
+			})
+		}
 		claudeRequest.Messages = append(claudeRequest.Messages, claudeMessage)
 	}
 
@@ -303,17 +303,14 @@ func StreamResponse2OpenAI(meta *meta.Meta, claudeResponse *StreamResponse) *mod
 func Response2OpenAI(meta *meta.Meta, claudeResponse *Response) *model.TextResponse {
 	var content string
 	var thinking string
+	tools := make([]*model.Tool, 0)
 	for _, v := range claudeResponse.Content {
 		switch v.Type {
 		case conetentTypeText:
 			content = v.Text
 		case conetentTypeThinking:
 			thinking = v.Thinking
-		}
-	}
-	tools := make([]*model.Tool, 0)
-	for _, v := range claudeResponse.Content {
-		if v.Type == toolUseType {
+		case toolUseType:
 			args, _ := sonic.MarshalString(v.Input)
 			tools = append(tools, &model.Tool{
 				ID:   v.ID,
@@ -325,6 +322,7 @@ func Response2OpenAI(meta *meta.Meta, claudeResponse *Response) *model.TextRespo
 			})
 		}
 	}
+
 	choice := model.TextResponseChoice{
 		Index: 0,
 		Message: model.Message{
