@@ -226,8 +226,6 @@ func StreamResponse2OpenAI(meta *meta.Meta, claudeResponse *StreamResponse) *mod
 	tools := make([]*model.Tool, 0)
 
 	switch claudeResponse.Type {
-	case "message_start":
-		return nil
 	case "content_block_start":
 		if claudeResponse.ContentBlock != nil {
 			content = claudeResponse.ContentBlock.Text
@@ -258,6 +256,20 @@ func StreamResponse2OpenAI(meta *meta.Meta, claudeResponse *StreamResponse) *mod
 				content = claudeResponse.Delta.Text
 			}
 		}
+	case "message_start":
+		if claudeResponse.Message == nil {
+			return nil
+		}
+		usage := claudeResponse.Message.Usage
+		openaiResponse.Usage = &model.Usage{
+			PromptTokens:     usage.InputTokens + usage.CacheReadInputTokens + usage.CacheCreationInputTokens,
+			CompletionTokens: usage.OutputTokens,
+			PromptTokensDetails: &model.PromptTokensDetails{
+				CachedTokens:        usage.CacheReadInputTokens,
+				CacheCreationTokens: usage.CacheCreationInputTokens,
+			},
+		}
+		openaiResponse.Usage.TotalTokens = openaiResponse.Usage.PromptTokens + openaiResponse.Usage.CompletionTokens
 	case "message_delta":
 		if claudeResponse.Usage != nil {
 			openaiResponse.Usage = &model.Usage{
@@ -345,6 +357,9 @@ func Response2OpenAI(meta *meta.Meta, claudeResponse *Response) *model.TextRespo
 			},
 		},
 	}
+	if fullTextResponse.Usage.PromptTokens == 0 {
+		fullTextResponse.Usage.PromptTokens = meta.InputTokens
+	}
 	fullTextResponse.Usage.TotalTokens = fullTextResponse.Usage.PromptTokens + fullTextResponse.Usage.CompletionTokens
 	return &fullTextResponse
 }
@@ -403,17 +418,16 @@ func StreamHandler(m *meta.Meta, c *gin.Context, resp *http.Response) (*model.Us
 			continue
 		}
 		if response.Usage != nil {
-			if response.Usage.PromptTokens == 0 {
-				response.Usage.PromptTokens = m.InputTokens
-				response.Usage.TotalTokens += m.InputTokens
-			}
-			usage = *response.Usage
+			usage.Add(response.Usage)
+			response.Usage = &usage
 			usageWrited = true
 			responseText.Reset()
 		} else if !usageWrited {
 			for _, choice := range response.Choices {
 				responseText.WriteString(choice.Delta.StringContent())
 			}
+		} else {
+			response.Usage = &usage
 		}
 
 		if lastToolCallChoice != nil && len(lastToolCallChoice.Delta.ToolCalls) > 0 {

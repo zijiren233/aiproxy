@@ -13,9 +13,32 @@ type Usage struct {
 	PromptTokensDetails *PromptTokensDetails `json:"prompt_tokens_details,omitempty"`
 }
 
+func (u *Usage) Add(other *Usage) {
+	if other == nil {
+		return
+	}
+	u.PromptTokens += other.PromptTokens
+	u.CompletionTokens += other.CompletionTokens
+	u.TotalTokens += other.TotalTokens
+	if other.PromptTokensDetails != nil {
+		if u.PromptTokensDetails == nil {
+			u.PromptTokensDetails = &PromptTokensDetails{}
+		}
+		u.PromptTokensDetails.Add(other.PromptTokensDetails)
+	}
+}
+
 type PromptTokensDetails struct {
 	CachedTokens        int `json:"cached_tokens"`
 	CacheCreationTokens int `json:"cache_creation_tokens"`
+}
+
+func (d *PromptTokensDetails) Add(other *PromptTokensDetails) {
+	if other == nil {
+		return
+	}
+	d.CachedTokens += other.CachedTokens
+	d.CacheCreationTokens += other.CacheCreationTokens
 }
 
 type Error struct {
