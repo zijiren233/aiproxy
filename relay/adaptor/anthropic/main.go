@@ -423,6 +423,10 @@ func StreamHandler(m *meta.Meta, c *gin.Context, resp *http.Response) (*model.Us
 				usage = &model.Usage{}
 			}
 			usage.Add(response.Usage)
+			if usage.PromptTokens == 0 {
+				usage.PromptTokens = m.InputTokens
+				usage.TotalTokens += m.InputTokens
+			}
 			response.Usage = usage
 			responseText.Reset()
 		case usage == nil:
