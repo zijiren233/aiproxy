@@ -363,6 +363,12 @@ func buildGetLogsQuery(
 	} else if group != "*" {
 		tx = tx.Where("group_id = ?", group)
 	}
+	if modelName != "" {
+		tx = tx.Where("model = ?", modelName)
+	}
+	if tokenName != "" {
+		tx = tx.Where("token_name = ?", tokenName)
+	}
 
 	switch {
 	case !startTimestamp.IsZero() && !endTimestamp.IsZero():
@@ -372,38 +378,36 @@ func buildGetLogsQuery(
 	case !endTimestamp.IsZero():
 		tx = tx.Where("request_at <= ?", endTimestamp)
 	}
-	if tokenName != "" {
-		tx = tx.Where("token_name = ?", tokenName)
-	}
-	if modelName != "" {
-		tx = tx.Where("model = ?", modelName)
-	}
-	if mode != 0 {
-		tx = tx.Where("mode = ?", mode)
-	}
+
 	if requestID != "" {
 		tx = tx.Where("request_id = ?", requestID)
 	}
-	if tokenID != 0 {
-		tx = tx.Where("token_id = ?", tokenID)
-	}
-	if channelID != 0 {
-		tx = tx.Where("channel_id = ?", channelID)
-	}
-	if endpoint != "" {
-		tx = tx.Where("endpoint = ?", endpoint)
-	}
-	if ip != "" {
-		tx = tx.Where("ip = ?", ip)
-	}
+
 	switch codeType {
 	case CodeTypeSuccess:
 		tx = tx.Where("code = 200")
 	case CodeTypeError:
 		tx = tx.Where("code != 200")
 	}
+
 	if resultOnly {
 		tx = tx.Where("downstream_result = true")
+	}
+
+	if channelID != 0 {
+		tx = tx.Where("channel_id = ?", channelID)
+	}
+	if tokenID != 0 {
+		tx = tx.Where("token_id = ?", tokenID)
+	}
+	if ip != "" {
+		tx = tx.Where("ip = ?", ip)
+	}
+	if mode != 0 {
+		tx = tx.Where("mode = ?", mode)
+	}
+	if endpoint != "" {
+		tx = tx.Where("endpoint = ?", endpoint)
 	}
 	return tx
 }
@@ -608,13 +612,11 @@ func buildSearchLogsQuery(
 	} else if group != "*" {
 		tx = tx.Where("group_id = ?", group)
 	}
-
-	if tokenName != "" {
-		tx = tx.Where("token_name = ?", tokenName)
-	}
-
 	if modelName != "" {
 		tx = tx.Where("model = ?", modelName)
+	}
+	if tokenName != "" {
+		tx = tx.Where("token_name = ?", tokenName)
 	}
 
 	switch {
@@ -629,12 +631,6 @@ func buildSearchLogsQuery(
 	if requestID != "" {
 		tx = tx.Where("request_id = ?", requestID)
 	}
-	if tokenID != 0 {
-		tx = tx.Where("token_id = ?", tokenID)
-	}
-	if channelID != 0 {
-		tx = tx.Where("channel_id = ?", channelID)
-	}
 
 	switch codeType {
 	case CodeTypeSuccess:
@@ -642,14 +638,20 @@ func buildSearchLogsQuery(
 	case CodeTypeError:
 		tx = tx.Where("code != 200")
 	}
+
 	if resultOnly {
 		tx = tx.Where("downstream_result = true")
 	}
 
+	if channelID != 0 {
+		tx = tx.Where("channel_id = ?", channelID)
+	}
+	if tokenID != 0 {
+		tx = tx.Where("token_id = ?", tokenID)
+	}
 	if ip != "" {
 		tx = tx.Where("ip = ?", ip)
 	}
-
 	if mode != 0 {
 		tx = tx.Where("mode = ?", mode)
 	}
@@ -666,12 +668,12 @@ func buildSearchLogsQuery(
 			conditions = append(conditions, "group_id = ?")
 			values = append(values, keyword)
 		}
-		if tokenName == "" {
-			conditions = append(conditions, "token_name = ?")
-			values = append(values, keyword)
-		}
 		if modelName == "" {
 			conditions = append(conditions, "model = ?")
+			values = append(values, keyword)
+		}
+		if tokenName == "" {
+			conditions = append(conditions, "token_name = ?")
 			values = append(values, keyword)
 		}
 		if requestID == "" {
@@ -990,8 +992,11 @@ func getChartData(group string, start, end time.Time, tokenName, modelName strin
 		query = query.Where("group_id = ?", group)
 	}
 
-	if resultOnly {
-		query = query.Where("downstream_result = true")
+	if modelName != "" {
+		query = query.Where("model = ?", modelName)
+	}
+	if tokenName != "" {
+		query = query.Where("token_name = ?", tokenName)
 	}
 
 	switch {
@@ -1003,11 +1008,8 @@ func getChartData(group string, start, end time.Time, tokenName, modelName strin
 		query = query.Where("request_at <= ?", end)
 	}
 
-	if tokenName != "" {
-		query = query.Where("token_name = ?", tokenName)
-	}
-	if modelName != "" {
-		query = query.Where("model = ?", modelName)
+	if resultOnly {
+		query = query.Where("downstream_result = true")
 	}
 
 	err := query.Scan(&chartData).Error
@@ -1115,11 +1117,11 @@ func getRPM(group string, end time.Time, tokenName, modelName string, resultOnly
 	} else if group != "*" {
 		query = query.Where("group_id = ?", group)
 	}
-	if tokenName != "" {
-		query = query.Where("token_name = ?", tokenName)
-	}
 	if modelName != "" {
 		query = query.Where("model = ?", modelName)
+	}
+	if tokenName != "" {
+		query = query.Where("token_name = ?", tokenName)
 	}
 	if resultOnly {
 		query = query.Where("downstream_result = true")
@@ -1142,11 +1144,11 @@ func getTPM(group string, end time.Time, tokenName, modelName string, resultOnly
 	} else if group != "*" {
 		query = query.Where("group_id = ?", group)
 	}
-	if tokenName != "" {
-		query = query.Where("token_name = ?", tokenName)
-	}
 	if modelName != "" {
 		query = query.Where("model = ?", modelName)
+	}
+	if tokenName != "" {
+		query = query.Where("token_name = ?", tokenName)
 	}
 	if resultOnly {
 		query = query.Where("downstream_result = true")
