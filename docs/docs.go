@@ -6668,13 +6668,28 @@ const docTemplate = `{
         "model.ChartData": {
             "type": "object",
             "properties": {
+                "cache_creation_tokens": {
+                    "type": "integer"
+                },
+                "cached_tokens": {
+                    "type": "integer"
+                },
                 "exception_count": {
+                    "type": "integer"
+                },
+                "input_tokens": {
+                    "type": "integer"
+                },
+                "output_tokens": {
                     "type": "integer"
                 },
                 "request_count": {
                     "type": "integer"
                 },
                 "timestamp": {
+                    "type": "integer"
+                },
+                "total_tokens": {
                     "type": "integer"
                 },
                 "used_amount": {
@@ -7235,10 +7250,25 @@ const docTemplate = `{
         "model.ModelCostRank": {
             "type": "object",
             "properties": {
+                "cache_creation_tokens": {
+                    "type": "integer"
+                },
+                "cached_tokens": {
+                    "type": "integer"
+                },
+                "input_tokens": {
+                    "type": "integer"
+                },
                 "model": {
                     "type": "string"
                 },
+                "output_tokens": {
+                    "type": "integer"
+                },
                 "total": {
+                    "type": "integer"
+                },
+                "total_tokens": {
                     "type": "integer"
                 },
                 "used_amount": {

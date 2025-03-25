@@ -116,36 +116,36 @@ func CreateLogIndexes(db *gorm.DB) error {
 	} else {
 		indexes = []string{
 			// used by global search logs
-			"CREATE INDEX IF NOT EXISTS idx_model_reqat ON logs (model, request_at) INCLUDE (code, used_amount, total_tokens, request_id, downstream_result)",
+			"CREATE INDEX IF NOT EXISTS idx_model_reqat ON logs (model, request_at) INCLUDE (code, request_id, downstream_result)",
 			// used by global search logs
-			"CREATE INDEX IF NOT EXISTS idx_channel_reqat ON logs (channel_id, request_at) INCLUDE (code, used_amount, total_tokens, request_id, downstream_result)",
+			"CREATE INDEX IF NOT EXISTS idx_channel_reqat ON logs (channel_id, request_at) INCLUDE (code, request_id, downstream_result)",
 			// used by global search logs
-			"CREATE INDEX IF NOT EXISTS idx_channel_model_reqat ON logs (channel_id, model, request_at) INCLUDE (code, used_amount, total_tokens, request_id, downstream_result)",
+			"CREATE INDEX IF NOT EXISTS idx_channel_model_reqat ON logs (channel_id, model, request_at) INCLUDE (code, request_id, downstream_result)",
 
 			// global day indexes, used by global dashboard
-			"CREATE INDEX IF NOT EXISTS idx_model_reqat_truncday ON logs (model, request_at, timestamp_trunc_by_day) INCLUDE (code, used_amount, total_tokens, downstream_result)",
+			"CREATE INDEX IF NOT EXISTS idx_model_reqat_truncday ON logs (model, request_at, timestamp_trunc_by_day) INCLUDE (code, downstream_result)",
 			// global hour indexes, used by global dashboard
-			"CREATE INDEX IF NOT EXISTS idx_model_reqat_trunchour ON logs (model, request_at, timestamp_trunc_by_hour) INCLUDE (code, used_amount, total_tokens, downstream_result)",
+			"CREATE INDEX IF NOT EXISTS idx_model_reqat_trunchour ON logs (model, request_at, timestamp_trunc_by_hour) INCLUDE (code, downstream_result)",
 
 			// used by search group logs
-			"CREATE INDEX IF NOT EXISTS idx_group_token_reqat ON logs (group_id, token_name, request_at) INCLUDE (code, used_amount, total_tokens, request_id, downstream_result)",
+			"CREATE INDEX IF NOT EXISTS idx_group_token_reqat ON logs (group_id, token_name, request_at) INCLUDE (code, request_id, downstream_result)",
 			// used by search group logs
-			"CREATE INDEX IF NOT EXISTS idx_group_token_reqat ON logs (group_id, token_name, request_at) INCLUDE (code, used_amount, total_tokens, request_id, downstream_result)",
+			"CREATE INDEX IF NOT EXISTS idx_group_token_reqat ON logs (group_id, token_name, request_at) INCLUDE (code, request_id, downstream_result)",
 			// used by search group logs
-			"CREATE INDEX IF NOT EXISTS idx_group_model_reqat ON logs (group_id, model, request_at) INCLUDE (code, used_amount, total_tokens, request_id, downstream_result)",
+			"CREATE INDEX IF NOT EXISTS idx_group_model_reqat ON logs (group_id, model, request_at) INCLUDE (code, request_id, downstream_result)",
 			// used by search group logs
-			"CREATE INDEX IF NOT EXISTS idx_group_token_model_reqat ON logs (group_id, token_name, model, request_at) INCLUDE (code, used_amount, total_tokens, request_id, downstream_result)",
+			"CREATE INDEX IF NOT EXISTS idx_group_token_model_reqat ON logs (group_id, token_name, model, request_at) INCLUDE (code, request_id, downstream_result)",
 
 			// day indexes, used by dashboard
-			"CREATE INDEX IF NOT EXISTS idx_group_reqat_truncday ON logs (group_id, request_at, timestamp_trunc_by_day) INCLUDE (code, used_amount, total_tokens, downstream_result)",
-			"CREATE INDEX IF NOT EXISTS idx_group_model_reqat_truncday ON logs (group_id, model, request_at, timestamp_trunc_by_day) INCLUDE (code, used_amount, total_tokens, downstream_result)",
-			"CREATE INDEX IF NOT EXISTS idx_group_token_reqat_truncday ON logs (group_id, token_name, request_at, timestamp_trunc_by_day) INCLUDE (code, used_amount, total_tokens, downstream_result)",
-			"CREATE INDEX IF NOT EXISTS idx_group_model_token_reqat_truncday ON logs (group_id, model, token_name, request_at, timestamp_trunc_by_day) INCLUDE (code, used_amount, total_tokens, downstream_result)",
+			"CREATE INDEX IF NOT EXISTS idx_group_reqat_truncday ON logs (group_id, request_at, timestamp_trunc_by_day) INCLUDE (downstream_result)",
+			"CREATE INDEX IF NOT EXISTS idx_group_model_reqat_truncday ON logs (group_id, model, request_at, timestamp_trunc_by_day) INCLUDE (downstream_result)",
+			"CREATE INDEX IF NOT EXISTS idx_group_token_reqat_truncday ON logs (group_id, token_name, request_at, timestamp_trunc_by_day) INCLUDE (downstream_result)",
+			"CREATE INDEX IF NOT EXISTS idx_group_model_token_reqat_truncday ON logs (group_id, model, token_name, request_at, timestamp_trunc_by_day) INCLUDE (downstream_result)",
 			// hour indexes, used by dashboard
-			"CREATE INDEX IF NOT EXISTS idx_group_reqat_trunchour ON logs (group_id, request_at, timestamp_trunc_by_hour) INCLUDE (code, used_amount, total_tokens, downstream_result)",
-			"CREATE INDEX IF NOT EXISTS idx_group_model_reqat_trunchour ON logs (group_id, model, request_at, timestamp_trunc_by_hour) INCLUDE (code, used_amount, total_tokens, downstream_result)",
-			"CREATE INDEX IF NOT EXISTS idx_group_token_reqat_trunchour ON logs (group_id, token_name, request_at, timestamp_trunc_by_hour) INCLUDE (code, used_amount, total_tokens, downstream_result)",
-			"CREATE INDEX IF NOT EXISTS idx_group_model_token_reqat_trunchour ON logs (group_id, model, token_name, request_at, timestamp_trunc_by_hour) INCLUDE (code, used_amount, total_tokens, downstream_result)",
+			"CREATE INDEX IF NOT EXISTS idx_group_reqat_trunchour ON logs (group_id, request_at, timestamp_trunc_by_hour) INCLUDE (downstream_result)",
+			"CREATE INDEX IF NOT EXISTS idx_group_model_reqat_trunchour ON logs (group_id, model, request_at, timestamp_trunc_by_hour) INCLUDE (downstream_result)",
+			"CREATE INDEX IF NOT EXISTS idx_group_token_reqat_trunchour ON logs (group_id, token_name, request_at, timestamp_trunc_by_hour) INCLUDE (downstream_result)",
+			"CREATE INDEX IF NOT EXISTS idx_group_model_token_reqat_trunchour ON logs (group_id, model, token_name, request_at, timestamp_trunc_by_hour) INCLUDE (downstream_result)",
 		}
 	}
 
@@ -919,10 +919,15 @@ func DeleteGroupLogs(groupID string) (int64, error) {
 }
 
 type ChartData struct {
-	Timestamp      int64   `json:"timestamp"`
-	RequestCount   int64   `json:"request_count"`
-	UsedAmount     float64 `json:"used_amount"`
-	ExceptionCount int64   `json:"exception_count"`
+	Timestamp           int64   `json:"timestamp"`
+	RequestCount        int64   `json:"request_count"`
+	UsedAmount          float64 `json:"used_amount"`
+	InputTokens         int64   `json:"input_tokens"`
+	OutputTokens        int64   `json:"output_tokens"`
+	CachedTokens        int64   `json:"cached_tokens"`
+	CacheCreationTokens int64   `json:"cache_creation_tokens"`
+	TotalTokens         int64   `json:"total_tokens"`
+	ExceptionCount      int64   `json:"exception_count"`
 }
 
 type DashboardResponse struct {
@@ -967,7 +972,7 @@ func getChartData(group string, start, end time.Time, tokenName, modelName strin
 	}
 
 	query := LogDB.Table("logs").
-		Select(timeSpanFormat + " as timestamp, count(*) as request_count, sum(used_amount) as used_amount, sum(case when code != 200 then 1 else 0 end) as exception_count").
+		Select(timeSpanFormat + " as timestamp, count(*) as request_count, sum(used_amount) as used_amount, sum(case when code != 200 then 1 else 0 end) as exception_count, sum(input_tokens) as input_tokens, sum(output_tokens) as output_tokens, sum(cached_tokens) as cached_tokens, sum(cache_creation_tokens) as cache_creation_tokens, sum(total_tokens) as total_tokens").
 		Group("timestamp").
 		Order("timestamp ASC")
 
@@ -1318,16 +1323,21 @@ func GetGroupModelTPM(group string, model string) (int64, error) {
 
 //nolint:revive
 type ModelCostRank struct {
-	Model      string  `json:"model"`
-	UsedAmount float64 `json:"used_amount"`
-	Total      int64   `json:"total"`
+	Model               string  `json:"model"`
+	UsedAmount          float64 `json:"used_amount"`
+	InputTokens         int64   `json:"input_tokens"`
+	OutputTokens        int64   `json:"output_tokens"`
+	CachedTokens        int64   `json:"cached_tokens"`
+	CacheCreationTokens int64   `json:"cache_creation_tokens"`
+	TotalTokens         int64   `json:"total_tokens"`
+	Total               int64   `json:"total"`
 }
 
 func GetModelCostRank(group string, start, end time.Time) ([]*ModelCostRank, error) {
 	var ranks []*ModelCostRank
 
 	query := LogDB.Model(&Log{}).
-		Select("model, SUM(used_amount) as used_amount, COUNT(*) as total").
+		Select("model, SUM(used_amount) as used_amount, SUM(input_tokens) as input_tokens, SUM(output_tokens) as output_tokens, SUM(cached_tokens) as cached_tokens, SUM(cache_creation_tokens) as cache_creation_tokens, SUM(total_tokens) as total_tokens, COUNT(*) as total").
 		Group("model").
 		Order("used_amount DESC")
 
