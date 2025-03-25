@@ -233,8 +233,7 @@ func StreamResponse2OpenAI(meta *meta.Meta, claudeResponse *StreamResponse) *mod
 					ID:   claudeResponse.ContentBlock.ID,
 					Type: "function",
 					Function: model.Function{
-						Name:      claudeResponse.ContentBlock.Name,
-						Arguments: "",
+						Name: claudeResponse.ContentBlock.Name,
 					},
 				})
 			}
@@ -244,6 +243,7 @@ func StreamResponse2OpenAI(meta *meta.Meta, claudeResponse *StreamResponse) *mod
 			switch claudeResponse.Delta.Type {
 			case "input_json_delta":
 				tools = append(tools, &model.Tool{
+					Type: "function",
 					Function: model.Function{
 						Arguments: claudeResponse.Delta.PartialJSON,
 					},
@@ -289,11 +289,7 @@ func StreamResponse2OpenAI(meta *meta.Meta, claudeResponse *StreamResponse) *mod
 	var choice model.ChatCompletionsStreamResponseChoice
 	choice.Delta.Content = content
 	choice.Delta.ReasoningContent = thinking
-
-	if len(tools) > 0 {
-		choice.Delta.Content = nil // compatible with other OpenAI derivative applications, like LobeOpenAICompatibleFactory ...
-		choice.Delta.ToolCalls = tools
-	}
+	choice.Delta.ToolCalls = tools
 	choice.Delta.Role = "assistant"
 	finishReason := stopReasonClaude2OpenAI(&stopReason)
 	if finishReason != "null" {
@@ -318,13 +314,13 @@ func Response2OpenAI(meta *meta.Meta, claudeResponse *Response) *model.TextRespo
 	tools := make([]*model.Tool, 0)
 	for _, v := range claudeResponse.Content {
 		if v.Type == toolUseType {
-			args, _ := sonic.Marshal(v.Input)
+			args, _ := sonic.MarshalString(v.Input)
 			tools = append(tools, &model.Tool{
 				ID:   v.ID,
-				Type: "function", // compatible with other OpenAI derivative applications
+				Type: "function",
 				Function: model.Function{
 					Name:      v.Name,
-					Arguments: conv.BytesToString(args),
+					Arguments: args,
 				},
 			})
 		}
@@ -382,7 +378,6 @@ func StreamHandler(m *meta.Meta, c *gin.Context, resp *http.Response) (*model.Us
 	responseText := strings.Builder{}
 
 	var usage *model.Usage
-	var lastToolCallChoice *model.ChatCompletionsStreamResponseChoice
 
 	for scanner.Scan() {
 		data := scanner.Bytes()
@@ -427,20 +422,6 @@ func StreamHandler(m *meta.Meta, c *gin.Context, resp *http.Response) (*model.Us
 			response.Usage = usage
 		}
 
-		if lastToolCallChoice != nil && len(lastToolCallChoice.Delta.ToolCalls) > 0 {
-			lastArgs := &lastToolCallChoice.Delta.ToolCalls[len(lastToolCallChoice.Delta.ToolCalls)-1].Function
-			if len(lastArgs.Arguments) == 0 { // compatible with OpenAI sending an empty object `{}` when no arguments.
-				lastArgs.Arguments = "{}"
-				response.Choices[len(response.Choices)-1].Delta.Content = nil
-				response.Choices[len(response.Choices)-1].Delta.ToolCalls = lastToolCallChoice.Delta.ToolCalls
-			}
-		}
-
-		for _, choice := range response.Choices {
-			if len(choice.Delta.ToolCalls) > 0 {
-				lastToolCallChoice = choice
-			}
-		}
 		_ = render.ObjectData(c, response)
 	}
 
