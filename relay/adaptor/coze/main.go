@@ -3,6 +3,7 @@ package coze
 import (
 	"bufio"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/bytedance/sonic"
@@ -96,10 +97,13 @@ func StreamHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model
 
 	log := middleware.GetLogger(c)
 
-	var responseText string
+	responseText := strings.Builder{}
 	createdTime := time.Now().Unix()
+
 	scanner := bufio.NewScanner(resp.Body)
-	scanner.Split(bufio.ScanLines)
+	buf := openai.GetScannerBuffer()
+	defer openai.PutScannerBuffer(buf)
+	scanner.Buffer(*buf, cap(*buf))
 
 	common.SetEventStreamHeaders(c)
 
@@ -127,7 +131,7 @@ func StreamHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model
 		}
 
 		for _, choice := range response.Choices {
-			responseText += conv.AsString(choice.Delta.Content)
+			responseText.WriteString(choice.Delta.StringContent())
 		}
 		response.Model = meta.OriginModel
 		response.Created = createdTime
@@ -141,7 +145,7 @@ func StreamHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model
 
 	render.Done(c)
 
-	return openai.ResponseText2Usage(responseText, meta.ActualModel, meta.InputTokens), nil
+	return openai.ResponseText2Usage(responseText.String(), meta.ActualModel, meta.InputTokens), nil
 }
 
 func Handler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, *model.ErrorWithStatusCode) {

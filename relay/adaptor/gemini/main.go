@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/bytedance/sonic"
@@ -485,6 +486,27 @@ func streamResponseChat2OpenAI(meta *meta.Meta, geminiResponse *ChatResponse) *m
 	return response
 }
 
+const imageScannerBufferSize = 2 * 1024 * 1024
+
+var scannerBufferPool = sync.Pool{
+	New: func() any {
+		buf := make([]byte, imageScannerBufferSize)
+		return &buf
+	},
+}
+
+//nolint:forcetypeassert
+func GetImageScannerBuffer() *[]byte {
+	return scannerBufferPool.Get().(*[]byte)
+}
+
+func PutImageScannerBuffer(buf *[]byte) {
+	if cap(*buf) != imageScannerBufferSize {
+		return
+	}
+	scannerBufferPool.Put(buf)
+}
+
 func StreamHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, *model.ErrorWithStatusCode) {
 	defer resp.Body.Close()
 
@@ -497,9 +519,15 @@ func StreamHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model
 	responseText := strings.Builder{}
 
 	scanner := bufio.NewScanner(resp.Body)
-	buf := openai.GetScannerBuffer()
-	defer openai.PutScannerBuffer(buf)
-	scanner.Buffer(*buf, cap(*buf))
+	if strings.Contains(meta.ActualModel, "image") {
+		buf := GetImageScannerBuffer()
+		defer PutImageScannerBuffer(buf)
+		scanner.Buffer(*buf, cap(*buf))
+	} else {
+		buf := openai.GetScannerBuffer()
+		defer openai.PutScannerBuffer(buf)
+		scanner.Buffer(*buf, cap(*buf))
+	}
 
 	common.SetEventStreamHeaders(c)
 

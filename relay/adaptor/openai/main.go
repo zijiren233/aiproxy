@@ -33,7 +33,7 @@ var (
 	DoneBytes       = conv.StringToBytes(Done)
 )
 
-const scannerBufferSize = 1024 * 1024 * 2
+const scannerBufferSize = 256 * 1024
 
 var scannerBufferPool = sync.Pool{
 	New: func() any {

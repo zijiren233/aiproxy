@@ -3,7 +3,6 @@ package anthropic
 import (
 	"bufio"
 	"net/http"
-	"slices"
 	"strings"
 	"time"
 
@@ -374,18 +373,9 @@ func StreamHandler(m *meta.Meta, c *gin.Context, resp *http.Response) (*model.Us
 	log := middleware.GetLogger(c)
 
 	scanner := bufio.NewScanner(resp.Body)
-	scanner.Split(func(data []byte, atEOF bool) (advance int, token []byte, err error) {
-		if atEOF && len(data) == 0 {
-			return 0, nil, nil
-		}
-		if i := slices.Index(data, '\n'); i >= 0 {
-			return i + 1, data[0:i], nil
-		}
-		if atEOF {
-			return len(data), data, nil
-		}
-		return 0, nil, nil
-	})
+	buf := openai.GetScannerBuffer()
+	defer openai.PutScannerBuffer(buf)
+	scanner.Buffer(*buf, cap(*buf))
 
 	common.SetEventStreamHeaders(c)
 
