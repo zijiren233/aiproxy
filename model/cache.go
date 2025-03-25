@@ -273,12 +273,14 @@ func (r redisGroupModelConfigMap) MarshalBinary() ([]byte, error) {
 }
 
 type GroupCache struct {
-	ID            string                   `json:"-"              redis:"-"`
-	Status        int                      `json:"status"         redis:"st"`
-	UsedAmount    float64                  `json:"used_amount"    redis:"ua"`
-	RPMRatio      float64                  `json:"rpm_ratio"      redis:"rpm_r"`
-	RPM           redisMapStringInt64      `json:"rpm"            redis:"rpm"`
-	TPMRatio      float64                  `json:"tpm_ratio"      redis:"tpm_r"`
+	ID         string  `json:"-"           redis:"-"`
+	Status     int     `json:"status"      redis:"st"`
+	UsedAmount float64 `json:"used_amount" redis:"ua"`
+	RPMRatio   float64 `json:"rpm_ratio"   redis:"rpm_r"`
+	// Deprecated: Use GroupModelConfigs instead
+	RPM      redisMapStringInt64 `json:"rpm"       redis:"rpm"`
+	TPMRatio float64             `json:"tpm_ratio" redis:"tpm_r"`
+	// Deprecated: Use GroupModelConfigs instead
 	TPM           redisMapStringInt64      `json:"tpm"            redis:"tpm"`
 	AvailableSets redisStringSlice         `json:"available_sets" redis:"ass"`
 	ModelConfigs  redisGroupModelConfigMap `json:"model_configs"  redis:"mc"`
