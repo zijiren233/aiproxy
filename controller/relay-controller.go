@@ -585,7 +585,8 @@ func handleRetryResult(ctx *gin.Context, retry bool, newChannel *model.Channel, 
 // 仅当是channel错误时，才需要记录，用户请求参数错误时，不需要记录
 func shouldRetry(_ *gin.Context, statusCode int) bool {
 	return statusCode != http.StatusBadRequest &&
-		statusCode != http.StatusRequestEntityTooLarge
+		statusCode != http.StatusRequestEntityTooLarge &&
+		statusCode != http.StatusUnprocessableEntity
 }
 
 var channelNoPermissionStatusCodesMap = map[int]struct{}{
@@ -601,7 +602,8 @@ func channelHasPermission(statusCode int) bool {
 }
 
 func shouldDelay(statusCode int) bool {
-	return statusCode == http.StatusTooManyRequests
+	return statusCode == http.StatusTooManyRequests ||
+		statusCode == http.StatusServiceUnavailable
 }
 
 func RelayNotImplemented(c *gin.Context) {
