@@ -41,8 +41,10 @@ func (c *ModelConfig) LoadFromGroupModelConfig(groupModelConfig GroupModelConfig
 	newC := *c
 	newC.RPM = groupModelConfig.RPM
 	newC.TPM = groupModelConfig.TPM
-	newC.ImagePrices = groupModelConfig.ImagePrices
-	newC.Price = groupModelConfig.Price
+	if groupModelConfig.OverwritePrice {
+		newC.ImagePrices = groupModelConfig.ImagePrices
+		newC.Price = groupModelConfig.Price
+	}
 	return newC
 }
 

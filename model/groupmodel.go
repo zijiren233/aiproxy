@@ -7,13 +7,15 @@ const (
 )
 
 type GroupModelConfig struct {
-	GroupID     string             `gorm:"primaryKey"                    json:"group_id"`
-	Group       *Group             `gorm:"foreignKey:GroupID"            json:"-"`
-	Model       string             `gorm:"primaryKey"                    json:"model"`
-	RPM         int64              `json:"rpm,omitempty"`
-	TPM         int64              `json:"tpm,omitempty"`
-	ImagePrices map[string]float64 `gorm:"serializer:fastjson;type:text" json:"image_prices,omitempty"`
-	Price       Price              `gorm:"embedded"                      json:"price,omitempty"`
+	GroupID string `gorm:"primaryKey"         json:"group_id"`
+	Group   *Group `gorm:"foreignKey:GroupID" json:"-"`
+	Model   string `gorm:"primaryKey"         json:"model"`
+	RPM     int64  `json:"rpm,omitempty"`
+	TPM     int64  `json:"tpm,omitempty"`
+
+	OverwritePrice bool               `json:"overwrite_price,omitempty"`
+	ImagePrices    map[string]float64 `gorm:"serializer:fastjson;type:text" json:"image_prices,omitempty"`
+	Price          Price              `gorm:"embedded"                      json:"price,omitempty"`
 }
 
 func SaveGroupModelConfig(groupModelConfig *GroupModelConfig) (err error) {

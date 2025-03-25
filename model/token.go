@@ -500,6 +500,9 @@ func UpdateToken(id int, token *Token) (err error) {
 	if token.Name != "" {
 		selects = append(selects, "name")
 	}
+	if token.Status != 0 {
+		selects = append(selects, "status")
+	}
 	result := DB.
 		Select(selects).
 		Where("id = ?", id).
@@ -533,6 +536,9 @@ func UpdateGroupToken(id int, group string, token *Token) (err error) {
 	}
 	if token.Name != "" {
 		selects = append(selects, "name")
+	}
+	if token.Status != 0 {
+		selects = append(selects, "status")
 	}
 	result := DB.
 		Select(selects).
