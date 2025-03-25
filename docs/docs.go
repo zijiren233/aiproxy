@@ -1000,6 +1000,12 @@ const docTemplate = `{
                         "description": "Only return result",
                         "name": "result_only",
                         "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Token usage",
+                        "name": "token_usage",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -1069,6 +1075,12 @@ const docTemplate = `{
                         "type": "boolean",
                         "description": "Only return result",
                         "name": "result_only",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Token usage",
+                        "name": "token_usage",
                         "in": "query"
                     }
                 ],
@@ -1333,7 +1345,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/group/{group}/model_config": {
+        "/api/group/{group}/model_config/": {
             "post": {
                 "security": [
                     {
@@ -1522,7 +1534,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/group/{group}/model_configs": {
+        "/api/group/{group}/model_configs/": {
             "get": {
                 "security": [
                     {
@@ -1566,6 +1578,144 @@ const docTemplate = `{
                                     }
                                 }
                             ]
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Update group model configs",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "group"
+                ],
+                "summary": "Update group model configs",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Group name",
+                        "name": "group",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Group model config information",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/controller.SaveGroupModelConfigRequest"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.APIResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Save group model configs",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "group"
+                ],
+                "summary": "Save group model configs",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Group name",
+                        "name": "group",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Group model config information",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/controller.SaveGroupModelConfigRequest"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.APIResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Delete group model configs",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "group"
+                ],
+                "summary": "Delete group model configs",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Group name",
+                        "name": "group",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Model names",
+                        "name": "models",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.APIResponse"
                         }
                     }
                 }
@@ -3423,6 +3573,12 @@ const docTemplate = `{
                         "description": "End timestamp",
                         "name": "end_timestamp",
                         "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Token usage",
+                        "name": "token_usage",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -3483,6 +3639,12 @@ const docTemplate = `{
                         "type": "integer",
                         "description": "End timestamp",
                         "name": "end_timestamp",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Token usage",
+                        "name": "token_usage",
                         "in": "query"
                     }
                 ],
@@ -6291,12 +6453,6 @@ const docTemplate = `{
                 "created_at": {
                     "type": "string"
                 },
-                "group_model_configs": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/model.GroupModelConfig"
-                    }
-                },
                 "id": {
                     "type": "string"
                 },
@@ -6418,6 +6574,12 @@ const docTemplate = `{
                 },
                 "model": {
                     "type": "string"
+                },
+                "override_limit": {
+                    "type": "boolean"
+                },
+                "override_price": {
+                    "type": "boolean"
                 },
                 "price": {
                     "$ref": "#/definitions/model.Price"
@@ -7106,12 +7268,6 @@ const docTemplate = `{
                 "created_at": {
                     "type": "string"
                 },
-                "group_model_configs": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/model.GroupModelConfig"
-                    }
-                },
                 "id": {
                     "type": "string"
                 },
@@ -7196,6 +7352,12 @@ const docTemplate = `{
                 },
                 "model": {
                     "type": "string"
+                },
+                "override_limit": {
+                    "type": "boolean"
+                },
+                "override_price": {
+                    "type": "boolean"
                 },
                 "price": {
                     "$ref": "#/definitions/model.Price"

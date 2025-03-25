@@ -39,9 +39,11 @@ func NewDefaultModelConfig(model string) *ModelConfig {
 
 func (c *ModelConfig) LoadFromGroupModelConfig(groupModelConfig GroupModelConfig) ModelConfig {
 	newC := *c
-	newC.RPM = groupModelConfig.RPM
-	newC.TPM = groupModelConfig.TPM
-	if groupModelConfig.OverwritePrice {
+	if groupModelConfig.OverrideLimit {
+		newC.RPM = groupModelConfig.RPM
+		newC.TPM = groupModelConfig.TPM
+	}
+	if groupModelConfig.OverridePrice {
 		newC.ImagePrices = groupModelConfig.ImagePrices
 		newC.Price = groupModelConfig.Price
 	}

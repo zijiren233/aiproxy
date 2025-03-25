@@ -1,6 +1,9 @@
 package model
 
-import log "github.com/sirupsen/logrus"
+import (
+	log "github.com/sirupsen/logrus"
+	"gorm.io/gorm"
+)
 
 const (
 	GroupModelConfigCacheKey = "group_model_config"
@@ -10,15 +13,17 @@ type GroupModelConfig struct {
 	GroupID string `gorm:"primaryKey"         json:"group_id"`
 	Group   *Group `gorm:"foreignKey:GroupID" json:"-"`
 	Model   string `gorm:"primaryKey"         json:"model"`
-	RPM     int64  `json:"rpm,omitempty"`
-	TPM     int64  `json:"tpm,omitempty"`
 
-	OverwritePrice bool               `json:"overwrite_price,omitempty"`
-	ImagePrices    map[string]float64 `gorm:"serializer:fastjson;type:text" json:"image_prices,omitempty"`
-	Price          Price              `gorm:"embedded"                      json:"price,omitempty"`
+	OverrideLimit bool  `json:"override_limit"`
+	RPM           int64 `json:"rpm"`
+	TPM           int64 `json:"tpm"`
+
+	OverridePrice bool               `json:"override_price"`
+	ImagePrices   map[string]float64 `gorm:"serializer:fastjson;type:text" json:"image_prices,omitempty"`
+	Price         Price              `gorm:"embedded"                      json:"price,omitempty"`
 }
 
-func SaveGroupModelConfig(groupModelConfig *GroupModelConfig) (err error) {
+func SaveGroupModelConfig(groupModelConfig GroupModelConfig) (err error) {
 	defer func() {
 		if err == nil {
 			if err := CacheDeleteGroup(groupModelConfig.GroupID); err != nil {
@@ -26,7 +31,62 @@ func SaveGroupModelConfig(groupModelConfig *GroupModelConfig) (err error) {
 			}
 		}
 	}()
-	return HandleNotFound(DB.Save(groupModelConfig).Error, GroupModelConfigCacheKey)
+	return DB.Save(&groupModelConfig).Error
+}
+
+func UpdateGroupModelConfig(groupModelConfig GroupModelConfig) (err error) {
+	defer func() {
+		if err == nil {
+			if err := CacheDeleteGroup(groupModelConfig.GroupID); err != nil {
+				log.Error("cache delete group failed: " + err.Error())
+			}
+		}
+	}()
+	return HandleNotFound(
+		DB.Model(&groupModelConfig).Updates(groupModelConfig).Error,
+		GroupModelConfigCacheKey,
+	)
+}
+
+func SaveGroupModelConfigs(groupID string, groupModelConfigs []GroupModelConfig) (err error) {
+	defer func() {
+		if err == nil {
+			if err := CacheDeleteGroup(groupID); err != nil {
+				log.Error("cache delete group failed: " + err.Error())
+			}
+		}
+	}()
+	return DB.Transaction(func(tx *gorm.DB) error {
+		for _, groupModelConfig := range groupModelConfigs {
+			groupModelConfig.GroupID = groupID
+			if err := tx.Save(&groupModelConfig).Error; err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+}
+
+func UpdateGroupModelConfigs(groupID string, groupModelConfigs []GroupModelConfig) (err error) {
+	defer func() {
+		if err == nil {
+			if err := CacheDeleteGroup(groupID); err != nil {
+				log.Error("cache delete group failed: " + err.Error())
+			}
+		}
+	}()
+	return DB.Transaction(func(tx *gorm.DB) error {
+		for _, groupModelConfig := range groupModelConfigs {
+			groupModelConfig.GroupID = groupID
+			if err := HandleNotFound(
+				tx.Model(&groupModelConfig).Updates(groupModelConfig).Error,
+				GroupModelConfigCacheKey,
+			); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 }
 
 func DeleteGroupModelConfig(groupID, model string) error {
@@ -35,6 +95,10 @@ func DeleteGroupModelConfig(groupID, model string) error {
 		Delete(&GroupModelConfig{}).
 		Error
 	return HandleNotFound(err, GroupModelConfigCacheKey)
+}
+
+func DeleteGroupModelConfigs(groupID string, models []string) error {
+	return DB.Where("group_id = ? AND model IN ?", groupID, models).Delete(&GroupModelConfig{}).Error
 }
 
 func GetGroupModelConfigs(groupID string) ([]GroupModelConfig, error) {

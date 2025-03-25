@@ -110,10 +110,6 @@ definitions:
         type: array
       created_at:
         type: string
-      group_model_configs:
-        items:
-          $ref: '#/definitions/model.GroupModelConfig'
-        type: array
       id:
         type: string
       request_count:
@@ -194,6 +190,10 @@ definitions:
         type: object
       model:
         type: string
+      override_limit:
+        type: boolean
+      override_price:
+        type: boolean
       price:
         $ref: '#/definitions/model.Price'
       rpm:
@@ -654,10 +654,6 @@ definitions:
         type: array
       created_at:
         type: string
-      group_model_configs:
-        items:
-          $ref: '#/definitions/model.GroupModelConfig'
-        type: array
       id:
         type: string
       request_count:
@@ -714,6 +710,10 @@ definitions:
         type: object
       model:
         type: string
+      override_limit:
+        type: boolean
+      override_price:
+        type: boolean
       price:
         $ref: '#/definitions/model.Price'
       rpm:
@@ -1725,6 +1725,10 @@ paths:
         in: query
         name: result_only
         type: boolean
+      - description: Token usage
+        in: query
+        name: token_usage
+        type: boolean
       produces:
       - application/json
       responses:
@@ -1766,6 +1770,10 @@ paths:
       - description: Only return result
         in: query
         name: result_only
+        type: boolean
+      - description: Token usage
+        in: query
+        name: token_usage
         type: boolean
       produces:
       - application/json
@@ -1924,7 +1932,7 @@ paths:
       summary: Update a group
       tags:
       - group
-  /api/group/{group}/model_config:
+  /api/group/{group}/model_config/:
     post:
       consumes:
       - application/json
@@ -2042,7 +2050,35 @@ paths:
       summary: Update group model config
       tags:
       - group
-  /api/group/{group}/model_configs:
+  /api/group/{group}/model_configs/:
+    delete:
+      description: Delete group model configs
+      parameters:
+      - description: Group name
+        in: path
+        name: group
+        required: true
+        type: string
+      - description: Model names
+        in: body
+        name: models
+        required: true
+        schema:
+          items:
+            type: string
+          type: array
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/middleware.APIResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Delete group model configs
+      tags:
+      - group
     get:
       description: Get group model configs
       parameters:
@@ -2068,6 +2104,66 @@ paths:
       security:
       - ApiKeyAuth: []
       summary: Get group model configs
+      tags:
+      - group
+    post:
+      consumes:
+      - application/json
+      description: Save group model configs
+      parameters:
+      - description: Group name
+        in: path
+        name: group
+        required: true
+        type: string
+      - description: Group model config information
+        in: body
+        name: data
+        required: true
+        schema:
+          items:
+            $ref: '#/definitions/controller.SaveGroupModelConfigRequest'
+          type: array
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/middleware.APIResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Save group model configs
+      tags:
+      - group
+    put:
+      consumes:
+      - application/json
+      description: Update group model configs
+      parameters:
+      - description: Group name
+        in: path
+        name: group
+        required: true
+        type: string
+      - description: Group model config information
+        in: body
+        name: data
+        required: true
+        schema:
+          items:
+            $ref: '#/definitions/controller.SaveGroupModelConfigRequest'
+          type: array
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/middleware.APIResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Update group model configs
       tags:
       - group
   /api/group/{group}/rpm_ratio:
@@ -3188,6 +3284,10 @@ paths:
         in: query
         name: end_timestamp
         type: integer
+      - description: Token usage
+        in: query
+        name: token_usage
+        type: boolean
       produces:
       - application/json
       responses:
@@ -3224,6 +3324,10 @@ paths:
         in: query
         name: end_timestamp
         type: integer
+      - description: Token usage
+        in: query
+        name: token_usage
+        type: boolean
       produces:
       - application/json
       responses:

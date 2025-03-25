@@ -61,11 +61,14 @@ func SetAPIRouter(router *gin.Engine) {
 
 			groupModelConfigRoute := groupRoute.Group("/:group/model_config")
 			{
-				groupModelConfigRoute.POST("/", controller.SaveGroupModelConfig)
-				groupModelConfigRoute.DELETE("/:model", controller.DeleteGroupModelConfig)
 				groupModelConfigRoute.GET("/", controller.GetGroupModelConfigs)
-				groupModelConfigRoute.GET("/:model", controller.GetGroupModelConfig)
+				groupModelConfigRoute.POST("/", controller.SaveGroupModelConfigs)
+				groupModelConfigRoute.PUT("/", controller.UpdateGroupModelConfigs)
+				groupModelConfigRoute.DELETE("/", controller.DeleteGroupModelConfigs)
+				groupModelConfigRoute.POST("/:model", controller.SaveGroupModelConfig)
 				groupModelConfigRoute.PUT("/:model", controller.UpdateGroupModelConfig)
+				groupModelConfigRoute.DELETE("/:model", controller.DeleteGroupModelConfig)
+				groupModelConfigRoute.GET("/:model", controller.GetGroupModelConfig)
 			}
 		}
 
