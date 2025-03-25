@@ -491,8 +491,17 @@ func UpdateToken(id int, token *Token) (err error) {
 			}
 		}
 	}()
+	selects := []string{
+		"subnets",
+		"quota",
+		"models",
+		"expired_at",
+	}
+	if token.Name != "" {
+		selects = append(selects, "name")
+	}
 	result := DB.
-		Select("subnets", "quota", "models", "expired_at").
+		Select(selects).
 		Where("id = ?", id).
 		Clauses(clause.Returning{}).
 		Updates(token)
@@ -516,8 +525,17 @@ func UpdateGroupToken(id int, group string, token *Token) (err error) {
 			}
 		}
 	}()
+	selects := []string{
+		"subnets",
+		"quota",
+		"models",
+		"expired_at",
+	}
+	if token.Name != "" {
+		selects = append(selects, "name")
+	}
 	result := DB.
-		Select("subnets", "quota", "models", "expired_at").
+		Select(selects).
 		Where("id = ? and group_id = ?", id, group).
 		Clauses(clause.Returning{}).
 		Updates(token)

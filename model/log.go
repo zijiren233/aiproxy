@@ -963,7 +963,7 @@ func getTimeSpanFormat(t TimeSpanType) string {
 	}
 }
 
-func getChartData(group string, start, end time.Time, tokenName, modelName string, timeSpan TimeSpanType, resultOnly bool) ([]*ChartData, error) {
+func getChartData(group string, start, end time.Time, tokenName, modelName string, timeSpan TimeSpanType, resultOnly bool, tokenUsage bool) ([]*ChartData, error) {
 	var chartData []*ChartData
 
 	timeSpanFormat := getTimeSpanFormat(timeSpan)
@@ -971,10 +971,18 @@ func getChartData(group string, start, end time.Time, tokenName, modelName strin
 		return nil, errors.New("unsupported time format")
 	}
 
-	query := LogDB.Table("logs").
-		Select(timeSpanFormat + " as timestamp, count(*) as request_count, sum(used_amount) as used_amount, sum(case when code != 200 then 1 else 0 end) as exception_count, sum(input_tokens) as input_tokens, sum(output_tokens) as output_tokens, sum(cached_tokens) as cached_tokens, sum(cache_creation_tokens) as cache_creation_tokens, sum(total_tokens) as total_tokens").
-		Group("timestamp").
-		Order("timestamp ASC")
+	var query *gorm.DB
+	if tokenUsage {
+		query = LogDB.Table("logs").
+			Select(timeSpanFormat + " as timestamp, count(*) as request_count, sum(used_amount) as used_amount, sum(case when code != 200 then 1 else 0 end) as exception_count, sum(input_tokens) as input_tokens, sum(output_tokens) as output_tokens, sum(cached_tokens) as cached_tokens, sum(cache_creation_tokens) as cache_creation_tokens, sum(total_tokens) as total_tokens").
+			Group("timestamp").
+			Order("timestamp ASC")
+	} else {
+		query = LogDB.Table("logs").
+			Select(timeSpanFormat + " as timestamp, count(*) as request_count, sum(used_amount) as used_amount, sum(case when code != 200 then 1 else 0 end) as exception_count").
+			Group("timestamp").
+			Order("timestamp ASC")
+	}
 
 	if group == "" {
 		query = query.Where("group_id IS NULL OR group_id = ''")
@@ -1157,6 +1165,7 @@ func GetDashboardData(
 	timeSpan TimeSpanType,
 	resultOnly bool,
 	needRPM bool,
+	tokenUsage bool,
 ) (*DashboardResponse, error) {
 	if end.IsZero() {
 		end = time.Now()
@@ -1174,7 +1183,7 @@ func GetDashboardData(
 
 	g.Go(func() error {
 		var err error
-		chartData, err = getChartData(group, start, end, "", modelName, timeSpan, resultOnly)
+		chartData, err = getChartData(group, start, end, "", modelName, timeSpan, resultOnly, tokenUsage)
 		return err
 	})
 
@@ -1218,6 +1227,7 @@ func GetGroupDashboardData(
 	timeSpan TimeSpanType,
 	resultOnly bool,
 	needRPM bool,
+	tokenUsage bool,
 ) (*GroupDashboardResponse, error) {
 	if group == "" || group == "*" {
 		return nil, errors.New("group is required")
@@ -1241,7 +1251,7 @@ func GetGroupDashboardData(
 
 	g.Go(func() error {
 		var err error
-		chartData, err = getChartData(group, start, end, tokenName, modelName, timeSpan, resultOnly)
+		chartData, err = getChartData(group, start, end, tokenName, modelName, timeSpan, resultOnly, tokenUsage)
 		return err
 	})
 
@@ -1333,13 +1343,21 @@ type ModelCostRank struct {
 	Total               int64   `json:"total"`
 }
 
-func GetModelCostRank(group string, start, end time.Time) ([]*ModelCostRank, error) {
+func GetModelCostRank(group string, start, end time.Time, tokenUsage bool) ([]*ModelCostRank, error) {
 	var ranks []*ModelCostRank
 
-	query := LogDB.Model(&Log{}).
-		Select("model, SUM(used_amount) as used_amount, SUM(input_tokens) as input_tokens, SUM(output_tokens) as output_tokens, SUM(cached_tokens) as cached_tokens, SUM(cache_creation_tokens) as cache_creation_tokens, SUM(total_tokens) as total_tokens, COUNT(*) as total").
-		Group("model").
-		Order("used_amount DESC")
+	var query *gorm.DB
+	if tokenUsage {
+		query = LogDB.Model(&Log{}).
+			Select("model, SUM(used_amount) as used_amount, SUM(input_tokens) as input_tokens, SUM(output_tokens) as output_tokens, SUM(cached_tokens) as cached_tokens, SUM(cache_creation_tokens) as cache_creation_tokens, SUM(total_tokens) as total_tokens, COUNT(*) as total").
+			Group("model").
+			Order("used_amount DESC")
+	} else {
+		query = LogDB.Model(&Log{}).
+			Select("model, SUM(used_amount) as used_amount, COUNT(*) as total").
+			Group("model").
+			Order("used_amount DESC")
+	}
 
 	if group == "" {
 		query = query.Where("group_id IS NULL OR group_id = ''")
