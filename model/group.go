@@ -26,7 +26,7 @@ type Group struct {
 	CreatedAt         time.Time          `json:"created_at"`
 	ID                string             `gorm:"primaryKey"                    json:"id"`
 	Tokens            []Token            `gorm:"foreignKey:GroupID"            json:"-"`
-	GroupModelConfigs []GroupModelConfig `gorm:"foreignKey:GroupID"            json:"group_model_configs,omitempty"`
+	GroupModelConfigs []GroupModelConfig `gorm:"foreignKey:GroupID"            json:"-"`
 	Status            int                `gorm:"default:1;index"               json:"status"`
 	RPMRatio          float64            `gorm:"index"                         json:"rpm_ratio,omitempty"`
 	RPM               map[string]int64   `gorm:"serializer:fastjson;type:text" json:"rpm"`
