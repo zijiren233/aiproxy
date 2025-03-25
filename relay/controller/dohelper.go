@@ -249,13 +249,14 @@ func updateUsageMetrics(usage relaymodel.Usage, log *log.Entry) {
 	if usage.CompletionTokens > 0 {
 		log.Data["t_output"] = usage.CompletionTokens
 	}
-	if usage.PromptTokensDetails != nil {
-		if usage.PromptTokensDetails.CachedTokens > 0 {
-			log.Data["t_cached"] = usage.PromptTokensDetails.CachedTokens
-		}
-		if usage.PromptTokensDetails.CacheCreationTokens > 0 {
-			log.Data["t_cache_creation"] = usage.PromptTokensDetails.CacheCreationTokens
-		}
-	}
 	log.Data["t_total"] = usage.TotalTokens
+	if usage.PromptTokensDetails == nil {
+		return
+	}
+	if usage.PromptTokensDetails.CachedTokens > 0 {
+		log.Data["t_cached"] = usage.PromptTokensDetails.CachedTokens
+	}
+	if usage.PromptTokensDetails.CacheCreationTokens > 0 {
+		log.Data["t_cache_creation"] = usage.PromptTokensDetails.CacheCreationTokens
+	}
 }

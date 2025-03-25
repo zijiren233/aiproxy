@@ -226,8 +226,6 @@ func StreamResponse2OpenAI(meta *meta.Meta, claudeResponse *StreamResponse) *mod
 	tools := make([]*model.Tool, 0)
 
 	switch claudeResponse.Type {
-	case "message_start":
-		return nil
 	case "content_block_start":
 		if claudeResponse.ContentBlock != nil {
 			content = claudeResponse.ContentBlock.Text
@@ -258,6 +256,20 @@ func StreamResponse2OpenAI(meta *meta.Meta, claudeResponse *StreamResponse) *mod
 				content = claudeResponse.Delta.Text
 			}
 		}
+	case "message_start":
+		if claudeResponse.Message == nil {
+			return nil
+		}
+		usage := claudeResponse.Message.Usage
+		openaiResponse.Usage = &model.Usage{
+			PromptTokens:     usage.InputTokens + usage.CacheReadInputTokens + usage.CacheCreationInputTokens,
+			CompletionTokens: usage.OutputTokens,
+			PromptTokensDetails: &model.PromptTokensDetails{
+				CachedTokens:        usage.CacheReadInputTokens,
+				CacheCreationTokens: usage.CacheCreationInputTokens,
+			},
+		}
+		openaiResponse.Usage.TotalTokens = openaiResponse.Usage.PromptTokens + openaiResponse.Usage.CompletionTokens
 	case "message_delta":
 		if claudeResponse.Usage != nil {
 			openaiResponse.Usage = &model.Usage{
@@ -345,6 +357,9 @@ func Response2OpenAI(meta *meta.Meta, claudeResponse *Response) *model.TextRespo
 			},
 		},
 	}
+	if fullTextResponse.Usage.PromptTokens == 0 {
+		fullTextResponse.Usage.PromptTokens = meta.InputTokens
+	}
 	fullTextResponse.Usage.TotalTokens = fullTextResponse.Usage.PromptTokens + fullTextResponse.Usage.CompletionTokens
 	return &fullTextResponse
 }
@@ -376,9 +391,8 @@ func StreamHandler(m *meta.Meta, c *gin.Context, resp *http.Response) (*model.Us
 
 	responseText := strings.Builder{}
 
-	var usage model.Usage
+	var usage *model.Usage
 	var lastToolCallChoice *model.ChatCompletionsStreamResponseChoice
-	var usageWrited bool
 
 	for scanner.Scan() {
 		data := scanner.Bytes()
@@ -402,18 +416,25 @@ func StreamHandler(m *meta.Meta, c *gin.Context, resp *http.Response) (*model.Us
 		if response == nil {
 			continue
 		}
-		if response.Usage != nil {
-			if response.Usage.PromptTokens == 0 {
-				response.Usage.PromptTokens = m.InputTokens
-				response.Usage.TotalTokens += m.InputTokens
+
+		switch {
+		case response.Usage != nil:
+			if usage == nil {
+				usage = &model.Usage{}
 			}
-			usage = *response.Usage
-			usageWrited = true
+			usage.Add(response.Usage)
+			if usage.PromptTokens == 0 {
+				usage.PromptTokens = m.InputTokens
+				usage.TotalTokens += m.InputTokens
+			}
+			response.Usage = usage
 			responseText.Reset()
-		} else if !usageWrited {
+		case usage == nil:
 			for _, choice := range response.Choices {
 				responseText.WriteString(choice.Delta.StringContent())
 			}
+		default:
+			response.Usage = usage
 		}
 
 		if lastToolCallChoice != nil && len(lastToolCallChoice.Delta.ToolCalls) > 0 {
@@ -437,23 +458,25 @@ func StreamHandler(m *meta.Meta, c *gin.Context, resp *http.Response) (*model.Us
 		log.Error("error reading stream: " + err.Error())
 	}
 
-	if !usageWrited {
-		usage.PromptTokens = m.InputTokens
-		usage.CompletionTokens = openai.CountTokenText(responseText.String(), m.OriginModel)
-		usage.TotalTokens = usage.PromptTokens + usage.CompletionTokens
+	if usage == nil {
+		usage = &model.Usage{
+			PromptTokens:     m.InputTokens,
+			CompletionTokens: openai.CountTokenText(responseText.String(), m.OriginModel),
+			TotalTokens:      m.InputTokens + openai.CountTokenText(responseText.String(), m.OriginModel),
+		}
 		_ = render.ObjectData(c, &model.ChatCompletionsStreamResponse{
 			ID:      openai.ChatCompletionID(),
 			Model:   m.OriginModel,
 			Object:  model.ChatCompletionChunk,
 			Created: time.Now().Unix(),
 			Choices: []*model.ChatCompletionsStreamResponseChoice{},
-			Usage:   &usage,
+			Usage:   usage,
 		})
 	}
 
 	render.Done(c)
 
-	return &usage, nil
+	return usage, nil
 }
 
 func Handler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, *model.ErrorWithStatusCode) {
