@@ -26,6 +26,7 @@ type Meta struct {
 
 	Endpoint    string
 	RequestAt   time.Time
+	RetryAt     time.Time
 	RequestID   string
 	OriginModel string
 	ActualModel string
@@ -51,6 +52,12 @@ func WithRequestID(requestID string) Option {
 func WithRequestAt(requestAt time.Time) Option {
 	return func(meta *Meta) {
 		meta.RequestAt = requestAt
+	}
+}
+
+func WithRetryAt(retryAt time.Time) Option {
+	return func(meta *Meta) {
+		meta.RetryAt = retryAt
 	}
 }
 
@@ -84,12 +91,15 @@ func NewMeta(
 		Mode:        mode,
 		OriginModel: modelName,
 		ActualModel: modelName,
-		RequestAt:   time.Now(),
 		ModelConfig: modelConfig,
 	}
 
 	for _, opt := range opts {
 		opt(&meta)
+	}
+
+	if meta.RequestAt.IsZero() {
+		meta.RequestAt = time.Now()
 	}
 
 	if channel != nil {

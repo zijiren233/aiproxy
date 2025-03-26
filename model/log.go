@@ -56,6 +56,8 @@ type Usage struct {
 type Log struct {
 	RequestDetail        *RequestDetail `gorm:"foreignKey:LogID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"request_detail,omitempty"`
 	RequestAt            time.Time      `gorm:"index"                                                          json:"request_at"`
+	RetryAt              time.Time      `gorm:"index"                                                          json:"retry_at,omitempty"`
+	TTFBMilliseconds     int64          `json:"ttfb_milliseconds,omitempty"`
 	TimestampTruncByDay  int64          `json:"timestamp_trunc_by_day"`
 	TimestampTruncByHour int64          `json:"timestamp_trunc_by_hour"`
 	CreatedAt            time.Time      `gorm:"autoCreateTime;index"                                           json:"created_at"`
@@ -166,6 +168,12 @@ func (l *Log) BeforeSave(_ *gorm.DB) (err error) {
 	if len(l.Content) > contentMaxSize {
 		l.Content = common.TruncateByRune(l.Content, contentMaxSize) + "..."
 	}
+	if l.CreatedAt.IsZero() {
+		l.CreatedAt = time.Now()
+	}
+	if l.RequestAt.IsZero() {
+		l.RequestAt = l.CreatedAt
+	}
 	if l.TimestampTruncByDay == 0 {
 		l.TimestampTruncByDay = l.RequestAt.Truncate(24 * time.Hour).Unix()
 	}
@@ -177,15 +185,20 @@ func (l *Log) BeforeSave(_ *gorm.DB) (err error) {
 
 func (l *Log) MarshalJSON() ([]byte, error) {
 	type Alias Log
-	return sonic.Marshal(&struct {
+	a := &struct {
 		*Alias
 		CreatedAt int64 `json:"created_at"`
 		RequestAt int64 `json:"request_at"`
+		RetryAt   int64 `json:"retry_at,omitempty"`
 	}{
 		Alias:     (*Alias)(l),
 		CreatedAt: l.CreatedAt.UnixMilli(),
 		RequestAt: l.RequestAt.UnixMilli(),
-	})
+	}
+	if !l.RetryAt.IsZero() {
+		a.RetryAt = l.RetryAt.UnixMilli()
+	}
+	return sonic.Marshal(a)
 }
 
 func GetLogDetail(logID int) (*RequestDetail, error) {
@@ -266,6 +279,8 @@ func cleanLogDetail(batchSize int) error {
 func RecordConsumeLog(
 	requestID string,
 	requestAt time.Time,
+	retryAt time.Time,
+	firstByteAt time.Time,
 	group string,
 	code int,
 	channelID int,
@@ -283,11 +298,20 @@ func RecordConsumeLog(
 	modelPrice Price,
 	amount float64,
 ) error {
+	now := time.Now()
+	if requestAt.IsZero() {
+		requestAt = now
+	}
+	if firstByteAt.IsZero() || firstByteAt.Before(requestAt) {
+		firstByteAt = requestAt
+	}
 	log := &Log{
 		RequestID:        requestID,
 		RequestAt:        requestAt,
+		CreatedAt:        now,
+		RetryAt:          retryAt,
+		TTFBMilliseconds: firstByteAt.Sub(requestAt).Milliseconds(),
 		GroupID:          group,
-		CreatedAt:        time.Now(),
 		Code:             code,
 		TokenID:          tokenID,
 		TokenName:        tokenName,

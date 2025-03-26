@@ -23,6 +23,7 @@ func Wait() {
 func AsyncConsume(
 	postGroupConsumer balance.PostGroupConsumer,
 	code int,
+	firstByteAt time.Time,
 	meta *meta.Meta,
 	usage relaymodel.Usage,
 	modelPrice model.Price,
@@ -43,6 +44,7 @@ func AsyncConsume(
 	go Consume(
 		context.Background(),
 		postGroupConsumer,
+		firstByteAt,
 		code,
 		meta,
 		usage,
@@ -58,6 +60,7 @@ func AsyncConsume(
 func Consume(
 	ctx context.Context,
 	postGroupConsumer balance.PostGroupConsumer,
+	firstByteAt time.Time,
 	code int,
 	meta *meta.Meta,
 	usage relaymodel.Usage,
@@ -72,8 +75,10 @@ func Consume(
 
 	amount = consumeAmount(ctx, amount, postGroupConsumer, meta)
 
-	err := recordConsume(meta,
+	err := recordConsume(
+		meta,
 		code,
+		firstByteAt,
 		usage,
 		modelPrice,
 		content,

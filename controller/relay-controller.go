@@ -113,24 +113,24 @@ func RelayHelper(meta *meta.Meta, c *gin.Context, handel RelayHandler) (*control
 			notify.ErrorThrottle(
 				fmt.Sprintf("autoBanned:%d:%s", meta.Channel.ID, meta.OriginModel),
 				time.Minute,
-				fmt.Sprintf("channel[%d] %s(%d) model %s is auto banned",
-					meta.Channel.Type, meta.Channel.Name, meta.Channel.ID, meta.OriginModel),
+				fmt.Sprintf("channel[%d] %s(%d) model %s is auto banned: %d",
+					meta.Channel.Type, meta.Channel.Name, meta.Channel.ID, meta.OriginModel, result.Error.StatusCode),
 				result.Error.JSONOrEmpty(),
 			)
 		case beyondThreshold:
 			notify.WarnThrottle(
 				fmt.Sprintf("beyondThreshold:%d:%s", meta.Channel.ID, meta.OriginModel),
 				time.Minute,
-				fmt.Sprintf("channel[%d] %s(%d) model %s error rate is beyond threshold",
-					meta.Channel.Type, meta.Channel.Name, meta.Channel.ID, meta.OriginModel),
+				fmt.Sprintf("channel[%d] %s(%d) model %s error rate is beyond threshold: %d",
+					meta.Channel.Type, meta.Channel.Name, meta.Channel.ID, meta.OriginModel, result.Error.StatusCode),
 				result.Error.JSONOrEmpty(),
 			)
 		case !hasPermission:
 			notify.ErrorThrottle(
 				fmt.Sprintf("channelHasPermission:%d:%s", meta.Channel.ID, meta.OriginModel),
 				time.Minute,
-				fmt.Sprintf("channel[%d] %s(%d) model %s has no permission",
-					meta.Channel.Type, meta.Channel.Name, meta.Channel.ID, meta.OriginModel),
+				fmt.Sprintf("channel[%d] %s(%d) model %s has no permission: %d",
+					meta.Channel.Type, meta.Channel.Name, meta.Channel.ID, meta.OriginModel, result.Error.StatusCode),
 				result.Error.JSONOrEmpty(),
 			)
 		}
@@ -336,9 +336,15 @@ func recordResult(c *gin.Context, meta *meta.Meta, price model.Price, result *co
 		content = result.Error.JSONOrEmpty()
 	}
 
-	detail := result.Detail
+	var detail *model.RequestDetail
+	firstByteAt := result.Detail.FirstByteAt
 	if code == http.StatusOK && !config.GetSaveAllLogDetail() {
 		detail = nil
+	} else {
+		detail = &model.RequestDetail{
+			RequestBody:  result.Detail.RequestBody,
+			ResponseBody: result.Detail.ResponseBody,
+		}
 	}
 
 	gbc := middleware.GetGroupBalanceConsumerFromContext(c)
@@ -355,6 +361,7 @@ func recordResult(c *gin.Context, meta *meta.Meta, price model.Price, result *co
 	consume.AsyncConsume(
 		gbc.Consumer,
 		code,
+		firstByteAt,
 		meta,
 		result.Usage,
 		price,
@@ -502,6 +509,7 @@ func retryLoop(c *gin.Context, mode mode.Mode, state *retryState, relayControlle
 			newChannel,
 			mode,
 			meta.WithInputTokens(state.inputTokens),
+			meta.WithRetryAt(time.Now()),
 		)
 		var retry bool
 		state.result, retry = RelayHelper(state.meta, c, relayController)

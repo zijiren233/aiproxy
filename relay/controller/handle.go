@@ -6,7 +6,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/common/config"
 	"github.com/labring/aiproxy/middleware"
-	"github.com/labring/aiproxy/model"
 	"github.com/labring/aiproxy/relay/adaptor/openai"
 	"github.com/labring/aiproxy/relay/channeltype"
 	"github.com/labring/aiproxy/relay/meta"
@@ -17,7 +16,7 @@ import (
 type HandleResult struct {
 	Error  *relaymodel.ErrorWithStatusCode
 	Usage  relaymodel.Usage
-	Detail *model.RequestDetail
+	Detail *RequestDetail
 }
 
 func Handle(meta *meta.Meta, c *gin.Context) *HandleResult {
@@ -34,7 +33,7 @@ func Handle(meta *meta.Meta, c *gin.Context) *HandleResult {
 
 	usage, detail, respErr := DoHelper(adaptor, c, meta)
 	if respErr != nil {
-		var logDetail *model.RequestDetail
+		var logDetail *RequestDetail
 		if detail != nil && config.DebugEnabled {
 			logDetail = detail
 			log.Errorf(

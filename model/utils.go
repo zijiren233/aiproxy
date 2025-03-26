@@ -156,6 +156,8 @@ func ProcessBatchUpdates() {
 func BatchRecordConsume(
 	requestID string,
 	requestAt time.Time,
+	retryAt time.Time,
+	firstByteAt time.Time,
 	group string,
 	code int,
 	channelID int,
@@ -176,6 +178,8 @@ func BatchRecordConsume(
 	err := RecordConsumeLog(
 		requestID,
 		requestAt,
+		retryAt,
+		firstByteAt,
 		group,
 		code,
 		channelID,
