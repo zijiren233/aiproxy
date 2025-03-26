@@ -35,6 +35,7 @@ type ChannelConfig struct {
 }
 
 type Channel struct {
+	DeletedAt               gorm.DeletedAt    `gorm:"index"`
 	CreatedAt               time.Time         `gorm:"index"                              json:"created_at"`
 	LastTestErrorAt         time.Time         `json:"last_test_error_at"`
 	ChannelTests            []*ChannelTest    `gorm:"foreignKey:ChannelID;references:ID" json:"channel_tests,omitempty"`
