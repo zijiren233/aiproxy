@@ -57,7 +57,7 @@ type Log struct {
 	RequestDetail        *RequestDetail  `gorm:"foreignKey:LogID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"request_detail,omitempty"`
 	RequestAt            time.Time       `gorm:"index"                                                          json:"request_at"`
 	RetryAt              time.Time       `gorm:"index"                                                          json:"retry_at,omitempty"`
-	TTFBMilliseconds     int64           `json:"ttfb_milliseconds,omitempty"`
+	TTFBMilliseconds     ZeroNullInt64   `json:"ttfb_milliseconds,omitempty"`
 	TimestampTruncByDay  int64           `json:"timestamp_trunc_by_day"`
 	TimestampTruncByHour int64           `json:"timestamp_trunc_by_hour"`
 	CreatedAt            time.Time       `gorm:"autoCreateTime;index"                                           json:"created_at"`
@@ -73,7 +73,7 @@ type Log struct {
 	Code                 int             `gorm:"index"                                                          json:"code,omitempty"`
 	Mode                 int             `json:"mode,omitempty"`
 	IP                   EmptyNullString `gorm:"index"                                                          json:"ip,omitempty"`
-	RetryTimes           int             `json:"retry_times,omitempty"`
+	RetryTimes           ZeroNullInt64   `json:"retry_times,omitempty"`
 	DownstreamResult     bool            `json:"downstream_result,omitempty"`
 	Price                Price           `gorm:"embedded"                                                       json:"price,omitempty"`
 	Usage                Usage           `gorm:"embedded"                                                       json:"usage,omitempty"`
@@ -334,7 +334,7 @@ func RecordConsumeLog(
 		RequestAt:        requestAt,
 		CreatedAt:        now,
 		RetryAt:          retryAt,
-		TTFBMilliseconds: firstByteAt.Sub(requestAt).Milliseconds(),
+		TTFBMilliseconds: ZeroNullInt64(firstByteAt.Sub(requestAt).Milliseconds()),
 		GroupID:          group,
 		Code:             code,
 		TokenID:          tokenID,
@@ -345,7 +345,7 @@ func RecordConsumeLog(
 		ChannelID:        channelID,
 		Endpoint:         EmptyNullString(endpoint),
 		Content:          EmptyNullString(content),
-		RetryTimes:       retryTimes,
+		RetryTimes:       ZeroNullInt64(retryTimes),
 		RequestDetail:    requestDetail,
 		DownstreamResult: downstreamResult,
 		Price:            modelPrice,

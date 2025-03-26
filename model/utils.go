@@ -249,6 +249,31 @@ func BatchRecordConsume(
 	return err
 }
 
+type ZeroNullInt64 int64
+
+func (zni ZeroNullInt64) Value() (driver.Value, error) {
+	if zni == 0 {
+		return nil, nil
+	}
+	return int64(zni), nil
+}
+
+func (zni *ZeroNullInt64) Scan(value any) error {
+	if value == nil {
+		*zni = 0
+		return nil
+	}
+	switch v := value.(type) {
+	case int:
+		*zni = ZeroNullInt64(v)
+	case int64:
+		*zni = ZeroNullInt64(v)
+	default:
+		return fmt.Errorf("unsupported type: %T", v)
+	}
+	return nil
+}
+
 type EmptyNullString string
 
 func (ns EmptyNullString) String() string {
