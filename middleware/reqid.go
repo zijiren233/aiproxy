@@ -7,13 +7,17 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func GenRequestID() string {
-	return strconv.FormatInt(time.Now().UnixMicro(), 10)
+func GenRequestID(t time.Time) string {
+	return strconv.FormatInt(t.UnixMicro(), 10)
 }
+
+const (
+	RequestIDHeader = "X-Request-Id"
+)
 
 func SetRequestID(c *gin.Context, id string) {
 	c.Set(RequestID, id)
-	c.Header(RequestID, id)
+	c.Header(RequestIDHeader, id)
 	log := GetLogger(c)
 	SetLogRequestIDField(log.Data, id)
 }
@@ -23,6 +27,16 @@ func GetRequestID(c *gin.Context) string {
 }
 
 func RequestIDMiddleware(c *gin.Context) {
-	id := GenRequestID()
+	now := time.Now()
+	id := GenRequestID(now)
 	SetRequestID(c, id)
+	SetRequestAt(c, now)
+}
+
+func SetRequestAt(c *gin.Context, requestAt time.Time) {
+	c.Set(RequestAt, requestAt)
+}
+
+func GetRequestAt(c *gin.Context) time.Time {
+	return c.GetTime(RequestAt)
 }

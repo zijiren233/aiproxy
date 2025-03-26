@@ -334,6 +334,7 @@ func distribute(c *gin.Context, mode mode.Mode) {
 		consume.AsyncConsume(
 			nil,
 			http.StatusTooManyRequests,
+			time.Time{},
 			NewMetaByContext(c, nil, mode),
 			relaymodel.Usage{},
 			model.Price{},
@@ -371,9 +372,11 @@ func NewMetaByContext(c *gin.Context,
 	token := GetToken(c)
 	modelName := GetRequestModel(c)
 	modelConfig := GetModelConfig(c)
+	requestAt := GetRequestAt(c)
 
 	opts = append(
 		opts,
+		meta.WithRequestAt(requestAt),
 		meta.WithRequestID(requestID),
 		meta.WithGroup(group),
 		meta.WithToken(token),

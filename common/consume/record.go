@@ -1,6 +1,8 @@
 package consume
 
 import (
+	"time"
+
 	"github.com/labring/aiproxy/model"
 	"github.com/labring/aiproxy/relay/meta"
 	relaymodel "github.com/labring/aiproxy/relay/model"
@@ -9,6 +11,7 @@ import (
 func recordConsume(
 	meta *meta.Meta,
 	code int,
+	firstByteAt time.Time,
 	usage relaymodel.Usage,
 	modelPrice model.Price,
 	content string,
@@ -36,6 +39,8 @@ func recordConsume(
 	return model.BatchRecordConsume(
 		meta.RequestID,
 		meta.RequestAt,
+		meta.RetryAt,
+		firstByteAt,
 		meta.Group.ID,
 		code,
 		channelID,

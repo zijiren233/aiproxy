@@ -6,7 +6,8 @@ const (
 	Token        = "token"
 	GroupBalance = "group_balance"
 	RequestModel = "request_model"
-	RequestID    = "X-Request-Id"
+	RequestAt    = "request_at"
+	RequestID    = "request_id"
 	ModelCaches  = "model_caches"
 	ModelConfig  = "model_config"
 )

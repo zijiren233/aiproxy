@@ -14,7 +14,6 @@ import (
 	"github.com/labring/aiproxy/common/config"
 	"github.com/labring/aiproxy/common/conv"
 	"github.com/labring/aiproxy/middleware"
-	"github.com/labring/aiproxy/model"
 	"github.com/labring/aiproxy/relay/adaptor"
 	"github.com/labring/aiproxy/relay/adaptor/openai"
 	"github.com/labring/aiproxy/relay/meta"
@@ -30,10 +29,14 @@ const (
 
 type responseWriter struct {
 	gin.ResponseWriter
-	body *bytes.Buffer
+	body        *bytes.Buffer
+	firstByteAt time.Time
 }
 
 func (rw *responseWriter) Write(b []byte) (int, error) {
+	if rw.firstByteAt.IsZero() {
+		rw.firstByteAt = time.Now()
+	}
 	if total := rw.body.Len() + len(b); total <= maxBufferSize {
 		rw.body.Write(b)
 	} else {
@@ -43,6 +46,9 @@ func (rw *responseWriter) Write(b []byte) (int, error) {
 }
 
 func (rw *responseWriter) WriteString(s string) (int, error) {
+	if rw.firstByteAt.IsZero() {
+		rw.firstByteAt = time.Now()
+	}
 	if total := rw.body.Len() + len(s); total <= maxBufferSize {
 		rw.body.WriteString(s)
 	} else {
@@ -69,16 +75,22 @@ func putBuffer(buf *bytes.Buffer) {
 	bufferPool.Put(buf)
 }
 
+type RequestDetail struct {
+	RequestBody  string
+	ResponseBody string
+	FirstByteAt  time.Time
+}
+
 func DoHelper(
 	a adaptor.Adaptor,
 	c *gin.Context,
 	meta *meta.Meta,
 ) (
 	relaymodel.Usage,
-	*model.RequestDetail,
+	*RequestDetail,
 	*relaymodel.ErrorWithStatusCode,
 ) {
-	detail := model.RequestDetail{}
+	detail := RequestDetail{}
 
 	// 1. Get request body
 	if err := getRequestBody(meta, c, &detail); err != nil {
@@ -112,7 +124,7 @@ func DoHelper(
 	return usage, &detail, nil
 }
 
-func getRequestBody(meta *meta.Meta, c *gin.Context, detail *model.RequestDetail) *relaymodel.ErrorWithStatusCode {
+func getRequestBody(meta *meta.Meta, c *gin.Context, detail *RequestDetail) *relaymodel.ErrorWithStatusCode {
 	switch meta.Mode {
 	case mode.AudioTranscription, mode.AudioTranslation:
 		return nil
@@ -202,7 +214,7 @@ func doRequest(a adaptor.Adaptor, c *gin.Context, meta *meta.Meta, req *http.Req
 	return resp, nil
 }
 
-func handleResponse(a adaptor.Adaptor, c *gin.Context, meta *meta.Meta, resp *http.Response, detail *model.RequestDetail) (relaymodel.Usage, *relaymodel.ErrorWithStatusCode) {
+func handleResponse(a adaptor.Adaptor, c *gin.Context, meta *meta.Meta, resp *http.Response, detail *RequestDetail) (relaymodel.Usage, *relaymodel.ErrorWithStatusCode) {
 	buf := getBuffer()
 	defer putBuffer(buf)
 
@@ -211,7 +223,10 @@ func handleResponse(a adaptor.Adaptor, c *gin.Context, meta *meta.Meta, resp *ht
 		body:           buf,
 	}
 	rawWriter := c.Writer
-	defer func() { c.Writer = rawWriter }()
+	defer func() {
+		c.Writer = rawWriter
+		detail.FirstByteAt = rw.firstByteAt
+	}()
 	c.Writer = rw
 
 	c.Header("Content-Type", resp.Header.Get("Content-Type"))
