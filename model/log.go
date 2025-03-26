@@ -86,68 +86,70 @@ func CreateLogIndexes(db *gorm.DB) error {
 		// not support INCLUDE
 		indexes = []string{
 			// used by global search logs
-			"CREATE INDEX IF NOT EXISTS idx_model_reqat ON logs (model, request_at)",
+			"CREATE INDEX IF NOT EXISTS idx_model_reqat ON logs (model, request_at DESC)",
 			// used by global search logs
-			"CREATE INDEX IF NOT EXISTS idx_channel_reqat ON logs (channel_id, request_at)",
+			"CREATE INDEX IF NOT EXISTS idx_channel_reqat ON logs (channel_id, request_at DESC)",
 			// used by global search logs
-			"CREATE INDEX IF NOT EXISTS idx_channel_model_reqat ON logs (channel_id, model, request_at)",
+			"CREATE INDEX IF NOT EXISTS idx_channel_model_reqat ON logs (channel_id, model, request_at DESC)",
 
 			// global day indexes, used by global dashboard
-			"CREATE INDEX IF NOT EXISTS idx_model_reqat_truncday ON logs (model, request_at, timestamp_trunc_by_day)",
+			"CREATE INDEX IF NOT EXISTS idx_model_truncday ON logs (model, timestamp_trunc_by_day)",
 			// global hour indexes, used by global dashboard
-			"CREATE INDEX IF NOT EXISTS idx_model_reqat_trunchour ON logs (model, request_at, timestamp_trunc_by_hour)",
+			"CREATE INDEX IF NOT EXISTS idx_model_trunchour ON logs (model, timestamp_trunc_by_hour)",
 
 			// used by search group logs
-			"CREATE INDEX IF NOT EXISTS idx_group_token_reqat ON logs (group_id, token_name, request_at)",
+			"CREATE INDEX IF NOT EXISTS idx_group_reqat ON logs (group_id, request_at DESC)",
 			// used by search group logs
-			"CREATE INDEX IF NOT EXISTS idx_group_model_reqat ON logs (group_id, model, request_at)",
+			"CREATE INDEX IF NOT EXISTS idx_group_token_reqat ON logs (group_id, token_name, request_at DESC)",
 			// used by search group logs
-			"CREATE INDEX IF NOT EXISTS idx_group_token_model_reqat ON logs (group_id, token_name, model, request_at)",
+			"CREATE INDEX IF NOT EXISTS idx_group_model_reqat ON logs (group_id, model, request_at DESC)",
+			// used by search group logs
+			"CREATE INDEX IF NOT EXISTS idx_group_token_model_reqat ON logs (group_id, token_name, model, request_at DESC)",
 
 			// day indexes, used by dashboard
-			"CREATE INDEX IF NOT EXISTS idx_group_reqat_truncday ON logs (group_id, request_at, timestamp_trunc_by_day)",
-			"CREATE INDEX IF NOT EXISTS idx_group_model_reqat_truncday ON logs (group_id, model, request_at, timestamp_trunc_by_day)",
-			"CREATE INDEX IF NOT EXISTS idx_group_token_reqat_truncday ON logs (group_id, token_name, request_at, timestamp_trunc_by_day)",
-			"CREATE INDEX IF NOT EXISTS idx_group_model_token_reqat_truncday ON logs (group_id, model, token_name, request_at, timestamp_trunc_by_day)",
+			"CREATE INDEX IF NOT EXISTS idx_group_truncday ON logs (group_id, timestamp_trunc_by_day DESC)",
+			"CREATE INDEX IF NOT EXISTS idx_group_model_truncday ON logs (group_id, model, timestamp_trunc_by_day DESC)",
+			"CREATE INDEX IF NOT EXISTS idx_group_token_truncday ON logs (group_id, token_name, timestamp_trunc_by_day DESC)",
+			"CREATE INDEX IF NOT EXISTS idx_group_model_token_truncday ON logs (group_id, model, token_name, timestamp_trunc_by_day DESC)",
 			// hour indexes, used by dashboard
-			"CREATE INDEX IF NOT EXISTS idx_group_reqat_trunchour ON logs (group_id, request_at, timestamp_trunc_by_hour)",
-			"CREATE INDEX IF NOT EXISTS idx_group_model_reqat_trunchour ON logs (group_id, model, request_at, timestamp_trunc_by_hour)",
-			"CREATE INDEX IF NOT EXISTS idx_group_token_reqat_trunchour ON logs (group_id, token_name, request_at, timestamp_trunc_by_hour)",
-			"CREATE INDEX IF NOT EXISTS idx_group_model_token_reqat_trunchour ON logs (group_id, model, token_name, request_at, timestamp_trunc_by_hour)",
+			"CREATE INDEX IF NOT EXISTS idx_group_trunchour ON logs (group_id, timestamp_trunc_by_hour DESC)",
+			"CREATE INDEX IF NOT EXISTS idx_group_model_trunchour ON logs (group_id, model, timestamp_trunc_by_hour DESC)",
+			"CREATE INDEX IF NOT EXISTS idx_group_token_trunchour ON logs (group_id, token_name, timestamp_trunc_by_hour DESC)",
+			"CREATE INDEX IF NOT EXISTS idx_group_model_token_trunchour ON logs (group_id, model, token_name, timestamp_trunc_by_hour DESC)",
 		}
 	} else {
 		indexes = []string{
 			// used by global search logs
-			"CREATE INDEX IF NOT EXISTS idx_model_reqat ON logs (model, request_at) INCLUDE (code, request_id, downstream_result)",
+			"CREATE INDEX IF NOT EXISTS idx_model_reqat ON logs (model, request_at DESC) INCLUDE (code, request_id, downstream_result)",
 			// used by global search logs
-			"CREATE INDEX IF NOT EXISTS idx_channel_reqat ON logs (channel_id, request_at) INCLUDE (code, request_id, downstream_result)",
+			"CREATE INDEX IF NOT EXISTS idx_channel_reqat ON logs (channel_id, request_at DESC) INCLUDE (code, request_id, downstream_result)",
 			// used by global search logs
-			"CREATE INDEX IF NOT EXISTS idx_channel_model_reqat ON logs (channel_id, model, request_at) INCLUDE (code, request_id, downstream_result)",
+			"CREATE INDEX IF NOT EXISTS idx_channel_model_reqat ON logs (channel_id, model, request_at DESC) INCLUDE (code, request_id, downstream_result)",
 
 			// global day indexes, used by global dashboard
-			"CREATE INDEX IF NOT EXISTS idx_model_reqat_truncday ON logs (model, request_at, timestamp_trunc_by_day) INCLUDE (code, downstream_result)",
+			"CREATE INDEX IF NOT EXISTS idx_model_truncday ON logs (model, timestamp_trunc_by_day) INCLUDE (code, downstream_result)",
 			// global hour indexes, used by global dashboard
-			"CREATE INDEX IF NOT EXISTS idx_model_reqat_trunchour ON logs (model, request_at, timestamp_trunc_by_hour) INCLUDE (code, downstream_result)",
+			"CREATE INDEX IF NOT EXISTS idx_model_trunchour ON logs (model, timestamp_trunc_by_hour) INCLUDE (code, downstream_result)",
 
 			// used by search group logs
-			"CREATE INDEX IF NOT EXISTS idx_group_token_reqat ON logs (group_id, token_name, request_at) INCLUDE (code, request_id, downstream_result)",
+			"CREATE INDEX IF NOT EXISTS idx_group_reqat ON logs (group_id, request_at DESC) INCLUDE (code, request_id, downstream_result)",
 			// used by search group logs
-			"CREATE INDEX IF NOT EXISTS idx_group_token_reqat ON logs (group_id, token_name, request_at) INCLUDE (code, request_id, downstream_result)",
+			"CREATE INDEX IF NOT EXISTS idx_group_token_reqat ON logs (group_id, token_name, request_at DESC) INCLUDE (code, request_id, downstream_result)",
 			// used by search group logs
-			"CREATE INDEX IF NOT EXISTS idx_group_model_reqat ON logs (group_id, model, request_at) INCLUDE (code, request_id, downstream_result)",
+			"CREATE INDEX IF NOT EXISTS idx_group_model_reqat ON logs (group_id, model, request_at DESC) INCLUDE (code, request_id, downstream_result)",
 			// used by search group logs
-			"CREATE INDEX IF NOT EXISTS idx_group_token_model_reqat ON logs (group_id, token_name, model, request_at) INCLUDE (code, request_id, downstream_result)",
+			"CREATE INDEX IF NOT EXISTS idx_group_token_model_reqat ON logs (group_id, token_name, model, request_at DESC) INCLUDE (code, request_id, downstream_result)",
 
 			// day indexes, used by dashboard
-			"CREATE INDEX IF NOT EXISTS idx_group_reqat_truncday ON logs (group_id, request_at, timestamp_trunc_by_day) INCLUDE (downstream_result)",
-			"CREATE INDEX IF NOT EXISTS idx_group_model_reqat_truncday ON logs (group_id, model, request_at, timestamp_trunc_by_day) INCLUDE (downstream_result)",
-			"CREATE INDEX IF NOT EXISTS idx_group_token_reqat_truncday ON logs (group_id, token_name, request_at, timestamp_trunc_by_day) INCLUDE (downstream_result)",
-			"CREATE INDEX IF NOT EXISTS idx_group_model_token_reqat_truncday ON logs (group_id, model, token_name, request_at, timestamp_trunc_by_day) INCLUDE (downstream_result)",
+			"CREATE INDEX IF NOT EXISTS idx_group_truncday ON logs (group_id, timestamp_trunc_by_day DESC) INCLUDE (downstream_result)",
+			"CREATE INDEX IF NOT EXISTS idx_group_model_truncday ON logs (group_id, model, timestamp_trunc_by_day DESC) INCLUDE (downstream_result)",
+			"CREATE INDEX IF NOT EXISTS idx_group_token_truncday ON logs (group_id, token_name, timestamp_trunc_by_day DESC) INCLUDE (downstream_result)",
+			"CREATE INDEX IF NOT EXISTS idx_group_model_token_truncday ON logs (group_id, model, token_name, timestamp_trunc_by_day DESC) INCLUDE (downstream_result)",
 			// hour indexes, used by dashboard
-			"CREATE INDEX IF NOT EXISTS idx_group_reqat_trunchour ON logs (group_id, request_at, timestamp_trunc_by_hour) INCLUDE (downstream_result)",
-			"CREATE INDEX IF NOT EXISTS idx_group_model_reqat_trunchour ON logs (group_id, model, request_at, timestamp_trunc_by_hour) INCLUDE (downstream_result)",
-			"CREATE INDEX IF NOT EXISTS idx_group_token_reqat_trunchour ON logs (group_id, token_name, request_at, timestamp_trunc_by_hour) INCLUDE (downstream_result)",
-			"CREATE INDEX IF NOT EXISTS idx_group_model_token_reqat_trunchour ON logs (group_id, model, token_name, request_at, timestamp_trunc_by_hour) INCLUDE (downstream_result)",
+			"CREATE INDEX IF NOT EXISTS idx_group_trunchour ON logs (group_id, timestamp_trunc_by_hour DESC) INCLUDE (downstream_result)",
+			"CREATE INDEX IF NOT EXISTS idx_group_model_trunchour ON logs (group_id, model, timestamp_trunc_by_hour DESC) INCLUDE (downstream_result)",
+			"CREATE INDEX IF NOT EXISTS idx_group_token_trunchour ON logs (group_id, token_name, timestamp_trunc_by_hour DESC) INCLUDE (downstream_result)",
+			"CREATE INDEX IF NOT EXISTS idx_group_model_token_trunchour ON logs (group_id, model, token_name, timestamp_trunc_by_hour DESC) INCLUDE (downstream_result)",
 		}
 	}
 
@@ -1025,11 +1027,11 @@ func getChartData(group string, start, end time.Time, tokenName, modelName strin
 
 	switch {
 	case !start.IsZero() && !end.IsZero():
-		query = query.Where("request_at BETWEEN ? AND ?", start, end)
+		query = query.Where(timeSpanFormat+" BETWEEN ? AND ?", start.Unix(), end.Unix())
 	case !start.IsZero():
-		query = query.Where("request_at >= ?", start)
+		query = query.Where(timeSpanFormat+" >= ?", start.Unix())
 	case !end.IsZero():
-		query = query.Where("request_at <= ?", end)
+		query = query.Where(timeSpanFormat+" <= ?", end.Unix())
 	}
 
 	if resultOnly {
