@@ -330,6 +330,14 @@ definitions:
       total_tokens:
         type: integer
     type: object
+  gorm.DeletedAt:
+    properties:
+      time:
+        type: string
+      valid:
+        description: Valid is true if Time is not NULL
+        type: boolean
+    type: object
   middleware.APIResponse:
     properties:
       data: {}
@@ -391,6 +399,8 @@ definitions:
         $ref: '#/definitions/model.ChannelConfig'
       created_at:
         type: string
+      deletedAt:
+        $ref: '#/definitions/gorm.DeletedAt'
       enabled_auto_balance_check:
         type: boolean
       id:
