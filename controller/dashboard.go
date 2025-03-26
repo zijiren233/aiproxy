@@ -133,6 +133,7 @@ func fillGaps(data []*model.ChartData, start, end time.Time, t model.TimeSpanTyp
 //	@Produce		json
 //	@Security		ApiKeyAuth
 //	@Param			group		query		string	false	"Group or *"
+//	@Param			channel		query		int		false	"Channel ID"
 //	@Param			type		query		string	false	"Type of time span (day, week, month, two_week)"
 //	@Param			model		query		string	false	"Model name"
 //	@Param			result_only	query		bool	false	"Only return result"
@@ -147,7 +148,11 @@ func GetDashboard(c *gin.Context) {
 	modelName := c.Query("model")
 	resultOnly, _ := strconv.ParseBool(c.Query("result_only"))
 	tokenUsage, _ := strconv.ParseBool(c.Query("token_usage"))
-	dashboards, err := model.GetDashboardData(group, start, end, modelName, timeSpan, resultOnly, false, tokenUsage)
+	channelID, _ := strconv.Atoi(c.Query("channel"))
+
+	needRPM := channelID != 0
+
+	dashboards, err := model.GetDashboardData(group, start, end, modelName, channelID, timeSpan, resultOnly, needRPM, tokenUsage)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusOK, err.Error())
 		return
@@ -155,11 +160,13 @@ func GetDashboard(c *gin.Context) {
 
 	dashboards.ChartData = fillGaps(dashboards.ChartData, start, end, timeSpan)
 
-	rpm, err := rpmlimit.GetRPM(c.Request.Context(), group, modelName)
-	if err != nil {
-		log.Errorf("failed to get rpm: %v", err)
-	} else {
-		dashboards.RPM = rpm
+	if !needRPM {
+		rpm, err := rpmlimit.GetRPM(c.Request.Context(), group, modelName)
+		if err != nil {
+			log.Errorf("failed to get rpm: %v", err)
+		} else {
+			dashboards.RPM = rpm
+		}
 	}
 
 	middleware.SuccessResponse(c, dashboards)
@@ -267,6 +274,7 @@ func GetGroupDashboardModels(c *gin.Context) {
 //	@Produce		json
 //	@Security		ApiKeyAuth
 //	@Param			group			query		string	false	"Group or *"
+//	@Param			channel			query		int		false	"Channel ID"
 //	@Param			start_timestamp	query		int64	false	"Start timestamp"
 //	@Param			end_timestamp	query		int64	false	"End timestamp"
 //	@Param			token_usage		query		bool	false	"Token usage"
@@ -274,9 +282,10 @@ func GetGroupDashboardModels(c *gin.Context) {
 //	@Router			/api/model_cost_rank [get]
 func GetModelCostRank(c *gin.Context) {
 	group := c.Query("group")
+	channelID, _ := strconv.Atoi(c.Query("channel"))
 	startTime, endTime := parseTimeRange(c)
 	tokenUsage, _ := strconv.ParseBool(c.Query("token_usage"))
-	models, err := model.GetModelCostRank(group, startTime, endTime, tokenUsage)
+	models, err := model.GetModelCostRank(group, channelID, startTime, endTime, tokenUsage)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusOK, err.Error())
 		return
@@ -305,7 +314,7 @@ func GetGroupModelCostRank(c *gin.Context) {
 	}
 	startTime, endTime := parseTimeRange(c)
 	tokenUsage, _ := strconv.ParseBool(c.Query("token_usage"))
-	models, err := model.GetModelCostRank(group, startTime, endTime, tokenUsage)
+	models, err := model.GetModelCostRank(group, 0, startTime, endTime, tokenUsage)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusOK, err.Error())
 		return

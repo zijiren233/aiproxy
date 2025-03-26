@@ -973,6 +973,12 @@
                         "in": "query"
                     },
                     {
+                        "type": "integer",
+                        "description": "Channel ID",
+                        "name": "channel",
+                        "in": "query"
+                    },
+                    {
                         "type": "string",
                         "description": "Type of time span (day, week, month, two_week)",
                         "name": "type",
@@ -3549,6 +3555,12 @@
                         "type": "string",
                         "description": "Group or *",
                         "name": "group",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Channel ID",
+                        "name": "channel",
                         "in": "query"
                     },
                     {
@@ -6780,6 +6792,18 @@
                 }
             }
         },
+        "gorm.DeletedAt": {
+            "type": "object",
+            "properties": {
+                "time": {
+                    "type": "string"
+                },
+                "valid": {
+                    "description": "Valid is true if Time is not NULL",
+                    "type": "boolean"
+                }
+            }
+        },
         "middleware.APIResponse": {
             "type": "object",
             "properties": {
@@ -6860,6 +6884,9 @@
                 },
                 "created_at": {
                     "type": "string"
+                },
+                "deletedAt": {
+                    "$ref": "#/definitions/gorm.DeletedAt"
                 },
                 "enabled_auto_balance_check": {
                     "type": "boolean"
@@ -6992,6 +7019,12 @@
         "model.DashboardResponse": {
             "type": "object",
             "properties": {
+                "channels": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
                 "chart_data": {
                     "type": "array",
                     "items": {
@@ -7208,6 +7241,12 @@
         "model.GetGroupLogsResult": {
             "type": "object",
             "properties": {
+                "channels": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
                 "logs": {
                     "type": "array",
                     "items": {
@@ -7234,6 +7273,12 @@
         "model.GetLogsResult": {
             "type": "object",
             "properties": {
+                "channels": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
                 "logs": {
                     "type": "array",
                     "items": {
@@ -7292,6 +7337,12 @@
         "model.GroupDashboardResponse": {
             "type": "object",
             "properties": {
+                "channels": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
                 "chart_data": {
                     "type": "array",
                     "items": {

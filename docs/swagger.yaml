@@ -330,6 +330,14 @@ definitions:
       total_tokens:
         type: integer
     type: object
+  gorm.DeletedAt:
+    properties:
+      time:
+        type: string
+      valid:
+        description: Valid is true if Time is not NULL
+        type: boolean
+    type: object
   middleware.APIResponse:
     properties:
       data: {}
@@ -391,6 +399,8 @@ definitions:
         $ref: '#/definitions/model.ChannelConfig'
       created_at:
         type: string
+      deletedAt:
+        $ref: '#/definitions/gorm.DeletedAt'
       enabled_auto_balance_check:
         type: boolean
       id:
@@ -477,6 +487,10 @@ definitions:
     type: object
   model.DashboardResponse:
     properties:
+      channels:
+        items:
+          type: integer
+        type: array
       chart_data:
         items:
           $ref: '#/definitions/model.ChartData'
@@ -622,6 +636,10 @@ definitions:
     type: object
   model.GetGroupLogsResult:
     properties:
+      channels:
+        items:
+          type: integer
+        type: array
       logs:
         items:
           $ref: '#/definitions/model.Log'
@@ -639,6 +657,10 @@ definitions:
     type: object
   model.GetLogsResult:
     properties:
+      channels:
+        items:
+          type: integer
+        type: array
       logs:
         items:
           $ref: '#/definitions/model.Log'
@@ -677,6 +699,10 @@ definitions:
     type: object
   model.GroupDashboardResponse:
     properties:
+      channels:
+        items:
+          type: integer
+        type: array
       chart_data:
         items:
           $ref: '#/definitions/model.ChartData'
@@ -1717,6 +1743,10 @@ paths:
         in: query
         name: group
         type: string
+      - description: Channel ID
+        in: query
+        name: channel
+        type: integer
       - description: Type of time span (day, week, month, two_week)
         in: query
         name: type
@@ -3280,6 +3310,10 @@ paths:
         in: query
         name: group
         type: string
+      - description: Channel ID
+        in: query
+        name: channel
+        type: integer
       - description: Start timestamp
         in: query
         name: start_timestamp

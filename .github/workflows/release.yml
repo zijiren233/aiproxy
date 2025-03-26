@@ -50,7 +50,7 @@ jobs:
 
       - name: Download tiktoken
         run: |
-          bash common/tiktoken/assest.sh
+          bash scripts/tiktoken.sh
 
       - name: Setup Go
         uses: actions/setup-go@v5
@@ -60,7 +60,7 @@ jobs:
       - name: Generate Swagger
         run: |
           go install github.com/swaggo/swag/cmd/swag@latest
-          swag init
+          bash scripts/swag.sh
 
       - name: Build
         run: |
