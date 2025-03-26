@@ -973,6 +973,12 @@
                         "in": "query"
                     },
                     {
+                        "type": "integer",
+                        "description": "Channel ID",
+                        "name": "channel",
+                        "in": "query"
+                    },
+                    {
                         "type": "string",
                         "description": "Type of time span (day, week, month, two_week)",
                         "name": "type",
@@ -3549,6 +3555,12 @@
                         "type": "string",
                         "description": "Group or *",
                         "name": "group",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Channel ID",
+                        "name": "channel",
                         "in": "query"
                     },
                     {
@@ -6992,6 +7004,12 @@
         "model.DashboardResponse": {
             "type": "object",
             "properties": {
+                "channels": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
                 "chart_data": {
                     "type": "array",
                     "items": {
@@ -7208,6 +7226,12 @@
         "model.GetGroupLogsResult": {
             "type": "object",
             "properties": {
+                "channels": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
                 "logs": {
                     "type": "array",
                     "items": {
@@ -7234,6 +7258,12 @@
         "model.GetLogsResult": {
             "type": "object",
             "properties": {
+                "channels": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
                 "logs": {
                     "type": "array",
                     "items": {
@@ -7292,6 +7322,12 @@
         "model.GroupDashboardResponse": {
             "type": "object",
             "properties": {
+                "channels": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
                 "chart_data": {
                     "type": "array",
                     "items": {

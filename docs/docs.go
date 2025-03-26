@@ -984,6 +984,12 @@ const docTemplate = `{
                         "in": "query"
                     },
                     {
+                        "type": "integer",
+                        "description": "Channel ID",
+                        "name": "channel",
+                        "in": "query"
+                    },
+                    {
                         "type": "string",
                         "description": "Type of time span (day, week, month, two_week)",
                         "name": "type",
@@ -3560,6 +3566,12 @@ const docTemplate = `{
                         "type": "string",
                         "description": "Group or *",
                         "name": "group",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Channel ID",
+                        "name": "channel",
                         "in": "query"
                     },
                     {
@@ -7003,6 +7015,12 @@ const docTemplate = `{
         "model.DashboardResponse": {
             "type": "object",
             "properties": {
+                "channels": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
                 "chart_data": {
                     "type": "array",
                     "items": {
@@ -7219,6 +7237,12 @@ const docTemplate = `{
         "model.GetGroupLogsResult": {
             "type": "object",
             "properties": {
+                "channels": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
                 "logs": {
                     "type": "array",
                     "items": {
@@ -7245,6 +7269,12 @@ const docTemplate = `{
         "model.GetLogsResult": {
             "type": "object",
             "properties": {
+                "channels": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
                 "logs": {
                     "type": "array",
                     "items": {
@@ -7303,6 +7333,12 @@ const docTemplate = `{
         "model.GroupDashboardResponse": {
             "type": "object",
             "properties": {
+                "channels": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
                 "chart_data": {
                     "type": "array",
                     "items": {

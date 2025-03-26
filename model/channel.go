@@ -325,21 +325,25 @@ func UpdateChannel(channel *Channel) (err error) {
 	if err := CheckModelConfigExist(channel.Models); err != nil {
 		return err
 	}
+	selects := []string{
+		"model_mapping",
+		"key",
+		"base_url",
+		"models",
+		"priority",
+		"config",
+		"enabled_auto_balance_check",
+		"balance_threshold",
+		"sets",
+	}
+	if channel.Type != 0 {
+		selects = append(selects, "type")
+	}
+	if channel.Name != "" {
+		selects = append(selects, "name")
+	}
 	result := DB.
-		Model(channel).
-		Select(
-			"model_mapping",
-			"key",
-			"name",
-			"base_url",
-			"models",
-			"type",
-			"priority",
-			"config",
-			"enabled_auto_balance_check",
-			"balance_threshold",
-			"sets",
-		).
+		Select(selects).
 		Clauses(clause.Returning{}).
 		Where("id = ?", channel.ID).
 		Updates(channel)
