@@ -7493,6 +7493,9 @@ const docTemplate = `{
                 "request_id": {
                     "type": "string"
                 },
+                "retry_at": {
+                    "type": "string"
+                },
                 "retry_times": {
                     "type": "integer"
                 },
@@ -7507,6 +7510,9 @@ const docTemplate = `{
                 },
                 "token_name": {
                     "type": "string"
+                },
+                "ttfb_milliseconds": {
+                    "type": "integer"
                 },
                 "usage": {
                     "$ref": "#/definitions/github_com_labring_aiproxy_model.Usage"

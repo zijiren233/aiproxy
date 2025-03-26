@@ -802,6 +802,8 @@ definitions:
         $ref: '#/definitions/model.RequestDetail'
       request_id:
         type: string
+      retry_at:
+        type: string
       retry_times:
         type: integer
       timestamp_trunc_by_day:
@@ -812,6 +814,8 @@ definitions:
         type: integer
       token_name:
         type: string
+      ttfb_milliseconds:
+        type: integer
       usage:
         $ref: '#/definitions/github_com_labring_aiproxy_model.Usage'
       used_amount:
