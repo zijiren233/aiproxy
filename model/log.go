@@ -1027,11 +1027,11 @@ func getChartData(group string, start, end time.Time, tokenName, modelName strin
 
 	switch {
 	case !start.IsZero() && !end.IsZero():
-		query = query.Where("? BETWEEN ? AND ?", timeSpanFormat, start.Unix(), end.Unix())
+		query = query.Where(timeSpanFormat+" BETWEEN ? AND ?", start.Unix(), end.Unix())
 	case !start.IsZero():
-		query = query.Where("? >= ?", timeSpanFormat, start.Unix())
+		query = query.Where(timeSpanFormat+" >= ?", start.Unix())
 	case !end.IsZero():
-		query = query.Where("? <= ?", timeSpanFormat, end.Unix())
+		query = query.Where(timeSpanFormat+" <= ?", end.Unix())
 	}
 
 	if resultOnly {
