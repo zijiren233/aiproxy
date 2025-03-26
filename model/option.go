@@ -58,6 +58,7 @@ func InitOption2DB() error {
 
 func initOptionMap() error {
 	optionMap["LogStorageHours"] = strconv.FormatInt(config.GetLogStorageHours(), 10)
+	optionMap["LogContentStorageHours"] = strconv.FormatInt(config.GetLogContentStorageHours(), 10)
 	optionMap["LogDetailStorageHours"] = strconv.FormatInt(config.GetLogDetailStorageHours(), 10)
 	optionMap["SaveAllLogDetail"] = strconv.FormatBool(config.GetSaveAllLogDetail())
 	optionMap["LogDetailRequestBodyMaxSize"] = strconv.FormatInt(config.GetLogDetailRequestBodyMaxSize(), 10)
@@ -198,6 +199,12 @@ func updateOption(key string, value string, isInit bool) (err error) {
 			return err
 		}
 		config.SetLogStorageHours(logStorageHours)
+	case "LogContentStorageHours":
+		logContentStorageHours, err := strconv.ParseInt(value, 10, 64)
+		if err != nil {
+			return err
+		}
+		config.SetLogContentStorageHours(logContentStorageHours)
 	case "LogDetailStorageHours":
 		logDetailStorageHours, err := strconv.ParseInt(value, 10, 64)
 		if err != nil {

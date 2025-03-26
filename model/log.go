@@ -54,30 +54,30 @@ type Usage struct {
 }
 
 type Log struct {
-	RequestDetail        *RequestDetail `gorm:"foreignKey:LogID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"request_detail,omitempty"`
-	RequestAt            time.Time      `gorm:"index"                                                          json:"request_at"`
-	RetryAt              time.Time      `gorm:"index"                                                          json:"retry_at,omitempty"`
-	TTFBMilliseconds     int64          `json:"ttfb_milliseconds,omitempty"`
-	TimestampTruncByDay  int64          `json:"timestamp_trunc_by_day"`
-	TimestampTruncByHour int64          `json:"timestamp_trunc_by_hour"`
-	CreatedAt            time.Time      `gorm:"autoCreateTime;index"                                           json:"created_at"`
-	TokenName            string         `json:"token_name,omitempty"`
-	Endpoint             string         `json:"endpoint"`
-	Content              string         `gorm:"type:text"                                                      json:"content,omitempty"`
-	GroupID              string         `gorm:"index"                                                          json:"group,omitempty"`
-	Model                string         `gorm:"index"                                                          json:"model"`
-	RequestID            string         `gorm:"index"                                                          json:"request_id"`
-	ID                   int            `gorm:"primaryKey"                                                     json:"id"`
-	TokenID              int            `gorm:"index"                                                          json:"token_id,omitempty"`
-	ChannelID            int            `gorm:"index"                                                          json:"channel,omitempty"`
-	Code                 int            `gorm:"index"                                                          json:"code,omitempty"`
-	Mode                 int            `json:"mode,omitempty"`
-	IP                   string         `gorm:"index"                                                          json:"ip,omitempty"`
-	RetryTimes           int            `json:"retry_times,omitempty"`
-	DownstreamResult     bool           `json:"downstream_result,omitempty"`
-	Price                Price          `gorm:"embedded"                                                       json:"price,omitempty"`
-	Usage                Usage          `gorm:"embedded"                                                       json:"usage,omitempty"`
-	UsedAmount           float64        `json:"used_amount,omitempty"`
+	RequestDetail        *RequestDetail  `gorm:"foreignKey:LogID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"request_detail,omitempty"`
+	RequestAt            time.Time       `gorm:"index"                                                          json:"request_at"`
+	RetryAt              time.Time       `gorm:"index"                                                          json:"retry_at,omitempty"`
+	TTFBMilliseconds     int64           `json:"ttfb_milliseconds,omitempty"`
+	TimestampTruncByDay  int64           `json:"timestamp_trunc_by_day"`
+	TimestampTruncByHour int64           `json:"timestamp_trunc_by_hour"`
+	CreatedAt            time.Time       `gorm:"autoCreateTime;index"                                           json:"created_at"`
+	TokenName            string          `json:"token_name,omitempty"`
+	Endpoint             EmptyNullString `json:"endpoint,omitempty"`
+	Content              EmptyNullString `gorm:"type:text"                                                      json:"content,omitempty"`
+	GroupID              string          `gorm:"index"                                                          json:"group,omitempty"`
+	Model                string          `gorm:"index"                                                          json:"model"`
+	RequestID            EmptyNullString `gorm:"index"                                                          json:"request_id"`
+	ID                   int             `gorm:"primaryKey"                                                     json:"id"`
+	TokenID              int             `gorm:"index"                                                          json:"token_id,omitempty"`
+	ChannelID            int             `gorm:"index"                                                          json:"channel,omitempty"`
+	Code                 int             `gorm:"index"                                                          json:"code,omitempty"`
+	Mode                 int             `json:"mode,omitempty"`
+	IP                   EmptyNullString `gorm:"index"                                                          json:"ip,omitempty"`
+	RetryTimes           int             `json:"retry_times,omitempty"`
+	DownstreamResult     bool            `json:"downstream_result,omitempty"`
+	Price                Price           `gorm:"embedded"                                                       json:"price,omitempty"`
+	Usage                Usage           `gorm:"embedded"                                                       json:"usage,omitempty"`
+	UsedAmount           float64         `json:"used_amount,omitempty"`
 }
 
 func CreateLogIndexes(db *gorm.DB) error {
@@ -243,21 +243,43 @@ func CleanLog(batchSize int) error {
 }
 
 func cleanLog(batchSize int) error {
-	logStorageHours := config.GetLogStorageHours()
-	if logStorageHours <= 0 {
-		return nil
-	}
 	if batchSize <= 0 {
 		batchSize = defaultCleanLogBatchSize
 	}
+	logStorageHours := config.GetLogStorageHours()
+	if logStorageHours > 0 {
+		err := LogDB.
+			Session(&gorm.Session{SkipDefaultTransaction: true}).
+			Where(
+				"created_at < ?",
+				time.Now().Add(-time.Duration(logStorageHours)*time.Hour),
+			).
+			Limit(batchSize).
+			Delete(&Log{}).Error
+		if err != nil {
+			return err
+		}
+	}
+
+	logContentStorageHours := config.GetLogContentStorageHours()
+	if logContentStorageHours <= 0 {
+		return nil
+	}
 	return LogDB.
+		Model(&Log{}).
 		Session(&gorm.Session{SkipDefaultTransaction: true}).
 		Where(
 			"created_at < ?",
-			time.Now().Add(-time.Duration(logStorageHours)*time.Hour),
+			time.Now().Add(-time.Duration(logContentStorageHours)*time.Hour),
 		).
+		Where("content IS NOT NULL OR ip IS NOT NULL OR endpoint IS NOT NULL OR ttfb_milliseconds IS NOT NULL").
 		Limit(batchSize).
-		Delete(&Log{}).Error
+		Updates(map[string]any{
+			"content":           gorm.Expr("NULL"),
+			"ip":                gorm.Expr("NULL"),
+			"endpoint":          gorm.Expr("NULL"),
+			"ttfb_milliseconds": gorm.Expr("NULL"),
+		}).Error
 }
 
 func cleanLogDetail(batchSize int) error {
@@ -308,7 +330,7 @@ func RecordConsumeLog(
 		firstByteAt = requestAt
 	}
 	log := &Log{
-		RequestID:        requestID,
+		RequestID:        EmptyNullString(requestID),
 		RequestAt:        requestAt,
 		CreatedAt:        now,
 		RetryAt:          retryAt,
@@ -319,10 +341,10 @@ func RecordConsumeLog(
 		TokenName:        tokenName,
 		Model:            modelName,
 		Mode:             mode,
-		IP:               ip,
+		IP:               EmptyNullString(ip),
 		ChannelID:        channelID,
-		Endpoint:         endpoint,
-		Content:          content,
+		Endpoint:         EmptyNullString(endpoint),
+		Content:          EmptyNullString(content),
 		RetryTimes:       retryTimes,
 		RequestDetail:    requestDetail,
 		DownstreamResult: downstreamResult,
@@ -385,7 +407,7 @@ func buildGetLogsQuery(
 	tx := LogDB.Model(&Log{})
 
 	if group == "" {
-		tx = tx.Where("group_id IS NULL OR group_id = ''")
+		tx = tx.Where("group_id = ''")
 	} else if group != "*" {
 		tx = tx.Where("group_id = ?", group)
 	}
@@ -634,7 +656,7 @@ func buildSearchLogsQuery(
 	tx := LogDB.Model(&Log{})
 
 	if group == "" {
-		tx = tx.Where("group_id IS NULL OR group_id = ''")
+		tx = tx.Where("group_id = ''")
 	} else if group != "*" {
 		tx = tx.Where("group_id = ?", group)
 	}
@@ -1013,7 +1035,7 @@ func getChartData(group string, start, end time.Time, tokenName, modelName strin
 	}
 
 	if group == "" {
-		query = query.Where("group_id IS NULL OR group_id = ''")
+		query = query.Where("group_id = ''")
 	} else if group != "*" {
 		query = query.Where("group_id = ?", group)
 	}
@@ -1086,7 +1108,7 @@ func getLogGroupByValues[T cmp.Ordered](field string, group string, start, end t
 		Model(&Log{})
 
 	if group == "" {
-		query = query.Where("group_id IS NULL OR group_id = ''")
+		query = query.Where("group_id = ''")
 	} else if group != "*" {
 		query = query.Where("group_id = ?", group)
 	}
@@ -1139,7 +1161,7 @@ func getRPM(group string, end time.Time, tokenName, modelName string, resultOnly
 	query := LogDB.Model(&Log{})
 
 	if group == "" {
-		query = query.Where("group_id IS NULL OR group_id = ''")
+		query = query.Where("group_id = ''")
 	} else if group != "*" {
 		query = query.Where("group_id = ?", group)
 	}
@@ -1166,7 +1188,7 @@ func getTPM(group string, end time.Time, tokenName, modelName string, resultOnly
 		Where("request_at >= ? AND request_at <= ?", end.Add(-time.Minute), end)
 
 	if group == "" {
-		query = query.Where("group_id IS NULL OR group_id = ''")
+		query = query.Where("group_id = ''")
 	} else if group != "*" {
 		query = query.Where("group_id = ?", group)
 	}
@@ -1388,7 +1410,7 @@ func GetModelCostRank(group string, start, end time.Time, tokenUsage bool) ([]*M
 	}
 
 	if group == "" {
-		query = query.Where("group_id IS NULL OR group_id = ''")
+		query = query.Where("group_id = ''")
 	} else if group != "*" {
 		query = query.Where("group_id = ?", group)
 	}
