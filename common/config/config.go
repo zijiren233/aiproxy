@@ -24,6 +24,7 @@ var (
 var (
 	disableServe                 atomic.Bool
 	logStorageHours              int64 // default 0 means no limit
+	logContentStorageHours       int64 // default 0 means no limit
 	saveAllLogDetail             atomic.Bool
 	logDetailRequestBodyMaxSize  int64 = 128 * 1024 // 128KB
 	logDetailResponseBodyMaxSize int64 = 128 * 1024 // 128KB
@@ -110,6 +111,15 @@ func GetLogStorageHours() int64 {
 func SetLogStorageHours(hours int64) {
 	hours = env.Int64("LOG_STORAGE_HOURS", hours)
 	atomic.StoreInt64(&logStorageHours, hours)
+}
+
+func GetLogContentStorageHours() int64 {
+	return atomic.LoadInt64(&logContentStorageHours)
+}
+
+func SetLogContentStorageHours(hours int64) {
+	hours = env.Int64("LOG_CONTENT_STORAGE_HOURS", hours)
+	atomic.StoreInt64(&logContentStorageHours, hours)
 }
 
 func GetLogDetailStorageHours() int64 {

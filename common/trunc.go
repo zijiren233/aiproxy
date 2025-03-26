@@ -6,7 +6,7 @@ import (
 	"github.com/labring/aiproxy/common/conv"
 )
 
-func TruncateByRune(s string, length int) string {
+func TruncateByRune[T ~string](s T, length int) T {
 	total := 0
 	for _, r := range s {
 		runeLen := utf8.RuneLen(r)
