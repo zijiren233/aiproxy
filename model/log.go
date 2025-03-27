@@ -1173,7 +1173,10 @@ func aggregateHourDataToDay(hourlyData []*ChartData) []*ChartData {
 
 		day := dayData[dayTimestamp]
 		day.RequestCount += data.RequestCount
-		day.UsedAmount += data.UsedAmount
+		day.UsedAmount = decimal.
+			NewFromFloat(data.UsedAmount).
+			Add(decimal.NewFromFloat(day.UsedAmount)).
+			InexactFloat64()
 		day.ExceptionCount += data.ExceptionCount
 		day.InputTokens += data.InputTokens
 		day.OutputTokens += data.OutputTokens
