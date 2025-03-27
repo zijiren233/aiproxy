@@ -114,11 +114,11 @@ func CreateLogIndexes(db *gorm.DB) error {
 	} else {
 		indexes = []string{
 			// used by global search logs
-			"CREATE INDEX IF NOT EXISTS idx_model_reqat ON logs (model, request_at DESC) INCLUDE (code, request_id, downstream_result)",
+			"CREATE INDEX IF NOT EXISTS idx_model_reqat ON logs (model, request_at DESC) INCLUDE (code, downstream_result)",
 			// used by global search logs
-			"CREATE INDEX IF NOT EXISTS idx_channel_reqat ON logs (channel_id, request_at DESC) INCLUDE (code, request_id, downstream_result)",
+			"CREATE INDEX IF NOT EXISTS idx_channel_reqat ON logs (channel_id, request_at DESC) INCLUDE (code, downstream_result)",
 			// used by global search logs
-			"CREATE INDEX IF NOT EXISTS idx_channel_model_reqat ON logs (channel_id, model, request_at DESC) INCLUDE (code, request_id, downstream_result)",
+			"CREATE INDEX IF NOT EXISTS idx_channel_model_reqat ON logs (channel_id, model, request_at DESC) INCLUDE (code, downstream_result)",
 
 			// global hour indexes, used by global dashboard
 			"CREATE INDEX IF NOT EXISTS idx_model_trunchour ON logs (model, timestamp_trunc_by_hour) INCLUDE (downstream_result)",
@@ -126,13 +126,13 @@ func CreateLogIndexes(db *gorm.DB) error {
 			"CREATE INDEX IF NOT EXISTS idx_channel_model_trunchour ON logs (channel_id, model, timestamp_trunc_by_hour) INCLUDE (downstream_result)",
 
 			// used by search group logs
-			"CREATE INDEX IF NOT EXISTS idx_group_reqat ON logs (group_id, request_at DESC) INCLUDE (code, request_id, downstream_result)",
+			"CREATE INDEX IF NOT EXISTS idx_group_reqat ON logs (group_id, request_at DESC) INCLUDE (code, downstream_result)",
 			// used by search group logs
-			"CREATE INDEX IF NOT EXISTS idx_group_token_reqat ON logs (group_id, token_name, request_at DESC) INCLUDE (code, request_id, downstream_result)",
+			"CREATE INDEX IF NOT EXISTS idx_group_token_reqat ON logs (group_id, token_name, request_at DESC) INCLUDE (code, downstream_result)",
 			// used by search group logs
-			"CREATE INDEX IF NOT EXISTS idx_group_model_reqat ON logs (group_id, model, request_at DESC) INCLUDE (code, request_id, downstream_result)",
+			"CREATE INDEX IF NOT EXISTS idx_group_model_reqat ON logs (group_id, model, request_at DESC) INCLUDE (code, downstream_result)",
 			// used by search group logs
-			"CREATE INDEX IF NOT EXISTS idx_group_token_model_reqat ON logs (group_id, token_name, model, request_at DESC) INCLUDE (code, request_id, downstream_result)",
+			"CREATE INDEX IF NOT EXISTS idx_group_token_model_reqat ON logs (group_id, token_name, model, request_at DESC) INCLUDE (code, downstream_result)",
 
 			// hour indexes, used by dashboard
 			"CREATE INDEX IF NOT EXISTS idx_group_trunchour ON logs (group_id, timestamp_trunc_by_hour DESC) INCLUDE (downstream_result)",
@@ -458,13 +458,18 @@ func buildGetLogsQuery(
 	tokenID int,
 	tokenName string,
 	channelID int,
-	endpoint string,
-	mode int,
 	codeType CodeType,
 	ip string,
 	resultOnly bool,
 ) *gorm.DB {
 	tx := LogDB.Model(&Log{})
+
+	if requestID != "" {
+		tx = tx.Where("request_id = ?", requestID)
+	}
+	if ip != "" {
+		tx = tx.Where("ip = ?", ip)
+	}
 
 	if group == "" {
 		tx = tx.Where("group_id = ''")
@@ -477,6 +482,9 @@ func buildGetLogsQuery(
 	if tokenName != "" {
 		tx = tx.Where("token_name = ?", tokenName)
 	}
+	if channelID != 0 {
+		tx = tx.Where("channel_id = ?", channelID)
+	}
 
 	switch {
 	case !startTimestamp.IsZero() && !endTimestamp.IsZero():
@@ -487,8 +495,8 @@ func buildGetLogsQuery(
 		tx = tx.Where("request_at <= ?", endTimestamp)
 	}
 
-	if requestID != "" {
-		tx = tx.Where("request_id = ?", requestID)
+	if resultOnly {
+		tx = tx.Where("downstream_result = true")
 	}
 
 	switch codeType {
@@ -498,24 +506,8 @@ func buildGetLogsQuery(
 		tx = tx.Where("code != 200")
 	}
 
-	if resultOnly {
-		tx = tx.Where("downstream_result = true")
-	}
-
-	if channelID != 0 {
-		tx = tx.Where("channel_id = ?", channelID)
-	}
 	if tokenID != 0 {
 		tx = tx.Where("token_id = ?", tokenID)
-	}
-	if ip != "" {
-		tx = tx.Where("ip = ?", ip)
-	}
-	if mode != 0 {
-		tx = tx.Where("mode = ?", mode)
-	}
-	if endpoint != "" {
-		tx = tx.Where("endpoint = ?", endpoint)
 	}
 	return tx
 }
@@ -529,9 +521,7 @@ func getLogs(
 	tokenID int,
 	tokenName string,
 	channelID int,
-	endpoint string,
 	order string,
-	mode int,
 	codeType CodeType,
 	withBody bool,
 	ip string,
@@ -554,8 +544,6 @@ func getLogs(
 			tokenID,
 			tokenName,
 			channelID,
-			endpoint,
-			mode,
 			codeType,
 			ip,
 			resultOnly,
@@ -572,8 +560,6 @@ func getLogs(
 			tokenID,
 			tokenName,
 			channelID,
-			endpoint,
-			mode,
 			codeType,
 			ip,
 			resultOnly,
@@ -610,9 +596,7 @@ func GetLogs(
 	tokenID int,
 	tokenName string,
 	channelID int,
-	endpoint string,
 	order string,
-	mode int,
 	codeType CodeType,
 	withBody bool,
 	ip string,
@@ -634,7 +618,7 @@ func GetLogs(
 
 	g.Go(func() error {
 		var err error
-		total, logs, err = getLogs(group, startTimestamp, endTimestamp, modelName, requestID, tokenID, tokenName, channelID, endpoint, order, mode, codeType, withBody, ip, page, perPage, resultOnly)
+		total, logs, err = getLogs(group, startTimestamp, endTimestamp, modelName, requestID, tokenID, tokenName, channelID, order, codeType, withBody, ip, page, perPage, resultOnly)
 		return err
 	})
 
@@ -660,9 +644,7 @@ func GetGroupLogs(
 	tokenID int,
 	tokenName string,
 	channelID int,
-	endpoint string,
 	order string,
-	mode int,
 	codeType CodeType,
 	withBody bool,
 	ip string,
@@ -685,7 +667,7 @@ func GetGroupLogs(
 
 	g.Go(func() error {
 		var err error
-		total, logs, err = getLogs(group, startTimestamp, endTimestamp, modelName, requestID, tokenID, tokenName, channelID, endpoint, order, mode, codeType, withBody, ip, page, perPage, resultOnly)
+		total, logs, err = getLogs(group, startTimestamp, endTimestamp, modelName, requestID, tokenID, tokenName, channelID, order, codeType, withBody, ip, page, perPage, resultOnly)
 		return err
 	})
 
@@ -718,7 +700,6 @@ func GetGroupLogs(
 func buildSearchLogsQuery(
 	group string,
 	keyword string,
-	endpoint string,
 	requestID string,
 	tokenID int,
 	tokenName string,
@@ -726,12 +707,18 @@ func buildSearchLogsQuery(
 	startTimestamp time.Time,
 	endTimestamp time.Time,
 	channelID int,
-	mode int,
 	codeType CodeType,
 	ip string,
 	resultOnly bool,
 ) *gorm.DB {
 	tx := LogDB.Model(&Log{})
+
+	if requestID != "" {
+		tx = tx.Where("request_id = ?", requestID)
+	}
+	if ip != "" {
+		tx = tx.Where("ip = ?", ip)
+	}
 
 	if group == "" {
 		tx = tx.Where("group_id = ''")
@@ -744,6 +731,9 @@ func buildSearchLogsQuery(
 	if tokenName != "" {
 		tx = tx.Where("token_name = ?", tokenName)
 	}
+	if channelID != 0 {
+		tx = tx.Where("channel_id = ?", channelID)
+	}
 
 	switch {
 	case !startTimestamp.IsZero() && !endTimestamp.IsZero():
@@ -754,8 +744,8 @@ func buildSearchLogsQuery(
 		tx = tx.Where("request_at <= ?", endTimestamp)
 	}
 
-	if requestID != "" {
-		tx = tx.Where("request_id = ?", requestID)
+	if resultOnly {
+		tx = tx.Where("downstream_result = true")
 	}
 
 	switch codeType {
@@ -765,24 +755,8 @@ func buildSearchLogsQuery(
 		tx = tx.Where("code != 200")
 	}
 
-	if resultOnly {
-		tx = tx.Where("downstream_result = true")
-	}
-
-	if channelID != 0 {
-		tx = tx.Where("channel_id = ?", channelID)
-	}
 	if tokenID != 0 {
 		tx = tx.Where("token_id = ?", tokenID)
-	}
-	if ip != "" {
-		tx = tx.Where("ip = ?", ip)
-	}
-	if mode != 0 {
-		tx = tx.Where("mode = ?", mode)
-	}
-	if endpoint != "" {
-		tx = tx.Where("endpoint = ?", endpoint)
 	}
 
 	// Handle keyword search for zero value fields
@@ -790,6 +764,10 @@ func buildSearchLogsQuery(
 		var conditions []string
 		var values []interface{}
 
+		if requestID == "" {
+			conditions = append(conditions, "request_id = ?")
+			values = append(values, keyword)
+		}
 		if group == "" {
 			conditions = append(conditions, "group_id = ?")
 			values = append(values, keyword)
@@ -802,18 +780,10 @@ func buildSearchLogsQuery(
 			conditions = append(conditions, "token_name = ?")
 			values = append(values, keyword)
 		}
-		if requestID == "" {
-			conditions = append(conditions, "request_id = ?")
-			values = append(values, keyword)
-		}
 
 		// if num := String2Int(keyword); num != 0 {
 		// 	if channelID == 0 {
 		// 		conditions = append(conditions, "channel_id = ?")
-		// 		values = append(values, num)
-		// 	}
-		// 	if mode != 0 {
-		// 		conditions = append(conditions, "mode = ?")
 		// 		values = append(values, num)
 		// 	}
 		// }
@@ -821,15 +791,6 @@ func buildSearchLogsQuery(
 		// if ip != "" {
 		// 	conditions = append(conditions, "ip = ?")
 		// 	values = append(values, ip)
-		// }
-
-		// if endpoint == "" {
-		// 	if common.UsingPostgreSQL {
-		// 		conditions = append(conditions, "endpoint ILIKE ?")
-		// 	} else {
-		// 		conditions = append(conditions, "endpoint LIKE ?")
-		// 	}
-		// 	values = append(values, "%"+keyword+"%")
 		// }
 
 		// slow query
@@ -851,7 +812,6 @@ func buildSearchLogsQuery(
 func searchLogs(
 	group string,
 	keyword string,
-	endpoint string,
 	requestID string,
 	tokenID int,
 	tokenName string,
@@ -860,7 +820,6 @@ func searchLogs(
 	endTimestamp time.Time,
 	channelID int,
 	order string,
-	mode int,
 	codeType CodeType,
 	withBody bool,
 	ip string,
@@ -877,7 +836,6 @@ func searchLogs(
 		return buildSearchLogsQuery(
 			group,
 			keyword,
-			endpoint,
 			requestID,
 			tokenID,
 			tokenName,
@@ -885,7 +843,6 @@ func searchLogs(
 			startTimestamp,
 			endTimestamp,
 			channelID,
-			mode,
 			codeType,
 			ip,
 			resultOnly,
@@ -896,7 +853,6 @@ func searchLogs(
 		query := buildSearchLogsQuery(
 			group,
 			keyword,
-			endpoint,
 			requestID,
 			tokenID,
 			tokenName,
@@ -904,7 +860,6 @@ func searchLogs(
 			startTimestamp,
 			endTimestamp,
 			channelID,
-			mode,
 			codeType,
 			ip,
 			resultOnly,
@@ -936,7 +891,6 @@ func searchLogs(
 func SearchLogs(
 	group string,
 	keyword string,
-	endpoint string,
 	requestID string,
 	tokenID int,
 	tokenName string,
@@ -945,7 +899,6 @@ func SearchLogs(
 	endTimestamp time.Time,
 	channelID int,
 	order string,
-	mode int,
 	codeType CodeType,
 	withBody bool,
 	ip string,
@@ -961,7 +914,7 @@ func SearchLogs(
 
 	g.Go(func() error {
 		var err error
-		total, logs, err = searchLogs(group, keyword, endpoint, requestID, tokenID, tokenName, modelName, startTimestamp, endTimestamp, channelID, order, mode, codeType, withBody, ip, page, perPage, resultOnly)
+		total, logs, err = searchLogs(group, keyword, requestID, tokenID, tokenName, modelName, startTimestamp, endTimestamp, channelID, order, codeType, withBody, ip, page, perPage, resultOnly)
 		return err
 	})
 
@@ -987,7 +940,6 @@ func SearchLogs(
 func SearchGroupLogs(
 	group string,
 	keyword string,
-	endpoint string,
 	requestID string,
 	tokenID int,
 	tokenName string,
@@ -996,7 +948,6 @@ func SearchGroupLogs(
 	endTimestamp time.Time,
 	channelID int,
 	order string,
-	mode int,
 	codeType CodeType,
 	withBody bool,
 	ip string,
@@ -1019,7 +970,7 @@ func SearchGroupLogs(
 
 	g.Go(func() error {
 		var err error
-		total, logs, err = searchLogs(group, keyword, endpoint, requestID, tokenID, tokenName, modelName, startTimestamp, endTimestamp, channelID, order, mode, codeType, withBody, ip, page, perPage, resultOnly)
+		total, logs, err = searchLogs(group, keyword, requestID, tokenID, tokenName, modelName, startTimestamp, endTimestamp, channelID, order, codeType, withBody, ip, page, perPage, resultOnly)
 		return err
 	})
 
