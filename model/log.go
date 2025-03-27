@@ -1039,11 +1039,11 @@ type DashboardResponse struct {
 	TPM int64 `json:"tpm"`
 
 	UsedAmount          float64 `json:"used_amount"`
-	InputTokens         int64   `json:"input_tokens"`
-	OutputTokens        int64   `json:"output_tokens"`
-	TotalTokens         int64   `json:"total_tokens"`
-	CachedTokens        int64   `json:"cached_tokens"`
-	CacheCreationTokens int64   `json:"cache_creation_tokens"`
+	InputTokens         int64   `json:"input_tokens,omitempty"`
+	OutputTokens        int64   `json:"output_tokens,omitempty"`
+	TotalTokens         int64   `json:"total_tokens,omitempty"`
+	CachedTokens        int64   `json:"cached_tokens,omitempty"`
+	CacheCreationTokens int64   `json:"cache_creation_tokens,omitempty"`
 
 	Channels []int `json:"channels,omitempty"`
 }
