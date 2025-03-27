@@ -1034,10 +1034,18 @@ type DashboardResponse struct {
 	ChartData      []*ChartData `json:"chart_data"`
 	TotalCount     int64        `json:"total_count"`
 	ExceptionCount int64        `json:"exception_count"`
-	UsedAmount     float64      `json:"used_amount"`
-	RPM            int64        `json:"rpm"`
-	TPM            int64        `json:"tpm"`
-	Channels       []int        `json:"channels,omitempty"`
+
+	RPM int64 `json:"rpm"`
+	TPM int64 `json:"tpm"`
+
+	UsedAmount          float64 `json:"used_amount"`
+	InputTokens         int64   `json:"input_tokens"`
+	OutputTokens        int64   `json:"output_tokens"`
+	TotalTokens         int64   `json:"total_tokens"`
+	CachedTokens        int64   `json:"cached_tokens"`
+	CacheCreationTokens int64   `json:"cache_creation_tokens"`
+
+	Channels []int `json:"channels,omitempty"`
 }
 
 type GroupDashboardResponse struct {
@@ -1196,28 +1204,24 @@ func getLogGroupByValues[T cmp.Ordered](field string, group string, start, end t
 	return values, nil
 }
 
-func sumTotalCount(chartData []*ChartData) int64 {
-	var count int64
-	for _, data := range chartData {
-		count += data.RequestCount
+func sumDashboardResponse(chartData []*ChartData) DashboardResponse {
+	dashboardResponse := DashboardResponse{
+		ChartData: chartData,
 	}
-	return count
-}
+	usedAmount := decimal.NewFromFloat(0)
+	for _, data := range chartData {
+		dashboardResponse.TotalCount += data.RequestCount
+		dashboardResponse.ExceptionCount += data.ExceptionCount
 
-func sumExceptionCount(chartData []*ChartData) int64 {
-	var count int64
-	for _, data := range chartData {
-		count += data.ExceptionCount
+		usedAmount = usedAmount.Add(decimal.NewFromFloat(data.UsedAmount))
+		dashboardResponse.InputTokens += data.InputTokens
+		dashboardResponse.OutputTokens += data.OutputTokens
+		dashboardResponse.TotalTokens += data.TotalTokens
+		dashboardResponse.CachedTokens += data.CachedTokens
+		dashboardResponse.CacheCreationTokens += data.CacheCreationTokens
 	}
-	return count
-}
-
-func sumUsedAmount(chartData []*ChartData) float64 {
-	var amount decimal.Decimal
-	for _, data := range chartData {
-		amount = amount.Add(decimal.NewFromFloat(data.UsedAmount))
-	}
-	return amount.InexactFloat64()
+	dashboardResponse.UsedAmount = usedAmount.InexactFloat64()
+	return dashboardResponse
 }
 
 func getRPM(group string, end time.Time, tokenName, modelName string, channelID int, resultOnly bool) (int64, error) {
@@ -1333,19 +1337,12 @@ func GetDashboardData(
 		return nil, err
 	}
 
-	totalCount := sumTotalCount(chartData)
-	exceptionCount := sumExceptionCount(chartData)
-	usedAmount := sumUsedAmount(chartData)
+	dashboardResponse := sumDashboardResponse(chartData)
+	dashboardResponse.Channels = channels
+	dashboardResponse.RPM = rpm
+	dashboardResponse.TPM = tpm
 
-	return &DashboardResponse{
-		ChartData:      chartData,
-		TotalCount:     totalCount,
-		ExceptionCount: exceptionCount,
-		UsedAmount:     usedAmount,
-		RPM:            rpm,
-		TPM:            tpm,
-		Channels:       channels,
-	}, nil
+	return &dashboardResponse, nil
 }
 
 func GetGroupDashboardData(
@@ -1414,21 +1411,14 @@ func GetGroupDashboardData(
 		return nil, err
 	}
 
-	totalCount := sumTotalCount(chartData)
-	exceptionCount := sumExceptionCount(chartData)
-	usedAmount := sumUsedAmount(chartData)
+	dashboardResponse := sumDashboardResponse(chartData)
+	dashboardResponse.RPM = rpm
+	dashboardResponse.TPM = tpm
 
 	return &GroupDashboardResponse{
-		DashboardResponse: DashboardResponse{
-			ChartData:      chartData,
-			TotalCount:     totalCount,
-			ExceptionCount: exceptionCount,
-			UsedAmount:     usedAmount,
-			RPM:            rpm,
-			TPM:            tpm,
-		},
-		Models:     models,
-		TokenNames: tokenNames,
+		DashboardResponse: dashboardResponse,
+		Models:            models,
+		TokenNames:        tokenNames,
 	}, nil
 }
 
