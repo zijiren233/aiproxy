@@ -11,6 +11,7 @@ import (
 	"github.com/labring/aiproxy/common"
 	"github.com/labring/aiproxy/common/config"
 	"github.com/labring/aiproxy/common/env"
+	"github.com/labring/aiproxy/common/notify"
 
 	// import fastjson serializer
 	_ "github.com/labring/aiproxy/common/fastJSONSerializer"
@@ -196,7 +197,14 @@ func migrateLOGDB() error {
 		return err
 	}
 
-	return CreateLogIndexes(LogDB)
+	go func() {
+		err := CreateLogIndexes(LogDB)
+		if err != nil {
+			notify.ErrorThrottle("createLogIndexes", time.Minute, "failed to create log indexes", err.Error())
+		}
+	}()
+
+	return nil
 }
 
 func setDBConns(db *gorm.DB) {
