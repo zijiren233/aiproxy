@@ -182,54 +182,58 @@ func detectIPGroups(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			threshold := config.GetIPGroupsThreshold()
-			if threshold < 1 {
-				continue
-			}
-			if !trylock.Lock("detectIPGroups", time.Minute) {
-				continue
-			}
-			ipGroupList, err := model.GetIPGroups(int(threshold), time.Now().Add(-time.Hour), time.Now())
+			DetectIPGroups()
+		}
+	}
+}
+
+func DetectIPGroups() {
+	threshold := config.GetIPGroupsThreshold()
+	if threshold < 1 {
+		return
+	}
+	if !trylock.Lock("detectIPGroups", time.Minute) {
+		return
+	}
+	ipGroupList, err := model.GetIPGroups(int(threshold), time.Now().Add(-time.Hour), time.Now())
+	if err != nil {
+		notify.ErrorThrottle("detectIPGroups", time.Minute, "detect IP groups failed", err.Error())
+	}
+	if len(ipGroupList) == 0 {
+		return
+	}
+	banThreshold := config.GetIPGroupsBanThreshold()
+	for ip, groups := range ipGroupList {
+		slices.Sort(groups)
+		groupsJSON, err := sonic.MarshalString(groups)
+		if err != nil {
+			notify.ErrorThrottle("detectIPGroupsMarshal", time.Minute, "marshal IP groups failed", err.Error())
+			continue
+		}
+
+		h := sha256.New()
+		h.Write(conv.StringToBytes(groupsJSON))
+		groupsHash := hex.EncodeToString(h.Sum(nil))
+
+		hashKey := fmt.Sprintf("%s:%s", ip, groupsHash)
+		if !trylock.Lock("detectIPGroupsHandle:"+hashKey, time.Hour*3) {
+			continue
+		}
+		if banThreshold >= threshold && len(groups) >= int(banThreshold) {
+			notify.Warn(
+				fmt.Sprintf("Suspicious activity: IP %s is using %d groups (exceeds ban threshold of %d). IP and all groups have been disabled.", ip, len(groups), banThreshold),
+				groupsJSON,
+			)
+			err = model.UpdateGroupsStatus(groups, model.GroupStatusDisabled)
 			if err != nil {
-				notify.ErrorThrottle("detectIPGroups", time.Minute, "detect IP groups failed", err.Error())
+				notify.ErrorThrottle("detectIPGroupsBan", time.Minute, "update groups status failed", err.Error())
 			}
-			if len(ipGroupList) == 0 {
-				continue
-			}
-			banThreshold := config.GetIPGroupsBanThreshold()
-			for ip, groups := range ipGroupList {
-				slices.Sort(groups)
-				groupsJSON, err := sonic.MarshalString(groups)
-				if err != nil {
-					notify.ErrorThrottle("detectIPGroupsMarshal", time.Minute, "marshal IP groups failed", err.Error())
-					continue
-				}
-
-				h := sha256.New()
-				h.Write(conv.StringToBytes(groupsJSON))
-				groupsHash := hex.EncodeToString(h.Sum(nil))
-
-				hashKey := fmt.Sprintf("%s:%s", ip, groupsHash)
-				if !trylock.Lock("detectIPGroupsHandle:"+hashKey, time.Hour*3) {
-					continue
-				}
-				if banThreshold >= threshold && len(groups) >= int(banThreshold) {
-					notify.Warn(
-						fmt.Sprintf("Suspicious activity: IP %s is using %d groups (exceeds ban threshold of %d). IP and all groups have been disabled.", ip, len(groups), banThreshold),
-						groupsJSON,
-					)
-					err = model.UpdateGroupsStatus(groups, model.GroupStatusDisabled)
-					if err != nil {
-						notify.ErrorThrottle("detectIPGroupsBan", time.Minute, "update groups status failed", err.Error())
-					}
-					ipblack.SetIPBlack(ip, time.Hour*48)
-				} else {
-					notify.Warn(
-						fmt.Sprintf("Potential abuse: IP %s is using %d groups (exceeds threshold of %d)", ip, len(groups), threshold),
-						groupsJSON,
-					)
-				}
-			}
+			ipblack.SetIPBlack(ip, time.Hour*48)
+		} else {
+			notify.Warn(
+				fmt.Sprintf("Potential abuse: IP %s is using %d groups (exceeds threshold of %d)", ip, len(groups), threshold),
+				groupsJSON,
+			)
 		}
 	}
 }
