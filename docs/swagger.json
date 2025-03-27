@@ -1966,6 +1966,108 @@
                 }
             }
         },
+        "/api/groups/batch_status": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Updates the status of multiple groups",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "groups"
+                ],
+                "summary": "Update multiple groups status",
+                "parameters": [
+                    {
+                        "description": "Group IDs and status",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/controller.UpdateGroupsStatusRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/groups/ip_groups": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Get IP group list",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "groups"
+                ],
+                "summary": "Get IP group list",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Threshold",
+                        "name": "threshold",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Start timestamp",
+                        "name": "start_timestamp",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "End timestamp",
+                        "name": "end_timestamp",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/middleware.APIResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "additionalProperties": {
+                                                "type": "array",
+                                                "items": {
+                                                    "type": "string"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/api/groups/search": {
             "get": {
                 "security": [
@@ -6736,6 +6838,20 @@
             "properties": {
                 "tpm_ratio": {
                     "type": "number"
+                }
+            }
+        },
+        "controller.UpdateGroupsStatusRequest": {
+            "type": "object",
+            "properties": {
+                "groups": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "status": {
+                    "type": "integer"
                 }
             }
         },

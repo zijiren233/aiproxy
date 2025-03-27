@@ -296,6 +296,15 @@ definitions:
       tpm_ratio:
         type: number
     type: object
+  controller.UpdateGroupsStatusRequest:
+    properties:
+      groups:
+        items:
+          type: string
+        type: array
+      status:
+        type: integer
+    type: object
   controller.UpdateTokenNameRequest:
     properties:
       name:
@@ -2351,6 +2360,67 @@ paths:
       security:
       - ApiKeyAuth: []
       summary: Delete multiple groups
+      tags:
+      - groups
+  /api/groups/batch_status:
+    post:
+      consumes:
+      - application/json
+      description: Updates the status of multiple groups
+      parameters:
+      - description: Group IDs and status
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/controller.UpdateGroupsStatusRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/middleware.APIResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Update multiple groups status
+      tags:
+      - groups
+  /api/groups/ip_groups:
+    get:
+      description: Get IP group list
+      parameters:
+      - description: Threshold
+        in: query
+        name: threshold
+        type: integer
+      - description: Start timestamp
+        in: query
+        name: start_timestamp
+        type: integer
+      - description: End timestamp
+        in: query
+        name: end_timestamp
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/middleware.APIResponse'
+            - properties:
+                data:
+                  additionalProperties:
+                    items:
+                      type: string
+                    type: array
+                  type: object
+              type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Get IP group list
       tags:
       - groups
   /api/groups/search:

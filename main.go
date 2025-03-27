@@ -14,13 +14,16 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/bytedance/sonic"
 	"github.com/gin-gonic/gin"
 	_ "github.com/joho/godotenv/autoload"
 	"github.com/labring/aiproxy/common"
 	"github.com/labring/aiproxy/common/balance"
 	"github.com/labring/aiproxy/common/config"
 	"github.com/labring/aiproxy/common/consume"
+	"github.com/labring/aiproxy/common/ipblack"
 	"github.com/labring/aiproxy/common/notify"
+	"github.com/labring/aiproxy/common/trylock"
 	"github.com/labring/aiproxy/controller"
 	"github.com/labring/aiproxy/middleware"
 	"github.com/labring/aiproxy/model"
@@ -165,6 +168,50 @@ func autoTestBannedModels(ctx context.Context) {
 	}
 }
 
+func detectIPGroups(ctx context.Context) {
+	log.Info("detect IP groups start")
+	ticker := time.NewTicker(time.Minute)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			threshold := config.GetIPGroupsThreshold()
+			if threshold < 1 {
+				continue
+			}
+			trylock.Lock("detectIPGroups", time.Minute)
+			ipGroupList, err := model.GetIPGroups(int(threshold), time.Now().Add(-time.Hour), time.Now())
+			if err != nil {
+				notify.ErrorThrottle("detectIPGroups", time.Minute, "detect IP groups failed", err.Error())
+			}
+			if len(ipGroupList) == 0 {
+				continue
+			}
+			banThreshold := config.GetIPGroupsBanThreshold()
+			for ip, groups := range ipGroupList {
+				groupsJSON, err := sonic.MarshalString(groups)
+				if err != nil {
+					notify.ErrorThrottle("detectIPGroupsMarshal", time.Minute, "marshal IP groups failed", err.Error())
+					continue
+				}
+				if banThreshold >= threshold && len(groups) >= int(banThreshold) {
+					notify.WarnThrottle("detectIPGroupsBan:"+ip, time.Hour, fmt.Sprintf("IP(%s) groups beyond ban threshold(%d)", ip, banThreshold), groupsJSON)
+					err = model.UpdateGroupsStatus(groups, model.GroupStatusDisabled)
+					if err != nil {
+						notify.ErrorThrottle("detectIPGroupsBan", time.Minute, "update groups status failed", err.Error())
+					}
+					ipblack.SetIPBlack(ip, time.Hour*24)
+				} else {
+					notify.WarnThrottle("detectIPGroups:"+ip, time.Minute, fmt.Sprintf("IP(%s) groups beyond threshold(%d)", ip, threshold), groupsJSON)
+				}
+			}
+		}
+	}
+}
+
 func cleanLog(ctx context.Context) {
 	log.Info("clean log start")
 	// the interval should not be too large to avoid cleaning too much at once
@@ -219,6 +266,7 @@ func main() {
 
 	go autoTestBannedModels(ctx)
 	go cleanLog(ctx)
+	go detectIPGroups(ctx)
 	go controller.UpdateChannelsBalance(time.Minute * 10)
 
 	batchProcessorCtx, batchProcessorCancel := context.WithCancel(context.Background())

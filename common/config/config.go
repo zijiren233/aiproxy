@@ -31,6 +31,8 @@ var (
 	logDetailStorageHours        int64 = 3 * 24     // 3 days
 	internalToken                atomic.Value
 	notifyNote                   atomic.Value
+	ipGroupsThreshold            int64
+	ipGroupsBanThreshold         int64
 )
 
 var (
@@ -129,6 +131,24 @@ func GetLogDetailStorageHours() int64 {
 func SetLogDetailStorageHours(hours int64) {
 	hours = env.Int64("LOG_DETAIL_STORAGE_HOURS", hours)
 	atomic.StoreInt64(&logDetailStorageHours, hours)
+}
+
+func GetIPGroupsThreshold() int64 {
+	return atomic.LoadInt64(&ipGroupsThreshold)
+}
+
+func SetIPGroupsThreshold(threshold int64) {
+	threshold = env.Int64("IP_GROUPS_THRESHOLD", threshold)
+	atomic.StoreInt64(&ipGroupsThreshold, threshold)
+}
+
+func GetIPGroupsBanThreshold() int64 {
+	return atomic.LoadInt64(&ipGroupsBanThreshold)
+}
+
+func SetIPGroupsBanThreshold(threshold int64) {
+	threshold = env.Int64("IP_GROUPS_BAN_THRESHOLD", threshold)
+	atomic.StoreInt64(&ipGroupsBanThreshold, threshold)
 }
 
 func GetSaveAllLogDetail() bool {

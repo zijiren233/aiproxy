@@ -109,3 +109,5 @@ docker-compose up -d
 - `GROUP_CONSUME_LEVEL_RATIO`: 每个组消费等级比例，默认 `{}`
 - `GEMINI_SAFETY_SETTING`: Gemini 模型安全设置，默认 `BLOCK_NONE`
 - `BILLING_ENABLED`: 启用计费功能，默认 `true`
+- `IP_GROUPS_THRESHOLD`: IP 组阈值，当同一个 IP 被多个组使用时发出预警，默认 `0`
+- `IP_GROUPS_BAN_THRESHOLD`: IP 组禁用阈值，当同一个 IP 被多个组使用时禁用其所有组和 IP，默认 `0`
