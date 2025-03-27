@@ -764,6 +764,10 @@ func buildSearchLogsQuery(
 		var conditions []string
 		var values []interface{}
 
+		if requestID == "" {
+			conditions = append(conditions, "request_id = ?")
+			values = append(values, keyword)
+		}
 		if group == "" {
 			conditions = append(conditions, "group_id = ?")
 			values = append(values, keyword)
@@ -774,10 +778,6 @@ func buildSearchLogsQuery(
 		}
 		if tokenName == "" {
 			conditions = append(conditions, "token_name = ?")
-			values = append(values, keyword)
-		}
-		if requestID == "" {
-			conditions = append(conditions, "request_id = ?")
 			values = append(values, keyword)
 		}
 
