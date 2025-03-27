@@ -15,8 +15,11 @@ import (
 	"gorm.io/gorm"
 )
 
-func getDashboardTime(t string) (time.Time, time.Time, model.TimeSpanType) {
+func getDashboardTime(t string, startTimestamp int64, endTimestamp int64) (time.Time, time.Time, model.TimeSpanType) {
 	end := time.Now()
+	if endTimestamp != 0 {
+		end = time.UnixMilli(endTimestamp)
+	}
 	var start time.Time
 	var timeSpan model.TimeSpanType
 	switch t {
@@ -34,6 +37,9 @@ func getDashboardTime(t string) (time.Time, time.Time, model.TimeSpanType) {
 	default:
 		start = end.AddDate(0, 0, -1)
 		timeSpan = model.TimeSpanHour
+	}
+	if startTimestamp != 0 {
+		start = time.UnixMilli(startTimestamp)
 	}
 	return start, end, timeSpan
 }
@@ -132,19 +138,23 @@ func fillGaps(data []*model.ChartData, start, end time.Time, t model.TimeSpanTyp
 //	@Tags			dashboard
 //	@Produce		json
 //	@Security		ApiKeyAuth
-//	@Param			group		query		string	false	"Group or *"
-//	@Param			channel		query		int		false	"Channel ID"
-//	@Param			type		query		string	false	"Type of time span (day, week, month, two_week)"
-//	@Param			model		query		string	false	"Model name"
-//	@Param			result_only	query		bool	false	"Only return result"
-//	@Param			token_usage	query		bool	false	"Token usage"
-//	@Success		200			{object}	middleware.APIResponse{data=model.DashboardResponse}
+//	@Param			group			query		string	false	"Group or *"
+//	@Param			channel			query		int		false	"Channel ID"
+//	@Param			type			query		string	false	"Type of time span (day, week, month, two_week)"
+//	@Param			model			query		string	false	"Model name"
+//	@Param			result_only		query		bool	false	"Only return result"
+//	@Param			token_usage		query		bool	false	"Token usage"
+//	@Param			start_timestamp	query		int64	false	"Start timestamp"
+//	@Param			end_timestamp	query		int64	false	"End timestamp"
+//	@Success		200				{object}	middleware.APIResponse{data=model.DashboardResponse}
 //	@Router			/api/dashboard [get]
 func GetDashboard(c *gin.Context) {
 	log := middleware.GetLogger(c)
 
 	group := c.Query("group")
-	start, end, timeSpan := getDashboardTime(c.Query("type"))
+	startTimestamp, _ := strconv.ParseInt(c.Query("start_timestamp"), 10, 64)
+	endTimestamp, _ := strconv.ParseInt(c.Query("end_timestamp"), 10, 64)
+	start, end, timeSpan := getDashboardTime(c.Query("type"), startTimestamp, endTimestamp)
 	modelName := c.Query("model")
 	resultOnly, _ := strconv.ParseBool(c.Query("result_only"))
 	tokenUsage, _ := strconv.ParseBool(c.Query("token_usage"))
@@ -179,13 +189,15 @@ func GetDashboard(c *gin.Context) {
 //	@Tags			dashboard
 //	@Produce		json
 //	@Security		ApiKeyAuth
-//	@Param			group		path		string	true	"Group"
-//	@Param			type		query		string	false	"Type of time span (day, week, month, two_week)"
-//	@Param			token_name	query		string	false	"Token name"
-//	@Param			model		query		string	false	"Model or *"
-//	@Param			result_only	query		bool	false	"Only return result"
-//	@Param			token_usage	query		bool	false	"Token usage"
-//	@Success		200			{object}	middleware.APIResponse{data=model.GroupDashboardResponse}
+//	@Param			group			path		string	true	"Group"
+//	@Param			type			query		string	false	"Type of time span (day, week, month, two_week)"
+//	@Param			token_name		query		string	false	"Token name"
+//	@Param			model			query		string	false	"Model or *"
+//	@Param			result_only		query		bool	false	"Only return result"
+//	@Param			token_usage		query		bool	false	"Token usage"
+//	@Param			start_timestamp	query		int64	false	"Start timestamp"
+//	@Param			end_timestamp	query		int64	false	"End timestamp"
+//	@Success		200				{object}	middleware.APIResponse{data=model.GroupDashboardResponse}
 //	@Router			/api/dashboard/{group} [get]
 func GetGroupDashboard(c *gin.Context) {
 	log := middleware.GetLogger(c)
@@ -196,7 +208,9 @@ func GetGroupDashboard(c *gin.Context) {
 		return
 	}
 
-	start, end, timeSpan := getDashboardTime(c.Query("type"))
+	startTimestamp, _ := strconv.ParseInt(c.Query("start_timestamp"), 10, 64)
+	endTimestamp, _ := strconv.ParseInt(c.Query("end_timestamp"), 10, 64)
+	start, end, timeSpan := getDashboardTime(c.Query("type"), startTimestamp, endTimestamp)
 	tokenName := c.Query("token_name")
 	modelName := c.Query("model")
 	resultOnly, _ := strconv.ParseBool(c.Query("result_only"))

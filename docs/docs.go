@@ -1012,6 +1012,18 @@ const docTemplate = `{
                         "description": "Token usage",
                         "name": "token_usage",
                         "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Start timestamp",
+                        "name": "start_timestamp",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "End timestamp",
+                        "name": "end_timestamp",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -1087,6 +1099,18 @@ const docTemplate = `{
                         "type": "boolean",
                         "description": "Token usage",
                         "name": "token_usage",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Start timestamp",
+                        "name": "start_timestamp",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "End timestamp",
+                        "name": "end_timestamp",
                         "in": "query"
                     }
                 ],
@@ -6573,23 +6597,11 @@ const docTemplate = `{
                 "request_count": {
                     "type": "integer"
                 },
-                "rpm": {
-                    "type": "object",
-                    "additionalProperties": {
-                        "type": "integer"
-                    }
-                },
                 "rpm_ratio": {
                     "type": "number"
                 },
                 "status": {
                     "type": "integer"
-                },
-                "tpm": {
-                    "type": "object",
-                    "additionalProperties": {
-                        "type": "integer"
-                    }
                 },
                 "tpm_ratio": {
                     "type": "number"
@@ -7146,6 +7158,12 @@ const docTemplate = `{
         "model.DashboardResponse": {
             "type": "object",
             "properties": {
+                "cache_creation_tokens": {
+                    "type": "integer"
+                },
+                "cached_tokens": {
+                    "type": "integer"
+                },
                 "channels": {
                     "type": "array",
                     "items": {
@@ -7161,10 +7179,19 @@ const docTemplate = `{
                 "exception_count": {
                     "type": "integer"
                 },
+                "input_tokens": {
+                    "type": "integer"
+                },
+                "output_tokens": {
+                    "type": "integer"
+                },
                 "rpm": {
                     "type": "integer"
                 },
                 "total_count": {
+                    "type": "integer"
+                },
+                "total_tokens": {
                     "type": "integer"
                 },
                 "tpm": {
@@ -7435,23 +7462,11 @@ const docTemplate = `{
                 "request_count": {
                     "type": "integer"
                 },
-                "rpm": {
-                    "type": "object",
-                    "additionalProperties": {
-                        "type": "integer"
-                    }
-                },
                 "rpm_ratio": {
                     "type": "number"
                 },
                 "status": {
                     "type": "integer"
-                },
-                "tpm": {
-                    "type": "object",
-                    "additionalProperties": {
-                        "type": "integer"
-                    }
                 },
                 "tpm_ratio": {
                     "type": "number"
@@ -7464,6 +7479,12 @@ const docTemplate = `{
         "model.GroupDashboardResponse": {
             "type": "object",
             "properties": {
+                "cache_creation_tokens": {
+                    "type": "integer"
+                },
+                "cached_tokens": {
+                    "type": "integer"
+                },
                 "channels": {
                     "type": "array",
                     "items": {
@@ -7479,11 +7500,17 @@ const docTemplate = `{
                 "exception_count": {
                     "type": "integer"
                 },
+                "input_tokens": {
+                    "type": "integer"
+                },
                 "models": {
                     "type": "array",
                     "items": {
                         "type": "string"
                     }
+                },
+                "output_tokens": {
+                    "type": "integer"
                 },
                 "rpm": {
                     "type": "integer"
@@ -7495,6 +7522,9 @@ const docTemplate = `{
                     }
                 },
                 "total_count": {
+                    "type": "integer"
+                },
+                "total_tokens": {
                     "type": "integer"
                 },
                 "tpm": {
