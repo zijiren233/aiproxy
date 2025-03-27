@@ -198,14 +198,24 @@ func detectIPGroups(ctx context.Context) {
 					continue
 				}
 				if banThreshold >= threshold && len(groups) >= int(banThreshold) {
-					notify.WarnThrottle("detectIPGroupsBan:"+ip, time.Hour, fmt.Sprintf("IP(%s) groups beyond ban threshold(%d)", ip, banThreshold), groupsJSON)
+					notify.WarnThrottle(
+						"detectIPGroupsBan:"+ip,
+						time.Hour,
+						fmt.Sprintf("Suspicious activity: IP %s is using %d groups (exceeds ban threshold of %d). IP and all groups have been disabled.", ip, len(groups), banThreshold),
+						groupsJSON,
+					)
 					err = model.UpdateGroupsStatus(groups, model.GroupStatusDisabled)
 					if err != nil {
 						notify.ErrorThrottle("detectIPGroupsBan", time.Minute, "update groups status failed", err.Error())
 					}
 					ipblack.SetIPBlack(ip, time.Hour*24)
 				} else {
-					notify.WarnThrottle("detectIPGroups:"+ip, time.Minute, fmt.Sprintf("IP(%s) groups beyond threshold(%d)", ip, threshold), groupsJSON)
+					notify.WarnThrottle(
+						"detectIPGroups:"+ip,
+						time.Minute,
+						fmt.Sprintf("Potential abuse: IP %s is using %d groups (exceeds threshold of %d)", ip, len(groups), threshold),
+						groupsJSON,
+					)
 				}
 			}
 		}
