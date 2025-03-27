@@ -1015,13 +1015,13 @@ const docTemplate = `{
                     },
                     {
                         "type": "integer",
-                        "description": "Start timestamp",
+                        "description": "Start second timestamp",
                         "name": "start_timestamp",
                         "in": "query"
                     },
                     {
                         "type": "integer",
-                        "description": "End timestamp",
+                        "description": "End second timestamp",
                         "name": "end_timestamp",
                         "in": "query"
                     }
@@ -1103,13 +1103,13 @@ const docTemplate = `{
                     },
                     {
                         "type": "integer",
-                        "description": "Start timestamp",
+                        "description": "Start second timestamp",
                         "name": "start_timestamp",
                         "in": "query"
                     },
                     {
                         "type": "integer",
-                        "description": "End timestamp",
+                        "description": "End second timestamp",
                         "name": "end_timestamp",
                         "in": "query"
                     }
@@ -7694,9 +7694,6 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "retry_times": {
-                    "type": "integer"
-                },
-                "timestamp_trunc_by_day": {
                     "type": "integer"
                 },
                 "timestamp_trunc_by_hour": {

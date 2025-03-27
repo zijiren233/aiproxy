@@ -110,8 +110,6 @@ func CreateLogIndexes(db *gorm.DB) error {
 			"CREATE INDEX IF NOT EXISTS idx_group_model_trunchour ON logs (group_id, model, timestamp_trunc_by_hour DESC)",
 			"CREATE INDEX IF NOT EXISTS idx_group_token_trunchour ON logs (group_id, token_name, timestamp_trunc_by_hour DESC)",
 			"CREATE INDEX IF NOT EXISTS idx_group_model_token_trunchour ON logs (group_id, model, token_name, timestamp_trunc_by_hour DESC)",
-
-			"CREATE INDEX IF NOT EXISTS idx_reqat_ip_group ON logs (request_at DESC, ip, group_id)",
 		}
 	} else {
 		indexes = []string{
@@ -141,8 +139,6 @@ func CreateLogIndexes(db *gorm.DB) error {
 			"CREATE INDEX IF NOT EXISTS idx_group_model_trunchour ON logs (group_id, model, timestamp_trunc_by_hour DESC) INCLUDE (downstream_result)",
 			"CREATE INDEX IF NOT EXISTS idx_group_token_trunchour ON logs (group_id, token_name, timestamp_trunc_by_hour DESC) INCLUDE (downstream_result)",
 			"CREATE INDEX IF NOT EXISTS idx_group_model_token_trunchour ON logs (group_id, model, token_name, timestamp_trunc_by_hour DESC) INCLUDE (downstream_result)",
-
-			"CREATE INDEX IF NOT EXISTS idx_reqat_ip_group ON logs (request_at DESC, ip, group_id)",
 		}
 	}
 
@@ -262,26 +258,41 @@ func cleanLog(batchSize int, optimize bool) error {
 		return optimizeLog()
 	}
 
-	subQuery := LogDB.
+	// Find the minimum ID that meets our criteria
+	var id int64
+	err := LogDB.
 		Model(&Log{}).
 		Where(
 			"created_at < ?",
 			time.Now().Add(-time.Duration(logContentStorageHours)*time.Hour),
 		).
 		Where("content IS NOT NULL OR ip IS NOT NULL OR endpoint IS NOT NULL OR ttfb_milliseconds IS NOT NULL").
-		Limit(batchSize).
-		Select("id")
+		Order("created_at DESC").
+		Limit(1).
+		Select("id").
+		Scan(&id).Error
 
-	err := LogDB.
-		Model(&Log{}).
-		Session(&gorm.Session{SkipDefaultTransaction: true}).
-		Where("id IN (?)", subQuery).
-		Updates(map[string]any{
-			"content":           gorm.Expr("NULL"),
-			"ip":                gorm.Expr("NULL"),
-			"endpoint":          gorm.Expr("NULL"),
-			"ttfb_milliseconds": gorm.Expr("NULL"),
-		}).Error
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		return err
+	}
+
+	if id > 0 {
+		// Process in batches based on ID range
+		err = LogDB.
+			Model(&Log{}).
+			Session(&gorm.Session{SkipDefaultTransaction: true}).
+			Where(
+				"id BETWEEN ? AND ?",
+				id-int64(batchSize),
+				id,
+			).
+			Updates(map[string]any{
+				"content":           gorm.Expr("NULL"),
+				"ip":                gorm.Expr("NULL"),
+				"endpoint":          gorm.Expr("NULL"),
+				"ttfb_milliseconds": gorm.Expr("NULL"),
+			}).Error
+	}
 	if err != nil {
 		return err
 	}
