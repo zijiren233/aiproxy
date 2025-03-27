@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"flag"
 	"fmt"
@@ -10,6 +12,7 @@ import (
 	"os"
 	"os/signal"
 	"runtime"
+	"slices"
 	"sync"
 	"syscall"
 	"time"
@@ -21,6 +24,7 @@ import (
 	"github.com/labring/aiproxy/common/balance"
 	"github.com/labring/aiproxy/common/config"
 	"github.com/labring/aiproxy/common/consume"
+	"github.com/labring/aiproxy/common/conv"
 	"github.com/labring/aiproxy/common/ipblack"
 	"github.com/labring/aiproxy/common/notify"
 	"github.com/labring/aiproxy/common/trylock"
@@ -182,7 +186,9 @@ func detectIPGroups(ctx context.Context) {
 			if threshold < 1 {
 				continue
 			}
-			trylock.Lock("detectIPGroups", time.Minute)
+			if !trylock.Lock("detectIPGroups", time.Minute) {
+				continue
+			}
 			ipGroupList, err := model.GetIPGroups(int(threshold), time.Now().Add(-time.Hour), time.Now())
 			if err != nil {
 				notify.ErrorThrottle("detectIPGroups", time.Minute, "detect IP groups failed", err.Error())
@@ -192,15 +198,23 @@ func detectIPGroups(ctx context.Context) {
 			}
 			banThreshold := config.GetIPGroupsBanThreshold()
 			for ip, groups := range ipGroupList {
+				slices.Sort(groups)
 				groupsJSON, err := sonic.MarshalString(groups)
 				if err != nil {
 					notify.ErrorThrottle("detectIPGroupsMarshal", time.Minute, "marshal IP groups failed", err.Error())
 					continue
 				}
+
+				h := sha256.New()
+				h.Write(conv.StringToBytes(groupsJSON))
+				groupsHash := hex.EncodeToString(h.Sum(nil))
+
+				hashKey := fmt.Sprintf("%s:%s", ip, groupsHash)
+				if !trylock.Lock("detectIPGroupsHandle:"+hashKey, time.Hour*3) {
+					continue
+				}
 				if banThreshold >= threshold && len(groups) >= int(banThreshold) {
-					notify.WarnThrottle(
-						"detectIPGroupsBan:"+ip,
-						time.Hour,
+					notify.Warn(
 						fmt.Sprintf("Suspicious activity: IP %s is using %d groups (exceeds ban threshold of %d). IP and all groups have been disabled.", ip, len(groups), banThreshold),
 						groupsJSON,
 					)
@@ -208,11 +222,9 @@ func detectIPGroups(ctx context.Context) {
 					if err != nil {
 						notify.ErrorThrottle("detectIPGroupsBan", time.Minute, "update groups status failed", err.Error())
 					}
-					ipblack.SetIPBlack(ip, time.Hour*24)
+					ipblack.SetIPBlack(ip, time.Hour*48)
 				} else {
-					notify.WarnThrottle(
-						"detectIPGroups:"+ip,
-						time.Minute,
+					notify.Warn(
 						fmt.Sprintf("Potential abuse: IP %s is using %d groups (exceeds threshold of %d)", ip, len(groups), threshold),
 						groupsJSON,
 					)
