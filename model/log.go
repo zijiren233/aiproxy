@@ -495,15 +495,15 @@ func buildGetLogsQuery(
 		tx = tx.Where("request_at <= ?", endTimestamp)
 	}
 
+	if resultOnly {
+		tx = tx.Where("downstream_result = true")
+	}
+
 	switch codeType {
 	case CodeTypeSuccess:
 		tx = tx.Where("code = 200")
 	case CodeTypeError:
 		tx = tx.Where("code != 200")
-	}
-
-	if resultOnly {
-		tx = tx.Where("downstream_result = true")
 	}
 
 	if tokenID != 0 {
@@ -744,15 +744,15 @@ func buildSearchLogsQuery(
 		tx = tx.Where("request_at <= ?", endTimestamp)
 	}
 
+	if resultOnly {
+		tx = tx.Where("downstream_result = true")
+	}
+
 	switch codeType {
 	case CodeTypeSuccess:
 		tx = tx.Where("code = 200")
 	case CodeTypeError:
 		tx = tx.Where("code != 200")
-	}
-
-	if resultOnly {
-		tx = tx.Where("downstream_result = true")
 	}
 
 	if tokenID != 0 {
