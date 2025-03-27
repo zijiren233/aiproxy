@@ -18,7 +18,7 @@ import (
 func getDashboardTime(t string, startTimestamp int64, endTimestamp int64) (time.Time, time.Time, model.TimeSpanType) {
 	end := time.Now()
 	if endTimestamp != 0 {
-		end = time.UnixMilli(endTimestamp)
+		end = time.Unix(endTimestamp, 0)
 	}
 	var start time.Time
 	var timeSpan model.TimeSpanType
@@ -39,7 +39,7 @@ func getDashboardTime(t string, startTimestamp int64, endTimestamp int64) (time.
 		timeSpan = model.TimeSpanHour
 	}
 	if startTimestamp != 0 {
-		start = time.UnixMilli(startTimestamp)
+		start = time.Unix(startTimestamp, 0)
 	}
 	return start, end, timeSpan
 }
@@ -144,8 +144,8 @@ func fillGaps(data []*model.ChartData, start, end time.Time, t model.TimeSpanTyp
 //	@Param			model			query		string	false	"Model name"
 //	@Param			result_only		query		bool	false	"Only return result"
 //	@Param			token_usage		query		bool	false	"Token usage"
-//	@Param			start_timestamp	query		int64	false	"Start timestamp"
-//	@Param			end_timestamp	query		int64	false	"End timestamp"
+//	@Param			start_timestamp	query		int64	false	"Start second timestamp"
+//	@Param			end_timestamp	query		int64	false	"End second timestamp"
 //	@Success		200				{object}	middleware.APIResponse{data=model.DashboardResponse}
 //	@Router			/api/dashboard [get]
 func GetDashboard(c *gin.Context) {
@@ -195,8 +195,8 @@ func GetDashboard(c *gin.Context) {
 //	@Param			model			query		string	false	"Model or *"
 //	@Param			result_only		query		bool	false	"Only return result"
 //	@Param			token_usage		query		bool	false	"Token usage"
-//	@Param			start_timestamp	query		int64	false	"Start timestamp"
-//	@Param			end_timestamp	query		int64	false	"End timestamp"
+//	@Param			start_timestamp	query		int64	false	"Start second timestamp"
+//	@Param			end_timestamp	query		int64	false	"End second timestamp"
 //	@Success		200				{object}	middleware.APIResponse{data=model.GroupDashboardResponse}
 //	@Router			/api/dashboard/{group} [get]
 func GetGroupDashboard(c *gin.Context) {

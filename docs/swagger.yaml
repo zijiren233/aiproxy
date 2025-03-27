@@ -845,8 +845,6 @@ definitions:
         type: string
       retry_times:
         type: integer
-      timestamp_trunc_by_day:
-        type: integer
       timestamp_trunc_by_hour:
         type: integer
       token_id:
@@ -1776,11 +1774,11 @@ paths:
         in: query
         name: token_usage
         type: boolean
-      - description: Start timestamp
+      - description: Start second timestamp
         in: query
         name: start_timestamp
         type: integer
-      - description: End timestamp
+      - description: End second timestamp
         in: query
         name: end_timestamp
         type: integer
@@ -1830,11 +1828,11 @@ paths:
         in: query
         name: token_usage
         type: boolean
-      - description: Start timestamp
+      - description: Start second timestamp
         in: query
         name: start_timestamp
         type: integer
-      - description: End timestamp
+      - description: End second timestamp
         in: query
         name: end_timestamp
         type: integer
