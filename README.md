@@ -4,7 +4,7 @@ English | [简体中文](./README.zh.md)
 
 Next-generation AI gateway, using OpenAI as the protocol entry point.
 
-## New Feature
+## Feature
 
 - Intelligent error retry
 - Channel selection based on priority and error rate
@@ -35,15 +35,25 @@ Next-generation AI gateway, using OpenAI as the protocol entry point.
 - Inline tiktoken, no need to download tiktoken file
 - API `Swagger` documentation support `http://host:port/swagger/index.html`
 
+## How to use
+
+### Sealos
+
+Use Sealos built-in model capabilities, click to [Sealos](https://usw.sealos.io/?openapp=system-aiproxy).
+
+### FastGPT
+
+Use AI Proxy to access models, click to [FastGPT](https://doc.tryfastgpt.ai/docs/development/modelconfig/ai-proxy/).
+
 ## Deploy
 
-## Use Docker
+### Use Docker
 
 ```bash
 docker run -d --name aiproxy -p 3000:3000 -v $(pwd)/aiproxy:/aiproxy ghcr.io/labring/aiproxy:latest
 ```
 
-## Use Docker Compose
+### Use Docker Compose
 
 Copy [docker-compose.yaml](./docker-compose.yaml) to directory.
 
