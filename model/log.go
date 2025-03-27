@@ -246,15 +246,15 @@ func GetGroupLogDetail(logID int, group string) (*RequestDetail, error) {
 
 const defaultCleanLogBatchSize = 1000
 
-func CleanLog(batchSize int) error {
-	err := cleanLog(batchSize)
+func CleanLog(batchSize int, optimize bool) error {
+	err := cleanLog(batchSize, optimize)
 	if err != nil {
 		return err
 	}
-	return cleanLogDetail(batchSize)
+	return cleanLogDetail(batchSize, optimize)
 }
 
-func cleanLog(batchSize int) error {
+func cleanLog(batchSize int, optimize bool) error {
 	if batchSize <= 0 {
 		batchSize = defaultCleanLogBatchSize
 	}
@@ -276,9 +276,9 @@ func cleanLog(batchSize int) error {
 	logContentStorageHours := config.GetLogContentStorageHours()
 	if logContentStorageHours <= 0 ||
 		logContentStorageHours <= logStorageHours {
-		return nil
+		return optimizeLog()
 	}
-	return LogDB.
+	err := LogDB.
 		Model(&Log{}).
 		Session(&gorm.Session{SkipDefaultTransaction: true}).
 		Where(
@@ -293,9 +293,29 @@ func cleanLog(batchSize int) error {
 			"endpoint":          gorm.Expr("NULL"),
 			"ttfb_milliseconds": gorm.Expr("NULL"),
 		}).Error
+	if err != nil {
+		return err
+	}
+	if !optimize {
+		return nil
+	}
+
+	return optimizeLog()
 }
 
-func cleanLogDetail(batchSize int) error {
+func optimizeLog() error {
+	switch {
+	case common.UsingPostgreSQL:
+		return LogDB.Exec("VACUUM ANALYZE logs").Error
+	case common.UsingMySQL:
+		return LogDB.Exec("OPTIMIZE TABLE logs").Error
+	case common.UsingSQLite:
+		return LogDB.Exec("VACUUM").Error
+	}
+	return nil
+}
+
+func cleanLogDetail(batchSize int, optimize bool) error {
 	detailStorageHours := config.GetLogDetailStorageHours()
 	if detailStorageHours <= 0 {
 		return nil
@@ -303,7 +323,7 @@ func cleanLogDetail(batchSize int) error {
 	if batchSize <= 0 {
 		batchSize = defaultCleanLogBatchSize
 	}
-	return LogDB.
+	err := LogDB.
 		Session(&gorm.Session{SkipDefaultTransaction: true}).
 		Where(
 			"created_at < ?",
@@ -311,6 +331,26 @@ func cleanLogDetail(batchSize int) error {
 		).
 		Limit(batchSize).
 		Delete(&RequestDetail{}).Error
+	if err != nil {
+		return err
+	}
+	if !optimize {
+		return nil
+	}
+
+	return optimizeLogDetail()
+}
+
+func optimizeLogDetail() error {
+	switch {
+	case common.UsingPostgreSQL:
+		return LogDB.Exec("VACUUM ANALYZE request_details").Error
+	case common.UsingMySQL:
+		return LogDB.Exec("OPTIMIZE TABLE request_details").Error
+	case common.UsingSQLite:
+		return LogDB.Exec("VACUUM").Error
+	}
+	return nil
 }
 
 func RecordConsumeLog(
