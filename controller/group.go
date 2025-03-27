@@ -287,6 +287,37 @@ func DeleteGroups(c *gin.Context) {
 	middleware.SuccessResponse(c, nil)
 }
 
+type UpdateGroupsStatusRequest struct {
+	Status int      `json:"status"`
+	Groups []string `json:"groups"`
+}
+
+// UpdateGroupsStatus godoc
+//
+//	@Summary		Update multiple groups status
+//	@Description	Updates the status of multiple groups
+//	@Tags			groups
+//	@Accept			json
+//	@Produce		json
+//	@Security		ApiKeyAuth
+//	@Param			data	body		UpdateGroupsStatusRequest	true	"Group IDs and status"
+//	@Success		200		{object}	middleware.APIResponse
+//	@Router			/api/groups/batch_status [post]
+func UpdateGroupsStatus(c *gin.Context) {
+	req := UpdateGroupsStatusRequest{}
+	err := c.ShouldBindJSON(&req)
+	if err != nil {
+		middleware.ErrorResponse(c, http.StatusOK, err.Error())
+		return
+	}
+	_, err = model.UpdateGroupsStatus(req.Groups, req.Status)
+	if err != nil {
+		middleware.ErrorResponse(c, http.StatusOK, err.Error())
+		return
+	}
+	middleware.SuccessResponse(c, nil)
+}
+
 type CreateGroupRequest struct {
 	RPMRatio     float64  `json:"rpm_ratio"`
 	TPMRatio     float64  `json:"tpm_ratio"`
@@ -656,4 +687,27 @@ func UpdateGroupModelConfigs(c *gin.Context) {
 		return
 	}
 	middleware.SuccessResponse(c, nil)
+}
+
+// GetIPGroupList godoc
+//
+//	@Summary		Get IP group list
+//	@Description	Get IP group list
+//	@Tags			groups
+//	@Produce		json
+//	@Security		ApiKeyAuth
+//	@Param			threshold		query		int	false	"Threshold"
+//	@Param			start_timestamp	query		int	false	"Start timestamp"
+//	@Param			end_timestamp	query		int	false	"End timestamp"
+//	@Success		200				{object}	middleware.APIResponse{data=map[string][]string}
+//	@Router			/api/groups/ip_groups [get]
+func GetIPGroupList(c *gin.Context) {
+	threshold, _ := strconv.Atoi(c.Query("threshold"))
+	startTime, endTime := parseTimeRange(c)
+	ipGroupList, err := model.GetIPGroups(threshold, startTime, endTime)
+	if err != nil {
+		middleware.ErrorResponse(c, http.StatusOK, err.Error())
+		return
+	}
+	middleware.SuccessResponse(c, ipGroupList)
 }

@@ -108,3 +108,5 @@ docker-compose up -d
 - `GROUP_CONSUME_LEVEL_RATIO`: Consumption level ratio for groups, default is `{}`
 - `GEMINI_SAFETY_SETTING`: Safety setting for Gemini models, default is `BLOCK_NONE`
 - `BILLING_ENABLED`: Enable billing functionality, default is `true`
+- `IP_GROUPS_THRESHOLD`: IP group threshold, when the same IP is used by multiple groups, send a warning, default is `0`
+- `IP_GROUPS_BAN_THRESHOLD`: IP group ban threshold, when the same IP is used by multiple groups, ban it and all groups, default is `0`

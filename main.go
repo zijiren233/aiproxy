@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"flag"
 	"fmt"
@@ -10,17 +12,22 @@ import (
 	"os"
 	"os/signal"
 	"runtime"
+	"slices"
 	"sync"
 	"syscall"
 	"time"
 
+	"github.com/bytedance/sonic"
 	"github.com/gin-gonic/gin"
 	_ "github.com/joho/godotenv/autoload"
 	"github.com/labring/aiproxy/common"
 	"github.com/labring/aiproxy/common/balance"
 	"github.com/labring/aiproxy/common/config"
 	"github.com/labring/aiproxy/common/consume"
+	"github.com/labring/aiproxy/common/conv"
+	"github.com/labring/aiproxy/common/ipblack"
 	"github.com/labring/aiproxy/common/notify"
+	"github.com/labring/aiproxy/common/trylock"
 	"github.com/labring/aiproxy/controller"
 	"github.com/labring/aiproxy/middleware"
 	"github.com/labring/aiproxy/model"
@@ -165,6 +172,74 @@ func autoTestBannedModels(ctx context.Context) {
 	}
 }
 
+func detectIPGroups(ctx context.Context) {
+	log.Info("detect IP groups start")
+	ticker := time.NewTicker(time.Minute)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			DetectIPGroups()
+		}
+	}
+}
+
+func DetectIPGroups() {
+	threshold := config.GetIPGroupsThreshold()
+	if threshold < 1 {
+		return
+	}
+	if !trylock.Lock("detectIPGroups", time.Minute) {
+		return
+	}
+	ipGroupList, err := model.GetIPGroups(int(threshold), time.Now().Add(-time.Hour), time.Now())
+	if err != nil {
+		notify.ErrorThrottle("detectIPGroups", time.Minute, "detect IP groups failed", err.Error())
+	}
+	if len(ipGroupList) == 0 {
+		return
+	}
+	banThreshold := config.GetIPGroupsBanThreshold()
+	for ip, groups := range ipGroupList {
+		slices.Sort(groups)
+		groupsJSON, err := sonic.MarshalString(groups)
+		if err != nil {
+			notify.ErrorThrottle("detectIPGroupsMarshal", time.Minute, "marshal IP groups failed", err.Error())
+			continue
+		}
+
+		if banThreshold >= threshold && len(groups) >= int(banThreshold) {
+			rowsAffected, err := model.UpdateGroupsStatus(groups, model.GroupStatusDisabled)
+			if err != nil {
+				notify.ErrorThrottle("detectIPGroupsBan", time.Minute, "update groups status failed", err.Error())
+			}
+			if rowsAffected > 0 {
+				notify.Warn(
+					fmt.Sprintf("Suspicious activity: IP %s is using %d groups (exceeds ban threshold of %d). IP and all groups have been disabled.", ip, len(groups), banThreshold),
+					groupsJSON,
+				)
+				ipblack.SetIPBlackAnyWay(ip, time.Hour*48)
+			}
+			continue
+		}
+
+		h := sha256.New()
+		h.Write(conv.StringToBytes(groupsJSON))
+		groupsHash := hex.EncodeToString(h.Sum(nil))
+		hashKey := fmt.Sprintf("%s:%s", ip, groupsHash)
+
+		notify.WarnThrottle(
+			hashKey,
+			time.Hour*3,
+			fmt.Sprintf("Potential abuse: IP %s is using %d groups (exceeds threshold of %d)", ip, len(groups), threshold),
+			groupsJSON,
+		)
+	}
+}
+
 func cleanLog(ctx context.Context) {
 	log.Info("clean log start")
 	// the interval should not be too large to avoid cleaning too much at once
@@ -219,6 +294,7 @@ func main() {
 
 	go autoTestBannedModels(ctx)
 	go cleanLog(ctx)
+	go detectIPGroups(ctx)
 	go controller.UpdateChannelsBalance(time.Minute * 10)
 
 	batchProcessorCtx, batchProcessorCancel := context.WithCancel(context.Background())

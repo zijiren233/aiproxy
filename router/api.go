@@ -48,6 +48,8 @@ func SetAPIRouter(router *gin.Engine) {
 			groupsRoute.GET("/", controller.GetGroups)
 			groupsRoute.GET("/search", controller.SearchGroups)
 			groupsRoute.POST("/batch_delete", controller.DeleteGroups)
+			groupsRoute.POST("/batch_status", controller.UpdateGroupsStatus)
+			groupsRoute.GET("/ip_groups", controller.GetIPGroupList)
 		}
 		groupRoute := apiRouter.Group("/group")
 		{

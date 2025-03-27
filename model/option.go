@@ -60,6 +60,8 @@ func initOptionMap() error {
 	optionMap["LogStorageHours"] = strconv.FormatInt(config.GetLogStorageHours(), 10)
 	optionMap["LogContentStorageHours"] = strconv.FormatInt(config.GetLogContentStorageHours(), 10)
 	optionMap["LogDetailStorageHours"] = strconv.FormatInt(config.GetLogDetailStorageHours(), 10)
+	optionMap["IPGroupsThreshold"] = strconv.FormatInt(config.GetIPGroupsThreshold(), 10)
+	optionMap["IPGroupsBanThreshold"] = strconv.FormatInt(config.GetIPGroupsBanThreshold(), 10)
 	optionMap["SaveAllLogDetail"] = strconv.FormatBool(config.GetSaveAllLogDetail())
 	optionMap["LogDetailRequestBodyMaxSize"] = strconv.FormatInt(config.GetLogDetailRequestBodyMaxSize(), 10)
 	optionMap["LogDetailResponseBodyMaxSize"] = strconv.FormatInt(config.GetLogDetailResponseBodyMaxSize(), 10)
@@ -211,6 +213,18 @@ func updateOption(key string, value string, isInit bool) (err error) {
 			return err
 		}
 		config.SetLogDetailStorageHours(logDetailStorageHours)
+	case "IPGroupsThreshold":
+		ipGroupsThreshold, err := strconv.ParseInt(value, 10, 64)
+		if err != nil {
+			return err
+		}
+		config.SetIPGroupsThreshold(ipGroupsThreshold)
+	case "IPGroupsBanThreshold":
+		ipGroupsBanThreshold, err := strconv.ParseInt(value, 10, 64)
+		if err != nil {
+			return err
+		}
+		config.SetIPGroupsBanThreshold(ipGroupsBanThreshold)
 	case "SaveAllLogDetail":
 		config.SetSaveAllLogDetail(toBool(value))
 	case "LogDetailRequestBodyMaxSize":

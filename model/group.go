@@ -156,16 +156,20 @@ func UpdateGroup(id string, group *Group) (err error) {
 			}
 		}
 	}()
+	selects := []string{
+		"rpm_ratio",
+		"rpm",
+		"tpm_ratio",
+		"tpm",
+		"available_sets",
+	}
+	if group.Status != 0 {
+		selects = append(selects, "status")
+	}
 	result := DB.
 		Clauses(clause.Returning{}).
 		Where("id = ?", id).
-		Select(
-			"rpm_ratio",
-			"rpm",
-			"tpm_ratio",
-			"tpm",
-			"available_sets",
-		).
+		Select(selects).
 		Updates(group)
 	return HandleUpdateResult(result, ErrGroupNotFound)
 }
@@ -260,6 +264,21 @@ func UpdateGroupStatus(id string, status int) (err error) {
 	}()
 	result := DB.Model(&Group{}).Where("id = ?", id).Update("status", status)
 	return HandleUpdateResult(result, ErrGroupNotFound)
+}
+
+func UpdateGroupsStatus(ids []string, status int) (rowsAffected int64, err error) {
+	defer func() {
+		if err == nil {
+			for _, id := range ids {
+				if err := CacheUpdateGroupStatus(id, status); err != nil {
+					log.Error("cache update group status failed: " + err.Error())
+				}
+			}
+		}
+	}()
+
+	result := DB.Model(&Group{}).Where("id IN (?) AND status != ?", ids, status).Update("status", status)
+	return result.RowsAffected, result.Error
 }
 
 func SearchGroup(keyword string, page int, perPage int, order string, status int) (groups []*Group, total int64, err error) {

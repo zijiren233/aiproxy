@@ -55,8 +55,8 @@ type Usage struct {
 
 type Log struct {
 	RequestDetail        *RequestDetail  `gorm:"foreignKey:LogID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"request_detail,omitempty"`
-	RequestAt            time.Time       `gorm:"index"                                                          json:"request_at"`
-	RetryAt              time.Time       `gorm:"index"                                                          json:"retry_at,omitempty"`
+	RequestAt            time.Time       `json:"request_at"`
+	RetryAt              time.Time       `json:"retry_at,omitempty"`
 	TTFBMilliseconds     ZeroNullInt64   `json:"ttfb_milliseconds,omitempty"`
 	TimestampTruncByDay  int64           `json:"timestamp_trunc_by_day"`
 	TimestampTruncByHour int64           `json:"timestamp_trunc_by_hour"`
@@ -64,12 +64,12 @@ type Log struct {
 	TokenName            string          `json:"token_name,omitempty"`
 	Endpoint             EmptyNullString `json:"endpoint,omitempty"`
 	Content              EmptyNullString `gorm:"type:text"                                                      json:"content,omitempty"`
-	GroupID              string          `gorm:"index"                                                          json:"group,omitempty"`
-	Model                string          `gorm:"index"                                                          json:"model"`
+	GroupID              string          `json:"group,omitempty"`
+	Model                string          `json:"model"`
 	RequestID            EmptyNullString `gorm:"index"                                                          json:"request_id"`
 	ID                   int             `gorm:"primaryKey"                                                     json:"id"`
 	TokenID              int             `gorm:"index"                                                          json:"token_id,omitempty"`
-	ChannelID            int             `gorm:"index"                                                          json:"channel,omitempty"`
+	ChannelID            int             `json:"channel,omitempty"`
 	Code                 int             `gorm:"index"                                                          json:"code,omitempty"`
 	Mode                 int             `json:"mode,omitempty"`
 	IP                   EmptyNullString `gorm:"index"                                                          json:"ip,omitempty"`
@@ -121,7 +121,7 @@ func CreateLogIndexes(db *gorm.DB) error {
 			"CREATE INDEX IF NOT EXISTS idx_group_token_trunchour ON logs (group_id, token_name, timestamp_trunc_by_hour DESC)",
 			"CREATE INDEX IF NOT EXISTS idx_group_model_token_trunchour ON logs (group_id, model, token_name, timestamp_trunc_by_hour DESC)",
 
-			"CREATE INDEX IF NOT EXISTS idx_ip_group_reqat ON logs (ip, group_id, request_at DESC)",
+			"CREATE INDEX IF NOT EXISTS idx_reqat_ip_group ON logs (request_at DESC, ip, group_id)",
 		}
 	} else {
 		indexes = []string{
@@ -161,7 +161,7 @@ func CreateLogIndexes(db *gorm.DB) error {
 			"CREATE INDEX IF NOT EXISTS idx_group_token_trunchour ON logs (group_id, token_name, timestamp_trunc_by_hour DESC) INCLUDE (downstream_result)",
 			"CREATE INDEX IF NOT EXISTS idx_group_model_token_trunchour ON logs (group_id, model, token_name, timestamp_trunc_by_hour DESC) INCLUDE (downstream_result)",
 
-			"CREATE INDEX IF NOT EXISTS idx_ip_group_reqat ON logs (ip, group_id, request_at DESC)",
+			"CREATE INDEX IF NOT EXISTS idx_reqat_ip_group ON logs (request_at DESC, ip, group_id)",
 		}
 	}
 
@@ -1513,4 +1513,40 @@ func GetModelCostRank(group string, channelID int, start, end time.Time, tokenUs
 	}
 
 	return ranks, nil
+}
+
+func GetIPGroups(threshold int, start, end time.Time) (map[string][]string, error) {
+	if threshold < 1 {
+		threshold = 1
+	}
+	db := LogDB.Model(&Log{}).
+		Select("ip, GROUP_CONCAT(DISTINCT group_id) as groups").
+		Group("ip").
+		Having("COUNT(DISTINCT group_id) >= ?", threshold)
+	switch {
+	case !start.IsZero() && !end.IsZero():
+		db = db.Where("request_at BETWEEN ? AND ?", start, end)
+	case !start.IsZero():
+		db = db.Where("request_at >= ?", start)
+	case !end.IsZero():
+		db = db.Where("request_at <= ?", end)
+	}
+	db.Where("ip IS NOT NULL AND ip != '' AND group_id != ''")
+
+	result := make(map[string][]string)
+	rows, err := db.Rows()
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var ip string
+		var groups string
+		err = rows.Scan(&ip, &groups)
+		if err != nil {
+			return nil, err
+		}
+		result[ip] = strings.Split(groups, ",")
+	}
+	return result, nil
 }
