@@ -60,13 +60,6 @@ func getGroupPMRatio(group *model.GroupCache) (float64, float64) {
 func GetGroupAdjustedModelConfig(group *model.GroupCache, mc model.ModelConfig) model.ModelConfig {
 	if groupModelConfig, ok := group.ModelConfigs[mc.Model]; ok {
 		mc = mc.LoadFromGroupModelConfig(groupModelConfig)
-	} else {
-		if group.RPM != nil && group.RPM[mc.Model] > 0 {
-			mc.RPM = group.RPM[mc.Model]
-		}
-		if group.TPM != nil && group.TPM[mc.Model] > 0 {
-			mc.TPM = group.TPM[mc.Model]
-		}
 	}
 	rpmRatio, tpmRatio := getGroupPMRatio(group)
 	groupConsumeLevelRatio := calculateGroupConsumeLevelRatio(group.UsedAmount)

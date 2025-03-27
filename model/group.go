@@ -29,9 +29,7 @@ type Group struct {
 	GroupModelConfigs []GroupModelConfig `gorm:"foreignKey:GroupID"            json:"-"`
 	Status            int                `gorm:"default:1;index"               json:"status"`
 	RPMRatio          float64            `gorm:"index"                         json:"rpm_ratio,omitempty"`
-	RPM               map[string]int64   `gorm:"serializer:fastjson;type:text" json:"rpm"`
 	TPMRatio          float64            `gorm:"index"                         json:"tpm_ratio,omitempty"`
-	TPM               map[string]int64   `gorm:"serializer:fastjson;type:text" json:"tpm"`
 	UsedAmount        float64            `gorm:"index"                         json:"used_amount"`
 	RequestCount      int                `gorm:"index"                         json:"request_count"`
 	AvailableSets     []string           `gorm:"serializer:fastjson;type:text" json:"available_sets,omitempty"`
@@ -158,9 +156,7 @@ func UpdateGroup(id string, group *Group) (err error) {
 	}()
 	selects := []string{
 		"rpm_ratio",
-		"rpm",
 		"tpm_ratio",
-		"tpm",
 		"available_sets",
 	}
 	if group.Status != 0 {
