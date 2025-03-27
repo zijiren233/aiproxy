@@ -304,11 +304,12 @@ func cleanLog(batchSize int, optimize bool) error {
 }
 
 func optimizeLog() error {
-	if common.UsingPostgreSQL {
+	switch {
+	case common.UsingPostgreSQL:
 		return LogDB.Exec("VACUUM ANALYZE logs").Error
-	} else if common.UsingMySQL {
+	case common.UsingMySQL:
 		return LogDB.Exec("OPTIMIZE TABLE logs").Error
-	} else if common.UsingSQLite {
+	case common.UsingSQLite:
 		return LogDB.Exec("VACUUM").Error
 	}
 	return nil
@@ -341,11 +342,12 @@ func cleanLogDetail(batchSize int, optimize bool) error {
 }
 
 func optimizeLogDetail() error {
-	if common.UsingPostgreSQL {
+	switch {
+	case common.UsingPostgreSQL:
 		return LogDB.Exec("VACUUM ANALYZE request_details").Error
-	} else if common.UsingMySQL {
+	case common.UsingMySQL:
 		return LogDB.Exec("OPTIMIZE TABLE request_details").Error
-	} else if common.UsingSQLite {
+	case common.UsingSQLite:
 		return LogDB.Exec("VACUUM").Error
 	}
 	return nil
