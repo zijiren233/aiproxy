@@ -114,18 +114,10 @@ definitions:
         type: string
       request_count:
         type: integer
-      rpm:
-        additionalProperties:
-          type: integer
-        type: object
       rpm_ratio:
         type: number
       status:
         type: integer
-      tpm:
-        additionalProperties:
-          type: integer
-        type: object
       tpm_ratio:
         type: number
       used_amount:
@@ -496,6 +488,10 @@ definitions:
     type: object
   model.DashboardResponse:
     properties:
+      cache_creation_tokens:
+        type: integer
+      cached_tokens:
+        type: integer
       channels:
         items:
           type: integer
@@ -506,9 +502,15 @@ definitions:
         type: array
       exception_count:
         type: integer
+      input_tokens:
+        type: integer
+      output_tokens:
+        type: integer
       rpm:
         type: integer
       total_count:
+        type: integer
+      total_tokens:
         type: integer
       tpm:
         type: integer
@@ -689,18 +691,10 @@ definitions:
         type: string
       request_count:
         type: integer
-      rpm:
-        additionalProperties:
-          type: integer
-        type: object
       rpm_ratio:
         type: number
       status:
         type: integer
-      tpm:
-        additionalProperties:
-          type: integer
-        type: object
       tpm_ratio:
         type: number
       used_amount:
@@ -708,6 +702,10 @@ definitions:
     type: object
   model.GroupDashboardResponse:
     properties:
+      cache_creation_tokens:
+        type: integer
+      cached_tokens:
+        type: integer
       channels:
         items:
           type: integer
@@ -718,10 +716,14 @@ definitions:
         type: array
       exception_count:
         type: integer
+      input_tokens:
+        type: integer
       models:
         items:
           type: string
         type: array
+      output_tokens:
+        type: integer
       rpm:
         type: integer
       token_names:
@@ -729,6 +731,8 @@ definitions:
           type: string
         type: array
       total_count:
+        type: integer
+      total_tokens:
         type: integer
       tpm:
         type: integer
@@ -1772,6 +1776,14 @@ paths:
         in: query
         name: token_usage
         type: boolean
+      - description: Start timestamp
+        in: query
+        name: start_timestamp
+        type: integer
+      - description: End timestamp
+        in: query
+        name: end_timestamp
+        type: integer
       produces:
       - application/json
       responses:
@@ -1818,6 +1830,14 @@ paths:
         in: query
         name: token_usage
         type: boolean
+      - description: Start timestamp
+        in: query
+        name: start_timestamp
+        type: integer
+      - description: End timestamp
+        in: query
+        name: end_timestamp
+        type: integer
       produces:
       - application/json
       responses:
