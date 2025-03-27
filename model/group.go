@@ -5,7 +5,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/bytedance/sonic"
 	"github.com/labring/aiproxy/common"
 	log "github.com/sirupsen/logrus"
 	"gorm.io/gorm"
@@ -206,22 +205,6 @@ func UpdateGroupRPMRatio(id string, rpmRatio float64) (err error) {
 	return HandleUpdateResult(result, ErrGroupNotFound)
 }
 
-func UpdateGroupRPM(id string, rpm map[string]int64) (err error) {
-	defer func() {
-		if err == nil {
-			if err := CacheUpdateGroupRPM(id, rpm); err != nil {
-				log.Error("cache update group rpm failed: " + err.Error())
-			}
-		}
-	}()
-	jsonRpm, err := sonic.Marshal(rpm)
-	if err != nil {
-		return err
-	}
-	result := DB.Model(&Group{}).Where("id = ?", id).Update("rpm", jsonRpm)
-	return HandleUpdateResult(result, ErrGroupNotFound)
-}
-
 func UpdateGroupTPMRatio(id string, tpmRatio float64) (err error) {
 	defer func() {
 		if err == nil {
@@ -231,22 +214,6 @@ func UpdateGroupTPMRatio(id string, tpmRatio float64) (err error) {
 		}
 	}()
 	result := DB.Model(&Group{}).Where("id = ?", id).Update("tpm_ratio", tpmRatio)
-	return HandleUpdateResult(result, ErrGroupNotFound)
-}
-
-func UpdateGroupTPM(id string, tpm map[string]int64) (err error) {
-	defer func() {
-		if err == nil {
-			if err := CacheUpdateGroupTPM(id, tpm); err != nil {
-				log.Error("cache update group tpm failed: " + err.Error())
-			}
-		}
-	}()
-	jsonTpm, err := sonic.Marshal(tpm)
-	if err != nil {
-		return err
-	}
-	result := DB.Model(&Group{}).Where("id = ?", id).Update("tpm", jsonTpm)
 	return HandleUpdateResult(result, ErrGroupNotFound)
 }
 

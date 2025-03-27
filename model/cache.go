@@ -311,24 +311,6 @@ func CacheUpdateGroupRPMRatio(id string, rpmRatio float64) error {
 	return updateGroupRPMRatioScript.Run(context.Background(), common.RDB, []string{fmt.Sprintf(GroupCacheKey, id)}, rpmRatio).Err()
 }
 
-var updateGroupRPMScript = redis.NewScript(`
-	if redis.call("HExists", KEYS[1], "rpm") then
-		redis.call("HSet", KEYS[1], "rpm", ARGV[1])
-	end
-	return redis.status_reply("ok")
-`)
-
-func CacheUpdateGroupRPM(id string, rpm map[string]int64) error {
-	if !common.RedisEnabled {
-		return nil
-	}
-	jsonRPM, err := sonic.Marshal(rpm)
-	if err != nil {
-		return err
-	}
-	return updateGroupRPMScript.Run(context.Background(), common.RDB, []string{fmt.Sprintf(GroupCacheKey, id)}, conv.BytesToString(jsonRPM)).Err()
-}
-
 var updateGroupTPMRatioScript = redis.NewScript(`
 	if redis.call("HExists", KEYS[1], "tpm_r") then
 		redis.call("HSet", KEYS[1], "tpm_r", ARGV[1])
@@ -341,24 +323,6 @@ func CacheUpdateGroupTPMRatio(id string, tpmRatio float64) error {
 		return nil
 	}
 	return updateGroupTPMRatioScript.Run(context.Background(), common.RDB, []string{fmt.Sprintf(GroupCacheKey, id)}, tpmRatio).Err()
-}
-
-var updateGroupTPMScript = redis.NewScript(`
-	if redis.call("HExists", KEYS[1], "tpm") then
-		redis.call("HSet", KEYS[1], "tpm", ARGV[1])
-	end
-	return redis.status_reply("ok")
-`)
-
-func CacheUpdateGroupTPM(id string, tpm map[string]int64) error {
-	if !common.RedisEnabled {
-		return nil
-	}
-	jsonTPM, err := sonic.Marshal(tpm)
-	if err != nil {
-		return err
-	}
-	return updateGroupTPMScript.Run(context.Background(), common.RDB, []string{fmt.Sprintf(GroupCacheKey, id)}, conv.BytesToString(jsonTPM)).Err()
 }
 
 var updateGroupStatusScript = redis.NewScript(`
