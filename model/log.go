@@ -260,13 +260,18 @@ func cleanLog(batchSize int, optimize bool) error {
 	}
 	logStorageHours := config.GetLogStorageHours()
 	if logStorageHours > 0 {
-		err := LogDB.
-			Session(&gorm.Session{SkipDefaultTransaction: true}).
+		subQuery := LogDB.
+			Model(&Log{}).
 			Where(
 				"created_at < ?",
 				time.Now().Add(-time.Duration(logStorageHours)*time.Hour),
 			).
 			Limit(batchSize).
+			Select("id")
+
+		err := LogDB.
+			Session(&gorm.Session{SkipDefaultTransaction: true}).
+			Where("id IN (?)", subQuery).
 			Delete(&Log{}).Error
 		if err != nil {
 			return err
@@ -278,15 +283,21 @@ func cleanLog(batchSize int, optimize bool) error {
 		logContentStorageHours <= logStorageHours {
 		return optimizeLog()
 	}
-	err := LogDB.
+
+	subQuery := LogDB.
 		Model(&Log{}).
-		Session(&gorm.Session{SkipDefaultTransaction: true}).
 		Where(
 			"created_at < ?",
 			time.Now().Add(-time.Duration(logContentStorageHours)*time.Hour),
 		).
 		Where("content IS NOT NULL OR ip IS NOT NULL OR endpoint IS NOT NULL OR ttfb_milliseconds IS NOT NULL").
 		Limit(batchSize).
+		Select("id")
+
+	err := LogDB.
+		Model(&Log{}).
+		Session(&gorm.Session{SkipDefaultTransaction: true}).
+		Where("id IN (?)", subQuery).
 		Updates(map[string]any{
 			"content":           gorm.Expr("NULL"),
 			"ip":                gorm.Expr("NULL"),
@@ -323,13 +334,19 @@ func cleanLogDetail(batchSize int, optimize bool) error {
 	if batchSize <= 0 {
 		batchSize = defaultCleanLogBatchSize
 	}
-	err := LogDB.
-		Session(&gorm.Session{SkipDefaultTransaction: true}).
+
+	subQuery := LogDB.
+		Model(&RequestDetail{}).
 		Where(
 			"created_at < ?",
 			time.Now().Add(-time.Duration(detailStorageHours)*time.Hour),
 		).
 		Limit(batchSize).
+		Select("id")
+
+	err := LogDB.
+		Session(&gorm.Session{SkipDefaultTransaction: true}).
+		Where("id IN (?)", subQuery).
 		Delete(&RequestDetail{}).Error
 	if err != nil {
 		return err
