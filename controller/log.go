@@ -32,11 +32,9 @@ func parseCommonParams(c *gin.Context) (params struct {
 	tokenName  string
 	modelName  string
 	channelID  int
-	endpoint   string
 	tokenID    int
 	order      string
 	requestID  string
-	mode       int
 	codeType   string
 	withBody   bool
 	ip         string
@@ -46,11 +44,9 @@ func parseCommonParams(c *gin.Context) (params struct {
 	params.tokenName = c.Query("token_name")
 	params.modelName = c.Query("model_name")
 	params.channelID, _ = strconv.Atoi(c.Query("channel"))
-	params.endpoint = c.Query("endpoint")
 	params.tokenID, _ = strconv.Atoi(c.Query("token_id"))
 	params.order = c.Query("order")
 	params.requestID = c.Query("request_id")
-	params.mode, _ = strconv.Atoi(c.Query("mode"))
 	params.codeType = c.Query("code_type")
 	params.withBody, _ = strconv.ParseBool(c.Query("with_body"))
 	params.ip = c.Query("ip")
@@ -73,10 +69,8 @@ func parseCommonParams(c *gin.Context) (params struct {
 //	@Param			token_name		query		string	false	"Token name"
 //	@Param			model_name		query		string	false	"Model name"
 //	@Param			channel			query		int		false	"Channel ID"
-//	@Param			endpoint		query		string	false	"Endpoint"
 //	@Param			token_id		query		int		false	"Token ID"
 //	@Param			order			query		string	false	"Order"
-//	@Param			mode			query		int		false	"Mode"
 //	@Param			request_id		query		string	false	"Request ID"
 //	@Param			code_type		query		string	false	"Code type"
 //	@Param			with_body		query		bool	false	"With body"
@@ -99,9 +93,7 @@ func GetLogs(c *gin.Context) {
 		params.tokenID,
 		params.tokenName,
 		params.channelID,
-		params.endpoint,
 		params.order,
-		params.mode,
 		model.CodeType(params.codeType),
 		params.withBody,
 		params.ip,
@@ -131,11 +123,9 @@ func GetLogs(c *gin.Context) {
 //	@Param			token_name		query		string	false	"Token name"
 //	@Param			model_name		query		string	false	"Model name"
 //	@Param			channel			query		int		false	"Channel ID"
-//	@Param			endpoint		query		string	false	"Endpoint"
 //	@Param			token_id		query		int		false	"Token ID"
 //	@Param			order			query		string	false	"Order"
 //	@Param			request_id		query		string	false	"Request ID"
-//	@Param			mode			query		int		false	"Mode"
 //	@Param			code_type		query		string	false	"Code type"
 //	@Param			with_body		query		bool	false	"With body"
 //	@Param			ip				query		string	false	"IP"
@@ -162,9 +152,7 @@ func GetGroupLogs(c *gin.Context) {
 		params.tokenID,
 		params.tokenName,
 		params.channelID,
-		params.endpoint,
 		params.order,
-		params.mode,
 		model.CodeType(params.codeType),
 		params.withBody,
 		params.ip,
@@ -195,11 +183,9 @@ func GetGroupLogs(c *gin.Context) {
 //	@Param			token_name		query		string	false	"Filter by token name"
 //	@Param			model_name		query		string	false	"Filter by model name"
 //	@Param			channel			query		int		false	"Filter by channel"
-//	@Param			endpoint		query		string	false	"Filter by endpoint"
 //	@Param			token_id		query		int		false	"Filter by token id"
 //	@Param			order			query		string	false	"Order"
 //	@Param			request_id		query		string	false	"Request ID"
-//	@Param			mode			query		int		false	"Mode"
 //	@Param			code_type		query		string	false	"Code type"
 //	@Param			with_body		query		bool	false	"With body"
 //	@Param			ip				query		string	false	"IP"
@@ -217,7 +203,6 @@ func SearchLogs(c *gin.Context) {
 	result, err := model.SearchLogs(
 		group,
 		keyword,
-		params.endpoint,
 		params.requestID,
 		params.tokenID,
 		params.tokenName,
@@ -226,7 +211,6 @@ func SearchLogs(c *gin.Context) {
 		endTime,
 		params.channelID,
 		params.order,
-		params.mode,
 		model.CodeType(params.codeType),
 		params.withBody,
 		params.ip,
@@ -257,11 +241,9 @@ func SearchLogs(c *gin.Context) {
 //	@Param			token_name		query		string	false	"Filter by token name"
 //	@Param			model_name		query		string	false	"Filter by model name"
 //	@Param			channel			query		int		false	"Filter by channel"
-//	@Param			endpoint		query		string	false	"Filter by endpoint"
 //	@Param			token_id		query		int		false	"Filter by token id"
 //	@Param			order			query		string	false	"Order"
 //	@Param			request_id		query		string	false	"Request ID"
-//	@Param			mode			query		int		false	"Mode"
 //	@Param			code_type		query		string	false	"Code type"
 //	@Param			with_body		query		bool	false	"With body"
 //	@Param			ip				query		string	false	"IP"
@@ -283,7 +265,6 @@ func SearchGroupLogs(c *gin.Context) {
 	result, err := model.SearchGroupLogs(
 		group,
 		keyword,
-		params.endpoint,
 		params.requestID,
 		params.tokenID,
 		params.tokenName,
@@ -292,7 +273,6 @@ func SearchGroupLogs(c *gin.Context) {
 		endTime,
 		params.channelID,
 		params.order,
-		params.mode,
 		model.CodeType(params.codeType),
 		params.withBody,
 		params.ip,

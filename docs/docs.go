@@ -2258,12 +2258,6 @@ const docTemplate = `{
                         "in": "query"
                     },
                     {
-                        "type": "string",
-                        "description": "Endpoint",
-                        "name": "endpoint",
-                        "in": "query"
-                    },
-                    {
                         "type": "integer",
                         "description": "Token ID",
                         "name": "token_id",
@@ -2279,12 +2273,6 @@ const docTemplate = `{
                         "type": "string",
                         "description": "Request ID",
                         "name": "request_id",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "description": "Mode",
-                        "name": "mode",
                         "in": "query"
                     },
                     {
@@ -2460,12 +2448,6 @@ const docTemplate = `{
                         "in": "query"
                     },
                     {
-                        "type": "string",
-                        "description": "Filter by endpoint",
-                        "name": "endpoint",
-                        "in": "query"
-                    },
-                    {
                         "type": "integer",
                         "description": "Filter by token id",
                         "name": "token_id",
@@ -2481,12 +2463,6 @@ const docTemplate = `{
                         "type": "string",
                         "description": "Request ID",
                         "name": "request_id",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "description": "Mode",
-                        "name": "mode",
                         "in": "query"
                     },
                     {
@@ -2699,12 +2675,6 @@ const docTemplate = `{
                         "in": "query"
                     },
                     {
-                        "type": "string",
-                        "description": "Endpoint",
-                        "name": "endpoint",
-                        "in": "query"
-                    },
-                    {
                         "type": "integer",
                         "description": "Token ID",
                         "name": "token_id",
@@ -2714,12 +2684,6 @@ const docTemplate = `{
                         "type": "string",
                         "description": "Order",
                         "name": "order",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "description": "Mode",
-                        "name": "mode",
                         "in": "query"
                     },
                     {
@@ -3067,12 +3031,6 @@ const docTemplate = `{
                         "in": "query"
                     },
                     {
-                        "type": "string",
-                        "description": "Filter by endpoint",
-                        "name": "endpoint",
-                        "in": "query"
-                    },
-                    {
                         "type": "integer",
                         "description": "Filter by token id",
                         "name": "token_id",
@@ -3088,12 +3046,6 @@ const docTemplate = `{
                         "type": "string",
                         "description": "Request ID",
                         "name": "request_id",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "description": "Mode",
-                        "name": "mode",
                         "in": "query"
                     },
                     {
