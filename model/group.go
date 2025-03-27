@@ -266,7 +266,7 @@ func UpdateGroupStatus(id string, status int) (err error) {
 	return HandleUpdateResult(result, ErrGroupNotFound)
 }
 
-func UpdateGroupsStatus(ids []string, status int) (err error) {
+func UpdateGroupsStatus(ids []string, status int) (rowsAffected int64, err error) {
 	defer func() {
 		if err == nil {
 			for _, id := range ids {
@@ -276,9 +276,9 @@ func UpdateGroupsStatus(ids []string, status int) (err error) {
 			}
 		}
 	}()
-	return DB.Transaction(func(tx *gorm.DB) error {
-		return tx.Model(&Group{}).Where("id IN (?)", ids).Update("status", status).Error
-	})
+
+	result := DB.Model(&Group{}).Where("id IN (?) AND status != ?", ids, status).Update("status", status)
+	return result.RowsAffected, result.Error
 }
 
 func SearchGroup(keyword string, page int, perPage int, order string, status int) (groups []*Group, total int64, err error) {

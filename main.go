@@ -211,30 +211,32 @@ func DetectIPGroups() {
 			continue
 		}
 
-		h := sha256.New()
-		h.Write(conv.StringToBytes(groupsJSON))
-		groupsHash := hex.EncodeToString(h.Sum(nil))
-
-		hashKey := fmt.Sprintf("%s:%s", ip, groupsHash)
-		if !trylock.Lock("detectIPGroupsHandle:"+hashKey, time.Hour*3) {
-			continue
-		}
 		if banThreshold >= threshold && len(groups) >= int(banThreshold) {
-			notify.Warn(
-				fmt.Sprintf("Suspicious activity: IP %s is using %d groups (exceeds ban threshold of %d). IP and all groups have been disabled.", ip, len(groups), banThreshold),
-				groupsJSON,
-			)
-			err = model.UpdateGroupsStatus(groups, model.GroupStatusDisabled)
+			rowsAffected, err := model.UpdateGroupsStatus(groups, model.GroupStatusDisabled)
 			if err != nil {
 				notify.ErrorThrottle("detectIPGroupsBan", time.Minute, "update groups status failed", err.Error())
 			}
-			ipblack.SetIPBlack(ip, time.Hour*48)
-		} else {
-			notify.Warn(
-				fmt.Sprintf("Potential abuse: IP %s is using %d groups (exceeds threshold of %d)", ip, len(groups), threshold),
-				groupsJSON,
-			)
+			if rowsAffected > 0 {
+				notify.Warn(
+					fmt.Sprintf("Suspicious activity: IP %s is using %d groups (exceeds ban threshold of %d). IP and all groups have been disabled.", ip, len(groups), banThreshold),
+					groupsJSON,
+				)
+				ipblack.SetIPBlackAnyWay(ip, time.Hour*48)
+			}
+			continue
 		}
+
+		h := sha256.New()
+		h.Write(conv.StringToBytes(groupsJSON))
+		groupsHash := hex.EncodeToString(h.Sum(nil))
+		hashKey := fmt.Sprintf("%s:%s", ip, groupsHash)
+
+		notify.WarnThrottle(
+			hashKey,
+			time.Hour*3,
+			fmt.Sprintf("Potential abuse: IP %s is using %d groups (exceeds threshold of %d)", ip, len(groups), threshold),
+			groupsJSON,
+		)
 	}
 }
 

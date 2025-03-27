@@ -27,21 +27,21 @@ func memSetIPBlack(ip string, duration time.Duration) {
 	}
 }
 
-func memGetIPIsBlock(ip string) (bool, error) {
+func memGetIPIsBlock(ip string) bool {
 	v, ok := ipBlackMap.Load(ip)
 	if !ok {
-		return false, nil
+		return false
 	}
 
 	expiredAtPtr, ok := v.(*time.Time)
 	if !ok {
-		return false, nil
+		return false
 	}
 
 	if time.Now().After(*expiredAtPtr) {
 		ipBlackMap.CompareAndDelete(ip, expiredAtPtr)
-		return false, nil
+		return false
 	}
 
-	return true, nil
+	return true
 }

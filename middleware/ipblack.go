@@ -9,11 +9,7 @@ import (
 
 func IPBlock(c *gin.Context) {
 	ip := c.ClientIP()
-	isBlock, err := ipblack.GetIPIsBlock(c.Request.Context(), ip)
-	if err != nil {
-		c.Next()
-		return
-	}
+	isBlock := ipblack.GetIPIsBlockAnyWay(c.Request.Context(), ip)
 	if isBlock {
 		AbortLogWithMessage(c, http.StatusForbidden, "please try again later")
 		c.Abort()

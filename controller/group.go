@@ -310,7 +310,7 @@ func UpdateGroupsStatus(c *gin.Context) {
 		middleware.ErrorResponse(c, http.StatusOK, err.Error())
 		return
 	}
-	err = model.UpdateGroupsStatus(req.Groups, req.Status)
+	_, err = model.UpdateGroupsStatus(req.Groups, req.Status)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusOK, err.Error())
 		return
