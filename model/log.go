@@ -155,7 +155,7 @@ const (
 	contentMaxSize = 2 * 1024 // 2KB
 )
 
-func (l *Log) BeforeSave(_ *gorm.DB) (err error) {
+func (l *Log) BeforeCreate(_ *gorm.DB) (err error) {
 	if len(l.Content) > contentMaxSize {
 		l.Content = common.TruncateByRune(l.Content, contentMaxSize) + "..."
 	}
@@ -218,7 +218,7 @@ func GetGroupLogDetail(logID int, group string) (*RequestDetail, error) {
 	return &detail, nil
 }
 
-const defaultCleanLogBatchSize = 1000
+const defaultCleanLogBatchSize = 5000
 
 func CleanLog(batchSize int, optimize bool) error {
 	err := cleanLog(batchSize, optimize)
@@ -266,7 +266,7 @@ func cleanLog(batchSize int, optimize bool) error {
 			"created_at < ?",
 			time.Now().Add(-time.Duration(logContentStorageHours)*time.Hour),
 		).
-		Where("content IS NOT NULL OR ip IS NOT NULL OR endpoint IS NOT NULL OR ttfb_milliseconds IS NOT NULL").
+		Where("endpoint IS NOT NULL OR ip IS NOT NULL OR content IS NOT NULL OR ttfb_milliseconds IS NOT NULL").
 		Order("created_at DESC").
 		Limit(1).
 		Select("id").
@@ -286,7 +286,7 @@ func cleanLog(batchSize int, optimize bool) error {
 				id-int64(batchSize),
 				id,
 			).
-			Updates(map[string]any{
+			UpdateColumns(map[string]any{
 				"content":           gorm.Expr("NULL"),
 				"ip":                gorm.Expr("NULL"),
 				"endpoint":          gorm.Expr("NULL"),

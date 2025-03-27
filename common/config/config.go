@@ -29,6 +29,7 @@ var (
 	logDetailRequestBodyMaxSize  int64 = 128 * 1024 // 128KB
 	logDetailResponseBodyMaxSize int64 = 128 * 1024 // 128KB
 	logDetailStorageHours        int64 = 3 * 24     // 3 days
+	cleanLogBatchSize            int64 = 5000
 	internalToken                atomic.Value
 	notifyNote                   atomic.Value
 	ipGroupsThreshold            int64
@@ -131,6 +132,15 @@ func GetLogDetailStorageHours() int64 {
 func SetLogDetailStorageHours(hours int64) {
 	hours = env.Int64("LOG_DETAIL_STORAGE_HOURS", hours)
 	atomic.StoreInt64(&logDetailStorageHours, hours)
+}
+
+func GetCleanLogBatchSize() int64 {
+	return atomic.LoadInt64(&cleanLogBatchSize)
+}
+
+func SetCleanLogBatchSize(size int64) {
+	size = env.Int64("CLEAN_LOG_BATCH_SIZE", size)
+	atomic.StoreInt64(&cleanLogBatchSize, size)
 }
 
 func GetIPGroupsThreshold() int64 {

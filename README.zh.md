@@ -111,6 +111,7 @@ docker-compose up -d
 - `LOG_DETAIL_REQUEST_BODY_MAX_SIZE`: 日志详情请求体最大大小，默认 `128KB`
 - `LOG_DETAIL_RESPONSE_BODY_MAX_SIZE`: 日志详情响应体最大大小，默认 `128KB`
 - `LOG_DETAIL_STORAGE_HOURS`: 日志详情存储时间，默认 `72`（3 天）
+- `CLEAN_LOG_BATCH_SIZE`: 日志清理批量大小，默认 `5000`
 
 ### 服务控制
 
