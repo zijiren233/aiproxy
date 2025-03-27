@@ -5,7 +5,7 @@
 
 新一代 AI 网关，使用 OpenAI 作为协议入口。
 
-## 新功能
+## 特效
 
 - 智能错误重试
 - 基于优先级与错误率选择渠道
@@ -36,15 +36,25 @@
 - 内敛分词器，无需额外下载 tiktoken 文件
 - API `Swagger` 文档支持 `http://host:port/swagger/index.html`
 
+## 如何使用
+
+### Sealos
+
+使用Sealos 内置模型能力，点击前往 [Sealos](https://hzh.sealos.run/?openapp=system-aiproxy)。
+
+### FastGPT
+
+通过 AI Proxy 接入模型，点击前往 [FastGPT](https://doc.tryfastgpt.ai/docs/development/modelconfig/ai-proxy/)。
+
 ## 部署
 
-## 使用 Docker
+### 使用 Docker
 
 ```bash
 docker run -d --name aiproxy -p 3000:3000 -v $(pwd)/aiproxy:/aiproxy ghcr.io/labring/aiproxy:latest
 ```
 
-## 使用 Docker Compose
+### 使用 Docker Compose
 
 将 [docker-compose.yaml](./docker-compose.yaml) 复制到目录。
 
