@@ -58,7 +58,6 @@ type Log struct {
 	RequestAt            time.Time       `json:"request_at"`
 	RetryAt              time.Time       `json:"retry_at,omitempty"`
 	TTFBMilliseconds     ZeroNullInt64   `json:"ttfb_milliseconds,omitempty"`
-	TimestampTruncByDay  int64           `json:"timestamp_trunc_by_day"`
 	TimestampTruncByHour int64           `json:"timestamp_trunc_by_hour"`
 	CreatedAt            time.Time       `gorm:"autoCreateTime;index"                                           json:"created_at"`
 	TokenName            string          `json:"token_name,omitempty"`
@@ -92,10 +91,6 @@ func CreateLogIndexes(db *gorm.DB) error {
 			// used by global search logs
 			"CREATE INDEX IF NOT EXISTS idx_channel_model_reqat ON logs (channel_id, model, request_at DESC)",
 
-			// global day indexes, used by global dashboard
-			"CREATE INDEX IF NOT EXISTS idx_model_truncday ON logs (model, timestamp_trunc_by_day)",
-			"CREATE INDEX IF NOT EXISTS idx_channel_truncday ON logs (channel_id, timestamp_trunc_by_day)",
-			"CREATE INDEX IF NOT EXISTS idx_channel_model_truncday ON logs (channel_id, model, timestamp_trunc_by_day)",
 			// global hour indexes, used by global dashboard
 			"CREATE INDEX IF NOT EXISTS idx_model_trunchour ON logs (model, timestamp_trunc_by_hour)",
 			"CREATE INDEX IF NOT EXISTS idx_channel_trunchour ON logs (channel_id, timestamp_trunc_by_hour)",
@@ -110,11 +105,6 @@ func CreateLogIndexes(db *gorm.DB) error {
 			// used by search group logs
 			"CREATE INDEX IF NOT EXISTS idx_group_token_model_reqat ON logs (group_id, token_name, model, request_at DESC)",
 
-			// day indexes, used by dashboard
-			"CREATE INDEX IF NOT EXISTS idx_group_truncday ON logs (group_id, timestamp_trunc_by_day DESC)",
-			"CREATE INDEX IF NOT EXISTS idx_group_model_truncday ON logs (group_id, model, timestamp_trunc_by_day DESC)",
-			"CREATE INDEX IF NOT EXISTS idx_group_token_truncday ON logs (group_id, token_name, timestamp_trunc_by_day DESC)",
-			"CREATE INDEX IF NOT EXISTS idx_group_model_token_truncday ON logs (group_id, model, token_name, timestamp_trunc_by_day DESC)",
 			// hour indexes, used by dashboard
 			"CREATE INDEX IF NOT EXISTS idx_group_trunchour ON logs (group_id, timestamp_trunc_by_hour DESC)",
 			"CREATE INDEX IF NOT EXISTS idx_group_model_trunchour ON logs (group_id, model, timestamp_trunc_by_hour DESC)",
@@ -132,10 +122,6 @@ func CreateLogIndexes(db *gorm.DB) error {
 			// used by global search logs
 			"CREATE INDEX IF NOT EXISTS idx_channel_model_reqat ON logs (channel_id, model, request_at DESC) INCLUDE (code, request_id, downstream_result)",
 
-			// global day indexes, used by global dashboard
-			"CREATE INDEX IF NOT EXISTS idx_model_truncday ON logs (model, timestamp_trunc_by_day) INCLUDE (downstream_result)",
-			"CREATE INDEX IF NOT EXISTS idx_channel_truncday ON logs (channel_id, timestamp_trunc_by_day) INCLUDE (downstream_result)",
-			"CREATE INDEX IF NOT EXISTS idx_channel_model_truncday ON logs (channel_id, model, timestamp_trunc_by_day) INCLUDE (downstream_result)",
 			// global hour indexes, used by global dashboard
 			"CREATE INDEX IF NOT EXISTS idx_model_trunchour ON logs (model, timestamp_trunc_by_hour) INCLUDE (downstream_result)",
 			"CREATE INDEX IF NOT EXISTS idx_channel_trunchour ON logs (channel_id, timestamp_trunc_by_hour) INCLUDE (downstream_result)",
@@ -150,11 +136,6 @@ func CreateLogIndexes(db *gorm.DB) error {
 			// used by search group logs
 			"CREATE INDEX IF NOT EXISTS idx_group_token_model_reqat ON logs (group_id, token_name, model, request_at DESC) INCLUDE (code, request_id, downstream_result)",
 
-			// day indexes, used by dashboard
-			"CREATE INDEX IF NOT EXISTS idx_group_truncday ON logs (group_id, timestamp_trunc_by_day DESC) INCLUDE (downstream_result)",
-			"CREATE INDEX IF NOT EXISTS idx_group_model_truncday ON logs (group_id, model, timestamp_trunc_by_day DESC) INCLUDE (downstream_result)",
-			"CREATE INDEX IF NOT EXISTS idx_group_token_truncday ON logs (group_id, token_name, timestamp_trunc_by_day DESC) INCLUDE (downstream_result)",
-			"CREATE INDEX IF NOT EXISTS idx_group_model_token_truncday ON logs (group_id, model, token_name, timestamp_trunc_by_day DESC) INCLUDE (downstream_result)",
 			// hour indexes, used by dashboard
 			"CREATE INDEX IF NOT EXISTS idx_group_trunchour ON logs (group_id, timestamp_trunc_by_hour DESC) INCLUDE (downstream_result)",
 			"CREATE INDEX IF NOT EXISTS idx_group_model_trunchour ON logs (group_id, model, timestamp_trunc_by_hour DESC) INCLUDE (downstream_result)",
@@ -187,9 +168,6 @@ func (l *Log) BeforeSave(_ *gorm.DB) (err error) {
 	}
 	if l.RequestAt.IsZero() {
 		l.RequestAt = l.CreatedAt
-	}
-	if l.TimestampTruncByDay == 0 {
-		l.TimestampTruncByDay = l.RequestAt.Truncate(24 * time.Hour).Unix()
 	}
 	if l.TimestampTruncByHour == 0 {
 		l.TimestampTruncByHour = l.RequestAt.Truncate(time.Hour).Unix()
@@ -1118,17 +1096,6 @@ const (
 	TimeSpanHour TimeSpanType = "hour"
 )
 
-func getTimeSpanFormat(t TimeSpanType) string {
-	switch t {
-	case TimeSpanDay:
-		return "timestamp_trunc_by_day"
-	case TimeSpanHour:
-		return "timestamp_trunc_by_hour"
-	default:
-		return ""
-	}
-}
-
 func getChartData(group string,
 	start, end time.Time,
 	tokenName, modelName string,
@@ -1136,20 +1103,15 @@ func getChartData(group string,
 	timeSpan TimeSpanType,
 	resultOnly bool, tokenUsage bool,
 ) ([]*ChartData, error) {
-	timeSpanFormat := getTimeSpanFormat(timeSpan)
-	if timeSpanFormat == "" {
-		return nil, errors.New("unsupported time format")
-	}
-
 	var query *gorm.DB
 	if tokenUsage {
 		query = LogDB.Table("logs").
-			Select(timeSpanFormat + " as timestamp, count(*) as request_count, sum(used_amount) as used_amount, sum(case when code != 200 then 1 else 0 end) as exception_count, sum(input_tokens) as input_tokens, sum(output_tokens) as output_tokens, sum(cached_tokens) as cached_tokens, sum(cache_creation_tokens) as cache_creation_tokens, sum(total_tokens) as total_tokens").
+			Select("timestamp_trunc_by_hour as timestamp, count(*) as request_count, sum(used_amount) as used_amount, sum(case when code != 200 then 1 else 0 end) as exception_count, sum(input_tokens) as input_tokens, sum(output_tokens) as output_tokens, sum(cached_tokens) as cached_tokens, sum(cache_creation_tokens) as cache_creation_tokens, sum(total_tokens) as total_tokens").
 			Group("timestamp").
 			Order("timestamp ASC")
 	} else {
 		query = LogDB.Table("logs").
-			Select(timeSpanFormat + " as timestamp, count(*) as request_count, sum(used_amount) as used_amount, sum(case when code != 200 then 1 else 0 end) as exception_count").
+			Select("timestamp_trunc_by_hour as timestamp, count(*) as request_count, sum(used_amount) as used_amount, sum(case when code != 200 then 1 else 0 end) as exception_count").
 			Group("timestamp").
 			Order("timestamp ASC")
 	}
@@ -1172,11 +1134,11 @@ func getChartData(group string,
 
 	switch {
 	case !start.IsZero() && !end.IsZero():
-		query = query.Where(timeSpanFormat+" BETWEEN ? AND ?", start.Unix(), end.Unix())
+		query = query.Where("timestamp_trunc_by_hour BETWEEN ? AND ?", start.Unix(), end.Unix())
 	case !start.IsZero():
-		query = query.Where(timeSpanFormat+" >= ?", start.Unix())
+		query = query.Where("timestamp_trunc_by_hour >= ?", start.Unix())
 	case !end.IsZero():
-		query = query.Where(timeSpanFormat+" <= ?", end.Unix())
+		query = query.Where("timestamp_trunc_by_hour <= ?", end.Unix())
 	}
 
 	if resultOnly {
@@ -1185,8 +1147,51 @@ func getChartData(group string,
 
 	var chartData []*ChartData
 	err := query.Scan(&chartData).Error
+	if err != nil {
+		return nil, err
+	}
 
-	return chartData, err
+	// If timeSpan is day, aggregate hour data into day data
+	if timeSpan == TimeSpanDay && len(chartData) > 0 {
+		return aggregateHourDataToDay(chartData), nil
+	}
+
+	return chartData, nil
+}
+
+// aggregateHourDataToDay converts hourly chart data into daily aggregated data
+func aggregateHourDataToDay(hourlyData []*ChartData) []*ChartData {
+	dayData := make(map[int64]*ChartData)
+	for _, data := range hourlyData {
+		dayTimestamp := data.Timestamp - (data.Timestamp % int64(24*time.Hour.Seconds()))
+
+		if _, exists := dayData[dayTimestamp]; !exists {
+			dayData[dayTimestamp] = &ChartData{
+				Timestamp: dayTimestamp,
+			}
+		}
+
+		day := dayData[dayTimestamp]
+		day.RequestCount += data.RequestCount
+		day.UsedAmount += data.UsedAmount
+		day.ExceptionCount += data.ExceptionCount
+		day.InputTokens += data.InputTokens
+		day.OutputTokens += data.OutputTokens
+		day.CachedTokens += data.CachedTokens
+		day.CacheCreationTokens += data.CacheCreationTokens
+		day.TotalTokens += data.TotalTokens
+	}
+
+	result := make([]*ChartData, 0, len(dayData))
+	for _, data := range dayData {
+		result = append(result, data)
+	}
+
+	slices.SortFunc(result, func(a, b *ChartData) int {
+		return cmp.Compare(a.Timestamp, b.Timestamp)
+	})
+
+	return result
 }
 
 func GetUsedChannels(group string, start, end time.Time) ([]int, error) {
