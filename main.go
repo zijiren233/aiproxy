@@ -252,7 +252,7 @@ func cleanLog(ctx context.Context) {
 			return
 		case <-ticker.C:
 			optimize := trylock.Lock("optimizeLog", time.Minute*15)
-			err := model.CleanLog(1000, optimize)
+			err := model.CleanLog(int(config.GetCleanLogBatchSize()), optimize)
 			if err != nil {
 				notify.ErrorThrottle("cleanLog", time.Minute, "clean log failed", err.Error())
 			}

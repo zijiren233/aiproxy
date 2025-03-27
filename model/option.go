@@ -60,6 +60,7 @@ func initOptionMap() error {
 	optionMap["LogStorageHours"] = strconv.FormatInt(config.GetLogStorageHours(), 10)
 	optionMap["LogContentStorageHours"] = strconv.FormatInt(config.GetLogContentStorageHours(), 10)
 	optionMap["LogDetailStorageHours"] = strconv.FormatInt(config.GetLogDetailStorageHours(), 10)
+	optionMap["CleanLogBatchSize"] = strconv.FormatInt(config.GetCleanLogBatchSize(), 10)
 	optionMap["IPGroupsThreshold"] = strconv.FormatInt(config.GetIPGroupsThreshold(), 10)
 	optionMap["IPGroupsBanThreshold"] = strconv.FormatInt(config.GetIPGroupsBanThreshold(), 10)
 	optionMap["SaveAllLogDetail"] = strconv.FormatBool(config.GetSaveAllLogDetail())
@@ -239,6 +240,12 @@ func updateOption(key string, value string, isInit bool) (err error) {
 			return err
 		}
 		config.SetLogDetailResponseBodyMaxSize(logDetailResponseBodyMaxSize)
+	case "CleanLogBatchSize":
+		cleanLogBatchSize, err := strconv.ParseInt(value, 10, 64)
+		if err != nil {
+			return err
+		}
+		config.SetCleanLogBatchSize(cleanLogBatchSize)
 	case "DisableServe":
 		config.SetDisableServe(toBool(value))
 	case "BillingEnabled":
