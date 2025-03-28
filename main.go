@@ -243,7 +243,7 @@ func DetectIPGroups() {
 func cleanLog(ctx context.Context) {
 	log.Info("clean log start")
 	// the interval should not be too large to avoid cleaning too much at once
-	ticker := time.NewTicker(time.Second * 15)
+	ticker := time.NewTicker(time.Second)
 	defer ticker.Stop()
 
 	for {
@@ -251,6 +251,9 @@ func cleanLog(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
+			if !trylock.Lock("cleanLog", time.Second) {
+				continue
+			}
 			optimize := trylock.Lock("optimizeLog", time.Hour*24)
 			err := model.CleanLog(int(config.GetCleanLogBatchSize()), optimize)
 			if err != nil {
