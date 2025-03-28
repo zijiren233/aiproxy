@@ -266,7 +266,7 @@ func cleanLog(batchSize int, optimize bool) error {
 			"created_at < ?",
 			time.Now().Truncate(time.Hour).Add(-time.Duration(logContentStorageHours)*time.Hour),
 		).
-		Where("endpoint IS NOT NULL").
+		Where("content IS NOT NULL").
 		Order("created_at DESC").
 		Limit(1).
 		Select("id").

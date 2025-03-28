@@ -110,7 +110,7 @@ docker-compose up -d
 - `LOG_DETAIL_REQUEST_BODY_MAX_SIZE`: Maximum size for request body in log details, default is `128KB`
 - `LOG_DETAIL_RESPONSE_BODY_MAX_SIZE`: Maximum size for response body in log details, default is `128KB`
 - `LOG_DETAIL_STORAGE_HOURS`: Hours to store log details, default is `72` (3 days)
-- `CLEAN_LOG_BATCH_SIZE`: Batch size for cleaning logs, default is `2000`
+- `CLEAN_LOG_BATCH_SIZE`: Batch size for cleaning logs, cleaning interval is 1 minute, default is `2000`
 
 ### Service Control
 
