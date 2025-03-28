@@ -65,7 +65,7 @@ type Log struct {
 	Content              EmptyNullString `gorm:"type:text"                                                      json:"content,omitempty"`
 	GroupID              string          `json:"group,omitempty"`
 	Model                string          `json:"model"`
-	RequestID            EmptyNullString `gorm:"index"                                                          json:"request_id"`
+	RequestID            EmptyNullString `gorm:"index:,where:request_id is not null"                            json:"request_id"`
 	ID                   int             `gorm:"primaryKey"                                                     json:"id"`
 	TokenID              int             `gorm:"index"                                                          json:"token_id,omitempty"`
 	ChannelID            int             `json:"channel,omitempty"`
