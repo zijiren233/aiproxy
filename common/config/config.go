@@ -29,7 +29,7 @@ var (
 	logDetailRequestBodyMaxSize  int64 = 128 * 1024 // 128KB
 	logDetailResponseBodyMaxSize int64 = 128 * 1024 // 128KB
 	logDetailStorageHours        int64 = 3 * 24     // 3 days
-	cleanLogBatchSize            int64 = 5000
+	cleanLogBatchSize            int64 = 2000
 	internalToken                atomic.Value
 	notifyNote                   atomic.Value
 	ipGroupsThreshold            int64
