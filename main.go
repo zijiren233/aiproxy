@@ -182,6 +182,9 @@ func detectIPGroups(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
+			if !trylock.Lock("detectIPGroups", time.Minute) {
+				continue
+			}
 			DetectIPGroups()
 		}
 	}
@@ -190,9 +193,6 @@ func detectIPGroups(ctx context.Context) {
 func DetectIPGroups() {
 	threshold := config.GetIPGroupsThreshold()
 	if threshold < 1 {
-		return
-	}
-	if !trylock.Lock("detectIPGroups", time.Minute) {
 		return
 	}
 	ipGroupList, err := model.GetIPGroups(int(threshold), time.Now().Add(-time.Hour), time.Now())
