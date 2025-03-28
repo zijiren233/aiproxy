@@ -71,7 +71,7 @@ type Log struct {
 	ChannelID            int             `json:"channel,omitempty"`
 	Code                 int             `gorm:"index"                                                          json:"code,omitempty"`
 	Mode                 int             `json:"mode,omitempty"`
-	IP                   EmptyNullString `gorm:"index"                                                          json:"ip,omitempty"`
+	IP                   EmptyNullString `gorm:"index:,where:ip is not null"                                    json:"ip,omitempty"`
 	RetryTimes           ZeroNullInt64   `json:"retry_times,omitempty"`
 	DownstreamResult     bool            `json:"downstream_result,omitempty"`
 	Price                Price           `gorm:"embedded"                                                       json:"price,omitempty"`
@@ -264,9 +264,9 @@ func cleanLog(batchSize int, optimize bool) error {
 		Model(&Log{}).
 		Where(
 			"created_at < ?",
-			time.Now().Add(-time.Duration(logContentStorageHours)*time.Hour),
+			time.Now().Truncate(time.Hour).Add(-time.Duration(logContentStorageHours)*time.Hour),
 		).
-		Where("endpoint IS NOT NULL OR ip IS NOT NULL OR content IS NOT NULL OR ttfb_milliseconds IS NOT NULL").
+		Where("endpoint IS NOT NULL").
 		Order("created_at DESC").
 		Limit(1).
 		Select("id").
@@ -282,7 +282,7 @@ func cleanLog(batchSize int, optimize bool) error {
 			Model(&Log{}).
 			Session(&gorm.Session{SkipDefaultTransaction: true}).
 			Where(
-				"id BETWEEN ? AND ?",
+				"id BETWEEN ? AND ? AND content IS NOT NULL",
 				id-int64(batchSize),
 				id,
 			).
