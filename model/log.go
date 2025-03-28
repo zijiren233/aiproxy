@@ -1536,10 +1536,19 @@ func GetIPGroups(threshold int, start, end time.Time) (map[string][]string, erro
 	if threshold < 1 {
 		threshold = 1
 	}
+
+	var selectClause string
+	if common.UsingSQLite {
+		selectClause = "ip, GROUP_CONCAT(DISTINCT group_id) as groups"
+	} else {
+		selectClause = "ip, STRING_AGG(DISTINCT group_id, ',') as groups"
+	}
+
 	db := LogDB.Model(&Log{}).
-		Select("ip, GROUP_CONCAT(DISTINCT group_id) as groups").
+		Select(selectClause).
 		Group("ip").
 		Having("COUNT(DISTINCT group_id) >= ?", threshold)
+
 	switch {
 	case !start.IsZero() && !end.IsZero():
 		db = db.Where("request_at BETWEEN ? AND ?", start, end)
