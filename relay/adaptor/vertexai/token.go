@@ -60,10 +60,10 @@ func getToken(ctx context.Context, adcJSON string) (string, error) {
 		return "", fmt.Errorf("failed to generate access token: %w", err)
 	}
 	expireTime := resp.GetExpireTime()
-	expireTimeTime := time.Now().Add(time.Minute * 50)
-	if expireTime != nil {
-		expireTimeTime = expireTime.AsTime()
+	expireTimeTime := time.Minute * 50
+	if expireTime != nil && expireTime.IsValid() {
+		expireTimeTime = time.Until(expireTime.AsTime().Add(-time.Minute * 10))
 	}
-	tokenCache.Set(adcJSON, resp.GetAccessToken(), time.Until(expireTimeTime.Add(-time.Minute*10)))
+	tokenCache.Set(adcJSON, resp.GetAccessToken(), expireTimeTime)
 	return resp.GetAccessToken(), nil
 }
