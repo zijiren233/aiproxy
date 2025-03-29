@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -19,15 +20,19 @@ type HandleResult struct {
 	Detail *RequestDetail
 }
 
+var ErrInvalidChannelTypeCode = "invalid_channel_type"
+
 func Handle(meta *meta.Meta, c *gin.Context) *HandleResult {
 	log := middleware.GetLogger(c)
 
 	adaptor, ok := channeltype.GetAdaptor(meta.Channel.Type)
 	if !ok {
-		log.Errorf("invalid (%s[%d]) channel type: %d", meta.Channel.Name, meta.Channel.ID, meta.Channel.Type)
 		return &HandleResult{
 			Error: openai.ErrorWrapperWithMessage(
-				"invalid channel error", "invalid_channel_type", http.StatusInternalServerError),
+				fmt.Sprintf("invalid channel type: %d", meta.Channel.Type),
+				ErrInvalidChannelTypeCode,
+				http.StatusInternalServerError,
+			),
 		}
 	}
 

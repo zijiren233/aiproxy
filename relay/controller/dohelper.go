@@ -189,7 +189,7 @@ func setupRequestHeader(a adaptor.Adaptor, c *gin.Context, meta *meta.Meta, req 
 		req.Header[key] = value
 	}
 	if err := a.SetupRequestHeader(meta, c, req); err != nil {
-		return openai.ErrorWrapperWithMessage("setup request header failed: "+err.Error(), "setup_request_header_failed", http.StatusUnauthorized)
+		return openai.ErrorWrapperWithMessage("setup request header failed: "+err.Error(), "setup_request_header_failed", http.StatusInternalServerError)
 	}
 	return nil
 }

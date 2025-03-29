@@ -9,16 +9,17 @@ import (
 )
 
 type ChannelMeta struct {
-	Name    string
-	BaseURL string
-	Key     string
-	ID      int
-	Type    int
+	Name     string
+	BaseURL  string
+	Key      string
+	ID       int
+	Type     int
+	TypeName string
 }
 
 type Meta struct {
 	values        map[string]any
-	Channel       *ChannelMeta
+	Channel       ChannelMeta
 	ChannelConfig model.ChannelConfig
 	Group         *model.GroupCache
 	Token         *model.TokenCache
@@ -79,6 +80,12 @@ func WithInputTokens(inputTokens int) Option {
 	}
 }
 
+func WithChannelTypeName(typeName string) Option {
+	return func(meta *Meta) {
+		meta.Channel.TypeName = typeName
+	}
+}
+
 func NewMeta(
 	channel *model.Channel,
 	mode mode.Mode,
@@ -103,13 +110,11 @@ func NewMeta(
 	}
 
 	if channel != nil {
-		meta.Channel = &ChannelMeta{
-			Name:    channel.Name,
-			BaseURL: channel.BaseURL,
-			Key:     channel.Key,
-			ID:      channel.ID,
-			Type:    channel.Type,
-		}
+		meta.Channel.Name = channel.Name
+		meta.Channel.BaseURL = channel.BaseURL
+		meta.Channel.Key = channel.Key
+		meta.Channel.ID = channel.ID
+		meta.Channel.Type = channel.Type
 		if channel.Config != nil {
 			meta.ChannelConfig = *channel.Config
 		}

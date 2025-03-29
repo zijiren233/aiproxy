@@ -31,11 +31,6 @@ func recordConsume(
 		us.CacheCreationTokens = usage.PromptTokensDetails.CacheCreationTokens
 	}
 
-	var channelID int
-	if meta.Channel != nil {
-		channelID = meta.Channel.ID
-	}
-
 	return model.BatchRecordConsume(
 		meta.RequestID,
 		meta.RequestAt,
@@ -43,7 +38,7 @@ func recordConsume(
 		firstByteAt,
 		meta.Group.ID,
 		code,
-		channelID,
+		meta.Channel.ID,
 		meta.OriginModel,
 		meta.Token.ID,
 		meta.Token.Name,

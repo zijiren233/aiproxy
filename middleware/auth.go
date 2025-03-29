@@ -174,11 +174,18 @@ func SetLogModelFields(fields logrus.Fields, model string) {
 	fields["model"] = model
 }
 
-func SetLogChannelFields(fields logrus.Fields, channel *meta.ChannelMeta) {
-	if channel != nil {
+func SetLogChannelFields(fields logrus.Fields, channel meta.ChannelMeta) {
+	if channel.ID > 0 {
 		fields["chid"] = channel.ID
+	}
+	if channel.Name != "" {
 		fields["chname"] = channel.Name
+	}
+	if channel.Type > 0 {
 		fields["chtype"] = channel.Type
+	}
+	if channel.TypeName != "" {
+		fields["chtype_name"] = channel.TypeName
 	}
 }
 

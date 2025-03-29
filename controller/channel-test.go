@@ -479,17 +479,17 @@ func AutoTestBannedModels() {
 			}
 			result, err := testSingleModel(mc, channel, modelName)
 			if err != nil {
-				notify.Error(fmt.Sprintf("channel[%d] %s(%d) model %s test failed", channel.Type, channel.Name, channel.ID, modelName), err.Error())
+				notify.Error(fmt.Sprintf("channel %s (type: %d, id: %d) model %s test failed", channel.Name, channel.Type, channel.ID, modelName), err.Error())
 				continue
 			}
 			if result.Success {
-				notify.Info(fmt.Sprintf("channel[%d] %s(%d) model %s test success", channel.Type, channel.Name, channel.ID, modelName), "unban it")
+				notify.Info(fmt.Sprintf("channel %s (type: %d, id: %d) model %s test success", channel.Name, channel.Type, channel.ID, modelName), "unban it")
 				err = monitor.ClearChannelModelErrors(context.Background(), modelName, channel.ID)
 				if err != nil {
 					log.Errorf("clear channel errors failed: %+v", err)
 				}
 			} else {
-				notify.Error(fmt.Sprintf("channel[%d] %s(%d) model %s test failed", channel.Type, channel.Name, channel.ID, modelName),
+				notify.Error(fmt.Sprintf("channel %s (type: %d, id: %d) model %s test failed", channel.Name, channel.Type, channel.ID, modelName),
 					fmt.Sprintf("code: %d, response: %s", result.Code, result.Response))
 			}
 		}
