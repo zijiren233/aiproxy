@@ -252,6 +252,18 @@ func getChannelFromHeader(header string, mc *model.ModelCaches, availableSet []s
 	return nil, fmt.Errorf("channel %d not found for model %s", channelIDInt, model)
 }
 
+func CheckRelayMode(requestMode mode.Mode, modelMode mode.Mode) bool {
+	if modelMode == mode.Unknown {
+		return true
+	}
+	switch requestMode {
+	case mode.ChatCompletions, mode.Completions:
+		return modelMode == mode.ChatCompletions || modelMode == mode.Completions
+	default:
+		return requestMode == modelMode
+	}
+}
+
 func distribute(c *gin.Context, mode mode.Mode) {
 	if config.GetDisableServe() {
 		AbortLogWithMessage(c, http.StatusServiceUnavailable, "service is under maintenance")
@@ -287,7 +299,7 @@ func distribute(c *gin.Context, mode mode.Mode) {
 	SetLogModelFields(log.Data, requestModel)
 
 	mc, ok := GetModelCaches(c).ModelConfig.GetModelConfig(requestModel)
-	if !ok {
+	if !ok || !CheckRelayMode(mode, mc.Type) {
 		AbortLogWithMessage(c,
 			http.StatusNotFound,
 			fmt.Sprintf("The model `%s` does not exist or you do not have access to it.", requestModel),

@@ -114,25 +114,52 @@ func RelayHelper(meta *meta.Meta, c *gin.Context, handel RelayHandler) (*control
 			notify.ErrorThrottle(
 				fmt.Sprintf("autoBanned:%d:%s", meta.Channel.ID, meta.OriginModel),
 				time.Minute,
-				fmt.Sprintf("channel %s (type: %d, type_name: %s, id: %d) model %s is auto banned: %d",
-					meta.Channel.Name, meta.Channel.Type, meta.Channel.TypeName, meta.Channel.ID, meta.OriginModel, result.Error.StatusCode),
-				result.Error.JSONOrEmpty(),
+				fmt.Sprintf("%s `%s` Auto Banned", meta.Channel.Name, meta.OriginModel),
+				fmt.Sprintf(
+					"channel %s (type: %d, type name: %s, id: %d)\nmodel %s\nmode: %s\nstatus code: %d\nauto banned: %s",
+					meta.Channel.Name,
+					meta.Channel.Type,
+					meta.Channel.TypeName,
+					meta.Channel.ID,
+					meta.OriginModel,
+					meta.Mode,
+					result.Error.StatusCode,
+					result.Error.JSONOrEmpty(),
+				),
 			)
 		case beyondThreshold:
 			notify.WarnThrottle(
 				fmt.Sprintf("beyondThreshold:%d:%s", meta.Channel.ID, meta.OriginModel),
 				time.Minute,
-				fmt.Sprintf("channel %s (type: %d, type_name: %s, id: %d) model %s error rate is beyond threshold: %d",
-					meta.Channel.Name, meta.Channel.Type, meta.Channel.TypeName, meta.Channel.ID, meta.OriginModel, result.Error.StatusCode),
-				result.Error.JSONOrEmpty(),
+				fmt.Sprintf("%s `%s` Error Rate Beyond Threshold", meta.Channel.Name, meta.OriginModel),
+				fmt.Sprintf(
+					"channel %s (type: %d, type name: %s, id: %d)\nmodel %s\nmode: %s\nstatus code: %d\nerror rate is beyond threshold: %s",
+					meta.Channel.Name,
+					meta.Channel.Type,
+					meta.Channel.TypeName,
+					meta.Channel.ID,
+					meta.OriginModel,
+					meta.Mode,
+					result.Error.StatusCode,
+					result.Error.JSONOrEmpty(),
+				),
 			)
 		case !hasPermission:
 			notify.ErrorThrottle(
 				fmt.Sprintf("channelHasPermission:%d:%s", meta.Channel.ID, meta.OriginModel),
 				time.Minute,
-				fmt.Sprintf("channel %s (type: %d, type_name: %s, id: %d) model %s has no permission: %d",
-					meta.Channel.Name, meta.Channel.Type, meta.Channel.TypeName, meta.Channel.ID, meta.OriginModel, result.Error.StatusCode),
-				result.Error.JSONOrEmpty(),
+				fmt.Sprintf("%s `%s` No Permission", meta.Channel.Name, meta.OriginModel),
+				fmt.Sprintf(
+					"channel %s (type: %d, type name: %s, id: %d)\nmodel %s\nmode: %s\nstatus code: %d\nhas no permission: %s",
+					meta.Channel.Name,
+					meta.Channel.Type,
+					meta.Channel.TypeName,
+					meta.Channel.ID,
+					meta.OriginModel,
+					meta.Mode,
+					result.Error.StatusCode,
+					result.Error.JSONOrEmpty(),
+				),
 			)
 		}
 	}

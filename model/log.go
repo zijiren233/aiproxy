@@ -255,7 +255,10 @@ func cleanLog(batchSize int, optimize bool) error {
 	logContentStorageHours := config.GetLogContentStorageHours()
 	if logContentStorageHours <= 0 ||
 		logContentStorageHours <= logStorageHours {
-		return optimizeLog()
+		if optimize {
+			return optimizeLog()
+		}
+		return nil
 	}
 
 	// Find the minimum ID that meets our criteria
