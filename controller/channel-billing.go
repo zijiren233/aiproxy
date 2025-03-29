@@ -21,19 +21,19 @@ import (
 func updateChannelBalance(channel *model.Channel) (float64, error) {
 	adaptorI, ok := channeltype.GetAdaptor(channel.Type)
 	if !ok {
-		return 0, fmt.Errorf("invalid channel type: %d, channel: %s(%d)", channel.Type, channel.Name, channel.ID)
+		return 0, fmt.Errorf("invalid channel type: %d, channel: %s (id: %d)", channel.Type, channel.Name, channel.ID)
 	}
 	if getBalance, ok := adaptorI.(adaptor.Balancer); ok {
 		balance, err := getBalance.GetBalance(channel)
 		if err != nil && !errors.Is(err, adaptor.ErrGetBalanceNotImplemented) {
-			return 0, fmt.Errorf("failed to get channel[%d] %s(%d) balance: %s", channel.Type, channel.Name, channel.ID, err.Error())
+			return 0, fmt.Errorf("failed to get channel %s (type: %d, id: %d) balance: %s", channel.Name, channel.Type, channel.ID, err.Error())
 		}
 		if err := channel.UpdateBalance(balance); err != nil {
-			return 0, fmt.Errorf("failed to update channel [%d] %s(%d) balance: %s", channel.Type, channel.Name, channel.ID, err.Error())
+			return 0, fmt.Errorf("failed to update channel %s (type: %d, id: %d) balance: %s", channel.Name, channel.Type, channel.ID, err.Error())
 		}
 		if !errors.Is(err, adaptor.ErrGetBalanceNotImplemented) &&
 			balance < channel.GetBalanceThreshold() {
-			return 0, fmt.Errorf("channel[%d] %s(%d) balance is less than threshold: %f", channel.Type, channel.Name, channel.ID, balance)
+			return 0, fmt.Errorf("channel %s (type: %d, id: %d) balance is less than threshold: %f", channel.Name, channel.Type, channel.ID, balance)
 		}
 		return balance, nil
 	}
@@ -69,7 +69,7 @@ func UpdateChannelBalance(c *gin.Context) {
 	}
 	balance, err := updateChannelBalance(channel)
 	if err != nil {
-		notify.Error(fmt.Sprintf("check channel[%d] %s(%d) balance error", channel.Type, channel.Name, channel.ID), err.Error())
+		notify.Error(fmt.Sprintf("check channel %s (type: %d, id: %d) balance error", channel.Name, channel.Type, channel.ID), err.Error())
 		c.JSON(http.StatusOK, middleware.APIResponse{
 			Success: false,
 			Message: err.Error(),
@@ -99,7 +99,7 @@ func updateAllChannelsBalance() error {
 			defer func() { <-semaphore }()
 			_, err := updateChannelBalance(ch)
 			if err != nil {
-				notify.Error(fmt.Sprintf("check channel[%d] %s(%d) balance error", ch.Type, ch.Name, ch.ID), err.Error())
+				notify.Error(fmt.Sprintf("check channel %s (type: %d, id: %d) balance error", ch.Name, ch.Type, ch.ID), err.Error())
 			}
 		}(channel)
 	}

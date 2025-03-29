@@ -112,3 +112,7 @@ func getAdaptorKeyHelp(a adaptor.Adaptor) string {
 	}
 	return ""
 }
+
+func GetChannelName(channel int) string {
+	return ChannelNames[channel]
+}

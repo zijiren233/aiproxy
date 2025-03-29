@@ -20,6 +20,7 @@ import (
 	"github.com/labring/aiproxy/middleware"
 	"github.com/labring/aiproxy/model"
 	"github.com/labring/aiproxy/monitor"
+	"github.com/labring/aiproxy/relay/channeltype"
 	"github.com/labring/aiproxy/relay/controller"
 	"github.com/labring/aiproxy/relay/meta"
 	"github.com/labring/aiproxy/relay/mode"
@@ -95,9 +96,9 @@ func RelayHelper(meta *meta.Meta, c *gin.Context, handel RelayHandler) (*control
 		}
 		return result, false
 	}
-	shouldRetry := shouldRetry(c, result.Error.StatusCode)
+	shouldRetry := shouldRetry(c, *result.Error)
 	if shouldRetry {
-		hasPermission := channelHasPermission(result.Error.StatusCode)
+		hasPermission := channelHasPermission(*result.Error)
 		beyondThreshold, banExecution, err := monitor.AddRequest(
 			context.Background(),
 			meta.OriginModel,
@@ -113,24 +114,24 @@ func RelayHelper(meta *meta.Meta, c *gin.Context, handel RelayHandler) (*control
 			notify.ErrorThrottle(
 				fmt.Sprintf("autoBanned:%d:%s", meta.Channel.ID, meta.OriginModel),
 				time.Minute,
-				fmt.Sprintf("channel[%d] %s(%d) model %s is auto banned: %d",
-					meta.Channel.Type, meta.Channel.Name, meta.Channel.ID, meta.OriginModel, result.Error.StatusCode),
+				fmt.Sprintf("channel %s (type: %d, type_name: %s, id: %d) model %s is auto banned: %d",
+					meta.Channel.Name, meta.Channel.Type, meta.Channel.TypeName, meta.Channel.ID, meta.OriginModel, result.Error.StatusCode),
 				result.Error.JSONOrEmpty(),
 			)
 		case beyondThreshold:
 			notify.WarnThrottle(
 				fmt.Sprintf("beyondThreshold:%d:%s", meta.Channel.ID, meta.OriginModel),
 				time.Minute,
-				fmt.Sprintf("channel[%d] %s(%d) model %s error rate is beyond threshold: %d",
-					meta.Channel.Type, meta.Channel.Name, meta.Channel.ID, meta.OriginModel, result.Error.StatusCode),
+				fmt.Sprintf("channel %s (type: %d, type_name: %s, id: %d) model %s error rate is beyond threshold: %d",
+					meta.Channel.Name, meta.Channel.Type, meta.Channel.TypeName, meta.Channel.ID, meta.OriginModel, result.Error.StatusCode),
 				result.Error.JSONOrEmpty(),
 			)
 		case !hasPermission:
 			notify.ErrorThrottle(
 				fmt.Sprintf("channelHasPermission:%d:%s", meta.Channel.ID, meta.OriginModel),
 				time.Minute,
-				fmt.Sprintf("channel[%d] %s(%d) model %s has no permission: %d",
-					meta.Channel.Type, meta.Channel.Name, meta.Channel.ID, meta.OriginModel, result.Error.StatusCode),
+				fmt.Sprintf("channel %s (type: %d, type_name: %s, id: %d) model %s has no permission: %d",
+					meta.Channel.Name, meta.Channel.Type, meta.Channel.TypeName, meta.Channel.ID, meta.OriginModel, result.Error.StatusCode),
 				result.Error.JSONOrEmpty(),
 			)
 		}
@@ -239,6 +240,14 @@ func NewRelay(mode mode.Mode) func(c *gin.Context) {
 	}
 }
 
+func NewMetaByContext(c *gin.Context, channel *model.Channel, mode mode.Mode, opts ...meta.Option) *meta.Meta {
+	channelTypeName := channeltype.GetChannelName(channel.Type)
+	if channelTypeName != "" {
+		opts = append(opts, meta.WithChannelTypeName(channelTypeName))
+	}
+	return middleware.NewMetaByContext(c, channel, mode, opts...)
+}
+
 func relay(c *gin.Context, mode mode.Mode, relayController RelayController) {
 	log := middleware.GetLogger(c)
 	requestModel := middleware.GetRequestModel(c)
@@ -268,7 +277,7 @@ func relay(c *gin.Context, mode mode.Mode, relayController RelayController) {
 		}
 	}
 
-	meta := middleware.NewMetaByContext(c, initialChannel.channel, mode)
+	meta := NewMetaByContext(c, initialChannel.channel, mode)
 
 	if billingEnabled && relayController.GetRequestUsage != nil {
 		requestUsage, err := relayController.GetRequestUsage(c, mc)
@@ -460,7 +469,7 @@ func initRetryState(retryTimes int, channel *initialChannel, meta *meta.Meta, re
 		state.exhausted = true
 	}
 
-	if !channelHasPermission(result.Error.StatusCode) {
+	if !channelHasPermission(*result.Error) {
 		state.ignoreChannelIDs = append(state.ignoreChannelIDs, int64(channel.channel.ID))
 	} else {
 		state.lastHasPermissionChannel = channel.channel
@@ -504,7 +513,7 @@ func retryLoop(c *gin.Context, mode mode.Mode, state *retryState, relayControlle
 			state.retryTimes-i,
 		)
 
-		state.meta = middleware.NewMetaByContext(
+		state.meta = NewMetaByContext(
 			c,
 			newChannel,
 			mode,
@@ -574,12 +583,14 @@ func handleRetryResult(ctx *gin.Context, retry bool, newChannel *model.Channel, 
 		return true
 	}
 
+	hasPermission := channelHasPermission(*state.result.Error)
+
 	if state.exhausted {
-		if !channelHasPermission(state.result.Error.StatusCode) {
+		if !hasPermission {
 			return true
 		}
 	} else {
-		if !channelHasPermission(state.result.Error.StatusCode) {
+		if !hasPermission {
 			state.ignoreChannelIDs = append(state.ignoreChannelIDs, int64(newChannel.ID))
 			state.retryTimes++
 		} else {
@@ -591,10 +602,13 @@ func handleRetryResult(ctx *gin.Context, retry bool, newChannel *model.Channel, 
 }
 
 // 仅当是channel错误时，才需要记录，用户请求参数错误时，不需要记录
-func shouldRetry(_ *gin.Context, statusCode int) bool {
-	return statusCode != http.StatusBadRequest &&
-		statusCode != http.StatusRequestEntityTooLarge &&
-		statusCode != http.StatusUnprocessableEntity
+func shouldRetry(_ *gin.Context, relayErr relaymodel.ErrorWithStatusCode) bool {
+	if relayErr.Error.Code == controller.ErrInvalidChannelTypeCode {
+		return false
+	}
+	return relayErr.StatusCode != http.StatusBadRequest &&
+		relayErr.StatusCode != http.StatusRequestEntityTooLarge &&
+		relayErr.StatusCode != http.StatusUnprocessableEntity
 }
 
 var channelNoPermissionStatusCodesMap = map[int]struct{}{
@@ -604,8 +618,11 @@ var channelNoPermissionStatusCodesMap = map[int]struct{}{
 	http.StatusNotFound:        {},
 }
 
-func channelHasPermission(statusCode int) bool {
-	_, ok := channelNoPermissionStatusCodesMap[statusCode]
+func channelHasPermission(relayErr relaymodel.ErrorWithStatusCode) bool {
+	if relayErr.Error.Code == controller.ErrInvalidChannelTypeCode {
+		return false
+	}
+	_, ok := channelNoPermissionStatusCodesMap[relayErr.StatusCode]
 	return !ok
 }
 
