@@ -1072,7 +1072,8 @@ const (
 	TimeSpanHour TimeSpanType = "hour"
 )
 
-func getChartData(group string,
+func getChartData(
+	group string,
 	start, end time.Time,
 	tokenName, modelName string,
 	channelID int,
