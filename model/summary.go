@@ -130,7 +130,7 @@ func getChartDataFromSummary(
 
 	if group == "*" || channelID != 0 {
 		query = LogDB.Model(&Summary{}).
-			Select("hour_timestamp as timestamp, count(*) as request_count, sum(used_amount) as used_amount, sum(exception_count) as exception_count, sum(input_tokens) as input_tokens, sum(output_tokens) as output_tokens, sum(cached_tokens) as cached_tokens, sum(cache_creation_tokens) as cache_creation_tokens, sum(total_tokens) as total_tokens").
+			Select("hour_timestamp as timestamp, sum(request_count) as request_count, sum(used_amount) as used_amount, sum(exception_count) as exception_count, sum(input_tokens) as input_tokens, sum(output_tokens) as output_tokens, sum(cached_tokens) as cached_tokens, sum(cache_creation_tokens) as cache_creation_tokens, sum(total_tokens) as total_tokens").
 			Group("timestamp").
 			Order("timestamp ASC")
 
@@ -139,7 +139,7 @@ func getChartDataFromSummary(
 		}
 	} else {
 		query = LogDB.Model(&GroupSummary{}).
-			Select("hour_timestamp as timestamp, count(*) as request_count, sum(used_amount) as used_amount, sum(exception_count) as exception_count, sum(input_tokens) as input_tokens, sum(output_tokens) as output_tokens, sum(cached_tokens) as cached_tokens, sum(cache_creation_tokens) as cache_creation_tokens, sum(total_tokens) as total_tokens").
+			Select("hour_timestamp as timestamp, sum(request_count) as request_count, sum(used_amount) as used_amount, sum(exception_count) as exception_count, sum(input_tokens) as input_tokens, sum(output_tokens) as output_tokens, sum(cached_tokens) as cached_tokens, sum(cache_creation_tokens) as cache_creation_tokens, sum(total_tokens) as total_tokens").
 			Group("timestamp").
 			Order("timestamp ASC").
 			Where("group_id = ?", group)
