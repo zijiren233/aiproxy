@@ -122,6 +122,7 @@ func UpsertSummary(unique SummaryUnique, data SummaryData) error {
 func createSummary(unique SummaryUnique, data SummaryData) error {
 	return LogDB.
 		Clauses(clause.OnConflict{
+			Columns:   []clause.Column{{Name: "channel_id"}, {Name: "model"}, {Name: "hour_timestamp"}},
 			DoUpdates: clause.Assignments(data.buildUpdateData()),
 		}).
 		Create(&Summary{

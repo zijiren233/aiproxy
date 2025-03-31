@@ -90,6 +90,7 @@ func UpsertGroupSummary(unique GroupSummaryUnique, data SummaryData) error {
 func createGroupSummary(unique GroupSummaryUnique, data SummaryData) error {
 	return LogDB.
 		Clauses(clause.OnConflict{
+			Columns:   []clause.Column{{Name: "group_id"}, {Name: "token_name"}, {Name: "model"}, {Name: "hour_timestamp"}},
 			DoUpdates: clause.Assignments(data.buildUpdateData()),
 		}).
 		Create(&GroupSummary{
