@@ -137,12 +137,11 @@ func cacheGetGroupBalance(ctx context.Context, group string) (*sealosCache, erro
 }
 
 var decreaseGroupBalanceScript = redis.NewScript(`
-	local balance = redis.call("HGet", KEYS[1], "balance")
-	if balance == false then
-		return redis.status_reply("ok")
-	end
-	redis.call("HSet", KEYS[1], "balance", balance - ARGV[1])
-	return redis.status_reply("ok")
+local balance = redis.call("HGet", KEYS[1], "b")
+if balance then
+	redis.call("HSet", KEYS[1], "b", balance - ARGV[1])
+end
+return redis.status_reply("ok")
 `)
 
 func cacheDecreaseGroupBalance(ctx context.Context, group string, amount int64) error {
