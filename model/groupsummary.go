@@ -110,6 +110,9 @@ func GetGroupLastRequestTime(group string) (time.Time, error) {
 		Where("group_id = ?", group).
 		Order("hour_timestamp desc").
 		First(&summary).Error
+	if summary.Unique.HourTimestamp == 0 {
+		return time.Time{}, nil
+	}
 	return time.Unix(summary.Unique.HourTimestamp, 0), err
 }
 
@@ -120,5 +123,8 @@ func GetGroupTokenLastRequestTime(group string, token string) (time.Time, error)
 		Where("group_id = ? AND token_name = ?", group, token).
 		Order("hour_timestamp desc").
 		First(&summary).Error
+	if summary.Unique.HourTimestamp == 0 {
+		return time.Time{}, nil
+	}
 	return time.Unix(summary.Unique.HourTimestamp, 0), err
 }
