@@ -300,7 +300,7 @@ func SearchGroupLogs(c *gin.Context) {
 func GetUsedModels(c *gin.Context) {
 	group := c.Query("group")
 	startTime, endTime := parseTimeRange(c)
-	models, err := model.GetUsedModels(group, startTime, endTime)
+	models, err := model.GetUsedModelsFromLog(group, startTime, endTime)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusOK, err.Error())
 		return
@@ -325,7 +325,7 @@ func GetGroupUsedModels(c *gin.Context) {
 		return
 	}
 	startTime, endTime := parseTimeRange(c)
-	models, err := model.GetUsedModels(group, startTime, endTime)
+	models, err := model.GetUsedModelsFromLog(group, startTime, endTime)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusOK, err.Error())
 		return
@@ -392,7 +392,7 @@ func GetGroupLogDetail(c *gin.Context) {
 func GetUsedTokenNames(c *gin.Context) {
 	group := c.Query("group")
 	startTime, endTime := parseTimeRange(c)
-	tokenNames, err := model.GetUsedTokenNames(group, startTime, endTime)
+	tokenNames, err := model.GetUsedTokenNamesFromLog(group, startTime, endTime)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusOK, err.Error())
 		return
@@ -417,7 +417,7 @@ func GetGroupUsedTokenNames(c *gin.Context) {
 		return
 	}
 	startTime, endTime := parseTimeRange(c)
-	tokenNames, err := model.GetUsedTokenNames(group, startTime, endTime)
+	tokenNames, err := model.GetUsedTokenNamesFromLog(group, startTime, endTime)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusOK, err.Error())
 		return

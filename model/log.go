@@ -1072,7 +1072,7 @@ const (
 	TimeSpanHour TimeSpanType = "hour"
 )
 
-func getChartData(
+func getChartDataFromLog(
 	group string,
 	start, end time.Time,
 	tokenName, modelName string,
@@ -1174,19 +1174,19 @@ func aggregateHourDataToDay(hourlyData []*ChartData) []*ChartData {
 	return result
 }
 
-func GetUsedChannels(group string, start, end time.Time) ([]int, error) {
-	return getLogGroupByValues[int]("channel_id", group, start, end)
+func GetUsedChannelsFromLog(group string, start, end time.Time) ([]int, error) {
+	return getLogGroupByValuesFromLog[int]("channel_id", group, start, end)
 }
 
-func GetUsedModels(group string, start, end time.Time) ([]string, error) {
-	return getLogGroupByValues[string]("model", group, start, end)
+func GetUsedModelsFromLog(group string, start, end time.Time) ([]string, error) {
+	return getLogGroupByValuesFromLog[string]("model", group, start, end)
 }
 
-func GetUsedTokenNames(group string, start, end time.Time) ([]string, error) {
-	return getLogGroupByValues[string]("token_name", group, start, end)
+func GetUsedTokenNamesFromLog(group string, start, end time.Time) ([]string, error) {
+	return getLogGroupByValuesFromLog[string]("token_name", group, start, end)
 }
 
-func getLogGroupByValues[T cmp.Ordered](field string, group string, start, end time.Time) ([]T, error) {
+func getLogGroupByValuesFromLog[T cmp.Ordered](field string, group string, start, end time.Time) ([]T, error) {
 	var values []T
 	query := LogDB.
 		Model(&Log{})
@@ -1304,7 +1304,7 @@ func GetDashboardData(
 	resultOnly bool,
 	needRPM bool,
 	tokenUsage bool,
-	fromSummary bool,
+	fromLog bool,
 ) (*DashboardResponse, error) {
 	if end.IsZero() {
 		end = time.Now()
@@ -1321,16 +1321,16 @@ func GetDashboardData(
 
 	g := new(errgroup.Group)
 
-	if !fromSummary {
+	if fromLog {
 		g.Go(func() error {
 			var err error
-			chartData, err = getChartData(group, start, end, "", modelName, channelID, timeSpan, resultOnly, tokenUsage)
+			chartData, err = getChartDataFromLog(group, start, end, "", modelName, channelID, timeSpan, resultOnly, tokenUsage)
 			return err
 		})
 	} else {
 		g.Go(func() error {
 			var err error
-			chartData, err = getChartDataFromSummary(group, start, end, "", modelName, channelID, timeSpan)
+			chartData, err = getChartData(group, start, end, "", modelName, channelID, timeSpan)
 			return err
 		})
 	}
@@ -1376,7 +1376,7 @@ func GetGroupDashboardData(
 	resultOnly bool,
 	needRPM bool,
 	tokenUsage bool,
-	fromSummary bool,
+	fromLog bool,
 ) (*GroupDashboardResponse, error) {
 	if group == "" || group == "*" {
 		return nil, errors.New("group is required")
@@ -1398,16 +1398,16 @@ func GetGroupDashboardData(
 
 	g := new(errgroup.Group)
 
-	if !fromSummary {
+	if fromLog {
 		g.Go(func() error {
 			var err error
-			chartData, err = getChartData(group, start, end, tokenName, modelName, 0, timeSpan, resultOnly, tokenUsage)
+			chartData, err = getChartDataFromLog(group, start, end, tokenName, modelName, 0, timeSpan, resultOnly, tokenUsage)
 			return err
 		})
 	} else {
 		g.Go(func() error {
 			var err error
-			chartData, err = getChartDataFromSummary(group, start, end, tokenName, modelName, 0, timeSpan)
+			chartData, err = getChartData(group, start, end, tokenName, modelName, 0, timeSpan)
 			return err
 		})
 	}

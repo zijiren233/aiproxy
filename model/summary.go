@@ -1,10 +1,13 @@
 package model
 
 import (
+	"cmp"
 	"errors"
+	"slices"
 	"time"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 // only summary result only requests
@@ -25,6 +28,19 @@ type SummaryData struct {
 	UsedAmount     float64 `json:"used_amount"`
 	ExceptionCount int64   `json:"exception_count"`
 	Usage          Usage   `gorm:"embedded"        json:"usage,omitempty"`
+}
+
+func (d *SummaryData) buildUpdateData() map[string]interface{} {
+	return map[string]interface{}{
+		"request_count":         gorm.Expr("request_count + ?", d.RequestCount),
+		"used_amount":           gorm.Expr("used_amount + ?", d.UsedAmount),
+		"exception_count":       gorm.Expr("exception_count + ?", d.ExceptionCount),
+		"input_tokens":          gorm.Expr("input_tokens + ?", d.Usage.InputTokens),
+		"output_tokens":         gorm.Expr("output_tokens + ?", d.Usage.OutputTokens),
+		"total_tokens":          gorm.Expr("total_tokens + ?", d.Usage.TotalTokens),
+		"cached_tokens":         gorm.Expr("cached_tokens + ?", d.Usage.CachedTokens),
+		"cache_creation_tokens": gorm.Expr("cache_creation_tokens + ?", d.Usage.CacheCreationTokens),
+	}
 }
 
 func (l *Summary) BeforeCreate(_ *gorm.DB) (err error) {
@@ -82,16 +98,7 @@ func UpsertSummary(unique SummaryUnique, data SummaryData) error {
 				unique.Model,
 				unique.HourTimestamp,
 			).
-			Updates(map[string]interface{}{
-				"request_count":         gorm.Expr("request_count + ?", data.RequestCount),
-				"used_amount":           gorm.Expr("used_amount + ?", data.UsedAmount),
-				"exception_count":       gorm.Expr("exception_count + ?", data.ExceptionCount),
-				"input_tokens":          gorm.Expr("input_tokens + ?", data.Usage.InputTokens),
-				"output_tokens":         gorm.Expr("output_tokens + ?", data.Usage.OutputTokens),
-				"total_tokens":          gorm.Expr("total_tokens + ?", data.Usage.TotalTokens),
-				"cached_tokens":         gorm.Expr("cached_tokens + ?", data.Usage.CachedTokens),
-				"cache_creation_tokens": gorm.Expr("cache_creation_tokens + ?", data.Usage.CacheCreationTokens),
-			})
+			Updates(data.buildUpdateData())
 		err = result.Error
 		if err != nil {
 			return err
@@ -113,13 +120,17 @@ func UpsertSummary(unique SummaryUnique, data SummaryData) error {
 }
 
 func createSummary(unique SummaryUnique, data SummaryData) error {
-	return LogDB.Create(&Summary{
-		Unique: unique,
-		Data:   data,
-	}).Error
+	return LogDB.
+		Clauses(clause.OnConflict{
+			DoUpdates: clause.Assignments(data.buildUpdateData()),
+		}).
+		Create(&Summary{
+			Unique: unique,
+			Data:   data,
+		}).Error
 }
 
-func getChartDataFromSummary(
+func getChartData(
 	group string,
 	start, end time.Time,
 	tokenName, modelName string,
@@ -174,4 +185,53 @@ func getChartDataFromSummary(
 	}
 
 	return chartData, nil
+}
+
+func GetUsedChannels(group string, start, end time.Time) ([]int, error) {
+	if group != "*" {
+		return []int{}, nil
+	}
+	return getLogGroupByValues[int]("channel_id", group, start, end)
+}
+
+func GetUsedModels(group string, start, end time.Time) ([]string, error) {
+	return getLogGroupByValues[string]("model", group, start, end)
+}
+
+func GetUsedTokenNames(group string, start, end time.Time) ([]string, error) {
+	return getLogGroupByValues[string]("token_name", group, start, end)
+}
+
+func getLogGroupByValues[T cmp.Ordered](field string, group string, start, end time.Time) ([]T, error) {
+	var values []T
+
+	var query *gorm.DB
+
+	if group == "*" {
+		query = LogDB.
+			Model(&Summary{})
+	} else {
+		query = LogDB.
+			Model(&GroupSummary{}).
+			Where("group_id = ?", group)
+	}
+
+	switch {
+	case !start.IsZero() && !end.IsZero():
+		query = query.Where("hour_timestamp BETWEEN ? AND ?", start.Unix(), end.Unix())
+	case !start.IsZero():
+		query = query.Where("hour_timestamp >= ?", start.Unix())
+	case !end.IsZero():
+		query = query.Where("hour_timestamp <= ?", end.Unix())
+	}
+
+	err := query.
+		Select(field).
+		Group(field).
+		Pluck(field, &values).Error
+	if err != nil {
+		return nil, err
+	}
+	slices.Sort(values)
+	return values, nil
 }

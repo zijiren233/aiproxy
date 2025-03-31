@@ -251,7 +251,9 @@ func BatchRecordConsume(
 
 	updateTokenData(tokenID, amount, amountDecimal)
 
-	updateSummaryData(channelID, modelName, requestAt, code, amountDecimal, usage)
+	if channelID != 0 {
+		updateSummaryData(channelID, modelName, requestAt, code, amountDecimal, usage)
+	}
 
 	updateGroupSummaryData(group, tokenName, modelName, requestAt, code, amountDecimal, usage)
 

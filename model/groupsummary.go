@@ -4,6 +4,7 @@ import (
 	"errors"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 // only summary result only requests
@@ -65,16 +66,7 @@ func UpsertGroupSummary(unique GroupSummaryUnique, data SummaryData) error {
 				unique.Model,
 				unique.HourTimestamp,
 			).
-			Updates(map[string]interface{}{
-				"request_count":         gorm.Expr("request_count + ?", data.RequestCount),
-				"used_amount":           gorm.Expr("used_amount + ?", data.UsedAmount),
-				"exception_count":       gorm.Expr("exception_count + ?", data.ExceptionCount),
-				"input_tokens":          gorm.Expr("input_tokens + ?", data.Usage.InputTokens),
-				"output_tokens":         gorm.Expr("output_tokens + ?", data.Usage.OutputTokens),
-				"total_tokens":          gorm.Expr("total_tokens + ?", data.Usage.TotalTokens),
-				"cached_tokens":         gorm.Expr("cached_tokens + ?", data.Usage.CachedTokens),
-				"cache_creation_tokens": gorm.Expr("cache_creation_tokens + ?", data.Usage.CacheCreationTokens),
-			})
+			Updates(data.buildUpdateData())
 		err = result.Error
 		if err != nil {
 			return err
@@ -96,8 +88,12 @@ func UpsertGroupSummary(unique GroupSummaryUnique, data SummaryData) error {
 }
 
 func createGroupSummary(unique GroupSummaryUnique, data SummaryData) error {
-	return LogDB.Create(&GroupSummary{
-		Unique: unique,
-		Data:   data,
-	}).Error
+	return LogDB.
+		Clauses(clause.OnConflict{
+			DoUpdates: clause.Assignments(data.buildUpdateData()),
+		}).
+		Create(&GroupSummary{
+			Unique: unique,
+			Data:   data,
+		}).Error
 }
