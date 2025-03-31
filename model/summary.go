@@ -30,17 +30,33 @@ type SummaryData struct {
 	Usage          Usage   `gorm:"embedded"        json:"usage,omitempty"`
 }
 
-func (d *SummaryData) buildUpdateData() map[string]interface{} {
-	return map[string]interface{}{
-		"request_count":         gorm.Expr("request_count + ?", d.RequestCount),
-		"used_amount":           gorm.Expr("used_amount + ?", d.UsedAmount),
-		"exception_count":       gorm.Expr("exception_count + ?", d.ExceptionCount),
-		"input_tokens":          gorm.Expr("input_tokens + ?", d.Usage.InputTokens),
-		"output_tokens":         gorm.Expr("output_tokens + ?", d.Usage.OutputTokens),
-		"total_tokens":          gorm.Expr("total_tokens + ?", d.Usage.TotalTokens),
-		"cached_tokens":         gorm.Expr("cached_tokens + ?", d.Usage.CachedTokens),
-		"cache_creation_tokens": gorm.Expr("cache_creation_tokens + ?", d.Usage.CacheCreationTokens),
+func (d *SummaryData) buildUpdateData(tableName string) map[string]any {
+	data := map[string]any{}
+	if d.RequestCount > 0 {
+		data["request_count"] = gorm.Expr(tableName+".request_count + ?", d.RequestCount)
 	}
+	if d.UsedAmount > 0 {
+		data["used_amount"] = gorm.Expr(tableName+".used_amount + ?", d.UsedAmount)
+	}
+	if d.ExceptionCount > 0 {
+		data["exception_count"] = gorm.Expr(tableName+".exception_count + ?", d.ExceptionCount)
+	}
+	if d.Usage.InputTokens > 0 {
+		data["input_tokens"] = gorm.Expr(tableName+".input_tokens + ?", d.Usage.InputTokens)
+	}
+	if d.Usage.OutputTokens > 0 {
+		data["output_tokens"] = gorm.Expr(tableName+".output_tokens + ?", d.Usage.OutputTokens)
+	}
+	if d.Usage.TotalTokens > 0 {
+		data["total_tokens"] = gorm.Expr(tableName+".total_tokens + ?", d.Usage.TotalTokens)
+	}
+	if d.Usage.CachedTokens > 0 {
+		data["cached_tokens"] = gorm.Expr(tableName+".cached_tokens + ?", d.Usage.CachedTokens)
+	}
+	if d.Usage.CacheCreationTokens > 0 {
+		data["cache_creation_tokens"] = gorm.Expr(tableName+".cache_creation_tokens + ?", d.Usage.CacheCreationTokens)
+	}
+	return data
 }
 
 func (l *Summary) BeforeCreate(_ *gorm.DB) (err error) {
@@ -98,7 +114,7 @@ func UpsertSummary(unique SummaryUnique, data SummaryData) error {
 				unique.Model,
 				unique.HourTimestamp,
 			).
-			Updates(data.buildUpdateData())
+			Updates(data.buildUpdateData("summaries"))
 		err = result.Error
 		if err != nil {
 			return err
@@ -123,7 +139,7 @@ func createSummary(unique SummaryUnique, data SummaryData) error {
 	return LogDB.
 		Clauses(clause.OnConflict{
 			Columns:   []clause.Column{{Name: "channel_id"}, {Name: "model"}, {Name: "hour_timestamp"}},
-			DoUpdates: clause.Assignments(data.buildUpdateData()),
+			DoUpdates: clause.Assignments(data.buildUpdateData("summaries")),
 		}).
 		Create(&Summary{
 			Unique: unique,
