@@ -46,11 +46,22 @@ type Price struct {
 }
 
 type Usage struct {
-	InputTokens         int `json:"input_tokens,omitempty"`
-	OutputTokens        int `json:"output_tokens,omitempty"`
-	CachedTokens        int `json:"cached_tokens,omitempty"`
-	CacheCreationTokens int `json:"cache_creation_tokens,omitempty"`
-	TotalTokens         int `json:"total_tokens,omitempty"`
+	InputTokens         int64 `json:"input_tokens,omitempty"`
+	OutputTokens        int64 `json:"output_tokens,omitempty"`
+	CachedTokens        int64 `json:"cached_tokens,omitempty"`
+	CacheCreationTokens int64 `json:"cache_creation_tokens,omitempty"`
+	TotalTokens         int64 `json:"total_tokens,omitempty"`
+}
+
+func (u *Usage) Add(other *Usage) {
+	if other == nil {
+		return
+	}
+	u.InputTokens += other.InputTokens
+	u.OutputTokens += other.OutputTokens
+	u.CachedTokens += other.CachedTokens
+	u.CacheCreationTokens += other.CacheCreationTokens
+	u.TotalTokens += other.TotalTokens
 }
 
 type Log struct {
@@ -1061,7 +1072,8 @@ const (
 	TimeSpanHour TimeSpanType = "hour"
 )
 
-func getChartData(group string,
+func getChartDataFromLog(
+	group string,
 	start, end time.Time,
 	tokenName, modelName string,
 	channelID int,
@@ -1162,48 +1174,19 @@ func aggregateHourDataToDay(hourlyData []*ChartData) []*ChartData {
 	return result
 }
 
-func GetUsedChannels(group string, start, end time.Time) ([]int, error) {
-	return getLogGroupByValues[int]("channel_id", group, start, end)
+func GetUsedChannelsFromLog(group string, start, end time.Time) ([]int, error) {
+	return getLogGroupByValuesFromLog[int]("channel_id", group, start, end)
 }
 
-func GetUsedModels(group string, start, end time.Time) ([]string, error) {
-	return getLogGroupByValues[string]("model", group, start, end)
+func GetUsedModelsFromLog(group string, start, end time.Time) ([]string, error) {
+	return getLogGroupByValuesFromLog[string]("model", group, start, end)
 }
 
-func GetUsedTokenNames(group string, start, end time.Time) ([]string, error) {
-	return getLogGroupByValues[string]("token_name", group, start, end)
+func GetUsedTokenNamesFromLog(group string, start, end time.Time) ([]string, error) {
+	return getLogGroupByValuesFromLog[string]("token_name", group, start, end)
 }
 
-//nolint:unused
-func getLogDistinctValues[T cmp.Ordered](field string, group string, start, end time.Time) ([]T, error) {
-	var values []T
-	query := LogDB.
-		Model(&Log{})
-
-	if group != "" {
-		query = query.Where("group_id = ?", group)
-	}
-
-	switch {
-	case !start.IsZero() && !end.IsZero():
-		query = query.Where("request_at BETWEEN ? AND ?", start, end)
-	case !start.IsZero():
-		query = query.Where("request_at >= ?", start)
-	case !end.IsZero():
-		query = query.Where("request_at <= ?", end)
-	}
-
-	err := query.
-		Distinct(field).
-		Pluck(field, &values).Error
-	if err != nil {
-		return nil, err
-	}
-	slices.Sort(values)
-	return values, nil
-}
-
-func getLogGroupByValues[T cmp.Ordered](field string, group string, start, end time.Time) ([]T, error) {
+func getLogGroupByValuesFromLog[T cmp.Ordered](field string, group string, start, end time.Time) ([]T, error) {
 	var values []T
 	query := LogDB.
 		Model(&Log{})
@@ -1321,6 +1304,7 @@ func GetDashboardData(
 	resultOnly bool,
 	needRPM bool,
 	tokenUsage bool,
+	fromLog bool,
 ) (*DashboardResponse, error) {
 	if end.IsZero() {
 		end = time.Now()
@@ -1337,11 +1321,19 @@ func GetDashboardData(
 
 	g := new(errgroup.Group)
 
-	g.Go(func() error {
-		var err error
-		chartData, err = getChartData(group, start, end, "", modelName, channelID, timeSpan, resultOnly, tokenUsage)
-		return err
-	})
+	if fromLog {
+		g.Go(func() error {
+			var err error
+			chartData, err = getChartDataFromLog(group, start, end, "", modelName, channelID, timeSpan, resultOnly, tokenUsage)
+			return err
+		})
+	} else {
+		g.Go(func() error {
+			var err error
+			chartData, err = getChartData(group, start, end, "", modelName, channelID, timeSpan)
+			return err
+		})
+	}
 
 	if needRPM {
 		g.Go(func() error {
@@ -1384,6 +1376,7 @@ func GetGroupDashboardData(
 	resultOnly bool,
 	needRPM bool,
 	tokenUsage bool,
+	fromLog bool,
 ) (*GroupDashboardResponse, error) {
 	if group == "" || group == "*" {
 		return nil, errors.New("group is required")
@@ -1405,11 +1398,19 @@ func GetGroupDashboardData(
 
 	g := new(errgroup.Group)
 
-	g.Go(func() error {
-		var err error
-		chartData, err = getChartData(group, start, end, tokenName, modelName, 0, timeSpan, resultOnly, tokenUsage)
-		return err
-	})
+	if fromLog {
+		g.Go(func() error {
+			var err error
+			chartData, err = getChartDataFromLog(group, start, end, tokenName, modelName, 0, timeSpan, resultOnly, tokenUsage)
+			return err
+		})
+	} else {
+		g.Go(func() error {
+			var err error
+			chartData, err = getChartData(group, start, end, tokenName, modelName, 0, timeSpan)
+			return err
+		})
+	}
 
 	g.Go(func() error {
 		var err error
