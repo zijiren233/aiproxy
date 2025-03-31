@@ -118,3 +118,60 @@ func createSummary(unique SummaryUnique, data SummaryData) error {
 		Data:   data,
 	}).Error
 }
+
+func getChartDataFromSummary(
+	group string,
+	start, end time.Time,
+	tokenName, modelName string,
+	channelID int,
+	timeSpan TimeSpanType,
+) ([]*ChartData, error) {
+	var query *gorm.DB
+
+	if group == "*" || channelID != 0 {
+		query = LogDB.Model(&Summary{}).
+			Select("hour_timestamp as timestamp, count(*) as request_count, sum(used_amount) as used_amount, sum(exception_count) as exception_count, sum(input_tokens) as input_tokens, sum(output_tokens) as output_tokens, sum(cached_tokens) as cached_tokens, sum(cache_creation_tokens) as cache_creation_tokens, sum(total_tokens) as total_tokens").
+			Group("timestamp").
+			Order("timestamp ASC")
+
+		if channelID != 0 {
+			query = query.Where("channel_id = ?", channelID)
+		}
+	} else {
+		query = LogDB.Model(&GroupSummary{}).
+			Select("hour_timestamp as timestamp, count(*) as request_count, sum(used_amount) as used_amount, sum(exception_count) as exception_count, sum(input_tokens) as input_tokens, sum(output_tokens) as output_tokens, sum(cached_tokens) as cached_tokens, sum(cache_creation_tokens) as cache_creation_tokens, sum(total_tokens) as total_tokens").
+			Group("timestamp").
+			Order("timestamp ASC").
+			Where("group_id = ?", group)
+
+		if tokenName != "" {
+			query = query.Where("token_name = ?", tokenName)
+		}
+	}
+
+	if modelName != "" {
+		query = query.Where("model = ?", modelName)
+	}
+
+	switch {
+	case !start.IsZero() && !end.IsZero():
+		query = query.Where("hour_timestamp BETWEEN ? AND ?", start.Unix(), end.Unix())
+	case !start.IsZero():
+		query = query.Where("hour_timestamp >= ?", start.Unix())
+	case !end.IsZero():
+		query = query.Where("hour_timestamp <= ?", end.Unix())
+	}
+
+	var chartData []*ChartData
+	err := query.Scan(&chartData).Error
+	if err != nil {
+		return nil, err
+	}
+
+	// If timeSpan is day, aggregate hour data into day data
+	if timeSpan == TimeSpanDay && len(chartData) > 0 {
+		return aggregateHourDataToDay(chartData), nil
+	}
+
+	return chartData, nil
+}

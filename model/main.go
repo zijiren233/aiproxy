@@ -193,6 +193,7 @@ func migrateLOGDB() error {
 		&RequestDetail{},
 		&Group{},
 		&GroupSummary{},
+		&Summary{},
 		&ConsumeError{},
 	)
 	if err != nil {
