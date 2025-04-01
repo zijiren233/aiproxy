@@ -138,7 +138,7 @@ func notifyChannelIssue(meta *meta.Meta, issueType string, titleSuffix string, e
 	}
 
 	message := fmt.Sprintf(
-		"channel: %s (type: %d, type name: %s, id: %d)\nmodel: %s\nmode: %s\nstatus code: %d\ndetail: %s",
+		"channel: %s (type: %d, type name: %s, id: %d)\nmodel: %s\nmode: %s\nstatus code: %d\ndetail: %s\nrequest id: %s",
 		meta.Channel.Name,
 		meta.Channel.Type,
 		meta.Channel.TypeName,
@@ -147,6 +147,7 @@ func notifyChannelIssue(meta *meta.Meta, issueType string, titleSuffix string, e
 		meta.Mode,
 		err.StatusCode,
 		err.JSONOrEmpty(),
+		meta.RequestID,
 	)
 
 	if err.StatusCode == http.StatusTooManyRequests {
