@@ -1024,6 +1024,18 @@ const docTemplate = `{
                         "description": "End second timestamp",
                         "name": "end_timestamp",
                         "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "From log",
+                        "name": "from_log",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Timezone",
+                        "name": "timezone",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -1111,6 +1123,18 @@ const docTemplate = `{
                         "type": "integer",
                         "description": "End second timestamp",
                         "name": "end_timestamp",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "From log",
+                        "name": "from_log",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Timezone",
+                        "name": "timezone",
                         "in": "query"
                     }
                 ],
@@ -6509,6 +6533,12 @@ const docTemplate = `{
                         "type": "string"
                     }
                 },
+                "balance_alert_enabled": {
+                    "type": "boolean"
+                },
+                "balance_alert_threshold": {
+                    "type": "number"
+                },
                 "rpm_ratio": {
                     "type": "number"
                 },
@@ -6539,6 +6569,12 @@ const docTemplate = `{
                     "items": {
                         "type": "string"
                     }
+                },
+                "balance_alert_enabled": {
+                    "type": "boolean"
+                },
+                "balance_alert_threshold": {
+                    "type": "number"
                 },
                 "created_at": {
                     "type": "string"
@@ -7404,6 +7440,12 @@ const docTemplate = `{
                     "items": {
                         "type": "string"
                     }
+                },
+                "balance_alert_enabled": {
+                    "type": "boolean"
+                },
+                "balance_alert_threshold": {
+                    "type": "number"
                 },
                 "created_at": {
                     "type": "string"

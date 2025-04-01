@@ -133,6 +133,7 @@ func checkGroupModelRPMAndTPM(c *gin.Context, group *model.GroupCache, mc *model
 
 type GroupBalanceConsumer struct {
 	Group        string
+	balance      float64
 	CheckBalance func(amount float64) bool
 	Consumer     balance.PostGroupConsumer
 }
@@ -172,7 +173,8 @@ func GetGroupBalanceConsumer(c *gin.Context, group *model.GroupCache) (*GroupBal
 		log.Data["balance"] = strconv.FormatFloat(groupBalance, 'f', -1, 64)
 
 		gbc = &GroupBalanceConsumer{
-			Group: group.ID,
+			Group:   group.ID,
+			balance: groupBalance,
 			CheckBalance: func(amount float64) bool {
 				return groupBalance >= amount
 			},
@@ -197,15 +199,31 @@ func checkGroupBalance(c *gin.Context, group *model.GroupCache) bool {
 			})
 			return false
 		}
-		notify.ErrorThrottle("balance", time.Minute, fmt.Sprintf("get group (%s) balance error", group.ID), err.Error())
-		AbortWithMessage(c, http.StatusInternalServerError, fmt.Sprintf("get group (%s) balance error", group.ID), &ErrorField{
+		notify.ErrorThrottle(
+			"getGroupBalanceError",
+			time.Minute,
+			fmt.Sprintf("Get group `%s` balance error", group.ID),
+			err.Error(),
+		)
+		AbortWithMessage(c, http.StatusInternalServerError, fmt.Sprintf("get group `%s` balance error", group.ID), &ErrorField{
 			Code: "get_group_balance_error",
 		})
 		return false
 	}
 
+	if group.Status != model.GroupStatusInternal &&
+		group.BalanceAlertEnabled &&
+		!gbc.CheckBalance(group.BalanceAlertThreshold) {
+		notify.ErrorThrottle(
+			"groupBalanceAlert:"+group.ID,
+			time.Minute*15,
+			fmt.Sprintf("Group `%s` balance below threshold", group.ID),
+			fmt.Sprintf("Group `%s` balance has fallen below the threshold\nCurrent balance: %.2f", group.ID, gbc.balance),
+		)
+	}
+
 	if !gbc.CheckBalance(0) {
-		AbortLogWithMessage(c, http.StatusForbidden, fmt.Sprintf("group (%s) balance not enough", group.ID), &ErrorField{
+		AbortLogWithMessage(c, http.StatusForbidden, fmt.Sprintf("group `%s` balance not enough", group.ID), &ErrorField{
 			Code: GroupBalanceNotEnough,
 		})
 		return false
@@ -249,7 +267,7 @@ func getChannelFromHeader(header string, mc *model.ModelCaches, availableSet []s
 		}
 	}
 
-	return nil, fmt.Errorf("channel %d not found for model %s", channelIDInt, model)
+	return nil, fmt.Errorf("channel %d not found for model `%s`", channelIDInt, model)
 }
 
 func CheckRelayMode(requestMode mode.Mode, modelMode mode.Mode) bool {

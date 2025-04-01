@@ -153,6 +153,7 @@ func getChartData(
 	tokenName, modelName string,
 	channelID int,
 	timeSpan TimeSpanType,
+	timezone *time.Location,
 ) ([]*ChartData, error) {
 	var query *gorm.DB
 
@@ -198,7 +199,7 @@ func getChartData(
 
 	// If timeSpan is day, aggregate hour data into day data
 	if timeSpan == TimeSpanDay && len(chartData) > 0 {
-		return aggregateHourDataToDay(chartData), nil
+		return aggregateHourDataToDay(chartData, timezone), nil
 	}
 
 	return chartData, nil

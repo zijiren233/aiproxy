@@ -322,6 +322,20 @@ type CreateGroupRequest struct {
 	RPMRatio     float64  `json:"rpm_ratio"`
 	TPMRatio     float64  `json:"tpm_ratio"`
 	AvailableSet []string `json:"available_set"`
+
+	BalanceAlertEnabled   bool    `json:"balance_alert_enabled"`
+	BalanceAlertThreshold float64 `json:"balance_alert_threshold"`
+}
+
+func (r *CreateGroupRequest) ToGroup() *model.Group {
+	return &model.Group{
+		RPMRatio:      r.RPMRatio,
+		TPMRatio:      r.TPMRatio,
+		AvailableSets: r.AvailableSet,
+
+		BalanceAlertEnabled:   r.BalanceAlertEnabled,
+		BalanceAlertThreshold: r.BalanceAlertThreshold,
+	}
 }
 
 // CreateGroup godoc
@@ -348,12 +362,9 @@ func CreateGroup(c *gin.Context) {
 		middleware.ErrorResponse(c, http.StatusOK, "invalid parameter")
 		return
 	}
-	g := &model.Group{
-		ID:            group,
-		RPMRatio:      req.RPMRatio,
-		TPMRatio:      req.TPMRatio,
-		AvailableSets: req.AvailableSet,
-	}
+
+	g := req.ToGroup()
+	g.ID = group
 	if err := model.CreateGroup(g); err != nil {
 		middleware.ErrorResponse(c, http.StatusOK, err.Error())
 		return
@@ -385,11 +396,8 @@ func UpdateGroup(c *gin.Context) {
 		middleware.ErrorResponse(c, http.StatusOK, "invalid parameter")
 		return
 	}
-	g := &model.Group{
-		RPMRatio:      req.RPMRatio,
-		TPMRatio:      req.TPMRatio,
-		AvailableSets: req.AvailableSet,
-	}
+
+	g := req.ToGroup()
 	err = model.UpdateGroup(group, g)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusOK, err.Error())

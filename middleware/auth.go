@@ -112,13 +112,12 @@ func TokenAuth(c *gin.Context) {
 			AbortLogWithMessage(c, http.StatusInternalServerError, fmt.Sprintf("failed to get group: %v", err))
 			return
 		}
-		if group.Status != model.GroupStatusEnabled && group.Status != model.GroupStatusInternal {
-			AbortLogWithMessage(c, http.StatusForbidden, "group is disabled")
-			return
-		}
 	}
-
 	SetLogGroupFields(log.Data, group)
+	if group.Status != model.GroupStatusEnabled && group.Status != model.GroupStatusInternal {
+		AbortLogWithMessage(c, http.StatusForbidden, "group is disabled")
+		return
+	}
 
 	token.SetAvailableSets(group.GetAvailableSets())
 	token.SetModelsBySet(modelCaches.EnabledModelsBySet)
