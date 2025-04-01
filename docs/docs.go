@@ -3693,6 +3693,12 @@ const docTemplate = `{
                         "description": "Token usage",
                         "name": "token_usage",
                         "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "From log",
+                        "name": "from_log",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -3759,6 +3765,12 @@ const docTemplate = `{
                         "type": "boolean",
                         "description": "Token usage",
                         "name": "token_usage",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "From log",
+                        "name": "from_log",
                         "in": "query"
                     }
                 ],

@@ -3410,6 +3410,10 @@ paths:
         in: query
         name: token_usage
         type: boolean
+      - description: From log
+        in: query
+        name: from_log
+        type: boolean
       produces:
       - application/json
       responses:
@@ -3449,6 +3453,10 @@ paths:
       - description: Token usage
         in: query
         name: token_usage
+        type: boolean
+      - description: From log
+        in: query
+        name: from_log
         type: boolean
       produces:
       - application/json

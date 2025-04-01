@@ -306,6 +306,7 @@ func GetGroupDashboardModels(c *gin.Context) {
 //	@Param			start_timestamp	query		int64	false	"Start timestamp"
 //	@Param			end_timestamp	query		int64	false	"End timestamp"
 //	@Param			token_usage		query		bool	false	"Token usage"
+//	@Param			from_log		query		bool	false	"From log"
 //	@Success		200				{object}	middleware.APIResponse{data=[]model.ModelCostRank}
 //	@Router			/api/model_cost_rank [get]
 func GetModelCostRank(c *gin.Context) {
@@ -313,7 +314,8 @@ func GetModelCostRank(c *gin.Context) {
 	channelID, _ := strconv.Atoi(c.Query("channel"))
 	startTime, endTime := parseTimeRange(c)
 	tokenUsage, _ := strconv.ParseBool(c.Query("token_usage"))
-	models, err := model.GetModelCostRank(group, channelID, startTime, endTime, tokenUsage)
+	fromLog, _ := strconv.ParseBool(c.Query("from_log"))
+	models, err := model.GetModelCostRank(group, channelID, startTime, endTime, tokenUsage, fromLog)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusOK, err.Error())
 		return
@@ -332,6 +334,7 @@ func GetModelCostRank(c *gin.Context) {
 //	@Param			start_timestamp	query		int64	false	"Start timestamp"
 //	@Param			end_timestamp	query		int64	false	"End timestamp"
 //	@Param			token_usage		query		bool	false	"Token usage"
+//	@Param			from_log		query		bool	false	"From log"
 //	@Success		200				{object}	middleware.APIResponse{data=[]model.ModelCostRank}
 //	@Router			/api/model_cost_rank/{group} [get]
 func GetGroupModelCostRank(c *gin.Context) {
@@ -342,7 +345,8 @@ func GetGroupModelCostRank(c *gin.Context) {
 	}
 	startTime, endTime := parseTimeRange(c)
 	tokenUsage, _ := strconv.ParseBool(c.Query("token_usage"))
-	models, err := model.GetModelCostRank(group, 0, startTime, endTime, tokenUsage)
+	fromLog, _ := strconv.ParseBool(c.Query("from_log"))
+	models, err := model.GetModelCostRank(group, 0, startTime, endTime, tokenUsage, fromLog)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusOK, err.Error())
 		return

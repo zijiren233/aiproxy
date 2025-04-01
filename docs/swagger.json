@@ -3682,6 +3682,12 @@
                         "description": "Token usage",
                         "name": "token_usage",
                         "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "From log",
+                        "name": "from_log",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -3748,6 +3754,12 @@
                         "type": "boolean",
                         "description": "Token usage",
                         "name": "token_usage",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "From log",
+                        "name": "from_log",
                         "in": "query"
                     }
                 ],
