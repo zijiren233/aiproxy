@@ -1079,6 +1079,7 @@ func getChartDataFromLog(
 	channelID int,
 	timeSpan TimeSpanType,
 	resultOnly bool, tokenUsage bool,
+	timezone *time.Location,
 ) ([]*ChartData, error) {
 	var query *gorm.DB
 	if tokenUsage {
@@ -1130,17 +1131,25 @@ func getChartDataFromLog(
 
 	// If timeSpan is day, aggregate hour data into day data
 	if timeSpan == TimeSpanDay && len(chartData) > 0 {
-		return aggregateHourDataToDay(chartData), nil
+		return aggregateHourDataToDay(chartData, timezone), nil
 	}
 
 	return chartData, nil
 }
 
 // aggregateHourDataToDay converts hourly chart data into daily aggregated data
-func aggregateHourDataToDay(hourlyData []*ChartData) []*ChartData {
+func aggregateHourDataToDay(hourlyData []*ChartData, timezone *time.Location) []*ChartData {
 	dayData := make(map[int64]*ChartData)
+	if timezone == nil {
+		timezone = time.UTC
+	}
+
 	for _, data := range hourlyData {
-		dayTimestamp := data.Timestamp - (data.Timestamp % int64(24*time.Hour.Seconds()))
+		// Convert timestamp to time in the specified timezone
+		t := time.Unix(data.Timestamp, 0).In(timezone)
+		// Get the start of the day in the specified timezone
+		startOfDay := time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, timezone)
+		dayTimestamp := startOfDay.Unix()
 
 		if _, exists := dayData[dayTimestamp]; !exists {
 			dayData[dayTimestamp] = &ChartData{
@@ -1305,6 +1314,7 @@ func GetDashboardData(
 	needRPM bool,
 	tokenUsage bool,
 	fromLog bool,
+	timezone *time.Location,
 ) (*DashboardResponse, error) {
 	if end.IsZero() {
 		end = time.Now()
@@ -1324,13 +1334,13 @@ func GetDashboardData(
 	if fromLog {
 		g.Go(func() error {
 			var err error
-			chartData, err = getChartDataFromLog(group, start, end, "", modelName, channelID, timeSpan, resultOnly, tokenUsage)
+			chartData, err = getChartDataFromLog(group, start, end, "", modelName, channelID, timeSpan, resultOnly, tokenUsage, timezone)
 			return err
 		})
 	} else {
 		g.Go(func() error {
 			var err error
-			chartData, err = getChartData(group, start, end, "", modelName, channelID, timeSpan)
+			chartData, err = getChartData(group, start, end, "", modelName, channelID, timeSpan, timezone)
 			return err
 		})
 	}
@@ -1377,6 +1387,7 @@ func GetGroupDashboardData(
 	needRPM bool,
 	tokenUsage bool,
 	fromLog bool,
+	timezone *time.Location,
 ) (*GroupDashboardResponse, error) {
 	if group == "" || group == "*" {
 		return nil, errors.New("group is required")
@@ -1401,13 +1412,13 @@ func GetGroupDashboardData(
 	if fromLog {
 		g.Go(func() error {
 			var err error
-			chartData, err = getChartDataFromLog(group, start, end, tokenName, modelName, 0, timeSpan, resultOnly, tokenUsage)
+			chartData, err = getChartDataFromLog(group, start, end, tokenName, modelName, 0, timeSpan, resultOnly, tokenUsage, timezone)
 			return err
 		})
 	} else {
 		g.Go(func() error {
 			var err error
-			chartData, err = getChartData(group, start, end, tokenName, modelName, 0, timeSpan)
+			chartData, err = getChartData(group, start, end, tokenName, modelName, 0, timeSpan, timezone)
 			return err
 		})
 	}

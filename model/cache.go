@@ -265,6 +265,9 @@ type GroupCache struct {
 	TPMRatio      float64                  `json:"tpm_ratio"      redis:"tpm_r"`
 	AvailableSets redisStringSlice         `json:"available_sets" redis:"ass"`
 	ModelConfigs  redisGroupModelConfigMap `json:"model_configs"  redis:"mc"`
+
+	BalanceAlertEnabled   bool    `json:"balance_alert_enabled"   redis:"bae"`
+	BalanceAlertThreshold float64 `json:"balance_alert_threshold" redis:"bat"`
 }
 
 func (g *GroupCache) GetAvailableSets() []string {
@@ -287,6 +290,9 @@ func (g *Group) ToGroupCache() *GroupCache {
 		TPMRatio:      g.TPMRatio,
 		AvailableSets: g.AvailableSets,
 		ModelConfigs:  modelConfigs,
+
+		BalanceAlertEnabled:   g.BalanceAlertEnabled,
+		BalanceAlertThreshold: g.BalanceAlertThreshold,
 	}
 }
 

@@ -32,6 +32,9 @@ type Group struct {
 	UsedAmount        float64            `gorm:"index"                         json:"used_amount"`
 	RequestCount      int                `gorm:"index"                         json:"request_count"`
 	AvailableSets     []string           `gorm:"serializer:fastjson;type:text" json:"available_sets,omitempty"`
+
+	BalanceAlertEnabled   bool    `gorm:"default:false" json:"balance_alert_enabled"`
+	BalanceAlertThreshold float64 `gorm:"default:0"     json:"balance_alert_threshold"`
 }
 
 func (g *Group) BeforeDelete(tx *gorm.DB) (err error) {
@@ -157,6 +160,8 @@ func UpdateGroup(id string, group *Group) (err error) {
 		"rpm_ratio",
 		"tpm_ratio",
 		"available_sets",
+		"balance_alert_enabled",
+		"balance_alert_threshold",
 	}
 	if group.Status != 0 {
 		selects = append(selects, "status")

@@ -146,7 +146,8 @@ func fillGaps(data []*model.ChartData, start, end time.Time, t model.TimeSpanTyp
 //	@Param			token_usage		query		bool	false	"Token usage"
 //	@Param			start_timestamp	query		int64	false	"Start second timestamp"
 //	@Param			end_timestamp	query		int64	false	"End second timestamp"
-//	@Param			from_log	query		bool	false	"From log"
+//	@Param			from_log		query		bool	false	"From log"
+//	@Param			timezone		query		string	false	"Timezone"
 //	@Success		200				{object}	middleware.APIResponse{data=model.DashboardResponse}
 //	@Router			/api/dashboard [get]
 func GetDashboard(c *gin.Context) {
@@ -161,10 +162,14 @@ func GetDashboard(c *gin.Context) {
 	tokenUsage, _ := strconv.ParseBool(c.Query("token_usage"))
 	channelID, _ := strconv.Atoi(c.Query("channel"))
 	fromLog, _ := strconv.ParseBool(c.Query("from_log"))
+	timezoneLocation, _ := time.LoadLocation(c.Query("timezone"))
+	if timezoneLocation == nil {
+		timezoneLocation = time.UTC
+	}
 
 	needRPM := channelID != 0
 
-	dashboards, err := model.GetDashboardData(group, start, end, modelName, channelID, timeSpan, resultOnly, needRPM, tokenUsage, fromLog)
+	dashboards, err := model.GetDashboardData(group, start, end, modelName, channelID, timeSpan, resultOnly, needRPM, tokenUsage, fromLog, timezoneLocation)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusOK, err.Error())
 		return
@@ -199,7 +204,8 @@ func GetDashboard(c *gin.Context) {
 //	@Param			token_usage		query		bool	false	"Token usage"
 //	@Param			start_timestamp	query		int64	false	"Start second timestamp"
 //	@Param			end_timestamp	query		int64	false	"End second timestamp"
-//	@Param			from_log	query		bool	false	"From log"
+//	@Param			from_log		query		bool	false	"From log"
+//	@Param			timezone		query		string	false	"Timezone"
 //	@Success		200				{object}	middleware.APIResponse{data=model.GroupDashboardResponse}
 //	@Router			/api/dashboard/{group} [get]
 func GetGroupDashboard(c *gin.Context) {
@@ -219,9 +225,14 @@ func GetGroupDashboard(c *gin.Context) {
 	resultOnly, _ := strconv.ParseBool(c.Query("result_only"))
 	tokenUsage, _ := strconv.ParseBool(c.Query("token_usage"))
 	fromLog, _ := strconv.ParseBool(c.Query("from_log"))
+	timezoneLocation, _ := time.LoadLocation(c.Query("timezone"))
+	if timezoneLocation == nil {
+		timezoneLocation = time.UTC
+	}
+
 	needRPM := tokenName != ""
 
-	dashboards, err := model.GetGroupDashboardData(group, start, end, tokenName, modelName, timeSpan, resultOnly, needRPM, tokenUsage, fromLog)
+	dashboards, err := model.GetGroupDashboardData(group, start, end, tokenName, modelName, timeSpan, resultOnly, needRPM, tokenUsage, fromLog, timezoneLocation)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusOK, "failed to get statistics")
 		return
