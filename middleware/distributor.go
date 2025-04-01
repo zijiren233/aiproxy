@@ -218,7 +218,7 @@ func checkGroupBalance(c *gin.Context, group *model.GroupCache) bool {
 			"groupBalanceAlert:"+group.ID,
 			time.Minute*15,
 			fmt.Sprintf("Group `%s` balance below threshold", group.ID),
-			fmt.Sprintf("Group `%s` balance has fallen below the threshold\nCurrent balance: %.2f", group.ID, group.BalanceAlertThreshold, gbc.balance),
+			fmt.Sprintf("Group `%s` balance has fallen below the threshold\nCurrent balance: %.2f", group.ID, gbc.balance),
 		)
 	}
 
