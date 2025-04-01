@@ -1359,11 +1359,19 @@ func GetDashboardData(
 		return err
 	})
 
-	g.Go(func() error {
-		var err error
-		channels, err = GetUsedChannels(group, start, end)
-		return err
-	})
+	if fromLog {
+		g.Go(func() error {
+			var err error
+			channels, err = GetUsedChannelsFromLog(group, start, end)
+			return err
+		})
+	} else {
+		g.Go(func() error {
+			var err error
+			channels, err = GetUsedChannels(group, start, end)
+			return err
+		})
+	}
 
 	if err := g.Wait(); err != nil {
 		return nil, err
@@ -1485,23 +1493,28 @@ type ModelCostRank struct {
 	CachedTokens        int64   `json:"cached_tokens"`
 	CacheCreationTokens int64   `json:"cache_creation_tokens"`
 	TotalTokens         int64   `json:"total_tokens"`
-	Total               int64   `json:"total"`
+	TotalCount          int64   `json:"total_count"`
 }
 
-func GetModelCostRank(group string, channelID int, start, end time.Time, tokenUsage bool) ([]*ModelCostRank, error) {
+func GetModelCostRank(group string, channelID int, start, end time.Time, tokenUsage bool, fromLog bool) ([]*ModelCostRank, error) {
+	if fromLog {
+		return getModelCostRankFromLog(group, channelID, start, end, tokenUsage)
+	}
+	return getModelCostRank(group, channelID, start, end)
+}
+
+func getModelCostRankFromLog(group string, channelID int, start, end time.Time, tokenUsage bool) ([]*ModelCostRank, error) {
 	var ranks []*ModelCostRank
 
 	var query *gorm.DB
 	if tokenUsage {
 		query = LogDB.Model(&Log{}).
-			Select("model, SUM(used_amount) as used_amount, SUM(input_tokens) as input_tokens, SUM(output_tokens) as output_tokens, SUM(cached_tokens) as cached_tokens, SUM(cache_creation_tokens) as cache_creation_tokens, SUM(total_tokens) as total_tokens, COUNT(*) as total").
-			Group("model").
-			Order("used_amount DESC")
+			Select("model, SUM(used_amount) as used_amount, SUM(input_tokens) as input_tokens, SUM(output_tokens) as output_tokens, SUM(cached_tokens) as cached_tokens, SUM(cache_creation_tokens) as cache_creation_tokens, SUM(total_tokens) as total_tokens, COUNT(*) as total_count").
+			Group("model")
 	} else {
 		query = LogDB.Model(&Log{}).
-			Select("model, SUM(used_amount) as used_amount, COUNT(*) as total").
-			Group("model").
-			Order("used_amount DESC")
+			Select("model, SUM(used_amount) as used_amount, COUNT(*) as total_count").
+			Group("model")
 	}
 
 	if group == "" {
@@ -1527,6 +1540,19 @@ func GetModelCostRank(group string, channelID int, start, end time.Time, tokenUs
 	if err != nil {
 		return nil, err
 	}
+
+	slices.SortFunc(ranks, func(a, b *ModelCostRank) int {
+		if a.UsedAmount != b.UsedAmount {
+			return cmp.Compare(b.UsedAmount, a.UsedAmount)
+		}
+		if a.TotalTokens != b.TotalTokens {
+			return cmp.Compare(b.TotalTokens, a.TotalTokens)
+		}
+		if a.TotalCount != b.TotalCount {
+			return cmp.Compare(b.TotalCount, a.TotalCount)
+		}
+		return cmp.Compare(a.Model, b.Model)
+	})
 
 	return ranks, nil
 }

@@ -221,7 +221,11 @@ func GetUsedTokenNames(group string, start, end time.Time) ([]string, error) {
 }
 
 func getLogGroupByValues[T cmp.Ordered](field string, group string, start, end time.Time) ([]T, error) {
-	var values []T
+	type Result struct {
+		Value        T
+		RequestCount int64
+	}
+	var results []Result
 
 	var query *gorm.DB
 
@@ -244,12 +248,73 @@ func getLogGroupByValues[T cmp.Ordered](field string, group string, start, end t
 	}
 
 	err := query.
-		Select(field).
+		Select(field + " as value, SUM(request_count) as request_count").
 		Group(field).
-		Pluck(field, &values).Error
+		Scan(&results).Error
 	if err != nil {
 		return nil, err
 	}
-	slices.Sort(values)
+
+	slices.SortFunc(results, func(a, b Result) int {
+		if a.RequestCount != b.RequestCount {
+			return cmp.Compare(b.RequestCount, a.RequestCount)
+		}
+		return cmp.Compare(a.Value, b.Value)
+	})
+
+	values := make([]T, len(results))
+	for i, result := range results {
+		values[i] = result.Value
+	}
+
 	return values, nil
+}
+
+func getModelCostRank(group string, channelID int, start, end time.Time) ([]*ModelCostRank, error) {
+	var ranks []*ModelCostRank
+
+	var query *gorm.DB
+	if group == "*" || channelID != 0 {
+		query = LogDB.Model(&Summary{}).
+			Select("model, SUM(used_amount) as used_amount, SUM(request_count) as total_count, SUM(input_tokens) as input_tokens, SUM(output_tokens) as output_tokens, SUM(cached_tokens) as cached_tokens, SUM(cache_creation_tokens) as cache_creation_tokens, SUM(total_tokens) as total_tokens").
+			Group("model")
+
+		if channelID != 0 {
+			query = query.Where("channel_id = ?", channelID)
+		}
+	} else {
+		query = LogDB.Model(&GroupSummary{}).
+			Select("model, SUM(used_amount) as used_amount, SUM(request_count) as total_count, SUM(input_tokens) as input_tokens, SUM(output_tokens) as output_tokens, SUM(cached_tokens) as cached_tokens, SUM(cache_creation_tokens) as cache_creation_tokens, SUM(total_tokens) as total_tokens").
+			Group("model").
+			Where("group_id = ?", group)
+	}
+
+	switch {
+	case !start.IsZero() && !end.IsZero():
+		query = query.Where("hour_timestamp BETWEEN ? AND ?", start.Unix(), end.Unix())
+	case !start.IsZero():
+		query = query.Where("hour_timestamp >= ?", start.Unix())
+	case !end.IsZero():
+		query = query.Where("hour_timestamp <= ?", end.Unix())
+	}
+
+	err := query.Scan(&ranks).Error
+	if err != nil {
+		return nil, err
+	}
+
+	slices.SortFunc(ranks, func(a, b *ModelCostRank) int {
+		if a.UsedAmount != b.UsedAmount {
+			return cmp.Compare(b.UsedAmount, a.UsedAmount)
+		}
+		if a.TotalTokens != b.TotalTokens {
+			return cmp.Compare(b.TotalTokens, a.TotalTokens)
+		}
+		if a.TotalCount != b.TotalCount {
+			return cmp.Compare(b.TotalCount, a.TotalCount)
+		}
+		return cmp.Compare(a.Model, b.Model)
+	})
+
+	return ranks, nil
 }
