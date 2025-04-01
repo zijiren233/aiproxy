@@ -165,14 +165,14 @@ func notifyChannelIssue(meta *meta.Meta, issueType string, titleSuffix string, e
 		rpm, rpmErr := model.GetRPM(group, now, "", meta.OriginModel, meta.Channel.ID)
 		tpm, tpmErr := model.GetTPM(group, now, "", meta.OriginModel, meta.Channel.ID)
 		if rpmErr != nil {
-			message += fmt.Sprintf("\nRPM: %v", rpmErr)
+			message += fmt.Sprintf("\nrpm: %v", rpmErr)
 		} else {
-			message += fmt.Sprintf("\nRPM: %d", rpm)
+			message += fmt.Sprintf("\nrpm: %d", rpm)
 		}
 		if tpmErr != nil {
-			message += fmt.Sprintf("\nTPM: %v", tpmErr)
+			message += fmt.Sprintf("\ntpm: %v", tpmErr)
 		} else {
-			message += fmt.Sprintf("\nTPM: %d", tpm)
+			message += fmt.Sprintf("\ntpm: %d", tpm)
 		}
 	}
 
