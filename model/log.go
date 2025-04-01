@@ -1493,7 +1493,7 @@ type ModelCostRank struct {
 	CachedTokens        int64   `json:"cached_tokens"`
 	CacheCreationTokens int64   `json:"cache_creation_tokens"`
 	TotalTokens         int64   `json:"total_tokens"`
-	TotalCount          int64   `json:"total_count"`
+	RequestCount        int64   `json:"request_count"`
 }
 
 func GetModelCostRank(group string, channelID int, start, end time.Time, tokenUsage bool, fromLog bool) ([]*ModelCostRank, error) {
@@ -1509,11 +1509,11 @@ func getModelCostRankFromLog(group string, channelID int, start, end time.Time, 
 	var query *gorm.DB
 	if tokenUsage {
 		query = LogDB.Model(&Log{}).
-			Select("model, SUM(used_amount) as used_amount, SUM(input_tokens) as input_tokens, SUM(output_tokens) as output_tokens, SUM(cached_tokens) as cached_tokens, SUM(cache_creation_tokens) as cache_creation_tokens, SUM(total_tokens) as total_tokens, COUNT(*) as total_count").
+			Select("model, SUM(used_amount) as used_amount, SUM(input_tokens) as input_tokens, SUM(output_tokens) as output_tokens, SUM(cached_tokens) as cached_tokens, SUM(cache_creation_tokens) as cache_creation_tokens, SUM(total_tokens) as total_tokens, COUNT(*) as request_count").
 			Group("model")
 	} else {
 		query = LogDB.Model(&Log{}).
-			Select("model, SUM(used_amount) as used_amount, COUNT(*) as total_count").
+			Select("model, SUM(used_amount) as used_amount, COUNT(*) as request_count").
 			Group("model")
 	}
 
@@ -1548,8 +1548,8 @@ func getModelCostRankFromLog(group string, channelID int, start, end time.Time, 
 		if a.TotalTokens != b.TotalTokens {
 			return cmp.Compare(b.TotalTokens, a.TotalTokens)
 		}
-		if a.TotalCount != b.TotalCount {
-			return cmp.Compare(b.TotalCount, a.TotalCount)
+		if a.RequestCount != b.RequestCount {
+			return cmp.Compare(b.RequestCount, a.RequestCount)
 		}
 		return cmp.Compare(a.Model, b.Model)
 	})

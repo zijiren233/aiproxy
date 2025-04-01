@@ -223,6 +223,7 @@ func GetUsedTokenNames(group string, start, end time.Time) ([]string, error) {
 func getLogGroupByValues[T cmp.Ordered](field string, group string, start, end time.Time) ([]T, error) {
 	type Result struct {
 		Value        T
+		UsedAmount   float64
 		RequestCount int64
 	}
 	var results []Result
@@ -248,7 +249,7 @@ func getLogGroupByValues[T cmp.Ordered](field string, group string, start, end t
 	}
 
 	err := query.
-		Select(field + " as value, SUM(request_count) as request_count").
+		Select(field + " as value, SUM(request_count) as request_count, SUM(used_amount) as used_amount").
 		Group(field).
 		Scan(&results).Error
 	if err != nil {
@@ -256,6 +257,9 @@ func getLogGroupByValues[T cmp.Ordered](field string, group string, start, end t
 	}
 
 	slices.SortFunc(results, func(a, b Result) int {
+		if a.UsedAmount != b.UsedAmount {
+			return cmp.Compare(b.UsedAmount, a.UsedAmount)
+		}
 		if a.RequestCount != b.RequestCount {
 			return cmp.Compare(b.RequestCount, a.RequestCount)
 		}
@@ -276,7 +280,7 @@ func getModelCostRank(group string, channelID int, start, end time.Time) ([]*Mod
 	var query *gorm.DB
 	if group == "*" || channelID != 0 {
 		query = LogDB.Model(&Summary{}).
-			Select("model, SUM(used_amount) as used_amount, SUM(request_count) as total_count, SUM(input_tokens) as input_tokens, SUM(output_tokens) as output_tokens, SUM(cached_tokens) as cached_tokens, SUM(cache_creation_tokens) as cache_creation_tokens, SUM(total_tokens) as total_tokens").
+			Select("model, SUM(used_amount) as used_amount, SUM(request_count) as request_count, SUM(input_tokens) as input_tokens, SUM(output_tokens) as output_tokens, SUM(cached_tokens) as cached_tokens, SUM(cache_creation_tokens) as cache_creation_tokens, SUM(total_tokens) as total_tokens").
 			Group("model")
 
 		if channelID != 0 {
@@ -284,7 +288,7 @@ func getModelCostRank(group string, channelID int, start, end time.Time) ([]*Mod
 		}
 	} else {
 		query = LogDB.Model(&GroupSummary{}).
-			Select("model, SUM(used_amount) as used_amount, SUM(request_count) as total_count, SUM(input_tokens) as input_tokens, SUM(output_tokens) as output_tokens, SUM(cached_tokens) as cached_tokens, SUM(cache_creation_tokens) as cache_creation_tokens, SUM(total_tokens) as total_tokens").
+			Select("model, SUM(used_amount) as used_amount, SUM(request_count) as request_count, SUM(input_tokens) as input_tokens, SUM(output_tokens) as output_tokens, SUM(cached_tokens) as cached_tokens, SUM(cache_creation_tokens) as cache_creation_tokens, SUM(total_tokens) as total_tokens").
 			Group("model").
 			Where("group_id = ?", group)
 	}
@@ -310,8 +314,8 @@ func getModelCostRank(group string, channelID int, start, end time.Time) ([]*Mod
 		if a.TotalTokens != b.TotalTokens {
 			return cmp.Compare(b.TotalTokens, a.TotalTokens)
 		}
-		if a.TotalCount != b.TotalCount {
-			return cmp.Compare(b.TotalCount, a.TotalCount)
+		if a.RequestCount != b.RequestCount {
+			return cmp.Compare(b.RequestCount, a.RequestCount)
 		}
 		return cmp.Compare(a.Model, b.Model)
 	})
