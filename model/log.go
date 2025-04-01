@@ -1246,7 +1246,7 @@ func sumDashboardResponse(chartData []*ChartData) DashboardResponse {
 	return dashboardResponse
 }
 
-func getRPM(group string, end time.Time, tokenName, modelName string, channelID int, resultOnly bool) (int64, error) {
+func GetRPM(group string, end time.Time, tokenName, modelName string, channelID int) (int64, error) {
 	query := LogDB.Model(&Log{})
 
 	if group == "" {
@@ -1263,9 +1263,6 @@ func getRPM(group string, end time.Time, tokenName, modelName string, channelID 
 	if tokenName != "" {
 		query = query.Where("token_name = ?", tokenName)
 	}
-	if resultOnly {
-		query = query.Where("downstream_result = true")
-	}
 
 	var count int64
 	err := query.
@@ -1274,7 +1271,7 @@ func getRPM(group string, end time.Time, tokenName, modelName string, channelID 
 	return count, err
 }
 
-func getTPM(group string, end time.Time, tokenName, modelName string, channelID int, resultOnly bool) (int64, error) {
+func GetTPM(group string, end time.Time, tokenName, modelName string, channelID int) (int64, error) {
 	query := LogDB.Model(&Log{}).
 		Select("COALESCE(SUM(total_tokens), 0)")
 
@@ -1291,9 +1288,6 @@ func getTPM(group string, end time.Time, tokenName, modelName string, channelID 
 	}
 	if tokenName != "" {
 		query = query.Where("token_name = ?", tokenName)
-	}
-	if resultOnly {
-		query = query.Where("downstream_result = true")
 	}
 
 	var tpm int64
@@ -1348,14 +1342,14 @@ func GetDashboardData(
 	if needRPM {
 		g.Go(func() error {
 			var err error
-			rpm, err = getRPM(group, end, "", modelName, channelID, resultOnly)
+			rpm, err = GetRPM(group, end, "", modelName, channelID)
 			return err
 		})
 	}
 
 	g.Go(func() error {
 		var err error
-		tpm, err = getTPM(group, end, "", modelName, channelID, resultOnly)
+		tpm, err = GetTPM(group, end, "", modelName, channelID)
 		return err
 	})
 
@@ -1446,14 +1440,14 @@ func GetGroupDashboardData(
 	if needRPM {
 		g.Go(func() error {
 			var err error
-			rpm, err = getRPM(group, end, tokenName, modelName, 0, resultOnly)
+			rpm, err = GetRPM(group, end, tokenName, modelName, 0)
 			return err
 		})
 	}
 
 	g.Go(func() error {
 		var err error
-		tpm, err = getTPM(group, end, tokenName, modelName, 0, resultOnly)
+		tpm, err = GetTPM(group, end, tokenName, modelName, 0)
 		return err
 	})
 

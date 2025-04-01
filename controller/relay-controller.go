@@ -17,6 +17,7 @@ import (
 	"github.com/labring/aiproxy/common/config"
 	"github.com/labring/aiproxy/common/consume"
 	"github.com/labring/aiproxy/common/notify"
+	"github.com/labring/aiproxy/common/trylock"
 	"github.com/labring/aiproxy/middleware"
 	"github.com/labring/aiproxy/model"
 	"github.com/labring/aiproxy/monitor"
@@ -111,59 +112,74 @@ func RelayHelper(meta *meta.Meta, c *gin.Context, handel RelayHandler) (*control
 		}
 		switch {
 		case banExecution:
-			notify.ErrorThrottle(
-				fmt.Sprintf("autoBanned:%d:%s", meta.Channel.ID, meta.OriginModel),
-				time.Minute,
-				fmt.Sprintf("%s `%s` Auto Banned", meta.Channel.Name, meta.OriginModel),
-				fmt.Sprintf(
-					"channel %s (type: %d, type name: %s, id: %d)\nmodel %s\nmode: %s\nstatus code: %d\nauto banned: %s",
-					meta.Channel.Name,
-					meta.Channel.Type,
-					meta.Channel.TypeName,
-					meta.Channel.ID,
-					meta.OriginModel,
-					meta.Mode,
-					result.Error.StatusCode,
-					result.Error.JSONOrEmpty(),
-				),
-			)
+			notifyChannelIssue(meta, "autoBanned", "Auto Banned", *result.Error)
 		case beyondThreshold:
-			notify.WarnThrottle(
-				fmt.Sprintf("beyondThreshold:%d:%s", meta.Channel.ID, meta.OriginModel),
-				time.Minute,
-				fmt.Sprintf("%s `%s` Error Rate Beyond Threshold", meta.Channel.Name, meta.OriginModel),
-				fmt.Sprintf(
-					"channel %s (type: %d, type name: %s, id: %d)\nmodel %s\nmode: %s\nstatus code: %d\nerror rate is beyond threshold: %s",
-					meta.Channel.Name,
-					meta.Channel.Type,
-					meta.Channel.TypeName,
-					meta.Channel.ID,
-					meta.OriginModel,
-					meta.Mode,
-					result.Error.StatusCode,
-					result.Error.JSONOrEmpty(),
-				),
-			)
+			notifyChannelIssue(meta, "beyondThreshold", "Error Rate Beyond Threshold", *result.Error)
 		case !hasPermission:
-			notify.ErrorThrottle(
-				fmt.Sprintf("channelHasPermission:%d:%s", meta.Channel.ID, meta.OriginModel),
-				time.Minute,
-				fmt.Sprintf("%s `%s` No Permission", meta.Channel.Name, meta.OriginModel),
-				fmt.Sprintf(
-					"channel %s (type: %d, type name: %s, id: %d)\nmodel %s\nmode: %s\nstatus code: %d\nhas no permission: %s",
-					meta.Channel.Name,
-					meta.Channel.Type,
-					meta.Channel.TypeName,
-					meta.Channel.ID,
-					meta.OriginModel,
-					meta.Mode,
-					result.Error.StatusCode,
-					result.Error.JSONOrEmpty(),
-				),
-			)
+			notifyChannelIssue(meta, "channelHasPermission", "No Permission", *result.Error)
 		}
 	}
 	return result, shouldRetry
+}
+
+func notifyChannelIssue(meta *meta.Meta, issueType string, titleSuffix string, err relaymodel.ErrorWithStatusCode) {
+	var notifyFunc func(title string, message string)
+
+	lockKey := fmt.Sprintf("%s:%d:%s", issueType, meta.Channel.ID, meta.OriginModel)
+	switch issueType {
+	case "beyondThreshold":
+		notifyFunc = func(title string, message string) {
+			notify.WarnThrottle(lockKey, time.Minute, title, message)
+		}
+	default:
+		notifyFunc = func(title string, message string) {
+			notify.ErrorThrottle(lockKey, time.Minute, title, message)
+		}
+	}
+
+	message := fmt.Sprintf(
+		"channel: %s (type: %d, type name: %s, id: %d)\nmodel: %s\nmode: %s\nstatus code: %d\ndetail: %s",
+		meta.Channel.Name,
+		meta.Channel.Type,
+		meta.Channel.TypeName,
+		meta.Channel.ID,
+		meta.OriginModel,
+		meta.Mode,
+		err.StatusCode,
+		err.JSONOrEmpty(),
+	)
+
+	if err.StatusCode == http.StatusTooManyRequests {
+		if !trylock.Lock(lockKey, time.Minute) {
+			return
+		}
+		switch issueType {
+		case "beyondThreshold":
+			notifyFunc = notify.Warn
+		default:
+			notifyFunc = notify.Error
+		}
+
+		now := time.Now()
+		group := "*"
+		rpm, rpmErr := model.GetRPM(group, now, "", meta.OriginModel, meta.Channel.ID)
+		tpm, tpmErr := model.GetTPM(group, now, "", meta.OriginModel, meta.Channel.ID)
+		if rpmErr != nil {
+			message += fmt.Sprintf("\nRPM: %v", rpmErr)
+		} else {
+			message += fmt.Sprintf("\nRPM: %d", rpm)
+		}
+		if tpmErr != nil {
+			message += fmt.Sprintf("\nTPM: %v", tpmErr)
+		} else {
+			message += fmt.Sprintf("\nTPM: %d", tpm)
+		}
+	}
+
+	notifyFunc(
+		fmt.Sprintf("%s `%s` %s", meta.Channel.Name, meta.OriginModel, titleSuffix),
+		message,
+	)
 }
 
 func filterChannels(channels []*model.Channel, ignoreChannel ...int64) []*model.Channel {
