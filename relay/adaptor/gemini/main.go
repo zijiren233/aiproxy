@@ -283,9 +283,15 @@ type ChatResponse struct {
 }
 
 type UsageMetadata struct {
-	PromptTokenCount     int64 `json:"promptTokenCount"`
-	CandidatesTokenCount int64 `json:"candidatesTokenCount"`
-	TotalTokenCount      int64 `json:"totalTokenCount"`
+	PromptTokenCount     int64                `json:"promptTokenCount"`
+	CandidatesTokenCount int64                `json:"candidatesTokenCount"`
+	TotalTokenCount      int64                `json:"totalTokenCount"`
+	PromptTokensDetails  []PromptTokensDetail `json:"promptTokensDetails"`
+}
+
+type PromptTokensDetail struct {
+	Modality   string `json:"modality"`
+	TokenCount int64  `json:"tokenCount"`
 }
 
 func (g *ChatResponse) GetResponseText() string {
