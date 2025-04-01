@@ -7806,7 +7806,7 @@ const docTemplate = `{
                 "output_tokens": {
                     "type": "integer"
                 },
-                "total": {
+                "total_count": {
                     "type": "integer"
                 },
                 "total_tokens": {

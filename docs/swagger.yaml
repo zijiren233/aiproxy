@@ -926,7 +926,7 @@ definitions:
         type: string
       output_tokens:
         type: integer
-      total:
+      total_count:
         type: integer
       total_tokens:
         type: integer
