@@ -1022,7 +1022,7 @@
                     },
                     {
                         "type": "string",
-                        "description": "Timezone",
+                        "description": "Timezone, default is Local",
                         "name": "timezone",
                         "in": "query"
                     }
@@ -1122,7 +1122,7 @@
                     },
                     {
                         "type": "string",
-                        "description": "Timezone",
+                        "description": "Timezone, default is Local",
                         "name": "timezone",
                         "in": "query"
                     }

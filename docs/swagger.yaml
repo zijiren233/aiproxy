@@ -1798,7 +1798,7 @@ paths:
         in: query
         name: from_log
         type: boolean
-      - description: Timezone
+      - description: Timezone, default is Local
         in: query
         name: timezone
         type: string
@@ -1860,7 +1860,7 @@ paths:
         in: query
         name: from_log
         type: boolean
-      - description: Timezone
+      - description: Timezone, default is Local
         in: query
         name: timezone
         type: string
