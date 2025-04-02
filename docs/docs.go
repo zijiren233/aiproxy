@@ -1033,7 +1033,7 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "Timezone",
+                        "description": "Timezone, default is Local",
                         "name": "timezone",
                         "in": "query"
                     }
@@ -1133,7 +1133,7 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "Timezone",
+                        "description": "Timezone, default is Local",
                         "name": "timezone",
                         "in": "query"
                     }

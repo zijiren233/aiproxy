@@ -1141,7 +1141,7 @@ func getChartDataFromLog(
 func aggregateHourDataToDay(hourlyData []*ChartData, timezone *time.Location) []*ChartData {
 	dayData := make(map[int64]*ChartData)
 	if timezone == nil {
-		timezone = time.UTC
+		timezone = time.Local
 	}
 
 	for _, data := range hourlyData {

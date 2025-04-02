@@ -15,22 +15,28 @@ import (
 	"gorm.io/gorm"
 )
 
-func getDashboardTime(t string, startTimestamp int64, endTimestamp int64) (time.Time, time.Time, model.TimeSpanType) {
+func getDashboardTime(t string, startTimestamp int64, endTimestamp int64, timezoneLocation *time.Location) (time.Time, time.Time, model.TimeSpanType) {
 	end := time.Now()
 	if endTimestamp != 0 {
 		end = time.Unix(endTimestamp, 0)
+	}
+	if timezoneLocation == nil {
+		timezoneLocation = time.Local
 	}
 	var start time.Time
 	var timeSpan model.TimeSpanType
 	switch t {
 	case "month":
 		start = end.AddDate(0, 0, -30)
+		start = time.Date(start.Year(), start.Month(), start.Day(), 0, 0, 0, 0, timezoneLocation)
 		timeSpan = model.TimeSpanDay
 	case "two_week":
 		start = end.AddDate(0, 0, -15)
+		start = time.Date(start.Year(), start.Month(), start.Day(), 0, 0, 0, 0, timezoneLocation)
 		timeSpan = model.TimeSpanDay
 	case "week":
 		start = end.AddDate(0, 0, -7)
+		start = time.Date(start.Year(), start.Month(), start.Day(), 0, 0, 0, 0, timezoneLocation)
 		timeSpan = model.TimeSpanDay
 	case "day":
 		fallthrough
@@ -147,7 +153,7 @@ func fillGaps(data []*model.ChartData, start, end time.Time, t model.TimeSpanTyp
 //	@Param			start_timestamp	query		int64	false	"Start second timestamp"
 //	@Param			end_timestamp	query		int64	false	"End second timestamp"
 //	@Param			from_log		query		bool	false	"From log"
-//	@Param			timezone		query		string	false	"Timezone"
+//	@Param			timezone		query		string	false	"Timezone, default is Local"
 //	@Success		200				{object}	middleware.APIResponse{data=model.DashboardResponse}
 //	@Router			/api/dashboard [get]
 func GetDashboard(c *gin.Context) {
@@ -156,16 +162,13 @@ func GetDashboard(c *gin.Context) {
 	group := c.Query("group")
 	startTimestamp, _ := strconv.ParseInt(c.Query("start_timestamp"), 10, 64)
 	endTimestamp, _ := strconv.ParseInt(c.Query("end_timestamp"), 10, 64)
-	start, end, timeSpan := getDashboardTime(c.Query("type"), startTimestamp, endTimestamp)
+	timezoneLocation, _ := time.LoadLocation(c.DefaultQuery("timezone", "Local"))
+	start, end, timeSpan := getDashboardTime(c.Query("type"), startTimestamp, endTimestamp, timezoneLocation)
 	modelName := c.Query("model")
 	resultOnly, _ := strconv.ParseBool(c.Query("result_only"))
 	tokenUsage, _ := strconv.ParseBool(c.Query("token_usage"))
 	channelID, _ := strconv.Atoi(c.Query("channel"))
 	fromLog, _ := strconv.ParseBool(c.Query("from_log"))
-	timezoneLocation, _ := time.LoadLocation(c.Query("timezone"))
-	if timezoneLocation == nil {
-		timezoneLocation = time.UTC
-	}
 
 	needRPM := channelID != 0
 
@@ -205,7 +208,7 @@ func GetDashboard(c *gin.Context) {
 //	@Param			start_timestamp	query		int64	false	"Start second timestamp"
 //	@Param			end_timestamp	query		int64	false	"End second timestamp"
 //	@Param			from_log		query		bool	false	"From log"
-//	@Param			timezone		query		string	false	"Timezone"
+//	@Param			timezone		query		string	false	"Timezone, default is Local"
 //	@Success		200				{object}	middleware.APIResponse{data=model.GroupDashboardResponse}
 //	@Router			/api/dashboard/{group} [get]
 func GetGroupDashboard(c *gin.Context) {
@@ -219,16 +222,13 @@ func GetGroupDashboard(c *gin.Context) {
 
 	startTimestamp, _ := strconv.ParseInt(c.Query("start_timestamp"), 10, 64)
 	endTimestamp, _ := strconv.ParseInt(c.Query("end_timestamp"), 10, 64)
-	start, end, timeSpan := getDashboardTime(c.Query("type"), startTimestamp, endTimestamp)
+	timezoneLocation, _ := time.LoadLocation(c.DefaultQuery("timezone", "Local"))
+	start, end, timeSpan := getDashboardTime(c.Query("type"), startTimestamp, endTimestamp, timezoneLocation)
 	tokenName := c.Query("token_name")
 	modelName := c.Query("model")
 	resultOnly, _ := strconv.ParseBool(c.Query("result_only"))
 	tokenUsage, _ := strconv.ParseBool(c.Query("token_usage"))
 	fromLog, _ := strconv.ParseBool(c.Query("from_log"))
-	timezoneLocation, _ := time.LoadLocation(c.Query("timezone"))
-	if timezoneLocation == nil {
-		timezoneLocation = time.UTC
-	}
 
 	needRPM := tokenName != ""
 
