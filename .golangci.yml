@@ -23,7 +23,6 @@ linters:
     - govet
     - staticcheck
     - unused
-    - nilerr
     - unconvert
     - nosprintfhostport
     - gofumpt
@@ -43,7 +42,6 @@ linters:
     - errorlint
     - errchkjson
     - errname
-    - nilerr
     - gosec
     - sqlclosecheck
     - rowserrcheck
