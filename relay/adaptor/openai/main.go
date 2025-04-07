@@ -9,6 +9,7 @@ import (
 	"slices"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/bytedance/sonic"
 	"github.com/bytedance/sonic/ast"
@@ -186,16 +187,22 @@ func StreamHandler(meta *meta.Meta, c *gin.Context, resp *http.Response, preHand
 		log.Error("error reading stream: " + err.Error())
 	}
 
-	render.Done(c)
-
 	if usage == nil || (usage.TotalTokens == 0 && responseText.Len() > 0) {
 		usage = ResponseText2Usage(responseText.String(), meta.ActualModel, meta.InputTokens)
-	}
-
-	if usage.TotalTokens != 0 && usage.PromptTokens == 0 { // some channels don't return prompt tokens & completion tokens
+		_ = render.ObjectData(c, &model.ChatCompletionsStreamResponse{
+			ID:      ChatCompletionID(),
+			Model:   meta.OriginModel,
+			Object:  model.ChatCompletionChunk,
+			Created: time.Now().Unix(),
+			Choices: []*model.ChatCompletionsStreamResponseChoice{},
+			Usage:   usage,
+		})
+	} else if usage.TotalTokens != 0 && usage.PromptTokens == 0 { // some channels don't return prompt tokens & completion tokens
 		usage.PromptTokens = meta.InputTokens
 		usage.CompletionTokens = usage.TotalTokens - meta.InputTokens
 	}
+
+	render.Done(c)
 
 	return usage, nil
 }
@@ -374,7 +381,7 @@ func Handler(meta *meta.Meta, c *gin.Context, resp *http.Response, preHandler Pr
 		return nil, ErrorWrapper(err, "unmarshal_response_body_failed", http.StatusInternalServerError)
 	}
 
-	if usage.TotalTokens == 0 || (usage.PromptTokens == 0 && usage.CompletionTokens == 0) {
+	if usage == nil || usage.TotalTokens == 0 || (usage.PromptTokens == 0 && usage.CompletionTokens == 0) {
 		var completionTokens int64
 		for _, choice := range choices {
 			if choice.Text != "" {
@@ -386,9 +393,20 @@ func Handler(meta *meta.Meta, c *gin.Context, resp *http.Response, preHandler Pr
 		usage = &model.Usage{
 			PromptTokens:     meta.InputTokens,
 			CompletionTokens: completionTokens,
+			TotalTokens:      meta.InputTokens + completionTokens,
+		}
+		_, err = node.Set("usage", ast.NewAny(usage))
+		if err != nil {
+			return usage, ErrorWrapper(err, "set_usage_failed", http.StatusInternalServerError)
+		}
+	} else if usage.TotalTokens != 0 && usage.PromptTokens == 0 { // some channels don't return prompt tokens & completion tokens
+		usage.PromptTokens = meta.InputTokens
+		usage.CompletionTokens = usage.TotalTokens - meta.InputTokens
+		_, err = node.Set("usage", ast.NewAny(usage))
+		if err != nil {
+			return usage, ErrorWrapper(err, "set_usage_failed", http.StatusInternalServerError)
 		}
 	}
-	usage.TotalTokens = usage.PromptTokens + usage.CompletionTokens
 
 	_, err = node.Set("model", ast.NewString(meta.OriginModel))
 	if err != nil {
