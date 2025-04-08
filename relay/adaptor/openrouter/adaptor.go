@@ -93,9 +93,8 @@ func (a *Adaptor) DoResponse(meta *meta.Meta, c *gin.Context, resp *http.Respons
 	case mode.ChatCompletions:
 		if utils.IsStreamResponse(resp) {
 			return openai.StreamHandler(meta, c, resp, streamPreHandler)
-		} else {
-			return openai.Handler(meta, c, resp, handlerPreHandler)
 		}
+		return openai.Handler(meta, c, resp, handlerPreHandler)
 	default:
 		return openai.DoResponse(meta, c, resp)
 	}
