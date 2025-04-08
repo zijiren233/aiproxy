@@ -5,10 +5,11 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/labring/aiproxy/model"
 	"github.com/labring/aiproxy/relay/adaptor/anthropic"
 	"github.com/labring/aiproxy/relay/adaptor/aws/utils"
 	"github.com/labring/aiproxy/relay/meta"
-	"github.com/labring/aiproxy/relay/model"
+	relaymodel "github.com/labring/aiproxy/relay/model"
 )
 
 const (
@@ -28,11 +29,11 @@ func (a *Adaptor) ConvertRequest(meta *meta.Meta, req *http.Request) (string, ht
 	return "", nil, nil, nil
 }
 
-func (a *Adaptor) DoResponse(meta *meta.Meta, c *gin.Context) (usage *model.Usage, err *model.ErrorWithStatusCode) {
+func (a *Adaptor) DoResponse(meta *meta.Meta, c *gin.Context) (usage *model.Usage, err *relaymodel.ErrorWithStatusCode) {
 	if meta.GetBool("stream") {
-		err, usage = StreamHandler(meta, c)
+		usage, err = StreamHandler(meta, c)
 	} else {
-		err, usage = Handler(meta, c)
+		usage, err = Handler(meta, c)
 	}
 	return
 }

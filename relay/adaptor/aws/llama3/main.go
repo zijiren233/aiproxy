@@ -89,10 +89,10 @@ func ConvertRequest(textRequest *relaymodel.GeneralOpenAIRequest) *Request {
 	return &llamaRequest
 }
 
-func Handler(meta *meta.Meta, c *gin.Context) (*relaymodel.ErrorWithStatusCode, *relaymodel.Usage) {
+func Handler(meta *meta.Meta, c *gin.Context) (*model.Usage, *relaymodel.ErrorWithStatusCode) {
 	awsModelID, err := awsModelID(meta.ActualModel)
 	if err != nil {
-		return utils.WrapErr(errors.Wrap(err, "awsModelID")), nil
+		return nil, utils.WrapErr(errors.Wrap(err, "awsModelID"))
 	}
 
 	awsReq := &bedrockruntime.InvokeModelInput{
@@ -103,28 +103,28 @@ func Handler(meta *meta.Meta, c *gin.Context) (*relaymodel.ErrorWithStatusCode, 
 
 	llamaReq, ok := meta.Get(ConvertedRequest)
 	if !ok {
-		return utils.WrapErr(errors.New("request not found")), nil
+		return nil, utils.WrapErr(errors.New("request not found"))
 	}
 
 	awsReq.Body, err = sonic.Marshal(llamaReq)
 	if err != nil {
-		return utils.WrapErr(errors.Wrap(err, "marshal request")), nil
+		return nil, utils.WrapErr(errors.Wrap(err, "marshal request"))
 	}
 
 	awsClient, err := utils.AwsClientFromMeta(meta)
 	if err != nil {
-		return utils.WrapErr(errors.Wrap(err, "get aws client")), nil
+		return nil, utils.WrapErr(errors.Wrap(err, "get aws client"))
 	}
 
 	awsResp, err := awsClient.InvokeModel(c.Request.Context(), awsReq)
 	if err != nil {
-		return utils.WrapErr(errors.Wrap(err, "InvokeModel")), nil
+		return nil, utils.WrapErr(errors.Wrap(err, "InvokeModel"))
 	}
 
 	var llamaResponse Response
 	err = sonic.Unmarshal(awsResp.Body, &llamaResponse)
 	if err != nil {
-		return utils.WrapErr(errors.Wrap(err, "unmarshal response")), nil
+		return nil, utils.WrapErr(errors.Wrap(err, "unmarshal response"))
 	}
 
 	openaiResp := ResponseLlama2OpenAI(&llamaResponse)
@@ -137,7 +137,7 @@ func Handler(meta *meta.Meta, c *gin.Context) (*relaymodel.ErrorWithStatusCode, 
 	openaiResp.Usage = usage
 
 	c.JSON(http.StatusOK, openaiResp)
-	return nil, &usage
+	return usage.ToModelUsage(), nil
 }
 
 func ResponseLlama2OpenAI(llamaResponse *Response) *relaymodel.TextResponse {
@@ -163,13 +163,13 @@ func ResponseLlama2OpenAI(llamaResponse *Response) *relaymodel.TextResponse {
 	return &fullTextResponse
 }
 
-func StreamHandler(meta *meta.Meta, c *gin.Context) (*relaymodel.ErrorWithStatusCode, *relaymodel.Usage) {
+func StreamHandler(meta *meta.Meta, c *gin.Context) (*model.Usage, *relaymodel.ErrorWithStatusCode) {
 	log := middleware.GetLogger(c)
 
 	createdTime := time.Now().Unix()
 	awsModelID, err := awsModelID(meta.ActualModel)
 	if err != nil {
-		return utils.WrapErr(errors.Wrap(err, "awsModelID")), nil
+		return nil, utils.WrapErr(errors.Wrap(err, "awsModelID"))
 	}
 
 	awsReq := &bedrockruntime.InvokeModelWithResponseStreamInput{
@@ -180,22 +180,22 @@ func StreamHandler(meta *meta.Meta, c *gin.Context) (*relaymodel.ErrorWithStatus
 
 	llamaReq, ok := meta.Get(ConvertedRequest)
 	if !ok {
-		return utils.WrapErr(errors.New("request not found")), nil
+		return nil, utils.WrapErr(errors.New("request not found"))
 	}
 
 	awsReq.Body, err = sonic.Marshal(llamaReq)
 	if err != nil {
-		return utils.WrapErr(errors.Wrap(err, "marshal request")), nil
+		return nil, utils.WrapErr(errors.Wrap(err, "marshal request"))
 	}
 
 	awsClient, err := utils.AwsClientFromMeta(meta)
 	if err != nil {
-		return utils.WrapErr(errors.Wrap(err, "get aws client")), nil
+		return nil, utils.WrapErr(errors.Wrap(err, "get aws client"))
 	}
 
 	awsResp, err := awsClient.InvokeModelWithResponseStream(c.Request.Context(), awsReq)
 	if err != nil {
-		return utils.WrapErr(errors.Wrap(err, "InvokeModelWithResponseStream")), nil
+		return nil, utils.WrapErr(errors.Wrap(err, "InvokeModelWithResponseStream"))
 	}
 	stream := awsResp.GetStream()
 	defer stream.Close()
@@ -244,7 +244,7 @@ func StreamHandler(meta *meta.Meta, c *gin.Context) (*relaymodel.ErrorWithStatus
 		}
 	})
 
-	return nil, &usage
+	return usage.ToModelUsage(), nil
 }
 
 func StreamResponseLlama2OpenAI(llamaResponse *StreamResponse) *relaymodel.ChatCompletionsStreamResponse {

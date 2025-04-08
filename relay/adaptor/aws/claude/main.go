@@ -91,10 +91,10 @@ func awsModelID(requestModel string) (string, error) {
 	return "", errors.Errorf("model %s not found", requestModel)
 }
 
-func Handler(meta *meta.Meta, c *gin.Context) (*relaymodel.ErrorWithStatusCode, *relaymodel.Usage) {
+func Handler(meta *meta.Meta, c *gin.Context) (*model.Usage, *relaymodel.ErrorWithStatusCode) {
 	awsModelID, err := awsModelID(meta.ActualModel)
 	if err != nil {
-		return utils.WrapErr(errors.Wrap(err, "awsModelID")), nil
+		return nil, utils.WrapErr(errors.Wrap(err, "awsModelID"))
 	}
 
 	awsReq := &bedrockruntime.InvokeModelInput{
@@ -105,47 +105,47 @@ func Handler(meta *meta.Meta, c *gin.Context) (*relaymodel.ErrorWithStatusCode, 
 
 	convReq, ok := meta.Get(ConvertedRequest)
 	if !ok {
-		return utils.WrapErr(errors.New("request not found")), nil
+		return nil, utils.WrapErr(errors.New("request not found"))
 	}
 	claudeReq := convReq.(*anthropic.Request)
 	awsClaudeReq := &Request{
 		AnthropicVersion: "bedrock-2023-05-31",
 	}
 	if err = copier.Copy(awsClaudeReq, claudeReq); err != nil {
-		return utils.WrapErr(errors.Wrap(err, "copy request")), nil
+		return nil, utils.WrapErr(errors.Wrap(err, "copy request"))
 	}
 
 	awsReq.Body, err = sonic.Marshal(awsClaudeReq)
 	if err != nil {
-		return utils.WrapErr(errors.Wrap(err, "marshal request")), nil
+		return nil, utils.WrapErr(errors.Wrap(err, "marshal request"))
 	}
 
 	awsClient, err := utils.AwsClientFromMeta(meta)
 	if err != nil {
-		return utils.WrapErr(errors.Wrap(err, "get aws client")), nil
+		return nil, utils.WrapErr(errors.Wrap(err, "get aws client"))
 	}
 
 	awsResp, err := awsClient.InvokeModel(c.Request.Context(), awsReq)
 	if err != nil {
-		return utils.WrapErr(errors.Wrap(err, "InvokeModel")), nil
+		return nil, utils.WrapErr(errors.Wrap(err, "InvokeModel"))
 	}
 
 	claudeResponse := new(anthropic.Response)
 	err = sonic.Unmarshal(awsResp.Body, claudeResponse)
 	if err != nil {
-		return utils.WrapErr(errors.Wrap(err, "unmarshal response")), nil
+		return nil, utils.WrapErr(errors.Wrap(err, "unmarshal response"))
 	}
 
 	openaiResp := anthropic.Response2OpenAI(meta, claudeResponse)
 	c.JSON(http.StatusOK, openaiResp)
-	return nil, &openaiResp.Usage
+	return openaiResp.Usage.ToModelUsage(), nil
 }
 
-func StreamHandler(meta *meta.Meta, c *gin.Context) (*relaymodel.ErrorWithStatusCode, *relaymodel.Usage) {
+func StreamHandler(meta *meta.Meta, c *gin.Context) (*model.Usage, *relaymodel.ErrorWithStatusCode) {
 	log := middleware.GetLogger(c)
 	awsModelID, err := awsModelID(meta.ActualModel)
 	if err != nil {
-		return utils.WrapErr(errors.Wrap(err, "awsModelID")), nil
+		return nil, utils.WrapErr(errors.Wrap(err, "awsModelID"))
 	}
 
 	awsReq := &bedrockruntime.InvokeModelWithResponseStreamInput{
@@ -156,32 +156,32 @@ func StreamHandler(meta *meta.Meta, c *gin.Context) (*relaymodel.ErrorWithStatus
 
 	convReq, ok := meta.Get(ConvertedRequest)
 	if !ok {
-		return utils.WrapErr(errors.New("request not found")), nil
+		return nil, utils.WrapErr(errors.New("request not found"))
 	}
 	claudeReq, ok := convReq.(*anthropic.Request)
 	if !ok {
-		return utils.WrapErr(errors.New("request not found")), nil
+		return nil, utils.WrapErr(errors.New("request not found"))
 	}
 
 	awsClaudeReq := &Request{
 		AnthropicVersion: "bedrock-2023-05-31",
 	}
 	if err = copier.Copy(awsClaudeReq, claudeReq); err != nil {
-		return utils.WrapErr(errors.Wrap(err, "copy request")), nil
+		return nil, utils.WrapErr(errors.Wrap(err, "copy request"))
 	}
 	awsReq.Body, err = sonic.Marshal(awsClaudeReq)
 	if err != nil {
-		return utils.WrapErr(errors.Wrap(err, "marshal request")), nil
+		return nil, utils.WrapErr(errors.Wrap(err, "marshal request"))
 	}
 
 	awsClient, err := utils.AwsClientFromMeta(meta)
 	if err != nil {
-		return utils.WrapErr(errors.Wrap(err, "get aws client")), nil
+		return nil, utils.WrapErr(errors.Wrap(err, "get aws client"))
 	}
 
 	awsResp, err := awsClient.InvokeModelWithResponseStream(c.Request.Context(), awsReq)
 	if err != nil {
-		return utils.WrapErr(errors.Wrap(err, "InvokeModelWithResponseStream")), nil
+		return nil, utils.WrapErr(errors.Wrap(err, "InvokeModelWithResponseStream"))
 	}
 	stream := awsResp.GetStream()
 	defer stream.Close()
@@ -256,5 +256,5 @@ func StreamHandler(meta *meta.Meta, c *gin.Context) (*relaymodel.ErrorWithStatus
 		})
 	}
 
-	return nil, &usage
+	return usage.ToModelUsage(), nil
 }

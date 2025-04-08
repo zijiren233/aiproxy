@@ -13,9 +13,10 @@ import (
 	"github.com/labring/aiproxy/common/image"
 	"github.com/labring/aiproxy/common/render"
 	"github.com/labring/aiproxy/middleware"
+	"github.com/labring/aiproxy/model"
 	"github.com/labring/aiproxy/relay/adaptor/openai"
 	"github.com/labring/aiproxy/relay/meta"
-	"github.com/labring/aiproxy/relay/model"
+	relaymodel "github.com/labring/aiproxy/relay/model"
 )
 
 const (
@@ -31,7 +32,7 @@ func stopReasonClaude2OpenAI(reason *string) string {
 	}
 	switch *reason {
 	case "end_turn", "stop_sequence":
-		return model.StopFinishReason
+		return relaymodel.StopFinishReason
 	case "max_tokens":
 		return "length"
 	case toolUseType:
@@ -175,10 +176,10 @@ func ConvertRequest(meta *meta.Meta, req *http.Request) (*Request, error) {
 			for _, part := range openaiContent {
 				var content Content
 				switch part.Type {
-				case model.ContentTypeText:
+				case relaymodel.ContentTypeText:
 					content.Type = conetentTypeText
 					content.Text = part.Text
-				case model.ContentTypeImageURL:
+				case relaymodel.ContentTypeImageURL:
 					content.Type = conetentTypeImage
 					content.Source = &ImageSource{
 						Type: "base64",
@@ -212,27 +213,27 @@ func ConvertRequest(meta *meta.Meta, req *http.Request) (*Request, error) {
 }
 
 // https://docs.anthropic.com/claude/reference/messages-streaming
-func StreamResponse2OpenAI(meta *meta.Meta, claudeResponse *StreamResponse) *model.ChatCompletionsStreamResponse {
-	openaiResponse := model.ChatCompletionsStreamResponse{
+func StreamResponse2OpenAI(meta *meta.Meta, claudeResponse *StreamResponse) *relaymodel.ChatCompletionsStreamResponse {
+	openaiResponse := relaymodel.ChatCompletionsStreamResponse{
 		ID:      openai.ChatCompletionID(),
-		Object:  model.ChatCompletionChunk,
+		Object:  relaymodel.ChatCompletionChunk,
 		Created: time.Now().Unix(),
 		Model:   meta.OriginModel,
 	}
 	var content string
 	var thinking string
 	var stopReason string
-	tools := make([]*model.Tool, 0)
+	tools := make([]*relaymodel.Tool, 0)
 
 	switch claudeResponse.Type {
 	case "content_block_start":
 		if claudeResponse.ContentBlock != nil {
 			content = claudeResponse.ContentBlock.Text
 			if claudeResponse.ContentBlock.Type == toolUseType {
-				tools = append(tools, &model.Tool{
+				tools = append(tools, &relaymodel.Tool{
 					ID:   claudeResponse.ContentBlock.ID,
 					Type: "function",
-					Function: model.Function{
+					Function: relaymodel.Function{
 						Name: claudeResponse.ContentBlock.Name,
 					},
 				})
@@ -242,9 +243,9 @@ func StreamResponse2OpenAI(meta *meta.Meta, claudeResponse *StreamResponse) *mod
 		if claudeResponse.Delta != nil {
 			switch claudeResponse.Delta.Type {
 			case "input_json_delta":
-				tools = append(tools, &model.Tool{
+				tools = append(tools, &relaymodel.Tool{
 					Type: "function",
-					Function: model.Function{
+					Function: relaymodel.Function{
 						Arguments: claudeResponse.Delta.PartialJSON,
 					},
 				})
@@ -260,10 +261,10 @@ func StreamResponse2OpenAI(meta *meta.Meta, claudeResponse *StreamResponse) *mod
 			return nil
 		}
 		usage := claudeResponse.Message.Usage
-		openaiResponse.Usage = &model.Usage{
+		openaiResponse.Usage = &relaymodel.Usage{
 			PromptTokens:     usage.InputTokens + usage.CacheReadInputTokens + usage.CacheCreationInputTokens,
 			CompletionTokens: usage.OutputTokens,
-			PromptTokensDetails: &model.PromptTokensDetails{
+			PromptTokensDetails: &relaymodel.PromptTokensDetails{
 				CachedTokens:        usage.CacheReadInputTokens,
 				CacheCreationTokens: usage.CacheCreationInputTokens,
 			},
@@ -271,10 +272,10 @@ func StreamResponse2OpenAI(meta *meta.Meta, claudeResponse *StreamResponse) *mod
 		openaiResponse.Usage.TotalTokens = openaiResponse.Usage.PromptTokens + openaiResponse.Usage.CompletionTokens
 	case "message_delta":
 		if claudeResponse.Usage != nil {
-			openaiResponse.Usage = &model.Usage{
+			openaiResponse.Usage = &relaymodel.Usage{
 				PromptTokens:     claudeResponse.Usage.InputTokens + claudeResponse.Usage.CacheReadInputTokens + claudeResponse.Usage.CacheCreationInputTokens,
 				CompletionTokens: claudeResponse.Usage.OutputTokens,
-				PromptTokensDetails: &model.PromptTokensDetails{
+				PromptTokensDetails: &relaymodel.PromptTokensDetails{
 					CachedTokens:        claudeResponse.Usage.CacheReadInputTokens,
 					CacheCreationTokens: claudeResponse.Usage.CacheCreationInputTokens,
 				},
@@ -286,7 +287,7 @@ func StreamResponse2OpenAI(meta *meta.Meta, claudeResponse *StreamResponse) *mod
 		}
 	}
 
-	var choice model.ChatCompletionsStreamResponseChoice
+	var choice relaymodel.ChatCompletionsStreamResponseChoice
 	choice.Delta.Content = content
 	choice.Delta.ReasoningContent = thinking
 	choice.Delta.ToolCalls = tools
@@ -295,15 +296,15 @@ func StreamResponse2OpenAI(meta *meta.Meta, claudeResponse *StreamResponse) *mod
 	if finishReason != "null" {
 		choice.FinishReason = &finishReason
 	}
-	openaiResponse.Choices = []*model.ChatCompletionsStreamResponseChoice{&choice}
+	openaiResponse.Choices = []*relaymodel.ChatCompletionsStreamResponseChoice{&choice}
 
 	return &openaiResponse
 }
 
-func Response2OpenAI(meta *meta.Meta, claudeResponse *Response) *model.TextResponse {
+func Response2OpenAI(meta *meta.Meta, claudeResponse *Response) *relaymodel.TextResponse {
 	var content string
 	var thinking string
-	tools := make([]*model.Tool, 0)
+	tools := make([]*relaymodel.Tool, 0)
 	for _, v := range claudeResponse.Content {
 		switch v.Type {
 		case conetentTypeText:
@@ -312,10 +313,10 @@ func Response2OpenAI(meta *meta.Meta, claudeResponse *Response) *model.TextRespo
 			thinking = v.Thinking
 		case toolUseType:
 			args, _ := sonic.MarshalString(v.Input)
-			tools = append(tools, &model.Tool{
+			tools = append(tools, &relaymodel.Tool{
 				ID:   v.ID,
 				Type: "function",
-				Function: model.Function{
+				Function: relaymodel.Function{
 					Name:      v.Name,
 					Arguments: args,
 				},
@@ -323,9 +324,9 @@ func Response2OpenAI(meta *meta.Meta, claudeResponse *Response) *model.TextRespo
 		}
 	}
 
-	choice := model.TextResponseChoice{
+	choice := relaymodel.TextResponseChoice{
 		Index: 0,
-		Message: model.Message{
+		Message: relaymodel.Message{
 			Role:             "assistant",
 			Content:          content,
 			ReasoningContent: thinking,
@@ -335,16 +336,16 @@ func Response2OpenAI(meta *meta.Meta, claudeResponse *Response) *model.TextRespo
 		FinishReason: stopReasonClaude2OpenAI(claudeResponse.StopReason),
 	}
 
-	fullTextResponse := model.TextResponse{
+	fullTextResponse := relaymodel.TextResponse{
 		ID:      openai.ChatCompletionID(),
 		Model:   meta.OriginModel,
-		Object:  model.ChatCompletion,
+		Object:  relaymodel.ChatCompletion,
 		Created: time.Now().Unix(),
-		Choices: []*model.TextResponseChoice{&choice},
-		Usage: model.Usage{
+		Choices: []*relaymodel.TextResponseChoice{&choice},
+		Usage: relaymodel.Usage{
 			PromptTokens:     claudeResponse.Usage.InputTokens + claudeResponse.Usage.CacheReadInputTokens + claudeResponse.Usage.CacheCreationInputTokens,
 			CompletionTokens: claudeResponse.Usage.OutputTokens,
-			PromptTokensDetails: &model.PromptTokensDetails{
+			PromptTokensDetails: &relaymodel.PromptTokensDetails{
 				CachedTokens:        claudeResponse.Usage.CacheReadInputTokens,
 				CacheCreationTokens: claudeResponse.Usage.CacheCreationInputTokens,
 			},
@@ -357,7 +358,7 @@ func Response2OpenAI(meta *meta.Meta, claudeResponse *Response) *model.TextRespo
 	return &fullTextResponse
 }
 
-func StreamHandler(m *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, *model.ErrorWithStatusCode) {
+func StreamHandler(m *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, *relaymodel.ErrorWithStatusCode) {
 	if resp.StatusCode != http.StatusOK {
 		return nil, ErrorHandler(resp)
 	}
@@ -375,7 +376,7 @@ func StreamHandler(m *meta.Meta, c *gin.Context, resp *http.Response) (*model.Us
 
 	responseText := strings.Builder{}
 
-	var usage *model.Usage
+	var usage *relaymodel.Usage
 
 	for scanner.Scan() {
 		data := scanner.Bytes()
@@ -403,7 +404,7 @@ func StreamHandler(m *meta.Meta, c *gin.Context, resp *http.Response) (*model.Us
 		switch {
 		case response.Usage != nil:
 			if usage == nil {
-				usage = &model.Usage{}
+				usage = &relaymodel.Usage{}
 			}
 			usage.Add(response.Usage)
 			if usage.PromptTokens == 0 {
@@ -428,27 +429,27 @@ func StreamHandler(m *meta.Meta, c *gin.Context, resp *http.Response) (*model.Us
 	}
 
 	if usage == nil {
-		usage = &model.Usage{
+		usage = &relaymodel.Usage{
 			PromptTokens:     m.InputTokens,
 			CompletionTokens: openai.CountTokenText(responseText.String(), m.OriginModel),
 			TotalTokens:      m.InputTokens + openai.CountTokenText(responseText.String(), m.OriginModel),
 		}
-		_ = render.ObjectData(c, &model.ChatCompletionsStreamResponse{
+		_ = render.ObjectData(c, &relaymodel.ChatCompletionsStreamResponse{
 			ID:      openai.ChatCompletionID(),
 			Model:   m.OriginModel,
-			Object:  model.ChatCompletionChunk,
+			Object:  relaymodel.ChatCompletionChunk,
 			Created: time.Now().Unix(),
-			Choices: []*model.ChatCompletionsStreamResponseChoice{},
+			Choices: []*relaymodel.ChatCompletionsStreamResponseChoice{},
 			Usage:   usage,
 		})
 	}
 
 	render.Done(c)
 
-	return usage, nil
+	return usage.ToModelUsage(), nil
 }
 
-func Handler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, *model.ErrorWithStatusCode) {
+func Handler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, *relaymodel.ErrorWithStatusCode) {
 	if resp.StatusCode != http.StatusOK {
 		return nil, ErrorHandler(resp)
 	}
@@ -468,5 +469,5 @@ func Handler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage
 	c.Writer.Header().Set("Content-Type", "application/json")
 	c.Writer.WriteHeader(resp.StatusCode)
 	_, _ = c.Writer.Write(jsonResponse)
-	return &fullTextResponse.Usage, nil
+	return fullTextResponse.Usage.ToModelUsage(), nil
 }

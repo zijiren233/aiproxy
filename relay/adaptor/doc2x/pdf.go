@@ -16,9 +16,10 @@ import (
 
 	"github.com/bytedance/sonic"
 	"github.com/gin-gonic/gin"
+	"github.com/labring/aiproxy/model"
 	"github.com/labring/aiproxy/relay/adaptor/openai"
 	"github.com/labring/aiproxy/relay/meta"
-	model "github.com/labring/aiproxy/relay/model"
+	relaymodel "github.com/labring/aiproxy/relay/model"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -49,7 +50,7 @@ type ParsePdfResponseData struct {
 	UID string `json:"uid"`
 }
 
-func HandleParsePdfResponse(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, *model.ErrorWithStatusCode) {
+func HandleParsePdfResponse(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, *relaymodel.ErrorWithStatusCode) {
 	var response ParsePdfResponse
 	err := sonic.ConfigDefault.NewDecoder(resp.Body).Decode(&response)
 	if err != nil {
@@ -316,7 +317,7 @@ func handleConvertPdfToMd(ctx context.Context, str string) string {
 	return result
 }
 
-func handleParsePdfResponse(meta *meta.Meta, c *gin.Context, response *StatusResponseDataResult) (*model.Usage, *model.ErrorWithStatusCode) {
+func handleParsePdfResponse(meta *meta.Meta, c *gin.Context, response *StatusResponseDataResult) (*model.Usage, *relaymodel.ErrorWithStatusCode) {
 	mds := make([]string, 0, len(response.Pages))
 	totalLength := 0
 	for _, page := range response.Pages {
@@ -331,7 +332,7 @@ func handleParsePdfResponse(meta *meta.Meta, c *gin.Context, response *StatusRes
 			result := handleConvertPdfToMd(c.Request.Context(), md)
 			mds[i] = result
 		}
-		c.JSON(http.StatusOK, model.ParsePdfListResponse{
+		c.JSON(http.StatusOK, relaymodel.ParsePdfListResponse{
 			Markdowns: mds,
 		})
 	default:
@@ -341,15 +342,15 @@ func handleParsePdfResponse(meta *meta.Meta, c *gin.Context, response *StatusRes
 			builder.WriteString(md)
 		}
 		result := handleConvertPdfToMd(c.Request.Context(), builder.String())
-		c.JSON(http.StatusOK, model.ParsePdfResponse{
+		c.JSON(http.StatusOK, relaymodel.ParsePdfResponse{
 			Pages:    pages,
 			Markdown: result,
 		})
 	}
 
 	return &model.Usage{
-		PromptTokens: pages,
-		TotalTokens:  pages,
+		InputTokens: pages,
+		TotalTokens: pages,
 	}, nil
 }
 

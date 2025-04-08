@@ -5,14 +5,13 @@ import (
 
 	"github.com/labring/aiproxy/model"
 	"github.com/labring/aiproxy/relay/meta"
-	relaymodel "github.com/labring/aiproxy/relay/model"
 )
 
 func recordConsume(
 	meta *meta.Meta,
 	code int,
 	firstByteAt time.Time,
-	usage relaymodel.Usage,
+	usage model.Usage,
 	modelPrice model.Price,
 	content string,
 	ip string,
@@ -21,16 +20,6 @@ func recordConsume(
 	retryTimes int,
 	downstreamResult bool,
 ) error {
-	us := model.Usage{
-		InputTokens:  usage.PromptTokens,
-		OutputTokens: usage.CompletionTokens,
-		TotalTokens:  usage.PromptTokens + usage.CompletionTokens,
-	}
-	if usage.PromptTokensDetails != nil {
-		us.CachedTokens = usage.PromptTokensDetails.CachedTokens
-		us.CacheCreationTokens = usage.PromptTokensDetails.CacheCreationTokens
-	}
-
 	return model.BatchRecordConsume(
 		meta.RequestID,
 		meta.RequestAt,
@@ -49,7 +38,7 @@ func recordConsume(
 		retryTimes,
 		requestDetail,
 		downstreamResult,
-		us,
+		usage,
 		modelPrice,
 		amount,
 	)

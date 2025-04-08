@@ -109,7 +109,7 @@ func (a *Adaptor) DoRequest(_ *meta.Meta, _ *gin.Context, req *http.Request) (*h
 	return utils.DoRequest(req)
 }
 
-func (a *Adaptor) DoResponse(meta *meta.Meta, c *gin.Context, resp *http.Response) (usage *relaymodel.Usage, err *relaymodel.ErrorWithStatusCode) {
+func (a *Adaptor) DoResponse(meta *meta.Meta, c *gin.Context, resp *http.Response) (usage *model.Usage, err *relaymodel.ErrorWithStatusCode) {
 	switch meta.Mode {
 	case mode.Embeddings:
 		usage, err = EmbeddingsHandler(meta, c, resp)
@@ -119,7 +119,7 @@ func (a *Adaptor) DoResponse(meta *meta.Meta, c *gin.Context, resp *http.Respons
 		usage, err = ImageHandler(meta, c, resp)
 	case mode.ChatCompletions:
 		if utils.IsStreamResponse(resp) {
-			err, usage = StreamHandler(meta, c, resp)
+			usage, err = StreamHandler(meta, c, resp)
 		} else {
 			usage, err = Handler(meta, c, resp)
 		}

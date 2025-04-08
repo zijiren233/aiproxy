@@ -13,9 +13,10 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/common/image"
 	"github.com/labring/aiproxy/middleware"
+	"github.com/labring/aiproxy/model"
 	"github.com/labring/aiproxy/relay/adaptor/openai"
 	"github.com/labring/aiproxy/relay/meta"
-	"github.com/labring/aiproxy/relay/model"
+	relaymodel "github.com/labring/aiproxy/relay/model"
 	"github.com/labring/aiproxy/relay/utils"
 	log "github.com/sirupsen/logrus"
 )
@@ -47,7 +48,7 @@ func ConvertImageRequest(meta *meta.Meta, req *http.Request) (string, http.Heade
 	}, bytes.NewReader(data), nil
 }
 
-func ImageHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, *model.ErrorWithStatusCode) {
+func ImageHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, *relaymodel.ErrorWithStatusCode) {
 	if resp.StatusCode != http.StatusOK {
 		return nil, openai.ErrorHanlder(resp)
 	}
@@ -79,8 +80,8 @@ func ImageHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.
 	}
 
 	if aliResponse.Output.TaskStatus != "SUCCEEDED" {
-		return nil, &model.ErrorWithStatusCode{
-			Error: model.Error{
+		return nil, &relaymodel.ErrorWithStatusCode{
+			Error: relaymodel.Error{
 				Message: aliResponse.Output.Message,
 				Type:    "ali_error",
 				Code:    aliResponse.Output.Code,
@@ -96,11 +97,11 @@ func ImageHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.
 	}
 	c.Writer.Header().Set("Content-Type", "application/json")
 	c.Writer.WriteHeader(resp.StatusCode)
-	_, err = c.Writer.Write(jsonResponse)
-	if err != nil {
-		log.Warnf("aliImageHandler write response body failed: %v", err)
-	}
-	return &model.Usage{}, nil
+	_, _ = c.Writer.Write(jsonResponse)
+	return &model.Usage{
+		OutputTokens: int64(len(jsonResponse)),
+		TotalTokens:  int64(len(jsonResponse)),
+	}, nil
 }
 
 func asyncTask(ctx context.Context, taskID string, key string) (*TaskResponse, error) {
@@ -166,8 +167,8 @@ func asyncTaskWait(ctx context.Context, taskID string, key string) (*TaskRespons
 	return nil, errors.New("aliAsyncTaskWait timeout")
 }
 
-func responseAli2OpenAIImage(ctx context.Context, response *TaskResponse, responseFormat string) *model.ImageResponse {
-	imageResponse := model.ImageResponse{
+func responseAli2OpenAIImage(ctx context.Context, response *TaskResponse, responseFormat string) *relaymodel.ImageResponse {
+	imageResponse := relaymodel.ImageResponse{
 		Created: time.Now().Unix(),
 	}
 
@@ -189,7 +190,7 @@ func responseAli2OpenAIImage(ctx context.Context, response *TaskResponse, respon
 			b64Json = data.B64Image
 		}
 
-		imageResponse.Data = append(imageResponse.Data, &model.ImageData{
+		imageResponse.Data = append(imageResponse.Data, &relaymodel.ImageData{
 			URL:           data.URL,
 			B64Json:       b64Json,
 			RevisedPrompt: "",

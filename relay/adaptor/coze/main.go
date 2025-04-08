@@ -12,10 +12,11 @@ import (
 	"github.com/labring/aiproxy/common/conv"
 	"github.com/labring/aiproxy/common/render"
 	"github.com/labring/aiproxy/middleware"
+	"github.com/labring/aiproxy/model"
 	"github.com/labring/aiproxy/relay/adaptor/coze/constant/messagetype"
 	"github.com/labring/aiproxy/relay/adaptor/openai"
 	"github.com/labring/aiproxy/relay/meta"
-	"github.com/labring/aiproxy/relay/model"
+	relaymodel "github.com/labring/aiproxy/relay/model"
 )
 
 // https://www.coze.com/open
@@ -36,9 +37,9 @@ func stopReasonCoze2OpenAI(reason *string) string {
 	}
 }
 
-func StreamResponse2OpenAI(meta *meta.Meta, cozeResponse *StreamResponse) *model.ChatCompletionsStreamResponse {
+func StreamResponse2OpenAI(meta *meta.Meta, cozeResponse *StreamResponse) *relaymodel.ChatCompletionsStreamResponse {
 	var stopReason string
-	var choice model.ChatCompletionsStreamResponseChoice
+	var choice relaymodel.ChatCompletionsStreamResponseChoice
 
 	if cozeResponse.Message != nil {
 		if cozeResponse.Message.Type != messagetype.Answer {
@@ -51,17 +52,17 @@ func StreamResponse2OpenAI(meta *meta.Meta, cozeResponse *StreamResponse) *model
 	if finishReason != "null" {
 		choice.FinishReason = &finishReason
 	}
-	openaiResponse := model.ChatCompletionsStreamResponse{
+	openaiResponse := relaymodel.ChatCompletionsStreamResponse{
 		ID:      cozeResponse.ConversationID,
 		Model:   meta.OriginModel,
 		Created: time.Now().Unix(),
-		Object:  model.ChatCompletionChunk,
-		Choices: []*model.ChatCompletionsStreamResponseChoice{&choice},
+		Object:  relaymodel.ChatCompletionChunk,
+		Choices: []*relaymodel.ChatCompletionsStreamResponseChoice{&choice},
 	}
 	return &openaiResponse
 }
 
-func Response2OpenAI(meta *meta.Meta, cozeResponse *Response) *model.TextResponse {
+func Response2OpenAI(meta *meta.Meta, cozeResponse *Response) *relaymodel.TextResponse {
 	var responseText string
 	for _, message := range cozeResponse.Messages {
 		if message.Type == messagetype.Answer {
@@ -69,26 +70,26 @@ func Response2OpenAI(meta *meta.Meta, cozeResponse *Response) *model.TextRespons
 			break
 		}
 	}
-	choice := model.TextResponseChoice{
+	choice := relaymodel.TextResponseChoice{
 		Index: 0,
-		Message: model.Message{
+		Message: relaymodel.Message{
 			Role:    "assistant",
 			Content: responseText,
 			Name:    nil,
 		},
-		FinishReason: model.StopFinishReason,
+		FinishReason: relaymodel.StopFinishReason,
 	}
-	fullTextResponse := model.TextResponse{
+	fullTextResponse := relaymodel.TextResponse{
 		ID:      openai.ChatCompletionID(),
 		Model:   meta.OriginModel,
-		Object:  model.ChatCompletion,
+		Object:  relaymodel.ChatCompletion,
 		Created: time.Now().Unix(),
-		Choices: []*model.TextResponseChoice{&choice},
+		Choices: []*relaymodel.TextResponseChoice{&choice},
 	}
 	return &fullTextResponse
 }
 
-func StreamHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, *model.ErrorWithStatusCode) {
+func StreamHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, *relaymodel.ErrorWithStatusCode) {
 	if resp.StatusCode != http.StatusOK {
 		return nil, openai.ErrorHanlder(resp)
 	}
@@ -145,10 +146,10 @@ func StreamHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model
 
 	render.Done(c)
 
-	return openai.ResponseText2Usage(responseText.String(), meta.ActualModel, meta.InputTokens), nil
+	return openai.ResponseText2Usage(responseText.String(), meta.ActualModel, meta.InputTokens).ToModelUsage(), nil
 }
 
-func Handler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, *model.ErrorWithStatusCode) {
+func Handler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, *relaymodel.ErrorWithStatusCode) {
 	if resp.StatusCode != http.StatusOK {
 		return nil, openai.ErrorHanlder(resp)
 	}
@@ -180,5 +181,5 @@ func Handler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage
 	if len(fullTextResponse.Choices) > 0 {
 		responseText = fullTextResponse.Choices[0].Message.StringContent()
 	}
-	return openai.ResponseText2Usage(responseText, meta.ActualModel, meta.InputTokens), nil
+	return openai.ResponseText2Usage(responseText, meta.ActualModel, meta.InputTokens).ToModelUsage(), nil
 }

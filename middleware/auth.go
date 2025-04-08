@@ -206,10 +206,10 @@ func SetLogTokenFields(fields logrus.Fields, token *model.TokenCache, internal b
 		return
 	}
 	if token.ID > 0 {
-		fields["tid"] = token.ID
+		fields["kid"] = token.ID
 	}
 	if token.Name != "" {
-		fields["tname"] = token.Name
+		fields["kname"] = token.Name
 	}
 	if token.Key != "" {
 		fields["key"] = maskTokenKey(token.Key)

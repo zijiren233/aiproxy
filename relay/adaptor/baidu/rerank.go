@@ -7,17 +7,18 @@ import (
 	"github.com/bytedance/sonic"
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/middleware"
+	"github.com/labring/aiproxy/model"
 	"github.com/labring/aiproxy/relay/adaptor/openai"
 	"github.com/labring/aiproxy/relay/meta"
-	"github.com/labring/aiproxy/relay/model"
+	relaymodel "github.com/labring/aiproxy/relay/model"
 )
 
 type RerankResponse struct {
-	Error *Error      `json:"error"`
-	Usage model.Usage `json:"usage"`
+	Error *Error           `json:"error"`
+	Usage relaymodel.Usage `json:"usage"`
 }
 
-func RerankHandler(_ *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, *model.ErrorWithStatusCode) {
+func RerankHandler(_ *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, *relaymodel.ErrorWithStatusCode) {
 	defer resp.Body.Close()
 
 	log := middleware.GetLogger(c)
@@ -37,12 +38,12 @@ func RerankHandler(_ *meta.Meta, c *gin.Context, resp *http.Response) (*model.Us
 	respMap := make(map[string]any)
 	err = sonic.Unmarshal(respBody, &respMap)
 	if err != nil {
-		return &reRankResp.Usage, openai.ErrorWrapper(err, "unmarshal_response_body_failed", http.StatusInternalServerError)
+		return reRankResp.Usage.ToModelUsage(), openai.ErrorWrapper(err, "unmarshal_response_body_failed", http.StatusInternalServerError)
 	}
 	delete(respMap, "model")
 	delete(respMap, "usage")
-	respMap["meta"] = &model.RerankMeta{
-		Tokens: &model.RerankMetaTokens{
+	respMap["meta"] = &relaymodel.RerankMeta{
+		Tokens: &relaymodel.RerankMetaTokens{
 			InputTokens:  reRankResp.Usage.TotalTokens,
 			OutputTokens: 0,
 		},
@@ -51,11 +52,11 @@ func RerankHandler(_ *meta.Meta, c *gin.Context, resp *http.Response) (*model.Us
 	delete(respMap, "results")
 	jsonData, err := sonic.Marshal(respMap)
 	if err != nil {
-		return &reRankResp.Usage, openai.ErrorWrapper(err, "marshal_response_body_failed", http.StatusInternalServerError)
+		return reRankResp.Usage.ToModelUsage(), openai.ErrorWrapper(err, "marshal_response_body_failed", http.StatusInternalServerError)
 	}
 	_, err = c.Writer.Write(jsonData)
 	if err != nil {
 		log.Warnf("write response body failed: %v", err)
 	}
-	return &reRankResp.Usage, nil
+	return reRankResp.Usage.ToModelUsage(), nil
 }

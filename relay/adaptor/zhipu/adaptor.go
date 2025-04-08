@@ -22,10 +22,10 @@ func (a *Adaptor) GetBaseURL() string {
 	return baseURL
 }
 
-func (a *Adaptor) DoResponse(meta *meta.Meta, c *gin.Context, resp *http.Response) (usage *relaymodel.Usage, err *relaymodel.ErrorWithStatusCode) {
+func (a *Adaptor) DoResponse(meta *meta.Meta, c *gin.Context, resp *http.Response) (usage *model.Usage, err *relaymodel.ErrorWithStatusCode) {
 	switch meta.Mode {
 	case mode.Embeddings:
-		err, usage = EmbeddingsHandler(c, resp)
+		usage, err = EmbeddingsHandler(c, resp)
 	default:
 		usage, err = openai.DoResponse(meta, c, resp)
 	}

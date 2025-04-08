@@ -15,9 +15,10 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/labring/aiproxy/common/conv"
 	"github.com/labring/aiproxy/middleware"
+	"github.com/labring/aiproxy/model"
 	"github.com/labring/aiproxy/relay/adaptor/openai"
 	"github.com/labring/aiproxy/relay/meta"
-	model "github.com/labring/aiproxy/relay/model"
+	relaymodel "github.com/labring/aiproxy/relay/model"
 	"github.com/labring/aiproxy/relay/utils"
 )
 
@@ -174,15 +175,15 @@ func TTSDoRequest(meta *meta.Meta, req *http.Request) (*http.Response, error) {
 	}, nil
 }
 
-func TTSDoResponse(meta *meta.Meta, c *gin.Context, _ *http.Response) (*model.Usage, *model.ErrorWithStatusCode) {
+func TTSDoResponse(meta *meta.Meta, c *gin.Context, _ *http.Response) (*model.Usage, *relaymodel.ErrorWithStatusCode) {
 	log := middleware.GetLogger(c)
 
 	conn := meta.MustGet("ws_conn").(*websocket.Conn)
 	defer conn.Close()
 
 	usage := &model.Usage{
-		PromptTokens: meta.InputTokens,
-		TotalTokens:  meta.InputTokens,
+		InputTokens: meta.InputTokens,
+		TotalTokens: meta.InputTokens,
 	}
 
 	for {

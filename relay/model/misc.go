@@ -3,6 +3,7 @@ package model
 import (
 	"github.com/bytedance/sonic"
 	"github.com/labring/aiproxy/common/conv"
+	"github.com/labring/aiproxy/model"
 )
 
 type Usage struct {
@@ -10,7 +11,26 @@ type Usage struct {
 	CompletionTokens int64 `json:"completion_tokens"`
 	TotalTokens      int64 `json:"total_tokens"`
 
+	WebSearchCount int64 `json:"web_search_count"`
+
 	PromptTokensDetails *PromptTokensDetails `json:"prompt_tokens_details,omitempty"`
+}
+
+func (u *Usage) ToModelUsage() *model.Usage {
+	if u == nil {
+		return nil
+	}
+	usage := &model.Usage{
+		InputTokens:    u.PromptTokens,
+		OutputTokens:   u.CompletionTokens,
+		TotalTokens:    u.TotalTokens,
+		WebSearchCount: u.WebSearchCount,
+	}
+	if u.PromptTokensDetails != nil {
+		usage.CachedTokens = u.PromptTokensDetails.CachedTokens
+		usage.CacheCreationTokens = u.PromptTokensDetails.CacheCreationTokens
+	}
+	return usage
 }
 
 func (u *Usage) Add(other *Usage) {

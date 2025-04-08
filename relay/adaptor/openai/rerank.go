@@ -10,8 +10,9 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/common"
 	"github.com/labring/aiproxy/middleware"
+	"github.com/labring/aiproxy/model"
 	"github.com/labring/aiproxy/relay/meta"
-	"github.com/labring/aiproxy/relay/model"
+	relaymodel "github.com/labring/aiproxy/relay/model"
 )
 
 func ConvertRerankRequest(meta *meta.Meta, req *http.Request) (string, http.Header, io.Reader, error) {
@@ -32,7 +33,7 @@ func ConvertRerankRequest(meta *meta.Meta, req *http.Request) (string, http.Head
 	return http.MethodPost, nil, bytes.NewReader(jsonData), nil
 }
 
-func RerankHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, *model.ErrorWithStatusCode) {
+func RerankHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, *relaymodel.ErrorWithStatusCode) {
 	if resp.StatusCode != http.StatusOK {
 		return nil, ErrorHanlder(resp)
 	}
@@ -45,7 +46,7 @@ func RerankHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model
 	if err != nil {
 		return nil, ErrorWrapper(err, "read_response_body_failed", http.StatusInternalServerError)
 	}
-	var rerankResponse model.SlimRerankResponse
+	var rerankResponse relaymodel.SlimRerankResponse
 	err = sonic.Unmarshal(responseBody, &rerankResponse)
 	if err != nil {
 		return nil, ErrorWrapper(err, "unmarshal_response_body_failed", http.StatusInternalServerError)
@@ -60,17 +61,16 @@ func RerankHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model
 
 	if rerankResponse.Meta.Tokens == nil {
 		return &model.Usage{
-			PromptTokens:     meta.InputTokens,
-			CompletionTokens: 0,
-			TotalTokens:      meta.InputTokens,
+			InputTokens: meta.InputTokens,
+			TotalTokens: meta.InputTokens,
 		}, nil
 	}
 	if rerankResponse.Meta.Tokens.InputTokens <= 0 {
 		rerankResponse.Meta.Tokens.InputTokens = meta.InputTokens
 	}
 	return &model.Usage{
-		PromptTokens:     rerankResponse.Meta.Tokens.InputTokens,
-		CompletionTokens: rerankResponse.Meta.Tokens.OutputTokens,
-		TotalTokens:      rerankResponse.Meta.Tokens.InputTokens + rerankResponse.Meta.Tokens.OutputTokens,
+		InputTokens:  rerankResponse.Meta.Tokens.InputTokens,
+		OutputTokens: rerankResponse.Meta.Tokens.OutputTokens,
+		TotalTokens:  rerankResponse.Meta.Tokens.InputTokens + rerankResponse.Meta.Tokens.OutputTokens,
 	}, nil
 }

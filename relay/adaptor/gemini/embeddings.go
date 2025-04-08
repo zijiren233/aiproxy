@@ -7,9 +7,10 @@ import (
 
 	"github.com/bytedance/sonic"
 	"github.com/gin-gonic/gin"
+	"github.com/labring/aiproxy/model"
 	"github.com/labring/aiproxy/relay/adaptor/openai"
 	"github.com/labring/aiproxy/relay/meta"
-	"github.com/labring/aiproxy/relay/model"
+	relaymodel "github.com/labring/aiproxy/relay/model"
 	"github.com/labring/aiproxy/relay/utils"
 )
 
@@ -46,7 +47,7 @@ func ConvertEmbeddingRequest(meta *meta.Meta, req *http.Request) (string, http.H
 	return http.MethodPost, nil, bytes.NewReader(data), nil
 }
 
-func EmbeddingHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, *model.ErrorWithStatusCode) {
+func EmbeddingHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, *relaymodel.ErrorWithStatusCode) {
 	if resp.StatusCode != http.StatusOK {
 		return nil, openai.ErrorHanlder(resp)
 	}
@@ -69,18 +70,18 @@ func EmbeddingHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*mo
 	c.Writer.Header().Set("Content-Type", "application/json")
 	c.Writer.WriteHeader(resp.StatusCode)
 	_, _ = c.Writer.Write(jsonResponse)
-	return &fullTextResponse.Usage, nil
+	return fullTextResponse.Usage.ToModelUsage(), nil
 }
 
-func embeddingResponse2OpenAI(meta *meta.Meta, response *EmbeddingResponse) *model.EmbeddingResponse {
-	openAIEmbeddingResponse := model.EmbeddingResponse{
+func embeddingResponse2OpenAI(meta *meta.Meta, response *EmbeddingResponse) *relaymodel.EmbeddingResponse {
+	openAIEmbeddingResponse := relaymodel.EmbeddingResponse{
 		Object: "list",
-		Data:   make([]*model.EmbeddingResponseItem, 0, len(response.Embeddings)),
+		Data:   make([]*relaymodel.EmbeddingResponseItem, 0, len(response.Embeddings)),
 		Model:  meta.OriginModel,
-		Usage:  model.Usage{TotalTokens: 0},
+		Usage:  relaymodel.Usage{TotalTokens: 0},
 	}
 	for _, item := range response.Embeddings {
-		openAIEmbeddingResponse.Data = append(openAIEmbeddingResponse.Data, &model.EmbeddingResponseItem{
+		openAIEmbeddingResponse.Data = append(openAIEmbeddingResponse.Data, &relaymodel.EmbeddingResponseItem{
 			Object:    `embedding`,
 			Index:     0,
 			Embedding: item.Values,

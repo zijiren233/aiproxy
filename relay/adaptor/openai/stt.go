@@ -13,8 +13,9 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/common/conv"
 	"github.com/labring/aiproxy/middleware"
+	"github.com/labring/aiproxy/model"
 	"github.com/labring/aiproxy/relay/meta"
-	"github.com/labring/aiproxy/relay/model"
+	relaymodel "github.com/labring/aiproxy/relay/model"
 )
 
 func ConvertSTTRequest(meta *meta.Meta, request *http.Request) (string, http.Header, io.Reader, error) {
@@ -76,7 +77,7 @@ func ConvertSTTRequest(meta *meta.Meta, request *http.Request) (string, http.Hea
 	}, multipartBody, nil
 }
 
-func STTHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, *model.ErrorWithStatusCode) {
+func STTHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, *relaymodel.ErrorWithStatusCode) {
 	if resp.StatusCode != http.StatusOK {
 		return nil, ErrorHanlder(resp)
 	}
@@ -126,9 +127,8 @@ func STTHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Us
 	}
 
 	return &model.Usage{
-		PromptTokens:     promptTokens,
-		CompletionTokens: 0,
-		TotalTokens:      promptTokens,
+		InputTokens: promptTokens,
+		TotalTokens: promptTokens,
 	}, nil
 }
 
@@ -137,7 +137,7 @@ func getTextFromVTT(body []byte) (string, error) {
 }
 
 func getTextFromVerboseJSON(body []byte) (string, error) {
-	var whisperResponse model.SttVerboseJSONResponse
+	var whisperResponse relaymodel.SttVerboseJSONResponse
 	if err := sonic.Unmarshal(body, &whisperResponse); err != nil {
 		return "", fmt.Errorf("unmarshal_response_body_failed err :%w", err)
 	}
@@ -170,7 +170,7 @@ func getTextFromText(body []byte) string {
 }
 
 func getTextFromJSON(body []byte) (string, error) {
-	var whisperResponse model.SttJSONResponse
+	var whisperResponse relaymodel.SttJSONResponse
 	if err := sonic.Unmarshal(body, &whisperResponse); err != nil {
 		return "", fmt.Errorf("unmarshal_response_body_failed err :%w", err)
 	}

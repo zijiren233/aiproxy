@@ -7,6 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/common/config"
 	"github.com/labring/aiproxy/middleware"
+	"github.com/labring/aiproxy/model"
 	"github.com/labring/aiproxy/relay/adaptor/openai"
 	"github.com/labring/aiproxy/relay/channeltype"
 	"github.com/labring/aiproxy/relay/meta"
@@ -16,7 +17,7 @@ import (
 // HandleResult contains all the information needed for consumption recording
 type HandleResult struct {
 	Error  *relaymodel.ErrorWithStatusCode
-	Usage  relaymodel.Usage
+	Usage  model.Usage
 	Detail *RequestDetail
 }
 

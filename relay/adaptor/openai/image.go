@@ -12,8 +12,9 @@ import (
 	"github.com/labring/aiproxy/common"
 	"github.com/labring/aiproxy/common/image"
 	"github.com/labring/aiproxy/middleware"
+	"github.com/labring/aiproxy/model"
 	"github.com/labring/aiproxy/relay/meta"
-	"github.com/labring/aiproxy/relay/model"
+	relaymodel "github.com/labring/aiproxy/relay/model"
 )
 
 func ConvertImageRequest(meta *meta.Meta, req *http.Request) (string, http.Header, io.Reader, error) {
@@ -40,7 +41,7 @@ func ConvertImageRequest(meta *meta.Meta, req *http.Request) (string, http.Heade
 	return http.MethodPost, nil, bytes.NewReader(jsonData), nil
 }
 
-func ImageHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, *model.ErrorWithStatusCode) {
+func ImageHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, *relaymodel.ErrorWithStatusCode) {
 	if resp.StatusCode != http.StatusOK {
 		return nil, ErrorHanlder(resp)
 	}
@@ -55,15 +56,15 @@ func ImageHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.
 	if err != nil {
 		return nil, ErrorWrapper(err, "read_response_body_failed", http.StatusInternalServerError)
 	}
-	var imageResponse model.ImageResponse
+	var imageResponse relaymodel.ImageResponse
 	err = sonic.Unmarshal(responseBody, &imageResponse)
 	if err != nil {
 		return nil, ErrorWrapper(err, "unmarshal_response_body_failed", http.StatusInternalServerError)
 	}
 
 	usage := &model.Usage{
-		PromptTokens: int64(len(imageResponse.Data)),
-		TotalTokens:  int64(len(imageResponse.Data)),
+		InputTokens: int64(len(imageResponse.Data)),
+		TotalTokens: int64(len(imageResponse.Data)),
 	}
 
 	if responseFormat == "b64_json" {

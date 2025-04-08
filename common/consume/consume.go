@@ -9,7 +9,6 @@ import (
 	"github.com/labring/aiproxy/common/notify"
 	"github.com/labring/aiproxy/model"
 	"github.com/labring/aiproxy/relay/meta"
-	relaymodel "github.com/labring/aiproxy/relay/model"
 	"github.com/shopspring/decimal"
 	log "github.com/sirupsen/logrus"
 )
@@ -25,7 +24,7 @@ func AsyncConsume(
 	code int,
 	firstByteAt time.Time,
 	meta *meta.Meta,
-	usage relaymodel.Usage,
+	usage model.Usage,
 	modelPrice model.Price,
 	content string,
 	ip string,
@@ -63,7 +62,7 @@ func Consume(
 	firstByteAt time.Time,
 	code int,
 	meta *meta.Meta,
-	usage relaymodel.Usage,
+	usage model.Usage,
 	modelPrice model.Price,
 	content string,
 	ip string,
@@ -107,35 +106,29 @@ func consumeAmount(
 }
 
 func CalculateAmount(
-	usage relaymodel.Usage,
+	usage model.Usage,
 	modelPrice model.Price,
 ) float64 {
-	promptTokens := usage.PromptTokens
-	completionTokens := usage.CompletionTokens
-	var cachedTokens int64
-	var cacheCreationTokens int64
-	if usage.PromptTokensDetails != nil {
-		cachedTokens = usage.PromptTokensDetails.CachedTokens
-		cacheCreationTokens = usage.PromptTokensDetails.CacheCreationTokens
-	}
+	inputTokens := usage.InputTokens
+	outputTokens := usage.TotalTokens
 
 	if modelPrice.CachedPrice > 0 {
-		promptTokens -= cachedTokens
+		inputTokens -= usage.CachedTokens
 	}
 	if modelPrice.CacheCreationPrice > 0 {
-		promptTokens -= cacheCreationTokens
+		inputTokens -= usage.CacheCreationTokens
 	}
 
-	promptAmount := decimal.NewFromInt(promptTokens).
+	promptAmount := decimal.NewFromInt(inputTokens).
 		Mul(decimal.NewFromFloat(modelPrice.InputPrice)).
 		Div(decimal.NewFromInt(model.PriceUnit))
-	completionAmount := decimal.NewFromInt(completionTokens).
+	completionAmount := decimal.NewFromInt(outputTokens).
 		Mul(decimal.NewFromFloat(modelPrice.OutputPrice)).
 		Div(decimal.NewFromInt(model.PriceUnit))
-	cachedAmount := decimal.NewFromInt(cachedTokens).
+	cachedAmount := decimal.NewFromInt(usage.CachedTokens).
 		Mul(decimal.NewFromFloat(modelPrice.CachedPrice)).
 		Div(decimal.NewFromInt(model.PriceUnit))
-	cacheCreationAmount := decimal.NewFromInt(cacheCreationTokens).
+	cacheCreationAmount := decimal.NewFromInt(usage.CacheCreationTokens).
 		Mul(decimal.NewFromFloat(modelPrice.CacheCreationPrice)).
 		Div(decimal.NewFromInt(model.PriceUnit))
 

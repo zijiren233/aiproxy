@@ -12,9 +12,10 @@ import (
 	"github.com/bytedance/sonic"
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/middleware"
+	"github.com/labring/aiproxy/model"
 	"github.com/labring/aiproxy/relay/adaptor/openai"
 	"github.com/labring/aiproxy/relay/meta"
-	model "github.com/labring/aiproxy/relay/model"
+	relaymodel "github.com/labring/aiproxy/relay/model"
 	"github.com/labring/aiproxy/relay/utils"
 )
 
@@ -105,7 +106,7 @@ type TTSResponse struct {
 	Data      TTSData      `json:"data"`
 }
 
-func TTSHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, *model.ErrorWithStatusCode) {
+func TTSHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, *relaymodel.ErrorWithStatusCode) {
 	if resp.StatusCode != http.StatusOK {
 		return nil, openai.ErrorHanlder(resp)
 	}
@@ -149,12 +150,12 @@ func TTSHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Us
 	}
 
 	return &model.Usage{
-		PromptTokens: usageCharacters,
-		TotalTokens:  usageCharacters,
+		InputTokens: usageCharacters,
+		TotalTokens: usageCharacters,
 	}, nil
 }
 
-func ttsStreamHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, *model.ErrorWithStatusCode) {
+func ttsStreamHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, *relaymodel.ErrorWithStatusCode) {
 	defer resp.Body.Close()
 
 	resp.Header.Set("Content-Type", "application/octet-stream")
@@ -200,7 +201,7 @@ func ttsStreamHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*mo
 	}
 
 	return &model.Usage{
-		PromptTokens: usageCharacters,
-		TotalTokens:  usageCharacters,
+		InputTokens: usageCharacters,
+		TotalTokens: usageCharacters,
 	}, nil
 }

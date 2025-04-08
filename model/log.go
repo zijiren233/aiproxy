@@ -51,6 +51,7 @@ type Usage struct {
 	CachedTokens        int64 `json:"cached_tokens,omitempty"`
 	CacheCreationTokens int64 `json:"cache_creation_tokens,omitempty"`
 	TotalTokens         int64 `json:"total_tokens,omitempty"`
+	WebSearchCount      int64 `json:"web_search_count,omitempty"`
 }
 
 func (u *Usage) Add(other *Usage) {
@@ -62,6 +63,7 @@ func (u *Usage) Add(other *Usage) {
 	u.CachedTokens += other.CachedTokens
 	u.CacheCreationTokens += other.CacheCreationTokens
 	u.TotalTokens += other.TotalTokens
+	u.WebSearchCount += other.WebSearchCount
 }
 
 type Log struct {

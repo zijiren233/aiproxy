@@ -7,9 +7,10 @@ import (
 	"github.com/bytedance/sonic"
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/middleware"
+	"github.com/labring/aiproxy/model"
 	"github.com/labring/aiproxy/relay/adaptor/openai"
 	"github.com/labring/aiproxy/relay/meta"
-	"github.com/labring/aiproxy/relay/model"
+	relaymodel "github.com/labring/aiproxy/relay/model"
 )
 
 type ImageData struct {
@@ -23,7 +24,7 @@ type ImageResponse struct {
 	Created int64        `json:"created"`
 }
 
-func ImageHandler(_ *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, *model.ErrorWithStatusCode) {
+func ImageHandler(_ *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, *relaymodel.ErrorWithStatusCode) {
 	defer resp.Body.Close()
 
 	log := middleware.GetLogger(c)
@@ -39,8 +40,8 @@ func ImageHandler(_ *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usa
 	}
 
 	usage := &model.Usage{
-		PromptTokens: int64(len(imageResponse.Data)),
-		TotalTokens:  int64(len(imageResponse.Data)),
+		InputTokens: int64(len(imageResponse.Data)),
+		TotalTokens: int64(len(imageResponse.Data)),
 	}
 
 	if imageResponse.Error != nil && imageResponse.Error.ErrorMsg != "" {
@@ -59,12 +60,12 @@ func ImageHandler(_ *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usa
 	return usage, nil
 }
 
-func ToOpenAIImageResponse(imageResponse *ImageResponse) *model.ImageResponse {
-	response := &model.ImageResponse{
+func ToOpenAIImageResponse(imageResponse *ImageResponse) *relaymodel.ImageResponse {
+	response := &relaymodel.ImageResponse{
 		Created: imageResponse.Created,
 	}
 	for _, data := range imageResponse.Data {
-		response.Data = append(response.Data, &model.ImageData{
+		response.Data = append(response.Data, &relaymodel.ImageData{
 			B64Json: data.B64Image,
 		})
 	}

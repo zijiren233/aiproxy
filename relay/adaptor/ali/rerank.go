@@ -9,9 +9,10 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/common"
 	"github.com/labring/aiproxy/middleware"
+	"github.com/labring/aiproxy/model"
 	"github.com/labring/aiproxy/relay/adaptor/openai"
 	"github.com/labring/aiproxy/relay/meta"
-	model "github.com/labring/aiproxy/relay/model"
+	relaymodel "github.com/labring/aiproxy/relay/model"
 )
 
 type RerankResponse struct {
@@ -20,7 +21,7 @@ type RerankResponse struct {
 	Output    RerankOutput `json:"output"`
 }
 type RerankOutput struct {
-	Results []*model.RerankResult `json:"results"`
+	Results []*relaymodel.RerankResult `json:"results"`
 }
 type RerankUsage struct {
 	TotalTokens int64 `json:"total_tokens"`
@@ -55,7 +56,7 @@ func ConvertRerankRequest(meta *meta.Meta, req *http.Request) (string, http.Head
 	return http.MethodPost, nil, bytes.NewReader(jsonData), nil
 }
 
-func RerankHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, *model.ErrorWithStatusCode) {
+func RerankHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, *relaymodel.ErrorWithStatusCode) {
 	if resp.StatusCode != http.StatusOK {
 		return nil, openai.ErrorHanlder(resp)
 	}
@@ -76,9 +77,9 @@ func RerankHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model
 
 	c.Writer.WriteHeader(resp.StatusCode)
 
-	rerankResp := model.RerankResponse{
-		Meta: model.RerankMeta{
-			Tokens: &model.RerankMetaTokens{
+	rerankResp := relaymodel.RerankResponse{
+		Meta: relaymodel.RerankMeta{
+			Tokens: &relaymodel.RerankMetaTokens{
 				InputTokens:  rerankResponse.Usage.TotalTokens,
 				OutputTokens: 0,
 			},
@@ -90,14 +91,13 @@ func RerankHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model
 	var usage *model.Usage
 	if rerankResponse.Usage == nil {
 		usage = &model.Usage{
-			PromptTokens:     meta.InputTokens,
-			CompletionTokens: 0,
-			TotalTokens:      meta.InputTokens,
+			InputTokens: meta.InputTokens,
+			TotalTokens: meta.InputTokens,
 		}
 	} else {
 		usage = &model.Usage{
-			PromptTokens: rerankResponse.Usage.TotalTokens,
-			TotalTokens:  rerankResponse.Usage.TotalTokens,
+			InputTokens: rerankResponse.Usage.TotalTokens,
+			TotalTokens: rerankResponse.Usage.TotalTokens,
 		}
 	}
 
