@@ -80,7 +80,7 @@ func ConvertRequest(meta *meta.Meta, req *http.Request) (string, http.Header, io
 	case mode.Embeddings, mode.Completions:
 		return ConvertEmbeddingsRequest(meta, req)
 	case mode.ChatCompletions:
-		return ConvertTextRequest(meta, req, meta.GetBool(DoNotPatchStreamOptionsIncludeUsageMetaKey))
+		return ConvertTextRequest(meta, req, false)
 	case mode.ImagesGenerations:
 		return ConvertImageRequest(meta, req)
 	case mode.AudioTranscription, mode.AudioTranslation:
@@ -119,8 +119,6 @@ func DoResponse(meta *meta.Meta, c *gin.Context, resp *http.Response) (usage *mo
 	}
 	return usage, err
 }
-
-const DoNotPatchStreamOptionsIncludeUsageMetaKey = "do_not_patch_stream_options_include_usage"
 
 func ConvertTextRequest(meta *meta.Meta, req *http.Request, doNotPatchStreamOptionsIncludeUsage bool) (string, http.Header, io.Reader, error) {
 	reqMap := make(map[string]any)
