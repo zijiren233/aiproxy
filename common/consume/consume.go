@@ -121,21 +121,25 @@ func CalculateAmount(
 
 	promptAmount := decimal.NewFromInt(inputTokens).
 		Mul(decimal.NewFromFloat(modelPrice.InputPrice)).
-		Div(decimal.NewFromInt(model.PriceUnit))
+		Div(decimal.NewFromInt(modelPrice.GetInputPriceUnit()))
 	completionAmount := decimal.NewFromInt(outputTokens).
 		Mul(decimal.NewFromFloat(modelPrice.OutputPrice)).
-		Div(decimal.NewFromInt(model.PriceUnit))
+		Div(decimal.NewFromInt(modelPrice.GetOutputPriceUnit()))
 	cachedAmount := decimal.NewFromInt(usage.CachedTokens).
 		Mul(decimal.NewFromFloat(modelPrice.CachedPrice)).
-		Div(decimal.NewFromInt(model.PriceUnit))
+		Div(decimal.NewFromInt(modelPrice.GetCachedPriceUnit()))
 	cacheCreationAmount := decimal.NewFromInt(usage.CacheCreationTokens).
 		Mul(decimal.NewFromFloat(modelPrice.CacheCreationPrice)).
-		Div(decimal.NewFromInt(model.PriceUnit))
+		Div(decimal.NewFromInt(modelPrice.GetCacheCreationPriceUnit()))
+	webSearchAmount := decimal.NewFromInt(usage.WebSearchCount).
+		Mul(decimal.NewFromFloat(modelPrice.WebSearchPrice)).
+		Div(decimal.NewFromInt(modelPrice.GetWebSearchPriceUnit()))
 
 	return promptAmount.
 		Add(completionAmount).
 		Add(cachedAmount).
 		Add(cacheCreationAmount).
+		Add(webSearchAmount).
 		InexactFloat64()
 }
 
