@@ -19,9 +19,10 @@ import (
 	"github.com/labring/aiproxy/common/image"
 	"github.com/labring/aiproxy/common/render"
 	"github.com/labring/aiproxy/middleware"
+	"github.com/labring/aiproxy/model"
 	"github.com/labring/aiproxy/relay/adaptor/openai"
 	"github.com/labring/aiproxy/relay/meta"
-	"github.com/labring/aiproxy/relay/model"
+	relaymodel "github.com/labring/aiproxy/relay/model"
 	"github.com/labring/aiproxy/relay/utils"
 	log "github.com/sirupsen/logrus"
 )
@@ -59,7 +60,7 @@ func buildSafetySettings() []ChatSafetySettings {
 	}
 }
 
-func buildGenerationConfig(meta *meta.Meta, textRequest *model.GeneralOpenAIRequest) *ChatGenerationConfig {
+func buildGenerationConfig(meta *meta.Meta, textRequest *relaymodel.GeneralOpenAIRequest) *ChatGenerationConfig {
 	config := ChatGenerationConfig{
 		Temperature:     textRequest.Temperature,
 		TopP:            textRequest.TopP,
@@ -86,9 +87,9 @@ func buildGenerationConfig(meta *meta.Meta, textRequest *model.GeneralOpenAIRequ
 	return &config
 }
 
-func buildTools(textRequest *model.GeneralOpenAIRequest) []ChatTools {
+func buildTools(textRequest *relaymodel.GeneralOpenAIRequest) []ChatTools {
 	if textRequest.Tools != nil {
-		functions := make([]model.Function, 0, len(textRequest.Tools))
+		functions := make([]relaymodel.Function, 0, len(textRequest.Tools))
 		for _, tool := range textRequest.Tools {
 			if parameters, ok := tool.Function.Parameters.(map[string]any); ok {
 				if properties, ok := parameters["properties"].(map[string]any); ok {
@@ -107,7 +108,7 @@ func buildTools(textRequest *model.GeneralOpenAIRequest) []ChatTools {
 	return nil
 }
 
-func buildToolConfig(textRequest *model.GeneralOpenAIRequest) *ToolConfig {
+func buildToolConfig(textRequest *relaymodel.GeneralOpenAIRequest) *ToolConfig {
 	if textRequest.ToolChoice == nil {
 		return nil
 	}
@@ -132,12 +133,12 @@ func buildToolConfig(textRequest *model.GeneralOpenAIRequest) *ToolConfig {
 	return &toolConfig
 }
 
-func buildMessageParts(ctx context.Context, part model.MessageContent) ([]Part, error) {
-	if part.Type == model.ContentTypeText {
+func buildMessageParts(ctx context.Context, part relaymodel.MessageContent) ([]Part, error) {
+	if part.Type == relaymodel.ContentTypeText {
 		return []Part{{Text: part.Text}}, nil
 	}
 
-	if part.Type == model.ContentTypeImageURL {
+	if part.Type == relaymodel.ContentTypeImageURL {
 		mimeType, data, err := image.GetImageFromURL(ctx, part.ImageURL.URL)
 		if err != nil {
 			return nil, err
@@ -153,7 +154,7 @@ func buildMessageParts(ctx context.Context, part model.MessageContent) ([]Part, 
 	return nil, nil
 }
 
-func buildContents(ctx context.Context, textRequest *model.GeneralOpenAIRequest) (*ChatContent, []*ChatContent, error) {
+func buildContents(ctx context.Context, textRequest *relaymodel.GeneralOpenAIRequest) (*ChatContent, []*ChatContent, error) {
 	contents := make([]*ChatContent, 0, len(textRequest.Messages))
 	imageNum := 0
 
@@ -212,7 +213,7 @@ func buildContents(ctx context.Context, textRequest *model.GeneralOpenAIRequest)
 		default:
 			openaiContent := message.ParseContent()
 			for _, part := range openaiContent {
-				if part.Type == model.ContentTypeImageURL {
+				if part.Type == relaymodel.ContentTypeImageURL {
 					imageNum++
 					if imageNum > VisionMaxImageNum {
 						continue
@@ -326,7 +327,7 @@ type ChatPromptFeedback struct {
 	SafetyRatings []ChatSafetyRating `json:"safetyRatings"`
 }
 
-func getToolCall(item *Part) (*model.Tool, error) {
+func getToolCall(item *Part) (*relaymodel.Tool, error) {
 	if item.FunctionCall == nil {
 		return nil, nil
 	}
@@ -334,10 +335,10 @@ func getToolCall(item *Part) (*model.Tool, error) {
 	if err != nil {
 		return nil, err
 	}
-	toolCall := model.Tool{
+	toolCall := relaymodel.Tool{
 		ID:   openai.CallID(),
 		Type: "function",
-		Function: model.Function{
+		Function: relaymodel.Function{
 			Arguments: conv.BytesToString(argsBytes),
 			Name:      item.FunctionCall.Name,
 		},
@@ -345,32 +346,32 @@ func getToolCall(item *Part) (*model.Tool, error) {
 	return &toolCall, nil
 }
 
-func responseChat2OpenAI(meta *meta.Meta, response *ChatResponse) *model.TextResponse {
-	fullTextResponse := model.TextResponse{
+func responseChat2OpenAI(meta *meta.Meta, response *ChatResponse) *relaymodel.TextResponse {
+	fullTextResponse := relaymodel.TextResponse{
 		ID:      openai.ChatCompletionID(),
 		Model:   meta.OriginModel,
-		Object:  model.ChatCompletion,
+		Object:  relaymodel.ChatCompletion,
 		Created: time.Now().Unix(),
-		Choices: make([]*model.TextResponseChoice, 0, len(response.Candidates)),
+		Choices: make([]*relaymodel.TextResponseChoice, 0, len(response.Candidates)),
 	}
 	if response.UsageMetadata != nil {
-		fullTextResponse.Usage = model.Usage{
+		fullTextResponse.Usage = relaymodel.Usage{
 			PromptTokens:     response.UsageMetadata.PromptTokenCount,
 			CompletionTokens: response.UsageMetadata.CandidatesTokenCount,
 			TotalTokens:      response.UsageMetadata.TotalTokenCount,
 		}
 	}
 	for i, candidate := range response.Candidates {
-		choice := model.TextResponseChoice{
+		choice := relaymodel.TextResponseChoice{
 			Index: i,
-			Message: model.Message{
+			Message: relaymodel.Message{
 				Role:    "assistant",
 				Content: "",
 			},
 			FinishReason: candidate.FinishReason,
 		}
 		if len(candidate.Content.Parts) > 0 {
-			var contents []model.MessageContent
+			var contents []relaymodel.MessageContent
 			var builder strings.Builder
 			hasImage := false
 			for _, part := range candidate.Content.Parts {
@@ -391,8 +392,8 @@ func responseChat2OpenAI(meta *meta.Meta, response *ChatResponse) *model.TextRes
 				}
 				if part.Text != "" {
 					if hasImage {
-						contents = append(contents, model.MessageContent{
-							Type: model.ContentTypeText,
+						contents = append(contents, relaymodel.MessageContent{
+							Type: relaymodel.ContentTypeText,
 							Text: part.Text,
 						})
 					} else {
@@ -400,9 +401,9 @@ func responseChat2OpenAI(meta *meta.Meta, response *ChatResponse) *model.TextRes
 					}
 				}
 				if part.InlineData != nil {
-					contents = append(contents, model.MessageContent{
-						Type: model.ContentTypeImageURL,
-						ImageURL: &model.ImageURL{
+					contents = append(contents, relaymodel.MessageContent{
+						Type: relaymodel.ContentTypeImageURL,
+						ImageURL: &relaymodel.ImageURL{
 							URL: fmt.Sprintf("data:%s;base64,%s", part.InlineData.MimeType, part.InlineData.Data),
 						},
 					})
@@ -419,31 +420,31 @@ func responseChat2OpenAI(meta *meta.Meta, response *ChatResponse) *model.TextRes
 	return &fullTextResponse
 }
 
-func streamResponseChat2OpenAI(meta *meta.Meta, geminiResponse *ChatResponse) *model.ChatCompletionsStreamResponse {
-	response := &model.ChatCompletionsStreamResponse{
+func streamResponseChat2OpenAI(meta *meta.Meta, geminiResponse *ChatResponse) *relaymodel.ChatCompletionsStreamResponse {
+	response := &relaymodel.ChatCompletionsStreamResponse{
 		ID:      openai.ChatCompletionID(),
 		Created: time.Now().Unix(),
 		Model:   meta.OriginModel,
-		Object:  model.ChatCompletionChunk,
-		Choices: make([]*model.ChatCompletionsStreamResponseChoice, 0, len(geminiResponse.Candidates)),
+		Object:  relaymodel.ChatCompletionChunk,
+		Choices: make([]*relaymodel.ChatCompletionsStreamResponseChoice, 0, len(geminiResponse.Candidates)),
 	}
 	if geminiResponse.UsageMetadata != nil {
-		response.Usage = &model.Usage{
+		response.Usage = &relaymodel.Usage{
 			PromptTokens:     geminiResponse.UsageMetadata.PromptTokenCount,
 			CompletionTokens: geminiResponse.UsageMetadata.CandidatesTokenCount,
 			TotalTokens:      geminiResponse.UsageMetadata.TotalTokenCount,
 		}
 	}
 	for i, candidate := range geminiResponse.Candidates {
-		choice := model.ChatCompletionsStreamResponseChoice{
+		choice := relaymodel.ChatCompletionsStreamResponseChoice{
 			Index: i,
-			Delta: model.Message{
+			Delta: relaymodel.Message{
 				Content: "",
 			},
 			FinishReason: &candidate.FinishReason,
 		}
 		if len(candidate.Content.Parts) > 0 {
-			var contents []model.MessageContent
+			var contents []relaymodel.MessageContent
 			var builder strings.Builder
 			hasImage := false
 			for _, part := range candidate.Content.Parts {
@@ -464,8 +465,8 @@ func streamResponseChat2OpenAI(meta *meta.Meta, geminiResponse *ChatResponse) *m
 				}
 				if part.Text != "" {
 					if hasImage {
-						contents = append(contents, model.MessageContent{
-							Type: model.ContentTypeText,
+						contents = append(contents, relaymodel.MessageContent{
+							Type: relaymodel.ContentTypeText,
 							Text: part.Text,
 						})
 					} else {
@@ -473,9 +474,9 @@ func streamResponseChat2OpenAI(meta *meta.Meta, geminiResponse *ChatResponse) *m
 					}
 				}
 				if part.InlineData != nil {
-					contents = append(contents, model.MessageContent{
-						Type: model.ContentTypeImageURL,
-						ImageURL: &model.ImageURL{
+					contents = append(contents, relaymodel.MessageContent{
+						Type: relaymodel.ContentTypeImageURL,
+						ImageURL: &relaymodel.ImageURL{
 							URL: fmt.Sprintf("data:%s;base64,%s", part.InlineData.MimeType, part.InlineData.Data),
 						},
 					})
@@ -513,7 +514,7 @@ func PutImageScannerBuffer(buf *[]byte) {
 	scannerBufferPool.Put(buf)
 }
 
-func StreamHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, *model.ErrorWithStatusCode) {
+func StreamHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, *relaymodel.ErrorWithStatusCode) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
@@ -537,7 +538,7 @@ func StreamHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model
 
 	common.SetEventStreamHeaders(c)
 
-	usage := model.Usage{
+	usage := relaymodel.Usage{
 		PromptTokens: meta.InputTokens,
 	}
 
@@ -574,10 +575,10 @@ func StreamHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model
 
 	render.Done(c)
 
-	return &usage, nil
+	return usage.ToModelUsage(), nil
 }
 
-func Handler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, *model.ErrorWithStatusCode) {
+func Handler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, *relaymodel.ErrorWithStatusCode) {
 	if resp.StatusCode != http.StatusOK {
 		return nil, openai.ErrorHanlder(resp)
 	}
@@ -597,5 +598,5 @@ func Handler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage
 	c.Writer.Header().Set("Content-Type", "application/json")
 	c.Writer.WriteHeader(resp.StatusCode)
 	_, _ = c.Writer.Write(jsonResponse)
-	return &fullTextResponse.Usage, nil
+	return fullTextResponse.Usage.ToModelUsage(), nil
 }

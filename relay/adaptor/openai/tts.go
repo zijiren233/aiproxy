@@ -10,8 +10,9 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/common"
 	"github.com/labring/aiproxy/middleware"
+	"github.com/labring/aiproxy/model"
 	"github.com/labring/aiproxy/relay/meta"
-	model "github.com/labring/aiproxy/relay/model"
+	relaymodel "github.com/labring/aiproxy/relay/model"
 )
 
 func ConvertTTSRequest(meta *meta.Meta, req *http.Request, defaultVoice string) (string, http.Header, io.Reader, error) {
@@ -54,7 +55,7 @@ func ConvertTTSRequest(meta *meta.Meta, req *http.Request, defaultVoice string) 
 	return http.MethodPost, nil, bytes.NewReader(jsonData), nil
 }
 
-func TTSHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, *model.ErrorWithStatusCode) {
+func TTSHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, *relaymodel.ErrorWithStatusCode) {
 	if resp.StatusCode != http.StatusOK {
 		return nil, ErrorHanlder(resp)
 	}
@@ -72,8 +73,7 @@ func TTSHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Us
 		log.Warnf("write response body failed: %v", err)
 	}
 	return &model.Usage{
-		PromptTokens:     meta.InputTokens,
-		CompletionTokens: 0,
-		TotalTokens:      meta.InputTokens,
+		InputTokens: meta.InputTokens,
+		TotalTokens: meta.InputTokens,
 	}, nil
 }

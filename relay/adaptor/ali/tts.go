@@ -12,9 +12,10 @@ import (
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	"github.com/labring/aiproxy/middleware"
+	"github.com/labring/aiproxy/model"
 	"github.com/labring/aiproxy/relay/adaptor/openai"
 	"github.com/labring/aiproxy/relay/meta"
-	model "github.com/labring/aiproxy/relay/model"
+	relaymodel "github.com/labring/aiproxy/relay/model"
 	"github.com/labring/aiproxy/relay/utils"
 )
 
@@ -190,7 +191,7 @@ func TTSDoRequest(meta *meta.Meta, req *http.Request) (*http.Response, error) {
 	}, nil
 }
 
-func TTSDoResponse(meta *meta.Meta, c *gin.Context, _ *http.Response) (usage *model.Usage, err *model.ErrorWithStatusCode) {
+func TTSDoResponse(meta *meta.Meta, c *gin.Context, _ *http.Response) (usage *model.Usage, err *relaymodel.ErrorWithStatusCode) {
 	log := middleware.GetLogger(c)
 
 	conn := meta.MustGet("ws_conn").(*websocket.Conn)
@@ -217,7 +218,7 @@ func TTSDoResponse(meta *meta.Meta, c *gin.Context, _ *http.Response) (usage *mo
 			case "result-generated":
 				continue
 			case "task-finished":
-				usage.PromptTokens = msg.Payload.Usage.Characters
+				usage.InputTokens = msg.Payload.Usage.Characters
 				usage.TotalTokens = msg.Payload.Usage.Characters
 				return usage, nil
 			case "task-failed":

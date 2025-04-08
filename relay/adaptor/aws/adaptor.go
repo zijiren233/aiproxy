@@ -30,7 +30,7 @@ func (a *Adaptor) ConvertRequest(meta *meta.Meta, req *http.Request) (string, ht
 	return adaptor.ConvertRequest(meta, req)
 }
 
-func (a *Adaptor) DoResponse(meta *meta.Meta, c *gin.Context, _ *http.Response) (usage *relaymodel.Usage, err *relaymodel.ErrorWithStatusCode) {
+func (a *Adaptor) DoResponse(meta *meta.Meta, c *gin.Context, _ *http.Response) (usage *model.Usage, err *relaymodel.ErrorWithStatusCode) {
 	adaptor, ok := meta.Get("awsAdapter")
 	if !ok {
 		return nil, &relaymodel.ErrorWithStatusCode{

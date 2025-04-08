@@ -12,9 +12,10 @@ import (
 	"github.com/labring/aiproxy/common/conv"
 	"github.com/labring/aiproxy/common/render"
 	"github.com/labring/aiproxy/middleware"
+	"github.com/labring/aiproxy/model"
 	"github.com/labring/aiproxy/relay/adaptor/openai"
 	"github.com/labring/aiproxy/relay/meta"
-	"github.com/labring/aiproxy/relay/model"
+	relaymodel "github.com/labring/aiproxy/relay/model"
 )
 
 var WebSearchConnector = Connector{ID: "web-search"}
@@ -25,13 +26,13 @@ func stopReasonCohere2OpenAI(reason *string) string {
 	}
 	switch *reason {
 	case "COMPLETE":
-		return model.StopFinishReason
+		return relaymodel.StopFinishReason
 	default:
 		return *reason
 	}
 }
 
-func ConvertRequest(textRequest *model.GeneralOpenAIRequest) *Request {
+func ConvertRequest(textRequest *relaymodel.GeneralOpenAIRequest) *Request {
 	cohereRequest := Request{
 		Model:            textRequest.Model,
 		Message:          "",
@@ -73,7 +74,7 @@ func ConvertRequest(textRequest *model.GeneralOpenAIRequest) *Request {
 	return &cohereRequest
 }
 
-func StreamResponse2OpenAI(meta *meta.Meta, cohereResponse *StreamResponse) *model.ChatCompletionsStreamResponse {
+func StreamResponse2OpenAI(meta *meta.Meta, cohereResponse *StreamResponse) *relaymodel.ChatCompletionsStreamResponse {
 	var response *Response
 	var responseText string
 	var finishReason string
@@ -98,21 +99,21 @@ func StreamResponse2OpenAI(meta *meta.Meta, cohereResponse *StreamResponse) *mod
 		return nil
 	}
 
-	var choice model.ChatCompletionsStreamResponseChoice
+	var choice relaymodel.ChatCompletionsStreamResponseChoice
 	choice.Delta.Content = responseText
 	choice.Delta.Role = "assistant"
 	if finishReason != "" {
 		choice.FinishReason = &finishReason
 	}
-	openaiResponse := model.ChatCompletionsStreamResponse{
+	openaiResponse := relaymodel.ChatCompletionsStreamResponse{
 		ID:      "chatcmpl-" + cohereResponse.GenerationID,
 		Model:   meta.OriginModel,
 		Created: time.Now().Unix(),
-		Object:  model.ChatCompletionChunk,
-		Choices: []*model.ChatCompletionsStreamResponseChoice{&choice},
+		Object:  relaymodel.ChatCompletionChunk,
+		Choices: []*relaymodel.ChatCompletionsStreamResponseChoice{&choice},
 	}
 	if response != nil {
-		openaiResponse.Usage = &model.Usage{
+		openaiResponse.Usage = &relaymodel.Usage{
 			PromptTokens:     response.Meta.Tokens.InputTokens,
 			CompletionTokens: response.Meta.Tokens.OutputTokens,
 			TotalTokens:      response.Meta.Tokens.InputTokens + response.Meta.Tokens.OutputTokens,
@@ -121,23 +122,23 @@ func StreamResponse2OpenAI(meta *meta.Meta, cohereResponse *StreamResponse) *mod
 	return &openaiResponse
 }
 
-func Response2OpenAI(meta *meta.Meta, cohereResponse *Response) *model.TextResponse {
-	choice := model.TextResponseChoice{
+func Response2OpenAI(meta *meta.Meta, cohereResponse *Response) *relaymodel.TextResponse {
+	choice := relaymodel.TextResponseChoice{
 		Index: 0,
-		Message: model.Message{
+		Message: relaymodel.Message{
 			Role:    "assistant",
 			Content: cohereResponse.Text,
 			Name:    nil,
 		},
 		FinishReason: stopReasonCohere2OpenAI(cohereResponse.FinishReason),
 	}
-	fullTextResponse := model.TextResponse{
+	fullTextResponse := relaymodel.TextResponse{
 		ID:      openai.ChatCompletionID(),
 		Model:   meta.OriginModel,
-		Object:  model.ChatCompletion,
+		Object:  relaymodel.ChatCompletion,
 		Created: time.Now().Unix(),
-		Choices: []*model.TextResponseChoice{&choice},
-		Usage: model.Usage{
+		Choices: []*relaymodel.TextResponseChoice{&choice},
+		Usage: relaymodel.Usage{
 			PromptTokens:     cohereResponse.Meta.Tokens.InputTokens,
 			CompletionTokens: cohereResponse.Meta.Tokens.OutputTokens,
 			TotalTokens:      cohereResponse.Meta.Tokens.InputTokens + cohereResponse.Meta.Tokens.OutputTokens,
@@ -146,7 +147,7 @@ func Response2OpenAI(meta *meta.Meta, cohereResponse *Response) *model.TextRespo
 	return &fullTextResponse
 }
 
-func StreamHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, *model.ErrorWithStatusCode) {
+func StreamHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, *relaymodel.ErrorWithStatusCode) {
 	if resp.StatusCode != http.StatusOK {
 		return nil, openai.ErrorHanlder(resp)
 	}
@@ -161,7 +162,7 @@ func StreamHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model
 	scanner.Buffer(*buf, cap(*buf))
 
 	common.SetEventStreamHeaders(c)
-	var usage model.Usage
+	var usage relaymodel.Usage
 
 	for scanner.Scan() {
 		data := scanner.Text()
@@ -188,10 +189,10 @@ func StreamHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model
 
 	render.Done(c)
 
-	return &usage, nil
+	return usage.ToModelUsage(), nil
 }
 
-func Handler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, *model.ErrorWithStatusCode) {
+func Handler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, *relaymodel.ErrorWithStatusCode) {
 	if resp.StatusCode != http.StatusOK {
 		return nil, openai.ErrorHanlder(resp)
 	}
@@ -214,5 +215,5 @@ func Handler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage
 	c.Writer.Header().Set("Content-Type", "application/json")
 	c.Writer.WriteHeader(resp.StatusCode)
 	_, _ = c.Writer.Write(jsonResponse)
-	return &fullTextResponse.Usage, nil
+	return fullTextResponse.Usage.ToModelUsage(), nil
 }

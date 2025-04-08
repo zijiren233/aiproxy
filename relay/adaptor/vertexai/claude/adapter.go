@@ -74,7 +74,7 @@ func (a *Adaptor) ConvertRequest(meta *meta.Meta, request *http.Request) (string
 	return http.MethodPost, nil, bytes.NewReader(data), nil
 }
 
-func (a *Adaptor) DoResponse(meta *meta.Meta, c *gin.Context, resp *http.Response) (usage *relaymodel.Usage, err *relaymodel.ErrorWithStatusCode) {
+func (a *Adaptor) DoResponse(meta *meta.Meta, c *gin.Context, resp *http.Response) (usage *model.Usage, err *relaymodel.ErrorWithStatusCode) {
 	if utils.IsStreamResponse(resp) {
 		usage, err = anthropic.StreamHandler(meta, c, resp)
 	} else {

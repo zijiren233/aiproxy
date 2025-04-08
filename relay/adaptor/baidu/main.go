@@ -12,9 +12,10 @@ import (
 	"github.com/labring/aiproxy/common/conv"
 	"github.com/labring/aiproxy/common/render"
 	"github.com/labring/aiproxy/middleware"
+	"github.com/labring/aiproxy/model"
 	"github.com/labring/aiproxy/relay/adaptor/openai"
 	"github.com/labring/aiproxy/relay/meta"
-	"github.com/labring/aiproxy/relay/model"
+	relaymodel "github.com/labring/aiproxy/relay/model"
 	"github.com/labring/aiproxy/relay/utils"
 )
 
@@ -26,16 +27,16 @@ type Message struct {
 }
 
 type ChatRequest struct {
-	Temperature     *float64         `json:"temperature,omitempty"`
-	TopP            *float64         `json:"top_p,omitempty"`
-	PenaltyScore    *float64         `json:"penalty_score,omitempty"`
-	System          string           `json:"system,omitempty"`
-	UserID          string           `json:"user_id,omitempty"`
-	Messages        []*model.Message `json:"messages"`
-	MaxOutputTokens int              `json:"max_output_tokens,omitempty"`
-	Stream          bool             `json:"stream,omitempty"`
-	DisableSearch   bool             `json:"disable_search,omitempty"`
-	EnableCitation  bool             `json:"enable_citation,omitempty"`
+	Temperature     *float64              `json:"temperature,omitempty"`
+	TopP            *float64              `json:"top_p,omitempty"`
+	PenaltyScore    *float64              `json:"penalty_score,omitempty"`
+	System          string                `json:"system,omitempty"`
+	UserID          string                `json:"user_id,omitempty"`
+	Messages        []*relaymodel.Message `json:"messages"`
+	MaxOutputTokens int                   `json:"max_output_tokens,omitempty"`
+	Stream          bool                  `json:"stream,omitempty"`
+	DisableSearch   bool                  `json:"disable_search,omitempty"`
+	EnableCitation  bool                  `json:"enable_citation,omitempty"`
 }
 
 func ConvertRequest(meta *meta.Meta, req *http.Request) (string, http.Header, io.Reader, error) {
@@ -83,21 +84,21 @@ func ConvertRequest(meta *meta.Meta, req *http.Request) (string, http.Header, io
 	return http.MethodPost, nil, bytes.NewReader(data), nil
 }
 
-func response2OpenAI(meta *meta.Meta, response *ChatResponse) *model.TextResponse {
-	choice := model.TextResponseChoice{
+func response2OpenAI(meta *meta.Meta, response *ChatResponse) *relaymodel.TextResponse {
+	choice := relaymodel.TextResponseChoice{
 		Index: 0,
-		Message: model.Message{
+		Message: relaymodel.Message{
 			Role:    "assistant",
 			Content: response.Result,
 		},
-		FinishReason: model.StopFinishReason,
+		FinishReason: relaymodel.StopFinishReason,
 	}
-	fullTextResponse := model.TextResponse{
+	fullTextResponse := relaymodel.TextResponse{
 		ID:      response.ID,
-		Object:  model.ChatCompletion,
+		Object:  relaymodel.ChatCompletion,
 		Created: response.Created,
 		Model:   meta.OriginModel,
-		Choices: []*model.TextResponseChoice{&choice},
+		Choices: []*relaymodel.TextResponseChoice{&choice},
 	}
 	if response.Usage != nil {
 		fullTextResponse.Usage = *response.Usage
@@ -105,30 +106,30 @@ func response2OpenAI(meta *meta.Meta, response *ChatResponse) *model.TextRespons
 	return &fullTextResponse
 }
 
-func streamResponse2OpenAI(meta *meta.Meta, baiduResponse *ChatStreamResponse) *model.ChatCompletionsStreamResponse {
-	var choice model.ChatCompletionsStreamResponseChoice
+func streamResponse2OpenAI(meta *meta.Meta, baiduResponse *ChatStreamResponse) *relaymodel.ChatCompletionsStreamResponse {
+	var choice relaymodel.ChatCompletionsStreamResponseChoice
 	choice.Delta.Content = baiduResponse.Result
 	if baiduResponse.IsEnd {
-		finishReason := model.StopFinishReason
+		finishReason := relaymodel.StopFinishReason
 		choice.FinishReason = &finishReason
 	}
-	response := model.ChatCompletionsStreamResponse{
+	response := relaymodel.ChatCompletionsStreamResponse{
 		ID:      baiduResponse.ID,
-		Object:  model.ChatCompletionChunk,
+		Object:  relaymodel.ChatCompletionChunk,
 		Created: baiduResponse.Created,
 		Model:   meta.OriginModel,
-		Choices: []*model.ChatCompletionsStreamResponseChoice{&choice},
+		Choices: []*relaymodel.ChatCompletionsStreamResponseChoice{&choice},
 		Usage:   baiduResponse.Usage,
 	}
 	return &response
 }
 
-func StreamHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.ErrorWithStatusCode, *model.Usage) {
+func StreamHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, *relaymodel.ErrorWithStatusCode) {
 	defer resp.Body.Close()
 
 	log := middleware.GetLogger(c)
 
-	var usage model.Usage
+	var usage relaymodel.Usage
 	scanner := bufio.NewScanner(resp.Body)
 	buf := openai.GetScannerBuffer()
 	defer openai.PutScannerBuffer(buf)
@@ -166,10 +167,10 @@ func StreamHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model
 
 	render.Done(c)
 
-	return nil, &usage
+	return usage.ToModelUsage(), nil
 }
 
-func Handler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, *model.ErrorWithStatusCode) {
+func Handler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, *relaymodel.ErrorWithStatusCode) {
 	defer resp.Body.Close()
 
 	var baiduResponse ChatResponse
@@ -188,5 +189,5 @@ func Handler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage
 	c.Writer.Header().Set("Content-Type", "application/json")
 	c.Writer.WriteHeader(resp.StatusCode)
 	_, _ = c.Writer.Write(jsonResponse)
-	return &fullTextResponse.Usage, nil
+	return fullTextResponse.Usage.ToModelUsage(), nil
 }

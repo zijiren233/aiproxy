@@ -18,7 +18,7 @@ type Adaptor interface {
 	SetupRequestHeader(meta *meta.Meta, c *gin.Context, req *http.Request) error
 	ConvertRequest(meta *meta.Meta, req *http.Request) (method string, header http.Header, body io.Reader, err error)
 	DoRequest(meta *meta.Meta, c *gin.Context, req *http.Request) (*http.Response, error)
-	DoResponse(meta *meta.Meta, c *gin.Context, resp *http.Response) (*relaymodel.Usage, *relaymodel.ErrorWithStatusCode)
+	DoResponse(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, *relaymodel.ErrorWithStatusCode)
 	GetModelList() []*model.ModelConfig
 }
 

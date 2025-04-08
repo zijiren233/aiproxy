@@ -20,7 +20,6 @@ import (
 	"github.com/labring/aiproxy/model"
 	"github.com/labring/aiproxy/relay/meta"
 	"github.com/labring/aiproxy/relay/mode"
-	relaymodel "github.com/labring/aiproxy/relay/model"
 )
 
 func calculateGroupConsumeLevelRatio(usedAmount float64) float64 {
@@ -359,7 +358,7 @@ func distribute(c *gin.Context, mode mode.Mode) {
 			http.StatusTooManyRequests,
 			time.Time{},
 			NewMetaByContext(c, nil, mode),
-			relaymodel.Usage{},
+			model.Usage{},
 			model.Price{},
 			errMsg,
 			c.ClientIP(),

@@ -8,11 +8,12 @@ import (
 	"github.com/bytedance/sonic/ast"
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/middleware"
+	"github.com/labring/aiproxy/model"
 	"github.com/labring/aiproxy/relay/meta"
-	"github.com/labring/aiproxy/relay/model"
+	relaymodel "github.com/labring/aiproxy/relay/model"
 )
 
-func ModerationsHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, *model.ErrorWithStatusCode) {
+func ModerationsHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, *relaymodel.ErrorWithStatusCode) {
 	if resp.StatusCode != http.StatusOK {
 		return nil, ErrorHanlder(resp)
 	}
@@ -41,8 +42,8 @@ func ModerationsHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*
 	}
 
 	usage := &model.Usage{
-		PromptTokens: meta.InputTokens,
-		TotalTokens:  meta.InputTokens,
+		InputTokens: meta.InputTokens,
+		TotalTokens: meta.InputTokens,
 	}
 
 	_, err = c.Writer.Write(newData)

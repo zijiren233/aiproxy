@@ -39,10 +39,55 @@ func (d *RequestDetail) BeforeSave(_ *gorm.DB) (err error) {
 }
 
 type Price struct {
-	InputPrice         float64 `json:"input_price,omitempty"`
-	OutputPrice        float64 `json:"output_price,omitempty"`
-	CachedPrice        float64 `json:"cached_price,omitempty"`
-	CacheCreationPrice float64 `json:"cache_creation_price,omitempty"`
+	InputPrice     float64 `json:"input_price,omitempty"`
+	InputPriceUnit int64   `json:"input_price_unit,omitempty"`
+
+	OutputPrice     float64 `json:"output_price,omitempty"`
+	OutputPriceUnit int64   `json:"output_price_unit,omitempty"`
+
+	CachedPrice     float64 `json:"cached_price,omitempty"`
+	CachedPriceUnit int64   `json:"cached_price_unit,omitempty"`
+
+	CacheCreationPrice     float64 `json:"cache_creation_price,omitempty"`
+	CacheCreationPriceUnit int64   `json:"cache_creation_price_unit,omitempty"`
+
+	WebSearchPrice     float64 `json:"web_search_price,omitempty"`
+	WebSearchPriceUnit int64   `json:"web_search_price_unit,omitempty"`
+}
+
+func (p *Price) GetInputPriceUnit() int64 {
+	if p.InputPriceUnit > 0 {
+		return p.InputPriceUnit
+	}
+	return PriceUnit
+}
+
+func (p *Price) GetOutputPriceUnit() int64 {
+	if p.OutputPriceUnit > 0 {
+		return p.OutputPriceUnit
+	}
+	return PriceUnit
+}
+
+func (p *Price) GetCachedPriceUnit() int64 {
+	if p.CachedPriceUnit > 0 {
+		return p.CachedPriceUnit
+	}
+	return PriceUnit
+}
+
+func (p *Price) GetCacheCreationPriceUnit() int64 {
+	if p.CacheCreationPriceUnit > 0 {
+		return p.CacheCreationPriceUnit
+	}
+	return PriceUnit
+}
+
+func (p *Price) GetWebSearchPriceUnit() int64 {
+	if p.WebSearchPriceUnit > 0 {
+		return p.WebSearchPriceUnit
+	}
+	return PriceUnit
 }
 
 type Usage struct {
@@ -51,6 +96,7 @@ type Usage struct {
 	CachedTokens        int64 `json:"cached_tokens,omitempty"`
 	CacheCreationTokens int64 `json:"cache_creation_tokens,omitempty"`
 	TotalTokens         int64 `json:"total_tokens,omitempty"`
+	WebSearchCount      int64 `json:"web_search_count,omitempty"`
 }
 
 func (u *Usage) Add(other *Usage) {
@@ -62,6 +108,7 @@ func (u *Usage) Add(other *Usage) {
 	u.CachedTokens += other.CachedTokens
 	u.CacheCreationTokens += other.CacheCreationTokens
 	u.TotalTokens += other.TotalTokens
+	u.WebSearchCount += other.WebSearchCount
 }
 
 type Log struct {

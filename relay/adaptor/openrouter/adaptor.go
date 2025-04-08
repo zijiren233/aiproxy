@@ -88,18 +88,16 @@ func handlerPreHandler(_ *meta.Meta, node *ast.Node) error {
 	return nil
 }
 
-func (a *Adaptor) DoResponse(meta *meta.Meta, c *gin.Context, resp *http.Response) (usage *relaymodel.Usage, err *relaymodel.ErrorWithStatusCode) {
+func (a *Adaptor) DoResponse(meta *meta.Meta, c *gin.Context, resp *http.Response) (usage *model.Usage, err *relaymodel.ErrorWithStatusCode) {
 	switch meta.Mode {
 	case mode.ChatCompletions:
 		if utils.IsStreamResponse(resp) {
-			usage, err = openai.StreamHandler(meta, c, resp, streamPreHandler)
-		} else {
-			usage, err = openai.Handler(meta, c, resp, handlerPreHandler)
+			return openai.StreamHandler(meta, c, resp, streamPreHandler)
 		}
+		return openai.Handler(meta, c, resp, handlerPreHandler)
 	default:
 		return openai.DoResponse(meta, c, resp)
 	}
-	return usage, err
 }
 
 func (a *Adaptor) GetModelList() []*model.ModelConfig {

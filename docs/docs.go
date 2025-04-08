@@ -6911,6 +6911,9 @@ const docTemplate = `{
                 },
                 "total_tokens": {
                     "type": "integer"
+                },
+                "web_search_count": {
+                    "type": "integer"
                 }
             }
         },
@@ -6927,6 +6930,9 @@ const docTemplate = `{
                     "$ref": "#/definitions/model.PromptTokensDetails"
                 },
                 "total_tokens": {
+                    "type": "integer"
+                },
+                "web_search_count": {
                     "type": "integer"
                 }
             }
@@ -7914,14 +7920,32 @@ const docTemplate = `{
                 "cache_creation_price": {
                     "type": "number"
                 },
+                "cache_creation_price_unit": {
+                    "type": "integer"
+                },
                 "cached_price": {
                     "type": "number"
+                },
+                "cached_price_unit": {
+                    "type": "integer"
                 },
                 "input_price": {
                     "type": "number"
                 },
+                "input_price_unit": {
+                    "type": "integer"
+                },
                 "output_price": {
                     "type": "number"
+                },
+                "output_price_unit": {
+                    "type": "integer"
+                },
+                "web_search_price": {
+                    "type": "number"
+                },
+                "web_search_price_unit": {
+                    "type": "integer"
                 }
             }
         },

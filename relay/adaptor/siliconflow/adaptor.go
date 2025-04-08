@@ -33,17 +33,17 @@ func (a *Adaptor) GetChannelName() string {
 }
 
 //nolint:gocritic
-func (a *Adaptor) DoResponse(meta *meta.Meta, c *gin.Context, resp *http.Response) (*relaymodel.Usage, *relaymodel.ErrorWithStatusCode) {
-	usage, err := a.Adaptor.DoResponse(meta, c, resp)
+func (a *Adaptor) DoResponse(meta *meta.Meta, c *gin.Context, resp *http.Response) (usage *model.Usage, err *relaymodel.ErrorWithStatusCode) {
+	usage, err = a.Adaptor.DoResponse(meta, c, resp)
 	if err != nil {
 		return nil, err
 	}
 	switch meta.Mode {
 	case mode.AudioSpeech:
 		size := c.Writer.Size()
-		usage = &relaymodel.Usage{
-			CompletionTokens: int64(size),
-			TotalTokens:      int64(size),
+		usage = &model.Usage{
+			OutputTokens: int64(size),
+			TotalTokens:  int64(size),
 		}
 	}
 	return usage, nil

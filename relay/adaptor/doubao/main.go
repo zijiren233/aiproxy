@@ -9,12 +9,15 @@ import (
 	"strings"
 
 	"github.com/bytedance/sonic"
+	"github.com/bytedance/sonic/ast"
+	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/model"
 	"github.com/labring/aiproxy/relay/adaptor"
 	"github.com/labring/aiproxy/relay/adaptor/openai"
 	"github.com/labring/aiproxy/relay/meta"
 	"github.com/labring/aiproxy/relay/mode"
 	relaymodel "github.com/labring/aiproxy/relay/model"
+	"github.com/labring/aiproxy/relay/utils"
 )
 
 func GetRequestURL(meta *meta.Meta) (string, error) {
@@ -80,6 +83,67 @@ func (a *Adaptor) ConvertRequest(meta *meta.Meta, req *http.Request) (string, ht
 	}
 
 	return method, header, bytes.NewReader(newBody), nil
+}
+
+func newHandlerPreHandler(websearchCount *int64) func(_ *meta.Meta, node *ast.Node) error {
+	return func(meta *meta.Meta, node *ast.Node) error {
+		return handlerPreHandler(meta, node, websearchCount)
+	}
+}
+
+// copy bot_usage.model_usage to usage
+func handlerPreHandler(meta *meta.Meta, node *ast.Node, websearchCount *int64) error {
+	if !strings.HasPrefix(meta.ActualModel, "bot-") {
+		return nil
+	}
+
+	botUsageNode := node.Get("bot_usage")
+	if botUsageNode.Check() != nil {
+		return nil
+	}
+
+	modelUsageNode := botUsageNode.Get("model_usage").Index(0)
+	if modelUsageNode.Check() != nil {
+		return nil
+	}
+
+	_, err := node.SetAny("usage", modelUsageNode)
+	if err != nil {
+		return err
+	}
+
+	actionUsageNodes := botUsageNode.Get("action_usage")
+	if actionUsageNodes.Check() != nil {
+		return nil
+	}
+
+	return actionUsageNodes.ForEach(func(_ ast.Sequence, node *ast.Node) bool {
+		if node.Check() != nil {
+			return true
+		}
+		count, err := node.Get("count").Int64()
+		if err != nil {
+			return true
+		}
+		*websearchCount += count
+		return true
+	})
+}
+
+func (a *Adaptor) DoResponse(meta *meta.Meta, c *gin.Context, resp *http.Response) (usage *model.Usage, err *relaymodel.ErrorWithStatusCode) {
+	switch meta.Mode {
+	case mode.ChatCompletions:
+		websearchCount := int64(0)
+		if utils.IsStreamResponse(resp) {
+			usage, err = openai.StreamHandler(meta, c, resp, newHandlerPreHandler(&websearchCount))
+		} else {
+			usage, err = openai.Handler(meta, c, resp, newHandlerPreHandler(&websearchCount))
+		}
+		usage.WebSearchCount += websearchCount
+	default:
+		return openai.DoResponse(meta, c, resp)
+	}
+	return usage, err
 }
 
 func (a *Adaptor) GetChannelName() string {

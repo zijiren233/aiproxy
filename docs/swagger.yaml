@@ -327,6 +327,8 @@ definitions:
         type: integer
       total_tokens:
         type: integer
+      web_search_count:
+        type: integer
     type: object
   github_com_labring_aiproxy_relay_model.Usage:
     properties:
@@ -337,6 +339,8 @@ definitions:
       prompt_tokens_details:
         $ref: '#/definitions/model.PromptTokensDetails'
       total_tokens:
+        type: integer
+      web_search_count:
         type: integer
     type: object
   gorm.DeletedAt:
@@ -1017,12 +1021,24 @@ definitions:
     properties:
       cache_creation_price:
         type: number
+      cache_creation_price_unit:
+        type: integer
       cached_price:
         type: number
+      cached_price_unit:
+        type: integer
       input_price:
         type: number
+      input_price_unit:
+        type: integer
       output_price:
         type: number
+      output_price_unit:
+        type: integer
+      web_search_price:
+        type: number
+      web_search_price_unit:
+        type: integer
     type: object
   model.PromptTokensDetails:
     properties:
