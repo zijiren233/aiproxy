@@ -56,6 +56,9 @@ func (d *SummaryData) buildUpdateData(tableName string) map[string]any {
 	if d.Usage.CacheCreationTokens > 0 {
 		data["cache_creation_tokens"] = gorm.Expr(tableName+".cache_creation_tokens + ?", d.Usage.CacheCreationTokens)
 	}
+	if d.Usage.WebSearchCount > 0 {
+		data["web_search_count"] = gorm.Expr(tableName+".web_search_count + ?", d.Usage.WebSearchCount)
+	}
 	return data
 }
 
@@ -158,21 +161,13 @@ func getChartData(
 	var query *gorm.DB
 
 	if group == "*" || channelID != 0 {
-		query = LogDB.Model(&Summary{}).
-			Select("hour_timestamp as timestamp, sum(request_count) as request_count, sum(used_amount) as used_amount, sum(exception_count) as exception_count, sum(input_tokens) as input_tokens, sum(output_tokens) as output_tokens, sum(cached_tokens) as cached_tokens, sum(cache_creation_tokens) as cache_creation_tokens, sum(total_tokens) as total_tokens").
-			Group("timestamp").
-			Order("timestamp ASC")
-
+		query = LogDB.Model(&Summary{})
 		if channelID != 0 {
 			query = query.Where("channel_id = ?", channelID)
 		}
 	} else {
 		query = LogDB.Model(&GroupSummary{}).
-			Select("hour_timestamp as timestamp, sum(request_count) as request_count, sum(used_amount) as used_amount, sum(exception_count) as exception_count, sum(input_tokens) as input_tokens, sum(output_tokens) as output_tokens, sum(cached_tokens) as cached_tokens, sum(cache_creation_tokens) as cache_creation_tokens, sum(total_tokens) as total_tokens").
-			Group("timestamp").
-			Order("timestamp ASC").
 			Where("group_id = ?", group)
-
 		if tokenName != "" {
 			query = query.Where("token_name = ?", tokenName)
 		}
@@ -190,6 +185,11 @@ func getChartData(
 	case !end.IsZero():
 		query = query.Where("hour_timestamp <= ?", end.Unix())
 	}
+
+	query = query.
+		Select("hour_timestamp as timestamp, sum(request_count) as request_count, sum(used_amount) as used_amount, sum(exception_count) as exception_count, sum(input_tokens) as input_tokens, sum(output_tokens) as output_tokens, sum(cached_tokens) as cached_tokens, sum(cache_creation_tokens) as cache_creation_tokens, sum(total_tokens) as total_tokens, sum(web_search_count) as web_search_count").
+		Group("timestamp").
+		Order("timestamp ASC")
 
 	var chartData []*ChartData
 	err := query.Scan(&chartData).Error
@@ -279,17 +279,12 @@ func getModelCostRank(group string, channelID int, start, end time.Time) ([]*Mod
 
 	var query *gorm.DB
 	if group == "*" || channelID != 0 {
-		query = LogDB.Model(&Summary{}).
-			Select("model, SUM(used_amount) as used_amount, SUM(request_count) as request_count, SUM(input_tokens) as input_tokens, SUM(output_tokens) as output_tokens, SUM(cached_tokens) as cached_tokens, SUM(cache_creation_tokens) as cache_creation_tokens, SUM(total_tokens) as total_tokens").
-			Group("model")
-
+		query = LogDB.Model(&Summary{})
 		if channelID != 0 {
 			query = query.Where("channel_id = ?", channelID)
 		}
 	} else {
 		query = LogDB.Model(&GroupSummary{}).
-			Select("model, SUM(used_amount) as used_amount, SUM(request_count) as request_count, SUM(input_tokens) as input_tokens, SUM(output_tokens) as output_tokens, SUM(cached_tokens) as cached_tokens, SUM(cache_creation_tokens) as cache_creation_tokens, SUM(total_tokens) as total_tokens").
-			Group("model").
 			Where("group_id = ?", group)
 	}
 
@@ -301,6 +296,10 @@ func getModelCostRank(group string, channelID int, start, end time.Time) ([]*Mod
 	case !end.IsZero():
 		query = query.Where("hour_timestamp <= ?", end.Unix())
 	}
+
+	query = query.
+		Select("model, SUM(used_amount) as used_amount, SUM(request_count) as request_count, SUM(input_tokens) as input_tokens, SUM(output_tokens) as output_tokens, SUM(cached_tokens) as cached_tokens, SUM(cache_creation_tokens) as cache_creation_tokens, SUM(total_tokens) as total_tokens").
+		Group("model")
 
 	err := query.Scan(&ranks).Error
 	if err != nil {
