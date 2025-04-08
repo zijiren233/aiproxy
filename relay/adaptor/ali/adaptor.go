@@ -1,11 +1,15 @@
 package ali
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 
+	"github.com/bytedance/sonic"
+	"github.com/bytedance/sonic/ast"
 	"github.com/gin-gonic/gin"
+	"github.com/labring/aiproxy/common"
 	"github.com/labring/aiproxy/model"
 	"github.com/labring/aiproxy/relay/adaptor/openai"
 	"github.com/labring/aiproxy/relay/meta"
@@ -84,22 +88,56 @@ func (a *Adaptor) DoRequest(meta *meta.Meta, _ *gin.Context, req *http.Request) 
 	}
 }
 
-func (a *Adaptor) DoResponse(meta *meta.Meta, c *gin.Context, resp *http.Response) (usage *model.Usage, err *relaymodel.ErrorWithStatusCode) {
+func (a *Adaptor) DoResponse(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, *relaymodel.ErrorWithStatusCode) {
 	switch meta.Mode {
 	case mode.ImagesGenerations:
-		usage, err = ImageHandler(meta, c, resp)
-	case mode.ChatCompletions, mode.Completions, mode.Embeddings:
-		usage, err = openai.DoResponse(meta, c, resp)
+		return ImageHandler(meta, c, resp)
+	case mode.Embeddings, mode.Completions:
+		return openai.DoResponse(meta, c, resp)
+	case mode.ChatCompletions:
+		reqBody, err := common.GetRequestBody(c.Request)
+		if err != nil {
+			return nil, openai.ErrorWrapperWithMessage(fmt.Sprintf("get request body failed: %s", err), "get_request_body_failed", http.StatusInternalServerError)
+		}
+		enableSearch, err := getEnableSearch(reqBody)
+		if err != nil {
+			return nil, openai.ErrorWrapperWithMessage(fmt.Sprintf("get enable_search failed: %s", err), "get_enable_search_failed", http.StatusInternalServerError)
+		}
+		u, e := openai.DoResponse(meta, c, resp)
+		if e != nil {
+			return nil, e
+		}
+		if enableSearch {
+			u.WebSearchCount++
+		}
+		return u, nil
 	case mode.Rerank:
-		usage, err = RerankHandler(meta, c, resp)
+		return RerankHandler(meta, c, resp)
 	case mode.AudioSpeech:
-		usage, err = TTSDoResponse(meta, c, resp)
+		return TTSDoResponse(meta, c, resp)
 	case mode.AudioTranscription:
-		usage, err = STTDoResponse(meta, c, resp)
+		return STTDoResponse(meta, c, resp)
 	default:
 		return nil, openai.ErrorWrapperWithMessage(fmt.Sprintf("unsupported mode: %s", meta.Mode), "unsupported_mode", http.StatusBadRequest)
 	}
-	return
+}
+
+func getEnableSearch(reqBody []byte) (bool, error) {
+	searchNode, err := sonic.Get(reqBody, "enable_search")
+	if err != nil {
+		if errors.Is(err, ast.ErrNotExist) {
+			return false, nil
+		}
+		return false, fmt.Errorf("get enable_search failed: %w", err)
+	}
+	enableSearch, err := searchNode.Bool()
+	if err != nil {
+		if errors.Is(err, ast.ErrNotExist) {
+			return false, nil
+		}
+		return false, fmt.Errorf("get enable_search failed: %w", err)
+	}
+	return enableSearch, nil
 }
 
 func (a *Adaptor) GetModelList() []*model.ModelConfig {

@@ -57,8 +57,7 @@ func (a *Adaptor) GetRequestURL(meta *meta.Meta) (string, error) {
 func (a *Adaptor) ConvertRequest(meta *meta.Meta, req *http.Request) (string, http.Header, io.Reader, error) {
 	switch meta.Mode {
 	case mode.ChatCompletions:
-		meta.Set(openai.DoNotPatchStreamOptionsIncludeUsageMetaKey, true)
-		return a.Adaptor.ConvertRequest(meta, req)
+		return openai.ConvertTextRequest(meta, req, true)
 	case mode.AudioSpeech:
 		return ConvertTTSRequest(meta, req)
 	default:
