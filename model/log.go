@@ -1086,6 +1086,7 @@ type ChartData struct {
 	CacheCreationTokens int64   `json:"cache_creation_tokens,omitempty"`
 	TotalTokens         int64   `json:"total_tokens,omitempty"`
 	ExceptionCount      int64   `json:"exception_count"`
+	WebSearchCount      int64   `json:"web_search_count,omitempty"`
 }
 
 type DashboardResponse struct {
@@ -1102,6 +1103,7 @@ type DashboardResponse struct {
 	TotalTokens         int64   `json:"total_tokens,omitempty"`
 	CachedTokens        int64   `json:"cached_tokens,omitempty"`
 	CacheCreationTokens int64   `json:"cache_creation_tokens,omitempty"`
+	WebSearchCount      int64   `json:"web_search_count,omitempty"`
 
 	Channels []int `json:"channels,omitempty"`
 }
@@ -1131,7 +1133,7 @@ func getChartDataFromLog(
 	var query *gorm.DB
 	if tokenUsage {
 		query = LogDB.Table("logs").
-			Select("timestamp_trunc_by_hour as timestamp, count(*) as request_count, sum(used_amount) as used_amount, sum(case when code != 200 then 1 else 0 end) as exception_count, sum(input_tokens) as input_tokens, sum(output_tokens) as output_tokens, sum(cached_tokens) as cached_tokens, sum(cache_creation_tokens) as cache_creation_tokens, sum(total_tokens) as total_tokens").
+			Select("timestamp_trunc_by_hour as timestamp, count(*) as request_count, sum(used_amount) as used_amount, sum(case when code != 200 then 1 else 0 end) as exception_count, sum(input_tokens) as input_tokens, sum(output_tokens) as output_tokens, sum(cached_tokens) as cached_tokens, sum(cache_creation_tokens) as cache_creation_tokens, sum(total_tokens) as total_tokens, sum(web_search_count) as web_search_count").
 			Group("timestamp").
 			Order("timestamp ASC")
 	} else {
@@ -1216,6 +1218,7 @@ func aggregateHourDataToDay(hourlyData []*ChartData, timezone *time.Location) []
 		day.CachedTokens += data.CachedTokens
 		day.CacheCreationTokens += data.CacheCreationTokens
 		day.TotalTokens += data.TotalTokens
+		day.WebSearchCount += data.WebSearchCount
 	}
 
 	result := make([]*ChartData, 0, len(dayData))
@@ -1288,6 +1291,7 @@ func sumDashboardResponse(chartData []*ChartData) DashboardResponse {
 		dashboardResponse.TotalTokens += data.TotalTokens
 		dashboardResponse.CachedTokens += data.CachedTokens
 		dashboardResponse.CacheCreationTokens += data.CacheCreationTokens
+		dashboardResponse.WebSearchCount += data.WebSearchCount
 	}
 	dashboardResponse.UsedAmount = usedAmount.InexactFloat64()
 	return dashboardResponse
@@ -1535,6 +1539,7 @@ type ModelCostRank struct {
 	CacheCreationTokens int64   `json:"cache_creation_tokens"`
 	TotalTokens         int64   `json:"total_tokens"`
 	RequestCount        int64   `json:"request_count"`
+	WebSearchCount      int64   `json:"web_search_count"`
 }
 
 func GetModelCostRank(group string, channelID int, start, end time.Time, tokenUsage bool, fromLog bool) ([]*ModelCostRank, error) {
@@ -1550,7 +1555,7 @@ func getModelCostRankFromLog(group string, channelID int, start, end time.Time, 
 	var query *gorm.DB
 	if tokenUsage {
 		query = LogDB.Model(&Log{}).
-			Select("model, SUM(used_amount) as used_amount, SUM(input_tokens) as input_tokens, SUM(output_tokens) as output_tokens, SUM(cached_tokens) as cached_tokens, SUM(cache_creation_tokens) as cache_creation_tokens, SUM(total_tokens) as total_tokens, COUNT(*) as request_count").
+			Select("model, SUM(used_amount) as used_amount, SUM(input_tokens) as input_tokens, SUM(output_tokens) as output_tokens, SUM(cached_tokens) as cached_tokens, SUM(cache_creation_tokens) as cache_creation_tokens, SUM(total_tokens) as total_tokens, COUNT(*) as request_count, SUM(web_search_count) as web_search_count").
 			Group("model")
 	} else {
 		query = LogDB.Model(&Log{}).
