@@ -110,7 +110,7 @@ func CalculateAmount(
 	modelPrice model.Price,
 ) float64 {
 	inputTokens := usage.InputTokens
-	outputTokens := usage.TotalTokens
+	outputTokens := usage.OutputTokens
 
 	if modelPrice.CachedPrice > 0 {
 		inputTokens -= usage.CachedTokens
