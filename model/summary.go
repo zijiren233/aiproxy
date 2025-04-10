@@ -18,9 +18,9 @@ type Summary struct {
 }
 
 type SummaryUnique struct {
-	ChannelID     int    `gorm:"uniqueIndex:idx_summary_unique,priority:1"`
-	Model         string `gorm:"uniqueIndex:idx_summary_unique,priority:2"`
-	HourTimestamp int64  `gorm:"uniqueIndex:idx_summary_unique,priority:3,sort:desc"`
+	ChannelID     int    `gorm:"not null;uniqueIndex:idx_summary_unique,priority:1"`
+	Model         string `gorm:"not null;uniqueIndex:idx_summary_unique,priority:2"`
+	HourTimestamp int64  `gorm:"not null;uniqueIndex:idx_summary_unique,priority:3,sort:desc"`
 }
 
 type SummaryData struct {
