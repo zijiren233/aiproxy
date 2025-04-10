@@ -11,7 +11,7 @@ type Usage struct {
 	CompletionTokens int64 `json:"completion_tokens"`
 	TotalTokens      int64 `json:"total_tokens"`
 
-	WebSearchCount int64 `json:"web_search_count"`
+	WebSearchCount int64 `json:"web_search_count,omitempty"`
 
 	PromptTokensDetails *PromptTokensDetails `json:"prompt_tokens_details,omitempty"`
 }
@@ -50,7 +50,7 @@ func (u *Usage) Add(other *Usage) {
 
 type PromptTokensDetails struct {
 	CachedTokens        int64 `json:"cached_tokens"`
-	CacheCreationTokens int64 `json:"cache_creation_tokens"`
+	CacheCreationTokens int64 `json:"cache_creation_tokens,omitempty"`
 }
 
 func (d *PromptTokensDetails) Add(other *PromptTokensDetails) {

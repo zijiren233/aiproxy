@@ -16,10 +16,10 @@ type GroupSummary struct {
 }
 
 type GroupSummaryUnique struct {
-	GroupID       string `gorm:"uniqueIndex:idx_groupsummary_unique,priority:1"`
-	TokenName     string `gorm:"uniqueIndex:idx_groupsummary_unique,priority:2"`
-	Model         string `gorm:"uniqueIndex:idx_groupsummary_unique,priority:3"`
-	HourTimestamp int64  `gorm:"uniqueIndex:idx_groupsummary_unique,priority:4,sort:desc"`
+	GroupID       string `gorm:"not null;uniqueIndex:idx_groupsummary_unique,priority:1"`
+	TokenName     string `gorm:"not null;uniqueIndex:idx_groupsummary_unique,priority:2"`
+	Model         string `gorm:"not null;uniqueIndex:idx_groupsummary_unique,priority:3"`
+	HourTimestamp int64  `gorm:"not null;uniqueIndex:idx_groupsummary_unique,priority:4,sort:desc"`
 }
 
 func (l *GroupSummary) BeforeCreate(_ *gorm.DB) (err error) {
