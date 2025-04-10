@@ -27,7 +27,7 @@ type ApplicationDefaultCredentials struct {
 	UniverseDomain          string `json:"universe_domain"`
 }
 
-var tokenCache = cache.New(50*time.Minute, time.Minute)
+var tokenCache = cache.New(30*time.Minute, time.Minute)
 
 const defaultScope = "https://www.googleapis.com/auth/cloud-platform"
 
@@ -59,11 +59,15 @@ func getToken(ctx context.Context, adcJSON string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("failed to generate access token: %w", err)
 	}
-	expireTime := resp.GetExpireTime()
-	expireTimeTime := time.Minute * 50
-	if expireTime != nil && expireTime.IsValid() {
-		expireTimeTime = time.Until(expireTime.AsTime().Add(-time.Minute * 10))
+	token := resp.GetAccessToken()
+	if token == "" {
+		return "", fmt.Errorf("failed to generate access token: %w", err)
 	}
-	tokenCache.Set(adcJSON, resp.GetAccessToken(), expireTimeTime)
-	return resp.GetAccessToken(), nil
+	expireTime := resp.GetExpireTime()
+	expireTimeTime := time.Minute * 30
+	if expireTime != nil && expireTime.IsValid() {
+		expireTimeTime = time.Until(expireTime.AsTime()) / 2
+	}
+	tokenCache.Set(adcJSON, token, expireTimeTime)
+	return token, nil
 }
