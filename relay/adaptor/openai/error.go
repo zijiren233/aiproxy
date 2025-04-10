@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/bytedance/sonic"
 	"github.com/labring/aiproxy/common/conv"
@@ -102,6 +103,10 @@ func ErrorHanlder(resp *http.Response) *model.ErrorWithStatusCode {
 
 	if code, ok := ErrorWithStatusCode.Error.Code.(int64); ok && code >= 400 && code < 600 {
 		ErrorWithStatusCode.StatusCode = int(code)
+	}
+
+	if strings.HasPrefix(ErrorWithStatusCode.Error.Message, "tools is not supported in this model.") {
+		ErrorWithStatusCode.StatusCode = http.StatusBadRequest
 	}
 
 	return ErrorWithStatusCode
