@@ -139,7 +139,9 @@ func (a *Adaptor) DoResponse(meta *meta.Meta, c *gin.Context, resp *http.Respons
 		} else {
 			usage, err = openai.Handler(meta, c, resp, newHandlerPreHandler(&websearchCount))
 		}
-		usage.WebSearchCount += websearchCount
+		if usage != nil {
+			usage.WebSearchCount += websearchCount
+		}
 	default:
 		return openai.DoResponse(meta, c, resp)
 	}
