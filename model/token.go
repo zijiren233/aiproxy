@@ -75,7 +75,7 @@ func getTokenOrder(order string) string {
 	}
 }
 
-func InsertToken(token *Token, autoCreateGroup bool) error {
+func InsertToken(token *Token, autoCreateGroup bool, ignoreExist bool) error {
 	if autoCreateGroup {
 		group := &Group{
 			ID: token.GroupID,
@@ -96,10 +96,18 @@ func InsertToken(token *Token, autoCreateGroup bool) error {
 				return errors.New("group max token num reached")
 			}
 		}
+		if ignoreExist {
+			return tx.
+				Where("group_id = ? and name = ?", token.GroupID, token.Name).
+				FirstOrCreate(token).Error
+		}
 		return tx.Create(token).Error
 	})
 	if err != nil {
 		if errors.Is(err, gorm.ErrDuplicatedKey) {
+			if ignoreExist {
+				return nil
+			}
 			return errors.New("token name already exists in this group")
 		}
 		return err

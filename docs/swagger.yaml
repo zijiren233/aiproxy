@@ -497,6 +497,8 @@ definitions:
         type: integer
       used_amount:
         type: number
+      web_search_count:
+        type: integer
     type: object
   model.DashboardResponse:
     properties:
@@ -528,6 +530,8 @@ definitions:
         type: integer
       used_amount:
         type: number
+      web_search_count:
+        type: integer
     type: object
   model.Document:
     properties:
@@ -754,6 +758,8 @@ definitions:
         type: integer
       used_amount:
         type: number
+      web_search_count:
+        type: integer
     type: object
   model.GroupModelConfig:
     properties:
@@ -936,6 +942,8 @@ definitions:
         type: integer
       used_amount:
         type: number
+      web_search_count:
+        type: integer
     type: object
   model.ModelOwner:
     enum:
@@ -3995,6 +4003,10 @@ paths:
       - description: Auto create group
         in: query
         name: auto_create_group
+        type: boolean
+      - description: Ignore exist
+        in: query
+        name: ignore_exist
         type: boolean
       - description: Token information
         in: body
