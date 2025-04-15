@@ -322,6 +322,7 @@ func GetGroupToken(c *gin.Context) {
 //	@Security		ApiKeyAuth
 //	@Param			group				path		string			true	"Group name"
 //	@Param			auto_create_group	query		bool			false	"Auto create group"
+//	@Param			ignore_exist		query		bool			false	"Ignore exist"
 //	@Param			token				body		AddTokenRequest	true	"Token information"
 //	@Success		200					{object}	middleware.APIResponse{data=TokenResponse}
 //	@Router			/api/token/{group} [post]
@@ -341,7 +342,7 @@ func AddGroupToken(c *gin.Context) {
 	token := req.ToToken()
 	token.GroupID = group
 
-	if err := model.InsertToken(token, c.Query("auto_create_group") == "true"); err != nil {
+	if err := model.InsertToken(token, c.Query("auto_create_group") == "true", c.Query("ignore_exist") == "true"); err != nil {
 		middleware.ErrorResponse(c, http.StatusOK, err.Error())
 		return
 	}

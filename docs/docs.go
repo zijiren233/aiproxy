@@ -4674,6 +4674,12 @@ const docTemplate = `{
                         "in": "query"
                     },
                     {
+                        "type": "boolean",
+                        "description": "Ignore exist",
+                        "name": "ignore_exist",
+                        "in": "query"
+                    },
+                    {
                         "description": "Token information",
                         "name": "token",
                         "in": "body",
@@ -7158,6 +7164,9 @@ const docTemplate = `{
                 },
                 "used_amount": {
                     "type": "number"
+                },
+                "web_search_count": {
+                    "type": "integer"
                 }
             }
         },
@@ -7205,6 +7214,9 @@ const docTemplate = `{
                 },
                 "used_amount": {
                     "type": "number"
+                },
+                "web_search_count": {
+                    "type": "integer"
                 }
             }
         },
@@ -7544,6 +7556,9 @@ const docTemplate = `{
                 },
                 "used_amount": {
                     "type": "number"
+                },
+                "web_search_count": {
+                    "type": "integer"
                 }
             }
         },
@@ -7820,6 +7835,9 @@ const docTemplate = `{
                 },
                 "used_amount": {
                     "type": "number"
+                },
+                "web_search_count": {
+                    "type": "integer"
                 }
             }
         },

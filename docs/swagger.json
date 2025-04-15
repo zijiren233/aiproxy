@@ -4663,6 +4663,12 @@
                         "in": "query"
                     },
                     {
+                        "type": "boolean",
+                        "description": "Ignore exist",
+                        "name": "ignore_exist",
+                        "in": "query"
+                    },
+                    {
                         "description": "Token information",
                         "name": "token",
                         "in": "body",
@@ -7147,6 +7153,9 @@
                 },
                 "used_amount": {
                     "type": "number"
+                },
+                "web_search_count": {
+                    "type": "integer"
                 }
             }
         },
@@ -7194,6 +7203,9 @@
                 },
                 "used_amount": {
                     "type": "number"
+                },
+                "web_search_count": {
+                    "type": "integer"
                 }
             }
         },
@@ -7533,6 +7545,9 @@
                 },
                 "used_amount": {
                     "type": "number"
+                },
+                "web_search_count": {
+                    "type": "integer"
                 }
             }
         },
@@ -7809,6 +7824,9 @@
                 },
                 "used_amount": {
                     "type": "number"
+                },
+                "web_search_count": {
+                    "type": "integer"
                 }
             }
         },
