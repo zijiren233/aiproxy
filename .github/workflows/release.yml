@@ -24,7 +24,7 @@ env:
 
 jobs:
   release:
-    name: Release
+    name: Release AI Proxy
     runs-on: ubuntu-24.04
     permissions:
       contents: write
@@ -51,6 +51,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Download tiktoken
+        working-directory: core
         run: |
           bash scripts/tiktoken.sh
 
@@ -60,11 +61,13 @@ jobs:
           go-version: "1.23"
 
       - name: Generate Swagger
+        working-directory: core
         run: |
           go install github.com/swaggo/swag/cmd/swag@latest
           bash scripts/swag.sh
 
       - name: Build
+        working-directory: core
         run: |
           export GOOS=${{ matrix.targets.GOOS }}
           export GOARCH=${{ matrix.targets.GOARCH }}
@@ -72,7 +75,7 @@ jobs:
 
       - name: Get release meta
         if: ${{ startsWith(github.ref, 'refs/tags/') }}
-        id: release_meta
+        working-directory: core
         run: |
           version=${GITHUB_REF/refs\/tags\/v/}
           echo "version: ${version}"
@@ -103,7 +106,7 @@ jobs:
           name: ${{ steps.release_meta.outputs.RELEASE_NAME }}
           tag_name: ${{ steps.release_meta.outputs.TAG_NAME }}
           files: |
-            aiproxy-${{ matrix.targets.GOOS }}-${{ matrix.targets.GOARCH }}${{ matrix.targets.EXT }}
+            core/aiproxy-${{ matrix.targets.GOOS }}-${{ matrix.targets.GOARCH }}${{ matrix.targets.EXT }}
 
   build-docker-images:
     name: Build Docker Images
@@ -159,12 +162,13 @@ jobs:
         id: build
         uses: docker/build-push-action@v6
         with:
-          context: .
+          context: core
           labels: ${{ steps.meta.outputs.labels }}
           platforms: linux/${{ matrix.arch }}
           outputs: type=image,"name=${{ env.GHCR_REPO }}${{ env.DOCKERHUB_REPO && format(',{0}', env.DOCKERHUB_REPO) }}${{ env.ALIYUN_REPO && format(',{0}', env.ALIYUN_REPO) }}",name-canonical=true,push-by-digest=${{ github.event_name != 'pull_request' && github.actor != 'dependabot[bot]' }},push=${{ github.event_name != 'pull_request' && github.actor != 'dependabot[bot]' }}
 
       - name: Export digest
+        working-directory: core
         run: |
           mkdir -p ${{ runner.temp }}/digests
           digest="${{ steps.build.outputs.digest }}"
