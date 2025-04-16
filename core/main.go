@@ -268,9 +268,14 @@ func cleanLog(ctx context.Context) {
 	}
 }
 
-// @securityDefinitions.apikey	ApiKeyAuth
-// @in							header
-// @name						Authorization
+// Swagger godoc
+//
+//	@title						AI Proxy Swagger API
+//	@version					1.0
+//	@securityDefinitions.apikey	ApiKeyAuth
+//	@in							header
+//	@name						Authorization
+//	@BasePath					/
 func main() {
 	flag.Parse()
 

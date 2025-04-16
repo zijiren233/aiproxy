@@ -315,7 +315,7 @@ definitions:
       status:
         type: integer
     type: object
-  github_com_labring_aiproxy_model.Usage:
+  github_com_labring_aiproxy_core_model.Usage:
     properties:
       cache_creation_tokens:
         type: integer
@@ -330,7 +330,7 @@ definitions:
       web_search_count:
         type: integer
     type: object
-  github_com_labring_aiproxy_relay_model.Usage:
+  github_com_labring_aiproxy_core_relay_model.Usage:
     properties:
       completion_tokens:
         type: integer
@@ -560,7 +560,7 @@ definitions:
       object:
         type: string
       usage:
-        $ref: '#/definitions/github_com_labring_aiproxy_relay_model.Usage'
+        $ref: '#/definitions/github_com_labring_aiproxy_core_relay_model.Usage'
     type: object
   model.EmbeddingResponseItem:
     properties:
@@ -876,7 +876,7 @@ definitions:
       ttfb_milliseconds:
         type: integer
       usage:
-        $ref: '#/definitions/github_com_labring_aiproxy_model.Usage'
+        $ref: '#/definitions/github_com_labring_aiproxy_core_model.Usage'
       used_amount:
         type: number
     type: object
@@ -1155,7 +1155,7 @@ definitions:
       object:
         type: string
       usage:
-        $ref: '#/definitions/github_com_labring_aiproxy_relay_model.Usage'
+        $ref: '#/definitions/github_com_labring_aiproxy_core_relay_model.Usage'
     type: object
   model.TextResponseChoice:
     properties:
@@ -1219,6 +1219,8 @@ definitions:
     type: object
 info:
   contact: {}
+  title: AI Proxy Swagger API
+  version: "1.0"
 paths:
   /api/channel:
     post:
@@ -2045,35 +2047,6 @@ paths:
       summary: Update a group
       tags:
       - group
-  /api/group/{group}/model_config/:
-    post:
-      consumes:
-      - application/json
-      description: Save group model config
-      parameters:
-      - description: Group name
-        in: path
-        name: group
-        required: true
-        type: string
-      - description: Group model config information
-        in: body
-        name: data
-        required: true
-        schema:
-          $ref: '#/definitions/controller.SaveGroupModelConfigRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/middleware.APIResponse'
-      security:
-      - ApiKeyAuth: []
-      summary: Save group model config
-      tags:
-      - group
   /api/group/{group}/model_config/{model}:
     delete:
       description: Delete group model config
@@ -2128,6 +2101,34 @@ paths:
       security:
       - ApiKeyAuth: []
       summary: Get group model config
+      tags:
+      - group
+    post:
+      consumes:
+      - application/json
+      description: Save group model config
+      parameters:
+      - description: Group name
+        in: path
+        name: group
+        required: true
+        type: string
+      - description: Group model config information
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/controller.SaveGroupModelConfigRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/middleware.APIResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Save group model config
       tags:
       - group
     put:
@@ -4854,7 +4855,7 @@ paths:
       summary: Completions
       tags:
       - relay
-  /v1/dashboard/subscription:
+  /v1/dashboard/billing/subscription:
     get:
       description: Get subscription
       produces:
@@ -4869,7 +4870,7 @@ paths:
       summary: Get subscription
       tags:
       - relay
-  /v1/dashboard/usage:
+  /v1/dashboard/billing/usage:
     get:
       description: Get usage
       produces:

@@ -482,10 +482,15 @@ func SaveGroupModelConfigs(c *gin.Context) {
 //	@Param			group	path		string						true	"Group name"
 //	@Param			data	body		SaveGroupModelConfigRequest	true	"Group model config information"
 //	@Success		200		{object}	middleware.APIResponse
-//	@Router			/api/group/{group}/model_config/ [post]
+//	@Router			/api/group/{group}/model_config/{model} [post]
 func SaveGroupModelConfig(c *gin.Context) {
 	group := c.Param("group")
 	if group == "" {
+		middleware.ErrorResponse(c, http.StatusOK, "invalid parameter")
+		return
+	}
+	modelName := c.Param("model")
+	if modelName == "" {
 		middleware.ErrorResponse(c, http.StatusOK, "invalid parameter")
 		return
 	}
@@ -497,6 +502,7 @@ func SaveGroupModelConfig(c *gin.Context) {
 		return
 	}
 	modelConfig := req.ToGroupModelConfig(group)
+	modelConfig.Model = modelName
 	err = model.SaveGroupModelConfig(modelConfig)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusOK, err.Error())
@@ -652,6 +658,7 @@ func UpdateGroupModelConfig(c *gin.Context) {
 		return
 	}
 	modelConfig := req.ToGroupModelConfig(group)
+	modelConfig.Model = modelName
 	err = model.UpdateGroupModelConfig(modelConfig)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusOK, err.Error())

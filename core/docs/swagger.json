@@ -1,7 +1,9 @@
 {
     "swagger": "2.0",
     "info": {
-        "contact": {}
+        "title": "AI Proxy Swagger API",
+        "contact": {},
+        "version": "1.0"
     },
     "paths": {
         "/api/channel": {
@@ -1388,52 +1390,6 @@
                 }
             }
         },
-        "/api/group/{group}/model_config/": {
-            "post": {
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ],
-                "description": "Save group model config",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "group"
-                ],
-                "summary": "Save group model config",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Group name",
-                        "name": "group",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "Group model config information",
-                        "name": "data",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/controller.SaveGroupModelConfigRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/middleware.APIResponse"
-                        }
-                    }
-                }
-            }
-        },
         "/api/group/{group}/model_config/{model}": {
             "get": {
                 "security": [
@@ -1515,6 +1471,50 @@
                         "type": "string",
                         "description": "Model name",
                         "name": "model",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Group model config information",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/controller.SaveGroupModelConfigRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.APIResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Save group model config",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "group"
+                ],
+                "summary": "Save group model config",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Group name",
+                        "name": "group",
                         "in": "path",
                         "required": true
                     },
@@ -6015,7 +6015,7 @@
                 }
             }
         },
-        "/v1/dashboard/subscription": {
+        "/v1/dashboard/billing/subscription": {
             "get": {
                 "security": [
                     {
@@ -6040,7 +6040,7 @@
                 }
             }
         },
-        "/v1/dashboard/usage": {
+        "/v1/dashboard/billing/usage": {
             "get": {
                 "security": [
                     {
@@ -6889,7 +6889,7 @@
                 }
             }
         },
-        "github_com_labring_aiproxy_model.Usage": {
+        "github_com_labring_aiproxy_core_model.Usage": {
             "type": "object",
             "properties": {
                 "cache_creation_tokens": {
@@ -6912,7 +6912,7 @@
                 }
             }
         },
-        "github_com_labring_aiproxy_relay_model.Usage": {
+        "github_com_labring_aiproxy_core_relay_model.Usage": {
             "type": "object",
             "properties": {
                 "completion_tokens": {
@@ -7250,7 +7250,7 @@
                     "type": "string"
                 },
                 "usage": {
-                    "$ref": "#/definitions/github_com_labring_aiproxy_relay_model.Usage"
+                    "$ref": "#/definitions/github_com_labring_aiproxy_core_relay_model.Usage"
                 }
             }
         },
@@ -7725,7 +7725,7 @@
                     "type": "integer"
                 },
                 "usage": {
-                    "$ref": "#/definitions/github_com_labring_aiproxy_model.Usage"
+                    "$ref": "#/definitions/github_com_labring_aiproxy_core_model.Usage"
                 },
                 "used_amount": {
                     "type": "number"
@@ -8121,7 +8121,7 @@
                     "type": "string"
                 },
                 "usage": {
-                    "$ref": "#/definitions/github_com_labring_aiproxy_relay_model.Usage"
+                    "$ref": "#/definitions/github_com_labring_aiproxy_core_relay_model.Usage"
                 }
             }
         },

@@ -20,7 +20,7 @@ import (
 //	@Produce		json
 //	@Security		ApiKeyAuth
 //	@Success		200	{object}	openai.SubscriptionResponse
-//	@Router			/v1/dashboard/subscription [get]
+//	@Router			/v1/dashboard/billing/subscription [get]
 func GetSubscription(c *gin.Context) {
 	group := middleware.GetGroup(c)
 	b, _, err := balance.GetGroupRemainBalance(c, *group)
@@ -53,7 +53,7 @@ func GetSubscription(c *gin.Context) {
 //	@Produce		json
 //	@Security		ApiKeyAuth
 //	@Success		200	{object}	openai.UsageResponse
-//	@Router			/v1/dashboard/usage [get]
+//	@Router			/v1/dashboard/billing/usage [get]
 func GetUsage(c *gin.Context) {
 	token := middleware.GetToken(c)
 	c.JSON(http.StatusOK, openai.UsageResponse{TotalUsage: token.UsedAmount * 100})

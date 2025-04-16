@@ -1399,52 +1399,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/group/{group}/model_config/": {
-            "post": {
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ],
-                "description": "Save group model config",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "group"
-                ],
-                "summary": "Save group model config",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Group name",
-                        "name": "group",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "Group model config information",
-                        "name": "data",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/controller.SaveGroupModelConfigRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/middleware.APIResponse"
-                        }
-                    }
-                }
-            }
-        },
         "/api/group/{group}/model_config/{model}": {
             "get": {
                 "security": [
@@ -1526,6 +1480,50 @@ const docTemplate = `{
                         "type": "string",
                         "description": "Model name",
                         "name": "model",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Group model config information",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/controller.SaveGroupModelConfigRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.APIResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Save group model config",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "group"
+                ],
+                "summary": "Save group model config",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Group name",
+                        "name": "group",
                         "in": "path",
                         "required": true
                     },
@@ -6026,7 +6024,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/v1/dashboard/subscription": {
+        "/v1/dashboard/billing/subscription": {
             "get": {
                 "security": [
                     {
@@ -6051,7 +6049,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/v1/dashboard/usage": {
+        "/v1/dashboard/billing/usage": {
             "get": {
                 "security": [
                     {
@@ -6900,7 +6898,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_labring_aiproxy_model.Usage": {
+        "github_com_labring_aiproxy_core_model.Usage": {
             "type": "object",
             "properties": {
                 "cache_creation_tokens": {
@@ -6923,7 +6921,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_labring_aiproxy_relay_model.Usage": {
+        "github_com_labring_aiproxy_core_relay_model.Usage": {
             "type": "object",
             "properties": {
                 "completion_tokens": {
@@ -7261,7 +7259,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "usage": {
-                    "$ref": "#/definitions/github_com_labring_aiproxy_relay_model.Usage"
+                    "$ref": "#/definitions/github_com_labring_aiproxy_core_relay_model.Usage"
                 }
             }
         },
@@ -7736,7 +7734,7 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "usage": {
-                    "$ref": "#/definitions/github_com_labring_aiproxy_model.Usage"
+                    "$ref": "#/definitions/github_com_labring_aiproxy_core_model.Usage"
                 },
                 "used_amount": {
                     "type": "number"
@@ -8132,7 +8130,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "usage": {
-                    "$ref": "#/definitions/github_com_labring_aiproxy_relay_model.Usage"
+                    "$ref": "#/definitions/github_com_labring_aiproxy_core_relay_model.Usage"
                 }
             }
         },
@@ -8239,11 +8237,11 @@ const docTemplate = `{
 
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
-	Version:          "",
+	Version:          "1.0",
 	Host:             "",
 	BasePath:         "",
 	Schemes:          []string{},
-	Title:            "",
+	Title:            "AI Proxy Swagger API",
 	Description:      "",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,

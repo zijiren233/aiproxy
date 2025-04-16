@@ -113,7 +113,7 @@ func (u *Usage) Add(other *Usage) {
 
 type Log struct {
 	RequestDetail        *RequestDetail  `gorm:"foreignKey:LogID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"request_detail,omitempty"`
-	RequestAt            time.Time       `json:"request_at"`
+	RequestAt            time.Time       `gorm:"index"                                                          json:"request_at"`
 	RetryAt              time.Time       `json:"retry_at,omitempty"`
 	TTFBMilliseconds     ZeroNullInt64   `json:"ttfb_milliseconds,omitempty"`
 	TimestampTruncByHour int64           `json:"timestamp_trunc_by_hour"`
