@@ -70,11 +70,7 @@ func (c *Converter) Convert() (*server.MCPServer, error) {
 	for path, pathItem := range c.parser.GetPaths().Map() {
 		operations := getOperations(pathItem)
 		for method, operation := range operations {
-			tool, err := c.convertOperation(path, method, operation)
-			if err != nil {
-				return nil, fmt.Errorf("failed to convert operation %s %s: %w", method, path, err)
-			}
-
+			tool := c.convertOperation(path, method, operation)
 			handler := newHandler(server, path, method, operation)
 			mcpServer.AddTool(*tool, handler)
 		}
@@ -273,7 +269,7 @@ func getOperations(pathItem *openapi3.PathItem) map[string]*openapi3.Operation {
 }
 
 // convertOperation converts an OpenAPI operation to an MCP tool
-func (c *Converter) convertOperation(path, method string, operation *openapi3.Operation) (*mcp.Tool, error) {
+func (c *Converter) convertOperation(path, method string, operation *openapi3.Operation) *mcp.Tool {
 	// Generate a tool name
 	toolName := c.parser.GetOperationID(path, method, operation)
 	if c.options.ToolNamePrefix != "" {
@@ -338,7 +334,7 @@ func (c *Converter) convertOperation(path, method string, operation *openapi3.Op
 		args...,
 	)
 
-	return &tool, nil
+	return &tool
 }
 
 // generateResponseDescription creates a human-readable description of possible responses
