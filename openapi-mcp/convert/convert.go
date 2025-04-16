@@ -69,6 +69,8 @@ func (c *Converter) Convert() (*server.MCPServer, error) {
 			return nil, err
 		}
 		defaultServer = server
+	} else if len(servers) == 0 {
+		defaultServer, _ = getServerURL(c.options.OpenAPIFrom, "")
 	}
 
 	// Process each path and operation
@@ -85,8 +87,8 @@ func (c *Converter) Convert() (*server.MCPServer, error) {
 }
 
 func getServerURL(from string, dir string) (string, error) {
-	if dir == "" || from == "" {
-		return from, nil
+	if from == "" {
+		return dir, nil
 	}
 	if strings.HasPrefix(dir, "http://") ||
 		strings.HasPrefix(dir, "https://") {
@@ -247,8 +249,6 @@ func getArgs(args map[string]interface{}) Args {
 				arg.AuthPassword, _ = v.(string)
 			case "auth_oauth2_token":
 				arg.AuthOAuth2Token, _ = v.(string)
-			default:
-				arg.AuthToken, _ = v.(string)
 			}
 		case k == "body":
 			arg.Body = v
@@ -321,8 +321,12 @@ func (c *Converter) convertOperation(path, method string, operation *openapi3.Op
 	switch {
 	case len(servers) == 0:
 		if c.options.OpenAPIFrom != "" {
+			u, err := getServerURL(c.options.OpenAPIFrom, "")
+			if err != nil {
+				u = c.options.OpenAPIFrom
+			}
 			args = append(args, mcp.WithString("openapi|server_addr",
-				mcp.Description("Server address to connect to, example: "+c.options.OpenAPIFrom),
+				mcp.Description("Server address to connect to, example: "+u),
 				mcp.Required()))
 		} else {
 			args = append(args, mcp.WithString("openapi|server_addr",
@@ -362,12 +366,12 @@ func (c *Converter) convertOperation(path, method string, operation *openapi3.Op
 	description := getDescription(operation)
 
 	// Add response information to description
-	if operation.Responses != nil {
-		responseDesc := c.generateResponseDescription(*operation.Responses)
-		if responseDesc != "" {
-			description += "\n\nResponses:\n\n" + responseDesc
-		}
-	}
+	// if operation.Responses != nil {
+	// 	responseDesc := c.generateResponseDescription(*operation.Responses)
+	// 	if responseDesc != "" {
+	// 		description += "\n\nResponses:\n\n" + responseDesc
+	// 	}
+	// }
 
 	args = append(args, mcp.WithDescription(description))
 
@@ -434,20 +438,27 @@ func (c *Converter) generateResponseDescription(responses openapi3.Responses) st
 func (c *Converter) convertSecurityRequirements(securityRequirements openapi3.SecurityRequirements) []mcp.ToolOption {
 	args := []mcp.ToolOption{}
 
+	var securitySchemes openapi3.SecuritySchemes
+
 	// Get security definitions from the document
 	components := c.parser.GetDocument().Components
-	if components == nil {
-		return nil
-	}
-	securitySchemes := components.SecuritySchemes
-	if len(securitySchemes) == 0 {
-		return nil
+	if components != nil {
+		securitySchemes = components.SecuritySchemes
 	}
 
 	// Process each security requirement
 	for _, requirement := range securityRequirements {
 		for schemeName, scopes := range requirement {
-			schemeRef := securitySchemes[schemeName]
+			var schemeRef *openapi3.SecuritySchemeRef
+
+			if securitySchemes != nil {
+				schemeRef = securitySchemes[schemeName]
+			} else {
+				args = append(args, mcp.WithString("header|Authorization",
+					mcp.Description(fmt.Sprintf("API Key for %s authentication",
+						schemeName)),
+					mcp.Required()))
+			}
 			if schemeRef == nil || schemeRef.Value == nil {
 				continue
 			}
@@ -455,9 +466,9 @@ func (c *Converter) convertSecurityRequirements(securityRequirements openapi3.Se
 			scheme := schemeRef.Value
 			switch scheme.Type {
 			case "apiKey":
-				args = append(args, mcp.WithString("openapi|auth_"+schemeName,
-					mcp.Description(fmt.Sprintf("API Key for %s authentication (in %s named '%s')",
-						schemeName, scheme.In, scheme.Name)),
+				args = append(args, mcp.WithString(scheme.In+"|"+scheme.Name,
+					mcp.Description(fmt.Sprintf("API Key for %s authentication",
+						schemeName)),
 					mcp.Required()))
 			case "http":
 				switch scheme.Scheme {
