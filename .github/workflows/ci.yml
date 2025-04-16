@@ -35,8 +35,8 @@ jobs:
         uses: golangci/golangci-lint-action@v6
         with:
           version: v1.64.6
-          working-directory: openapi-mcp
-          args: "--out-format colored-line-number --max-issues-per-linter 0 --max-same-issues 0 --config ../.golangci.yml"
+          working-directory: core
+          args: "--out-format colored-line-number --max-issues-per-linter 0 --max-same-issues 0 --config ./.golangci.yml"
 
   golangci-lint-openapimcp:
     name: Lint OpneAPI MCP
@@ -55,4 +55,4 @@ jobs:
         with:
           version: v1.64.6
           working-directory: openapi-mcp
-          args: "--out-format colored-line-number --max-issues-per-linter 0 --max-same-issues 0 --config ../.golangci.yml"
+          args: "--out-format colored-line-number --max-issues-per-linter 0 --max-same-issues 0 --config ./.golangci.yml"

@@ -87,7 +87,8 @@ func (c *Converter) Convert() (*server.MCPServer, error) {
 	return mcpServer, nil
 }
 
-func newHandler(server *openapi3.Server, path, method string, operation *openapi3.Operation) (server.ToolHandlerFunc, error) {
+// TODO: valid operation
+func newHandler(server *openapi3.Server, path, method string, _ *openapi3.Operation) (server.ToolHandlerFunc, error) {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		arg := getArgs(request.Params.Arguments)
 
@@ -215,17 +216,17 @@ func getArgs(args map[string]interface{}) Args {
 		case strings.HasPrefix(k, "openapi|"):
 			switch strings.TrimPrefix(k, "openapi|") {
 			case "server_addr":
-				arg.ServerAddr = v.(string)
+				arg.ServerAddr, _ = v.(string)
 			case "auth_token":
-				arg.AuthToken = v.(string)
+				arg.AuthToken, _ = v.(string)
 			case "auth_username":
-				arg.AuthUsername = v.(string)
+				arg.AuthUsername, _ = v.(string)
 			case "auth_password":
-				arg.AuthPassword = v.(string)
+				arg.AuthPassword, _ = v.(string)
 			case "auth_oauth2_token":
-				arg.AuthOAuth2Token = v.(string)
+				arg.AuthOAuth2Token, _ = v.(string)
 			default:
-				arg.AuthToken = v.(string)
+				arg.AuthToken, _ = v.(string)
 			}
 		case k == "body":
 			arg.Body = v
@@ -247,28 +248,28 @@ func getOperations(pathItem *openapi3.PathItem) map[string]*openapi3.Operation {
 	operations := make(map[string]*openapi3.Operation)
 
 	if pathItem.Get != nil {
-		operations["get"] = pathItem.Get
+		operations[http.MethodGet] = pathItem.Get
 	}
 	if pathItem.Post != nil {
-		operations["post"] = pathItem.Post
+		operations[http.MethodPost] = pathItem.Post
 	}
 	if pathItem.Put != nil {
-		operations["put"] = pathItem.Put
+		operations[http.MethodPut] = pathItem.Put
 	}
 	if pathItem.Delete != nil {
-		operations["delete"] = pathItem.Delete
+		operations[http.MethodDelete] = pathItem.Delete
 	}
 	if pathItem.Options != nil {
-		operations["options"] = pathItem.Options
+		operations[http.MethodOptions] = pathItem.Options
 	}
 	if pathItem.Head != nil {
-		operations["head"] = pathItem.Head
+		operations[http.MethodHead] = pathItem.Head
 	}
 	if pathItem.Patch != nil {
-		operations["patch"] = pathItem.Patch
+		operations[http.MethodPatch] = pathItem.Patch
 	}
 	if pathItem.Trace != nil {
-		operations["trace"] = pathItem.Trace
+		operations[http.MethodTrace] = pathItem.Trace
 	}
 
 	return operations
