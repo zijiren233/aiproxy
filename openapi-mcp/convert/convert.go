@@ -137,7 +137,9 @@ func newHandler(server *openapi3.Server, path, method string, _ *openapi3.Operat
 		}
 
 		// Set content type for requests with body
-		if arg.Body != nil {
+		if arg.BodyContentType != "" {
+			httpReq.Header.Set("Content-Type", arg.BodyContentType)
+		} else if arg.Body != nil {
 			httpReq.Header.Set("Content-Type", "application/json")
 		}
 
@@ -192,6 +194,7 @@ type Args struct {
 	AuthOAuth2Token string
 	Headers         map[string]any
 	Body            any
+	BodyContentType string
 	Query           map[string]any
 	Path            map[string]any
 	Forms           map[string]any
@@ -223,6 +226,9 @@ func getArgs(args map[string]interface{}) Args {
 			}
 		case k == "body":
 			arg.Body = v
+		case strings.HasPrefix(k, "body|"):
+			arg.Body = v
+			arg.BodyContentType = strings.TrimPrefix(k, "body|")
 		case strings.HasPrefix(k, "query|"):
 			arg.Query[strings.TrimPrefix(k, "query|")] = v
 		case strings.HasPrefix(k, "path|"):
@@ -454,7 +460,7 @@ func (c *Converter) convertSecurityRequirements(securityRequirements openapi3.Se
 func (c *Converter) convertRequestBody(requestBody *openapi3.RequestBody) []mcp.ToolOption {
 	args := []mcp.ToolOption{}
 
-	for _, mediaType := range requestBody.Content {
+	for contentType, mediaType := range requestBody.Content {
 		if mediaType.Schema == nil || mediaType.Schema.Value == nil {
 			continue
 		}
@@ -492,7 +498,7 @@ func (c *Converter) convertRequestBody(requestBody *openapi3.RequestBody) []mcp.
 		}
 
 		// Add content type as part of the parameter name
-		args = append(args, c.createToolOption(t, "body", propertyOptions...))
+		args = append(args, c.createToolOption(t, "body|"+contentType, propertyOptions...))
 	}
 
 	return args
