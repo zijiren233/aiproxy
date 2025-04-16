@@ -383,6 +383,8 @@ func (c *Converter) convertOperation(path, method string, operation *openapi3.Op
 }
 
 // generateResponseDescription creates a human-readable description of possible responses
+//
+//nolint:unused
 func (c *Converter) generateResponseDescription(responses openapi3.Responses) string {
 	respMap := responses.Map()
 	responseDescriptions := make([]string, 0, len(respMap))
