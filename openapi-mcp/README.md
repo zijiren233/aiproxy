@@ -22,3 +22,9 @@ go run . --file doc.json
 # serve on http://localhost:3000/sse
 go run . --file doc.json --sse 0.0.0.0:3000
 ```
+
+### Remote File
+
+```bash
+go run . --file https://converter.swagger.io/api/openapi.json
+```

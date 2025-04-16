@@ -9,8 +9,8 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/labring/aiproxy/openapi-mcp/convert"
 	"github.com/mark3labs/mcp-go/server"
-	"github.com/zijiren233/openapi-mcp/convert"
 )
 
 var (
@@ -66,7 +66,9 @@ func newServer() (*server.MCPServer, error) {
 	if err != nil {
 		return nil, err
 	}
-	converter := convert.NewConverter(parser, convert.Options{})
+	converter := convert.NewConverter(parser, convert.Options{
+		OpenAPIFrom: file,
+	})
 	return converter.Convert()
 }
 

@@ -17,6 +17,7 @@ import (
 )
 
 type Options struct {
+	OpenAPIFrom    string
 	ServerName     string
 	Version        string
 	ToolNamePrefix string
@@ -61,9 +62,13 @@ func (c *Converter) Convert() (*server.MCPServer, error) {
 	)
 
 	servers := c.parser.GetServers()
-	var server *openapi3.Server
+	defaultServer := ""
 	if len(servers) == 1 {
-		server = servers[0]
+		server, err := getServerURL(c.options.OpenAPIFrom, servers[0].URL)
+		if err != nil {
+			return nil, err
+		}
+		defaultServer = server
 	}
 
 	// Process each path and operation
@@ -71,7 +76,7 @@ func (c *Converter) Convert() (*server.MCPServer, error) {
 		operations := getOperations(pathItem)
 		for method, operation := range operations {
 			tool := c.convertOperation(path, method, operation)
-			handler := newHandler(server, path, method, operation)
+			handler := newHandler(defaultServer, path, method, operation)
 			mcpServer.AddTool(*tool, handler)
 		}
 	}
@@ -79,15 +84,36 @@ func (c *Converter) Convert() (*server.MCPServer, error) {
 	return mcpServer, nil
 }
 
+func getServerURL(from string, dir string) (string, error) {
+	if dir == "" || from == "" {
+		return from, nil
+	}
+	if strings.HasPrefix(dir, "http://") ||
+		strings.HasPrefix(dir, "https://") {
+		return dir, nil
+	}
+	if !strings.HasPrefix(from, "http://") &&
+		!strings.HasPrefix(from, "https://") {
+		return dir, nil
+	}
+	result, err := url.Parse(from)
+	if err != nil {
+		return "", err
+	}
+	result.Path = dir
+	result.RawQuery = ""
+	return result.String(), nil
+}
+
 // TODO: valid operation
-func newHandler(server *openapi3.Server, path, method string, _ *openapi3.Operation) server.ToolHandlerFunc {
+func newHandler(defaultServer string, path, method string, _ *openapi3.Operation) server.ToolHandlerFunc {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		arg := getArgs(request.Params.Arguments)
 
 		// Build the URL
 		serverURL := arg.ServerAddr
-		if serverURL == "" && server != nil {
-			serverURL = server.URL
+		if serverURL == "" {
+			serverURL = defaultServer
 		}
 
 		// Replace path parameters
@@ -177,12 +203,12 @@ func newHandler(server *openapi3.Server, path, method string, _ *openapi3.Operat
 			return nil, fmt.Errorf("request failed: %w", err)
 		}
 		defer resp.Body.Close()
-
-		result, err := io.ReadAll(resp.Body)
+		buf := bytes.NewBuffer(nil)
+		err = resp.Write(buf)
 		if err != nil {
 			return nil, fmt.Errorf("read response error: %w", err)
 		}
-		return mcp.NewToolResultText(fmt.Sprintf("status code: %d\nresponse body: %s", resp.StatusCode, result)), nil
+		return mcp.NewToolResultText(buf.String()), nil
 	}
 }
 
@@ -294,22 +320,31 @@ func (c *Converter) convertOperation(path, method string, operation *openapi3.Op
 	servers := c.parser.GetServers()
 	switch {
 	case len(servers) == 0:
-		args = append(args, mcp.WithString("openapi|server_addr",
-			mcp.Description("Server address to connect to"),
-			mcp.Required()))
+		if c.options.OpenAPIFrom != "" {
+			args = append(args, mcp.WithString("openapi|server_addr",
+				mcp.Description("Server address to connect to, example: "+c.options.OpenAPIFrom),
+				mcp.Required()))
+		} else {
+			args = append(args, mcp.WithString("openapi|server_addr",
+				mcp.Description("Server address to connect to"),
+				mcp.Required()))
+		}
 	case len(servers) == 1:
-		serverUrls := make([]string, 0, len(servers))
-		for _, server := range servers {
-			serverUrls = append(serverUrls, server.URL)
+		u, err := getServerURL(c.options.OpenAPIFrom, servers[0].URL)
+		if err != nil {
+			u = servers[0].URL
 		}
 		args = append(args, mcp.WithString("openapi|server_addr",
 			mcp.Description("Server address to connect to"),
-			mcp.DefaultString(servers[0].URL),
-			mcp.Enum(serverUrls...)))
+			mcp.DefaultString(u)))
 	default:
 		serverUrls := make([]string, 0, len(servers))
 		for _, server := range servers {
-			serverUrls = append(serverUrls, server.URL)
+			u, err := getServerURL(c.options.OpenAPIFrom, server.URL)
+			if err != nil {
+				u = server.URL
+			}
+			serverUrls = append(serverUrls, u)
 		}
 		args = append(args, mcp.WithString("openapi|server_addr",
 			mcp.Description("Server address to connect to"),
