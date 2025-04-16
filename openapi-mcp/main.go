@@ -83,6 +83,7 @@ func main() {
 	}
 
 	if sse != "" {
+		log.Printf("SSE MCP Server Starting")
 		err = server.NewSSEServer(s).Start(sse)
 	} else {
 		err = server.ServeStdio(s)

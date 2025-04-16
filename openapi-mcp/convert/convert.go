@@ -75,11 +75,7 @@ func (c *Converter) Convert() (*server.MCPServer, error) {
 				return nil, fmt.Errorf("failed to convert operation %s %s: %w", method, path, err)
 			}
 
-			handler, err := newHandler(server, path, method, operation)
-			if err != nil {
-				return nil, fmt.Errorf("failed to create handler for operation %s %s: %w", method, path, err)
-			}
-
+			handler := newHandler(server, path, method, operation)
 			mcpServer.AddTool(*tool, handler)
 		}
 	}
@@ -88,7 +84,7 @@ func (c *Converter) Convert() (*server.MCPServer, error) {
 }
 
 // TODO: valid operation
-func newHandler(server *openapi3.Server, path, method string, _ *openapi3.Operation) (server.ToolHandlerFunc, error) {
+func newHandler(server *openapi3.Server, path, method string, _ *openapi3.Operation) server.ToolHandlerFunc {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		arg := getArgs(request.Params.Arguments)
 
@@ -150,11 +146,12 @@ func newHandler(server *openapi3.Server, path, method string, _ *openapi3.Operat
 		}
 
 		// Add authentication if provided
-		if arg.AuthToken != "" {
+		switch {
+		case arg.AuthToken != "":
 			httpReq.Header.Set("Authorization", "Bearer "+arg.AuthToken)
-		} else if arg.AuthUsername != "" && arg.AuthPassword != "" {
+		case arg.AuthUsername != "" && arg.AuthPassword != "":
 			httpReq.SetBasicAuth(arg.AuthUsername, arg.AuthPassword)
-		} else if arg.AuthOAuth2Token != "" {
+		case arg.AuthOAuth2Token != "":
 			httpReq.Header.Set("Authorization", "Bearer "+arg.AuthOAuth2Token)
 		}
 
@@ -188,7 +185,7 @@ func newHandler(server *openapi3.Server, path, method string, _ *openapi3.Operat
 			return nil, fmt.Errorf("read response error: %w", err)
 		}
 		return mcp.NewToolResultText(fmt.Sprintf("status code: %d\nresponse body: %s", resp.StatusCode, result)), nil
-	}, nil
+	}
 }
 
 type Args struct {
@@ -299,11 +296,12 @@ func (c *Converter) convertOperation(path, method string, operation *openapi3.Op
 
 	// Add server address parameter
 	servers := c.parser.GetServers()
-	if len(servers) == 0 {
+	switch {
+	case len(servers) == 0:
 		args = append(args, mcp.WithString("openapi|server_addr",
 			mcp.Description("Server address to connect to"),
 			mcp.Required()))
-	} else if len(servers) == 1 {
+	case len(servers) == 1:
 		serverUrls := make([]string, 0, len(servers))
 		for _, server := range servers {
 			serverUrls = append(serverUrls, server.URL)
@@ -312,7 +310,7 @@ func (c *Converter) convertOperation(path, method string, operation *openapi3.Op
 			mcp.Description("Server address to connect to"),
 			mcp.DefaultString(servers[0].URL),
 			mcp.Enum(serverUrls...)))
-	} else {
+	default:
 		serverUrls := make([]string, 0, len(servers))
 		for _, server := range servers {
 			serverUrls = append(serverUrls, server.URL)
@@ -484,20 +482,21 @@ func (c *Converter) convertRequestBody(requestBody *openapi3.RequestBody) ([]mcp
 
 		t := PropertyTypeObject
 		if schema.Type != nil {
-			if schema.Type.Is("array") && schema.Items != nil && schema.Items.Value != nil {
+			switch {
+			case schema.Type.Is("array") && schema.Items != nil && schema.Items.Value != nil:
 				t = PropertyTypeArray
 				item := c.processSchemaItems(schema.Items.Value, make(map[string]bool))
 				propertyOptions = append(propertyOptions, mcp.Items(item))
-			} else if schema.Type.Is("object") || len(schema.Properties) > 0 {
+			case schema.Type.Is("object") || len(schema.Properties) > 0:
 				obj := c.processSchemaProperties(schema, make(map[string]bool))
 				propertyOptions = append(propertyOptions, mcp.Properties(obj))
-			} else if schema.Type.Is("string") {
+			case schema.Type.Is("string"):
 				t = PropertyTypeString
-			} else if schema.Type.Is("integer") {
+			case schema.Type.Is("integer"):
 				t = PropertyTypeInteger
-			} else if schema.Type.Is("number") {
+			case schema.Type.Is("number"):
 				t = PropertyTypeNumber
-			} else if schema.Type.Is("boolean") {
+			case schema.Type.Is("boolean"):
 				t = PropertyTypeBoolean
 			}
 		}
@@ -543,19 +542,20 @@ func (c *Converter) convertParameters(parameters openapi3.Parameters) ([]mcp.Too
 			schema := param.Schema.Value
 
 			// Determine property type and add specific options
-			if schema.Type.Is("array") && schema.Items != nil && schema.Items.Value != nil {
+			switch {
+			case schema.Type.Is("array") && schema.Items != nil && schema.Items.Value != nil:
 				t = PropertyTypeArray
 				item := c.processSchemaItems(schema.Items.Value, make(map[string]bool))
 				propertyOptions = append(propertyOptions, mcp.Items(item))
-			} else if schema.Type.Is("object") && len(schema.Properties) > 0 {
+			case schema.Type.Is("object") && len(schema.Properties) > 0:
 				t = PropertyTypeObject
 				obj := c.processSchemaProperties(schema, make(map[string]bool))
 				propertyOptions = append(propertyOptions, mcp.Properties(obj))
-			} else if schema.Type.Is("integer") {
+			case schema.Type.Is("integer"):
 				t = PropertyTypeInteger
-			} else if schema.Type.Is("number") {
+			case schema.Type.Is("number"):
 				t = PropertyTypeNumber
-			} else if schema.Type.Is("boolean") {
+			case schema.Type.Is("boolean"):
 				t = PropertyTypeBoolean
 			}
 
@@ -638,8 +638,6 @@ func (c *Converter) processSchemaProperties(schema *openapi3.Schema, visited map
 
 // processSchemaProperty processes a single schema property
 func (c *Converter) processSchemaProperty(schema *openapi3.Schema, visited map[string]bool) map[string]interface{} {
-	property := make(map[string]interface{})
-
 	// Check for circular references
 	if schema.Title != "" {
 		refKey := schema.Title
@@ -660,6 +658,37 @@ func (c *Converter) processSchemaProperty(schema *openapi3.Schema, visited map[s
 		visited = visitedCopy
 	}
 
+	return c.buildPropertyMap(schema, visited)
+}
+
+// buildPropertyMap builds the property map for a schema
+// This function was extracted to reduce cyclomatic complexity
+func (c *Converter) buildPropertyMap(schema *openapi3.Schema, visited map[string]bool) map[string]interface{} {
+	property := make(map[string]interface{})
+
+	// Add basic schema information
+	c.addBasicSchemaInfo(schema, property)
+
+	// Add schema validations
+	c.addSchemaValidations(schema, property)
+
+	// Add schema composition
+	c.addSchemaComposition(schema, property, visited)
+
+	// Add object properties
+	c.addObjectProperties(schema, property, visited)
+
+	// Add array items
+	c.addArrayItems(schema, property, visited)
+
+	// Add additional schema metadata
+	c.addAdditionalMetadata(schema, property, visited)
+
+	return property
+}
+
+// addBasicSchemaInfo adds basic schema information to the property map
+func (c *Converter) addBasicSchemaInfo(schema *openapi3.Schema, property map[string]interface{}) {
 	if schema.Type != nil {
 		property["type"] = schema.Type
 	}
@@ -683,48 +712,10 @@ func (c *Converter) processSchemaProperty(schema *openapi3.Schema, visited map[s
 	if schema.Format != "" {
 		property["format"] = schema.Format
 	}
+}
 
-	// Schema composition
-	if len(schema.OneOf) > 0 {
-		oneOf := make([]interface{}, 0, len(schema.OneOf))
-		for _, schemaRef := range schema.OneOf {
-			if schemaRef.Value != nil {
-				oneOf = append(oneOf, c.processSchemaProperty(schemaRef.Value, visited))
-			}
-		}
-		if len(oneOf) > 0 {
-			property["oneOf"] = oneOf
-		}
-	}
-
-	if len(schema.AnyOf) > 0 {
-		anyOf := make([]interface{}, 0, len(schema.AnyOf))
-		for _, schemaRef := range schema.AnyOf {
-			if schemaRef.Value != nil {
-				anyOf = append(anyOf, c.processSchemaProperty(schemaRef.Value, visited))
-			}
-		}
-		if len(anyOf) > 0 {
-			property["anyOf"] = anyOf
-		}
-	}
-
-	if len(schema.AllOf) > 0 {
-		allOf := make([]interface{}, 0, len(schema.AllOf))
-		for _, schemaRef := range schema.AllOf {
-			if schemaRef.Value != nil {
-				allOf = append(allOf, c.processSchemaProperty(schemaRef.Value, visited))
-			}
-		}
-		if len(allOf) > 0 {
-			property["allOf"] = allOf
-		}
-	}
-
-	if schema.Not != nil && schema.Not.Value != nil {
-		property["not"] = c.processSchemaProperty(schema.Not.Value, visited)
-	}
-
+// addSchemaValidations adds schema validations to the property map
+func (c *Converter) addSchemaValidations(schema *openapi3.Schema, property map[string]interface{}) {
 	// Boolean flags
 	if schema.Nullable {
 		property["nullable"] = schema.Nullable
@@ -791,7 +782,54 @@ func (c *Converter) processSchemaProperty(schema *openapi3.Schema, visited map[s
 	if len(schema.Required) > 0 {
 		property["required"] = schema.Required
 	}
+}
 
+// addSchemaComposition adds schema composition to the property map
+func (c *Converter) addSchemaComposition(schema *openapi3.Schema, property map[string]interface{}, visited map[string]bool) {
+	// Schema composition
+	if len(schema.OneOf) > 0 {
+		oneOf := make([]interface{}, 0, len(schema.OneOf))
+		for _, schemaRef := range schema.OneOf {
+			if schemaRef.Value != nil {
+				oneOf = append(oneOf, c.processSchemaProperty(schemaRef.Value, visited))
+			}
+		}
+		if len(oneOf) > 0 {
+			property["oneOf"] = oneOf
+		}
+	}
+
+	if len(schema.AnyOf) > 0 {
+		anyOf := make([]interface{}, 0, len(schema.AnyOf))
+		for _, schemaRef := range schema.AnyOf {
+			if schemaRef.Value != nil {
+				anyOf = append(anyOf, c.processSchemaProperty(schemaRef.Value, visited))
+			}
+		}
+		if len(anyOf) > 0 {
+			property["anyOf"] = anyOf
+		}
+	}
+
+	if len(schema.AllOf) > 0 {
+		allOf := make([]interface{}, 0, len(schema.AllOf))
+		for _, schemaRef := range schema.AllOf {
+			if schemaRef.Value != nil {
+				allOf = append(allOf, c.processSchemaProperty(schemaRef.Value, visited))
+			}
+		}
+		if len(allOf) > 0 {
+			property["allOf"] = allOf
+		}
+	}
+
+	if schema.Not != nil && schema.Not.Value != nil {
+		property["not"] = c.processSchemaProperty(schema.Not.Value, visited)
+	}
+}
+
+// addObjectProperties adds object properties to the property map
+func (c *Converter) addObjectProperties(schema *openapi3.Schema, property map[string]interface{}, visited map[string]bool) {
 	// Handle AdditionalProperties
 	if schema.AdditionalProperties.Has != nil {
 		property["additionalProperties"] = *schema.AdditionalProperties.Has
@@ -819,12 +857,16 @@ func (c *Converter) processSchemaProperty(schema *openapi3.Schema, visited map[s
 		}
 		property["properties"] = nestedProps
 	}
+}
 
+func (c *Converter) addArrayItems(schema *openapi3.Schema, property map[string]interface{}, visited map[string]bool) {
 	// Recursively process array items
 	if schema.Type != nil && schema.Type.Is("array") && schema.Items != nil && schema.Items.Value != nil {
 		property["items"] = c.processSchemaItems(schema.Items.Value, visited)
 	}
+}
 
+func (c *Converter) addAdditionalMetadata(schema *openapi3.Schema, property map[string]interface{}, visited map[string]bool) {
 	// Handle external docs if present
 	if schema.ExternalDocs != nil {
 		externalDocs := make(map[string]interface{})
@@ -853,8 +895,6 @@ func (c *Converter) processSchemaProperty(schema *openapi3.Schema, visited map[s
 		xml["wrapped"] = schema.XML.Wrapped
 		property["xml"] = xml
 	}
-
-	return property
 }
 
 // createToolOption creates the appropriate tool option based on property type
