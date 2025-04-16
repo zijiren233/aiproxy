@@ -280,17 +280,11 @@ func (c *Converter) convertOperation(path, method string, operation *openapi3.Op
 		toolName = c.options.ToolNamePrefix + toolName
 	}
 
-	args, err := c.convertParameters(operation.Parameters)
-	if err != nil {
-		return nil, fmt.Errorf("failed to convert parameters: %w", err)
-	}
+	args := c.convertParameters(operation.Parameters)
 
 	// Handle request body if present
 	if operation.RequestBody != nil && operation.RequestBody.Value != nil {
-		bodyArgs, err := c.convertRequestBody(operation.RequestBody.Value)
-		if err != nil {
-			return nil, fmt.Errorf("failed to convert request body: %w", err)
-		}
+		bodyArgs := c.convertRequestBody(operation.RequestBody.Value)
 		args = append(args, bodyArgs...)
 	}
 
@@ -461,7 +455,7 @@ func (c *Converter) convertSecurityRequirements(securityRequirements openapi3.Se
 }
 
 // convertRequestBody converts an OpenAPI request body to MCP arguments
-func (c *Converter) convertRequestBody(requestBody *openapi3.RequestBody) ([]mcp.ToolOption, error) {
+func (c *Converter) convertRequestBody(requestBody *openapi3.RequestBody) []mcp.ToolOption {
 	args := []mcp.ToolOption{}
 
 	for _, mediaType := range requestBody.Content {
@@ -505,7 +499,7 @@ func (c *Converter) convertRequestBody(requestBody *openapi3.RequestBody) ([]mcp
 		args = append(args, c.createToolOption(t, "body", propertyOptions...))
 	}
 
-	return args, nil
+	return args
 }
 
 type propertyType string
@@ -520,7 +514,7 @@ const (
 )
 
 // convertParameters converts OpenAPI parameters to MCP arguments
-func (c *Converter) convertParameters(parameters openapi3.Parameters) ([]mcp.ToolOption, error) {
+func (c *Converter) convertParameters(parameters openapi3.Parameters) []mcp.ToolOption {
 	args := []mcp.ToolOption{}
 
 	for _, paramRef := range parameters {
@@ -589,7 +583,7 @@ func (c *Converter) convertParameters(parameters openapi3.Parameters) ([]mcp.Too
 		}
 	}
 
-	return args, nil
+	return args
 }
 
 // processSchemaItems processes schema items for array types
@@ -682,7 +676,7 @@ func (c *Converter) buildPropertyMap(schema *openapi3.Schema, visited map[string
 	c.addArrayItems(schema, property, visited)
 
 	// Add additional schema metadata
-	c.addAdditionalMetadata(schema, property, visited)
+	c.addAdditionalMetadata(schema, property)
 
 	return property
 }
@@ -866,7 +860,7 @@ func (c *Converter) addArrayItems(schema *openapi3.Schema, property map[string]i
 	}
 }
 
-func (c *Converter) addAdditionalMetadata(schema *openapi3.Schema, property map[string]interface{}, visited map[string]bool) {
+func (c *Converter) addAdditionalMetadata(schema *openapi3.Schema, property map[string]interface{}) {
 	// Handle external docs if present
 	if schema.ExternalDocs != nil {
 		externalDocs := make(map[string]interface{})
