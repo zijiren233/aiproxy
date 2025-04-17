@@ -67,6 +67,7 @@ func (l *GroupPublicMCPReusingParam) BeforeCreate(_ *gorm.DB) (err error) {
 type MCPOpenAPIConfig struct {
 	OpenAPISpec    string   `json:"openapi_spec"`
 	OpenAPIContent string   `json:"openapi_content,omitempty"`
+	V2             bool     `json:"v2"`
 	Server         string   `json:"server,omitempty"`
 	Authorization  string   `json:"authorization,omitempty"`
 	Price          MCPPrice `json:"price"`

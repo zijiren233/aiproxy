@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 )
@@ -161,6 +162,12 @@ func ProxyHandler(
 	backendEndpoint, ok := store.Get(sessionID)
 	if !ok {
 		http.Error(w, "Invalid or expired sessionId", http.StatusNotFound)
+		return
+	}
+
+	u, err := url.Parse(backendEndpoint)
+	if err != nil || (u.Scheme != "http" && u.Scheme != "https") {
+		http.Error(w, "Invalid backend", http.StatusBadRequest)
 		return
 	}
 

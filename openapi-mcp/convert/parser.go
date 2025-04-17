@@ -1,7 +1,10 @@
 package convert
 
 import (
+	"context"
 	"fmt"
+	"io"
+	"net/http"
 	"os"
 	"strings"
 
@@ -20,8 +23,28 @@ func NewParser() *Parser {
 	return &Parser{}
 }
 
+func getFronHTTP(u string) ([]byte, error) {
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, u, nil)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	return io.ReadAll(resp.Body)
+}
+
 // ParseFile parses an OpenAPI document from a file
 func (p *Parser) ParseFile(filePath string) error {
+	if strings.HasPrefix(filePath, "http://") || strings.HasPrefix(filePath, "https://") {
+		data, err := getFronHTTP(filePath)
+		if err != nil {
+			return err
+		}
+		return p.Parse(data)
+	}
 	data, err := os.ReadFile(filePath)
 	if err != nil {
 		return fmt.Errorf("failed to read OpenAPI file: %w", err)
@@ -31,6 +54,13 @@ func (p *Parser) ParseFile(filePath string) error {
 }
 
 func (p *Parser) ParseFileV2(filePath string) error {
+	if strings.HasPrefix(filePath, "http://") || strings.HasPrefix(filePath, "https://") {
+		data, err := getFronHTTP(filePath)
+		if err != nil {
+			return err
+		}
+		return p.Parse(data)
+	}
 	data, err := os.ReadFile(filePath)
 	if err != nil {
 		return fmt.Errorf("failed to read OpenAPI file: %w", err)
