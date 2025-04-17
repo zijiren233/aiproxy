@@ -10,5 +10,5 @@ func SetMCPRouter(router *gin.Engine) {
 	mcpRoute := router.Group("/mcp", middleware.MCPAuth)
 
 	mcpRoute.GET("/public/:id/sse", controller.MCPSseProxy)
-	mcpRoute.POST("/message", controller.MCPProxy)
+	mcpRoute.POST("/message", controller.MCPMessage)
 }

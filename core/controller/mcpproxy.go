@@ -2,10 +2,12 @@ package controller
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"net/url"
+	"runtime"
 	"sync"
 	"time"
 
@@ -34,7 +36,7 @@ func newEndpoint(key string, t model.MCPType) mcpproxy.EndpointProvider {
 
 func (m *mcpEndpointProvider) NewEndpoint() (newSession string, newEndpoint string) {
 	session := uuid.NewString()
-	endpoint := fmt.Sprintf("/mcp/message?sessionId=%s&key=%s&t=%s", session, m.key, m.t)
+	endpoint := fmt.Sprintf("/mcp/message?sessionId=%s&key=%s&type=%s", session, m.key, m.t)
 	return session, endpoint
 }
 
@@ -201,7 +203,7 @@ func MCPSseProxy(c *gin.Context) {
 					return
 				default:
 				}
-				data, err := mpscInstance.recv(newSission)
+				data, err := mpscInstance.recv(c.Request.Context(), newSission)
 				if err != nil {
 					return
 				}
@@ -246,17 +248,17 @@ func processReusingParams(reusingParams map[string]model.ReusingParam, mcpId str
 	return nil
 }
 
-// MCPProxy godoc
+// MCPMessage godoc
 //
 //	@Summary	MCP SSE Proxy
 //	@Router		/mcp/message [post]
-func MCPProxy(c *gin.Context) {
+func MCPMessage(c *gin.Context) {
 	token := middleware.GetToken(c)
-	t, _ := c.GetQuery("type")
-	if t == "" {
+	mcpTypeStr, _ := c.GetQuery("type")
+	if mcpTypeStr == "" {
 		return
 	}
-	mcpType := model.MCPType(t)
+	mcpType := model.MCPType(mcpTypeStr)
 	sessionId, _ := c.GetQuery("sessionId")
 	if sessionId == "" {
 		return
@@ -271,36 +273,80 @@ func MCPProxy(c *gin.Context) {
 			newEndpoint(token.Key, mcpType),
 		)
 	case model.MCPTypeOpenAPI:
+		backend, ok := getStore().Get(sessionId)
+		if !ok || backend != "openapi" {
+			return
+		}
 		mpscInstance := getMpsc()
 		body, err := io.ReadAll(c.Request.Body)
 		if err != nil {
 			return
 		}
-		mpscInstance.send(sessionId, body)
+		mpscInstance.send(c.Request.Context(), sessionId, body)
+		c.Writer.WriteHeader(http.StatusAccepted)
 	}
 }
 
-var memMpsc mpsc = newChannelMpsc()
+var (
+	memMpsc       mpsc = newChannelMpsc()
+	redisMpsc     mpsc
+	redisMpscOnce = &sync.Once{}
+)
 
 func getMpsc() mpsc {
+	if common.RedisEnabled {
+		redisMpscOnce.Do(func() {
+			redisMpsc = NewRedisMPSC(common.RDB)
+		})
+		return redisMpsc
+	}
 	return memMpsc
 }
 
 type mpsc interface {
-	recv(id string) ([]byte, error)
-	send(id string, data []byte) error
+	recv(ctx context.Context, id string) ([]byte, error)
+	send(ctx context.Context, id string, data []byte) error
 }
 
 // channelMpsc implements mpsc interface using channels
 type channelMpsc struct {
 	channels     map[string]chan []byte
+	lastAccess   map[string]time.Time
 	channelMutex sync.RWMutex
 }
 
 // newChannelMpsc creates a new channel-based mpsc implementation
 func newChannelMpsc() *channelMpsc {
-	return &channelMpsc{
-		channels: make(map[string]chan []byte),
+	c := &channelMpsc{
+		channels:   make(map[string]chan []byte),
+		lastAccess: make(map[string]time.Time),
+	}
+
+	// Start a goroutine to clean up expired channels
+	go c.cleanupExpiredChannels()
+
+	return c
+}
+
+// cleanupExpiredChannels periodically checks for and removes channels that haven't been accessed in 5 minutes
+func (c *channelMpsc) cleanupExpiredChannels() {
+	ticker := time.NewTicker(1 * time.Minute)
+	defer ticker.Stop()
+
+	for range ticker.C {
+		c.channelMutex.Lock()
+		now := time.Now()
+		for id, lastAccess := range c.lastAccess {
+			if now.Sub(lastAccess) > 5*time.Minute {
+				// Close and delete the channel
+				if ch, exists := c.channels[id]; exists {
+					close(ch)
+					delete(c.channels, id)
+				}
+				delete(c.lastAccess, id)
+			}
+		}
+		c.channelMutex.Unlock()
 	}
 }
 
@@ -312,11 +358,15 @@ func (c *channelMpsc) getOrCreateChannel(id string) chan []byte {
 
 	if !exists {
 		c.channelMutex.Lock()
-		// Check again in case another goroutine created it while we were waiting for the lock
 		if ch, exists = c.channels[id]; !exists {
-			ch = make(chan []byte, 10) // Buffer size of 100
+			ch = make(chan []byte, 10)
 			c.channels[id] = ch
 		}
+		c.lastAccess[id] = time.Now()
+		c.channelMutex.Unlock()
+	} else {
+		c.channelMutex.Lock()
+		c.lastAccess[id] = time.Now()
 		c.channelMutex.Unlock()
 	}
 
@@ -324,7 +374,7 @@ func (c *channelMpsc) getOrCreateChannel(id string) chan []byte {
 }
 
 // recv receives data for the specified session
-func (c *channelMpsc) recv(id string) ([]byte, error) {
+func (c *channelMpsc) recv(ctx context.Context, id string) ([]byte, error) {
 	ch := c.getOrCreateChannel(id)
 
 	select {
@@ -333,19 +383,61 @@ func (c *channelMpsc) recv(id string) ([]byte, error) {
 			return nil, fmt.Errorf("channel closed for session %s", id)
 		}
 		return data, nil
-	case <-time.After(30 * time.Second):
-		return nil, fmt.Errorf("timeout waiting for data on session %s", id)
+	case <-ctx.Done():
+		return nil, ctx.Err()
 	}
 }
 
 // send sends data to the specified session
-func (c *channelMpsc) send(id string, data []byte) error {
+func (c *channelMpsc) send(ctx context.Context, id string, data []byte) error {
 	ch := c.getOrCreateChannel(id)
 
 	select {
 	case ch <- data:
 		return nil
+	case <-ctx.Done():
+		return ctx.Err()
 	default:
 		return fmt.Errorf("channel buffer full for session %s", id)
+	}
+}
+
+type redisMPSC struct {
+	rdb *redis.Client
+}
+
+// NewRedisMPSC 创建新的Redis MPSC实例
+func NewRedisMPSC(rdb *redis.Client) *redisMPSC {
+	return &redisMPSC{rdb: rdb}
+}
+
+func (r *redisMPSC) send(ctx context.Context, id string, data []byte) error {
+	// Set expiration to 5 minutes when sending data
+	pipe := r.rdb.Pipeline()
+	pipe.LPush(ctx, id, data)
+	pipe.Expire(ctx, id, 5*time.Minute)
+	_, err := pipe.Exec(ctx)
+	return err
+}
+
+func (r *redisMPSC) recv(ctx context.Context, id string) ([]byte, error) {
+	for {
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		default:
+			result, err := r.rdb.BRPop(ctx, time.Second, id).Result()
+			if err != nil {
+				if err == redis.Nil {
+					runtime.Gosched()
+					continue
+				}
+				return nil, err
+			}
+			if len(result) != 2 {
+				return nil, errors.New("invalid BRPop result")
+			}
+			return []byte(result[1]), nil
+		}
 	}
 }
