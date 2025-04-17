@@ -9,7 +9,7 @@ import (
 	"github.com/labring/aiproxy/core/model"
 )
 
-// GetMCPs godoc
+// GetPublicMCPs godoc
 //
 //	@Summary		Get MCPs
 //	@Description	Get a list of MCPs with pagination and filtering
@@ -21,13 +21,13 @@ import (
 //	@Param			type		query		string	false	"MCP type"
 //	@Param			keyword		query		string	false	"Search keyword"
 //	@Success		200			{object}	middleware.APIResponse{data=[]model.PublicMCP}
-//	@Router			/api/mcp/ [get]
-func GetMCPs(c *gin.Context) {
+//	@Router			/api/mcp/public/ [get]
+func GetPublicMCPs(c *gin.Context) {
 	page, perPage := parsePageParams(c)
 	mcpType := model.MCPType(c.Query("type"))
 	keyword := c.Query("keyword")
 
-	mcps, total, err := model.GetMCPs(page, perPage, mcpType, keyword)
+	mcps, total, err := model.GetPublicMCPs(page, perPage, mcpType, keyword)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
@@ -48,15 +48,15 @@ func GetMCPs(c *gin.Context) {
 //	@Security		ApiKeyAuth
 //	@Param			id	path		string	true	"MCP ID"
 //	@Success		200	{object}	middleware.APIResponse{data=model.PublicMCP}
-//	@Router			/api/mcp/{id} [get]
-func GetMCPByIDHandler(c *gin.Context) {
+//	@Router			/api/mcp/public/{id} [get]
+func GetPublicMCPByIDHandler(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
 		middleware.ErrorResponse(c, http.StatusBadRequest, "MCP ID is required")
 		return
 	}
 
-	mcp, err := model.GetMCPByID(id)
+	mcp, err := model.GetPublicMCPByID(id)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusNotFound, err.Error())
 		return
@@ -65,7 +65,7 @@ func GetMCPByIDHandler(c *gin.Context) {
 	middleware.SuccessResponse(c, mcp)
 }
 
-// CreateMCP godoc
+// CreatePublicMCP godoc
 //
 //	@Summary		Create MCP
 //	@Description	Create a new MCP
@@ -75,8 +75,8 @@ func GetMCPByIDHandler(c *gin.Context) {
 //	@Security		ApiKeyAuth
 //	@Param			mcp	body		model.PublicMCP	true	"MCP object"
 //	@Success		200	{object}	middleware.APIResponse
-//	@Router			/api/mcp/ [post]
-func CreateMCP(c *gin.Context) {
+//	@Router			/api/mcp/public/ [post]
+func CreatePublicMCP(c *gin.Context) {
 	var mcp model.PublicMCP
 	if err := c.ShouldBindJSON(&mcp); err != nil {
 		middleware.ErrorResponse(c, http.StatusBadRequest, err.Error())
@@ -86,7 +86,7 @@ func CreateMCP(c *gin.Context) {
 	mcp.CreatedAt = time.Now()
 	mcp.UpdateAt = time.Now()
 
-	if err := model.CreateMCP(&mcp); err != nil {
+	if err := model.CreatePublicMCP(&mcp); err != nil {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
@@ -94,7 +94,7 @@ func CreateMCP(c *gin.Context) {
 	middleware.SuccessResponse(c, mcp)
 }
 
-// UpdateMCP godoc
+// UpdatePublicMCP godoc
 //
 //	@Summary		Update MCP
 //	@Description	Update an existing MCP
@@ -105,8 +105,8 @@ func CreateMCP(c *gin.Context) {
 //	@Param			id	path		string			true	"MCP ID"
 //	@Param			mcp	body		model.PublicMCP	true	"MCP object"
 //	@Success		200	{object}	middleware.APIResponse
-//	@Router			/api/mcp/{id} [put]
-func UpdateMCP(c *gin.Context) {
+//	@Router			/api/mcp/public/{id} [put]
+func UpdatePublicMCP(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
 		middleware.ErrorResponse(c, http.StatusBadRequest, "MCP ID is required")
@@ -122,7 +122,7 @@ func UpdateMCP(c *gin.Context) {
 	mcp.ID = id
 	mcp.UpdateAt = time.Now()
 
-	if err := model.UpdateMCP(&mcp); err != nil {
+	if err := model.UpdatePublicMCP(&mcp); err != nil {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
@@ -130,7 +130,7 @@ func UpdateMCP(c *gin.Context) {
 	middleware.SuccessResponse(c, mcp)
 }
 
-// DeleteMCP godoc
+// DeletePublicMCP godoc
 //
 //	@Summary		Delete MCP
 //	@Description	Delete an MCP by ID
@@ -139,15 +139,15 @@ func UpdateMCP(c *gin.Context) {
 //	@Security		ApiKeyAuth
 //	@Param			id	path		string	true	"MCP ID"
 //	@Success		200	{object}	middleware.APIResponse
-//	@Router			/api/mcp/{id} [delete]
-func DeleteMCP(c *gin.Context) {
+//	@Router			/api/mcp/public/{id} [delete]
+func DeletePublicMCP(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
 		middleware.ErrorResponse(c, http.StatusBadRequest, "MCP ID is required")
 		return
 	}
 
-	if err := model.DeleteMCP(id); err != nil {
+	if err := model.DeletePublicMCP(id); err != nil {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
@@ -155,7 +155,7 @@ func DeleteMCP(c *gin.Context) {
 	middleware.SuccessResponse(c, gin.H{"id": id})
 }
 
-// GetGroupMCPReusingParam godoc
+// GetGroupPublicMCPReusingParam godoc
 //
 //	@Summary		Get group MCP reusing parameters
 //	@Description	Get reusing parameters for a specific group and MCP
@@ -164,9 +164,9 @@ func DeleteMCP(c *gin.Context) {
 //	@Security		ApiKeyAuth
 //	@Param			id		path		string	true	"MCP ID"
 //	@Param			group	path		string	true	"Group ID"
-//	@Success		200		{object}	middleware.APIResponse{data=model.GroupMCPReusingParam}
-//	@Router			/api/mcp/{id}/group/{group}/params [get]
-func GetGroupMCPReusingParam(c *gin.Context) {
+//	@Success		200		{object}	middleware.APIResponse{data=model.GroupPublicMCPReusingParam}
+//	@Router			/api/mcp/public/{id}/group/{group}/params [get]
+func GetGroupPublicMCPReusingParam(c *gin.Context) {
 	mcpID := c.Param("id")
 	groupID := c.Param("group")
 
@@ -175,7 +175,7 @@ func GetGroupMCPReusingParam(c *gin.Context) {
 		return
 	}
 
-	param, err := model.GetGroupMCPReusingParam(mcpID, groupID)
+	param, err := model.GetGroupPublicMCPReusingParam(mcpID, groupID)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusNotFound, err.Error())
 		return
@@ -184,7 +184,7 @@ func GetGroupMCPReusingParam(c *gin.Context) {
 	middleware.SuccessResponse(c, param)
 }
 
-// SaveGroupMCPReusingParam godoc
+// SaveGroupPublicMCPReusingParam godoc
 //
 //	@Summary		Create or update group MCP reusing parameters
 //	@Description	Create or update reusing parameters for a specific group and MCP
@@ -192,12 +192,12 @@ func GetGroupMCPReusingParam(c *gin.Context) {
 //	@Accept			json
 //	@Produce		json
 //	@Security		ApiKeyAuth
-//	@Param			id		path		string						true	"MCP ID"
-//	@Param			group	path		string						true	"Group ID"
-//	@Param			params	body		model.GroupMCPReusingParam	true	"Reusing parameters"
+//	@Param			id		path		string								true	"MCP ID"
+//	@Param			group	path		string								true	"Group ID"
+//	@Param			params	body		model.GroupPublicMCPReusingParam	true	"Reusing parameters"
 //	@Success		200		{object}	middleware.APIResponse
-//	@Router			/api/mcp/{id}/group/{group}/params [post]
-func SaveGroupMCPReusingParam(c *gin.Context) {
+//	@Router			/api/mcp/public/{id}/group/{group}/params [post]
+func SaveGroupPublicMCPReusingParam(c *gin.Context) {
 	mcpID := c.Param("id")
 	groupID := c.Param("group")
 
@@ -206,7 +206,7 @@ func SaveGroupMCPReusingParam(c *gin.Context) {
 		return
 	}
 
-	var param model.GroupMCPReusingParam
+	var param model.GroupPublicMCPReusingParam
 	if err := c.ShouldBindJSON(&param); err != nil {
 		middleware.ErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
@@ -215,7 +215,7 @@ func SaveGroupMCPReusingParam(c *gin.Context) {
 	param.MCPID = mcpID
 	param.GroupID = groupID
 
-	if err := model.SaveGroupMCPReusingParam(&param); err != nil {
+	if err := model.SaveGroupPublicMCPReusingParam(&param); err != nil {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}

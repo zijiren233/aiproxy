@@ -139,7 +139,7 @@ func migrateDB() error {
 		&ChannelTest{},
 		&Token{},
 		&GroupModelConfig{},
-		&GroupMCPReusingParam{},
+		&GroupPublicMCPReusingParam{},
 		&Group{},
 		&PublicMCP{},
 		&Option{},

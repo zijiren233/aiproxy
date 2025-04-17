@@ -3204,7 +3204,7 @@
                 }
             }
         },
-        "/api/mcp/": {
+        "/api/mcp/public/": {
             "get": {
                 "security": [
                     {
@@ -3307,7 +3307,7 @@
                 }
             }
         },
-        "/api/mcp/{id}": {
+        "/api/mcp/public/{id}": {
             "get": {
                 "security": [
                     {
@@ -3429,7 +3429,7 @@
                 }
             }
         },
-        "/api/mcp/{id}/group/{group}/params": {
+        "/api/mcp/public/{id}/group/{group}/params": {
             "get": {
                 "security": [
                     {
@@ -3472,7 +3472,7 @@
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/model.GroupMCPReusingParam"
+                                            "$ref": "#/definitions/model.GroupPublicMCPReusingParam"
                                         }
                                     }
                                 }
@@ -3519,7 +3519,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/model.GroupMCPReusingParam"
+                            "$ref": "#/definitions/model.GroupPublicMCPReusingParam"
                         }
                     }
                 ],
@@ -7892,23 +7892,6 @@
                 }
             }
         },
-        "model.GroupMCPReusingParam": {
-            "type": "object",
-            "properties": {
-                "group_id": {
-                    "type": "string"
-                },
-                "mcp_id": {
-                    "type": "string"
-                },
-                "reusing_params": {
-                    "type": "object",
-                    "additionalProperties": {
-                        "type": "string"
-                    }
-                }
-            }
-        },
         "model.GroupModelConfig": {
             "type": "object",
             "properties": {
@@ -7938,6 +7921,23 @@
                 },
                 "tpm": {
                     "type": "integer"
+                }
+            }
+        },
+        "model.GroupPublicMCPReusingParam": {
+            "type": "object",
+            "properties": {
+                "group_id": {
+                    "type": "string"
+                },
+                "mcp_id": {
+                    "type": "string"
+                },
+                "reusing_params": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
                 }
             }
         },
@@ -8102,41 +8102,15 @@
                 "openapi_spec": {
                     "type": "string"
                 },
+                "price": {
+                    "$ref": "#/definitions/model.MCPPrice"
+                },
                 "server": {
                     "type": "string"
                 }
             }
         },
-        "model.MCPProxySSEConfig": {
-            "type": "object",
-            "properties": {
-                "headers": {
-                    "type": "object",
-                    "additionalProperties": {
-                        "type": "string"
-                    }
-                },
-                "price": {
-                    "$ref": "#/definitions/model.MCPProxySSEPrice"
-                },
-                "querys": {
-                    "type": "object",
-                    "additionalProperties": {
-                        "type": "string"
-                    }
-                },
-                "reusing_params": {
-                    "type": "object",
-                    "additionalProperties": {
-                        "$ref": "#/definitions/model.ReusingParam"
-                    }
-                },
-                "url": {
-                    "type": "string"
-                }
-            }
-        },
-        "model.MCPProxySSEPrice": {
+        "model.MCPPrice": {
             "type": "object",
             "properties": {
                 "defaultToolsCallPrice": {
@@ -8437,7 +8411,7 @@
                     "$ref": "#/definitions/model.MCPOpenAPIConfig"
                 },
                 "proxy_sse_config": {
-                    "$ref": "#/definitions/model.MCPProxySSEConfig"
+                    "$ref": "#/definitions/model.PublicMCPProxySSEConfig"
                 },
                 "readme": {
                     "type": "string"
@@ -8458,6 +8432,35 @@
                     "$ref": "#/definitions/model.MCPType"
                 },
                 "update_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.PublicMCPProxySSEConfig": {
+            "type": "object",
+            "properties": {
+                "headers": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
+                "price": {
+                    "$ref": "#/definitions/model.MCPPrice"
+                },
+                "querys": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
+                "reusing_params": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "$ref": "#/definitions/model.ReusingParam"
+                    }
+                },
+                "url": {
                     "type": "string"
                 }
             }

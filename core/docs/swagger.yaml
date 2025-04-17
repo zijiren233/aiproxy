@@ -761,17 +761,6 @@ definitions:
       web_search_count:
         type: integer
     type: object
-  model.GroupMCPReusingParam:
-    properties:
-      group_id:
-        type: string
-      mcp_id:
-        type: string
-      reusing_params:
-        additionalProperties:
-          type: string
-        type: object
-    type: object
   model.GroupModelConfig:
     properties:
       group_id:
@@ -792,6 +781,17 @@ definitions:
         type: integer
       tpm:
         type: integer
+    type: object
+  model.GroupPublicMCPReusingParam:
+    properties:
+      group_id:
+        type: string
+      mcp_id:
+        type: string
+      reusing_params:
+        additionalProperties:
+          type: string
+        type: object
     type: object
   model.ImageData:
     properties:
@@ -899,29 +899,12 @@ definitions:
         type: string
       openapi_spec:
         type: string
+      price:
+        $ref: '#/definitions/model.MCPPrice'
       server:
         type: string
     type: object
-  model.MCPProxySSEConfig:
-    properties:
-      headers:
-        additionalProperties:
-          type: string
-        type: object
-      price:
-        $ref: '#/definitions/model.MCPProxySSEPrice'
-      querys:
-        additionalProperties:
-          type: string
-        type: object
-      reusing_params:
-        additionalProperties:
-          $ref: '#/definitions/model.ReusingParam'
-        type: object
-      url:
-        type: string
-    type: object
-  model.MCPProxySSEPrice:
+  model.MCPPrice:
     properties:
       defaultToolsCallPrice:
         type: number
@@ -1142,7 +1125,7 @@ definitions:
       openapi_config:
         $ref: '#/definitions/model.MCPOpenAPIConfig'
       proxy_sse_config:
-        $ref: '#/definitions/model.MCPProxySSEConfig'
+        $ref: '#/definitions/model.PublicMCPProxySSEConfig'
       readme:
         type: string
       readme_url:
@@ -1156,6 +1139,25 @@ definitions:
       type:
         $ref: '#/definitions/model.MCPType'
       update_at:
+        type: string
+    type: object
+  model.PublicMCPProxySSEConfig:
+    properties:
+      headers:
+        additionalProperties:
+          type: string
+        type: object
+      price:
+        $ref: '#/definitions/model.MCPPrice'
+      querys:
+        additionalProperties:
+          type: string
+        type: object
+      reusing_params:
+        additionalProperties:
+          $ref: '#/definitions/model.ReusingParam'
+        type: object
+      url:
         type: string
     type: object
   model.RequestDetail:
@@ -3271,7 +3273,7 @@ paths:
       summary: Get used token names
       tags:
       - logs
-  /api/mcp/:
+  /api/mcp/public/:
     get:
       description: Get a list of MCPs with pagination and filtering
       parameters:
@@ -3333,7 +3335,7 @@ paths:
       summary: Create MCP
       tags:
       - mcp
-  /api/mcp/{id}:
+  /api/mcp/public/{id}:
     delete:
       description: Delete an MCP by ID
       parameters:
@@ -3407,7 +3409,7 @@ paths:
       summary: Update MCP
       tags:
       - mcp
-  /api/mcp/{id}/group/{group}/params:
+  /api/mcp/public/{id}/group/{group}/params:
     get:
       description: Get reusing parameters for a specific group and MCP
       parameters:
@@ -3431,7 +3433,7 @@ paths:
             - $ref: '#/definitions/middleware.APIResponse'
             - properties:
                 data:
-                  $ref: '#/definitions/model.GroupMCPReusingParam'
+                  $ref: '#/definitions/model.GroupPublicMCPReusingParam'
               type: object
       security:
       - ApiKeyAuth: []
@@ -3458,7 +3460,7 @@ paths:
         name: params
         required: true
         schema:
-          $ref: '#/definitions/model.GroupMCPReusingParam'
+          $ref: '#/definitions/model.GroupPublicMCPReusingParam'
       produces:
       - application/json
       responses:

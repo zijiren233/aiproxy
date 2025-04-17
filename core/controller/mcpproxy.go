@@ -51,7 +51,7 @@ func MCPSseProxy(c *gin.Context) {
 	token := middleware.GetToken(c)
 	mcpId := c.Param("id")
 
-	publicMcp, err := model.GetMCPByID(mcpId)
+	publicMcp, err := model.GetPublicMCPByID(mcpId)
 	if err != nil {
 		middleware.AbortLogWithMessage(c, http.StatusBadRequest, err.Error())
 		return
@@ -98,7 +98,7 @@ func processReusingParams(publicMcp *model.PublicMCP, mcpId string, groupID stri
 		return nil
 	}
 
-	param, err := model.GetGroupMCPReusingParam(mcpId, groupID)
+	param, err := model.GetGroupPublicMCPReusingParam(mcpId, groupID)
 	if err != nil {
 		return err
 	}
