@@ -4,7 +4,7 @@ go 1.24.2
 
 require (
 	github.com/getkin/kin-openapi v0.131.0
-	github.com/mark3labs/mcp-go v0.20.1
+	github.com/mark3labs/mcp-go v0.21.0
 )
 
 require (
