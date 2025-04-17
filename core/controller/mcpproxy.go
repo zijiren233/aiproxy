@@ -1,15 +1,20 @@
 package controller
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"net/url"
+	"sync"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/labring/aiproxy/core/common"
 	"github.com/labring/aiproxy/core/common/mcpproxy"
 	"github.com/labring/aiproxy/core/middleware"
 	"github.com/labring/aiproxy/core/model"
+	"github.com/redis/go-redis/v9"
 )
 
 // mcpEndpointProvider implements the EndpointProvider interface for MCP
@@ -37,10 +42,63 @@ func (m *mcpEndpointProvider) LoadEndpoint(endpoint string) (session string) {
 	return parsedURL.Query().Get("sessionId")
 }
 
+type redisStoreManager struct {
+	rdb *redis.Client
+}
+
+func newRedisStoreManager(rdb *redis.Client) mcpproxy.SessionManager {
+	return &redisStoreManager{
+		rdb: rdb,
+	}
+}
+
+var redisStoreManagerScript = redis.NewScript(`
+local key = KEYS[1]
+local value = redis.call('GET', key)
+if not value then
+	return nil
+end
+redis.call('EXPIRE', key, 300)
+return value
+`)
+
+func (r *redisStoreManager) Get(sessionId string) (string, bool) {
+	ctx := context.Background()
+
+	result, err := redisStoreManagerScript.Run(ctx, r.rdb, []string{"mcp:session:" + sessionId}).Result()
+	if err != nil || result == nil {
+		return "", false
+	}
+
+	return result.(string), true
+}
+
+func (r *redisStoreManager) Set(sessionId, endpoint string) {
+	ctx := context.Background()
+	r.rdb.Set(ctx, "mcp:session:"+sessionId, endpoint, time.Minute*5)
+}
+
+func (r *redisStoreManager) Delete(session string) {
+	ctx := context.Background()
+	r.rdb.Del(ctx, "mcp:session:"+session)
+}
+
 // Global variables for MCP proxy
 var (
-	memStore = mcpproxy.NewMemStore()
+	memStore       mcpproxy.SessionManager = mcpproxy.NewMemStore()
+	redisStore     mcpproxy.SessionManager
+	redisStoreOnce = &sync.Once{}
 )
+
+func getStore() mcpproxy.SessionManager {
+	if common.RedisEnabled {
+		redisStoreOnce.Do(func() {
+			redisStore = newRedisStoreManager(common.RDB)
+		})
+		return redisStore
+	}
+	return memStore
+}
 
 // MCPSseProxy godoc
 //
@@ -84,7 +142,7 @@ func MCPSseProxy(c *gin.Context) {
 	mcpproxy.SSEHandler(
 		c.Writer,
 		c.Request,
-		memStore,
+		getStore(),
 		newEndpoint(token.Key),
 		backendURL.String(),
 		headers,
@@ -129,5 +187,10 @@ func processReusingParams(publicMcp *model.PublicMCP, mcpId string, groupID stri
 //	@Router		/mcp/message [post]
 func MCPProxy(c *gin.Context) {
 	token := middleware.GetToken(c)
-	mcpproxy.ProxyHandler(c.Writer, c.Request, memStore, newEndpoint(token.Key))
+	mcpproxy.ProxyHandler(
+		c.Writer,
+		c.Request,
+		getStore(),
+		newEndpoint(token.Key),
+	)
 }
