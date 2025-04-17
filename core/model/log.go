@@ -39,6 +39,8 @@ func (d *RequestDetail) BeforeSave(_ *gorm.DB) (err error) {
 }
 
 type Price struct {
+	PerRequestPrice float64 `json:"per_request_price,omitempty"`
+
 	InputPrice     float64 `json:"input_price,omitempty"`
 	InputPriceUnit int64   `json:"input_price_unit,omitempty"`
 

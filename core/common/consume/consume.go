@@ -2,6 +2,7 @@ package consume
 
 import (
 	"context"
+	"net/http"
 	"sync"
 	"time"
 
@@ -70,9 +71,11 @@ func Consume(
 	requestDetail *model.RequestDetail,
 	downstreamResult bool,
 ) {
-	amount := CalculateAmount(usage, modelPrice)
-
-	amount = consumeAmount(ctx, amount, postGroupConsumer, meta)
+	var amount float64
+	if code == http.StatusOK {
+		amount = CalculateAmount(usage, modelPrice)
+		amount = consumeAmount(ctx, amount, postGroupConsumer, meta)
+	}
 
 	err := recordConsume(
 		meta,
@@ -109,6 +112,10 @@ func CalculateAmount(
 	usage model.Usage,
 	modelPrice model.Price,
 ) float64 {
+	if modelPrice.PerRequestPrice != 0 {
+		return modelPrice.PerRequestPrice
+	}
+
 	inputTokens := usage.InputTokens
 	outputTokens := usage.OutputTokens
 

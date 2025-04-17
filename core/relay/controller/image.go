@@ -47,7 +47,8 @@ func GetImageRequestPrice(c *gin.Context, mc *model.ModelConfig) (model.Price, e
 	}
 
 	return model.Price{
-		InputPrice: imageCostPrice,
+		PerRequestPrice: mc.Price.PerRequestPrice,
+		InputPrice:      imageCostPrice,
 	}, nil
 }
 

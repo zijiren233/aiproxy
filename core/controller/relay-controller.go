@@ -26,7 +26,6 @@ import (
 	"github.com/labring/aiproxy/core/relay/meta"
 	"github.com/labring/aiproxy/core/relay/mode"
 	relaymodel "github.com/labring/aiproxy/core/relay/model"
-	"github.com/shopspring/decimal"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -333,7 +332,7 @@ func relay(c *gin.Context, mode mode.Mode, relayController RelayController) {
 			return
 		}
 		gbc := middleware.GetGroupBalanceConsumerFromContext(c)
-		if !gbc.CheckBalance(getPreConsumedAmount(requestUsage, price)) {
+		if !gbc.CheckBalance(consume.CalculateAmount(requestUsage, price)) {
 			middleware.AbortLogWithMessage(c,
 				http.StatusForbidden,
 				fmt.Sprintf("group (%s) balance not enough", gbc.Group),
@@ -369,17 +368,6 @@ func relay(c *gin.Context, mode mode.Mode, relayController RelayController) {
 	retryLoop(c, mode, retryState, relayController.Handler, log)
 }
 
-func getPreConsumedAmount(usage model.Usage, price model.Price) float64 {
-	if usage.InputTokens == 0 || price.InputPrice == 0 {
-		return 0
-	}
-	return decimal.
-		NewFromInt(usage.InputTokens).
-		Mul(decimal.NewFromFloat(price.InputPrice)).
-		Div(decimal.NewFromInt(price.GetInputPriceUnit())).
-		InexactFloat64()
-}
-
 // recordResult records the consumption for the final result
 func recordResult(c *gin.Context, meta *meta.Meta, price model.Price, result *controller.HandleResult, retryTimes int, downstreamResult bool) {
 	code := http.StatusOK
@@ -402,13 +390,15 @@ func recordResult(c *gin.Context, meta *meta.Meta, price model.Price, result *co
 
 	gbc := middleware.GetGroupBalanceConsumerFromContext(c)
 
-	amount := consume.CalculateAmount(
-		result.Usage,
-		price,
-	)
-	if amount > 0 {
-		log := middleware.GetLogger(c)
-		log.Data["amount"] = strconv.FormatFloat(amount, 'f', -1, 64)
+	if code == http.StatusOK {
+		amount := consume.CalculateAmount(
+			result.Usage,
+			price,
+		)
+		if amount > 0 {
+			log := middleware.GetLogger(c)
+			log.Data["amount"] = strconv.FormatFloat(amount, 'f', -1, 64)
+		}
 	}
 
 	consume.AsyncConsume(
