@@ -47,9 +47,9 @@ func TestProxySSEEndpoint(t *testing.T) {
 	defer backendServer.Close()
 
 	// Create the proxy
-	store := mcpproxy.NewSessionStore()
+	store := mcpproxy.NewMemStore()
 	handler := &TestEndpointHandler{}
-	proxy := mcpproxy.NewProxy(backendServer.URL+"/sse", store, handler)
+	proxy := mcpproxy.NewProxy(backendServer.URL+"/sse", nil, store, handler)
 
 	// Setup the proxy server
 	proxyServer := httptest.NewServer(http.HandlerFunc(proxy.SSEHandler))

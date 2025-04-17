@@ -23,9 +23,9 @@ func (h *TestEndpointHandler) LoadEndpoint(endpoint string) string {
 
 func main() {
 	// Start the proxy server on port 3000
-	store := mcpproxy.NewSessionStore()
+	store := mcpproxy.NewMemStore()
 	handler := &TestEndpointHandler{}
-	proxy := mcpproxy.NewProxy("http://localhost:3001/sse", store, handler)
+	proxy := mcpproxy.NewProxy("http://localhost:3001/sse", nil, store, handler)
 
 	// Setup routes
 	http.HandleFunc("/sse", proxy.SSEHandler)

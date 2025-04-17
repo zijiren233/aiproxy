@@ -10,41 +10,51 @@ import (
 	"time"
 )
 
-type EndpointHandler interface {
+type EndpointProvider interface {
 	NewEndpoint() (newSession string, newEndpoint string)
 	LoadEndpoint(endpoint string) (session string)
 }
 
 // Proxy represents the proxy object that handles SSE and HTTP requests
 type Proxy struct {
-	store           SessionManager
-	endpointHandler EndpointHandler
-	backend         string
+	store    SessionManager
+	endpoint EndpointProvider
+	backend  string
+	headers  map[string]string
 }
 
 // NewProxy creates a new proxy with the given backend and endpoint handler
-func NewProxy(backend string, store SessionManager, endpointHandler EndpointHandler) *Proxy {
+func NewProxy(backend string, headers map[string]string, store SessionManager, endpoint EndpointProvider) *Proxy {
 	return &Proxy{
-		store:           store,
-		endpointHandler: endpointHandler,
-		backend:         backend,
+		store:    store,
+		endpoint: endpoint,
+		backend:  backend,
+		headers:  headers,
 	}
 }
 
-// handleSSE handles SSE connections and extracts sessionId
 func (p *Proxy) SSEHandler(w http.ResponseWriter, r *http.Request) {
+	SSEHandler(w, r, p.store, p.endpoint, p.backend, p.headers)
+}
+
+func SSEHandler(
+	w http.ResponseWriter,
+	r *http.Request,
+	store SessionManager,
+	endpoint EndpointProvider,
+	backend string,
+	headers map[string]string,
+) {
 	// Create a request to the backend SSE endpoint
-	req, err := http.NewRequestWithContext(r.Context(), http.MethodGet, p.backend, nil)
+	req, err := http.NewRequestWithContext(r.Context(), http.MethodGet, backend, nil)
 	if err != nil {
 		http.Error(w, "Failed to create backend request", http.StatusInternalServerError)
 		return
 	}
 
 	// Copy headers from original request
-	for name, values := range r.Header {
-		for _, value := range values {
-			req.Header.Add(name, value)
-		}
+	for name, value := range headers {
+		req.Header.Set(name, value)
 	}
 
 	// Set necessary headers for SSE
@@ -105,9 +115,9 @@ func (p *Proxy) SSEHandler(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 
-			newSession, newEndpoint := p.endpointHandler.NewEndpoint()
+			newSession, newEndpoint := endpoint.NewEndpoint()
 			defer func() {
-				p.store.Delete(newSession)
+				store.Delete(newSession)
 			}()
 
 			// Extract sessionId from data line
@@ -118,7 +128,7 @@ func (p *Proxy) SSEHandler(w http.ResponseWriter, r *http.Request) {
 				backendHostURL := &copyURL
 				backendHostURL.Path = ""
 				backendHostURL.RawQuery = ""
-				p.store.Set(newSession, backendHostURL.String()+endpoint)
+				store.Set(newSession, backendHostURL.String()+endpoint)
 			} else {
 				break
 			}
@@ -130,17 +140,25 @@ func (p *Proxy) SSEHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// handleProxy handles requests with sessionId by forwarding to the appropriate backend
 func (p *Proxy) ProxyHandler(w http.ResponseWriter, r *http.Request) {
+	ProxyHandler(w, r, p.store, p.endpoint)
+}
+
+func ProxyHandler(
+	w http.ResponseWriter,
+	r *http.Request,
+	store SessionManager,
+	endpoint EndpointProvider,
+) {
 	// Extract sessionID from the request
-	sessionID := p.endpointHandler.LoadEndpoint(r.URL.String())
+	sessionID := endpoint.LoadEndpoint(r.URL.String())
 	if sessionID == "" {
 		http.Error(w, "Missing sessionId", http.StatusBadRequest)
 		return
 	}
 
 	// Look up the backend endpoint
-	backendEndpoint, ok := p.store.Get(sessionID)
+	backendEndpoint, ok := store.Get(sessionID)
 	if !ok {
 		http.Error(w, "Invalid or expired sessionId", http.StatusNotFound)
 		return

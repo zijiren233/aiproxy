@@ -3213,6 +3213,335 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/mcp/": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Get a list of MCPs with pagination and filtering",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "mcp"
+                ],
+                "summary": "Get MCPs",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Items per page",
+                        "name": "per_page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "MCP type",
+                        "name": "type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Search keyword",
+                        "name": "keyword",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/middleware.APIResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/model.PublicMCP"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Create a new MCP",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "mcp"
+                ],
+                "summary": "Create MCP",
+                "parameters": [
+                    {
+                        "description": "MCP object",
+                        "name": "mcp",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.PublicMCP"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/mcp/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Get a specific MCP by its ID",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "mcp"
+                ],
+                "summary": "Get MCP by ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "MCP ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/middleware.APIResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/model.PublicMCP"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Update an existing MCP",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "mcp"
+                ],
+                "summary": "Update MCP",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "MCP ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "MCP object",
+                        "name": "mcp",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.PublicMCP"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.APIResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Delete an MCP by ID",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "mcp"
+                ],
+                "summary": "Delete MCP",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "MCP ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/mcp/{id}/group/{group}/params": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Get reusing parameters for a specific group and MCP",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "mcp"
+                ],
+                "summary": "Get group MCP reusing parameters",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "MCP ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Group ID",
+                        "name": "group",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/middleware.APIResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/model.GroupMCPReusingParam"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Create or update reusing parameters for a specific group and MCP",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "mcp"
+                ],
+                "summary": "Create or update group MCP reusing parameters",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "MCP ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Group ID",
+                        "name": "group",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Reusing parameters",
+                        "name": "params",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.GroupMCPReusingParam"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/model_config": {
             "post": {
                 "security": [
@@ -5674,6 +6003,18 @@ const docTemplate = `{
                 }
             }
         },
+        "/mcp/message": {
+            "post": {
+                "summary": "MCP SSE Proxy",
+                "responses": {}
+            }
+        },
+        "/mcp/public/{id}/sse": {
+            "get": {
+                "summary": "MCP SSE Proxy",
+                "responses": {}
+            }
+        },
         "/v1/audio/speech": {
             "post": {
                 "security": [
@@ -7560,6 +7901,23 @@ const docTemplate = `{
                 }
             }
         },
+        "model.GroupMCPReusingParam": {
+            "type": "object",
+            "properties": {
+                "group_id": {
+                    "type": "string"
+                },
+                "mcp_id": {
+                    "type": "string"
+                },
+                "reusing_params": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
         "model.GroupModelConfig": {
             "type": "object",
             "properties": {
@@ -7741,6 +8099,82 @@ const docTemplate = `{
                 }
             }
         },
+        "model.MCPOpenAPIConfig": {
+            "type": "object",
+            "properties": {
+                "authorization": {
+                    "type": "string"
+                },
+                "openapi_content": {
+                    "type": "string"
+                },
+                "openapi_spec": {
+                    "type": "string"
+                },
+                "server": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.MCPProxySSEConfig": {
+            "type": "object",
+            "properties": {
+                "headers": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
+                "price": {
+                    "$ref": "#/definitions/model.MCPProxySSEPrice"
+                },
+                "querys": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
+                "reusing_params": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "$ref": "#/definitions/model.ReusingParam"
+                    }
+                },
+                "url": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.MCPProxySSEPrice": {
+            "type": "object",
+            "properties": {
+                "defaultToolsCallPrice": {
+                    "type": "number"
+                },
+                "toolsCallPrices": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "number"
+                    }
+                }
+            }
+        },
+        "model.MCPType": {
+            "type": "string",
+            "enum": [
+                "mcp_proxy_sse",
+                "mcp_git_repo",
+                "mcp_openapi"
+            ],
+            "x-enum-comments": {
+                "MCPTypeGitRepo": "read only"
+            },
+            "x-enum-varnames": [
+                "MCPTypeProxySSE",
+                "MCPTypeGitRepo",
+                "MCPTypeOpenAPI"
+            ]
+        },
         "model.Message": {
             "type": "object",
             "properties": {
@@ -7919,6 +8353,17 @@ const docTemplate = `{
                 }
             }
         },
+        "model.ParamType": {
+            "type": "string",
+            "enum": [
+                "header",
+                "query"
+            ],
+            "x-enum-varnames": [
+                "ParamTypeHeader",
+                "ParamTypeQuery"
+            ]
+        },
         "model.ParsePdfResponse": {
             "type": "object",
             "properties": {
@@ -7957,6 +8402,9 @@ const docTemplate = `{
                 "output_price_unit": {
                     "type": "integer"
                 },
+                "per_request_price": {
+                    "type": "number"
+                },
                 "web_search_price": {
                     "type": "number"
                 },
@@ -7973,6 +8421,53 @@ const docTemplate = `{
                 },
                 "cached_tokens": {
                     "type": "integer"
+                }
+            }
+        },
+        "model.PublicMCP": {
+            "type": "object",
+            "properties": {
+                "author": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "logo_url": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "openapi_config": {
+                    "$ref": "#/definitions/model.MCPOpenAPIConfig"
+                },
+                "proxy_sse_config": {
+                    "$ref": "#/definitions/model.MCPProxySSEConfig"
+                },
+                "readme": {
+                    "type": "string"
+                },
+                "readme_url": {
+                    "type": "string"
+                },
+                "repo_url": {
+                    "type": "string"
+                },
+                "tags": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "type": {
+                    "$ref": "#/definitions/model.MCPType"
+                },
+                "update_at": {
+                    "type": "string"
                 }
             }
         },
@@ -8089,6 +8584,23 @@ const docTemplate = `{
                 },
                 "type": {
                     "type": "string"
+                }
+            }
+        },
+        "model.ReusingParam": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "required": {
+                    "type": "boolean"
+                },
+                "type": {
+                    "$ref": "#/definitions/model.ParamType"
                 }
             }
         },

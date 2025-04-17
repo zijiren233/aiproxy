@@ -65,7 +65,9 @@ func TokenAuth(c *gin.Context) {
 	var useInternalToken bool
 	if config.AdminKey != "" && config.AdminKey == key ||
 		config.GetInternalToken() != "" && config.GetInternalToken() == key {
-		token = &model.TokenCache{}
+		token = &model.TokenCache{
+			Key: key,
+		}
 		useInternalToken = true
 	} else {
 		var err error

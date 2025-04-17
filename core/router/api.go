@@ -182,5 +182,16 @@ func SetAPIRouter(router *gin.Engine) {
 			monitorRoute.GET("/models", controller.GetModelsErrorRate)
 			monitorRoute.GET("/banned_channels", controller.GetAllBannedModelChannels)
 		}
+
+		mcpRoute := apiRouter.Group("/mcp")
+		{
+			mcpRoute.GET("/", controller.GetMCPs)
+			mcpRoute.GET("/:id", controller.GetMCPByIDHandler)
+			mcpRoute.POST("/", controller.CreateMCP)
+			mcpRoute.PUT("/:id", controller.UpdateMCP)
+			mcpRoute.DELETE("/:id", controller.DeleteMCP)
+			mcpRoute.GET("/:id/group/:group/params", controller.GetGroupMCPReusingParam)
+			mcpRoute.POST("/:id/group/:group/params", controller.SaveGroupMCPReusingParam)
+		}
 	}
 }
