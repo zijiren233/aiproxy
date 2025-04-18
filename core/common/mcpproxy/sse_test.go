@@ -1,6 +1,7 @@
 package mcpproxy_test
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -56,7 +57,11 @@ func TestProxySSEEndpoint(t *testing.T) {
 	defer proxyServer.Close()
 
 	// Make a request to the proxy
-	resp, err := http.Get(proxyServer.URL)
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, proxyServer.URL, nil)
+	if err != nil {
+		t.Fatalf("Error making request to proxy: %v", err)
+	}
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		t.Fatalf("Error making request to proxy: %v", err)
 	}

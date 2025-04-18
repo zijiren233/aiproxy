@@ -64,6 +64,7 @@ func SSEHandler(
 	req.Header.Set("Connection", "keep-alive")
 
 	// Make the request to the backend
+	//nolint:bodyclose
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		http.Error(w, "Failed to connect to backend", http.StatusInternalServerError)
