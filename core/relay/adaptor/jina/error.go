@@ -1,7 +1,6 @@
 package jina
 
 import (
-	"fmt"
 	"io"
 	"net/http"
 
@@ -24,9 +23,6 @@ func ErrorHanlder(resp *http.Response) *model.ErrorWithStatusCode {
 		return openai.ErrorWrapper(err, "read_response_body_failed", resp.StatusCode)
 	}
 
-	fmt.Println(string(body))
-
-	// detail可能是字符串或者对象
 	detailValue, err := sonic.Get(body, "detail")
 	if err != nil {
 		return openai.ErrorWrapper(err, "unmarshal_response_body_failed", resp.StatusCode)

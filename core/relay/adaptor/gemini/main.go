@@ -64,7 +64,7 @@ type thinkingConfigOnly struct {
 	ThinkingConfig *ThinkingConfig `json:"thinking_config"`
 }
 
-func buildGenerationConfig(meta *meta.Meta, req *http.Request, textRequest *relaymodel.GeneralOpenAIRequest) *ChatGenerationConfig {
+func buildGenerationConfig(meta *meta.Meta, req *http.Request, textRequest *relaymodel.GeneralOpenAIRequest) (*ChatGenerationConfig, error) {
 	config := ChatGenerationConfig{
 		Temperature:     textRequest.Temperature,
 		TopP:            textRequest.TopP,
@@ -89,12 +89,15 @@ func buildGenerationConfig(meta *meta.Meta, req *http.Request, textRequest *rela
 	}
 
 	var thinkingConfigOnly thinkingConfigOnly
-	common.UnmarshalBodyReusable(req, &thinkingConfigOnly)
+	err := common.UnmarshalBodyReusable(req, &thinkingConfigOnly)
+	if err != nil {
+		return nil, err
+	}
 	if thinkingConfigOnly.ThinkingConfig != nil {
 		config.ThinkingConfig = thinkingConfigOnly.ThinkingConfig
 	}
 
-	return &config
+	return &config, nil
 }
 
 func buildTools(textRequest *relaymodel.GeneralOpenAIRequest) []ChatTools {
@@ -268,12 +271,17 @@ func ConvertRequest(meta *meta.Meta, req *http.Request) (string, http.Header, io
 		return "", nil, nil, err
 	}
 
+	config, err := buildGenerationConfig(meta, req, textRequest)
+	if err != nil {
+		return "", nil, nil, err
+	}
+
 	// Build actual request
 	geminiRequest := ChatRequest{
 		Contents:          contents,
 		SystemInstruction: systemContent,
 		SafetySettings:    buildSafetySettings(),
-		GenerationConfig:  buildGenerationConfig(meta, req, textRequest),
+		GenerationConfig:  config,
 		Tools:             buildTools(textRequest),
 		ToolConfig:        buildToolConfig(textRequest),
 	}

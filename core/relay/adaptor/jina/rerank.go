@@ -51,8 +51,14 @@ func RerankHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model
 	node.SetAny("meta", map[string]any{
 		"tokens": modelUsage,
 	})
-	node.Unset("usage")
-	node.Set("model", ast.NewString(meta.OriginModel))
+	_, err = node.Unset("usage")
+	if err != nil {
+		return nil, openai.ErrorWrapper(err, "unmarshal_usage_failed", http.StatusInternalServerError)
+	}
+	_, err = node.Set("model", ast.NewString(meta.OriginModel))
+	if err != nil {
+		return nil, openai.ErrorWrapper(err, "unmarshal_usage_failed", http.StatusInternalServerError)
+	}
 	c.Writer.WriteHeader(resp.StatusCode)
 	respData, err := node.MarshalJSON()
 	if err != nil {

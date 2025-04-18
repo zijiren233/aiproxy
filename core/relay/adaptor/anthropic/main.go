@@ -30,7 +30,10 @@ func ConvertRequest(meta *meta.Meta, req *http.Request) (string, http.Header, io
 	}
 
 	// Set the actual model in the request
-	node.Set("model", ast.NewString(meta.ActualModel))
+	_, err = node.Set("model", ast.NewString(meta.ActualModel))
+	if err != nil {
+		return "", nil, nil, err
+	}
 
 	// Process image content if present
 	err = ConvertImage2Base64(req.Context(), &node)
@@ -54,13 +57,13 @@ func ConvertImage2Base64(ctx context.Context, node *ast.Node) error {
 		return nil
 	}
 
-	return messagesNode.ForEach(func(path ast.Sequence, msgNode *ast.Node) bool {
+	return messagesNode.ForEach(func(_ ast.Sequence, msgNode *ast.Node) bool {
 		contentNode := msgNode.Get("content")
 		if contentNode == nil || contentNode.TypeSafe() != ast.V_ARRAY {
 			return true
 		}
 
-		err := contentNode.ForEach(func(path ast.Sequence, contentItem *ast.Node) bool {
+		err := contentNode.ForEach(func(_ ast.Sequence, contentItem *ast.Node) bool {
 			contentType, err := contentItem.Get("type").String()
 			if err == nil && contentType == conetentTypeImage {
 				convertImageURLToBase64(ctx, contentItem)
@@ -93,11 +96,18 @@ func convertImageURLToBase64(ctx context.Context, contentItem *ast.Node) {
 		return
 	}
 
-	// Update the source node with base64 data
-	sourceNode.Set("type", ast.NewString("base64"))
-	sourceNode.Set("media_type", ast.NewString(mimeType))
-	sourceNode.Set("data", ast.NewString(data))
-	sourceNode.Unset("url")
+	patches := []func() (bool, error){
+		func() (bool, error) { return sourceNode.Set("type", ast.NewString("base64")) },
+		func() (bool, error) { return sourceNode.Set("media_type", ast.NewString(mimeType)) },
+		func() (bool, error) { return sourceNode.Set("data", ast.NewString(data)) },
+		func() (bool, error) { return sourceNode.Unset("url") },
+	}
+
+	for _, patch := range patches {
+		if _, err := patch(); err != nil {
+			return
+		}
+	}
 }
 
 func StreamHandler(m *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, *relaymodel.ErrorWithStatusCode) {
