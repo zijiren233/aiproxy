@@ -14,7 +14,6 @@ import (
 	"github.com/labring/aiproxy/core/common"
 	"github.com/labring/aiproxy/core/common/conv"
 	"github.com/labring/aiproxy/core/common/image"
-	"github.com/labring/aiproxy/core/common/render"
 	"github.com/labring/aiproxy/core/middleware"
 	"github.com/labring/aiproxy/core/model"
 	"github.com/labring/aiproxy/core/relay/adaptor/openai"
@@ -136,10 +135,6 @@ func StreamHandler(m *meta.Meta, c *gin.Context, resp *http.Response) (*model.Us
 		}
 		data = data[6:]
 
-		if conv.BytesToString(data) == "[DONE]" {
-			break
-		}
-
 		response, err := StreamResponse2OpenAI(m, data)
 		if err != nil {
 			if writed {
@@ -170,7 +165,7 @@ func StreamHandler(m *meta.Meta, c *gin.Context, resp *http.Response) (*model.Us
 			}
 		}
 
-		render.StringData(c, conv.BytesToString(data))
+		Data(c, data)
 		writed = true
 	}
 
@@ -185,8 +180,6 @@ func StreamHandler(m *meta.Meta, c *gin.Context, resp *http.Response) (*model.Us
 			TotalTokens:      m.InputTokens + openai.CountTokenText(responseText.String(), m.OriginModel),
 		}
 	}
-
-	render.Done(c)
 
 	return usage.ToModelUsage(), nil
 }
