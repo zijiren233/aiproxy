@@ -67,6 +67,7 @@ func (a *Adaptor) ConvertRequest(meta *meta.Meta, request *http.Request) (string
 		if err != nil {
 			return "", nil, nil, err
 		}
+		meta.Set("stream", claudeReq.Stream)
 		req := Request{
 			AnthropicVersion: anthropicVersion,
 			Request:          claudeReq,
@@ -86,6 +87,8 @@ func (a *Adaptor) ConvertRequest(meta *meta.Meta, request *http.Request) (string
 		if err != nil {
 			return "", nil, nil, err
 		}
+		stream, _ := node.Get("stream").Bool()
+		meta.Set("stream", stream)
 		_, err = node.Unset("model")
 		if err != nil {
 			return "", nil, nil, err

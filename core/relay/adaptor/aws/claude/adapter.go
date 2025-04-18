@@ -25,6 +25,7 @@ func (a *Adaptor) ConvertRequest(meta *meta.Meta, req *http.Request) (string, ht
 	if err != nil {
 		return "", nil, nil, err
 	}
+	meta.Set("stream", r.Stream)
 	meta.Set(ConvertedRequest, r)
 	return "", nil, nil, nil
 }

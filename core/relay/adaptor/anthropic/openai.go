@@ -60,7 +60,6 @@ func OpenAIConvertRequest(meta *meta.Meta, req *http.Request) (*Request, error) 
 	}
 
 	textRequest.Model = meta.ActualModel
-	meta.Set("stream", textRequest.Stream)
 	claudeTools := make([]Tool, 0, len(textRequest.Tools))
 
 	for _, tool := range textRequest.Tools {
