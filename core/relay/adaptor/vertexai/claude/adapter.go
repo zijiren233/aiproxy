@@ -2,6 +2,7 @@ package vertexai
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -20,39 +21,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-var ModelList = []*model.ModelConfig{
-	{
-		Model: "claude-3-haiku@20240307",
-		Type:  mode.ChatCompletions,
-		Owner: model.ModelOwnerAnthropic,
-	},
-	{
-		Model: "claude-3-sonnet@20240229",
-		Type:  mode.ChatCompletions,
-		Owner: model.ModelOwnerAnthropic,
-	},
-	{
-		Model: "claude-3-opus@20240229",
-		Type:  mode.ChatCompletions,
-		Owner: model.ModelOwnerAnthropic,
-	},
-	{
-		Model: "claude-3-5-sonnet@20240620",
-		Type:  mode.ChatCompletions,
-		Owner: model.ModelOwnerAnthropic,
-	},
-	{
-		Model: "claude-3-5-sonnet-v2@20241022",
-		Type:  mode.ChatCompletions,
-		Owner: model.ModelOwnerAnthropic,
-	},
-	{
-		Model: "claude-3-5-haiku@20241022",
-		Type:  mode.ChatCompletions,
-		Owner: model.ModelOwnerAnthropic,
-	},
-}
-
 const anthropicVersion = "vertex-2023-10-16"
 
 type Adaptor struct{}
@@ -61,50 +29,72 @@ func (a *Adaptor) ConvertRequest(meta *meta.Meta, request *http.Request) (string
 	if request == nil {
 		return "", nil, nil, errors.New("request is nil")
 	}
+
+	var (
+		data []byte
+		err  error
+	)
+
 	switch meta.Mode {
 	case mode.ChatCompletions:
-		claudeReq, err := anthropic.OpenAIConvertRequest(meta, request)
-		if err != nil {
-			return "", nil, nil, err
-		}
-		meta.Set("stream", claudeReq.Stream)
-		req := Request{
-			AnthropicVersion: anthropicVersion,
-			Request:          claudeReq,
-		}
-		req.Model = ""
-		data, err := sonic.Marshal(req)
-		if err != nil {
-			return "", nil, nil, err
-		}
-		return http.MethodPost, nil, bytes.NewReader(data), nil
+		data, err = handleChatCompletionsRequest(meta, request)
 	case mode.Anthropic:
-		reqBody, err := common.GetRequestBody(request)
-		if err != nil {
-			return "", nil, nil, err
-		}
-		node, err := sonic.Get(reqBody)
-		if err != nil {
-			return "", nil, nil, err
-		}
-		stream, _ := node.Get("stream").Bool()
-		meta.Set("stream", stream)
-		_, err = node.Unset("model")
-		if err != nil {
-			return "", nil, nil, err
-		}
-		_, err = node.Set("anthropic_version", ast.NewString(anthropicVersion))
-		if err != nil {
-			return "", nil, nil, err
-		}
-		data, err := node.MarshalJSON()
-		if err != nil {
-			return "", nil, nil, err
-		}
-		return http.MethodPost, nil, bytes.NewReader(data), nil
+		data, err = handleAnthropicRequest(meta, request)
 	default:
 		return "", nil, nil, fmt.Errorf("unsupported mode: %s", meta.Mode)
 	}
+
+	if err != nil {
+		return "", nil, nil, err
+	}
+
+	return http.MethodPost, nil, bytes.NewReader(data), nil
+}
+
+func handleChatCompletionsRequest(meta *meta.Meta, request *http.Request) ([]byte, error) {
+	claudeReq, err := anthropic.OpenAIConvertRequest(meta, request)
+	if err != nil {
+		return nil, err
+	}
+
+	meta.Set("stream", claudeReq.Stream)
+
+	req := Request{
+		AnthropicVersion: anthropicVersion,
+		Request:          claudeReq,
+	}
+	req.Model = ""
+
+	return sonic.Marshal(req)
+}
+
+func handleAnthropicRequest(meta *meta.Meta, request *http.Request) ([]byte, error) {
+	reqBody, err := common.GetRequestBody(request)
+	if err != nil {
+		return nil, err
+	}
+
+	node, err := sonic.Get(reqBody)
+	if err != nil {
+		return nil, err
+	}
+
+	if err = anthropic.ConvertImage2Base64(context.Background(), &node); err != nil {
+		return nil, err
+	}
+
+	stream, _ := node.Get("stream").Bool()
+	meta.Set("stream", stream)
+
+	if _, err = node.Unset("model"); err != nil {
+		return nil, err
+	}
+
+	if _, err = node.Set("anthropic_version", ast.NewString(anthropicVersion)); err != nil {
+		return nil, err
+	}
+
+	return node.MarshalJSON()
 }
 
 func (a *Adaptor) DoResponse(meta *meta.Meta, c *gin.Context, resp *http.Response) (usage *model.Usage, err *relaymodel.ErrorWithStatusCode) {

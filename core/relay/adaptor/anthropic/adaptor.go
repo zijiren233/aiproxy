@@ -67,7 +67,7 @@ func (a *Adaptor) ConvertRequest(meta *meta.Meta, req *http.Request) (string, ht
 		}
 		return http.MethodPost, nil, bytes.NewReader(data2), nil
 	case mode.Anthropic:
-		return http.MethodPost, nil, req.Body, nil
+		return ConvertRequest(meta, req)
 	default:
 		return "", nil, nil, fmt.Errorf("unsupported mode: %s", meta.Mode)
 	}
