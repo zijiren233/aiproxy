@@ -1,12 +1,10 @@
 FROM golang:1.24-alpine AS builder
 
-WORKDIR /aiproxy
+RUN apk add --no-cache curl
+
+WORKDIR /aiproxy/core
 
 COPY ./ /aiproxy
-
-RUN cd /aiproxy/core
-
-RUN apk add --no-cache curl
 
 RUN sh scripts/tiktoken.sh
 
