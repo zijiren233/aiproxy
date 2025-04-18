@@ -138,10 +138,10 @@ func migrateDB() error {
 		&Channel{},
 		&ChannelTest{},
 		&Token{},
+		&PublicMCP{},
 		&GroupModelConfig{},
 		&GroupPublicMCPReusingParam{},
 		&Group{},
-		&PublicMCP{},
 		&Option{},
 		&ModelConfig{},
 	)
