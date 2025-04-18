@@ -353,6 +353,9 @@ func relay(c *gin.Context, mode mode.Mode, relayController RelayController) {
 	result, retry := RelayHelper(meta, c, relayController.Handler)
 
 	retryTimes := int(config.GetRetryTimes())
+	if mc.RetryTimes > 0 {
+		retryTimes = int(mc.RetryTimes)
+	}
 	if handleRelayResult(c, result.Error, retry, retryTimes) {
 		recordResult(c, meta, price, result, 0, true)
 		return

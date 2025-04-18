@@ -29,6 +29,7 @@ type ModelConfig struct {
 	TPM              int64                  `json:"tpm,omitempty"`
 	ImagePrices      map[string]float64     `gorm:"serializer:fastjson;type:text" json:"image_prices,omitempty"`
 	Price            Price                  `gorm:"embedded"                      json:"price,omitempty"`
+	RetryTimes       int64                  `json:"retry_times"`
 }
 
 func NewDefaultModelConfig(model string) *ModelConfig {
