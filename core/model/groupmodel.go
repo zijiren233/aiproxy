@@ -21,6 +21,9 @@ type GroupModelConfig struct {
 	OverridePrice bool               `json:"override_price"`
 	ImagePrices   map[string]float64 `gorm:"serializer:fastjson;type:text" json:"image_prices,omitempty"`
 	Price         Price              `gorm:"embedded"                      json:"price,omitempty"`
+
+	OverrideRetryTimes bool  `json:"override_retry_times"`
+	RetryTimes         int64 `json:"retry_times"`
 }
 
 func SaveGroupModelConfig(groupModelConfig GroupModelConfig) (err error) {

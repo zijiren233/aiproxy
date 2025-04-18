@@ -48,6 +48,9 @@ func (c *ModelConfig) LoadFromGroupModelConfig(groupModelConfig GroupModelConfig
 		newC.ImagePrices = groupModelConfig.ImagePrices
 		newC.Price = groupModelConfig.Price
 	}
+	if groupModelConfig.OverrideRetryTimes {
+		newC.RetryTimes = groupModelConfig.RetryTimes
+	}
 	return newC
 }
 
