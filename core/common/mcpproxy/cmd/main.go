@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/labring/aiproxy/core/common/mcpproxy"
 )
@@ -33,7 +34,9 @@ func main() {
 
 	// Start the server in a goroutine
 	fmt.Println("Starting proxy server on :3000")
-	if err := http.ListenAndServe(":3000", nil); err != nil {
+	server := &http.Server{Addr: ":3000", ReadHeaderTimeout: time.Second * 10}
+	err := server.ListenAndServe()
+	if err != nil {
 		fmt.Printf("Server error: %v\n", err)
 	}
 }

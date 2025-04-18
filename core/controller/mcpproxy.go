@@ -86,10 +86,10 @@ redis.call('EXPIRE', key, 300)
 return value
 `)
 
-func (r *redisStoreManager) Get(sessionId string) (string, bool) {
+func (r *redisStoreManager) Get(sessionID string) (string, bool) {
 	ctx := context.Background()
 
-	result, err := redisStoreManagerScript.Run(ctx, r.rdb, []string{"mcp:session:" + sessionId}).Result()
+	result, err := redisStoreManagerScript.Run(ctx, r.rdb, []string{"mcp:session:" + sessionID}).Result()
 	if err != nil || result == nil {
 		return "", false
 	}
@@ -97,9 +97,9 @@ func (r *redisStoreManager) Get(sessionId string) (string, bool) {
 	return result.(string), true
 }
 
-func (r *redisStoreManager) Set(sessionId, endpoint string) {
+func (r *redisStoreManager) Set(sessionID, endpoint string) {
 	ctx := context.Background()
-	r.rdb.Set(ctx, "mcp:session:"+sessionId, endpoint, time.Minute*5)
+	r.rdb.Set(ctx, "mcp:session:"+sessionID, endpoint, time.Minute*5)
 }
 
 func (r *redisStoreManager) Delete(session string) {
@@ -310,8 +310,8 @@ func MCPMessage(c *gin.Context) {
 		return
 	}
 	mcpType := model.PublicMCPType(mcpTypeStr)
-	sessionId, _ := c.GetQuery("sessionId")
-	if sessionId == "" {
+	sessionID, _ := c.GetQuery("sessionId")
+	if sessionID == "" {
 		return
 	}
 
@@ -324,16 +324,21 @@ func MCPMessage(c *gin.Context) {
 			newEndpoint(token.Key, mcpType),
 		)
 	case model.PublicMCPTypeOpenAPI:
-		backend, ok := getStore().Get(sessionId)
+		backend, ok := getStore().Get(sessionID)
 		if !ok || backend != "openapi" {
 			return
 		}
 		mpscInstance := getMpsc()
 		body, err := io.ReadAll(c.Request.Body)
 		if err != nil {
+			c.AbortWithError(http.StatusInternalServerError, err)
 			return
 		}
-		mpscInstance.send(c.Request.Context(), sessionId, body)
+		err = mpscInstance.send(c.Request.Context(), sessionID, body)
+		if err != nil {
+			c.AbortWithError(http.StatusInternalServerError, err)
+			return
+		}
 		c.Writer.WriteHeader(http.StatusAccepted)
 	}
 }

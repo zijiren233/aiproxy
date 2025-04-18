@@ -56,7 +56,6 @@ linters:
     - testpackage
     - tparallel
     - goheader
-    - gomoddirectives
     - gomodguard
     - musttag
     - tagalign

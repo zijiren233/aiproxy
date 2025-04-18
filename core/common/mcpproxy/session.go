@@ -4,18 +4,18 @@ import "sync"
 
 // SessionManager defines the interface for managing session information
 type SessionManager interface {
-	// Set stores a sessionId and its corresponding backend endpoint
-	Set(sessionId, endpoint string)
-	// Get retrieves the backend endpoint for a sessionId
-	Get(sessionId string) (string, bool)
-	// Delete removes a sessionId from the store
-	Delete(sessionId string)
+	// Set stores a sessionID and its corresponding backend endpoint
+	Set(sessionID, endpoint string)
+	// Get retrieves the backend endpoint for a sessionID
+	Get(sessionID string) (string, bool)
+	// Delete removes a sessionID from the store
+	Delete(sessionID string)
 }
 
 // MemStore implements the SessionManager interface
 type MemStore struct {
 	mu       sync.RWMutex
-	sessions map[string]string // sessionId -> host+endpoint
+	sessions map[string]string // sessionID -> host+endpoint
 }
 
 // NewMemStore creates a new session store
@@ -25,24 +25,24 @@ func NewMemStore() *MemStore {
 	}
 }
 
-// Set stores a sessionId and its corresponding backend endpoint
-func (s *MemStore) Set(sessionId, endpoint string) {
+// Set stores a sessionID and its corresponding backend endpoint
+func (s *MemStore) Set(sessionID, endpoint string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.sessions[sessionId] = endpoint
+	s.sessions[sessionID] = endpoint
 }
 
-// Get retrieves the backend endpoint for a sessionId
-func (s *MemStore) Get(sessionId string) (string, bool) {
+// Get retrieves the backend endpoint for a sessionID
+func (s *MemStore) Get(sessionID string) (string, bool) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	endpoint, ok := s.sessions[sessionId]
+	endpoint, ok := s.sessions[sessionID]
 	return endpoint, ok
 }
 
-// Delete removes a sessionId from the store
-func (s *MemStore) Delete(sessionId string) {
+// Delete removes a sessionID from the store
+func (s *MemStore) Delete(sessionID string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	delete(s.sessions, sessionId)
+	delete(s.sessions, sessionID)
 }

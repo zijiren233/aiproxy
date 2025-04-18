@@ -87,7 +87,7 @@ func SSEHandler(
 		resp.Body.Close()
 	}()
 
-	// Parse the SSE stream and extract sessionId
+	// Parse the SSE stream and extract sessionID
 	reader := bufio.NewReader(resp.Body)
 	flusher, ok := w.(http.Flusher)
 	if !ok {
@@ -108,7 +108,7 @@ func SSEHandler(
 		fmt.Fprint(w, line)
 		flusher.Flush()
 
-		// Check if this is an endpoint event with sessionId
+		// Check if this is an endpoint event with sessionID
 		if strings.HasPrefix(line, "event: endpoint") {
 			// Next line should contain the data
 			dataLine, err := reader.ReadString('\n')
@@ -121,7 +121,7 @@ func SSEHandler(
 				store.Delete(newSession)
 			}()
 
-			// Extract sessionId from data line
+			// Extract sessionID from data line
 			// Example: data: /message?sessionId=3088a771-7961-44e8-9bdf-21953889f694
 			if strings.HasPrefix(dataLine, "data: ") {
 				endpoint := strings.TrimSpace(strings.TrimPrefix(dataLine, "data: "))

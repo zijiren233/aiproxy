@@ -8220,22 +8220,6 @@ const docTemplate = `{
                 }
             }
         },
-        "model.MCPType": {
-            "type": "string",
-            "enum": [
-                "mcp_proxy_sse",
-                "mcp_git_repo",
-                "mcp_openapi"
-            ],
-            "x-enum-comments": {
-                "MCPTypeGitRepo": "read only"
-            },
-            "x-enum-varnames": [
-                "MCPTypeProxySSE",
-                "MCPTypeGitRepo",
-                "MCPTypeOpenAPI"
-            ]
-        },
         "model.Message": {
             "type": "object",
             "properties": {
@@ -8525,7 +8509,7 @@ const docTemplate = `{
                     }
                 },
                 "type": {
-                    "$ref": "#/definitions/model.MCPType"
+                    "$ref": "#/definitions/model.PublicMCPType"
                 },
                 "update_at": {
                     "type": "string"
@@ -8560,6 +8544,22 @@ const docTemplate = `{
                     "type": "string"
                 }
             }
+        },
+        "model.PublicMCPType": {
+            "type": "string",
+            "enum": [
+                "mcp_proxy_sse",
+                "mcp_git_repo",
+                "mcp_openapi"
+            ],
+            "x-enum-comments": {
+                "PublicMCPTypeGitRepo": "read only"
+            },
+            "x-enum-varnames": [
+                "PublicMCPTypeProxySSE",
+                "PublicMCPTypeGitRepo",
+                "PublicMCPTypeOpenAPI"
+            ]
         },
         "model.RequestDetail": {
             "type": "object",

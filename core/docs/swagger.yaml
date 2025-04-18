@@ -926,18 +926,6 @@ definitions:
           type: number
         type: object
     type: object
-  model.MCPType:
-    enum:
-    - mcp_proxy_sse
-    - mcp_git_repo
-    - mcp_openapi
-    type: string
-    x-enum-comments:
-      MCPTypeGitRepo: read only
-    x-enum-varnames:
-    - MCPTypeProxySSE
-    - MCPTypeGitRepo
-    - MCPTypeOpenAPI
   model.Message:
     properties:
       content: {}
@@ -1150,7 +1138,7 @@ definitions:
           type: string
         type: array
       type:
-        $ref: '#/definitions/model.MCPType'
+        $ref: '#/definitions/model.PublicMCPType'
       update_at:
         type: string
     type: object
@@ -1173,6 +1161,18 @@ definitions:
       url:
         type: string
     type: object
+  model.PublicMCPType:
+    enum:
+    - mcp_proxy_sse
+    - mcp_git_repo
+    - mcp_openapi
+    type: string
+    x-enum-comments:
+      PublicMCPTypeGitRepo: read only
+    x-enum-varnames:
+    - PublicMCPTypeProxySSE
+    - PublicMCPTypeGitRepo
+    - PublicMCPTypeOpenAPI
   model.RequestDetail:
     properties:
       id:

@@ -146,19 +146,6 @@ func (s *SSEServer) HandleMessage(req []byte) error {
 	return nil
 }
 
-// writeJSONRPCError writes a JSON-RPC error response with the given error details.
-func (s *SSEServer) writeJSONRPCError(
-	w http.ResponseWriter,
-	id interface{},
-	code int,
-	message string,
-) {
-	response := createErrorResponse(id, code, message)
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusBadRequest)
-	json.NewEncoder(w).Encode(response)
-}
-
 func JSONRPCError(
 	id interface{},
 	code int,
