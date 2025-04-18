@@ -30,6 +30,8 @@ func (m Mode) String() string {
 		return "Rerank"
 	case ParsePdf:
 		return "ParsePdf"
+	case Anthropic:
+		return "Anthropic"
 	default:
 		return fmt.Sprintf("Mode(%d)", m)
 	}

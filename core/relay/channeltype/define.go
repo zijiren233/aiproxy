@@ -20,6 +20,7 @@ import (
 	"github.com/labring/aiproxy/core/relay/adaptor/gemini"
 	"github.com/labring/aiproxy/core/relay/adaptor/geminiopenai"
 	"github.com/labring/aiproxy/core/relay/adaptor/groq"
+	"github.com/labring/aiproxy/core/relay/adaptor/jina"
 	"github.com/labring/aiproxy/core/relay/adaptor/lingyiwanwu"
 	"github.com/labring/aiproxy/core/relay/adaptor/minimax"
 	"github.com/labring/aiproxy/core/relay/adaptor/mistral"
@@ -71,6 +72,7 @@ var ChannelAdaptor = map[int]adaptor.Adaptor{
 	44: &doubaoaudio.Adaptor{},
 	45: &xai.Adaptor{},
 	46: &doc2x.Adaptor{},
+	47: &jina.Adaptor{},
 }
 
 func GetAdaptor(channel int) (adaptor.Adaptor, bool) {
