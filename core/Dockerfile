@@ -2,7 +2,9 @@ FROM golang:1.23-alpine AS builder
 
 WORKDIR /aiproxy
 
-COPY ./ ./
+COPY ../ ./
+
+RUN cd core
 
 RUN apk add --no-cache curl
 
@@ -25,7 +27,7 @@ VOLUME /aiproxy
 RUN apk add --no-cache ca-certificates tzdata ffmpeg curl && \
     rm -rf /var/cache/apk/*
 
-COPY --from=builder /aiproxy/aiproxy /usr/local/bin/aiproxy
+COPY --from=builder /aiproxy/core/aiproxy /usr/local/bin/aiproxy
 
 ENV PUID=0 PGID=0 UMASK=022
 
