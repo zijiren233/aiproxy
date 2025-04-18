@@ -32,11 +32,11 @@ func stopReasonClaude2OpenAI(reason *string) string {
 	}
 	switch *reason {
 	case "end_turn", "stop_sequence":
-		return relaymodel.StopFinishReason
+		return relaymodel.FinishReasonStop
 	case "max_tokens":
-		return "length"
+		return relaymodel.FinishReasonLength
 	case toolUseType:
-		return "tool_calls"
+		return relaymodel.FinishReasonToolCalls
 	default:
 		return *reason
 	}
@@ -304,7 +304,7 @@ func StreamResponse2OpenAI(meta *meta.Meta, respData []byte) (*relaymodel.ChatCo
 	choice.Delta.Role = "assistant"
 	finishReason := stopReasonClaude2OpenAI(&stopReason)
 	if finishReason != "null" {
-		choice.FinishReason = &finishReason
+		choice.FinishReason = finishReason
 	}
 	openaiResponse.Choices = []*relaymodel.ChatCompletionsStreamResponseChoice{&choice}
 

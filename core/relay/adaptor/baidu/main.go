@@ -90,7 +90,7 @@ func response2OpenAI(meta *meta.Meta, response *ChatResponse) *relaymodel.TextRe
 			Role:    "assistant",
 			Content: response.Result,
 		},
-		FinishReason: relaymodel.StopFinishReason,
+		FinishReason: relaymodel.FinishReasonStop,
 	}
 	fullTextResponse := relaymodel.TextResponse{
 		ID:      response.ID,
@@ -109,8 +109,7 @@ func streamResponse2OpenAI(meta *meta.Meta, baiduResponse *ChatStreamResponse) *
 	var choice relaymodel.ChatCompletionsStreamResponseChoice
 	choice.Delta.Content = baiduResponse.Result
 	if baiduResponse.IsEnd {
-		finishReason := relaymodel.StopFinishReason
-		choice.FinishReason = &finishReason
+		choice.FinishReason = relaymodel.FinishReasonStop
 	}
 	response := relaymodel.ChatCompletionsStreamResponse{
 		ID:      baiduResponse.ID,

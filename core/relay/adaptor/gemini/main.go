@@ -13,6 +13,7 @@ import (
 
 	"github.com/bytedance/sonic"
 	"github.com/gin-gonic/gin"
+	"github.com/labring/aiproxy/core/common"
 	"github.com/labring/aiproxy/core/common/config"
 	"github.com/labring/aiproxy/core/common/conv"
 	"github.com/labring/aiproxy/core/common/image"
@@ -59,7 +60,11 @@ func buildSafetySettings() []ChatSafetySettings {
 	}
 }
 
-func buildGenerationConfig(meta *meta.Meta, textRequest *relaymodel.GeneralOpenAIRequest) *ChatGenerationConfig {
+type thinkingConfigOnly struct {
+	ThinkingConfig *ThinkingConfig `json:"thinking_config"`
+}
+
+func buildGenerationConfig(meta *meta.Meta, req *http.Request, textRequest *relaymodel.GeneralOpenAIRequest) *ChatGenerationConfig {
 	config := ChatGenerationConfig{
 		Temperature:     textRequest.Temperature,
 		TopP:            textRequest.TopP,
@@ -81,6 +86,12 @@ func buildGenerationConfig(meta *meta.Meta, textRequest *relaymodel.GeneralOpenA
 			config.ResponseSchema = textRequest.ResponseFormat.JSONSchema.Schema
 			config.ResponseMimeType = mimeTypeMap["json_object"]
 		}
+	}
+
+	var thinkingConfigOnly thinkingConfigOnly
+	common.UnmarshalBodyReusable(req, &thinkingConfigOnly)
+	if thinkingConfigOnly.ThinkingConfig != nil {
+		config.ThinkingConfig = thinkingConfigOnly.ThinkingConfig
 	}
 
 	return &config
@@ -262,7 +273,7 @@ func ConvertRequest(meta *meta.Meta, req *http.Request) (string, http.Header, io
 		Contents:          contents,
 		SystemInstruction: systemContent,
 		SafetySettings:    buildSafetySettings(),
-		GenerationConfig:  buildGenerationConfig(meta, textRequest),
+		GenerationConfig:  buildGenerationConfig(meta, req, textRequest),
 		Tools:             buildTools(textRequest),
 		ToolConfig:        buildToolConfig(textRequest),
 	}
@@ -286,6 +297,7 @@ type UsageMetadata struct {
 	PromptTokenCount     int64                `json:"promptTokenCount"`
 	CandidatesTokenCount int64                `json:"candidatesTokenCount"`
 	TotalTokenCount      int64                `json:"totalTokenCount"`
+	ThoughtsTokenCount   int64                `json:"thoughtsTokenCount,omitempty"`
 	PromptTokensDetails  []PromptTokensDetail `json:"promptTokensDetails"`
 }
 
@@ -308,6 +320,18 @@ func (g *ChatResponse) GetResponseText() string {
 		}
 	}
 	return builder.String()
+}
+
+var finishReason2OpenAI = map[string]string{
+	"STOP":       relaymodel.FinishReasonStop,
+	"MAX_TOKENS": relaymodel.FinishReasonLength,
+}
+
+func FinishReason2OpenAI(reason string) string {
+	if openaiReason, ok := finishReason2OpenAI[reason]; ok {
+		return openaiReason
+	}
+	return reason
 }
 
 type ChatCandidate struct {
@@ -359,6 +383,11 @@ func responseChat2OpenAI(meta *meta.Meta, response *ChatResponse) *relaymodel.Te
 			CompletionTokens: response.UsageMetadata.CandidatesTokenCount,
 			TotalTokens:      response.UsageMetadata.TotalTokenCount,
 		}
+		if response.UsageMetadata.ThoughtsTokenCount != 0 {
+			fullTextResponse.Usage.CompletionTokensDetails = &relaymodel.CompletionTokensDetails{
+				ReasoningTokens: response.UsageMetadata.ThoughtsTokenCount,
+			}
+		}
 	}
 	for i, candidate := range response.Candidates {
 		choice := relaymodel.TextResponseChoice{
@@ -367,7 +396,7 @@ func responseChat2OpenAI(meta *meta.Meta, response *ChatResponse) *relaymodel.Te
 				Role:    "assistant",
 				Content: "",
 			},
-			FinishReason: candidate.FinishReason,
+			FinishReason: FinishReason2OpenAI(candidate.FinishReason),
 		}
 		if len(candidate.Content.Parts) > 0 {
 			var contents []relaymodel.MessageContent
@@ -433,6 +462,11 @@ func streamResponseChat2OpenAI(meta *meta.Meta, geminiResponse *ChatResponse) *r
 			CompletionTokens: geminiResponse.UsageMetadata.CandidatesTokenCount,
 			TotalTokens:      geminiResponse.UsageMetadata.TotalTokenCount,
 		}
+		if geminiResponse.UsageMetadata.ThoughtsTokenCount != 0 {
+			response.Usage.CompletionTokensDetails = &relaymodel.CompletionTokensDetails{
+				ReasoningTokens: geminiResponse.UsageMetadata.ThoughtsTokenCount,
+			}
+		}
 	}
 	for i, candidate := range geminiResponse.Candidates {
 		choice := relaymodel.ChatCompletionsStreamResponseChoice{
@@ -440,7 +474,7 @@ func streamResponseChat2OpenAI(meta *meta.Meta, geminiResponse *ChatResponse) *r
 			Delta: relaymodel.Message{
 				Content: "",
 			},
-			FinishReason: &candidate.FinishReason,
+			FinishReason: FinishReason2OpenAI(candidate.FinishReason),
 		}
 		if len(candidate.Content.Parts) > 0 {
 			var contents []relaymodel.MessageContent

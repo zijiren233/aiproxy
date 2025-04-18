@@ -9,6 +9,10 @@ type ChatRequest struct {
 	ToolConfig        *ToolConfig           `json:"tool_config,omitempty"`
 }
 
+type ThinkingConfig struct {
+	ThinkingBudget int `json:"thinking_budget"`
+}
+
 type EmbeddingRequest struct {
 	Model                string      `json:"model"`
 	TaskType             string      `json:"taskType,omitempty"`
@@ -76,15 +80,16 @@ type ChatTools struct {
 }
 
 type ChatGenerationConfig struct {
-	ResponseSchema     any      `json:"responseSchema,omitempty"`
-	Temperature        *float64 `json:"temperature,omitempty"`
-	TopP               *float64 `json:"topP,omitempty"`
-	ResponseMimeType   string   `json:"responseMimeType,omitempty"`
-	StopSequences      []string `json:"stopSequences,omitempty"`
-	TopK               float64  `json:"topK,omitempty"`
-	MaxOutputTokens    int      `json:"maxOutputTokens,omitempty"`
-	CandidateCount     int      `json:"candidateCount,omitempty"`
-	ResponseModalities []string `json:"responseModalities,omitempty"`
+	ResponseSchema     any             `json:"responseSchema,omitempty"`
+	Temperature        *float64        `json:"temperature,omitempty"`
+	TopP               *float64        `json:"topP,omitempty"`
+	ResponseMimeType   string          `json:"responseMimeType,omitempty"`
+	StopSequences      []string        `json:"stopSequences,omitempty"`
+	TopK               float64         `json:"topK,omitempty"`
+	MaxOutputTokens    int             `json:"maxOutputTokens,omitempty"`
+	CandidateCount     int             `json:"candidateCount,omitempty"`
+	ResponseModalities []string        `json:"responseModalities,omitempty"`
+	ThinkingConfig     *ThinkingConfig `json:"thinking_config,omitempty"`
 }
 
 type FunctionCallingConfig struct {

@@ -85,10 +85,10 @@ func (r GeneralOpenAIRequest) ParseInput() []string {
 }
 
 type ChatCompletionsStreamResponseChoice struct {
-	FinishReason *string `json:"finish_reason,omitempty"`
-	Delta        Message `json:"delta"`
-	Index        int     `json:"index"`
-	Text         string  `json:"text,omitempty"`
+	FinishReason FinishReason `json:"finish_reason,omitempty"`
+	Delta        Message      `json:"delta"`
+	Index        int          `json:"index"`
+	Text         string       `json:"text,omitempty"`
 }
 
 type ChatCompletionsStreamResponse struct {
@@ -101,10 +101,10 @@ type ChatCompletionsStreamResponse struct {
 }
 
 type TextResponseChoice struct {
-	FinishReason string  `json:"finish_reason"`
-	Message      Message `json:"message"`
-	Index        int     `json:"index"`
-	Text         string  `json:"text,omitempty"`
+	FinishReason FinishReason `json:"finish_reason"`
+	Message      Message      `json:"message"`
+	Index        int          `json:"index"`
+	Text         string       `json:"text,omitempty"`
 }
 
 type TextResponse struct {

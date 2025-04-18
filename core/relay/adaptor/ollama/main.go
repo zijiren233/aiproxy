@@ -175,7 +175,7 @@ func streamResponse2OpenAI(meta *meta.Meta, ollamaResponse *ChatResponse) *relay
 		}
 	}
 	if ollamaResponse.Done {
-		choice.FinishReason = &ollamaResponse.DoneReason
+		choice.FinishReason = ollamaResponse.DoneReason
 	}
 	response := relaymodel.ChatCompletionsStreamResponse{
 		ID:      openai.ChatCompletionID(),

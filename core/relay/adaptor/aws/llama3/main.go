@@ -221,7 +221,7 @@ func StreamHandler(meta *meta.Meta, c *gin.Context) (*model.Usage, *relaymodel.E
 			if llamaResp.PromptTokenCount > 0 {
 				usage.PromptTokens = llamaResp.PromptTokenCount
 			}
-			if llamaResp.StopReason == relaymodel.StopFinishReason {
+			if llamaResp.StopReason == relaymodel.FinishReasonStop {
 				usage.CompletionTokens = llamaResp.GenerationTokenCount
 				usage.TotalTokens = usage.PromptTokens + usage.CompletionTokens
 			}
@@ -253,7 +253,7 @@ func StreamResponseLlama2OpenAI(llamaResponse *StreamResponse) *relaymodel.ChatC
 	choice.Delta.Role = "assistant"
 	finishReason := llamaResponse.StopReason
 	if finishReason != "null" {
-		choice.FinishReason = &finishReason
+		choice.FinishReason = finishReason
 	}
 	var openaiResponse relaymodel.ChatCompletionsStreamResponse
 	openaiResponse.Object = relaymodel.ChatCompletionChunk

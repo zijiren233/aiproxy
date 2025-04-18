@@ -13,7 +13,8 @@ type Usage struct {
 
 	WebSearchCount int64 `json:"web_search_count,omitempty"`
 
-	PromptTokensDetails *PromptTokensDetails `json:"prompt_tokens_details,omitempty"`
+	PromptTokensDetails     *PromptTokensDetails     `json:"prompt_tokens_details,omitempty"`
+	CompletionTokensDetails *CompletionTokensDetails `json:"completion_tokens_details,omitempty"`
 }
 
 func (u *Usage) ToModelUsage() *model.Usage {
@@ -49,7 +50,8 @@ func (u *Usage) Add(other *Usage) {
 }
 
 type PromptTokensDetails struct {
-	CachedTokens        int64 `json:"cached_tokens"`
+	CachedTokens        int64 `json:"cached_tokens,omitempty"`
+	AudioTokens         int64 `json:"audio_tokens,omitempty"`
 	CacheCreationTokens int64 `json:"cache_creation_tokens,omitempty"`
 }
 
@@ -58,7 +60,15 @@ func (d *PromptTokensDetails) Add(other *PromptTokensDetails) {
 		return
 	}
 	d.CachedTokens += other.CachedTokens
+	d.AudioTokens += other.AudioTokens
 	d.CacheCreationTokens += other.CacheCreationTokens
+}
+
+type CompletionTokensDetails struct {
+	ReasoningTokens          int64 `json:"reasoning_tokens,omitempty"`
+	AudioTokens              int64 `json:"audio_tokens,omitempty"`
+	AcceptedPredictionTokens int64 `json:"accepted_prediction_tokens,omitempty"`
+	RejectedPredictionTokens int64 `json:"rejected_prediction_tokens,omitempty"`
 }
 
 type Error struct {

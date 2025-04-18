@@ -25,7 +25,7 @@ func stopReasonCohere2OpenAI(reason *string) string {
 	}
 	switch *reason {
 	case "COMPLETE":
-		return relaymodel.StopFinishReason
+		return relaymodel.FinishReasonStop
 	default:
 		return *reason
 	}
@@ -102,7 +102,7 @@ func StreamResponse2OpenAI(meta *meta.Meta, cohereResponse *StreamResponse) *rel
 	choice.Delta.Content = responseText
 	choice.Delta.Role = "assistant"
 	if finishReason != "" {
-		choice.FinishReason = &finishReason
+		choice.FinishReason = finishReason
 	}
 	openaiResponse := relaymodel.ChatCompletionsStreamResponse{
 		ID:      "chatcmpl-" + cohereResponse.GenerationID,

@@ -7,7 +7,16 @@ const (
 )
 
 const (
-	StopFinishReason    = "stop"
 	ChatCompletionChunk = "chat.completion.chunk"
 	ChatCompletion      = "chat.completion"
+)
+
+type FinishReason = string
+
+const (
+	FinishReasonStop          FinishReason = "stop"
+	FinishReasonLength        FinishReason = "length"
+	FinishReasonContentFilter FinishReason = "content_filter"
+	FinishReasonToolCalls     FinishReason = "tool_calls"
+	FinishReasonFunctionCall  FinishReason = "function_call"
 )
