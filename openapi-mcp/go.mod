@@ -1,6 +1,6 @@
 module github.com/labring/aiproxy/openapi-mcp
 
-go 1.24.2
+go 1.23.8
 
 require (
 	github.com/getkin/kin-openapi v0.131.0
