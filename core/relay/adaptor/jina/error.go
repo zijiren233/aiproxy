@@ -1,6 +1,7 @@
 package jina
 
 import (
+	"fmt"
 	"io"
 	"net/http"
 
@@ -9,12 +10,10 @@ import (
 	"github.com/labring/aiproxy/core/relay/model"
 )
 
-type ErrorResponse struct {
-	Detail []struct {
-		Loc  []string `json:"loc"`
-		Msg  string   `json:"msg"`
-		Type string   `json:"type"`
-	} `json:"detail"`
+type Detail struct {
+	Loc  []string `json:"loc"`
+	Msg  string   `json:"msg"`
+	Type string   `json:"type"`
 }
 
 func ErrorHanlder(resp *http.Response) *model.ErrorWithStatusCode {
@@ -25,18 +24,28 @@ func ErrorHanlder(resp *http.Response) *model.ErrorWithStatusCode {
 		return openai.ErrorWrapper(err, "read_response_body_failed", resp.StatusCode)
 	}
 
-	var jinaError ErrorResponse
-	if err := sonic.Unmarshal(body, &jinaError); err != nil {
+	fmt.Println(string(body))
+
+	// detail可能是字符串或者对象
+	detailValue, err := sonic.Get(body, "detail")
+	if err != nil {
 		return openai.ErrorWrapper(err, "unmarshal_response_body_failed", resp.StatusCode)
 	}
 
 	errorMessage := "unknown error"
-	if len(jinaError.Detail) > 0 {
-		errorMessage = jinaError.Detail[0].Msg
-	}
 	errorType := openai.ErrorTypeUpstream
-	if len(jinaError.Detail) > 0 {
-		errorType = jinaError.Detail[0].Type
+
+	if detailStr, err := detailValue.String(); err == nil {
+		errorMessage = detailStr
+	} else {
+		var details []Detail
+		detailsData, _ := detailValue.Raw()
+		if err := sonic.Unmarshal([]byte(detailsData), &details); err == nil && len(details) > 0 {
+			errorMessage = details[0].Msg
+			if details[0].Type != "" {
+				errorType = details[0].Type
+			}
+		}
 	}
 
 	return &model.ErrorWithStatusCode{
