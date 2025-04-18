@@ -26,7 +26,7 @@ func (h *TestEndpointHandler) LoadEndpoint(endpoint string) string {
 
 func TestProxySSEEndpoint(t *testing.T) {
 	// Setup a mock backend server
-	backendServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	backendServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "text/event-stream")
 		w.Header().Set("Cache-Control", "no-cache")
 		w.Header().Set("Connection", "keep-alive")
@@ -60,6 +60,7 @@ func TestProxySSEEndpoint(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error making request to proxy: %v", err)
 	}
+	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		t.Errorf("Expected status code %d, got %d", http.StatusOK, resp.StatusCode)
 	}

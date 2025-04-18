@@ -90,15 +90,15 @@ type PublicMCP struct {
 	OpenAPIConfig               *MCPOpenAPIConfig            `gorm:"serializer:fastjson;type:text" json:"openapi_config,omitempty"`
 }
 
-func (l *PublicMCP) BeforeCreate(_ *gorm.DB) (err error) {
-	if l.ID == "" {
+func (p *PublicMCP) BeforeCreate(_ *gorm.DB) (err error) {
+	if p.ID == "" {
 		return errors.New("mcp id is empty")
 	}
 	return
 }
 
-func (c *PublicMCP) BeforeDelete(tx *gorm.DB) (err error) {
-	return tx.Model(&GroupPublicMCPReusingParam{}).Where("mcp_id = ?", c.ID).Delete(&GroupPublicMCPReusingParam{}).Error
+func (p *PublicMCP) BeforeDelete(tx *gorm.DB) (err error) {
+	return tx.Model(&GroupPublicMCPReusingParam{}).Where("mcp_id = ?", p.ID).Delete(&GroupPublicMCPReusingParam{}).Error
 }
 
 // CreatePublicMCP creates a new MCP

@@ -17,7 +17,6 @@ import (
 type SSEServer struct {
 	server          *server.MCPServer
 	messageEndpoint string
-	srv             *http.Server
 	eventQueue      chan string
 
 	keepAlive         bool
@@ -92,7 +91,6 @@ func (s *SSEServer) HandleSSE(w http.ResponseWriter, r *http.Request) {
 			for {
 				select {
 				case <-ticker.C:
-					//: ping - 2025-03-27 07:44:38.682659+00:00
 					s.eventQueue <- fmt.Sprintf(":ping - %s\n\n", time.Now().Format(time.RFC3339))
 				case <-r.Context().Done():
 					return
@@ -123,7 +121,7 @@ func (s *SSEServer) HandleSSE(w http.ResponseWriter, r *http.Request) {
 func (s *SSEServer) HandleMessage(req []byte) error {
 	// Parse message as raw JSON
 	var rawMessage json.RawMessage
-	if err := json.Unmarshal([]byte(req), &rawMessage); err != nil {
+	if err := json.Unmarshal(req, &rawMessage); err != nil {
 		return errors.New("parse error")
 	}
 
@@ -132,7 +130,10 @@ func (s *SSEServer) HandleMessage(req []byte) error {
 
 	// Only send response if there is one (not for notifications)
 	if response != nil {
-		eventData, _ := json.Marshal(response)
+		eventData, err := json.Marshal(response)
+		if err != nil {
+			return err
+		}
 
 		// Queue the event for sending via SSE
 		select {

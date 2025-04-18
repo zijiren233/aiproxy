@@ -112,9 +112,9 @@ func (r *redisStoreManager) Delete(session string) {
 //	@Summary	MCP SSE Proxy
 //	@Router		/mcp/public/{id}/sse [get]
 func MCPSseProxy(c *gin.Context) {
-	mcpId := c.Param("id")
+	mcpID := c.Param("id")
 
-	publicMcp, err := model.GetPublicMCPByID(mcpId)
+	publicMcp, err := model.GetPublicMCPByID(mcpID)
 	if err != nil {
 		middleware.AbortLogWithMessage(c, http.StatusBadRequest, err.Error())
 		return
@@ -267,12 +267,12 @@ func processOpenAPIMessages(ctx context.Context, sessionID string, server *SSESe
 }
 
 // processReusingParams handles the reusing parameters for MCP proxy
-func processReusingParams(reusingParams map[string]model.ReusingParam, mcpId string, groupID string, headers map[string]string, backendQuery *url.Values) error {
+func processReusingParams(reusingParams map[string]model.ReusingParam, mcpID string, groupID string, headers map[string]string, backendQuery *url.Values) error {
 	if len(reusingParams) == 0 {
 		return nil
 	}
 
-	param, err := model.GetGroupPublicMCPReusingParam(mcpId, groupID)
+	param, err := model.GetGroupPublicMCPReusingParam(mcpID, groupID)
 	if err != nil {
 		return err
 	}
@@ -331,12 +331,12 @@ func MCPMessage(c *gin.Context) {
 		mpscInstance := getMpsc()
 		body, err := io.ReadAll(c.Request.Body)
 		if err != nil {
-			c.AbortWithError(http.StatusInternalServerError, err)
+			_ = c.AbortWithError(http.StatusInternalServerError, err)
 			return
 		}
 		err = mpscInstance.send(c.Request.Context(), sessionID, body)
 		if err != nil {
-			c.AbortWithError(http.StatusInternalServerError, err)
+			_ = c.AbortWithError(http.StatusInternalServerError, err)
 			return
 		}
 		c.Writer.WriteHeader(http.StatusAccepted)
@@ -359,7 +359,7 @@ var (
 func getMpsc() mpsc {
 	if common.RedisEnabled {
 		redisMpscOnce.Do(func() {
-			redisMpsc = NewRedisMPSC(common.RDB)
+			redisMpsc = newRedisMPSC(common.RDB)
 		})
 		return redisMpsc
 	}
@@ -465,8 +465,8 @@ type redisMPSC struct {
 	rdb *redis.Client
 }
 
-// NewRedisMPSC creates a new Redis MPSC instance
-func NewRedisMPSC(rdb *redis.Client) *redisMPSC {
+// newRedisMPSC creates a new Redis MPSC instance
+func newRedisMPSC(rdb *redis.Client) *redisMPSC {
 	return &redisMPSC{rdb: rdb}
 }
 
@@ -487,7 +487,7 @@ func (r *redisMPSC) recv(ctx context.Context, id string) ([]byte, error) {
 		default:
 			result, err := r.rdb.BRPop(ctx, time.Second, id).Result()
 			if err != nil {
-				if err == redis.Nil {
+				if errors.Is(err, redis.Nil) {
 					runtime.Gosched()
 					continue
 				}
