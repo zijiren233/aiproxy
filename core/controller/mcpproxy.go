@@ -190,7 +190,11 @@ func MCPSseProxy(c *gin.Context) {
 			return
 		}
 		newSission, newEndpoint := newEndpoint(token.Key, publicMcp.Type).NewEndpoint()
-		getStore().Set(newSission, "openapi")
+		store := getStore()
+		store.Set(newSission, "openapi")
+		defer func() {
+			store.Delete(newSission)
+		}()
 		server := NewSSEServer(
 			s,
 			WithMessageEndpoint(newEndpoint),
