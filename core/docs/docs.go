@@ -7342,6 +7342,9 @@ const docTemplate = `{
                 "completion_tokens": {
                     "type": "integer"
                 },
+                "completion_tokens_details": {
+                    "$ref": "#/definitions/model.CompletionTokensDetails"
+                },
                 "prompt_tokens": {
                     "type": "integer"
                 },
@@ -7584,6 +7587,23 @@ const docTemplate = `{
                 }
             }
         },
+        "model.CompletionTokensDetails": {
+            "type": "object",
+            "properties": {
+                "accepted_prediction_tokens": {
+                    "type": "integer"
+                },
+                "audio_tokens": {
+                    "type": "integer"
+                },
+                "reasoning_tokens": {
+                    "type": "integer"
+                },
+                "rejected_prediction_tokens": {
+                    "type": "integer"
+                }
+            }
+        },
         "model.DashboardResponse": {
             "type": "object",
             "properties": {
@@ -7695,6 +7715,23 @@ const docTemplate = `{
                     "type": "string"
                 }
             }
+        },
+        "model.FinishReason": {
+            "type": "string",
+            "enum": [
+                "stop",
+                "length",
+                "content_filter",
+                "tool_calls",
+                "function_call"
+            ],
+            "x-enum-varnames": [
+                "FinishReasonStop",
+                "FinishReasonLength",
+                "FinishReasonContentFilter",
+                "FinishReasonToolCalls",
+                "FinishReasonFunctionCall"
+            ]
         },
         "model.Function": {
             "type": "object",
@@ -8351,7 +8388,8 @@ const docTemplate = `{
                 "lingyiwanwu",
                 "stepfun",
                 "xai",
-                "doc2x"
+                "doc2x",
+                "jina"
             ],
             "x-enum-varnames": [
                 "ModelOwnerOpenAI",
@@ -8384,7 +8422,8 @@ const docTemplate = `{
                 "ModelOwnerLingyiWanwu",
                 "ModelOwnerStepFun",
                 "ModelOwnerXAI",
-                "ModelOwnerDoc2x"
+                "ModelOwnerDoc2x",
+                "ModelOwnerJina"
             ]
         },
         "model.Option": {
@@ -8461,6 +8500,9 @@ const docTemplate = `{
         "model.PromptTokensDetails": {
             "type": "object",
             "properties": {
+                "audio_tokens": {
+                    "type": "integer"
+                },
                 "cache_creation_tokens": {
                     "type": "integer"
                 },
@@ -8740,7 +8782,7 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "finish_reason": {
-                    "type": "string"
+                    "$ref": "#/definitions/model.FinishReason"
                 },
                 "index": {
                     "type": "integer"

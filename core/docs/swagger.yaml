@@ -338,6 +338,8 @@ definitions:
     properties:
       completion_tokens:
         type: integer
+      completion_tokens_details:
+        $ref: '#/definitions/model.CompletionTokensDetails'
       prompt_tokens:
         type: integer
       prompt_tokens_details:
@@ -505,6 +507,17 @@ definitions:
       web_search_count:
         type: integer
     type: object
+  model.CompletionTokensDetails:
+    properties:
+      accepted_prediction_tokens:
+        type: integer
+      audio_tokens:
+        type: integer
+      reasoning_tokens:
+        type: integer
+      rejected_prediction_tokens:
+        type: integer
+    type: object
   model.DashboardResponse:
     properties:
       cache_creation_tokens:
@@ -578,6 +591,20 @@ definitions:
       object:
         type: string
     type: object
+  model.FinishReason:
+    enum:
+    - stop
+    - length
+    - content_filter
+    - tool_calls
+    - function_call
+    type: string
+    x-enum-varnames:
+    - FinishReasonStop
+    - FinishReasonLength
+    - FinishReasonContentFilter
+    - FinishReasonToolCalls
+    - FinishReasonFunctionCall
   model.Function:
     properties:
       arguments:
@@ -1024,6 +1051,7 @@ definitions:
     - stepfun
     - xai
     - doc2x
+    - jina
     type: string
     x-enum-varnames:
     - ModelOwnerOpenAI
@@ -1057,6 +1085,7 @@ definitions:
     - ModelOwnerStepFun
     - ModelOwnerXAI
     - ModelOwnerDoc2x
+    - ModelOwnerJina
   model.Option:
     properties:
       key:
@@ -1106,6 +1135,8 @@ definitions:
     type: object
   model.PromptTokensDetails:
     properties:
+      audio_tokens:
+        type: integer
       cache_creation_tokens:
         type: integer
       cached_tokens:
@@ -1289,7 +1320,7 @@ definitions:
   model.TextResponseChoice:
     properties:
       finish_reason:
-        type: string
+        $ref: '#/definitions/model.FinishReason'
       index:
         type: integer
       message:
