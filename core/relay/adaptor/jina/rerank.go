@@ -48,9 +48,12 @@ func RerankHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model
 		usage.TotalTokens = meta.InputTokens
 	}
 	modelUsage := usage.ToModelUsage()
-	node.SetAny("meta", map[string]any{
+	_, err = node.SetAny("meta", map[string]any{
 		"tokens": modelUsage,
 	})
+	if err != nil {
+		return nil, openai.ErrorWrapper(err, "unmarshal_usage_failed", http.StatusInternalServerError)
+	}
 	_, err = node.Unset("usage")
 	if err != nil {
 		return nil, openai.ErrorWrapper(err, "unmarshal_usage_failed", http.StatusInternalServerError)
