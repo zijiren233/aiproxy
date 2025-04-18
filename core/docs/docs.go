@@ -6935,6 +6935,9 @@ const docTemplate = `{
                 "price": {
                     "$ref": "#/definitions/model.Price"
                 },
+                "retry_times": {
+                    "type": "integer"
+                },
                 "rpm": {
                     "type": "integer"
                 },
@@ -7159,6 +7162,9 @@ const docTemplate = `{
                 "price": {
                     "$ref": "#/definitions/model.Price"
                 },
+                "retry_times": {
+                    "type": "integer"
+                },
                 "rpm": {
                     "type": "integer"
                 },
@@ -7350,18 +7356,6 @@ const docTemplate = `{
                 }
             }
         },
-        "gorm.DeletedAt": {
-            "type": "object",
-            "properties": {
-                "time": {
-                    "type": "string"
-                },
-                "valid": {
-                    "description": "Valid is true if Time is not NULL",
-                    "type": "boolean"
-                }
-            }
-        },
         "middleware.APIResponse": {
             "type": "object",
             "properties": {
@@ -7458,9 +7452,6 @@ const docTemplate = `{
                 },
                 "created_at": {
                     "type": "string"
-                },
-                "deletedAt": {
-                    "$ref": "#/definitions/gorm.DeletedAt"
                 },
                 "enabled_auto_balance_check": {
                     "type": "boolean"
@@ -8006,8 +7997,14 @@ const docTemplate = `{
                 "override_price": {
                     "type": "boolean"
                 },
+                "override_retry_times": {
+                    "type": "boolean"
+                },
                 "price": {
                     "$ref": "#/definitions/model.Price"
+                },
+                "retry_times": {
+                    "type": "integer"
                 },
                 "rpm": {
                     "type": "integer"
@@ -8271,6 +8268,9 @@ const docTemplate = `{
                 },
                 "price": {
                     "$ref": "#/definitions/model.Price"
+                },
+                "retry_times": {
+                    "type": "integer"
                 },
                 "rpm": {
                     "type": "integer"

@@ -6926,6 +6926,9 @@
                 "price": {
                     "$ref": "#/definitions/model.Price"
                 },
+                "retry_times": {
+                    "type": "integer"
+                },
                 "rpm": {
                     "type": "integer"
                 },
@@ -7150,6 +7153,9 @@
                 "price": {
                     "$ref": "#/definitions/model.Price"
                 },
+                "retry_times": {
+                    "type": "integer"
+                },
                 "rpm": {
                     "type": "integer"
                 },
@@ -7341,18 +7347,6 @@
                 }
             }
         },
-        "gorm.DeletedAt": {
-            "type": "object",
-            "properties": {
-                "time": {
-                    "type": "string"
-                },
-                "valid": {
-                    "description": "Valid is true if Time is not NULL",
-                    "type": "boolean"
-                }
-            }
-        },
         "middleware.APIResponse": {
             "type": "object",
             "properties": {
@@ -7449,9 +7443,6 @@
                 },
                 "created_at": {
                     "type": "string"
-                },
-                "deletedAt": {
-                    "$ref": "#/definitions/gorm.DeletedAt"
                 },
                 "enabled_auto_balance_check": {
                     "type": "boolean"
@@ -7997,8 +7988,14 @@
                 "override_price": {
                     "type": "boolean"
                 },
+                "override_retry_times": {
+                    "type": "boolean"
+                },
                 "price": {
                     "$ref": "#/definitions/model.Price"
+                },
+                "retry_times": {
+                    "type": "integer"
                 },
                 "rpm": {
                     "type": "integer"
@@ -8262,6 +8259,9 @@
                 },
                 "price": {
                     "$ref": "#/definitions/model.Price"
+                },
+                "retry_times": {
+                    "type": "integer"
                 },
                 "rpm": {
                     "type": "integer"

@@ -73,6 +73,8 @@ definitions:
         $ref: '#/definitions/model.ModelOwner'
       price:
         $ref: '#/definitions/model.Price'
+      retry_times:
+        type: integer
       rpm:
         type: integer
       tpm:
@@ -220,6 +222,8 @@ definitions:
         $ref: '#/definitions/model.ModelOwner'
       price:
         $ref: '#/definitions/model.Price'
+      retry_times:
+        type: integer
       rpm:
         type: integer
       tpm:
@@ -343,14 +347,6 @@ definitions:
       web_search_count:
         type: integer
     type: object
-  gorm.DeletedAt:
-    properties:
-      time:
-        type: string
-      valid:
-        description: Valid is true if Time is not NULL
-        type: boolean
-    type: object
   middleware.APIResponse:
     properties:
       data: {}
@@ -423,8 +419,6 @@ definitions:
         $ref: '#/definitions/model.ChannelConfig'
       created_at:
         type: string
-      deletedAt:
-        $ref: '#/definitions/gorm.DeletedAt'
       enabled_auto_balance_check:
         type: boolean
       id:
@@ -786,8 +780,12 @@ definitions:
         type: boolean
       override_price:
         type: boolean
+      override_retry_times:
+        type: boolean
       price:
         $ref: '#/definitions/model.Price'
+      retry_times:
+        type: integer
       rpm:
         type: integer
       tpm:
@@ -961,6 +959,8 @@ definitions:
         $ref: '#/definitions/model.ModelOwner'
       price:
         $ref: '#/definitions/model.Price'
+      retry_times:
+        type: integer
       rpm:
         type: integer
       tpm:
