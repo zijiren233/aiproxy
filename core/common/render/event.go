@@ -6,11 +6,6 @@ import (
 	"github.com/labring/aiproxy/core/common/conv"
 )
 
-var (
-	contentType = []string{"text/event-stream"}
-	noCache     = []string{"no-cache"}
-)
-
 type OpenAISSE struct {
 	Data string
 }
@@ -42,10 +37,9 @@ func (r *OpenAISSE) Render(w http.ResponseWriter) error {
 }
 
 func (r *OpenAISSE) WriteContentType(w http.ResponseWriter) {
-	header := w.Header()
-	header["Content-Type"] = contentType
-
-	if _, exist := header["Cache-Control"]; !exist {
-		header["Cache-Control"] = noCache
-	}
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
+	w.Header().Set("Transfer-Encoding", "chunked")
+	w.Header().Set("X-Accel-Buffering", "no")
 }

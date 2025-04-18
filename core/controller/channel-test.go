@@ -16,7 +16,6 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/labring/aiproxy/core/common"
 	"github.com/labring/aiproxy/core/common/notify"
 	"github.com/labring/aiproxy/core/common/render"
 	"github.com/labring/aiproxy/core/common/trylock"
@@ -276,10 +275,6 @@ func TestChannelModels(c *gin.Context) {
 	successResponseBody := c.Query("success_body") == "true"
 	isStream := c.Query("stream") == "true"
 
-	if isStream {
-		common.SetEventStreamHeaders(c)
-	}
-
 	results := make([]*TestResult, 0)
 	resultsMutex := sync.Mutex{}
 	hasError := atomic.Bool{}
@@ -372,10 +367,6 @@ func TestAllChannels(c *gin.Context) {
 	returnSuccess := c.Query("return_success") == "true"
 	successResponseBody := c.Query("success_body") == "true"
 	isStream := c.Query("stream") == "true"
-
-	if isStream {
-		common.SetEventStreamHeaders(c)
-	}
 
 	results := make([]*TestResult, 0)
 	resultsMutex := sync.Mutex{}

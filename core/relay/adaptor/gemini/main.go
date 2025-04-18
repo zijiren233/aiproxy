@@ -13,7 +13,6 @@ import (
 
 	"github.com/bytedance/sonic"
 	"github.com/gin-gonic/gin"
-	"github.com/labring/aiproxy/core/common"
 	"github.com/labring/aiproxy/core/common/config"
 	"github.com/labring/aiproxy/core/common/conv"
 	"github.com/labring/aiproxy/core/common/image"
@@ -535,8 +534,6 @@ func StreamHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model
 		defer openai.PutScannerBuffer(buf)
 		scanner.Buffer(*buf, cap(*buf))
 	}
-
-	common.SetEventStreamHeaders(c)
 
 	usage := relaymodel.Usage{
 		PromptTokens: meta.InputTokens,

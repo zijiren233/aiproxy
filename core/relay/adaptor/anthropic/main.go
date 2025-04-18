@@ -8,7 +8,6 @@ import (
 
 	"github.com/bytedance/sonic"
 	"github.com/gin-gonic/gin"
-	"github.com/labring/aiproxy/core/common"
 	"github.com/labring/aiproxy/core/common/conv"
 	"github.com/labring/aiproxy/core/common/render"
 	"github.com/labring/aiproxy/core/middleware"
@@ -32,11 +31,10 @@ func StreamHandler(m *meta.Meta, c *gin.Context, resp *http.Response) (*model.Us
 	defer openai.PutScannerBuffer(buf)
 	scanner.Buffer(*buf, cap(*buf))
 
-	common.SetEventStreamHeaders(c)
-
 	responseText := strings.Builder{}
 
 	var usage *relaymodel.Usage
+	var writed bool
 
 	for scanner.Scan() {
 		data := scanner.Bytes()
@@ -49,39 +47,38 @@ func StreamHandler(m *meta.Meta, c *gin.Context, resp *http.Response) (*model.Us
 			break
 		}
 
-		var claudeResponse StreamResponse
-		err := sonic.Unmarshal(data, &claudeResponse)
+		response, err := StreamResponse2OpenAI(m, data)
 		if err != nil {
-			log.Error("error unmarshalling stream response: " + err.Error())
-			continue
+			if writed {
+				log.Errorf("response error: %+v", err)
+			} else {
+				return usage.ToModelUsage(), err
+			}
 		}
-
-		response := StreamResponse2OpenAI(m, &claudeResponse)
-		if response == nil {
-			continue
-		}
-
-		switch {
-		case response.Usage != nil:
-			if usage == nil {
-				usage = &relaymodel.Usage{}
+		if response != nil {
+			switch {
+			case response.Usage != nil:
+				if usage == nil {
+					usage = &relaymodel.Usage{}
+				}
+				usage.Add(response.Usage)
+				if usage.PromptTokens == 0 {
+					usage.PromptTokens = m.InputTokens
+					usage.TotalTokens += m.InputTokens
+				}
+				response.Usage = usage
+				responseText.Reset()
+			case usage == nil:
+				for _, choice := range response.Choices {
+					responseText.WriteString(choice.Delta.StringContent())
+				}
+			default:
+				response.Usage = usage
 			}
-			usage.Add(response.Usage)
-			if usage.PromptTokens == 0 {
-				usage.PromptTokens = m.InputTokens
-				usage.TotalTokens += m.InputTokens
-			}
-			response.Usage = usage
-			responseText.Reset()
-		case usage == nil:
-			for _, choice := range response.Choices {
-				responseText.WriteString(choice.Delta.StringContent())
-			}
-		default:
-			response.Usage = usage
 		}
 
 		render.StringData(c, conv.BytesToString(data))
+		writed = true
 	}
 
 	if err := scanner.Err(); err != nil {

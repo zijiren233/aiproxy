@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/labring/aiproxy/core/common/balance"
+	"github.com/labring/aiproxy/core/common/config"
 	"github.com/labring/aiproxy/core/common/notify"
 	"github.com/labring/aiproxy/core/model"
 	"github.com/labring/aiproxy/core/relay/meta"
@@ -75,6 +76,14 @@ func Consume(
 	if code == http.StatusOK {
 		amount = CalculateAmount(usage, modelPrice)
 		amount = consumeAmount(ctx, amount, postGroupConsumer, meta)
+	}
+
+	if requestDetail != nil && config.GetLogContentStorageHours() < 0 {
+		requestDetail = nil
+	}
+
+	if requestDetail == nil && config.GetLogStorageHours() < 0 {
+		return
 	}
 
 	err := recordConsume(

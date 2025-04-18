@@ -11,7 +11,6 @@ import (
 
 	"github.com/bytedance/sonic"
 	"github.com/bytedance/sonic/ast"
-	"github.com/gin-gonic/gin"
 )
 
 type RequestBodyKey struct{}
@@ -99,12 +98,4 @@ func UnmarshalBody2Node(req *http.Request) (ast.Node, error) {
 		return ast.Node{}, err
 	}
 	return sonic.Get(requestBody)
-}
-
-func SetEventStreamHeaders(c *gin.Context) {
-	c.Writer.Header().Set("Content-Type", "text/event-stream")
-	c.Writer.Header().Set("Cache-Control", "no-cache")
-	c.Writer.Header().Set("Connection", "keep-alive")
-	c.Writer.Header().Set("Transfer-Encoding", "chunked")
-	c.Writer.Header().Set("X-Accel-Buffering", "no")
 }

@@ -211,8 +211,6 @@ func StreamHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model
 	defer openai.PutScannerBuffer(buf)
 	scanner.Buffer(*buf, cap(*buf))
 
-	common.SetEventStreamHeaders(c)
-
 	var thinkSplitter *splitter.Splitter
 	if meta.ChannelConfig.SplitThink {
 		thinkSplitter = splitter.NewThinkSplitter()

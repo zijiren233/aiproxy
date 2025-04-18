@@ -103,7 +103,8 @@ func checkGroupModelRPMAndTPM(c *gin.Context, group *model.GroupCache, mc *model
 
 	count, overLimitCount := rpmlimit.PushRequestAnyWay(c.Request.Context(), group.ID, mc.Model, adjustedModelConfig.RPM, time.Minute)
 	log.Data["rpm"] = strconv.FormatInt(count+overLimitCount, 10)
-	if adjustedModelConfig.RPM > 0 {
+	if group.Status != model.GroupStatusInternal &&
+		adjustedModelConfig.RPM > 0 {
 		log.Data["rpm_limit"] = strconv.FormatInt(adjustedModelConfig.RPM, 10)
 		if count > adjustedModelConfig.RPM {
 			setRpmHeaders(c, adjustedModelConfig.RPM, 0)
@@ -112,7 +113,8 @@ func checkGroupModelRPMAndTPM(c *gin.Context, group *model.GroupCache, mc *model
 		setRpmHeaders(c, adjustedModelConfig.RPM, adjustedModelConfig.RPM-count)
 	}
 
-	if adjustedModelConfig.TPM > 0 {
+	if group.Status != model.GroupStatusInternal &&
+		adjustedModelConfig.TPM > 0 {
 		tpm, err := model.CacheGetGroupModelTPM(group.ID, mc.Model)
 		if err != nil {
 			log.Errorf("get group model tpm (%s:%s) error: %s", group.ID, mc.Model, err.Error())

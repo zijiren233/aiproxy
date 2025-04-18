@@ -14,7 +14,6 @@ import (
 	"github.com/bytedance/sonic"
 	"github.com/bytedance/sonic/ast"
 	"github.com/gin-gonic/gin"
-	"github.com/labring/aiproxy/core/common"
 	"github.com/labring/aiproxy/core/common/conv"
 	"github.com/labring/aiproxy/core/common/render"
 	"github.com/labring/aiproxy/core/common/splitter"
@@ -108,8 +107,6 @@ func StreamHandler(meta *meta.Meta, c *gin.Context, resp *http.Response, preHand
 	scanner.Buffer(*buf, cap(*buf))
 
 	var usage *relaymodel.Usage
-
-	common.SetEventStreamHeaders(c)
 
 	hasReasoningContent := false
 	var thinkSplitter *splitter.Splitter

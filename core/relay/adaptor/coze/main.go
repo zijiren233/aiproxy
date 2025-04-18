@@ -8,7 +8,6 @@ import (
 
 	"github.com/bytedance/sonic"
 	"github.com/gin-gonic/gin"
-	"github.com/labring/aiproxy/core/common"
 	"github.com/labring/aiproxy/core/common/conv"
 	"github.com/labring/aiproxy/core/common/render"
 	"github.com/labring/aiproxy/core/middleware"
@@ -105,8 +104,6 @@ func StreamHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model
 	buf := openai.GetScannerBuffer()
 	defer openai.PutScannerBuffer(buf)
 	scanner.Buffer(*buf, cap(*buf))
-
-	common.SetEventStreamHeaders(c)
 
 	for scanner.Scan() {
 		data := scanner.Bytes()

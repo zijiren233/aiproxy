@@ -212,7 +212,7 @@ func OpenAIConvertRequest(meta *meta.Meta, req *http.Request) (*Request, error) 
 }
 
 // https://docs.anthropic.com/claude/reference/messages-streaming
-func StreamResponse2OpenAI(meta *meta.Meta, claudeResponse *StreamResponse) *relaymodel.ChatCompletionsStreamResponse {
+func StreamResponse2OpenAI(meta *meta.Meta, respData []byte) (*relaymodel.ChatCompletionsStreamResponse, *relaymodel.ErrorWithStatusCode) {
 	openaiResponse := relaymodel.ChatCompletionsStreamResponse{
 		ID:      openai.ChatCompletionID(),
 		Object:  relaymodel.ChatCompletionChunk,
@@ -224,7 +224,18 @@ func StreamResponse2OpenAI(meta *meta.Meta, claudeResponse *StreamResponse) *rel
 	var stopReason string
 	tools := make([]*relaymodel.Tool, 0)
 
+	var claudeResponse StreamResponse
+	err := sonic.Unmarshal(respData, &claudeResponse)
+	if err != nil {
+		return nil, openai.ErrorWrapper(err, "unmarshal_response", http.StatusInternalServerError)
+	}
+
 	switch claudeResponse.Type {
+	case "error":
+		return nil, OpenAIErrorHandlerWithBody(
+			http.StatusBadRequest,
+			respData,
+		)
 	case "content_block_start":
 		if claudeResponse.ContentBlock != nil {
 			content = claudeResponse.ContentBlock.Text
@@ -257,7 +268,7 @@ func StreamResponse2OpenAI(meta *meta.Meta, claudeResponse *StreamResponse) *rel
 		}
 	case "message_start":
 		if claudeResponse.Message == nil {
-			return nil
+			return nil, nil
 		}
 		usage := claudeResponse.Message.Usage
 		openaiResponse.Usage = &relaymodel.Usage{
@@ -297,7 +308,7 @@ func StreamResponse2OpenAI(meta *meta.Meta, claudeResponse *StreamResponse) *rel
 	}
 	openaiResponse.Choices = []*relaymodel.ChatCompletionsStreamResponseChoice{&choice}
 
-	return &openaiResponse
+	return &openaiResponse, nil
 }
 
 func Response2OpenAI(meta *meta.Meta, claudeResponse *Response) *relaymodel.TextResponse {
@@ -371,11 +382,10 @@ func OpenAIStreamHandler(m *meta.Meta, c *gin.Context, resp *http.Response) (*mo
 	defer openai.PutScannerBuffer(buf)
 	scanner.Buffer(*buf, cap(*buf))
 
-	common.SetEventStreamHeaders(c)
-
 	responseText := strings.Builder{}
 
 	var usage *relaymodel.Usage
+	var writed bool
 
 	for scanner.Scan() {
 		data := scanner.Bytes()
@@ -388,14 +398,14 @@ func OpenAIStreamHandler(m *meta.Meta, c *gin.Context, resp *http.Response) (*mo
 			break
 		}
 
-		var claudeResponse StreamResponse
-		err := sonic.Unmarshal(data, &claudeResponse)
+		response, err := StreamResponse2OpenAI(m, data)
 		if err != nil {
-			log.Error("error unmarshalling stream response: " + err.Error())
-			continue
+			if writed {
+				log.Errorf("response error: %+v", err)
+				continue
+			}
+			return usage.ToModelUsage(), err
 		}
-
-		response := StreamResponse2OpenAI(m, &claudeResponse)
 		if response == nil {
 			continue
 		}
@@ -421,6 +431,7 @@ func OpenAIStreamHandler(m *meta.Meta, c *gin.Context, resp *http.Response) (*mo
 		}
 
 		_ = render.ObjectData(c, response)
+		writed = true
 	}
 
 	if err := scanner.Err(); err != nil {

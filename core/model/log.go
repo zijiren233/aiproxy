@@ -293,7 +293,7 @@ func cleanLog(batchSize int, optimize bool) error {
 		batchSize = defaultCleanLogBatchSize
 	}
 	logStorageHours := config.GetLogStorageHours()
-	if logStorageHours > 0 {
+	if logStorageHours != 0 {
 		subQuery := LogDB.
 			Model(&Log{}).
 			Where(
@@ -313,8 +313,7 @@ func cleanLog(batchSize int, optimize bool) error {
 	}
 
 	logContentStorageHours := config.GetLogContentStorageHours()
-	if logContentStorageHours <= 0 ||
-		logContentStorageHours <= logStorageHours {
+	if logContentStorageHours == 0 {
 		if optimize {
 			return optimizeLog()
 		}

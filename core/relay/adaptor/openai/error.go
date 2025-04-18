@@ -75,17 +75,21 @@ func ErrorHanlder(resp *http.Response) *model.ErrorWithStatusCode {
 		}
 	}
 
+	return ErrorHanlderWithBody(resp.StatusCode, respBody)
+}
+
+func ErrorHanlderWithBody(statucCode int, respBody []byte) *model.ErrorWithStatusCode {
 	ErrorWithStatusCode := &model.ErrorWithStatusCode{
-		StatusCode: resp.StatusCode,
+		StatusCode: statucCode,
 		Error: model.Error{
 			Type:  ErrorTypeUpstream,
 			Code:  ErrorCodeBadResponse,
-			Param: strconv.Itoa(resp.StatusCode),
+			Param: strconv.Itoa(statucCode),
 		},
 	}
 
 	var errResponse GeneralErrorResponse
-	err = sonic.Unmarshal(respBody, &errResponse)
+	err := sonic.Unmarshal(respBody, &errResponse)
 	if err != nil {
 		ErrorWithStatusCode.Error.Message = conv.BytesToString(respBody)
 		return ErrorWithStatusCode
@@ -98,7 +102,7 @@ func ErrorHanlder(resp *http.Response) *model.ErrorWithStatusCode {
 		ErrorWithStatusCode.Error.Message = errResponse.ToMessage()
 	}
 	if ErrorWithStatusCode.Error.Message == "" {
-		ErrorWithStatusCode.Error.Message = fmt.Sprintf("bad response status code %d", resp.StatusCode)
+		ErrorWithStatusCode.Error.Message = fmt.Sprintf("bad response status code %d", statucCode)
 	}
 
 	if code, ok := ErrorWithStatusCode.Error.Code.(int64); ok && code >= 400 && code < 600 {

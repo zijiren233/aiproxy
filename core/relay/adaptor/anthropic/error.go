@@ -22,3 +22,16 @@ func OpenAIErrorHandler(resp *http.Response) *model.ErrorWithStatusCode {
 	}
 	return err
 }
+
+func OpenAIErrorHandlerWithBody(statusCode int, respBody []byte) *model.ErrorWithStatusCode {
+	err := openai.ErrorHanlderWithBody(statusCode, respBody)
+	if strings.Contains(err.Error.Message, "balance is too low") {
+		err.StatusCode = http.StatusPaymentRequired
+		return err
+	}
+	if strings.Contains(err.Error.Message, "Overloaded") {
+		err.StatusCode = http.StatusTooManyRequests
+		return err
+	}
+	return err
+}

@@ -2,8 +2,8 @@
 package aws
 
 import (
-	"io"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -141,9 +141,9 @@ func Handler(meta *meta.Meta, c *gin.Context) (*model.Usage, *relaymodel.ErrorWi
 	return openaiResp.Usage.ToModelUsage(), nil
 }
 
-func StreamHandler(meta *meta.Meta, c *gin.Context) (*model.Usage, *relaymodel.ErrorWithStatusCode) {
+func StreamHandler(m *meta.Meta, c *gin.Context) (*model.Usage, *relaymodel.ErrorWithStatusCode) {
 	log := middleware.GetLogger(c)
-	awsModelID, err := awsModelID(meta.ActualModel)
+	awsModelID, err := awsModelID(m.ActualModel)
 	if err != nil {
 		return nil, utils.WrapErr(errors.Wrap(err, "awsModelID"))
 	}
@@ -154,7 +154,7 @@ func StreamHandler(meta *meta.Meta, c *gin.Context) (*model.Usage, *relaymodel.E
 		ContentType: aws.String("application/json"),
 	}
 
-	convReq, ok := meta.Get(ConvertedRequest)
+	convReq, ok := m.Get(ConvertedRequest)
 	if !ok {
 		return nil, utils.WrapErr(errors.New("request not found"))
 	}
@@ -174,7 +174,7 @@ func StreamHandler(meta *meta.Meta, c *gin.Context) (*model.Usage, *relaymodel.E
 		return nil, utils.WrapErr(errors.Wrap(err, "marshal request"))
 	}
 
-	awsClient, err := utils.AwsClientFromMeta(meta)
+	awsClient, err := utils.AwsClientFromMeta(m)
 	if err != nil {
 		return nil, utils.WrapErr(errors.Wrap(err, "get aws client"))
 	}
@@ -186,75 +186,77 @@ func StreamHandler(meta *meta.Meta, c *gin.Context) (*model.Usage, *relaymodel.E
 	stream := awsResp.GetStream()
 	defer stream.Close()
 
-	c.Writer.Header().Set("Content-Type", "text/event-stream")
-	var usage relaymodel.Usage
-	var lastToolCallChoice *relaymodel.ChatCompletionsStreamResponseChoice
-	var usageWrited bool
+	var usage *relaymodel.Usage
+	responseText := strings.Builder{}
+	var writed bool
 
-	c.Stream(func(_ io.Writer) bool {
-		event, ok := <-stream.Events()
-		if !ok {
-			render.Done(c)
-			return false
-		}
+	// c.Stream(func(_ io.Writer) bool {
 
+	// })
+	for event := range stream.Events() {
 		switch v := event.(type) {
 		case *types.ResponseStreamMemberChunk:
-			claudeResp := anthropic.StreamResponse{}
-			err := sonic.Unmarshal(v.Value.Bytes, &claudeResp)
+			response, err := anthropic.StreamResponse2OpenAI(m, v.Value.Bytes)
 			if err != nil {
-				log.Error("error unmarshalling stream response: " + err.Error())
-				return false
+				if writed {
+					log.Errorf("response error: %+v", err)
+					continue
+				}
+				return usage.ToModelUsage(), err
 			}
-
-			response := anthropic.StreamResponse2OpenAI(meta, &claudeResp)
 			if response == nil {
-				return true
+				continue
 			}
-			if response.Usage != nil {
-				usage = *response.Usage
-				usageWrited = true
-
-				if lastToolCallChoice != nil && len(lastToolCallChoice.Delta.ToolCalls) > 0 {
-					lastArgs := &lastToolCallChoice.Delta.ToolCalls[len(lastToolCallChoice.Delta.ToolCalls)-1].Function
-					if len(lastArgs.Arguments) == 0 { // compatible with OpenAI sending an empty object `{}` when no arguments.
-						lastArgs.Arguments = "{}"
-						response.Choices[len(response.Choices)-1].Delta.Content = nil
-						response.Choices[len(response.Choices)-1].Delta.ToolCalls = lastToolCallChoice.Delta.ToolCalls
+			if response != nil {
+				switch {
+				case response.Usage != nil:
+					if usage == nil {
+						usage = &relaymodel.Usage{}
 					}
+					usage.Add(response.Usage)
+					if usage.PromptTokens == 0 {
+						usage.PromptTokens = m.InputTokens
+						usage.TotalTokens += m.InputTokens
+					}
+					response.Usage = usage
+					responseText.Reset()
+				case usage == nil:
+					for _, choice := range response.Choices {
+						responseText.WriteString(choice.Delta.StringContent())
+					}
+				default:
+					response.Usage = usage
 				}
 			}
 
-			for _, choice := range response.Choices {
-				if len(choice.Delta.ToolCalls) > 0 {
-					lastToolCallChoice = choice
-				}
-			}
-			err = render.ObjectData(c, response)
-			if err != nil {
-				log.Error("error stream response: " + err.Error())
-				return false
-			}
-			return true
+			_ = render.ObjectData(c, response)
+			writed = true
 		case *types.UnknownUnionMember:
 			log.Error("unknown tag: " + v.Tag)
-			return false
+			continue
 		default:
 			log.Errorf("union is nil or unknown type: %v", v)
-			return false
+			continue
 		}
-	})
+	}
 
-	if !usageWrited {
+	if usage == nil {
+		usage = &relaymodel.Usage{
+			PromptTokens:     m.InputTokens,
+			CompletionTokens: openai.CountTokenText(responseText.String(), m.OriginModel),
+			TotalTokens:      m.InputTokens + openai.CountTokenText(responseText.String(), m.OriginModel),
+		}
 		_ = render.ObjectData(c, &relaymodel.ChatCompletionsStreamResponse{
 			ID:      openai.ChatCompletionID(),
-			Model:   meta.OriginModel,
+			Model:   m.OriginModel,
 			Object:  relaymodel.ChatCompletionChunk,
 			Created: time.Now().Unix(),
 			Choices: []*relaymodel.ChatCompletionsStreamResponseChoice{},
-			Usage:   &usage,
+			Usage:   usage,
 		})
 	}
+
+	render.Done(c)
 
 	return usage.ToModelUsage(), nil
 }
