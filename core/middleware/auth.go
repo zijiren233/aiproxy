@@ -56,6 +56,9 @@ func AdminAuth(c *gin.Context) {
 func TokenAuth(c *gin.Context) {
 	log := GetLogger(c)
 	key := c.Request.Header.Get("Authorization")
+	if key == "" {
+		key = c.Request.Header.Get("x-api-key")
+	}
 	key = strings.TrimPrefix(
 		strings.TrimPrefix(key, "Bearer "),
 		"sk-",

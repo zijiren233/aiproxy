@@ -32,7 +32,7 @@ func SetRelayRouter(router *gin.Engine) {
 			controller.ChatCompletions()...,
 		)
 		relayRouter.POST(
-			"/message",
+			"/messages",
 			controller.Anthropic()...,
 		)
 		relayRouter.POST(
