@@ -120,7 +120,7 @@ type ErrorResponse struct {
 }
 
 type Response struct {
-	StopReason   *string   `json:"stop_reason"`
+	StopReason   string    `json:"stop_reason,omitempty"`
 	StopSequence *string   `json:"stop_sequence"`
 	Error        *Error    `json:"error"`
 	ID           string    `json:"id"`

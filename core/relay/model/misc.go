@@ -50,8 +50,8 @@ func (u *Usage) Add(other *Usage) {
 }
 
 type PromptTokensDetails struct {
-	CachedTokens        int64 `json:"cached_tokens,omitempty"`
-	AudioTokens         int64 `json:"audio_tokens,omitempty"`
+	CachedTokens        int64 `json:"cached_tokens"`
+	AudioTokens         int64 `json:"audio_tokens"`
 	CacheCreationTokens int64 `json:"cache_creation_tokens,omitempty"`
 }
 
@@ -65,10 +65,10 @@ func (d *PromptTokensDetails) Add(other *PromptTokensDetails) {
 }
 
 type CompletionTokensDetails struct {
-	ReasoningTokens          int64 `json:"reasoning_tokens,omitempty"`
-	AudioTokens              int64 `json:"audio_tokens,omitempty"`
-	AcceptedPredictionTokens int64 `json:"accepted_prediction_tokens,omitempty"`
-	RejectedPredictionTokens int64 `json:"rejected_prediction_tokens,omitempty"`
+	ReasoningTokens          int64 `json:"reasoning_tokens"`
+	AudioTokens              int64 `json:"audio_tokens"`
+	AcceptedPredictionTokens int64 `json:"accepted_prediction_tokens"`
+	RejectedPredictionTokens int64 `json:"rejected_prediction_tokens"`
 }
 
 type Error struct {

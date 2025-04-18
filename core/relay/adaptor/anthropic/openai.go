@@ -26,19 +26,18 @@ const (
 	conetentTypeImage    = "image"
 )
 
-func stopReasonClaude2OpenAI(reason *string) string {
-	if reason == nil {
-		return ""
-	}
-	switch *reason {
+func stopReasonClaude2OpenAI(reason string) string {
+	switch reason {
 	case "end_turn", "stop_sequence":
 		return relaymodel.FinishReasonStop
 	case "max_tokens":
 		return relaymodel.FinishReasonLength
 	case toolUseType:
 		return relaymodel.FinishReasonToolCalls
+	case "null":
+		return ""
 	default:
-		return *reason
+		return reason
 	}
 }
 
@@ -213,12 +212,7 @@ func OpenAIConvertRequest(meta *meta.Meta, req *http.Request) (*Request, error) 
 
 // https://docs.anthropic.com/claude/reference/messages-streaming
 func StreamResponse2OpenAI(meta *meta.Meta, respData []byte) (*relaymodel.ChatCompletionsStreamResponse, *relaymodel.ErrorWithStatusCode) {
-	openaiResponse := relaymodel.ChatCompletionsStreamResponse{
-		ID:      openai.ChatCompletionID(),
-		Object:  relaymodel.ChatCompletionChunk,
-		Created: time.Now().Unix(),
-		Model:   meta.OriginModel,
-	}
+	var usage *relaymodel.Usage
 	var content string
 	var thinking string
 	var stopReason string
@@ -236,6 +230,8 @@ func StreamResponse2OpenAI(meta *meta.Meta, respData []byte) (*relaymodel.ChatCo
 			http.StatusBadRequest,
 			respData,
 		)
+	case "ping", "message_stop", "content_block_stop":
+		return nil, nil
 	case "content_block_start":
 		if claudeResponse.ContentBlock != nil {
 			content = claudeResponse.ContentBlock.Text
@@ -270,19 +266,19 @@ func StreamResponse2OpenAI(meta *meta.Meta, respData []byte) (*relaymodel.ChatCo
 		if claudeResponse.Message == nil {
 			return nil, nil
 		}
-		usage := claudeResponse.Message.Usage
-		openaiResponse.Usage = &relaymodel.Usage{
-			PromptTokens:     usage.InputTokens + usage.CacheReadInputTokens + usage.CacheCreationInputTokens,
-			CompletionTokens: usage.OutputTokens,
+		claudeUsage := claudeResponse.Message.Usage
+		usage = &relaymodel.Usage{
+			PromptTokens:     claudeUsage.InputTokens + claudeUsage.CacheReadInputTokens + claudeUsage.CacheCreationInputTokens,
+			CompletionTokens: claudeUsage.OutputTokens,
 			PromptTokensDetails: &relaymodel.PromptTokensDetails{
-				CachedTokens:        usage.CacheReadInputTokens,
-				CacheCreationTokens: usage.CacheCreationInputTokens,
+				CachedTokens:        claudeUsage.CacheReadInputTokens,
+				CacheCreationTokens: claudeUsage.CacheCreationInputTokens,
 			},
 		}
-		openaiResponse.Usage.TotalTokens = openaiResponse.Usage.PromptTokens + openaiResponse.Usage.CompletionTokens
+		usage.TotalTokens = usage.PromptTokens + usage.CompletionTokens
 	case "message_delta":
 		if claudeResponse.Usage != nil {
-			openaiResponse.Usage = &relaymodel.Usage{
+			usage = &relaymodel.Usage{
 				PromptTokens:     claudeResponse.Usage.InputTokens + claudeResponse.Usage.CacheReadInputTokens + claudeResponse.Usage.CacheCreationInputTokens,
 				CompletionTokens: claudeResponse.Usage.OutputTokens,
 				PromptTokensDetails: &relaymodel.PromptTokensDetails{
@@ -290,23 +286,31 @@ func StreamResponse2OpenAI(meta *meta.Meta, respData []byte) (*relaymodel.ChatCo
 					CacheCreationTokens: claudeResponse.Usage.CacheCreationInputTokens,
 				},
 			}
-			openaiResponse.Usage.TotalTokens = openaiResponse.Usage.PromptTokens + openaiResponse.Usage.CompletionTokens
+			usage.TotalTokens = usage.PromptTokens + usage.CompletionTokens
 		}
 		if claudeResponse.Delta != nil && claudeResponse.Delta.StopReason != nil {
 			stopReason = *claudeResponse.Delta.StopReason
 		}
 	}
 
-	var choice relaymodel.ChatCompletionsStreamResponseChoice
-	choice.Delta.Content = content
-	choice.Delta.ReasoningContent = thinking
-	choice.Delta.ToolCalls = tools
-	choice.Delta.Role = "assistant"
-	finishReason := stopReasonClaude2OpenAI(&stopReason)
-	if finishReason != "null" {
-		choice.FinishReason = finishReason
+	choice := relaymodel.ChatCompletionsStreamResponseChoice{
+		Delta: relaymodel.Message{
+			Content:          content,
+			ReasoningContent: thinking,
+			ToolCalls:        tools,
+			Role:             "assistant",
+		},
+		FinishReason: stopReasonClaude2OpenAI(stopReason),
 	}
-	openaiResponse.Choices = []*relaymodel.ChatCompletionsStreamResponseChoice{&choice}
+
+	openaiResponse := relaymodel.ChatCompletionsStreamResponse{
+		ID:      openai.ChatCompletionID(),
+		Object:  relaymodel.ChatCompletionChunk,
+		Created: time.Now().Unix(),
+		Model:   meta.OriginModel,
+		Usage:   usage,
+		Choices: []*relaymodel.ChatCompletionsStreamResponseChoice{&choice},
+	}
 
 	return &openaiResponse, nil
 }
