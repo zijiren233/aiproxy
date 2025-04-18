@@ -6542,6 +6542,74 @@
                 }
             }
         },
+        "/v1/message": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Anthropic",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "relay"
+                ],
+                "summary": "Anthropic",
+                "parameters": [
+                    {
+                        "description": "Request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.AnthropicMessageRequest"
+                        }
+                    },
+                    {
+                        "type": "string",
+                        "description": "Optional Aiproxy-Channel header",
+                        "name": "Aiproxy-Channel",
+                        "in": "header"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.TextResponse"
+                        },
+                        "headers": {
+                            "X-RateLimit-Limit-Requests": {
+                                "type": "integer",
+                                "description": "X-RateLimit-Limit-Requests"
+                            },
+                            "X-RateLimit-Limit-Tokens": {
+                                "type": "integer",
+                                "description": "X-RateLimit-Limit-Tokens"
+                            },
+                            "X-RateLimit-Remaining-Requests": {
+                                "type": "integer",
+                                "description": "X-RateLimit-Remaining-Requests"
+                            },
+                            "X-RateLimit-Remaining-Tokens": {
+                                "type": "integer",
+                                "description": "X-RateLimit-Remaining-Tokens"
+                            },
+                            "X-RateLimit-Reset-Requests": {
+                                "type": "string",
+                                "description": "X-RateLimit-Reset-Requests"
+                            },
+                            "X-RateLimit-Reset-Tokens": {
+                                "type": "string",
+                                "description": "X-RateLimit-Reset-Tokens"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/v1/models": {
             "get": {
                 "security": [
@@ -7311,7 +7379,8 @@
                 8,
                 9,
                 10,
-                11
+                11,
+                12
             ],
             "x-enum-varnames": [
                 "Unknown",
@@ -7325,8 +7394,23 @@
                 "AudioTranscription",
                 "AudioTranslation",
                 "Rerank",
-                "ParsePdf"
+                "ParsePdf",
+                "Anthropic"
             ]
+        },
+        "model.AnthropicMessageRequest": {
+            "type": "object",
+            "properties": {
+                "messages": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.Message"
+                    }
+                },
+                "model": {
+                    "type": "string"
+                }
+            }
         },
         "model.Audio": {
             "type": "object",
@@ -8107,6 +8191,9 @@
                 },
                 "server": {
                     "type": "string"
+                },
+                "v2": {
+                    "type": "boolean"
                 }
             }
         },

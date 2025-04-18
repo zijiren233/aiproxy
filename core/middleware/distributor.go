@@ -274,8 +274,10 @@ func CheckRelayMode(requestMode mode.Mode, modelMode mode.Mode) bool {
 		return true
 	}
 	switch requestMode {
-	case mode.ChatCompletions, mode.Completions:
-		return modelMode == mode.ChatCompletions || modelMode == mode.Completions
+	case mode.ChatCompletions, mode.Completions, mode.Anthropic:
+		return modelMode == mode.ChatCompletions ||
+			modelMode == mode.Completions ||
+			modelMode == mode.Anthropic
 	default:
 		return requestMode == modelMode
 	}

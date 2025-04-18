@@ -27,10 +27,13 @@ func SetRelayRouter(router *gin.Engine) {
 			"/completions",
 			controller.Completions()...,
 		)
-
 		relayRouter.POST(
 			"/chat/completions",
 			controller.ChatCompletions()...,
+		)
+		relayRouter.POST(
+			"/message",
+			controller.Anthropic()...,
 		)
 		relayRouter.POST(
 			"/edits",

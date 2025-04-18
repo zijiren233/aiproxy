@@ -21,7 +21,7 @@ var _ utils.AwsAdapter = new(Adaptor)
 type Adaptor struct{}
 
 func (a *Adaptor) ConvertRequest(meta *meta.Meta, req *http.Request) (string, http.Header, io.Reader, error) {
-	r, err := anthropic.ConvertRequest(meta, req)
+	r, err := anthropic.OpenAIConvertRequest(meta, req)
 	if err != nil {
 		return "", nil, nil, err
 	}

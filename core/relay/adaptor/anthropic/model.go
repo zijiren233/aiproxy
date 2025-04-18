@@ -114,10 +114,15 @@ type Error struct {
 	Message string `json:"message"`
 }
 
+type ErrorResponse struct {
+	Type  string `json:"type"`
+	Error Error  `json:"error"`
+}
+
 type Response struct {
 	StopReason   *string   `json:"stop_reason"`
 	StopSequence *string   `json:"stop_sequence"`
-	Error        Error     `json:"error"`
+	Error        *Error    `json:"error"`
 	ID           string    `json:"id"`
 	Type         string    `json:"type"`
 	Role         string    `json:"role"`

@@ -33,6 +33,30 @@ func Completions() []gin.HandlerFunc {
 	}
 }
 
+// Anthropic godoc
+//
+//	@Summary		Anthropic
+//	@Description	Anthropic
+//	@Tags			relay
+//	@Produce		json
+//	@Security		ApiKeyAuth
+//	@Param			request			body		model.AnthropicMessageRequest	true	"Request"
+//	@Param			Aiproxy-Channel	header		string							false	"Optional Aiproxy-Channel header"
+//	@Success		200				{object}	model.TextResponse
+//	@Header			all				{integer}	X-RateLimit-Limit-Requests		"X-RateLimit-Limit-Requests"
+//	@Header			all				{integer}	X-RateLimit-Limit-Tokens		"X-RateLimit-Limit-Tokens"
+//	@Header			all				{integer}	X-RateLimit-Remaining-Requests	"X-RateLimit-Remaining-Requests"
+//	@Header			all				{integer}	X-RateLimit-Remaining-Tokens	"X-RateLimit-Remaining-Tokens"
+//	@Header			all				{string}	X-RateLimit-Reset-Requests		"X-RateLimit-Reset-Requests"
+//	@Header			all				{string}	X-RateLimit-Reset-Tokens		"X-RateLimit-Reset-Tokens"
+//	@Router			/v1/message [post]
+func Anthropic() []gin.HandlerFunc {
+	return []gin.HandlerFunc{
+		middleware.NewDistribute(mode.Anthropic),
+		NewRelay(mode.Anthropic),
+	}
+}
+
 // ChatCompletions godoc
 //
 //	@Summary		ChatCompletions

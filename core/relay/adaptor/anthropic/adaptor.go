@@ -2,6 +2,7 @@ package anthropic
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"net/http"
 	"strings"
@@ -9,7 +10,9 @@ import (
 	"github.com/bytedance/sonic"
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/core/model"
+	"github.com/labring/aiproxy/core/relay/adaptor/openai"
 	"github.com/labring/aiproxy/core/relay/meta"
+	"github.com/labring/aiproxy/core/relay/mode"
 	relaymodel "github.com/labring/aiproxy/core/relay/model"
 	"github.com/labring/aiproxy/core/relay/utils"
 )
@@ -51,16 +54,23 @@ func (a *Adaptor) SetupRequestHeader(meta *meta.Meta, c *gin.Context, req *http.
 }
 
 func (a *Adaptor) ConvertRequest(meta *meta.Meta, req *http.Request) (string, http.Header, io.Reader, error) {
-	data, err := ConvertRequest(meta, req)
-	if err != nil {
-		return "", nil, nil, err
-	}
+	switch meta.Mode {
+	case mode.ChatCompletions:
+		data, err := OpenAIConvertRequest(meta, req)
+		if err != nil {
+			return "", nil, nil, err
+		}
 
-	data2, err := sonic.Marshal(data)
-	if err != nil {
-		return "", nil, nil, err
+		data2, err := sonic.Marshal(data)
+		if err != nil {
+			return "", nil, nil, err
+		}
+		return http.MethodPost, nil, bytes.NewReader(data2), nil
+	case mode.Anthropic:
+		return http.MethodPost, nil, req.Body, nil
+	default:
+		return "", nil, nil, fmt.Errorf("unsupported mode: %s", meta.Mode)
 	}
-	return http.MethodPost, nil, bytes.NewReader(data2), nil
 }
 
 func (a *Adaptor) DoRequest(_ *meta.Meta, _ *gin.Context, req *http.Request) (*http.Response, error) {
@@ -68,10 +78,21 @@ func (a *Adaptor) DoRequest(_ *meta.Meta, _ *gin.Context, req *http.Request) (*h
 }
 
 func (a *Adaptor) DoResponse(meta *meta.Meta, c *gin.Context, resp *http.Response) (usage *model.Usage, err *relaymodel.ErrorWithStatusCode) {
-	if utils.IsStreamResponse(resp) {
-		usage, err = StreamHandler(meta, c, resp)
-	} else {
-		usage, err = Handler(meta, c, resp)
+	switch meta.Mode {
+	case mode.ChatCompletions:
+		if utils.IsStreamResponse(resp) {
+			usage, err = OpenAIStreamHandler(meta, c, resp)
+		} else {
+			usage, err = OpenAIHandler(meta, c, resp)
+		}
+	case mode.Anthropic:
+		if utils.IsStreamResponse(resp) {
+			usage, err = StreamHandler(meta, c, resp)
+		} else {
+			usage, err = Handler(meta, c, resp)
+		}
+	default:
+		return nil, openai.ErrorWrapperWithMessage(fmt.Sprintf("unsupported mode: %s", meta.Mode), "unsupported_mode", http.StatusBadRequest)
 	}
 	return
 }

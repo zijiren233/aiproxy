@@ -69,6 +69,9 @@ func relayController(m mode.Mode) RelayController {
 	case mode.Rerank:
 		c.GetRequestPrice = controller.GetRerankRequestPrice
 		c.GetRequestUsage = controller.GetRerankRequestUsage
+	case mode.Anthropic:
+		c.GetRequestPrice = controller.GetAnthropicRequestPrice
+		c.GetRequestUsage = controller.GetAnthropicRequestUsage
 	case mode.ChatCompletions:
 		c.GetRequestPrice = controller.GetChatRequestPrice
 		c.GetRequestUsage = controller.GetChatRequestUsage

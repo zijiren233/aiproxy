@@ -48,4 +48,5 @@ const (
 	AudioTranslation
 	Rerank
 	ParsePdf
+	Anthropic
 )

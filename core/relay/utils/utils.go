@@ -8,6 +8,15 @@ import (
 	model "github.com/labring/aiproxy/core/relay/model"
 )
 
+func UnmarshalAnthropicMessageRequest(req *http.Request) (*model.AnthropicMessageRequest, error) {
+	var request model.AnthropicMessageRequest
+	err := common.UnmarshalBodyReusable(req, &request)
+	if err != nil {
+		return nil, err
+	}
+	return &request, nil
+}
+
 func UnmarshalGeneralOpenAIRequest(req *http.Request) (*model.GeneralOpenAIRequest, error) {
 	var request model.GeneralOpenAIRequest
 	err := common.UnmarshalBodyReusable(req, &request)
