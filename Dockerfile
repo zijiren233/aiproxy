@@ -1,10 +1,10 @@
-FROM golang:1.23-alpine AS builder
-
-WORKDIR /aiproxy
-
-COPY ./ ./
+FROM golang:1.24-alpine AS builder
 
 RUN apk add --no-cache curl
+
+WORKDIR /aiproxy/core
+
+COPY ./ /aiproxy
 
 RUN sh scripts/tiktoken.sh
 
@@ -25,7 +25,7 @@ VOLUME /aiproxy
 RUN apk add --no-cache ca-certificates tzdata ffmpeg curl && \
     rm -rf /var/cache/apk/*
 
-COPY --from=builder /aiproxy/aiproxy /usr/local/bin/aiproxy
+COPY --from=builder /aiproxy/core/aiproxy /usr/local/bin/aiproxy
 
 ENV PUID=0 PGID=0 UMASK=022
 

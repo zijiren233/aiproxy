@@ -19,7 +19,8 @@ on:
       - "**/*.yaml"
 
 jobs:
-  golangci-lint:
+  golangci-lint-aiproxy:
+    name: Lint AI Proxy
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout
@@ -34,4 +35,24 @@ jobs:
         uses: golangci/golangci-lint-action@v6
         with:
           version: v1.64.6
-          args: "--out-format colored-line-number --max-issues-per-linter 0 --max-same-issues 0"
+          working-directory: core
+          args: "--out-format colored-line-number --max-issues-per-linter 0 --max-same-issues 0 --config ./.golangci.yml"
+
+  golangci-lint-openapimcp:
+    name: Lint OpneAPI MCP
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Golang with cache
+        uses: magnetikonline/action-golang-cache@v5
+        with:
+          go-version: "1.23"
+
+      - name: Run Linter
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: v1.64.6
+          working-directory: openapi-mcp
+          args: "--out-format colored-line-number --max-issues-per-linter 0 --max-same-issues 0 --config ./.golangci.yml"
