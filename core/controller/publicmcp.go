@@ -24,7 +24,7 @@ import (
 //	@Router			/api/mcp/public/ [get]
 func GetPublicMCPs(c *gin.Context) {
 	page, perPage := parsePageParams(c)
-	mcpType := model.MCPType(c.Query("type"))
+	mcpType := model.PublicMCPType(c.Query("type"))
 	keyword := c.Query("keyword")
 
 	mcps, total, err := model.GetPublicMCPs(page, perPage, mcpType, keyword)

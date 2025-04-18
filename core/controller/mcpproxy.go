@@ -24,10 +24,10 @@ import (
 // mcpEndpointProvider implements the EndpointProvider interface for MCP
 type mcpEndpointProvider struct {
 	key string
-	t   model.MCPType
+	t   model.PublicMCPType
 }
 
-func newEndpoint(key string, t model.MCPType) mcpproxy.EndpointProvider {
+func newEndpoint(key string, t model.PublicMCPType) mcpproxy.EndpointProvider {
 	return &mcpEndpointProvider{
 		key: key,
 		t:   t,
@@ -48,6 +48,24 @@ func (m *mcpEndpointProvider) LoadEndpoint(endpoint string) (session string) {
 	return parsedURL.Query().Get("sessionId")
 }
 
+// Global variables for session management
+var (
+	memStore       mcpproxy.SessionManager = mcpproxy.NewMemStore()
+	redisStore     mcpproxy.SessionManager
+	redisStoreOnce = &sync.Once{}
+)
+
+func getStore() mcpproxy.SessionManager {
+	if common.RedisEnabled {
+		redisStoreOnce.Do(func() {
+			redisStore = newRedisStoreManager(common.RDB)
+		})
+		return redisStore
+	}
+	return memStore
+}
+
+// Redis-based session manager
 type redisStoreManager struct {
 	rdb *redis.Client
 }
@@ -89,30 +107,11 @@ func (r *redisStoreManager) Delete(session string) {
 	r.rdb.Del(ctx, "mcp:session:"+session)
 }
 
-// Global variables for MCP proxy
-var (
-	memStore       mcpproxy.SessionManager = mcpproxy.NewMemStore()
-	redisStore     mcpproxy.SessionManager
-	redisStoreOnce = &sync.Once{}
-)
-
-func getStore() mcpproxy.SessionManager {
-	if common.RedisEnabled {
-		redisStoreOnce.Do(func() {
-			redisStore = newRedisStoreManager(common.RDB)
-		})
-		return redisStore
-	}
-	return memStore
-}
-
 // MCPSseProxy godoc
 //
 //	@Summary	MCP SSE Proxy
 //	@Router		/mcp/public/{id}/sse [get]
 func MCPSseProxy(c *gin.Context) {
-	group := middleware.GetGroup(c)
-	token := middleware.GetToken(c)
 	mcpId := c.Param("id")
 
 	publicMcp, err := model.GetPublicMCPByID(mcpId)
@@ -122,102 +121,148 @@ func MCPSseProxy(c *gin.Context) {
 	}
 
 	switch publicMcp.Type {
-	case model.MCPTypeProxySSE:
-		config := publicMcp.ProxySSEConfig
-		if config == nil || config.URL == "" {
-			return
-		}
-		backendURL, err := url.Parse(config.URL)
-		if err != nil {
-			middleware.AbortLogWithMessage(c, http.StatusBadRequest, err.Error())
-			return
-		}
+	case model.PublicMCPTypeProxySSE:
+		handleProxySSE(c, publicMcp)
+	case model.PublicMCPTypeOpenAPI:
+		handleOpenAPI(c, publicMcp)
+	default:
+		middleware.AbortLogWithMessage(c, http.StatusBadRequest, "unknow mcp type")
+		return
+	}
+}
 
-		headers := make(map[string]string)
-		backendQuery := &url.Values{}
+// handleProxySSE processes SSE proxy requests
+func handleProxySSE(c *gin.Context, publicMcp *model.PublicMCP) {
+	config := publicMcp.ProxySSEConfig
+	if config == nil || config.URL == "" {
+		return
+	}
 
-		// Process reusing parameters if any
-		if err := processReusingParams(config.ReusingParams, mcpId, group.ID, headers, backendQuery); err != nil {
-			middleware.AbortLogWithMessage(c, http.StatusBadRequest, err.Error())
+	backendURL, err := url.Parse(config.URL)
+	if err != nil {
+		middleware.AbortLogWithMessage(c, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	headers := make(map[string]string)
+	backendQuery := &url.Values{}
+	group := middleware.GetGroup(c)
+	token := middleware.GetToken(c)
+
+	// Process reusing parameters if any
+	if err := processReusingParams(config.ReusingParams, publicMcp.ID, group.ID, headers, backendQuery); err != nil {
+		middleware.AbortLogWithMessage(c, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	backendURL.RawQuery = backendQuery.Encode()
+	mcpproxy.SSEHandler(
+		c.Writer,
+		c.Request,
+		getStore(),
+		newEndpoint(token.Key, publicMcp.Type),
+		backendURL.String(),
+		headers,
+	)
+}
+
+// handleOpenAPI processes OpenAPI requests
+func handleOpenAPI(c *gin.Context, publicMcp *model.PublicMCP) {
+	config := publicMcp.OpenAPIConfig
+	if config == nil || (config.OpenAPISpec == "" && config.OpenAPIContent == "") {
+		return
+	}
+
+	// Parse OpenAPI specification
+	parser := convert.NewParser()
+	var err error
+	var openAPIFrom string
+
+	if config.OpenAPISpec != "" {
+		openAPIFrom, err = parseOpenAPIFromURL(config, parser)
+	} else {
+		err = parseOpenAPIFromContent(config, parser)
+	}
+
+	if err != nil {
+		return
+	}
+
+	// Convert to MCP server
+	converter := convert.NewConverter(parser, convert.Options{
+		OpenAPIFrom: openAPIFrom,
+	})
+	s, err := converter.Convert()
+	if err != nil {
+		return
+	}
+
+	token := middleware.GetToken(c)
+
+	// Setup SSE server
+	newSession, newEndpoint := newEndpoint(token.Key, publicMcp.Type).NewEndpoint()
+	store := getStore()
+	store.Set(newSession, "openapi")
+	defer func() {
+		store.Delete(newSession)
+	}()
+
+	server := NewSSEServer(
+		s,
+		WithMessageEndpoint(newEndpoint),
+	)
+
+	ctx, cancel := context.WithCancel(c.Request.Context())
+	defer cancel()
+
+	// Start message processing goroutine
+	go processOpenAPIMessages(ctx, newSession, server)
+
+	// Handle SSE connection
+	server.HandleSSE(c.Writer, c.Request)
+}
+
+// parseOpenAPIFromURL parses OpenAPI spec from a URL
+func parseOpenAPIFromURL(config *model.MCPOpenAPIConfig, parser *convert.Parser) (string, error) {
+	spec, err := url.Parse(config.OpenAPISpec)
+	if err != nil || (spec.Scheme != "http" && spec.Scheme != "https") {
+		return "", errors.New("invalid OpenAPI spec URL")
+	}
+
+	openAPIFrom := spec.String()
+	if config.V2 {
+		err = parser.ParseFileV2(openAPIFrom)
+	} else {
+		err = parser.ParseFile(openAPIFrom)
+	}
+
+	return openAPIFrom, err
+}
+
+// parseOpenAPIFromContent parses OpenAPI spec from content string
+func parseOpenAPIFromContent(config *model.MCPOpenAPIConfig, parser *convert.Parser) error {
+	if config.V2 {
+		return parser.ParseV2([]byte(config.OpenAPIContent))
+	}
+	return parser.Parse([]byte(config.OpenAPIContent))
+}
+
+// processOpenAPIMessages handles message processing for OpenAPI
+func processOpenAPIMessages(ctx context.Context, sessionID string, server *SSEServer) {
+	mpscInstance := getMpsc()
+	for {
+		select {
+		case <-ctx.Done():
 			return
-		}
-
-		backendURL.RawQuery = backendQuery.Encode()
-		mcpproxy.SSEHandler(
-			c.Writer,
-			c.Request,
-			getStore(),
-			newEndpoint(token.Key, publicMcp.Type),
-			backendURL.String(),
-			headers,
-		)
-
-	case model.MCPTypeOpenAPI:
-		config := publicMcp.OpenAPIConfig
-		if config == nil || (config.OpenAPISpec == "" && config.OpenAPIContent == "") {
-			return
-		}
-		parser := convert.NewParser()
-		var err error
-		var openAPIFrom string
-		if config.OpenAPISpec != "" {
-			var spec *url.URL
-			spec, err = url.Parse(config.OpenAPISpec)
-			if err != nil || (spec.Scheme != "http" && spec.Scheme != "https") {
+		default:
+			data, err := mpscInstance.recv(ctx, sessionID)
+			if err != nil {
 				return
 			}
-			openAPIFrom = spec.String()
-			if config.V2 {
-				err = parser.ParseFileV2(openAPIFrom)
-			} else {
-				err = parser.ParseFile(openAPIFrom)
-			}
-		} else {
-			if config.V2 {
-				err = parser.ParseV2([]byte(config.OpenAPIContent))
-			} else {
-				err = parser.Parse([]byte(config.OpenAPIContent))
+			if err := server.HandleMessage(data); err != nil {
+				return
 			}
 		}
-		if err != nil {
-			return
-		}
-		converter := convert.NewConverter(parser, convert.Options{
-			OpenAPIFrom: openAPIFrom,
-		})
-		s, err := converter.Convert()
-		if err != nil {
-			return
-		}
-		newSission, newEndpoint := newEndpoint(token.Key, publicMcp.Type).NewEndpoint()
-		store := getStore()
-		store.Set(newSission, "openapi")
-		defer func() {
-			store.Delete(newSission)
-		}()
-		server := NewSSEServer(
-			s,
-			WithMessageEndpoint(newEndpoint),
-		)
-		go func() {
-			mpscInstance := getMpsc()
-			for {
-				select {
-				case <-c.Request.Context().Done():
-					return
-				default:
-				}
-				data, err := mpscInstance.recv(c.Request.Context(), newSission)
-				if err != nil {
-					return
-				}
-				err = server.HandleMessage(data)
-				if err != nil {
-					return
-				}
-			}
-		}()
-		server.HandleSSE(c.Writer, c.Request)
 	}
 }
 
@@ -246,6 +291,8 @@ func processReusingParams(reusingParams map[string]model.ReusingParam, mcpId str
 			headers[k] = paramValue
 		case model.ParamTypeQuery:
 			backendQuery.Set(k, paramValue)
+		default:
+			return errors.New("unknow param type")
 		}
 	}
 
@@ -262,21 +309,21 @@ func MCPMessage(c *gin.Context) {
 	if mcpTypeStr == "" {
 		return
 	}
-	mcpType := model.MCPType(mcpTypeStr)
+	mcpType := model.PublicMCPType(mcpTypeStr)
 	sessionId, _ := c.GetQuery("sessionId")
 	if sessionId == "" {
 		return
 	}
 
 	switch mcpType {
-	case model.MCPTypeProxySSE:
+	case model.PublicMCPTypeProxySSE:
 		mcpproxy.ProxyHandler(
 			c.Writer,
 			c.Request,
 			getStore(),
 			newEndpoint(token.Key, mcpType),
 		)
-	case model.MCPTypeOpenAPI:
+	case model.PublicMCPTypeOpenAPI:
 		backend, ok := getStore().Get(sessionId)
 		if !ok || backend != "openapi" {
 			return
@@ -291,6 +338,13 @@ func MCPMessage(c *gin.Context) {
 	}
 }
 
+// Interface for multi-producer, single-consumer message passing
+type mpsc interface {
+	recv(ctx context.Context, id string) ([]byte, error)
+	send(ctx context.Context, id string, data []byte) error
+}
+
+// Global MPSC instances
 var (
 	memMpsc       mpsc = newChannelMpsc()
 	redisMpsc     mpsc
@@ -307,12 +361,7 @@ func getMpsc() mpsc {
 	return memMpsc
 }
 
-type mpsc interface {
-	recv(ctx context.Context, id string) ([]byte, error)
-	send(ctx context.Context, id string, data []byte) error
-}
-
-// channelMpsc implements mpsc interface using channels
+// In-memory channel-based MPSC implementation
 type channelMpsc struct {
 	channels     map[string]chan []byte
 	lastAccess   map[string]time.Time
@@ -406,11 +455,12 @@ func (c *channelMpsc) send(ctx context.Context, id string, data []byte) error {
 	}
 }
 
+// Redis-based MPSC implementation
 type redisMPSC struct {
 	rdb *redis.Client
 }
 
-// NewRedisMPSC 创建新的Redis MPSC实例
+// NewRedisMPSC creates a new Redis MPSC instance
 func NewRedisMPSC(rdb *redis.Client) *redisMPSC {
 	return &redisMPSC{rdb: rdb}
 }

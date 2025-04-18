@@ -12,12 +12,12 @@ const (
 	ErrGroupMCPReusingParamNotFound = "group mcp reusing param"
 )
 
-type MCPType string
+type PublicMCPType string
 
 const (
-	MCPTypeProxySSE MCPType = "mcp_proxy_sse"
-	MCPTypeGitRepo  MCPType = "mcp_git_repo" // read only
-	MCPTypeOpenAPI  MCPType = "mcp_openapi"
+	PublicMCPTypeProxySSE PublicMCPType = "mcp_proxy_sse"
+	PublicMCPTypeGitRepo  PublicMCPType = "mcp_git_repo" // read only
+	PublicMCPTypeOpenAPI  PublicMCPType = "mcp_openapi"
 )
 
 type ParamType string
@@ -79,7 +79,7 @@ type PublicMCP struct {
 	UpdateAt                    time.Time                    `gorm:"index"                         json:"update_at"`
 	GroupPublicMCPReusingParams []GroupPublicMCPReusingParam `gorm:"foreignKey:MCPID"              json:"-"`
 	Name                        string                       `json:"name"`
-	Type                        MCPType                      `gorm:"index"                         json:"type"`
+	Type                        PublicMCPType                `gorm:"index"                         json:"type"`
 	RepoURL                     string                       `json:"repo_url"`
 	ReadmeURL                   string                       `json:"readme_url"`
 	Readme                      string                       `gorm:"type:text"                     json:"readme"`
@@ -154,7 +154,7 @@ func GetPublicMCPByID(id string) (*PublicMCP, error) {
 }
 
 // GetPublicMCPs retrieves MCPs with pagination and filtering
-func GetPublicMCPs(page int, perPage int, mcpType MCPType, keyword string) (mcps []*PublicMCP, total int64, err error) {
+func GetPublicMCPs(page int, perPage int, mcpType PublicMCPType, keyword string) (mcps []*PublicMCP, total int64, err error) {
 	tx := DB.Model(&PublicMCP{})
 
 	if mcpType != "" {
