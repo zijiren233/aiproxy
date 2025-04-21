@@ -124,7 +124,7 @@ func PublicMCPSseServer(c *gin.Context) {
 	case model.PublicMCPTypeProxySSE:
 		handlePublicProxySSE(c, publicMcp.ID, publicMcp.ProxySSEConfig)
 	case model.PublicMCPTypeOpenAPI:
-		server, err := newOpenAPIMCPServer(c, publicMcp.OpenAPIConfig)
+		server, err := newOpenAPIMCPServer(publicMcp.OpenAPIConfig)
 		if err != nil {
 			middleware.AbortLogWithMessage(c, http.StatusBadRequest, err.Error())
 			return
@@ -178,7 +178,7 @@ func handlePublicProxySSE(c *gin.Context, mcpID string, config *model.PublicMCPP
 }
 
 // newOpenAPIMCPServer creates a new MCP server from OpenAPI configuration
-func newOpenAPIMCPServer(c *gin.Context, config *model.MCPOpenAPIConfig) (*server.MCPServer, error) {
+func newOpenAPIMCPServer(config *model.MCPOpenAPIConfig) (*server.MCPServer, error) {
 	if config == nil || (config.OpenAPISpec == "" && config.OpenAPIContent == "") {
 		return nil, errors.New("invalid OpenAPI configuration")
 	}
@@ -200,7 +200,9 @@ func newOpenAPIMCPServer(c *gin.Context, config *model.MCPOpenAPIConfig) (*serve
 
 	// Convert to MCP server
 	converter := convert.NewConverter(parser, convert.Options{
-		OpenAPIFrom: openAPIFrom,
+		OpenAPIFrom:   openAPIFrom,
+		ServerAddr:    config.ServerAddr,
+		Authorization: config.Authorization,
 	})
 	s, err := converter.Convert()
 	if err != nil {

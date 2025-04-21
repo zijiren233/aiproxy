@@ -86,7 +86,7 @@ type MCPOpenAPIConfig struct {
 	OpenAPISpec    string `json:"openapi_spec"`
 	OpenAPIContent string `json:"openapi_content,omitempty"`
 	V2             bool   `json:"v2"`
-	Server         string `json:"server,omitempty"`
+	ServerAddr     string `json:"server_addr,omitempty"`
 	Authorization  string `json:"authorization,omitempty"`
 }
 

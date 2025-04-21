@@ -63,7 +63,7 @@ func GroupMCPSseServer(c *gin.Context) {
 	case model.GroupMCPTypeProxySSE:
 		handleGroupProxySSE(c, mcp.ProxySSEConfig)
 	case model.GroupMCPTypeOpenAPI:
-		server, err := newOpenAPIMCPServer(c, mcp.OpenAPIConfig)
+		server, err := newOpenAPIMCPServer(mcp.OpenAPIConfig)
 		if err != nil {
 			middleware.AbortLogWithMessage(c, http.StatusBadRequest, err.Error())
 			return
