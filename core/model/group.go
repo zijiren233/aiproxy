@@ -22,17 +22,18 @@ const (
 )
 
 type Group struct {
-	CreatedAt             time.Time                    `json:"created_at"`
-	ID                    string                       `gorm:"primaryKey"                    json:"id"`
-	Tokens                []Token                      `gorm:"foreignKey:GroupID"            json:"-"`
-	GroupModelConfigs     []GroupModelConfig           `gorm:"foreignKey:GroupID"            json:"-"`
-	GroupMCPReusingParams []GroupPublicMCPReusingParam `gorm:"foreignKey:GroupID"            json:"-"`
-	Status                int                          `gorm:"default:1;index"               json:"status"`
-	RPMRatio              float64                      `gorm:"index"                         json:"rpm_ratio,omitempty"`
-	TPMRatio              float64                      `gorm:"index"                         json:"tpm_ratio,omitempty"`
-	UsedAmount            float64                      `gorm:"index"                         json:"used_amount"`
-	RequestCount          int                          `gorm:"index"                         json:"request_count"`
-	AvailableSets         []string                     `gorm:"serializer:fastjson;type:text" json:"available_sets,omitempty"`
+	CreatedAt              time.Time               `json:"created_at"`
+	ID                     string                  `gorm:"primaryKey"                    json:"id"`
+	Tokens                 []Token                 `gorm:"foreignKey:GroupID"            json:"-"`
+	GroupModelConfigs      []GroupModelConfig      `gorm:"foreignKey:GroupID"            json:"-"`
+	PublicMCPReusingParams []PublicMCPReusingParam `gorm:"foreignKey:GroupID"            json:"-"`
+	GroupMCPs              []GroupMCP              `gorm:"foreignKey:GroupID"            json:"-"`
+	Status                 int                     `gorm:"default:1;index"               json:"status"`
+	RPMRatio               float64                 `gorm:"index"                         json:"rpm_ratio,omitempty"`
+	TPMRatio               float64                 `gorm:"index"                         json:"tpm_ratio,omitempty"`
+	UsedAmount             float64                 `gorm:"index"                         json:"used_amount"`
+	RequestCount           int                     `gorm:"index"                         json:"request_count"`
+	AvailableSets          []string                `gorm:"serializer:fastjson;type:text" json:"available_sets,omitempty"`
 
 	BalanceAlertEnabled   bool    `gorm:"default:false" json:"balance_alert_enabled"`
 	BalanceAlertThreshold float64 `gorm:"default:0"     json:"balance_alert_threshold"`
@@ -43,7 +44,11 @@ func (g *Group) BeforeDelete(tx *gorm.DB) (err error) {
 	if err != nil {
 		return err
 	}
-	err = tx.Model(&GroupPublicMCPReusingParam{}).Where("group_id = ?", g.ID).Delete(&GroupPublicMCPReusingParam{}).Error
+	err = tx.Model(&PublicMCPReusingParam{}).Where("group_id = ?", g.ID).Delete(&PublicMCPReusingParam{}).Error
+	if err != nil {
+		return err
+	}
+	err = tx.Model(&GroupMCP{}).Where("group_id = ?", g.ID).Delete(&GroupMCP{}).Error
 	if err != nil {
 		return err
 	}

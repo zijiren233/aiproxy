@@ -94,7 +94,7 @@ func ConvertSTTRequest(meta *meta.Meta, request *http.Request) (string, http.Hea
 		Header: STTHeader{
 			Action:    "run-task",
 			Streaming: "duplex",
-			TaskID:    uuid.New().String(),
+			TaskID:    uuid.NewString(),
 		},
 		Payload: STTPayload{
 			Model:     meta.ActualModel,

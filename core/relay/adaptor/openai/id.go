@@ -1,23 +1,11 @@
 package openai
 
-import (
-	"encoding/hex"
-
-	"github.com/google/uuid"
-	"github.com/labring/aiproxy/core/common/conv"
-)
-
-func shortUUID() string {
-	var buf [32]byte
-	bytes := uuid.New()
-	hex.Encode(buf[:], bytes[:])
-	return conv.BytesToString(buf[:])
-}
+import "github.com/labring/aiproxy/core/common"
 
 func ChatCompletionID() string {
-	return "chatcmpl-" + shortUUID()
+	return "chatcmpl-" + common.ShortUUID()
 }
 
 func CallID() string {
-	return "call_" + shortUUID()
+	return "call_" + common.ShortUUID()
 }

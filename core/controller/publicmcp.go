@@ -164,7 +164,7 @@ func DeletePublicMCP(c *gin.Context) {
 //	@Security		ApiKeyAuth
 //	@Param			id		path		string	true	"MCP ID"
 //	@Param			group	path		string	true	"Group ID"
-//	@Success		200		{object}	middleware.APIResponse{data=model.GroupPublicMCPReusingParam}
+//	@Success		200		{object}	middleware.APIResponse{data=model.PublicMCPReusingParam}
 //	@Router			/api/mcp/public/{id}/group/{group}/params [get]
 func GetGroupPublicMCPReusingParam(c *gin.Context) {
 	mcpID := c.Param("id")
@@ -192,9 +192,9 @@ func GetGroupPublicMCPReusingParam(c *gin.Context) {
 //	@Accept			json
 //	@Produce		json
 //	@Security		ApiKeyAuth
-//	@Param			id		path		string								true	"MCP ID"
-//	@Param			group	path		string								true	"Group ID"
-//	@Param			params	body		model.GroupPublicMCPReusingParam	true	"Reusing parameters"
+//	@Param			id		path		string						true	"MCP ID"
+//	@Param			group	path		string						true	"Group ID"
+//	@Param			params	body		model.PublicMCPReusingParam	true	"Reusing parameters"
 //	@Success		200		{object}	middleware.APIResponse
 //	@Router			/api/mcp/public/{id}/group/{group}/params [post]
 func SaveGroupPublicMCPReusingParam(c *gin.Context) {
@@ -206,7 +206,7 @@ func SaveGroupPublicMCPReusingParam(c *gin.Context) {
 		return
 	}
 
-	var param model.GroupPublicMCPReusingParam
+	var param model.PublicMCPReusingParam
 	if err := c.ShouldBindJSON(&param); err != nil {
 		middleware.ErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
