@@ -122,7 +122,7 @@ func ConvertTTSRequest(meta *meta.Meta, req *http.Request) (string, http.Header,
 		Header: TTSHeader{
 			Action:    "run-task",
 			Streaming: "out",
-			TaskID:    uuid.New().String(),
+			TaskID:    uuid.NewString(),
 		},
 		Payload: TTSPayload{
 			Model:     request.Model,

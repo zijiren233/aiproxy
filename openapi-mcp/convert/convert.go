@@ -21,6 +21,8 @@ type Options struct {
 	ServerName     string
 	Version        string
 	ToolNamePrefix string
+	ServerAddr     string
+	Authorization  string
 }
 
 // Converter represents an OpenAPI to MCP converter
@@ -61,16 +63,19 @@ func (c *Converter) Convert() (*server.MCPServer, error) {
 		c.options.Version,
 	)
 
-	servers := c.parser.GetServers()
-	defaultServer := ""
-	if len(servers) == 1 {
-		server, err := getServerURL(c.options.OpenAPIFrom, servers[0].URL)
-		if err != nil {
-			return nil, err
+	defaultServer := c.options.ServerAddr
+	// Use custom server address if provided
+	if defaultServer == "" {
+		servers := c.parser.GetServers()
+		if len(servers) == 1 {
+			server, err := getServerURL(c.options.OpenAPIFrom, servers[0].URL)
+			if err != nil {
+				return nil, err
+			}
+			defaultServer = server
+		} else if len(servers) == 0 {
+			defaultServer, _ = getServerURL(c.options.OpenAPIFrom, "")
 		}
-		defaultServer = server
-	} else if len(servers) == 0 {
-		defaultServer, _ = getServerURL(c.options.OpenAPIFrom, "")
 	}
 
 	// Process each path and operation
@@ -78,7 +83,7 @@ func (c *Converter) Convert() (*server.MCPServer, error) {
 		operations := getOperations(pathItem)
 		for method, operation := range operations {
 			tool := c.convertOperation(path, method, operation)
-			handler := newHandler(defaultServer, path, method, operation)
+			handler := newHandler(defaultServer, c.options.Authorization, path, method, operation)
 			mcpServer.AddTool(*tool, handler)
 		}
 	}
@@ -108,7 +113,7 @@ func getServerURL(from string, dir string) (string, error) {
 }
 
 // TODO: valid operation
-func newHandler(defaultServer string, path, method string, _ *openapi3.Operation) server.ToolHandlerFunc {
+func newHandler(defaultServer, authorization string, path, method string, _ *openapi3.Operation) server.ToolHandlerFunc {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		arg := getArgs(request.Params.Arguments)
 
@@ -173,6 +178,8 @@ func newHandler(defaultServer string, path, method string, _ *openapi3.Operation
 
 		// Add authentication if provided
 		switch {
+		case authorization != "":
+			httpReq.Header.Set("Authorization", authorization)
 		case arg.AuthToken != "":
 			httpReq.Header.Set("Authorization", "Bearer "+arg.AuthToken)
 		case arg.AuthUsername != "" && arg.AuthPassword != "":
@@ -319,6 +326,11 @@ func (c *Converter) convertOperation(path, method string, operation *openapi3.Op
 	// Add server address parameter
 	servers := c.parser.GetServers()
 	switch {
+	case c.options.ServerAddr != "":
+		// Use custom server address from options
+		args = append(args, mcp.WithString("openapi|server_addr",
+			mcp.Description("Server address to connect to"),
+			mcp.DefaultString(c.options.ServerAddr)))
 	case len(servers) == 0:
 		if c.options.OpenAPIFrom != "" {
 			u, err := getServerURL(c.options.OpenAPIFrom, "")
@@ -357,7 +369,12 @@ func (c *Converter) convertOperation(path, method string, operation *openapi3.Op
 	}
 
 	// Handle security requirements if present and enabled
-	if operation.Security != nil && len(*operation.Security) > 0 {
+	if c.options.Authorization != "" {
+		// Use custom authorization from options
+		args = append(args, mcp.WithString("header|Authorization",
+			mcp.Description("Authorization header"),
+			mcp.DefaultString(c.options.Authorization)))
+	} else if operation.Security != nil && len(*operation.Security) > 0 {
 		securityArgs := c.convertSecurityRequirements(*operation.Security)
 		args = append(args, securityArgs...)
 	}

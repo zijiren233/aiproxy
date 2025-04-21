@@ -3213,6 +3213,290 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/mcp/group/{group}": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Get a list of Group MCPs with pagination and filtering",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "mcp"
+                ],
+                "summary": "Get Group MCPs",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Group ID",
+                        "name": "group",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Items per page",
+                        "name": "per_page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "MCP type",
+                        "name": "type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Search keyword",
+                        "name": "keyword",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/middleware.APIResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/model.GroupMCP"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Create a new Group MCP",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "mcp"
+                ],
+                "summary": "Create Group MCP",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Group ID",
+                        "name": "group",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Group MCP object",
+                        "name": "mcp",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.GroupMCP"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/middleware.APIResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/model.GroupMCP"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/api/mcp/group/{group}/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Get a specific Group MCP by its ID and Group ID",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "mcp"
+                ],
+                "summary": "Get Group MCP by ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "MCP ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Group ID",
+                        "name": "group",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/middleware.APIResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/model.GroupMCP"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Update an existing Group MCP",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "mcp"
+                ],
+                "summary": "Update Group MCP",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "MCP ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Group ID",
+                        "name": "group",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Group MCP object",
+                        "name": "mcp",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.GroupMCP"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/middleware.APIResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/model.GroupMCP"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Delete a Group MCP by ID and Group ID",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "mcp"
+                ],
+                "summary": "Delete Group MCP",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "MCP ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Group ID",
+                        "name": "group",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/mcp/public/": {
             "get": {
                 "security": [
@@ -3481,7 +3765,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/model.GroupPublicMCPReusingParam"
+                                            "$ref": "#/definitions/model.PublicMCPReusingParam"
                                         }
                                     }
                                 }
@@ -3528,7 +3812,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/model.GroupPublicMCPReusingParam"
+                            "$ref": "#/definitions/model.PublicMCPReusingParam"
                         }
                     }
                 ],
@@ -6003,7 +6287,19 @@ const docTemplate = `{
                 }
             }
         },
-        "/mcp/message": {
+        "/mcp/group/message": {
+            "post": {
+                "summary": "MCP SSE Proxy",
+                "responses": {}
+            }
+        },
+        "/mcp/group/{id}/sse": {
+            "get": {
+                "summary": "Group MCP SSE Server",
+                "responses": {}
+            }
+        },
+        "/mcp/public/message": {
             "post": {
                 "summary": "MCP SSE Proxy",
                 "responses": {}
@@ -6011,7 +6307,7 @@ const docTemplate = `{
         },
         "/mcp/public/{id}/sse": {
             "get": {
-                "summary": "MCP SSE Proxy",
+                "summary": "Public MCP SSE Server",
                 "responses": {}
             }
         },
@@ -8013,6 +8309,66 @@ const docTemplate = `{
                 }
             }
         },
+        "model.GroupMCP": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "group_id": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "openapi_config": {
+                    "$ref": "#/definitions/model.MCPOpenAPIConfig"
+                },
+                "proxy_sse_config": {
+                    "$ref": "#/definitions/model.GroupMCPProxySSEConfig"
+                },
+                "type": {
+                    "$ref": "#/definitions/model.GroupMCPType"
+                },
+                "update_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.GroupMCPProxySSEConfig": {
+            "type": "object",
+            "properties": {
+                "headers": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
+                "querys": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
+                "url": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.GroupMCPType": {
+            "type": "string",
+            "enum": [
+                "mcp_proxy_sse",
+                "mcp_openapi"
+            ],
+            "x-enum-varnames": [
+                "GroupMCPTypeProxySSE",
+                "GroupMCPTypeOpenAPI"
+            ]
+        },
         "model.GroupModelConfig": {
             "type": "object",
             "properties": {
@@ -8048,23 +8404,6 @@ const docTemplate = `{
                 },
                 "tpm": {
                     "type": "integer"
-                }
-            }
-        },
-        "model.GroupPublicMCPReusingParam": {
-            "type": "object",
-            "properties": {
-                "group_id": {
-                    "type": "string"
-                },
-                "mcp_id": {
-                    "type": "string"
-                },
-                "reusing_params": {
-                    "type": "object",
-                    "additionalProperties": {
-                        "type": "string"
-                    }
                 }
             }
         },
@@ -8229,9 +8568,6 @@ const docTemplate = `{
                 "openapi_spec": {
                     "type": "string"
                 },
-                "price": {
-                    "$ref": "#/definitions/model.MCPPrice"
-                },
                 "server": {
                     "type": "string"
                 },
@@ -8243,10 +8579,10 @@ const docTemplate = `{
         "model.MCPPrice": {
             "type": "object",
             "properties": {
-                "defaultToolsCallPrice": {
+                "default_tools_call_price": {
                     "type": "number"
                 },
-                "toolsCallPrices": {
+                "tools_call_prices": {
                     "type": "object",
                     "additionalProperties": {
                         "type": "number"
@@ -8532,6 +8868,9 @@ const docTemplate = `{
                 "openapi_config": {
                     "$ref": "#/definitions/model.MCPOpenAPIConfig"
                 },
+                "price": {
+                    "$ref": "#/definitions/model.MCPPrice"
+                },
                 "proxy_sse_config": {
                     "$ref": "#/definitions/model.PublicMCPProxySSEConfig"
                 },
@@ -8567,9 +8906,6 @@ const docTemplate = `{
                         "type": "string"
                     }
                 },
-                "price": {
-                    "$ref": "#/definitions/model.MCPPrice"
-                },
                 "querys": {
                     "type": "object",
                     "additionalProperties": {
@@ -8583,6 +8919,29 @@ const docTemplate = `{
                     }
                 },
                 "url": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.PublicMCPReusingParam": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "group_id": {
+                    "type": "string"
+                },
+                "mcp_id": {
+                    "type": "string"
+                },
+                "reusing_params": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
+                "update_at": {
                     "type": "string"
                 }
             }

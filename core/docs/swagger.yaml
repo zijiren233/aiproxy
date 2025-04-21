@@ -793,6 +793,46 @@ definitions:
       web_search_count:
         type: integer
     type: object
+  model.GroupMCP:
+    properties:
+      created_at:
+        type: string
+      group_id:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      openapi_config:
+        $ref: '#/definitions/model.MCPOpenAPIConfig'
+      proxy_sse_config:
+        $ref: '#/definitions/model.GroupMCPProxySSEConfig'
+      type:
+        $ref: '#/definitions/model.GroupMCPType'
+      update_at:
+        type: string
+    type: object
+  model.GroupMCPProxySSEConfig:
+    properties:
+      headers:
+        additionalProperties:
+          type: string
+        type: object
+      querys:
+        additionalProperties:
+          type: string
+        type: object
+      url:
+        type: string
+    type: object
+  model.GroupMCPType:
+    enum:
+    - mcp_proxy_sse
+    - mcp_openapi
+    type: string
+    x-enum-varnames:
+    - GroupMCPTypeProxySSE
+    - GroupMCPTypeOpenAPI
   model.GroupModelConfig:
     properties:
       group_id:
@@ -817,17 +857,6 @@ definitions:
         type: integer
       tpm:
         type: integer
-    type: object
-  model.GroupPublicMCPReusingParam:
-    properties:
-      group_id:
-        type: string
-      mcp_id:
-        type: string
-      reusing_params:
-        additionalProperties:
-          type: string
-        type: object
     type: object
   model.ImageData:
     properties:
@@ -935,8 +964,6 @@ definitions:
         type: string
       openapi_spec:
         type: string
-      price:
-        $ref: '#/definitions/model.MCPPrice'
       server:
         type: string
       v2:
@@ -944,9 +971,9 @@ definitions:
     type: object
   model.MCPPrice:
     properties:
-      defaultToolsCallPrice:
+      default_tools_call_price:
         type: number
-      toolsCallPrices:
+      tools_call_prices:
         additionalProperties:
           type: number
         type: object
@@ -1156,6 +1183,8 @@ definitions:
         type: string
       openapi_config:
         $ref: '#/definitions/model.MCPOpenAPIConfig'
+      price:
+        $ref: '#/definitions/model.MCPPrice'
       proxy_sse_config:
         $ref: '#/definitions/model.PublicMCPProxySSEConfig'
       readme:
@@ -1179,8 +1208,6 @@ definitions:
         additionalProperties:
           type: string
         type: object
-      price:
-        $ref: '#/definitions/model.MCPPrice'
       querys:
         additionalProperties:
           type: string
@@ -1190,6 +1217,21 @@ definitions:
           $ref: '#/definitions/model.ReusingParam'
         type: object
       url:
+        type: string
+    type: object
+  model.PublicMCPReusingParam:
+    properties:
+      created_at:
+        type: string
+      group_id:
+        type: string
+      mcp_id:
+        type: string
+      reusing_params:
+        additionalProperties:
+          type: string
+        type: object
+      update_at:
         type: string
     type: object
   model.PublicMCPType:
@@ -3317,6 +3359,177 @@ paths:
       summary: Get used token names
       tags:
       - logs
+  /api/mcp/group/{group}:
+    get:
+      description: Get a list of Group MCPs with pagination and filtering
+      parameters:
+      - description: Group ID
+        in: path
+        name: group
+        required: true
+        type: string
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      - description: Items per page
+        in: query
+        name: per_page
+        type: integer
+      - description: MCP type
+        in: query
+        name: type
+        type: string
+      - description: Search keyword
+        in: query
+        name: keyword
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/middleware.APIResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/model.GroupMCP'
+                  type: array
+              type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Get Group MCPs
+      tags:
+      - mcp
+    post:
+      consumes:
+      - application/json
+      description: Create a new Group MCP
+      parameters:
+      - description: Group ID
+        in: path
+        name: group
+        required: true
+        type: string
+      - description: Group MCP object
+        in: body
+        name: mcp
+        required: true
+        schema:
+          $ref: '#/definitions/model.GroupMCP'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/middleware.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.GroupMCP'
+              type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Create Group MCP
+      tags:
+      - mcp
+  /api/mcp/group/{group}/{id}:
+    delete:
+      description: Delete a Group MCP by ID and Group ID
+      parameters:
+      - description: MCP ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Group ID
+        in: path
+        name: group
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/middleware.APIResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Delete Group MCP
+      tags:
+      - mcp
+    get:
+      description: Get a specific Group MCP by its ID and Group ID
+      parameters:
+      - description: MCP ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Group ID
+        in: path
+        name: group
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/middleware.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.GroupMCP'
+              type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Get Group MCP by ID
+      tags:
+      - mcp
+    put:
+      consumes:
+      - application/json
+      description: Update an existing Group MCP
+      parameters:
+      - description: MCP ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Group ID
+        in: path
+        name: group
+        required: true
+        type: string
+      - description: Group MCP object
+        in: body
+        name: mcp
+        required: true
+        schema:
+          $ref: '#/definitions/model.GroupMCP'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/middleware.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.GroupMCP'
+              type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Update Group MCP
+      tags:
+      - mcp
   /api/mcp/public/:
     get:
       description: Get a list of MCPs with pagination and filtering
@@ -3477,7 +3690,7 @@ paths:
             - $ref: '#/definitions/middleware.APIResponse'
             - properties:
                 data:
-                  $ref: '#/definitions/model.GroupPublicMCPReusingParam'
+                  $ref: '#/definitions/model.PublicMCPReusingParam'
               type: object
       security:
       - ApiKeyAuth: []
@@ -3504,7 +3717,7 @@ paths:
         name: params
         required: true
         schema:
-          $ref: '#/definitions/model.GroupPublicMCPReusingParam'
+          $ref: '#/definitions/model.PublicMCPReusingParam'
       produces:
       - application/json
       responses:
@@ -4982,12 +5195,20 @@ paths:
       summary: Search tokens
       tags:
       - tokens
-  /mcp/message:
+  /mcp/group/{id}/sse:
+    get:
+      responses: {}
+      summary: Group MCP SSE Server
+  /mcp/group/message:
     post:
       responses: {}
       summary: MCP SSE Proxy
   /mcp/public/{id}/sse:
     get:
+      responses: {}
+      summary: Public MCP SSE Server
+  /mcp/public/message:
+    post:
       responses: {}
       summary: MCP SSE Proxy
   /v1/audio/speech:

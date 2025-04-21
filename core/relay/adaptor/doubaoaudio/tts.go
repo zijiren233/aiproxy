@@ -100,7 +100,7 @@ func ConvertTTSRequest(meta *meta.Meta, req *http.Request) (string, http.Header,
 			SpeedRatio: request.Speed,
 		},
 		Request: RequestConfig{
-			ReqID:     uuid.New().String(),
+			ReqID:     uuid.NewString(),
 			Text:      request.Input,
 			TextType:  textType,
 			Operation: "submit",
