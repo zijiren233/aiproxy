@@ -182,7 +182,6 @@ func SetAPIRouter(router *gin.Engine) {
 			monitorRoute.GET("/models", controller.GetModelsErrorRate)
 			monitorRoute.GET("/banned_channels", controller.GetAllBannedModelChannels)
 		}
-
 		publicMcpRoute := apiRouter.Group("/mcp/public")
 		{
 			publicMcpRoute.GET("/", controller.GetPublicMCPs)
@@ -192,6 +191,15 @@ func SetAPIRouter(router *gin.Engine) {
 			publicMcpRoute.DELETE("/:id", controller.DeletePublicMCP)
 			publicMcpRoute.GET("/:id/group/:group/params", controller.GetGroupPublicMCPReusingParam)
 			publicMcpRoute.POST("/:id/group/:group/params", controller.SaveGroupPublicMCPReusingParam)
+		}
+
+		groupMcpRoute := apiRouter.Group("/mcp/group")
+		{
+			groupMcpRoute.GET("/:group", controller.GetGroupMCPs)
+			groupMcpRoute.GET("/:group/:id", controller.GetGroupMCPByID)
+			groupMcpRoute.POST("/:group", controller.CreateGroupMCP)
+			groupMcpRoute.PUT("/:group/:id", controller.UpdateGroupMCP)
+			groupMcpRoute.DELETE("/:group/:id", controller.DeleteGroupMCP)
 		}
 	}
 }
