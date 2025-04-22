@@ -16,8 +16,9 @@ const (
 type GroupMCPType string
 
 const (
-	GroupMCPTypeProxySSE GroupMCPType = "mcp_proxy_sse"
-	GroupMCPTypeOpenAPI  GroupMCPType = "mcp_openapi"
+	GroupMCPTypeProxySSE        GroupMCPType = "mcp_proxy_sse"
+	GroupMCPTypeProxyStreamable GroupMCPType = "mcp_proxy_streamable"
+	GroupMCPTypeOpenAPI         GroupMCPType = "mcp_openapi"
 )
 
 type GroupMCPProxyConfig struct {

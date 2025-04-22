@@ -17,4 +17,7 @@ func SetMCPRouter(router *gin.Engine) {
 
 	mcpRoute.GET("/group/:id/sse", controller.GroupMCPSseServer)
 	mcpRoute.POST("/group/message", controller.GroupMCPMessage)
+	mcpRoute.GET("/group/:id/streamable", controller.GroupMCPStreamable)
+	mcpRoute.POST("/group/:id/streamable", controller.GroupMCPStreamable)
+	mcpRoute.DELETE("/group/:id/streamable", controller.GroupMCPStreamable)
 }

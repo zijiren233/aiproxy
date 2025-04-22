@@ -2,10 +2,12 @@ package controller
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
 
+	"github.com/bytedance/sonic"
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/core/common/mcpproxy"
 	"github.com/labring/aiproxy/core/middleware"
@@ -162,4 +164,80 @@ func GroupMCPMessage(c *gin.Context) {
 	default:
 		sendMCPSSEMessage(c, mcpTypeStr, sessionID)
 	}
+}
+
+// GroupMCPStreamable godoc
+//
+//	@Summary	Group MCP Streamable Server
+//	@Router		/mcp/group/{id}/streamable [get]
+//	@Router		/mcp/group/{id}/streamable [post]
+//	@Router		/mcp/group/{id}/streamable [delete]
+func GroupMCPStreamable(c *gin.Context) {
+	id := c.Param("id")
+	if id == "" {
+		middleware.ErrorResponse(c, http.StatusBadRequest, "MCP ID is required")
+		return
+	}
+
+	group := middleware.GetGroup(c)
+
+	mcp, err := model.GetGroupMCPByID(id, group.ID)
+	if err != nil {
+		middleware.ErrorResponse(c, http.StatusNotFound, err.Error())
+		return
+	}
+
+	switch mcp.Type {
+	case model.GroupMCPTypeProxyStreamable:
+		handleGroupProxyStreamable(c, mcp.ProxyConfig)
+	case model.GroupMCPTypeOpenAPI:
+		server, err := newOpenAPIMCPServer(mcp.OpenAPIConfig)
+		if err != nil {
+			middleware.AbortLogWithMessage(c, http.StatusBadRequest, err.Error())
+			return
+		}
+		handleGroupStreamableMCPServer(c, server)
+	default:
+		middleware.ErrorResponse(c, http.StatusBadRequest, "Unsupported MCP type")
+	}
+}
+
+// handleGroupProxyStreamable processes Streamable proxy requests for group
+func handleGroupProxyStreamable(c *gin.Context, config *model.GroupMCPProxyConfig) {
+	if config == nil || config.URL == "" {
+		return
+	}
+
+	backendURL, err := url.Parse(config.URL)
+	if err != nil {
+		middleware.AbortLogWithMessage(c, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	headers := make(map[string]string)
+	backendQuery := &url.Values{}
+
+	for k, v := range config.Headers {
+		headers[k] = v
+	}
+	for k, v := range config.Querys {
+		backendQuery.Set(k, v)
+	}
+
+	backendURL.RawQuery = backendQuery.Encode()
+	mcpproxy.NewStreamableProxy(backendURL.String(), headers, getStore()).
+		ServeHTTP(c.Writer, c.Request)
+}
+
+// handleGroupStreamableMCPServer handles the streamable connection for a group MCP server
+func handleGroupStreamableMCPServer(c *gin.Context, s *server.MCPServer) {
+	if c.Request.Method != http.MethodPost {
+		return
+	}
+	var rawMessage json.RawMessage
+	if err := sonic.ConfigDefault.NewDecoder(c.Request.Body).Decode(&rawMessage); err != nil {
+		return
+	}
+	respMessage := s.HandleMessage(c.Request.Context(), rawMessage)
+	c.JSON(http.StatusOK, respMessage)
 }

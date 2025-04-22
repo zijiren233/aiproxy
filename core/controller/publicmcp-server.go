@@ -444,7 +444,8 @@ func handlePublicProxyStreamable(c *gin.Context, mcpID string, config *model.Pub
 		headers,
 	)
 
-	mcpproxy.NewStreamableProxy(backendURL.String(), headers, getStore())
+	mcpproxy.NewStreamableProxy(backendURL.String(), headers, getStore()).
+		ServeHTTP(c.Writer, c.Request)
 }
 
 // handleStreamableMCPServer handles the streamable connection for an MCP server
