@@ -47,6 +47,7 @@ func WithKeepAlive(keepAlive bool) SSEOption {
 }
 
 // NewSSEServer creates a new SSE server instance with the given MCP server and options.
+// TODO: notify support
 func NewSSEServer(server *server.MCPServer, opts ...SSEOption) *SSEServer {
 	s := &SSEServer{
 		server:            server,

@@ -12,21 +12,21 @@ import (
 )
 
 type EndpointProvider interface {
-	NewEndpoint() (newSession string, newEndpoint string)
+	NewEndpoint(newSession string) (newEndpoint string)
 	LoadEndpoint(endpoint string) (session string)
 }
 
-// Proxy represents the proxy object that handles SSE and HTTP requests
-type Proxy struct {
+// SSEAProxy represents the proxy object that handles SSE and HTTP requests
+type SSEAProxy struct {
 	store    SessionManager
 	endpoint EndpointProvider
 	backend  string
 	headers  map[string]string
 }
 
-// NewProxy creates a new proxy with the given backend and endpoint handler
-func NewProxy(backend string, headers map[string]string, store SessionManager, endpoint EndpointProvider) *Proxy {
-	return &Proxy{
+// NewSSEProxy creates a new proxy with the given backend and endpoint handler
+func NewSSEProxy(backend string, headers map[string]string, store SessionManager, endpoint EndpointProvider) *SSEAProxy {
+	return &SSEAProxy{
 		store:    store,
 		endpoint: endpoint,
 		backend:  backend,
@@ -34,7 +34,7 @@ func NewProxy(backend string, headers map[string]string, store SessionManager, e
 	}
 }
 
-func (p *Proxy) SSEHandler(w http.ResponseWriter, r *http.Request) {
+func (p *SSEAProxy) SSEHandler(w http.ResponseWriter, r *http.Request) {
 	SSEHandler(w, r, p.store, p.endpoint, p.backend, p.headers)
 }
 
@@ -117,7 +117,8 @@ func SSEHandler(
 				return
 			}
 
-			newSession, newEndpoint := endpoint.NewEndpoint()
+			newSession := store.New()
+			newEndpoint := endpoint.NewEndpoint(newSession)
 			defer func() {
 				store.Delete(newSession)
 			}()
@@ -136,17 +137,17 @@ func SSEHandler(
 			}
 
 			// Write the data line to the client
-			fmt.Fprintf(w, "data: %s\n", newEndpoint)
+			_, _ = fmt.Fprintf(w, "data: %s\n", newEndpoint)
 			flusher.Flush()
 		}
 	}
 }
 
-func (p *Proxy) ProxyHandler(w http.ResponseWriter, r *http.Request) {
-	ProxyHandler(w, r, p.store, p.endpoint)
+func (p *SSEAProxy) ProxyHandler(w http.ResponseWriter, r *http.Request) {
+	SSEProxyHandler(w, r, p.store, p.endpoint)
 }
 
-func ProxyHandler(
+func SSEProxyHandler(
 	w http.ResponseWriter,
 	r *http.Request,
 	store SessionManager,

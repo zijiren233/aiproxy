@@ -7,7 +7,6 @@ import (
 	"net/url"
 
 	"github.com/gin-gonic/gin"
-	"github.com/labring/aiproxy/core/common"
 	"github.com/labring/aiproxy/core/common/mcpproxy"
 	"github.com/labring/aiproxy/core/middleware"
 	"github.com/labring/aiproxy/core/model"
@@ -26,10 +25,9 @@ func newGroupMcpEndpoint(key string, t model.GroupMCPType) mcpproxy.EndpointProv
 	}
 }
 
-func (m *groupMcpEndpointProvider) NewEndpoint() (newSession string, newEndpoint string) {
-	session := common.ShortUUID()
+func (m *groupMcpEndpointProvider) NewEndpoint(session string) (newEndpoint string) {
 	endpoint := fmt.Sprintf("/mcp/group/message?sessionId=%s&key=%s&type=%s", session, m.key, m.t)
-	return session, endpoint
+	return endpoint
 }
 
 func (m *groupMcpEndpointProvider) LoadEndpoint(endpoint string) (session string) {
@@ -61,7 +59,7 @@ func GroupMCPSseServer(c *gin.Context) {
 
 	switch mcp.Type {
 	case model.GroupMCPTypeProxySSE:
-		handleGroupProxySSE(c, mcp.ProxySSEConfig)
+		handleGroupProxySSE(c, mcp.ProxyConfig)
 	case model.GroupMCPTypeOpenAPI:
 		server, err := newOpenAPIMCPServer(mcp.OpenAPIConfig)
 		if err != nil {
@@ -75,7 +73,7 @@ func GroupMCPSseServer(c *gin.Context) {
 }
 
 // handlePublicProxySSE processes SSE proxy requests
-func handleGroupProxySSE(c *gin.Context, config *model.GroupMCPProxySSEConfig) {
+func handleGroupProxySSE(c *gin.Context, config *model.GroupMCPProxyConfig) {
 	if config == nil || config.URL == "" {
 		return
 	}
@@ -112,14 +110,16 @@ func handleGroupProxySSE(c *gin.Context, config *model.GroupMCPProxySSEConfig) {
 func handleGroupMCPServer(c *gin.Context, s *server.MCPServer, mcpType model.GroupMCPType) {
 	token := middleware.GetToken(c)
 
-	newSession, newEndpoint := newGroupMcpEndpoint(token.Key, mcpType).NewEndpoint()
+	// Store the session
+	store := getStore()
+	newSession := store.New()
+
+	newEndpoint := newGroupMcpEndpoint(token.Key, mcpType).NewEndpoint(newSession)
 	server := NewSSEServer(
 		s,
 		WithMessageEndpoint(newEndpoint),
 	)
 
-	// Store the session
-	store := getStore()
 	store.Set(newSession, string(mcpType))
 	defer func() {
 		store.Delete(newSession)
@@ -153,7 +153,7 @@ func GroupMCPMessage(c *gin.Context) {
 
 	switch mcpType {
 	case model.GroupMCPTypeProxySSE:
-		mcpproxy.ProxyHandler(
+		mcpproxy.SSEProxyHandler(
 			c.Writer,
 			c.Request,
 			getStore(),

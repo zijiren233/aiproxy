@@ -1,9 +1,14 @@
 package mcpproxy
 
-import "sync"
+import (
+	"sync"
+
+	"github.com/labring/aiproxy/core/common"
+)
 
 // SessionManager defines the interface for managing session information
 type SessionManager interface {
+	New() (sessionID string)
 	// Set stores a sessionID and its corresponding backend endpoint
 	Set(sessionID, endpoint string)
 	// Get retrieves the backend endpoint for a sessionID
@@ -23,6 +28,10 @@ func NewMemStore() *MemStore {
 	return &MemStore{
 		sessions: make(map[string]string),
 	}
+}
+
+func (s *MemStore) New() string {
+	return common.ShortUUID()
 }
 
 // Set stores a sessionID and its corresponding backend endpoint
