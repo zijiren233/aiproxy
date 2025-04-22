@@ -19,6 +19,7 @@ import (
 	"github.com/labring/aiproxy/core/middleware"
 	"github.com/labring/aiproxy/core/model"
 	"github.com/labring/aiproxy/openapi-mcp/convert"
+	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 	"github.com/redis/go-redis/v9"
 )
@@ -121,7 +122,11 @@ func PublicMCPSseServer(c *gin.Context) {
 
 	publicMcp, err := model.GetPublicMCPByID(mcpID)
 	if err != nil {
-		middleware.AbortLogWithMessage(c, http.StatusBadRequest, err.Error())
+		c.JSON(http.StatusBadRequest, CreateMCPErrorResponse(
+			nil,
+			mcp.INVALID_REQUEST,
+			err.Error(),
+		))
 		return
 	}
 
@@ -131,12 +136,20 @@ func PublicMCPSseServer(c *gin.Context) {
 	case model.PublicMCPTypeOpenAPI:
 		server, err := newOpenAPIMCPServer(publicMcp.OpenAPIConfig)
 		if err != nil {
-			middleware.AbortLogWithMessage(c, http.StatusBadRequest, err.Error())
+			c.JSON(http.StatusBadRequest, CreateMCPErrorResponse(
+				nil,
+				mcp.INVALID_REQUEST,
+				err.Error(),
+			))
 			return
 		}
 		handleSSEMCPServer(c, server, model.PublicMCPTypeOpenAPI)
 	default:
-		middleware.AbortLogWithMessage(c, http.StatusBadRequest, "unknow mcp type")
+		c.JSON(http.StatusBadRequest, CreateMCPErrorResponse(
+			nil,
+			mcp.INVALID_REQUEST,
+			"unknown mcp type",
+		))
 		return
 	}
 }
@@ -149,7 +162,11 @@ func handlePublicProxySSE(c *gin.Context, mcpID string, config *model.PublicMCPP
 
 	backendURL, err := url.Parse(config.URL)
 	if err != nil {
-		middleware.AbortLogWithMessage(c, http.StatusBadRequest, err.Error())
+		c.JSON(http.StatusBadRequest, CreateMCPErrorResponse(
+			nil,
+			mcp.INVALID_REQUEST,
+			err.Error(),
+		))
 		return
 	}
 
@@ -160,7 +177,11 @@ func handlePublicProxySSE(c *gin.Context, mcpID string, config *model.PublicMCPP
 
 	// Process reusing parameters if any
 	if err := processReusingParams(config.ReusingParams, mcpID, group.ID, headers, backendQuery); err != nil {
-		middleware.AbortLogWithMessage(c, http.StatusBadRequest, err.Error())
+		c.JSON(http.StatusBadRequest, CreateMCPErrorResponse(
+			nil,
+			mcp.INVALID_REQUEST,
+			err.Error(),
+		))
 		return
 	}
 
@@ -284,7 +305,7 @@ func processMCPSseMpscMessages(ctx context.Context, sessionID string, server *SS
 				return
 			}
 			if err := server.HandleMessage(data); err != nil {
-				return
+				continue
 			}
 		}
 	}
@@ -331,11 +352,21 @@ func PublicMCPMessage(c *gin.Context) {
 	token := middleware.GetToken(c)
 	mcpTypeStr, _ := c.GetQuery("type")
 	if mcpTypeStr == "" {
+		c.JSON(http.StatusBadRequest, CreateMCPErrorResponse(
+			nil,
+			mcp.INVALID_REQUEST,
+			"missing mcp type",
+		))
 		return
 	}
 	mcpType := model.PublicMCPType(mcpTypeStr)
 	sessionID, _ := c.GetQuery("sessionId")
 	if sessionID == "" {
+		c.JSON(http.StatusBadRequest, CreateMCPErrorResponse(
+			nil,
+			mcp.INVALID_REQUEST,
+			"missing sessionId",
+		))
 		return
 	}
 
@@ -350,24 +381,41 @@ func PublicMCPMessage(c *gin.Context) {
 	case model.PublicMCPTypeOpenAPI:
 		sendMCPSSEMessage(c, mcpTypeStr, sessionID)
 	default:
-		// TODO:error
+		c.JSON(http.StatusBadRequest, CreateMCPErrorResponse(
+			nil,
+			mcp.INVALID_REQUEST,
+			"unknown mcp type",
+		))
 	}
 }
 
 func sendMCPSSEMessage(c *gin.Context, mcpType, sessionID string) {
 	backend, ok := getStore().Get(sessionID)
 	if !ok || backend != mcpType {
+		c.JSON(http.StatusBadRequest, CreateMCPErrorResponse(
+			nil,
+			mcp.INVALID_REQUEST,
+			"invalid session",
+		))
 		return
 	}
 	mpscInstance := getMCPMpsc()
 	body, err := io.ReadAll(c.Request.Body)
 	if err != nil {
-		_ = c.AbortWithError(http.StatusInternalServerError, err)
+		c.JSON(http.StatusInternalServerError, CreateMCPErrorResponse(
+			nil,
+			mcp.INTERNAL_ERROR,
+			err.Error(),
+		))
 		return
 	}
 	err = mpscInstance.send(c.Request.Context(), sessionID, body)
 	if err != nil {
-		_ = c.AbortWithError(http.StatusInternalServerError, err)
+		c.JSON(http.StatusInternalServerError, CreateMCPErrorResponse(
+			nil,
+			mcp.INTERNAL_ERROR,
+			err.Error(),
+		))
 		return
 	}
 	c.Writer.WriteHeader(http.StatusAccepted)
@@ -385,7 +433,11 @@ func PublicMCPStreamable(c *gin.Context) {
 	mcpID := c.Param("id")
 	publicMcp, err := model.GetPublicMCPByID(mcpID)
 	if err != nil {
-		middleware.AbortLogWithMessage(c, http.StatusBadRequest, err.Error())
+		c.JSON(http.StatusBadRequest, CreateMCPErrorResponse(
+			nil,
+			mcp.INVALID_REQUEST,
+			err.Error(),
+		))
 		return
 	}
 
@@ -395,24 +447,41 @@ func PublicMCPStreamable(c *gin.Context) {
 	case model.PublicMCPTypeOpenAPI:
 		server, err := newOpenAPIMCPServer(publicMcp.OpenAPIConfig)
 		if err != nil {
-			middleware.AbortLogWithMessage(c, http.StatusBadRequest, err.Error())
+			c.JSON(http.StatusBadRequest, CreateMCPErrorResponse(
+				nil,
+				mcp.INVALID_REQUEST,
+				err.Error(),
+			))
 			return
 		}
 		handleStreamableMCPServer(c, server)
 	default:
-		// TODO:error
+		c.JSON(http.StatusBadRequest, CreateMCPErrorResponse(
+			nil,
+			mcp.INVALID_REQUEST,
+			"unknown mcp type",
+		))
 	}
 }
 
 // handlePublicProxyStreamable processes Streamable proxy requests
 func handlePublicProxyStreamable(c *gin.Context, mcpID string, config *model.PublicMCPProxyConfig) {
 	if config == nil || config.URL == "" {
+		c.JSON(http.StatusBadRequest, CreateMCPErrorResponse(
+			nil,
+			mcp.INVALID_REQUEST,
+			"invalid proxy configuration",
+		))
 		return
 	}
 
 	backendURL, err := url.Parse(config.URL)
 	if err != nil {
-		middleware.AbortLogWithMessage(c, http.StatusBadRequest, err.Error())
+		c.JSON(http.StatusBadRequest, CreateMCPErrorResponse(
+			nil,
+			mcp.INVALID_REQUEST,
+			err.Error(),
+		))
 		return
 	}
 
@@ -423,7 +492,11 @@ func handlePublicProxyStreamable(c *gin.Context, mcpID string, config *model.Pub
 
 	// Process reusing parameters if any
 	if err := processReusingParams(config.ReusingParams, mcpID, group.ID, headers, backendQuery); err != nil {
-		middleware.AbortLogWithMessage(c, http.StatusBadRequest, err.Error())
+		c.JSON(http.StatusBadRequest, CreateMCPErrorResponse(
+			nil,
+			mcp.INVALID_REQUEST,
+			err.Error(),
+		))
 		return
 	}
 
@@ -451,10 +524,20 @@ func handlePublicProxyStreamable(c *gin.Context, mcpID string, config *model.Pub
 // handleStreamableMCPServer handles the streamable connection for an MCP server
 func handleStreamableMCPServer(c *gin.Context, s *server.MCPServer) {
 	if c.Request.Method != http.MethodPost {
+		c.JSON(http.StatusMethodNotAllowed, CreateMCPErrorResponse(
+			nil,
+			mcp.METHOD_NOT_FOUND,
+			"method not allowed",
+		))
 		return
 	}
 	var rawMessage json.RawMessage
 	if err := sonic.ConfigDefault.NewDecoder(c.Request.Body).Decode(&rawMessage); err != nil {
+		c.JSON(http.StatusBadRequest, CreateMCPErrorResponse(
+			nil,
+			mcp.PARSE_ERROR,
+			err.Error(),
+		))
 		return
 	}
 	respMessage := s.HandleMessage(c.Request.Context(), rawMessage)
@@ -618,5 +701,24 @@ func (r *redisMCPMPSC) recv(ctx context.Context, id string) ([]byte, error) {
 			}
 			return []byte(result[1]), nil
 		}
+	}
+}
+
+func CreateMCPErrorResponse(
+	id interface{},
+	code int,
+	message string,
+) mcp.JSONRPCMessage {
+	return mcp.JSONRPCError{
+		JSONRPC: mcp.JSONRPC_VERSION,
+		ID:      id,
+		Error: struct {
+			Code    int         `json:"code"`
+			Message string      `json:"message"`
+			Data    interface{} `json:"data,omitempty"`
+		}{
+			Code:    code,
+			Message: message,
+		},
 	}
 }
