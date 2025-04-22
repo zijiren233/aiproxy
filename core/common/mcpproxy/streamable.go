@@ -104,12 +104,8 @@ func (p *StreamableProxy) handleGetRequest(w http.ResponseWriter, r *http.Reques
 		req.Header.Set(name, value)
 	}
 
-	// Make the request to the backend
-	client := &http.Client{
-		Timeout: 0, // No timeout for SSE connections
-	}
-
-	resp, err := client.Do(req)
+	//nolint:bodyclose
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		http.Error(w, "Failed to connect to backend", http.StatusInternalServerError)
 		return
@@ -131,7 +127,7 @@ func (p *StreamableProxy) handleGetRequest(w http.ResponseWriter, r *http.Reques
 		w.Header().Set("Mcp-Session-Id", proxySessionID)
 
 		w.WriteHeader(resp.StatusCode)
-		io.Copy(w, resp.Body)
+		_, _ = io.Copy(w, resp.Body)
 		return
 	}
 
@@ -217,12 +213,8 @@ func (p *StreamableProxy) handlePostRequest(w http.ResponseWriter, r *http.Reque
 		req.Header.Set(name, value)
 	}
 
-	// Make the request to the backend
-	client := &http.Client{
-		Timeout: time.Second * 30, // Use a timeout for regular requests
-	}
-
-	resp, err := client.Do(req)
+	//nolint:bodyclose
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		http.Error(w, "Failed to connect to backend", http.StatusInternalServerError)
 		return
@@ -380,12 +372,8 @@ func (p *StreamableProxy) proxyInitialOrNoSessionRequest(w http.ResponseWriter, 
 		req.Header.Set(name, value)
 	}
 
-	// Make the request to the backend
-	client := &http.Client{
-		Timeout: time.Second * 30,
-	}
-
-	resp, err := client.Do(req)
+	//nolint:bodyclose
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		http.Error(w, "Failed to connect to backend", http.StatusInternalServerError)
 		return
