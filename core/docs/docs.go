@@ -6299,15 +6299,43 @@ const docTemplate = `{
                 "responses": {}
             }
         },
+        "/mcp/group/{id}/streamable": {
+            "get": {
+                "summary": "Group MCP Streamable Server",
+                "responses": {}
+            },
+            "post": {
+                "summary": "Group MCP Streamable Server",
+                "responses": {}
+            },
+            "delete": {
+                "summary": "Group MCP Streamable Server",
+                "responses": {}
+            }
+        },
         "/mcp/public/message": {
             "post": {
-                "summary": "MCP SSE Proxy",
+                "summary": "Public MCP SSE Server",
                 "responses": {}
             }
         },
         "/mcp/public/{id}/sse": {
             "get": {
                 "summary": "Public MCP SSE Server",
+                "responses": {}
+            }
+        },
+        "/mcp/public/{id}/streamable": {
+            "get": {
+                "summary": "Public MCP Streamable Server",
+                "responses": {}
+            },
+            "post": {
+                "summary": "Public MCP Streamable Server",
+                "responses": {}
+            },
+            "delete": {
+                "summary": "Public MCP Streamable Server",
                 "responses": {}
             }
         },
@@ -8327,8 +8355,8 @@ const docTemplate = `{
                 "openapi_config": {
                     "$ref": "#/definitions/model.MCPOpenAPIConfig"
                 },
-                "proxy_sse_config": {
-                    "$ref": "#/definitions/model.GroupMCPProxySSEConfig"
+                "proxy_config": {
+                    "$ref": "#/definitions/model.GroupMCPProxyConfig"
                 },
                 "type": {
                     "$ref": "#/definitions/model.GroupMCPType"
@@ -8338,7 +8366,7 @@ const docTemplate = `{
                 }
             }
         },
-        "model.GroupMCPProxySSEConfig": {
+        "model.GroupMCPProxyConfig": {
             "type": "object",
             "properties": {
                 "headers": {
@@ -8362,10 +8390,12 @@ const docTemplate = `{
             "type": "string",
             "enum": [
                 "mcp_proxy_sse",
+                "mcp_proxy_streamable",
                 "mcp_openapi"
             ],
             "x-enum-varnames": [
                 "GroupMCPTypeProxySSE",
+                "GroupMCPTypeProxyStreamable",
                 "GroupMCPTypeOpenAPI"
             ]
         },
@@ -8568,7 +8598,7 @@ const docTemplate = `{
                 "openapi_spec": {
                     "type": "string"
                 },
-                "server": {
+                "server_addr": {
                     "type": "string"
                 },
                 "v2": {
@@ -8871,8 +8901,8 @@ const docTemplate = `{
                 "price": {
                     "$ref": "#/definitions/model.MCPPrice"
                 },
-                "proxy_sse_config": {
-                    "$ref": "#/definitions/model.PublicMCPProxySSEConfig"
+                "proxy_config": {
+                    "$ref": "#/definitions/model.PublicMCPProxyConfig"
                 },
                 "readme": {
                     "type": "string"
@@ -8897,7 +8927,7 @@ const docTemplate = `{
                 }
             }
         },
-        "model.PublicMCPProxySSEConfig": {
+        "model.PublicMCPProxyConfig": {
             "type": "object",
             "properties": {
                 "headers": {
@@ -8950,6 +8980,7 @@ const docTemplate = `{
             "type": "string",
             "enum": [
                 "mcp_proxy_sse",
+                "mcp_proxy_streamable",
                 "mcp_git_repo",
                 "mcp_openapi"
             ],
@@ -8958,6 +8989,7 @@ const docTemplate = `{
             },
             "x-enum-varnames": [
                 "PublicMCPTypeProxySSE",
+                "PublicMCPTypeProxyStreamable",
                 "PublicMCPTypeGitRepo",
                 "PublicMCPTypeOpenAPI"
             ]

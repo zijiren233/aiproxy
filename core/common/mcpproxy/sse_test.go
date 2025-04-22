@@ -14,8 +14,8 @@ import (
 
 type TestEndpointHandler struct{}
 
-func (h *TestEndpointHandler) NewEndpoint() (string, string) {
-	return "test-session-id", "/message?sessionId=test-session-id"
+func (h *TestEndpointHandler) NewEndpoint(_ string) string {
+	return "/message?sessionId=test-session-id"
 }
 
 func (h *TestEndpointHandler) LoadEndpoint(endpoint string) string {
@@ -50,7 +50,7 @@ func TestProxySSEEndpoint(t *testing.T) {
 	// Create the proxy
 	store := mcpproxy.NewMemStore()
 	handler := &TestEndpointHandler{}
-	proxy := mcpproxy.NewProxy(backendServer.URL+"/sse", nil, store, handler)
+	proxy := mcpproxy.NewSSEProxy(backendServer.URL+"/sse", nil, store, handler)
 
 	// Setup the proxy server
 	proxyServer := httptest.NewServer(http.HandlerFunc(proxy.SSEHandler))

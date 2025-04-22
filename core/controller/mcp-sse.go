@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/bytedance/sonic"
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 )
@@ -47,6 +48,7 @@ func WithKeepAlive(keepAlive bool) SSEOption {
 }
 
 // NewSSEServer creates a new SSE server instance with the given MCP server and options.
+// TODO: notify support
 func NewSSEServer(server *server.MCPServer, opts ...SSEOption) *SSEServer {
 	s := &SSEServer{
 		server:            server,
@@ -68,7 +70,13 @@ func NewSSEServer(server *server.MCPServer, opts ...SSEOption) *SSEServer {
 // It sets up appropriate headers and creates a new session for the client.
 func (s *SSEServer) HandleSSE(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		errorResponse := CreateMCPErrorResponse(
+			nil,
+			mcp.METHOD_NOT_FOUND,
+			"method not allowed",
+		)
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		_ = sonic.ConfigDefault.NewEncoder(w).Encode(errorResponse)
 		return
 	}
 
@@ -79,7 +87,13 @@ func (s *SSEServer) HandleSSE(w http.ResponseWriter, r *http.Request) {
 
 	flusher, ok := w.(http.Flusher)
 	if !ok {
-		http.Error(w, "Streaming unsupported", http.StatusInternalServerError)
+		errorResponse := CreateMCPErrorResponse(
+			nil,
+			mcp.INTERNAL_ERROR,
+			"streaming unsupported",
+		)
+		w.WriteHeader(http.StatusInternalServerError)
+		_ = sonic.ConfigDefault.NewEncoder(w).Encode(errorResponse)
 		return
 	}
 
@@ -121,8 +135,8 @@ func (s *SSEServer) HandleSSE(w http.ResponseWriter, r *http.Request) {
 func (s *SSEServer) HandleMessage(req []byte) error {
 	// Parse message as raw JSON
 	var rawMessage json.RawMessage
-	if err := json.Unmarshal(req, &rawMessage); err != nil {
-		return errors.New("parse error")
+	if err := sonic.Unmarshal(req, &rawMessage); err != nil {
+		return err
 	}
 
 	// Process message through MCPServer
@@ -130,7 +144,7 @@ func (s *SSEServer) HandleMessage(req []byte) error {
 
 	// Only send response if there is one (not for notifications)
 	if response != nil {
-		eventData, err := json.Marshal(response)
+		eventData, err := sonic.Marshal(response)
 		if err != nil {
 			return err
 		}
@@ -140,36 +154,10 @@ func (s *SSEServer) HandleMessage(req []byte) error {
 		case s.eventQueue <- fmt.Sprintf("event: message\ndata: %s\n\n", eventData):
 			// Event queued successfully
 		default:
-			// Queue is full, could log this
+			// Queue is full
+			return errors.New("event queue is full")
 		}
 	}
 
 	return nil
-}
-
-func JSONRPCError(
-	id interface{},
-	code int,
-	message string,
-) ([]byte, error) {
-	return json.Marshal(createErrorResponse(id, code, message))
-}
-
-func createErrorResponse(
-	id interface{},
-	code int,
-	message string,
-) mcp.JSONRPCMessage {
-	return mcp.JSONRPCError{
-		JSONRPC: mcp.JSONRPC_VERSION,
-		ID:      id,
-		Error: struct {
-			Code    int         `json:"code"`
-			Message string      `json:"message"`
-			Data    interface{} `json:"data,omitempty"`
-		}{
-			Code:    code,
-			Message: message,
-		},
-	}
 }

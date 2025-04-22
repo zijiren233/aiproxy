@@ -18,9 +18,10 @@ const (
 type PublicMCPType string
 
 const (
-	PublicMCPTypeProxySSE PublicMCPType = "mcp_proxy_sse"
-	PublicMCPTypeGitRepo  PublicMCPType = "mcp_git_repo" // read only
-	PublicMCPTypeOpenAPI  PublicMCPType = "mcp_openapi"
+	PublicMCPTypeProxySSE        PublicMCPType = "mcp_proxy_sse"
+	PublicMCPTypeProxyStreamable PublicMCPType = "mcp_proxy_streamable"
+	PublicMCPTypeGitRepo         PublicMCPType = "mcp_git_repo" // read only
+	PublicMCPTypeOpenAPI         PublicMCPType = "mcp_openapi"
 )
 
 type ParamType string
@@ -42,7 +43,7 @@ type MCPPrice struct {
 	ToolsCallPrices       map[string]float64 `gorm:"serializer:fastjson;type:text" json:"tools_call_prices"`
 }
 
-type PublicMCPProxySSEConfig struct {
+type PublicMCPProxyConfig struct {
 	URL           string                  `json:"url"`
 	Querys        map[string]string       `json:"querys"`
 	Headers       map[string]string       `json:"headers"`
@@ -91,21 +92,21 @@ type MCPOpenAPIConfig struct {
 }
 
 type PublicMCP struct {
-	ID                     string                   `gorm:"primaryKey"                    json:"id"`
-	CreatedAt              time.Time                `gorm:"index"                         json:"created_at"`
-	UpdateAt               time.Time                `gorm:"index"                         json:"update_at"`
-	PublicMCPReusingParams []PublicMCPReusingParam  `gorm:"foreignKey:MCPID"              json:"-"`
-	Name                   string                   `json:"name"`
-	Type                   PublicMCPType            `gorm:"index"                         json:"type"`
-	RepoURL                string                   `json:"repo_url"`
-	ReadmeURL              string                   `json:"readme_url"`
-	Readme                 string                   `gorm:"type:text"                     json:"readme"`
-	Tags                   []string                 `gorm:"serializer:fastjson;type:text" json:"tags,omitempty"`
-	Author                 string                   `json:"author"`
-	LogoURL                string                   `json:"logo_url"`
-	Price                  MCPPrice                 `gorm:"embedded"                      json:"price"`
-	ProxySSEConfig         *PublicMCPProxySSEConfig `gorm:"serializer:fastjson;type:text" json:"proxy_sse_config,omitempty"`
-	OpenAPIConfig          *MCPOpenAPIConfig        `gorm:"serializer:fastjson;type:text" json:"openapi_config,omitempty"`
+	ID                     string                  `gorm:"primaryKey"                    json:"id"`
+	CreatedAt              time.Time               `gorm:"index"                         json:"created_at"`
+	UpdateAt               time.Time               `gorm:"index"                         json:"update_at"`
+	PublicMCPReusingParams []PublicMCPReusingParam `gorm:"foreignKey:MCPID"              json:"-"`
+	Name                   string                  `json:"name"`
+	Type                   PublicMCPType           `gorm:"index"                         json:"type"`
+	RepoURL                string                  `json:"repo_url"`
+	ReadmeURL              string                  `json:"readme_url"`
+	Readme                 string                  `gorm:"type:text"                     json:"readme"`
+	Tags                   []string                `gorm:"serializer:fastjson;type:text" json:"tags,omitempty"`
+	Author                 string                  `json:"author"`
+	LogoURL                string                  `json:"logo_url"`
+	Price                  MCPPrice                `gorm:"embedded"                      json:"price"`
+	ProxyConfig            *PublicMCPProxyConfig   `gorm:"serializer:fastjson;type:text" json:"proxy_config,omitempty"`
+	OpenAPIConfig          *MCPOpenAPIConfig       `gorm:"serializer:fastjson;type:text" json:"openapi_config,omitempty"`
 }
 
 func (p *PublicMCP) BeforeCreate(_ *gorm.DB) error {
@@ -124,8 +125,8 @@ func (p *PublicMCP) BeforeCreate(_ *gorm.DB) error {
 		return errors.New("openapi spec and content is empty")
 	}
 
-	if p.ProxySSEConfig != nil {
-		config := p.ProxySSEConfig
+	if p.ProxyConfig != nil {
+		config := p.ProxyConfig
 		return validateHTTPURL(config.URL)
 	}
 	return nil

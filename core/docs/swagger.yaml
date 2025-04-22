@@ -805,14 +805,14 @@ definitions:
         type: string
       openapi_config:
         $ref: '#/definitions/model.MCPOpenAPIConfig'
-      proxy_sse_config:
-        $ref: '#/definitions/model.GroupMCPProxySSEConfig'
+      proxy_config:
+        $ref: '#/definitions/model.GroupMCPProxyConfig'
       type:
         $ref: '#/definitions/model.GroupMCPType'
       update_at:
         type: string
     type: object
-  model.GroupMCPProxySSEConfig:
+  model.GroupMCPProxyConfig:
     properties:
       headers:
         additionalProperties:
@@ -828,10 +828,12 @@ definitions:
   model.GroupMCPType:
     enum:
     - mcp_proxy_sse
+    - mcp_proxy_streamable
     - mcp_openapi
     type: string
     x-enum-varnames:
     - GroupMCPTypeProxySSE
+    - GroupMCPTypeProxyStreamable
     - GroupMCPTypeOpenAPI
   model.GroupModelConfig:
     properties:
@@ -964,7 +966,7 @@ definitions:
         type: string
       openapi_spec:
         type: string
-      server:
+      server_addr:
         type: string
       v2:
         type: boolean
@@ -1185,8 +1187,8 @@ definitions:
         $ref: '#/definitions/model.MCPOpenAPIConfig'
       price:
         $ref: '#/definitions/model.MCPPrice'
-      proxy_sse_config:
-        $ref: '#/definitions/model.PublicMCPProxySSEConfig'
+      proxy_config:
+        $ref: '#/definitions/model.PublicMCPProxyConfig'
       readme:
         type: string
       readme_url:
@@ -1202,7 +1204,7 @@ definitions:
       update_at:
         type: string
     type: object
-  model.PublicMCPProxySSEConfig:
+  model.PublicMCPProxyConfig:
     properties:
       headers:
         additionalProperties:
@@ -1237,6 +1239,7 @@ definitions:
   model.PublicMCPType:
     enum:
     - mcp_proxy_sse
+    - mcp_proxy_streamable
     - mcp_git_repo
     - mcp_openapi
     type: string
@@ -1244,6 +1247,7 @@ definitions:
       PublicMCPTypeGitRepo: read only
     x-enum-varnames:
     - PublicMCPTypeProxySSE
+    - PublicMCPTypeProxyStreamable
     - PublicMCPTypeGitRepo
     - PublicMCPTypeOpenAPI
   model.RequestDetail:
@@ -5199,6 +5203,16 @@ paths:
     get:
       responses: {}
       summary: Group MCP SSE Server
+  /mcp/group/{id}/streamable:
+    delete:
+      responses: {}
+      summary: Group MCP Streamable Server
+    get:
+      responses: {}
+      summary: Group MCP Streamable Server
+    post:
+      responses: {}
+      summary: Group MCP Streamable Server
   /mcp/group/message:
     post:
       responses: {}
@@ -5207,10 +5221,20 @@ paths:
     get:
       responses: {}
       summary: Public MCP SSE Server
+  /mcp/public/{id}/streamable:
+    delete:
+      responses: {}
+      summary: Public MCP Streamable Server
+    get:
+      responses: {}
+      summary: Public MCP Streamable Server
+    post:
+      responses: {}
+      summary: Public MCP Streamable Server
   /mcp/public/message:
     post:
       responses: {}
-      summary: MCP SSE Proxy
+      summary: Public MCP SSE Server
   /v1/audio/speech:
     post:
       description: AudioSpeech

@@ -16,26 +16,27 @@ const (
 type GroupMCPType string
 
 const (
-	GroupMCPTypeProxySSE GroupMCPType = "mcp_proxy_sse"
-	GroupMCPTypeOpenAPI  GroupMCPType = "mcp_openapi"
+	GroupMCPTypeProxySSE        GroupMCPType = "mcp_proxy_sse"
+	GroupMCPTypeProxyStreamable GroupMCPType = "mcp_proxy_streamable"
+	GroupMCPTypeOpenAPI         GroupMCPType = "mcp_openapi"
 )
 
-type GroupMCPProxySSEConfig struct {
+type GroupMCPProxyConfig struct {
 	URL     string            `json:"url"`
 	Querys  map[string]string `json:"querys"`
 	Headers map[string]string `json:"headers"`
 }
 
 type GroupMCP struct {
-	ID             string                  `gorm:"primaryKey"                    json:"id"`
-	GroupID        string                  `gorm:"primaryKey"                    json:"group_id"`
-	Group          *Group                  `gorm:"foreignKey:GroupID"            json:"-"`
-	CreatedAt      time.Time               `gorm:"index"                         json:"created_at"`
-	UpdateAt       time.Time               `gorm:"index"                         json:"update_at"`
-	Name           string                  `json:"name"`
-	Type           GroupMCPType            `gorm:"index"                         json:"type"`
-	ProxySSEConfig *GroupMCPProxySSEConfig `gorm:"serializer:fastjson;type:text" json:"proxy_sse_config,omitempty"`
-	OpenAPIConfig  *MCPOpenAPIConfig       `gorm:"serializer:fastjson;type:text" json:"openapi_config,omitempty"`
+	ID            string               `gorm:"primaryKey"                    json:"id"`
+	GroupID       string               `gorm:"primaryKey"                    json:"group_id"`
+	Group         *Group               `gorm:"foreignKey:GroupID"            json:"-"`
+	CreatedAt     time.Time            `gorm:"index"                         json:"created_at"`
+	UpdateAt      time.Time            `gorm:"index"                         json:"update_at"`
+	Name          string               `json:"name"`
+	Type          GroupMCPType         `gorm:"index"                         json:"type"`
+	ProxyConfig   *GroupMCPProxyConfig `gorm:"serializer:fastjson;type:text" json:"proxy_config,omitempty"`
+	OpenAPIConfig *MCPOpenAPIConfig    `gorm:"serializer:fastjson;type:text" json:"openapi_config,omitempty"`
 }
 
 func (g *GroupMCP) BeforeCreate(_ *gorm.DB) (err error) {
@@ -57,8 +58,8 @@ func (g *GroupMCP) BeforeCreate(_ *gorm.DB) (err error) {
 		return errors.New("openapi spec and content is empty")
 	}
 
-	if g.ProxySSEConfig != nil {
-		config := g.ProxySSEConfig
+	if g.ProxyConfig != nil {
+		config := g.ProxyConfig
 		return validateHTTPURL(config.URL)
 	}
 
