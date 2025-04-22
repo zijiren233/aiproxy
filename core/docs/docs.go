@@ -6299,6 +6299,20 @@ const docTemplate = `{
                 "responses": {}
             }
         },
+        "/mcp/group/{id}/streamable": {
+            "get": {
+                "summary": "Group MCP Streamable Server",
+                "responses": {}
+            },
+            "post": {
+                "summary": "Group MCP Streamable Server",
+                "responses": {}
+            },
+            "delete": {
+                "summary": "Group MCP Streamable Server",
+                "responses": {}
+            }
+        },
         "/mcp/public/message": {
             "post": {
                 "summary": "Public MCP SSE Server",
@@ -8376,10 +8390,12 @@ const docTemplate = `{
             "type": "string",
             "enum": [
                 "mcp_proxy_sse",
+                "mcp_proxy_streamable",
                 "mcp_openapi"
             ],
             "x-enum-varnames": [
                 "GroupMCPTypeProxySSE",
+                "GroupMCPTypeProxyStreamable",
                 "GroupMCPTypeOpenAPI"
             ]
         },

@@ -828,10 +828,12 @@ definitions:
   model.GroupMCPType:
     enum:
     - mcp_proxy_sse
+    - mcp_proxy_streamable
     - mcp_openapi
     type: string
     x-enum-varnames:
     - GroupMCPTypeProxySSE
+    - GroupMCPTypeProxyStreamable
     - GroupMCPTypeOpenAPI
   model.GroupModelConfig:
     properties:
@@ -5201,6 +5203,16 @@ paths:
     get:
       responses: {}
       summary: Group MCP SSE Server
+  /mcp/group/{id}/streamable:
+    delete:
+      responses: {}
+      summary: Group MCP Streamable Server
+    get:
+      responses: {}
+      summary: Group MCP Streamable Server
+    post:
+      responses: {}
+      summary: Group MCP Streamable Server
   /mcp/group/message:
     post:
       responses: {}
