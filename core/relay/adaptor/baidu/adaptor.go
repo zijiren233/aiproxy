@@ -92,8 +92,7 @@ func (a *Adaptor) SetupRequestHeader(meta *meta.Meta, _ *gin.Context, req *http.
 func (a *Adaptor) ConvertRequest(meta *meta.Meta, req *http.Request) (string, http.Header, io.Reader, error) {
 	switch meta.Mode {
 	case mode.Embeddings:
-		meta.Set(openai.MetaEmbeddingsPatchInputToSlices, true)
-		return openai.ConvertRequest(meta, req)
+		return openai.ConvertEmbeddingsRequest(meta, req, true)
 	case mode.Rerank:
 		return openai.ConvertRequest(meta, req)
 	case mode.ImagesGenerations:
