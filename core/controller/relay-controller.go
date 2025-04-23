@@ -335,7 +335,7 @@ func relay(c *gin.Context, mode mode.Mode, relayController RelayController) {
 			return
 		}
 		gbc := middleware.GetGroupBalanceConsumerFromContext(c)
-		if !gbc.CheckBalance(consume.CalculateAmount(requestUsage, price)) {
+		if !gbc.CheckBalance(consume.CalculateAmount(http.StatusOK, requestUsage, price)) {
 			middleware.AbortLogWithMessage(c,
 				http.StatusForbidden,
 				fmt.Sprintf("group (%s) balance not enough", gbc.Group),
@@ -396,15 +396,14 @@ func recordResult(c *gin.Context, meta *meta.Meta, price model.Price, result *co
 
 	gbc := middleware.GetGroupBalanceConsumerFromContext(c)
 
-	if code == http.StatusOK {
-		amount := consume.CalculateAmount(
-			result.Usage,
-			price,
-		)
-		if amount > 0 {
-			log := middleware.GetLogger(c)
-			log.Data["amount"] = strconv.FormatFloat(amount, 'f', -1, 64)
-		}
+	amount := consume.CalculateAmount(
+		code,
+		result.Usage,
+		price,
+	)
+	if amount > 0 {
+		log := middleware.GetLogger(c)
+		log.Data["amount"] = strconv.FormatFloat(amount, 'f', -1, 64)
 	}
 
 	consume.AsyncConsume(

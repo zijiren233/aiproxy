@@ -72,11 +72,8 @@ func Consume(
 	requestDetail *model.RequestDetail,
 	downstreamResult bool,
 ) {
-	var amount float64
-	if code == http.StatusOK {
-		amount = CalculateAmount(usage, modelPrice)
-		amount = consumeAmount(ctx, amount, postGroupConsumer, meta)
-	}
+	amount := CalculateAmount(code, usage, modelPrice)
+	amount = consumeAmount(ctx, amount, postGroupConsumer, meta)
 
 	if requestDetail != nil && config.GetLogContentStorageHours() < 0 {
 		requestDetail = nil
@@ -118,10 +115,14 @@ func consumeAmount(
 }
 
 func CalculateAmount(
+	code int,
 	usage model.Usage,
 	modelPrice model.Price,
 ) float64 {
 	if modelPrice.PerRequestPrice != 0 {
+		if code != http.StatusOK {
+			return 0
+		}
 		return modelPrice.PerRequestPrice
 	}
 
