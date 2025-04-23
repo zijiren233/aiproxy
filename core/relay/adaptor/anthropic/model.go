@@ -38,8 +38,9 @@ type Metadata struct {
 
 type ImageSource struct {
 	Type      string `json:"type"`
-	MediaType string `json:"media_type"`
-	Data      string `json:"data"`
+	MediaType string `json:"media_type,omitempty"`
+	Data      string `json:"data,omitempty"`
+	URL       string `json:"url,omitempty"`
 }
 
 type Content struct {
@@ -56,8 +57,8 @@ type Content struct {
 }
 
 type Message struct {
-	Role    string    `json:"role"`
-	Content []Content `json:"content"`
+	Role    string     `json:"role"`
+	Content []*Content `json:"content"`
 }
 
 type Tool struct {

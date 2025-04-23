@@ -4,9 +4,11 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"errors"
 	"io"
 	"net/http"
 	"strings"
+	"sync"
 
 	"github.com/bytedance/sonic"
 	"github.com/bytedance/sonic/ast"
@@ -19,6 +21,7 @@ import (
 	"github.com/labring/aiproxy/core/relay/adaptor/openai"
 	"github.com/labring/aiproxy/core/relay/meta"
 	relaymodel "github.com/labring/aiproxy/core/relay/model"
+	"golang.org/x/sync/semaphore"
 )
 
 func ConvertRequest(meta *meta.Meta, req *http.Request) (string, http.Header, io.Reader, error) {
@@ -56,7 +59,8 @@ func ConvertImage2Base64(ctx context.Context, node *ast.Node) error {
 		return nil
 	}
 
-	return messagesNode.ForEach(func(_ ast.Sequence, msgNode *ast.Node) bool {
+	var imageItems []*ast.Node
+	err := messagesNode.ForEach(func(_ ast.Sequence, msgNode *ast.Node) bool {
 		contentNode := msgNode.Get("content")
 		if contentNode == nil || contentNode.TypeSafe() != ast.V_ARRAY {
 			return true
@@ -65,34 +69,70 @@ func ConvertImage2Base64(ctx context.Context, node *ast.Node) error {
 		err := contentNode.ForEach(func(_ ast.Sequence, contentItem *ast.Node) bool {
 			contentType, err := contentItem.Get("type").String()
 			if err == nil && contentType == conetentTypeImage {
-				convertImageURLToBase64(ctx, contentItem)
+				sourceNode := contentItem.Get("source")
+				if sourceNode != nil {
+					imageType, err := sourceNode.Get("type").String()
+					if err == nil && imageType == "url" {
+						imageItems = append(imageItems, contentItem)
+					}
+				}
 			}
 			return true
 		})
 		return err == nil
 	})
+	if err != nil {
+		return err
+	}
+
+	if len(imageItems) == 0 {
+		return nil
+	}
+
+	sem := semaphore.NewWeighted(3)
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+	var processErrs []error
+
+	for _, item := range imageItems {
+		wg.Add(1)
+		go func(contentItem *ast.Node) {
+			defer wg.Done()
+			_ = sem.Acquire(ctx, 1)
+			defer sem.Release(1)
+
+			err := convertImageURLToBase64(ctx, contentItem)
+			if err != nil {
+				mu.Lock()
+				processErrs = append(processErrs, err)
+				mu.Unlock()
+			}
+		}(item)
+	}
+
+	wg.Wait()
+
+	if len(processErrs) != 0 {
+		return errors.Join(processErrs...)
+	}
+	return nil
 }
 
 // convertImageURLToBase64 converts an image URL to base64 encoded data
-func convertImageURLToBase64(ctx context.Context, contentItem *ast.Node) {
+func convertImageURLToBase64(ctx context.Context, contentItem *ast.Node) error {
 	sourceNode := contentItem.Get("source")
 	if sourceNode == nil {
-		return
-	}
-
-	imageType, err := sourceNode.Get("type").String()
-	if err != nil || imageType != "url" {
-		return
+		return nil
 	}
 
 	url, err := sourceNode.Get("url").String()
 	if err != nil {
-		return
+		return nil
 	}
 
 	mimeType, data, err := image.GetImageFromURL(ctx, url)
 	if err != nil {
-		return
+		return nil
 	}
 
 	patches := []func() (bool, error){
@@ -104,9 +144,11 @@ func convertImageURLToBase64(ctx context.Context, contentItem *ast.Node) {
 
 	for _, patch := range patches {
 		if _, err := patch(); err != nil {
-			return
+			return err
 		}
 	}
+
+	return nil
 }
 
 func StreamHandler(m *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, *relaymodel.ErrorWithStatusCode) {

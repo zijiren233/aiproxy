@@ -66,8 +66,8 @@ type Part struct {
 }
 
 type ChatContent struct {
-	Role  string `json:"role,omitempty"`
-	Parts []Part `json:"parts"`
+	Role  string  `json:"role,omitempty"`
+	Parts []*Part `json:"parts"`
 }
 
 type ChatSafetySettings struct {

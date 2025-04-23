@@ -29,7 +29,7 @@ func ConvertEmbeddingRequest(meta *meta.Meta, req *http.Request) (string, http.H
 		requests[i] = EmbeddingRequest{
 			Model: model,
 			Content: ChatContent{
-				Parts: []Part{
+				Parts: []*Part{
 					{
 						Text: input,
 					},

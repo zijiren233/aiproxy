@@ -2,8 +2,11 @@ package anthropic
 
 import (
 	"bufio"
+	"context"
+	"errors"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/bytedance/sonic"
@@ -17,6 +20,7 @@ import (
 	"github.com/labring/aiproxy/core/relay/adaptor/openai"
 	"github.com/labring/aiproxy/core/relay/meta"
 	relaymodel "github.com/labring/aiproxy/core/relay/model"
+	"golang.org/x/sync/semaphore"
 )
 
 const (
@@ -128,7 +132,7 @@ func OpenAIConvertRequest(meta *meta.Meta, req *http.Request) (*Request, error) 
 		claudeToolChoice := struct {
 			Type string `json:"type"`
 			Name string `json:"name,omitempty"`
-		}{Type: "auto"} // default value https://docs.anthropic.com/en/docs/build-with-claude/tool-use#controlling-claudes-output
+		}{Type: "auto"}
 		if choice, ok := textRequest.ToolChoice.(map[string]any); ok {
 			if function, ok := choice["function"].(map[string]any); ok {
 				claudeToolChoice.Type = "tool"
@@ -142,6 +146,8 @@ func OpenAIConvertRequest(meta *meta.Meta, req *http.Request) (*Request, error) 
 		}
 		claudeRequest.ToolChoice = claudeToolChoice
 	}
+
+	var imageTasks []*Content
 
 	for _, message := range textRequest.Messages {
 		if message.Role == "system" {
@@ -167,9 +173,9 @@ func OpenAIConvertRequest(meta *meta.Meta, req *http.Request) (*Request, error) 
 				content.Text = ""
 				content.ToolUseID = message.ToolCallID
 			}
-			claudeMessage.Content = append(claudeMessage.Content, content)
+			claudeMessage.Content = append(claudeMessage.Content, &content)
 		} else {
-			var contents []Content
+			var contents []*Content
 			openaiContent := message.ParseContent()
 			for _, part := range openaiContent {
 				var content Content
@@ -180,16 +186,12 @@ func OpenAIConvertRequest(meta *meta.Meta, req *http.Request) (*Request, error) 
 				case relaymodel.ContentTypeImageURL:
 					content.Type = conetentTypeImage
 					content.Source = &ImageSource{
-						Type: "base64",
+						Type: "url",
+						URL:  part.ImageURL.URL,
 					}
-					mimeType, data, err := image.GetImageFromURL(req.Context(), part.ImageURL.URL)
-					if err != nil {
-						return nil, err
-					}
-					content.Source.MediaType = mimeType
-					content.Source.Data = data
+					imageTasks = append(imageTasks, &content)
 				}
-				contents = append(contents, content)
+				contents = append(contents, &content)
 			}
 			claudeMessage.Content = contents
 		}
@@ -197,7 +199,7 @@ func OpenAIConvertRequest(meta *meta.Meta, req *http.Request) (*Request, error) 
 		for _, toolCall := range message.ToolCalls {
 			inputParam := make(map[string]any)
 			_ = sonic.UnmarshalString(toolCall.Function.Arguments, &inputParam)
-			claudeMessage.Content = append(claudeMessage.Content, Content{
+			claudeMessage.Content = append(claudeMessage.Content, &Content{
 				Type:  toolUseType,
 				ID:    toolCall.ID,
 				Name:  toolCall.Function.Name,
@@ -207,7 +209,54 @@ func OpenAIConvertRequest(meta *meta.Meta, req *http.Request) (*Request, error) 
 		claudeRequest.Messages = append(claudeRequest.Messages, claudeMessage)
 	}
 
+	if len(imageTasks) > 0 {
+		err := batchPatchImage2Base64(req.Context(), imageTasks)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	return &claudeRequest, nil
+}
+
+func batchPatchImage2Base64(ctx context.Context, imageTasks []*Content) error {
+	sem := semaphore.NewWeighted(3)
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+	var processErrs []error
+
+	for _, task := range imageTasks {
+		if task.Source.URL == "" {
+			continue
+		}
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+
+			_ = sem.Acquire(ctx, 1)
+			defer sem.Release(1)
+
+			mimeType, data, err := image.GetImageFromURL(ctx, task.Source.URL)
+			if err != nil {
+				mu.Lock()
+				processErrs = append(processErrs, err)
+				mu.Unlock()
+				return
+			}
+
+			task.Source.Type = "base64"
+			task.Source.URL = ""
+			task.Source.MediaType = mimeType
+			task.Source.Data = data
+		}()
+	}
+
+	wg.Wait()
+
+	if len(processErrs) != 0 {
+		return errors.Join(processErrs...)
+	}
+	return nil
 }
 
 // https://docs.anthropic.com/claude/reference/messages-streaming
