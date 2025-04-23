@@ -1002,18 +1002,6 @@ const docTemplate = `{
                         "in": "query"
                     },
                     {
-                        "type": "boolean",
-                        "description": "Only return result",
-                        "name": "result_only",
-                        "in": "query"
-                    },
-                    {
-                        "type": "boolean",
-                        "description": "Token usage",
-                        "name": "token_usage",
-                        "in": "query"
-                    },
-                    {
                         "type": "integer",
                         "description": "Start second timestamp",
                         "name": "start_timestamp",
@@ -1023,12 +1011,6 @@ const docTemplate = `{
                         "type": "integer",
                         "description": "End second timestamp",
                         "name": "end_timestamp",
-                        "in": "query"
-                    },
-                    {
-                        "type": "boolean",
-                        "description": "From log",
-                        "name": "from_log",
                         "in": "query"
                     },
                     {
@@ -1102,18 +1084,6 @@ const docTemplate = `{
                         "in": "query"
                     },
                     {
-                        "type": "boolean",
-                        "description": "Only return result",
-                        "name": "result_only",
-                        "in": "query"
-                    },
-                    {
-                        "type": "boolean",
-                        "description": "Token usage",
-                        "name": "token_usage",
-                        "in": "query"
-                    },
-                    {
                         "type": "integer",
                         "description": "Start second timestamp",
                         "name": "start_timestamp",
@@ -1123,12 +1093,6 @@ const docTemplate = `{
                         "type": "integer",
                         "description": "End second timestamp",
                         "name": "end_timestamp",
-                        "in": "query"
-                    },
-                    {
-                        "type": "boolean",
-                        "description": "From log",
-                        "name": "from_log",
                         "in": "query"
                     },
                     {
@@ -4298,18 +4262,6 @@ const docTemplate = `{
                         "description": "End timestamp",
                         "name": "end_timestamp",
                         "in": "query"
-                    },
-                    {
-                        "type": "boolean",
-                        "description": "Token usage",
-                        "name": "token_usage",
-                        "in": "query"
-                    },
-                    {
-                        "type": "boolean",
-                        "description": "From log",
-                        "name": "from_log",
-                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -4370,18 +4322,6 @@ const docTemplate = `{
                         "type": "integer",
                         "description": "End timestamp",
                         "name": "end_timestamp",
-                        "in": "query"
-                    },
-                    {
-                        "type": "boolean",
-                        "description": "Token usage",
-                        "name": "token_usage",
-                        "in": "query"
-                    },
-                    {
-                        "type": "boolean",
-                        "description": "From log",
-                        "name": "from_log",
                         "in": "query"
                     }
                 ],
@@ -8564,9 +8504,6 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "retry_times": {
-                    "type": "integer"
-                },
-                "timestamp_trunc_by_hour": {
                     "type": "integer"
                 },
                 "token_id": {

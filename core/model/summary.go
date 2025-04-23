@@ -274,7 +274,7 @@ func getLogGroupByValues[T cmp.Ordered](field string, group string, start, end t
 	return values, nil
 }
 
-func getModelCostRank(group string, channelID int, start, end time.Time) ([]*ModelCostRank, error) {
+func GetModelCostRank(group string, channelID int, start, end time.Time) ([]*ModelCostRank, error) {
 	var ranks []*ModelCostRank
 
 	var query *gorm.DB
