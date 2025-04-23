@@ -75,10 +75,9 @@ func ConvertRequest(meta *meta.Meta, req *http.Request) (string, http.Header, io
 	}
 	switch meta.Mode {
 	case mode.Moderations:
-		meta.Set(MetaEmbeddingsPatchInputToSlices, true)
-		return ConvertEmbeddingsRequest(meta, req)
+		return ConvertEmbeddingsRequest(meta, req, true)
 	case mode.Embeddings, mode.Completions:
-		return ConvertEmbeddingsRequest(meta, req)
+		return ConvertEmbeddingsRequest(meta, req, false)
 	case mode.ChatCompletions:
 		return ConvertTextRequest(meta, req, false)
 	case mode.ImagesGenerations:

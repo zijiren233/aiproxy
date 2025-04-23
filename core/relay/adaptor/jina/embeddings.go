@@ -1,4 +1,4 @@
-package openai
+package jina
 
 import (
 	"bytes"
@@ -11,7 +11,7 @@ import (
 )
 
 //nolint:gocritic
-func ConvertEmbeddingsRequest(meta *meta.Meta, req *http.Request, inputToSlices bool) (string, http.Header, io.Reader, error) {
+func ConvertEmbeddingsRequest(meta *meta.Meta, req *http.Request) (string, http.Header, io.Reader, error) {
 	reqMap := make(map[string]any)
 	err := common.UnmarshalBodyReusable(req, &reqMap)
 	if err != nil {
@@ -20,12 +20,12 @@ func ConvertEmbeddingsRequest(meta *meta.Meta, req *http.Request, inputToSlices 
 
 	reqMap["model"] = meta.ActualModel
 
-	if inputToSlices {
-		switch v := reqMap["input"].(type) {
-		case string:
-			reqMap["input"] = []string{v}
-		}
+	switch v := reqMap["input"].(type) {
+	case string:
+		reqMap["input"] = []string{v}
 	}
+
+	delete(reqMap, "encoding_format")
 
 	jsonData, err := sonic.Marshal(reqMap)
 	if err != nil {
