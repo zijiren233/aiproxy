@@ -123,7 +123,6 @@ func STTHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Us
 		TotalTokens:  promptTokens,
 	}
 
-	var respData []byte
 	switch {
 	case responseFormat == "text",
 		responseFormat == "json",
@@ -132,19 +131,37 @@ func STTHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Us
 		if err != nil {
 			return usage.ToModelUsage(), ErrorWrapper(err, "get_node_from_body_err", http.StatusInternalServerError)
 		}
+		if node.Get("usage").Exists() {
+			usageStr, err := node.Get("usage").Raw()
+			if err != nil {
+				return usage.ToModelUsage(), ErrorWrapper(err, "unmarshal_response_err", http.StatusInternalServerError)
+			}
+			err = sonic.UnmarshalString(usageStr, usage)
+			if err != nil {
+				return usage.ToModelUsage(), ErrorWrapper(err, "unmarshal_response_err", http.StatusInternalServerError)
+			}
+			switch {
+			case usage.PromptTokens != 0 && usage.TotalTokens == 0:
+				usage.TotalTokens = usage.PromptTokens
+			case usage.PromptTokens == 0 && usage.TotalTokens != 0:
+				usage.PromptTokens = usage.TotalTokens
+			default:
+				usage.PromptTokens = promptTokens
+				usage.TotalTokens = promptTokens
+			}
+		}
+
 		_, err = node.SetAny("usage", usage)
 		if err != nil {
 			return usage.ToModelUsage(), ErrorWrapper(err, "marshal_response_err", http.StatusInternalServerError)
 		}
-		respData, err = node.MarshalJSON()
+		responseBody, err = node.MarshalJSON()
 		if err != nil {
 			return usage.ToModelUsage(), ErrorWrapper(err, "marshal_response_err", http.StatusInternalServerError)
 		}
-	default:
-		respData = responseBody
 	}
 
-	_, err = c.Writer.Write(respData)
+	_, err = c.Writer.Write(responseBody)
 	if err != nil {
 		log.Warnf("write response body failed: %v", err)
 	}
