@@ -215,6 +215,10 @@ func STTDoResponse(meta *meta.Meta, c *gin.Context, _ *http.Response) (usage *mo
 			usage.TotalTokens = msg.Payload.Usage.Characters
 			c.JSON(http.StatusOK, gin.H{
 				"text": output.String(),
+				"usage": relaymodel.Usage{
+					PromptTokens: usage.InputTokens,
+					TotalTokens:  usage.TotalTokens,
+				},
 			})
 			return usage, nil
 		case "task-failed":
