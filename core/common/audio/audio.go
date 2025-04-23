@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/labring/aiproxy/core/common/config"
+	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -18,6 +19,7 @@ var (
 )
 
 func GetAudioDuration(audio io.Reader) (float64, error) {
+	logrus.Debug(config.FfmpegEnabled)
 	if !config.FfmpegEnabled {
 		return 0, nil
 	}
@@ -74,6 +76,8 @@ func getAudioDurationFallback(audio io.Reader) (float64, error) {
 	if err != nil {
 		return 0, err
 	}
+
+	logrus.Debug(stderr.String())
 
 	// Parse the time from ffmpeg output
 	// Example: size=N/A time=00:00:05.52 bitrate=N/A speed= 785x
