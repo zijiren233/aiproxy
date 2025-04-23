@@ -18,7 +18,7 @@ var (
 var (
 	DisableAutoMigrateDB = env.Bool("DISABLE_AUTO_MIGRATE_DB", false)
 	AdminKey             = os.Getenv("ADMIN_KEY")
-	FfprobeEnabled       = env.Bool("FFPROBE_ENABLED", false)
+	FfmpegEnabled        = env.Bool("FFMPEG_ENABLED", false)
 )
 
 var (

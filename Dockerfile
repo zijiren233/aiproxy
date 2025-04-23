@@ -29,7 +29,7 @@ COPY --from=builder /aiproxy/core/aiproxy /usr/local/bin/aiproxy
 
 ENV PUID=0 PGID=0 UMASK=022
 
-ENV FFPROBE_ENABLED=true
+ENV FFMPEG_ENABLED=true
 
 EXPOSE 3000
 
