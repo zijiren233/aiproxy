@@ -156,7 +156,7 @@ func buildMessageParts(message relaymodel.MessageContent) *Part {
 	return part
 }
 
-func buildContents(textRequest *relaymodel.GeneralOpenAIRequest) (*ChatContent, []*ChatContent, []*Part, error) {
+func buildContents(textRequest *relaymodel.GeneralOpenAIRequest) (*ChatContent, []*ChatContent, []*Part) {
 	contents := make([]*ChatContent, 0, len(textRequest.Messages))
 	var imageTasks []*Part
 
@@ -234,7 +234,7 @@ func buildContents(textRequest *relaymodel.GeneralOpenAIRequest) (*ChatContent, 
 		contents = append(contents, &content)
 	}
 
-	return systemContent, contents, imageTasks, nil
+	return systemContent, contents, imageTasks
 }
 
 func processImageTasks(ctx context.Context, imageTasks []*Part) error {
@@ -288,10 +288,7 @@ func ConvertRequest(meta *meta.Meta, req *http.Request) (string, http.Header, io
 	textRequest.Model = meta.ActualModel
 	meta.Set("stream", textRequest.Stream)
 
-	systemContent, contents, imageTasks, err := buildContents(textRequest)
-	if err != nil {
-		return "", nil, nil, err
-	}
+	systemContent, contents, imageTasks := buildContents(textRequest)
 
 	// Process image tasks concurrently
 	if len(imageTasks) > 0 {
