@@ -130,7 +130,10 @@ func STTHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Us
 		if err != nil {
 			return usage.ToModelUsage(), ErrorWrapper(err, "get_node_from_body_err", http.StatusInternalServerError)
 		}
-		node.SetAny("usage", usage)
+		_, err = node.SetAny("usage", usage)
+		if err != nil {
+			return usage.ToModelUsage(), ErrorWrapper(err, "marshal_response_err", http.StatusInternalServerError)
+		}
 		respData, err = node.MarshalJSON()
 		if err != nil {
 			return usage.ToModelUsage(), ErrorWrapper(err, "marshal_response_err", http.StatusInternalServerError)
