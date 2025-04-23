@@ -124,8 +124,10 @@ func STTHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Us
 	}
 
 	var respData []byte
-	switch responseFormat {
-	case "text", "json":
+	switch {
+	case responseFormat == "text",
+		responseFormat == "json",
+		strings.Contains(resp.Header.Get("Content-Type"), "json"):
 		node, err := sonic.Get(responseBody)
 		if err != nil {
 			return usage.ToModelUsage(), ErrorWrapper(err, "get_node_from_body_err", http.StatusInternalServerError)
