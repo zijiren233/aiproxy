@@ -7,8 +7,8 @@ import (
 )
 
 type Usage struct {
-	PromptTokens     int64 `json:"prompt_tokens"`
-	CompletionTokens int64 `json:"completion_tokens"`
+	PromptTokens     int64 `json:"prompt_tokens,omitempty"`
+	CompletionTokens int64 `json:"completion_tokens,omitempty"`
 	TotalTokens      int64 `json:"total_tokens"`
 
 	WebSearchCount int64 `json:"web_search_count,omitempty"`

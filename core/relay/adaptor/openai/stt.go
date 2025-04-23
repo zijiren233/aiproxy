@@ -118,18 +118,36 @@ func STTHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Us
 		promptTokens = CountTokenText(text, meta.ActualModel)
 	}
 
-	for k, v := range resp.Header {
-		c.Writer.Header().Set(k, v[0])
+	usage := &relaymodel.Usage{
+		PromptTokens: promptTokens,
+		TotalTokens:  promptTokens,
 	}
-	_, err = c.Writer.Write(responseBody)
+
+	var respData []byte
+	switch responseFormat {
+	case "text", "json":
+		node, err := sonic.Get(responseBody)
+		if err != nil {
+			return usage.ToModelUsage(), ErrorWrapper(err, "get_node_from_body_err", http.StatusInternalServerError)
+		}
+		_, err = node.SetAny("usage", usage)
+		if err != nil {
+			return usage.ToModelUsage(), ErrorWrapper(err, "marshal_response_err", http.StatusInternalServerError)
+		}
+		respData, err = node.MarshalJSON()
+		if err != nil {
+			return usage.ToModelUsage(), ErrorWrapper(err, "marshal_response_err", http.StatusInternalServerError)
+		}
+	default:
+		respData = responseBody
+	}
+
+	_, err = c.Writer.Write(respData)
 	if err != nil {
 		log.Warnf("write response body failed: %v", err)
 	}
 
-	return &model.Usage{
-		InputTokens: promptTokens,
-		TotalTokens: promptTokens,
-	}, nil
+	return usage.ToModelUsage(), nil
 }
 
 func getTextFromVTT(body []byte) (string, error) {
