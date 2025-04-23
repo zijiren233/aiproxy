@@ -3,15 +3,17 @@ package splitter
 import "github.com/labring/aiproxy/core/common/conv"
 
 const (
-	ThinkHead = "<think>\n"
-	ThinkTail = "</think>\n"
+	NThinkHead = "\n<think>\n"
+	ThinkHead  = "<think>\n"
+	ThinkTail  = "</think>\n"
 )
 
 var (
-	thinkHeadBytes = conv.StringToBytes(ThinkHead)
-	thinkTailBytes = conv.StringToBytes(ThinkTail)
+	nthinkHeadBytes = conv.StringToBytes(NThinkHead)
+	thinkHeadBytes  = conv.StringToBytes(ThinkHead)
+	thinkTailBytes  = conv.StringToBytes(ThinkTail)
 )
 
 func NewThinkSplitter() *Splitter {
-	return NewSplitter(thinkHeadBytes, thinkTailBytes)
+	return NewSplitter([][]byte{nthinkHeadBytes, thinkHeadBytes}, [][]byte{thinkTailBytes})
 }
