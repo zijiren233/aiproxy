@@ -152,7 +152,6 @@ func fillGaps(data []*model.ChartData, start, end time.Time, t model.TimeSpanTyp
 //	@Param			token_usage		query		bool	false	"Token usage"
 //	@Param			start_timestamp	query		int64	false	"Start second timestamp"
 //	@Param			end_timestamp	query		int64	false	"End second timestamp"
-//	@Param			from_log		query		bool	false	"From log"
 //	@Param			timezone		query		string	false	"Timezone, default is Local"
 //	@Success		200				{object}	middleware.APIResponse{data=model.DashboardResponse}
 //	@Router			/api/dashboard [get]
@@ -168,11 +167,10 @@ func GetDashboard(c *gin.Context) {
 	resultOnly, _ := strconv.ParseBool(c.Query("result_only"))
 	tokenUsage, _ := strconv.ParseBool(c.Query("token_usage"))
 	channelID, _ := strconv.Atoi(c.Query("channel"))
-	fromLog, _ := strconv.ParseBool(c.Query("from_log"))
 
 	needRPM := channelID != 0
 
-	dashboards, err := model.GetDashboardData(group, start, end, modelName, channelID, timeSpan, resultOnly, needRPM, tokenUsage, fromLog, timezoneLocation)
+	dashboards, err := model.GetDashboardData(group, start, end, modelName, channelID, timeSpan, resultOnly, needRPM, tokenUsage, timezoneLocation)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusOK, err.Error())
 		return
@@ -207,7 +205,6 @@ func GetDashboard(c *gin.Context) {
 //	@Param			token_usage		query		bool	false	"Token usage"
 //	@Param			start_timestamp	query		int64	false	"Start second timestamp"
 //	@Param			end_timestamp	query		int64	false	"End second timestamp"
-//	@Param			from_log		query		bool	false	"From log"
 //	@Param			timezone		query		string	false	"Timezone, default is Local"
 //	@Success		200				{object}	middleware.APIResponse{data=model.GroupDashboardResponse}
 //	@Router			/api/dashboard/{group} [get]
@@ -228,11 +225,10 @@ func GetGroupDashboard(c *gin.Context) {
 	modelName := c.Query("model")
 	resultOnly, _ := strconv.ParseBool(c.Query("result_only"))
 	tokenUsage, _ := strconv.ParseBool(c.Query("token_usage"))
-	fromLog, _ := strconv.ParseBool(c.Query("from_log"))
 
 	needRPM := tokenName != ""
 
-	dashboards, err := model.GetGroupDashboardData(group, start, end, tokenName, modelName, timeSpan, resultOnly, needRPM, tokenUsage, fromLog, timezoneLocation)
+	dashboards, err := model.GetGroupDashboardData(group, start, end, tokenName, modelName, timeSpan, resultOnly, needRPM, tokenUsage, timezoneLocation)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusOK, "failed to get statistics")
 		return
@@ -305,17 +301,13 @@ func GetGroupDashboardModels(c *gin.Context) {
 //	@Param			channel			query		int		false	"Channel ID"
 //	@Param			start_timestamp	query		int64	false	"Start timestamp"
 //	@Param			end_timestamp	query		int64	false	"End timestamp"
-//	@Param			token_usage		query		bool	false	"Token usage"
-//	@Param			from_log		query		bool	false	"From log"
 //	@Success		200				{object}	middleware.APIResponse{data=[]model.ModelCostRank}
 //	@Router			/api/model_cost_rank [get]
 func GetModelCostRank(c *gin.Context) {
 	group := c.Query("group")
 	channelID, _ := strconv.Atoi(c.Query("channel"))
 	startTime, endTime := parseTimeRange(c)
-	tokenUsage, _ := strconv.ParseBool(c.Query("token_usage"))
-	fromLog, _ := strconv.ParseBool(c.Query("from_log"))
-	models, err := model.GetModelCostRank(group, channelID, startTime, endTime, tokenUsage, fromLog)
+	models, err := model.GetModelCostRank(group, channelID, startTime, endTime)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusOK, err.Error())
 		return
@@ -333,8 +325,6 @@ func GetModelCostRank(c *gin.Context) {
 //	@Param			group			path		string	true	"Group"
 //	@Param			start_timestamp	query		int64	false	"Start timestamp"
 //	@Param			end_timestamp	query		int64	false	"End timestamp"
-//	@Param			token_usage		query		bool	false	"Token usage"
-//	@Param			from_log		query		bool	false	"From log"
 //	@Success		200				{object}	middleware.APIResponse{data=[]model.ModelCostRank}
 //	@Router			/api/model_cost_rank/{group} [get]
 func GetGroupModelCostRank(c *gin.Context) {
@@ -344,9 +334,7 @@ func GetGroupModelCostRank(c *gin.Context) {
 		return
 	}
 	startTime, endTime := parseTimeRange(c)
-	tokenUsage, _ := strconv.ParseBool(c.Query("token_usage"))
-	fromLog, _ := strconv.ParseBool(c.Query("from_log"))
-	models, err := model.GetModelCostRank(group, 0, startTime, endTime, tokenUsage, fromLog)
+	models, err := model.GetModelCostRank(group, 0, startTime, endTime)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusOK, err.Error())
 		return

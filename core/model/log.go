@@ -114,29 +114,28 @@ func (u *Usage) Add(other *Usage) {
 }
 
 type Log struct {
-	RequestDetail        *RequestDetail  `gorm:"foreignKey:LogID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"request_detail,omitempty"`
-	RequestAt            time.Time       `gorm:"index"                                                          json:"request_at"`
-	RetryAt              time.Time       `json:"retry_at,omitempty"`
-	TTFBMilliseconds     ZeroNullInt64   `json:"ttfb_milliseconds,omitempty"`
-	TimestampTruncByHour int64           `json:"timestamp_trunc_by_hour"`
-	CreatedAt            time.Time       `gorm:"autoCreateTime;index"                                           json:"created_at"`
-	TokenName            string          `json:"token_name,omitempty"`
-	Endpoint             EmptyNullString `json:"endpoint,omitempty"`
-	Content              EmptyNullString `gorm:"type:text"                                                      json:"content,omitempty"`
-	GroupID              string          `json:"group,omitempty"`
-	Model                string          `json:"model"`
-	RequestID            EmptyNullString `gorm:"index:,where:request_id is not null"                            json:"request_id"`
-	ID                   int             `gorm:"primaryKey"                                                     json:"id"`
-	TokenID              int             `gorm:"index"                                                          json:"token_id,omitempty"`
-	ChannelID            int             `json:"channel,omitempty"`
-	Code                 int             `gorm:"index"                                                          json:"code,omitempty"`
-	Mode                 int             `json:"mode,omitempty"`
-	IP                   EmptyNullString `gorm:"index:,where:ip is not null"                                    json:"ip,omitempty"`
-	RetryTimes           ZeroNullInt64   `json:"retry_times,omitempty"`
-	DownstreamResult     bool            `json:"downstream_result,omitempty"`
-	Price                Price           `gorm:"embedded"                                                       json:"price,omitempty"`
-	Usage                Usage           `gorm:"embedded"                                                       json:"usage,omitempty"`
-	UsedAmount           float64         `json:"used_amount,omitempty"`
+	RequestDetail    *RequestDetail  `gorm:"foreignKey:LogID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"request_detail,omitempty"`
+	RequestAt        time.Time       `gorm:"index"                                                          json:"request_at"`
+	RetryAt          time.Time       `json:"retry_at,omitempty"`
+	TTFBMilliseconds ZeroNullInt64   `json:"ttfb_milliseconds,omitempty"`
+	CreatedAt        time.Time       `gorm:"autoCreateTime;index"                                           json:"created_at"`
+	TokenName        string          `json:"token_name,omitempty"`
+	Endpoint         EmptyNullString `json:"endpoint,omitempty"`
+	Content          EmptyNullString `gorm:"type:text"                                                      json:"content,omitempty"`
+	GroupID          string          `json:"group,omitempty"`
+	Model            string          `json:"model"`
+	RequestID        EmptyNullString `gorm:"index:,where:request_id is not null"                            json:"request_id"`
+	ID               int             `gorm:"primaryKey"                                                     json:"id"`
+	TokenID          int             `gorm:"index"                                                          json:"token_id,omitempty"`
+	ChannelID        int             `json:"channel,omitempty"`
+	Code             int             `gorm:"index"                                                          json:"code,omitempty"`
+	Mode             int             `json:"mode,omitempty"`
+	IP               EmptyNullString `gorm:"index:,where:ip is not null"                                    json:"ip,omitempty"`
+	RetryTimes       ZeroNullInt64   `json:"retry_times,omitempty"`
+	DownstreamResult bool            `json:"downstream_result,omitempty"`
+	Price            Price           `gorm:"embedded"                                                       json:"price,omitempty"`
+	Usage            Usage           `gorm:"embedded"                                                       json:"usage,omitempty"`
+	UsedAmount       float64         `json:"used_amount,omitempty"`
 }
 
 func CreateLogIndexes(db *gorm.DB) error {
@@ -151,11 +150,6 @@ func CreateLogIndexes(db *gorm.DB) error {
 			// used by global search logs
 			"CREATE INDEX IF NOT EXISTS idx_channel_model_reqat ON logs (channel_id, model, request_at DESC)",
 
-			// global hour indexes, used by global dashboard
-			"CREATE INDEX IF NOT EXISTS idx_model_trunchour ON logs (model, timestamp_trunc_by_hour)",
-			"CREATE INDEX IF NOT EXISTS idx_channel_trunchour ON logs (channel_id, timestamp_trunc_by_hour)",
-			"CREATE INDEX IF NOT EXISTS idx_channel_model_trunchour ON logs (channel_id, model, timestamp_trunc_by_hour)",
-
 			// used by search group logs
 			"CREATE INDEX IF NOT EXISTS idx_group_reqat ON logs (group_id, request_at DESC)",
 			// used by search group logs
@@ -164,12 +158,6 @@ func CreateLogIndexes(db *gorm.DB) error {
 			"CREATE INDEX IF NOT EXISTS idx_group_model_reqat ON logs (group_id, model, request_at DESC)",
 			// used by search group logs
 			"CREATE INDEX IF NOT EXISTS idx_group_token_model_reqat ON logs (group_id, token_name, model, request_at DESC)",
-
-			// hour indexes, used by dashboard
-			"CREATE INDEX IF NOT EXISTS idx_group_trunchour ON logs (group_id, timestamp_trunc_by_hour DESC)",
-			"CREATE INDEX IF NOT EXISTS idx_group_model_trunchour ON logs (group_id, model, timestamp_trunc_by_hour DESC)",
-			"CREATE INDEX IF NOT EXISTS idx_group_token_trunchour ON logs (group_id, token_name, timestamp_trunc_by_hour DESC)",
-			"CREATE INDEX IF NOT EXISTS idx_group_model_token_trunchour ON logs (group_id, model, token_name, timestamp_trunc_by_hour DESC)",
 		}
 	} else {
 		indexes = []string{
@@ -180,11 +168,6 @@ func CreateLogIndexes(db *gorm.DB) error {
 			// used by global search logs
 			"CREATE INDEX IF NOT EXISTS idx_channel_model_reqat ON logs (channel_id, model, request_at DESC) INCLUDE (code, downstream_result)",
 
-			// global hour indexes, used by global dashboard
-			"CREATE INDEX IF NOT EXISTS idx_model_trunchour ON logs (model, timestamp_trunc_by_hour) INCLUDE (downstream_result)",
-			"CREATE INDEX IF NOT EXISTS idx_channel_trunchour ON logs (channel_id, timestamp_trunc_by_hour) INCLUDE (downstream_result)",
-			"CREATE INDEX IF NOT EXISTS idx_channel_model_trunchour ON logs (channel_id, model, timestamp_trunc_by_hour) INCLUDE (downstream_result)",
-
 			// used by search group logs
 			"CREATE INDEX IF NOT EXISTS idx_group_reqat ON logs (group_id, request_at DESC) INCLUDE (code, downstream_result)",
 			// used by search group logs
@@ -193,12 +176,6 @@ func CreateLogIndexes(db *gorm.DB) error {
 			"CREATE INDEX IF NOT EXISTS idx_group_model_reqat ON logs (group_id, model, request_at DESC) INCLUDE (code, downstream_result)",
 			// used by search group logs
 			"CREATE INDEX IF NOT EXISTS idx_group_token_model_reqat ON logs (group_id, token_name, model, request_at DESC) INCLUDE (code, downstream_result)",
-
-			// hour indexes, used by dashboard
-			"CREATE INDEX IF NOT EXISTS idx_group_trunchour ON logs (group_id, timestamp_trunc_by_hour DESC) INCLUDE (downstream_result)",
-			"CREATE INDEX IF NOT EXISTS idx_group_model_trunchour ON logs (group_id, model, timestamp_trunc_by_hour DESC) INCLUDE (downstream_result)",
-			"CREATE INDEX IF NOT EXISTS idx_group_token_trunchour ON logs (group_id, token_name, timestamp_trunc_by_hour DESC) INCLUDE (downstream_result)",
-			"CREATE INDEX IF NOT EXISTS idx_group_model_token_trunchour ON logs (group_id, model, token_name, timestamp_trunc_by_hour DESC) INCLUDE (downstream_result)",
 		}
 	}
 
@@ -224,9 +201,6 @@ func (l *Log) BeforeCreate(_ *gorm.DB) (err error) {
 	}
 	if l.RequestAt.IsZero() {
 		l.RequestAt = l.CreatedAt
-	}
-	if l.TimestampTruncByHour == 0 {
-		l.TimestampTruncByHour = l.RequestAt.Truncate(time.Hour).Unix()
 	}
 	return
 }
@@ -1122,71 +1096,6 @@ const (
 	TimeSpanHour TimeSpanType = "hour"
 )
 
-func getChartDataFromLog(
-	group string,
-	start, end time.Time,
-	tokenName, modelName string,
-	channelID int,
-	timeSpan TimeSpanType,
-	resultOnly bool, tokenUsage bool,
-	timezone *time.Location,
-) ([]*ChartData, error) {
-	var query *gorm.DB
-	if tokenUsage {
-		query = LogDB.Table("logs").
-			Select("timestamp_trunc_by_hour as timestamp, count(*) as request_count, sum(used_amount) as used_amount, sum(case when code != 200 then 1 else 0 end) as exception_count, sum(input_tokens) as input_tokens, sum(output_tokens) as output_tokens, sum(cached_tokens) as cached_tokens, sum(cache_creation_tokens) as cache_creation_tokens, sum(total_tokens) as total_tokens, sum(web_search_count) as web_search_count").
-			Group("timestamp").
-			Order("timestamp ASC")
-	} else {
-		query = LogDB.Table("logs").
-			Select("timestamp_trunc_by_hour as timestamp, count(*) as request_count, sum(used_amount) as used_amount, sum(case when code != 200 then 1 else 0 end) as exception_count").
-			Group("timestamp").
-			Order("timestamp ASC")
-	}
-
-	if group == "" {
-		query = query.Where("group_id = ''")
-	} else if group != "*" {
-		query = query.Where("group_id = ?", group)
-	}
-
-	if channelID != 0 {
-		query = query.Where("channel_id = ?", channelID)
-	}
-	if modelName != "" {
-		query = query.Where("model = ?", modelName)
-	}
-	if tokenName != "" {
-		query = query.Where("token_name = ?", tokenName)
-	}
-
-	switch {
-	case !start.IsZero() && !end.IsZero():
-		query = query.Where("timestamp_trunc_by_hour BETWEEN ? AND ?", start.Unix(), end.Unix())
-	case !start.IsZero():
-		query = query.Where("timestamp_trunc_by_hour >= ?", start.Unix())
-	case !end.IsZero():
-		query = query.Where("timestamp_trunc_by_hour <= ?", end.Unix())
-	}
-
-	if resultOnly {
-		query = query.Where("downstream_result = true")
-	}
-
-	var chartData []*ChartData
-	err := query.Scan(&chartData).Error
-	if err != nil {
-		return nil, err
-	}
-
-	// If timeSpan is day, aggregate hour data into day data
-	if timeSpan == TimeSpanDay && len(chartData) > 0 {
-		return aggregateHourDataToDay(chartData, timezone), nil
-	}
-
-	return chartData, nil
-}
-
 // aggregateHourDataToDay converts hourly chart data into daily aggregated data
 func aggregateHourDataToDay(hourlyData []*ChartData, timezone *time.Location) []*ChartData {
 	dayData := make(map[int64]*ChartData)
@@ -1359,7 +1268,6 @@ func GetDashboardData(
 	resultOnly bool,
 	needRPM bool,
 	tokenUsage bool,
-	fromLog bool,
 	timezone *time.Location,
 ) (*DashboardResponse, error) {
 	if end.IsZero() {
@@ -1377,19 +1285,11 @@ func GetDashboardData(
 
 	g := new(errgroup.Group)
 
-	if fromLog {
-		g.Go(func() error {
-			var err error
-			chartData, err = getChartDataFromLog(group, start, end, "", modelName, channelID, timeSpan, resultOnly, tokenUsage, timezone)
-			return err
-		})
-	} else {
-		g.Go(func() error {
-			var err error
-			chartData, err = getChartData(group, start, end, "", modelName, channelID, timeSpan, timezone)
-			return err
-		})
-	}
+	g.Go(func() error {
+		var err error
+		chartData, err = getChartData(group, start, end, "", modelName, channelID, timeSpan, timezone)
+		return err
+	})
 
 	if needRPM {
 		g.Go(func() error {
@@ -1405,19 +1305,11 @@ func GetDashboardData(
 		return err
 	})
 
-	if fromLog {
-		g.Go(func() error {
-			var err error
-			channels, err = GetUsedChannelsFromLog(group, start, end)
-			return err
-		})
-	} else {
-		g.Go(func() error {
-			var err error
-			channels, err = GetUsedChannels(group, start, end)
-			return err
-		})
-	}
+	g.Go(func() error {
+		var err error
+		channels, err = GetUsedChannels(group, start, end)
+		return err
+	})
 
 	if err := g.Wait(); err != nil {
 		return nil, err
@@ -1440,7 +1332,6 @@ func GetGroupDashboardData(
 	resultOnly bool,
 	needRPM bool,
 	tokenUsage bool,
-	fromLog bool,
 	timezone *time.Location,
 ) (*GroupDashboardResponse, error) {
 	if group == "" || group == "*" {
@@ -1463,19 +1354,11 @@ func GetGroupDashboardData(
 
 	g := new(errgroup.Group)
 
-	if fromLog {
-		g.Go(func() error {
-			var err error
-			chartData, err = getChartDataFromLog(group, start, end, tokenName, modelName, 0, timeSpan, resultOnly, tokenUsage, timezone)
-			return err
-		})
-	} else {
-		g.Go(func() error {
-			var err error
-			chartData, err = getChartData(group, start, end, tokenName, modelName, 0, timeSpan, timezone)
-			return err
-		})
-	}
+	g.Go(func() error {
+		var err error
+		chartData, err = getChartData(group, start, end, tokenName, modelName, 0, timeSpan, timezone)
+		return err
+	})
 
 	g.Go(func() error {
 		var err error
@@ -1541,67 +1424,6 @@ type ModelCostRank struct {
 	TotalTokens         int64   `json:"total_tokens"`
 	RequestCount        int64   `json:"request_count"`
 	WebSearchCount      int64   `json:"web_search_count"`
-}
-
-func GetModelCostRank(group string, channelID int, start, end time.Time, tokenUsage bool, fromLog bool) ([]*ModelCostRank, error) {
-	if fromLog {
-		return getModelCostRankFromLog(group, channelID, start, end, tokenUsage)
-	}
-	return getModelCostRank(group, channelID, start, end)
-}
-
-func getModelCostRankFromLog(group string, channelID int, start, end time.Time, tokenUsage bool) ([]*ModelCostRank, error) {
-	var ranks []*ModelCostRank
-
-	var query *gorm.DB
-	if tokenUsage {
-		query = LogDB.Model(&Log{}).
-			Select("model, SUM(used_amount) as used_amount, SUM(input_tokens) as input_tokens, SUM(output_tokens) as output_tokens, SUM(cached_tokens) as cached_tokens, SUM(cache_creation_tokens) as cache_creation_tokens, SUM(total_tokens) as total_tokens, COUNT(*) as request_count, SUM(web_search_count) as web_search_count").
-			Group("model")
-	} else {
-		query = LogDB.Model(&Log{}).
-			Select("model, SUM(used_amount) as used_amount, COUNT(*) as request_count").
-			Group("model")
-	}
-
-	if group == "" {
-		query = query.Where("group_id = ''")
-	} else if group != "*" {
-		query = query.Where("group_id = ?", group)
-	}
-
-	if channelID != 0 {
-		query = query.Where("channel_id = ?", channelID)
-	}
-
-	switch {
-	case !start.IsZero() && !end.IsZero():
-		query = query.Where("request_at BETWEEN ? AND ?", start, end)
-	case !start.IsZero():
-		query = query.Where("request_at >= ?", start)
-	case !end.IsZero():
-		query = query.Where("request_at <= ?", end)
-	}
-
-	err := query.Scan(&ranks).Error
-	if err != nil {
-		return nil, err
-	}
-
-	slices.SortFunc(ranks, func(a, b *ModelCostRank) int {
-		if a.UsedAmount != b.UsedAmount {
-			return cmp.Compare(b.UsedAmount, a.UsedAmount)
-		}
-		if a.TotalTokens != b.TotalTokens {
-			return cmp.Compare(b.TotalTokens, a.TotalTokens)
-		}
-		if a.RequestCount != b.RequestCount {
-			return cmp.Compare(b.RequestCount, a.RequestCount)
-		}
-		return cmp.Compare(a.Model, b.Model)
-	})
-
-	return ranks, nil
 }
 
 func GetIPGroups(threshold int, start, end time.Time) (map[string][]string, error) {

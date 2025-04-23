@@ -1026,12 +1026,6 @@ const docTemplate = `{
                         "in": "query"
                     },
                     {
-                        "type": "boolean",
-                        "description": "From log",
-                        "name": "from_log",
-                        "in": "query"
-                    },
-                    {
                         "type": "string",
                         "description": "Timezone, default is Local",
                         "name": "timezone",
@@ -1123,12 +1117,6 @@ const docTemplate = `{
                         "type": "integer",
                         "description": "End second timestamp",
                         "name": "end_timestamp",
-                        "in": "query"
-                    },
-                    {
-                        "type": "boolean",
-                        "description": "From log",
-                        "name": "from_log",
                         "in": "query"
                     },
                     {
@@ -4298,18 +4286,6 @@ const docTemplate = `{
                         "description": "End timestamp",
                         "name": "end_timestamp",
                         "in": "query"
-                    },
-                    {
-                        "type": "boolean",
-                        "description": "Token usage",
-                        "name": "token_usage",
-                        "in": "query"
-                    },
-                    {
-                        "type": "boolean",
-                        "description": "From log",
-                        "name": "from_log",
-                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -4370,18 +4346,6 @@ const docTemplate = `{
                         "type": "integer",
                         "description": "End timestamp",
                         "name": "end_timestamp",
-                        "in": "query"
-                    },
-                    {
-                        "type": "boolean",
-                        "description": "Token usage",
-                        "name": "token_usage",
-                        "in": "query"
-                    },
-                    {
-                        "type": "boolean",
-                        "description": "From log",
-                        "name": "from_log",
                         "in": "query"
                     }
                 ],
@@ -8564,9 +8528,6 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "retry_times": {
-                    "type": "integer"
-                },
-                "timestamp_trunc_by_hour": {
                     "type": "integer"
                 },
                 "token_id": {

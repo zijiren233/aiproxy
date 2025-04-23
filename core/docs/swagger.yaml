@@ -945,8 +945,6 @@ definitions:
         type: string
       retry_times:
         type: integer
-      timestamp_trunc_by_hour:
-        type: integer
       token_id:
         type: integer
       token_name:
@@ -2026,10 +2024,6 @@ paths:
         in: query
         name: end_timestamp
         type: integer
-      - description: From log
-        in: query
-        name: from_log
-        type: boolean
       - description: Timezone, default is Local
         in: query
         name: timezone
@@ -2088,10 +2082,6 @@ paths:
         in: query
         name: end_timestamp
         type: integer
-      - description: From log
-        in: query
-        name: from_log
-        type: boolean
       - description: Timezone, default is Local
         in: query
         name: timezone
@@ -4008,14 +3998,6 @@ paths:
         in: query
         name: end_timestamp
         type: integer
-      - description: Token usage
-        in: query
-        name: token_usage
-        type: boolean
-      - description: From log
-        in: query
-        name: from_log
-        type: boolean
       produces:
       - application/json
       responses:
@@ -4052,14 +4034,6 @@ paths:
         in: query
         name: end_timestamp
         type: integer
-      - description: Token usage
-        in: query
-        name: token_usage
-        type: boolean
-      - description: From log
-        in: query
-        name: from_log
-        type: boolean
       produces:
       - application/json
       responses:
