@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/labring/aiproxy/core/common/config"
+	log "github.com/sirupsen/logrus"
 )
 
 var (
@@ -75,6 +76,8 @@ func getAudioDurationFallback(audio io.Reader) (float64, error) {
 		return 0, err
 	}
 
+	log.Debugf("ffmpeg -i - -f null -\n%s", stderr.Bytes())
+
 	// Parse the time from ffmpeg output
 	// Example: size=N/A time=00:00:05.52 bitrate=N/A speed= 785x
 	return parseTimeFromFfmpegOutput(stderr.String())
@@ -129,13 +132,22 @@ func getAudioDurationFromFilePathFallback(filePath string) (float64, error) {
 		return 0, err
 	}
 
+	log.Debugf("ffmpeg -i %s -f null -\n%s", filePath, stderr.Bytes())
+
 	// Parse the time from ffmpeg output
 	return parseTimeFromFfmpegOutput(stderr.String())
 }
 
 // parseTimeFromFfmpegOutput extracts and converts time from ffmpeg output to seconds
 func parseTimeFromFfmpegOutput(output string) (float64, error) {
-	match := re.FindStringSubmatch(output)
+	// Find all matches of time pattern
+	matches := re.FindAllStringSubmatch(output, -1)
+	if len(matches) == 0 {
+		return 0, ErrAudioDurationNAN
+	}
+
+	// Get the last time match (as per the instruction)
+	match := matches[len(matches)-1]
 	if len(match) < 2 {
 		return 0, ErrAudioDurationNAN
 	}
