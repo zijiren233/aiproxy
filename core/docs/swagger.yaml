@@ -2008,14 +2008,6 @@ paths:
         in: query
         name: model
         type: string
-      - description: Only return result
-        in: query
-        name: result_only
-        type: boolean
-      - description: Token usage
-        in: query
-        name: token_usage
-        type: boolean
       - description: Start second timestamp
         in: query
         name: start_timestamp
@@ -2066,14 +2058,6 @@ paths:
         in: query
         name: model
         type: string
-      - description: Only return result
-        in: query
-        name: result_only
-        type: boolean
-      - description: Token usage
-        in: query
-        name: token_usage
-        type: boolean
       - description: Start second timestamp
         in: query
         name: start_timestamp

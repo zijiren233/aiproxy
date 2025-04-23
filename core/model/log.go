@@ -1265,9 +1265,7 @@ func GetDashboardData(
 	modelName string,
 	channelID int,
 	timeSpan TimeSpanType,
-	resultOnly bool,
 	needRPM bool,
-	tokenUsage bool,
 	timezone *time.Location,
 ) (*DashboardResponse, error) {
 	if end.IsZero() {
@@ -1329,9 +1327,7 @@ func GetGroupDashboardData(
 	tokenName string,
 	modelName string,
 	timeSpan TimeSpanType,
-	resultOnly bool,
 	needRPM bool,
-	tokenUsage bool,
 	timezone *time.Location,
 ) (*GroupDashboardResponse, error) {
 	if group == "" || group == "*" {

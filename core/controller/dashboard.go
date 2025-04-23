@@ -148,8 +148,6 @@ func fillGaps(data []*model.ChartData, start, end time.Time, t model.TimeSpanTyp
 //	@Param			channel			query		int		false	"Channel ID"
 //	@Param			type			query		string	false	"Type of time span (day, week, month, two_week)"
 //	@Param			model			query		string	false	"Model name"
-//	@Param			result_only		query		bool	false	"Only return result"
-//	@Param			token_usage		query		bool	false	"Token usage"
 //	@Param			start_timestamp	query		int64	false	"Start second timestamp"
 //	@Param			end_timestamp	query		int64	false	"End second timestamp"
 //	@Param			timezone		query		string	false	"Timezone, default is Local"
@@ -164,13 +162,11 @@ func GetDashboard(c *gin.Context) {
 	timezoneLocation, _ := time.LoadLocation(c.DefaultQuery("timezone", "Local"))
 	start, end, timeSpan := getDashboardTime(c.Query("type"), startTimestamp, endTimestamp, timezoneLocation)
 	modelName := c.Query("model")
-	resultOnly, _ := strconv.ParseBool(c.Query("result_only"))
-	tokenUsage, _ := strconv.ParseBool(c.Query("token_usage"))
 	channelID, _ := strconv.Atoi(c.Query("channel"))
 
 	needRPM := channelID != 0
 
-	dashboards, err := model.GetDashboardData(group, start, end, modelName, channelID, timeSpan, resultOnly, needRPM, tokenUsage, timezoneLocation)
+	dashboards, err := model.GetDashboardData(group, start, end, modelName, channelID, timeSpan, needRPM, timezoneLocation)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusOK, err.Error())
 		return
@@ -201,8 +197,6 @@ func GetDashboard(c *gin.Context) {
 //	@Param			type			query		string	false	"Type of time span (day, week, month, two_week)"
 //	@Param			token_name		query		string	false	"Token name"
 //	@Param			model			query		string	false	"Model or *"
-//	@Param			result_only		query		bool	false	"Only return result"
-//	@Param			token_usage		query		bool	false	"Token usage"
 //	@Param			start_timestamp	query		int64	false	"Start second timestamp"
 //	@Param			end_timestamp	query		int64	false	"End second timestamp"
 //	@Param			timezone		query		string	false	"Timezone, default is Local"
@@ -223,12 +217,10 @@ func GetGroupDashboard(c *gin.Context) {
 	start, end, timeSpan := getDashboardTime(c.Query("type"), startTimestamp, endTimestamp, timezoneLocation)
 	tokenName := c.Query("token_name")
 	modelName := c.Query("model")
-	resultOnly, _ := strconv.ParseBool(c.Query("result_only"))
-	tokenUsage, _ := strconv.ParseBool(c.Query("token_usage"))
 
 	needRPM := tokenName != ""
 
-	dashboards, err := model.GetGroupDashboardData(group, start, end, tokenName, modelName, timeSpan, resultOnly, needRPM, tokenUsage, timezoneLocation)
+	dashboards, err := model.GetGroupDashboardData(group, start, end, tokenName, modelName, timeSpan, needRPM, timezoneLocation)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusOK, "failed to get statistics")
 		return

@@ -1002,18 +1002,6 @@ const docTemplate = `{
                         "in": "query"
                     },
                     {
-                        "type": "boolean",
-                        "description": "Only return result",
-                        "name": "result_only",
-                        "in": "query"
-                    },
-                    {
-                        "type": "boolean",
-                        "description": "Token usage",
-                        "name": "token_usage",
-                        "in": "query"
-                    },
-                    {
                         "type": "integer",
                         "description": "Start second timestamp",
                         "name": "start_timestamp",
@@ -1093,18 +1081,6 @@ const docTemplate = `{
                         "type": "string",
                         "description": "Model or *",
                         "name": "model",
-                        "in": "query"
-                    },
-                    {
-                        "type": "boolean",
-                        "description": "Only return result",
-                        "name": "result_only",
-                        "in": "query"
-                    },
-                    {
-                        "type": "boolean",
-                        "description": "Token usage",
-                        "name": "token_usage",
                         "in": "query"
                     },
                     {
