@@ -417,6 +417,8 @@ func Handler(meta *meta.Meta, c *gin.Context, resp *http.Response, preHandler Pr
 			return usage.ToModelUsage(), ErrorWrapper(err, "unmarshal_response_body_failed", http.StatusInternalServerError)
 		}
 		SplitThink(respMap)
+		c.JSON(http.StatusOK, respMap)
+		return usage.ToModelUsage(), nil
 	}
 
 	newData, err := sonic.Marshal(&node)
