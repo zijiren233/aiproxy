@@ -88,10 +88,9 @@ func (s *Splitter) Process(data []byte) ([]byte, []byte) {
 					headMatched = true
 					headMatchLen = headLen
 					break
-				} else {
-					// Mark this head as impossible to match
-					s.impossibleHeads[i] = true
 				}
+				// Mark this head as impossible to match
+				s.impossibleHeads[i] = true
 			} else {
 				// Check for partial match (potential match)
 				matchLen := bufLen
