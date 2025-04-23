@@ -123,7 +123,6 @@ func STTHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Us
 		TotalTokens:  promptTokens,
 	}
 
-	respData := responseBody
 	switch {
 	case responseFormat == "text",
 		responseFormat == "json",
@@ -156,15 +155,13 @@ func STTHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Us
 		if err != nil {
 			return usage.ToModelUsage(), ErrorWrapper(err, "marshal_response_err", http.StatusInternalServerError)
 		}
-		respData, err = node.MarshalJSON()
+		responseBody, err = node.MarshalJSON()
 		if err != nil {
 			return usage.ToModelUsage(), ErrorWrapper(err, "marshal_response_err", http.StatusInternalServerError)
 		}
-	default:
-		respData = responseBody
 	}
 
-	_, err = c.Writer.Write(respData)
+	_, err = c.Writer.Write(responseBody)
 	if err != nil {
 		log.Warnf("write response body failed: %v", err)
 	}
