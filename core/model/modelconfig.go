@@ -27,9 +27,12 @@ type ModelConfig struct {
 	ExcludeFromTests bool                   `json:"exclude_from_tests,omitempty"`
 	RPM              int64                  `json:"rpm,omitempty"`
 	TPM              int64                  `json:"tpm,omitempty"`
-	ImagePrices      map[string]float64     `gorm:"serializer:fastjson;type:text" json:"image_prices,omitempty"`
-	Price            Price                  `gorm:"embedded"                      json:"price,omitempty"`
-	RetryTimes       int64                  `json:"retry_times"`
+	// map[size]map[quality]price_per_image
+	ImageQualityPrices map[string]map[string]float64 `gorm:"serializer:fastjson;type:text" json:"image_quality_prices,omitempty"`
+	// map[size]price_per_image
+	ImagePrices map[string]float64 `gorm:"serializer:fastjson;type:text" json:"image_prices,omitempty"`
+	Price       Price              `gorm:"embedded"                      json:"price,omitempty"`
+	RetryTimes  int64              `json:"retry_times"`
 }
 
 func NewDefaultModelConfig(model string) *ModelConfig {

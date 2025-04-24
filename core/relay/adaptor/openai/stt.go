@@ -112,8 +112,8 @@ func STTHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Us
 		return nil, ErrorWrapper(err, "get_text_from_body_err", http.StatusInternalServerError)
 	}
 	var promptTokens int64
-	if meta.InputTokens > 0 {
-		promptTokens = meta.InputTokens
+	if meta.RequestUsage.InputTokens > 0 {
+		promptTokens = meta.RequestUsage.InputTokens
 	} else {
 		promptTokens = CountTokenText(text, meta.ActualModel)
 	}

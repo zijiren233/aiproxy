@@ -6,6 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/core/model"
+	"github.com/labring/aiproxy/core/relay/adaptor/openai"
 	relaymodel "github.com/labring/aiproxy/core/relay/model"
 	"github.com/labring/aiproxy/core/relay/utils"
 )
@@ -27,12 +28,19 @@ func getImageRequest(c *gin.Context) (*relaymodel.ImageRequest, error) {
 	return imageRequest, nil
 }
 
-func GetImageSizePrice(modelConfig *model.ModelConfig, size string) (float64, bool) {
-	if len(modelConfig.ImagePrices) == 0 {
-		return modelConfig.Price.InputPrice, true
+func GetImageOutputPrice(modelConfig *model.ModelConfig, size string, quality string) (float64, bool) {
+	switch {
+	case len(modelConfig.ImagePrices) == 0 && len(modelConfig.ImageQualityPrices) == 0:
+		return modelConfig.Price.OutputPrice, true
+	case len(modelConfig.ImageQualityPrices) != 0:
+		price, ok := modelConfig.ImageQualityPrices[size][quality]
+		return price, ok
+	case len(modelConfig.ImagePrices) != 0:
+		price, ok := modelConfig.ImagePrices[size]
+		return price, ok
+	default:
+		return 0, false
 	}
-	price, ok := modelConfig.ImagePrices[size]
-	return price, ok
 }
 
 func GetImageRequestPrice(c *gin.Context, mc *model.ModelConfig) (model.Price, error) {
@@ -41,14 +49,21 @@ func GetImageRequestPrice(c *gin.Context, mc *model.ModelConfig) (model.Price, e
 		return model.Price{}, err
 	}
 
-	imageCostPrice, ok := GetImageSizePrice(mc, imageRequest.Size)
+	imageCostPrice, ok := GetImageOutputPrice(mc, imageRequest.Size, imageRequest.Quality)
 	if !ok {
 		return model.Price{}, fmt.Errorf("invalid image size: %s", imageRequest.Size)
 	}
 
 	return model.Price{
-		PerRequestPrice: mc.Price.PerRequestPrice,
-		InputPrice:      imageCostPrice,
+		PerRequestPrice:      mc.Price.PerRequestPrice,
+		InputPrice:           mc.Price.InputPrice,
+		InputPriceUnit:       mc.Price.InputPriceUnit,
+		ImageInputPrice:      mc.Price.ImageInputPrice,
+		ImageInputPriceUnit:  mc.Price.ImageInputPriceUnit,
+		OutputPrice:          mc.Price.OutputPrice,
+		OutputPriceUnit:      mc.Price.OutputPriceUnit,
+		ImageOutputPrice:     imageCostPrice,
+		ImageOutputPriceUnit: mc.Price.ImageOutputPriceUnit,
 	}, nil
 }
 
@@ -59,6 +74,7 @@ func GetImageRequestUsage(c *gin.Context, _ *model.ModelConfig) (model.Usage, er
 	}
 
 	return model.Usage{
-		InputTokens: int64(imageRequest.N),
+		InputTokens:        openai.CountTokenInput(imageRequest.Prompt, imageRequest.Model),
+		ImageOutputNumbers: int64(imageRequest.N),
 	}, nil
 }

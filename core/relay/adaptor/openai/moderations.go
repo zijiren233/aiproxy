@@ -42,8 +42,8 @@ func ModerationsHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*
 	}
 
 	usage := &model.Usage{
-		InputTokens: meta.InputTokens,
-		TotalTokens: meta.InputTokens,
+		InputTokens: meta.RequestUsage.InputTokens,
+		TotalTokens: meta.RequestUsage.InputTokens,
 	}
 
 	_, err = c.Writer.Write(newData)

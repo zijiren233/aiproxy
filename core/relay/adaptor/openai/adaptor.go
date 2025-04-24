@@ -44,7 +44,7 @@ func (a *Adaptor) GetRequestURL(meta *meta.Meta) (string, error) {
 	case mode.ImagesGenerations:
 		path = "/images/generations"
 	case mode.Edits:
-		path = "/edits"
+		path = "/images/edits"
 	case mode.AudioSpeech:
 		path = "/audio/speech"
 	case mode.AudioTranscription:

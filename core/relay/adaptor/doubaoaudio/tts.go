@@ -182,8 +182,8 @@ func TTSDoResponse(meta *meta.Meta, c *gin.Context, _ *http.Response) (*model.Us
 	defer conn.Close()
 
 	usage := &model.Usage{
-		InputTokens: meta.InputTokens,
-		TotalTokens: meta.InputTokens,
+		InputTokens: meta.RequestUsage.InputTokens,
+		TotalTokens: meta.RequestUsage.InputTokens,
 	}
 
 	for {

@@ -32,8 +32,8 @@ type Meta struct {
 	OriginModel string
 	ActualModel string
 	Mode        mode.Mode
-	// TODO: remove this field
-	InputTokens int64
+
+	RequestUsage model.Usage
 }
 
 type Option func(meta *Meta)
@@ -74,9 +74,9 @@ func WithToken(token *model.TokenCache) Option {
 	}
 }
 
-func WithInputTokens(inputTokens int64) Option {
+func WithRequestUsage(requestUsage model.Usage) Option {
 	return func(meta *Meta) {
-		meta.InputTokens = inputTokens
+		meta.RequestUsage = requestUsage
 	}
 }
 

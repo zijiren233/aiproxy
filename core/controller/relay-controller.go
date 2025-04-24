@@ -346,7 +346,7 @@ func relay(c *gin.Context, mode mode.Mode, relayController RelayController) {
 			return
 		}
 
-		meta.InputTokens = requestUsage.InputTokens
+		meta.RequestUsage = requestUsage
 	}
 
 	// First attempt
@@ -430,7 +430,7 @@ type retryState struct {
 
 	meta             *meta.Meta
 	price            model.Price
-	inputTokens      int64
+	requestUsage     model.Usage
 	result           *controller.HandleResult
 	migratedChannels []*model.Channel
 }
@@ -500,7 +500,7 @@ func initRetryState(retryTimes int, channel *initialChannel, meta *meta.Meta, re
 		meta:             meta,
 		result:           result,
 		price:            price,
-		inputTokens:      meta.InputTokens,
+		requestUsage:     meta.RequestUsage,
 		migratedChannels: channel.migratedChannels,
 	}
 
@@ -556,7 +556,7 @@ func retryLoop(c *gin.Context, mode mode.Mode, state *retryState, relayControlle
 			c,
 			newChannel,
 			mode,
-			meta.WithInputTokens(state.inputTokens),
+			meta.WithRequestUsage(state.requestUsage),
 			meta.WithRetryAt(time.Now()),
 		)
 		var retry bool
