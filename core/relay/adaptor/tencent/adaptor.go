@@ -22,10 +22,6 @@ func (a *Adaptor) GetModelList() []*model.ModelConfig {
 	return ModelList
 }
 
-func (a *Adaptor) GetChannelName() string {
-	return "tencent"
-}
-
 func (a *Adaptor) GetBalance(_ *model.Channel) (float64, error) {
 	return 0, adaptor.ErrGetBalanceNotImplemented
 }

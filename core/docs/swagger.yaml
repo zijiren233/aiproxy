@@ -35,7 +35,7 @@ definitions:
       status:
         type: integer
       type:
-        type: integer
+        $ref: '#/definitions/model.ChannelType'
     type: object
   controller.AddTokenRequest:
     properties:
@@ -106,6 +106,15 @@ definitions:
         type: number
       tpm_ratio:
         type: number
+    type: object
+  controller.EnabledModelChannel:
+    properties:
+      id:
+        type: integer
+      name:
+        type: string
+      type:
+        $ref: '#/definitions/model.ChannelType'
     type: object
   controller.GetModelConfigsByModelsContainsRequest:
     properties:
@@ -470,7 +479,7 @@ definitions:
       status:
         type: integer
       type:
-        type: integer
+        $ref: '#/definitions/model.ChannelType'
       used_amount:
         type: number
     type: object
@@ -488,7 +497,7 @@ definitions:
       channel_name:
         type: string
       channel_type:
-        type: integer
+        $ref: '#/definitions/model.ChannelType'
       code:
         type: integer
       mode:
@@ -504,6 +513,78 @@ definitions:
       took:
         type: number
     type: object
+  model.ChannelType:
+    enum:
+    - 1
+    - 3
+    - 12
+    - 13
+    - 14
+    - 15
+    - 16
+    - 17
+    - 18
+    - 19
+    - 20
+    - 23
+    - 24
+    - 25
+    - 26
+    - 27
+    - 28
+    - 29
+    - 30
+    - 31
+    - 32
+    - 33
+    - 34
+    - 35
+    - 36
+    - 37
+    - 40
+    - 41
+    - 42
+    - 43
+    - 44
+    - 45
+    - 46
+    - 47
+    type: integer
+    x-enum-varnames:
+    - ChannelTypeOpenAI
+    - ChannelTypeAzure
+    - ChannelTypeGoogleGeminiOpenAI
+    - ChannelTypeBaiduV2
+    - ChannelTypeAnthropic
+    - ChannelTypeBaidu
+    - ChannelTypeZhipu
+    - ChannelTypeAli
+    - ChannelTypeXunfei
+    - ChannelTypeAI360
+    - ChannelTypeOpenRouter
+    - ChannelTypeTencent
+    - ChannelTypeGoogleGemini
+    - ChannelTypeMoonshot
+    - ChannelTypeBaichuan
+    - ChannelTypeMinimax
+    - ChannelTypeMistral
+    - ChannelTypeGroq
+    - ChannelTypeOllama
+    - ChannelTypeLingyiwanwu
+    - ChannelTypeStepfun
+    - ChannelTypeAWS
+    - ChannelTypeCoze
+    - ChannelTypeCohere
+    - ChannelTypeDeepseek
+    - ChannelTypeCloudflare
+    - ChannelTypeDoubao
+    - ChannelTypeNovita
+    - ChannelTypeVertexAI
+    - ChannelTypeSiliconflow
+    - ChannelTypeDoubaoAudio
+    - ChannelTypeXAI
+    - ChannelTypeDoc2x
+    - ChannelTypeJina
   model.ChartData:
     properties:
       cache_creation_tokens:
@@ -2044,28 +2125,6 @@ paths:
       security:
       - ApiKeyAuth: []
       summary: Get channel type metadata
-      tags:
-      - channels
-  /api/channels/type_names:
-    get:
-      description: Returns a list of all available channel type names
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            allOf:
-            - $ref: '#/definitions/middleware.APIResponse'
-            - properties:
-                data:
-                  additionalProperties:
-                    type: string
-                  type: object
-              type: object
-      security:
-      - ApiKeyAuth: []
-      summary: Get all channel type names
       tags:
       - channels
   /api/dashboard:
@@ -4169,10 +4228,45 @@ paths:
       description: Returns a list of channel builtin models by type
       parameters:
       - description: Channel type
+        enum:
+        - 1
+        - 3
+        - 12
+        - 13
+        - 14
+        - 15
+        - 16
+        - 17
+        - 18
+        - 19
+        - 20
+        - 23
+        - 24
+        - 25
+        - 26
+        - 27
+        - 28
+        - 29
+        - 30
+        - 31
+        - 32
+        - 33
+        - 34
+        - 35
+        - 36
+        - 37
+        - 40
+        - 41
+        - 42
+        - 43
+        - 44
+        - 45
+        - 46
+        - 47
         in: path
         name: type
         required: true
-        type: string
+        type: integer
       produces:
       - application/json
       responses:
@@ -4190,6 +4284,62 @@ paths:
       security:
       - ApiKeyAuth: []
       summary: Get channel builtin models by type
+      tags:
+      - model
+  /api/models/channel:
+    get:
+      description: Returns a list of enabled models
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/middleware.APIResponse'
+            - properties:
+                data:
+                  additionalProperties:
+                    additionalProperties:
+                      items:
+                        $ref: '#/definitions/controller.EnabledModelChannel'
+                      type: array
+                    type: object
+                  type: object
+              type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Get enabled models and channels
+      tags:
+      - model
+  /api/models/channel/{set}:
+    get:
+      description: Returns a list of enabled models and channels by set
+      parameters:
+      - description: Models set
+        in: path
+        name: set
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/middleware.APIResponse'
+            - properties:
+                data:
+                  additionalProperties:
+                    items:
+                      $ref: '#/definitions/controller.EnabledModelChannel'
+                    type: array
+                  type: object
+              type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Get enabled models and channels by set
       tags:
       - model
   /api/models/default:
@@ -4286,6 +4436,34 @@ paths:
       security:
       - ApiKeyAuth: []
       summary: Get enabled models
+      tags:
+      - model
+  /api/models/enabled/{set}:
+    get:
+      description: Returns a list of enabled models by set
+      parameters:
+      - description: Models set
+        in: path
+        name: set
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/middleware.APIResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/model.ModelConfig'
+                  type: array
+              type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Get enabled models by set
       tags:
       - model
   /api/monitor:

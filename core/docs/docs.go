@@ -921,46 +921,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/channels/type_names": {
-            "get": {
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ],
-                "description": "Returns a list of all available channel type names",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "channels"
-                ],
-                "summary": "Get all channel type names",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/middleware.APIResponse"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "type": "object",
-                                            "additionalProperties": {
-                                                "type": "string"
-                                            }
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    }
-                }
-            }
-        },
         "/api/dashboard": {
             "get": {
                 "security": [
@@ -4450,7 +4410,43 @@ const docTemplate = `{
                 "summary": "Get channel builtin models by type",
                 "parameters": [
                     {
-                        "type": "string",
+                        "enum": [
+                            1,
+                            3,
+                            12,
+                            13,
+                            14,
+                            15,
+                            16,
+                            17,
+                            18,
+                            19,
+                            20,
+                            23,
+                            24,
+                            25,
+                            26,
+                            27,
+                            28,
+                            29,
+                            30,
+                            31,
+                            32,
+                            33,
+                            34,
+                            35,
+                            36,
+                            37,
+                            40,
+                            41,
+                            42,
+                            43,
+                            44,
+                            45,
+                            46,
+                            47
+                        ],
+                        "type": "integer",
                         "description": "Channel type",
                         "name": "type",
                         "in": "path",
@@ -4472,6 +4468,104 @@ const docTemplate = `{
                                             "type": "array",
                                             "items": {
                                                 "$ref": "#/definitions/controller.BuiltinModelConfig"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/api/models/channel": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Returns a list of enabled models",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "model"
+                ],
+                "summary": "Get enabled models and channels",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/middleware.APIResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "additionalProperties": {
+                                                "type": "object",
+                                                "additionalProperties": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "$ref": "#/definitions/controller.EnabledModelChannel"
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/api/models/channel/{set}": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Returns a list of enabled models and channels by set",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "model"
+                ],
+                "summary": "Get enabled models and channels by set",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Models set",
+                        "name": "set",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/middleware.APIResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "additionalProperties": {
+                                                "type": "array",
+                                                "items": {
+                                                    "$ref": "#/definitions/controller.EnabledModelChannel"
+                                                }
                                             }
                                         }
                                     }
@@ -4642,6 +4736,55 @@ const docTemplate = `{
                                                 "items": {
                                                     "$ref": "#/definitions/model.ModelConfig"
                                                 }
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/api/models/enabled/{set}": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Returns a list of enabled models by set",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "model"
+                ],
+                "summary": "Get enabled models by set",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Models set",
+                        "name": "set",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/middleware.APIResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/model.ModelConfig"
                                             }
                                         }
                                     }
@@ -7141,7 +7284,7 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "type": {
-                    "type": "integer"
+                    "$ref": "#/definitions/model.ChannelType"
                 }
             }
         },
@@ -7247,6 +7390,20 @@ const docTemplate = `{
                 },
                 "tpm_ratio": {
                     "type": "number"
+                }
+            }
+        },
+        "controller.EnabledModelChannel": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "type": {
+                    "$ref": "#/definitions/model.ChannelType"
                 }
             }
         },
@@ -7791,7 +7948,7 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "type": {
-                    "type": "integer"
+                    "$ref": "#/definitions/model.ChannelType"
                 },
                 "used_amount": {
                     "type": "number"
@@ -7819,7 +7976,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "channel_type": {
-                    "type": "integer"
+                    "$ref": "#/definitions/model.ChannelType"
                 },
                 "code": {
                     "type": "integer"
@@ -7843,6 +8000,81 @@ const docTemplate = `{
                     "type": "number"
                 }
             }
+        },
+        "model.ChannelType": {
+            "type": "integer",
+            "enum": [
+                1,
+                3,
+                12,
+                13,
+                14,
+                15,
+                16,
+                17,
+                18,
+                19,
+                20,
+                23,
+                24,
+                25,
+                26,
+                27,
+                28,
+                29,
+                30,
+                31,
+                32,
+                33,
+                34,
+                35,
+                36,
+                37,
+                40,
+                41,
+                42,
+                43,
+                44,
+                45,
+                46,
+                47
+            ],
+            "x-enum-varnames": [
+                "ChannelTypeOpenAI",
+                "ChannelTypeAzure",
+                "ChannelTypeGoogleGeminiOpenAI",
+                "ChannelTypeBaiduV2",
+                "ChannelTypeAnthropic",
+                "ChannelTypeBaidu",
+                "ChannelTypeZhipu",
+                "ChannelTypeAli",
+                "ChannelTypeXunfei",
+                "ChannelTypeAI360",
+                "ChannelTypeOpenRouter",
+                "ChannelTypeTencent",
+                "ChannelTypeGoogleGemini",
+                "ChannelTypeMoonshot",
+                "ChannelTypeBaichuan",
+                "ChannelTypeMinimax",
+                "ChannelTypeMistral",
+                "ChannelTypeGroq",
+                "ChannelTypeOllama",
+                "ChannelTypeLingyiwanwu",
+                "ChannelTypeStepfun",
+                "ChannelTypeAWS",
+                "ChannelTypeCoze",
+                "ChannelTypeCohere",
+                "ChannelTypeDeepseek",
+                "ChannelTypeCloudflare",
+                "ChannelTypeDoubao",
+                "ChannelTypeNovita",
+                "ChannelTypeVertexAI",
+                "ChannelTypeSiliconflow",
+                "ChannelTypeDoubaoAudio",
+                "ChannelTypeXAI",
+                "ChannelTypeDoc2x",
+                "ChannelTypeJina"
+            ]
         },
         "model.ChartData": {
             "type": "object",

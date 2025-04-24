@@ -19,8 +19,6 @@ import (
 
 var _ channelhelper.Adaptor = new(Adaptor)
 
-const channelName = "vertexai"
-
 type Adaptor struct{}
 
 func (a *Adaptor) GetBaseURL() string {
@@ -52,10 +50,6 @@ func (a *Adaptor) DoResponse(meta *meta.Meta, c *gin.Context, resp *http.Respons
 
 func (a *Adaptor) GetModelList() []*model.ModelConfig {
 	return modelList
-}
-
-func (a *Adaptor) GetChannelName() string {
-	return channelName
 }
 
 func (a *Adaptor) GetRequestURL(meta *meta.Meta) (string, error) {

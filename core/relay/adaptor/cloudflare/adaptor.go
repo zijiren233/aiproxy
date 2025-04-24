@@ -53,7 +53,3 @@ func (a *Adaptor) GetRequestURL(meta *meta.Meta) (string, error) {
 func (a *Adaptor) GetModelList() []*model.ModelConfig {
 	return ModelList
 }
-
-func (a *Adaptor) GetChannelName() string {
-	return "cloudflare"
-}

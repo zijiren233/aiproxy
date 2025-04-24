@@ -49,10 +49,6 @@ func (a *Adaptor) GetModelList() (models []*model.ModelConfig) {
 	return
 }
 
-func (a *Adaptor) GetChannelName() string {
-	return "aws"
-}
-
 func (a *Adaptor) GetRequestURL(_ *meta.Meta) (string, error) {
 	return "", nil
 }

@@ -12,7 +12,6 @@ import (
 )
 
 type Adaptor interface {
-	GetChannelName() string
 	GetBaseURL() string
 	GetRequestURL(meta *meta.Meta) (string, error)
 	SetupRequestHeader(meta *meta.Meta, c *gin.Context, req *http.Request) error

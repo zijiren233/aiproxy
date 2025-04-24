@@ -187,9 +187,7 @@ func SetLogChannelFields(fields logrus.Fields, channel meta.ChannelMeta) {
 	}
 	if channel.Type > 0 {
 		fields["chtype"] = channel.Type
-	}
-	if channel.TypeName != "" {
-		fields["chtype_name"] = channel.TypeName
+		fields["chtype_name"] = channel.Type.String()
 	}
 }
 

@@ -36,10 +36,6 @@ func (a *Adaptor) GetModelList() []*model.ModelConfig {
 	return ModelList
 }
 
-func (a *Adaptor) GetChannelName() string {
-	return "zhipu"
-}
-
 func (a *Adaptor) GetBalance(_ *model.Channel) (float64, error) {
 	return 0, adaptor.ErrGetBalanceNotImplemented
 }

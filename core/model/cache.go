@@ -453,11 +453,16 @@ type ModelConfigCache interface {
 type ModelCaches struct {
 	ModelConfig ModelConfigCache
 
-	EnabledModelsBySet       map[string][]string
+	// map[set][]model
+	EnabledModelsBySet map[string][]string
+	// map[set][]modelconfig
 	EnabledModelConfigsBySet map[string][]*ModelConfig
-	EnabledModelConfigsMap   map[string]*ModelConfig
+	// map[model]modelconfig
+	EnabledModelConfigsMap map[string]*ModelConfig
 
-	EnabledModel2ChannelsBySet  map[string]map[string][]*Channel
+	// map[set]map[model][]channel
+	EnabledModel2ChannelsBySet map[string]map[string][]*Channel
+	// map[set]map[model][]channel
 	DisabledModel2ChannelsBySet map[string]map[string][]*Channel
 }
 
@@ -618,7 +623,7 @@ func initializeModelConfigCache() (ModelConfigCache, error) {
 
 func initializeChannelModels(channel *Channel) {
 	if len(channel.Models) == 0 {
-		channel.Models = config.GetDefaultChannelModels()[channel.Type]
+		channel.Models = config.GetDefaultChannelModels()[int(channel.Type)]
 		return
 	}
 
@@ -637,7 +642,7 @@ func initializeChannelModels(channel *Channel) {
 
 func initializeChannelModelMapping(channel *Channel) {
 	if len(channel.ModelMapping) == 0 {
-		channel.ModelMapping = config.GetDefaultChannelModelMapping()[channel.Type]
+		channel.ModelMapping = config.GetDefaultChannelModelMapping()[int(channel.Type)]
 	}
 }
 
