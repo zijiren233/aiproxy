@@ -61,12 +61,12 @@ func RerankHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model
 
 	if rerankResponse.Meta.Tokens == nil {
 		return &model.Usage{
-			InputTokens: meta.InputTokens,
-			TotalTokens: meta.InputTokens,
+			InputTokens: meta.RequestUsage.InputTokens,
+			TotalTokens: meta.RequestUsage.InputTokens,
 		}, nil
 	}
 	if rerankResponse.Meta.Tokens.InputTokens <= 0 {
-		rerankResponse.Meta.Tokens.InputTokens = meta.InputTokens
+		rerankResponse.Meta.Tokens.InputTokens = meta.RequestUsage.InputTokens
 	}
 	return &model.Usage{
 		InputTokens:  rerankResponse.Meta.Tokens.InputTokens,

@@ -7185,9 +7185,20 @@ const docTemplate = `{
                     "type": "boolean"
                 },
                 "image_prices": {
+                    "description": "map[size]price_per_image",
                     "type": "object",
                     "additionalProperties": {
                         "type": "number"
+                    }
+                },
+                "image_quality_prices": {
+                    "description": "map[size]map[quality]price_per_image",
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "number"
+                        }
                     }
                 },
                 "model": {
@@ -7219,7 +7230,7 @@ const docTemplate = `{
         "controller.CreateGroupRequest": {
             "type": "object",
             "properties": {
-                "available_set": {
+                "available_sets": {
                     "type": "array",
                     "items": {
                         "type": "string"
@@ -7412,9 +7423,20 @@ const docTemplate = `{
                     "type": "boolean"
                 },
                 "image_prices": {
+                    "description": "map[size]price_per_image",
                     "type": "object",
                     "additionalProperties": {
                         "type": "number"
+                    }
+                },
+                "image_quality_prices": {
+                    "description": "map[size]map[quality]price_per_image",
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "number"
+                        }
                     }
                 },
                 "model": {
@@ -7584,6 +7606,12 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "cached_tokens": {
+                    "type": "integer"
+                },
+                "image_input_tokens": {
+                    "type": "integer"
+                },
+                "image_output_numbers": {
                     "type": "integer"
                 },
                 "input_tokens": {
@@ -8391,28 +8419,58 @@ const docTemplate = `{
                 }
             }
         },
+        "model.ImageInputTokensDetails": {
+            "type": "object",
+            "properties": {
+                "image_tokens": {
+                    "description": "The number of image tokens in the input prompt.",
+                    "type": "integer"
+                },
+                "text_tokens": {
+                    "description": "The number of text tokens in the input prompt.",
+                    "type": "integer"
+                }
+            }
+        },
         "model.ImageRequest": {
             "type": "object",
             "properties": {
+                "background": {
+                    "type": "string"
+                },
                 "model": {
+                    "type": "string"
+                },
+                "moderation": {
                     "type": "string"
                 },
                 "n": {
                     "type": "integer"
                 },
+                "output_compression": {
+                    "type": "integer"
+                },
+                "output_format": {
+                    "description": "png, jpeg, webp",
+                    "type": "string"
+                },
                 "prompt": {
                     "type": "string"
                 },
                 "quality": {
+                    "description": "auto, high, medium, low, hd, standard",
                     "type": "string"
                 },
                 "response_format": {
+                    "description": "url, b64_json",
                     "type": "string"
                 },
                 "size": {
+                    "description": "1024x1024, 1536x1024, 1024x1536, auto, 256x256, 512x512, 1792x1024, 1024x1792",
                     "type": "string"
                 },
                 "style": {
+                    "description": "vivid, natural",
                     "type": "string"
                 },
                 "user": {
@@ -8431,6 +8489,39 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/model.ImageData"
                     }
+                },
+                "usage": {
+                    "description": "For gpt-image-1 only, the token usage information for the image generation.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/model.ImageUsage"
+                        }
+                    ]
+                }
+            }
+        },
+        "model.ImageUsage": {
+            "type": "object",
+            "properties": {
+                "input_tokens": {
+                    "description": "The number of tokens (images and text) in the input prompt.",
+                    "type": "integer"
+                },
+                "input_tokens_details": {
+                    "description": "The input tokens detailed information for the image generation.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/model.ImageInputTokensDetails"
+                        }
+                    ]
+                },
+                "outputTokens": {
+                    "description": "The number of image tokens in the output image.",
+                    "type": "integer"
+                },
+                "total_tokens": {
+                    "description": "The total number of tokens (images and text) used for the image generation.",
+                    "type": "integer"
                 }
             }
         },
@@ -8595,9 +8686,20 @@ const docTemplate = `{
                     "type": "boolean"
                 },
                 "image_prices": {
+                    "description": "map[size]price_per_image",
                     "type": "object",
                     "additionalProperties": {
                         "type": "number"
+                    }
+                },
+                "image_quality_prices": {
+                    "description": "map[size]map[quality]price_per_image",
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "number"
+                        }
                     }
                 },
                 "model": {
@@ -8775,6 +8877,18 @@ const docTemplate = `{
                     "type": "number"
                 },
                 "cached_price_unit": {
+                    "type": "integer"
+                },
+                "image_input_price": {
+                    "type": "number"
+                },
+                "image_input_price_unit": {
+                    "type": "integer"
+                },
+                "image_output_price": {
+                    "type": "number"
+                },
+                "image_output_price_unit": {
                     "type": "integer"
                 },
                 "input_price": {

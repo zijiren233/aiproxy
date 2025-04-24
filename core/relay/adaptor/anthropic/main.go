@@ -193,8 +193,8 @@ func StreamHandler(m *meta.Meta, c *gin.Context, resp *http.Response) (*model.Us
 				}
 				usage.Add(response.Usage)
 				if usage.PromptTokens == 0 {
-					usage.PromptTokens = m.InputTokens
-					usage.TotalTokens += m.InputTokens
+					usage.PromptTokens = m.RequestUsage.InputTokens
+					usage.TotalTokens += m.RequestUsage.InputTokens
 				}
 				response.Usage = usage
 				responseText.Reset()
@@ -217,9 +217,9 @@ func StreamHandler(m *meta.Meta, c *gin.Context, resp *http.Response) (*model.Us
 
 	if usage == nil {
 		usage = &relaymodel.Usage{
-			PromptTokens:     m.InputTokens,
+			PromptTokens:     m.RequestUsage.InputTokens,
 			CompletionTokens: openai.CountTokenText(responseText.String(), m.OriginModel),
-			TotalTokens:      m.InputTokens + openai.CountTokenText(responseText.String(), m.OriginModel),
+			TotalTokens:      m.RequestUsage.InputTokens + openai.CountTokenText(responseText.String(), m.OriginModel),
 		}
 	}
 

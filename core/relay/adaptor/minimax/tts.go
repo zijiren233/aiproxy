@@ -144,7 +144,7 @@ func TTSHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Us
 		log.Warnf("write response body failed: %v", err)
 	}
 
-	usageCharacters := meta.InputTokens
+	usageCharacters := meta.RequestUsage.InputTokens
 	if result.ExtraInfo.UsageCharacters > 0 {
 		usageCharacters = result.ExtraInfo.UsageCharacters
 	}
@@ -167,7 +167,7 @@ func ttsStreamHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*mo
 	defer openai.PutScannerBuffer(buf)
 	scanner.Buffer(*buf, cap(*buf))
 
-	usageCharacters := meta.InputTokens
+	usageCharacters := meta.RequestUsage.InputTokens
 
 	for scanner.Scan() {
 		data := scanner.Text()

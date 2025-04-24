@@ -143,7 +143,7 @@ func StreamHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model
 
 	render.Done(c)
 
-	return openai.ResponseText2Usage(responseText.String(), meta.ActualModel, meta.InputTokens).ToModelUsage(), nil
+	return openai.ResponseText2Usage(responseText.String(), meta.ActualModel, meta.RequestUsage.InputTokens).ToModelUsage(), nil
 }
 
 func Handler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, *relaymodel.ErrorWithStatusCode) {
@@ -178,5 +178,5 @@ func Handler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage
 	if len(fullTextResponse.Choices) > 0 {
 		responseText = fullTextResponse.Choices[0].Message.StringContent()
 	}
-	return openai.ResponseText2Usage(responseText, meta.ActualModel, meta.InputTokens).ToModelUsage(), nil
+	return openai.ResponseText2Usage(responseText, meta.ActualModel, meta.RequestUsage.InputTokens).ToModelUsage(), nil
 }

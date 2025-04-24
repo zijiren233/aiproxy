@@ -50,8 +50,6 @@ func ImageHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.
 
 	log := middleware.GetLogger(c)
 
-	responseFormat := meta.GetString(MetaResponseFormat)
-
 	responseBody, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, ErrorWrapper(err, "read_response_body_failed", http.StatusInternalServerError)
@@ -63,11 +61,17 @@ func ImageHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.
 	}
 
 	usage := &model.Usage{
-		InputTokens: int64(len(imageResponse.Data)),
-		TotalTokens: int64(len(imageResponse.Data)),
+		InputTokens:        meta.RequestUsage.InputTokens,
+		TotalTokens:        meta.RequestUsage.InputTokens,
+		ImageOutputNumbers: meta.RequestUsage.ImageOutputNumbers,
 	}
 
-	if responseFormat == "b64_json" {
+	if imageResponse.Usage != nil {
+		usage = imageResponse.Usage.ToModelUsage()
+		usage.ImageOutputNumbers = meta.RequestUsage.ImageOutputNumbers
+	}
+
+	if meta.GetString(MetaResponseFormat) == "b64_json" {
 		for _, data := range imageResponse.Data {
 			if len(data.B64Json) > 0 {
 				continue

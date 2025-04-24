@@ -129,6 +129,9 @@ func CalculateAmount(
 	inputTokens := usage.InputTokens
 	outputTokens := usage.OutputTokens
 
+	if modelPrice.ImageInputPrice > 0 {
+		inputTokens -= usage.ImageInputTokens
+	}
 	if modelPrice.CachedPrice > 0 {
 		inputTokens -= usage.CachedTokens
 	}
@@ -136,27 +139,41 @@ func CalculateAmount(
 		inputTokens -= usage.CacheCreationTokens
 	}
 
-	promptAmount := decimal.NewFromInt(inputTokens).
+	inputAmount := decimal.NewFromInt(inputTokens).
 		Mul(decimal.NewFromFloat(modelPrice.InputPrice)).
 		Div(decimal.NewFromInt(modelPrice.GetInputPriceUnit()))
-	completionAmount := decimal.NewFromInt(outputTokens).
-		Mul(decimal.NewFromFloat(modelPrice.OutputPrice)).
-		Div(decimal.NewFromInt(modelPrice.GetOutputPriceUnit()))
+
+	inputImageAmount := decimal.NewFromInt(usage.ImageInputTokens).
+		Mul(decimal.NewFromFloat(modelPrice.ImageInputPrice)).
+		Div(decimal.NewFromInt(modelPrice.GetImageInputPriceUnit()))
+
 	cachedAmount := decimal.NewFromInt(usage.CachedTokens).
 		Mul(decimal.NewFromFloat(modelPrice.CachedPrice)).
 		Div(decimal.NewFromInt(modelPrice.GetCachedPriceUnit()))
+
 	cacheCreationAmount := decimal.NewFromInt(usage.CacheCreationTokens).
 		Mul(decimal.NewFromFloat(modelPrice.CacheCreationPrice)).
 		Div(decimal.NewFromInt(modelPrice.GetCacheCreationPriceUnit()))
+
 	webSearchAmount := decimal.NewFromInt(usage.WebSearchCount).
 		Mul(decimal.NewFromFloat(modelPrice.WebSearchPrice)).
 		Div(decimal.NewFromInt(modelPrice.GetWebSearchPriceUnit()))
 
-	return promptAmount.
-		Add(completionAmount).
+	outputAmount := decimal.NewFromInt(outputTokens).
+		Mul(decimal.NewFromFloat(modelPrice.OutputPrice)).
+		Div(decimal.NewFromInt(modelPrice.GetOutputPriceUnit()))
+
+	imageOutputAmount := decimal.NewFromInt(usage.ImageOutputNumbers).
+		Mul(decimal.NewFromFloat(modelPrice.ImageOutputPrice)).
+		Div(decimal.NewFromInt(modelPrice.GetImageOutputPriceUnit()))
+
+	return inputAmount.
+		Add(inputImageAmount).
 		Add(cachedAmount).
 		Add(cacheCreationAmount).
 		Add(webSearchAmount).
+		Add(outputAmount).
+		Add(imageOutputAmount).
 		InexactFloat64()
 }
 

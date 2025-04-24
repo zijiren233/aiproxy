@@ -73,7 +73,7 @@ func TTSHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Us
 		log.Warnf("write response body failed: %v", err)
 	}
 	return &model.Usage{
-		InputTokens: meta.InputTokens,
-		TotalTokens: meta.InputTokens,
+		InputTokens: meta.RequestUsage.InputTokens,
+		TotalTokens: meta.RequestUsage.InputTokens,
 	}, nil
 }

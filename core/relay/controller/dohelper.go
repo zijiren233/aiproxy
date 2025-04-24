@@ -249,10 +249,7 @@ func handleResponse(a adaptor.Adaptor, c *gin.Context, meta *meta.Meta, resp *ht
 		return model.Usage{}, relayErr
 	}
 
-	return model.Usage{
-		InputTokens: meta.InputTokens,
-		TotalTokens: meta.InputTokens,
-	}, nil
+	return meta.RequestUsage, nil
 }
 
 func updateUsageMetrics(usage model.Usage, log *log.Entry) {

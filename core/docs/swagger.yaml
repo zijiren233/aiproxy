@@ -66,6 +66,14 @@ definitions:
       image_prices:
         additionalProperties:
           type: number
+        description: map[size]price_per_image
+        type: object
+      image_quality_prices:
+        additionalProperties:
+          additionalProperties:
+            type: number
+          type: object
+        description: map[size]map[quality]price_per_image
         type: object
       model:
         type: string
@@ -86,7 +94,7 @@ definitions:
     type: object
   controller.CreateGroupRequest:
     properties:
-      available_set:
+      available_sets:
         items:
           type: string
         type: array
@@ -215,6 +223,14 @@ definitions:
       image_prices:
         additionalProperties:
           type: number
+        description: map[size]price_per_image
+        type: object
+      image_quality_prices:
+        additionalProperties:
+          additionalProperties:
+            type: number
+          type: object
+        description: map[size]map[quality]price_per_image
         type: object
       model:
         type: string
@@ -324,6 +340,10 @@ definitions:
       cache_creation_tokens:
         type: integer
       cached_tokens:
+        type: integer
+      image_input_tokens:
+        type: integer
+      image_output_numbers:
         type: integer
       input_tokens:
         type: integer
@@ -869,21 +889,44 @@ definitions:
       url:
         type: string
     type: object
+  model.ImageInputTokensDetails:
+    properties:
+      image_tokens:
+        description: The number of image tokens in the input prompt.
+        type: integer
+      text_tokens:
+        description: The number of text tokens in the input prompt.
+        type: integer
+    type: object
   model.ImageRequest:
     properties:
+      background:
+        type: string
       model:
+        type: string
+      moderation:
         type: string
       "n":
         type: integer
+      output_compression:
+        type: integer
+      output_format:
+        description: png, jpeg, webp
+        type: string
       prompt:
         type: string
       quality:
+        description: auto, high, medium, low, hd, standard
         type: string
       response_format:
+        description: url, b64_json
         type: string
       size:
+        description: 1024x1024, 1536x1024, 1024x1536, auto, 256x256, 512x512, 1792x1024,
+          1024x1792
         type: string
       style:
+        description: vivid, natural
         type: string
       user:
         type: string
@@ -896,6 +939,28 @@ definitions:
         items:
           $ref: '#/definitions/model.ImageData'
         type: array
+      usage:
+        allOf:
+        - $ref: '#/definitions/model.ImageUsage'
+        description: For gpt-image-1 only, the token usage information for the image
+          generation.
+    type: object
+  model.ImageUsage:
+    properties:
+      input_tokens:
+        description: The number of tokens (images and text) in the input prompt.
+        type: integer
+      input_tokens_details:
+        allOf:
+        - $ref: '#/definitions/model.ImageInputTokensDetails'
+        description: The input tokens detailed information for the image generation.
+      outputTokens:
+        description: The number of image tokens in the output image.
+        type: integer
+      total_tokens:
+        description: The total number of tokens (images and text) used for the image
+          generation.
+        type: integer
     type: object
   model.JSONSchema:
     properties:
@@ -1006,6 +1071,14 @@ definitions:
       image_prices:
         additionalProperties:
           type: number
+        description: map[size]price_per_image
+        type: object
+      image_quality_prices:
+        additionalProperties:
+          additionalProperties:
+            type: number
+          type: object
+        description: map[size]map[quality]price_per_image
         type: object
       model:
         type: string
@@ -1144,6 +1217,14 @@ definitions:
       cached_price:
         type: number
       cached_price_unit:
+        type: integer
+      image_input_price:
+        type: number
+      image_input_price_unit:
+        type: integer
+      image_output_price:
+        type: number
+      image_output_price_unit:
         type: integer
       input_price:
         type: number

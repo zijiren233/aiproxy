@@ -2,10 +2,10 @@ package controller
 
 import (
 	"errors"
-	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/core/model"
+	"github.com/labring/aiproxy/core/relay/adaptor/openai"
 	relaymodel "github.com/labring/aiproxy/core/relay/model"
 	"github.com/labring/aiproxy/core/relay/utils"
 )
@@ -29,7 +29,11 @@ func getRerankRequest(c *gin.Context) (*relaymodel.RerankRequest, error) {
 }
 
 func rerankPromptTokens(rerankRequest *relaymodel.RerankRequest) int64 {
-	return int64(len(rerankRequest.Query)) + int64(len(strings.Join(rerankRequest.Documents, "")))
+	tokens := openai.CountTokenInput(rerankRequest.Query, rerankRequest.Model)
+	for _, d := range rerankRequest.Documents {
+		tokens += openai.CountTokenInput(d, rerankRequest.Model)
+	}
+	return tokens
 }
 
 func GetRerankRequestPrice(_ *gin.Context, mc *model.ModelConfig) (model.Price, error) {

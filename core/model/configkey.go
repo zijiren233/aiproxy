@@ -1,6 +1,9 @@
 package model
 
-import "reflect"
+import (
+	"reflect"
+	"strings"
+)
 
 //nolint:revive
 type ModelConfigKey string
@@ -13,10 +16,29 @@ const (
 	ModelConfigToolChoiceKey       ModelConfigKey = "tool_choice"
 	ModelConfigSupportFormatsKey   ModelConfigKey = "support_formats"
 	ModelConfigSupportVoicesKey    ModelConfigKey = "support_voices"
+	ModelConfigImageSizes          ModelConfigKey = "image_sizes"
+	ModelConfigImageQualitys       ModelConfigKey = "image_qualitys"
 )
 
 //nolint:revive
 type ModelConfigOption func(config map[ModelConfigKey]any)
+
+func WithModelConfigImageSizes(sizes ...string) ModelConfigOption {
+	for _, size := range sizes {
+		if !strings.Contains(size, "x") {
+			panic("image size format error")
+		}
+	}
+	return func(config map[ModelConfigKey]any) {
+		config[ModelConfigImageSizes] = sizes
+	}
+}
+
+func WithModelConfigImageQualitys(qualitys ...string) ModelConfigOption {
+	return func(config map[ModelConfigKey]any) {
+		config[ModelConfigImageQualitys] = qualitys
+	}
+}
 
 func WithModelConfigMaxContextTokens(maxContextTokens int) ModelConfigOption {
 	return func(config map[ModelConfigKey]any) {
