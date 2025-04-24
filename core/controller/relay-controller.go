@@ -522,6 +522,8 @@ func retryLoop(c *gin.Context, mode mode.Mode, state *retryState, relayControlle
 	i := 0
 
 	for {
+		lastStatusCode := state.result.Error.StatusCode
+		lastChannelID := state.meta.Channel.ID
 		newChannel, err := getRetryChannel(state)
 		if err == nil {
 			err = prepareRetry(c)
@@ -551,6 +553,11 @@ func retryLoop(c *gin.Context, mode mode.Mode, state *retryState, relayControlle
 			newChannel.ID,
 			state.retryTimes-i,
 		)
+
+		// Check if we should delay (using the same channel)
+		if shouldDelay(lastStatusCode, lastChannelID, newChannel.ID) {
+			relayDelay()
+		}
 
 		state.meta = NewMetaByContext(
 			c,
@@ -582,10 +589,6 @@ func getRetryChannel(state *retryState) (*model.Channel, error) {
 		if state.lastHasPermissionChannel == nil {
 			return nil, ErrChannelsExhausted
 		}
-		if shouldDelay(state.result.Error.StatusCode) {
-			//nolint:gosec
-			time.Sleep(time.Duration(rand.Float64()*float64(time.Second)) + time.Second)
-		}
 		return state.lastHasPermissionChannel, nil
 	}
 
@@ -595,10 +598,6 @@ func getRetryChannel(state *retryState) (*model.Channel, error) {
 			return nil, err
 		}
 		state.exhausted = true
-		if shouldDelay(state.result.Error.StatusCode) {
-			//nolint:gosec
-			time.Sleep(time.Duration(rand.Float64()*float64(time.Second)) + time.Second)
-		}
 		return state.lastHasPermissionChannel, nil
 	}
 
@@ -671,9 +670,21 @@ func channelHasPermission(relayErr relaymodel.ErrorWithStatusCode) bool {
 	return !ok
 }
 
-func shouldDelay(statusCode int) bool {
+// shouldDelay checks if we need to add a delay before retrying
+// Only adds delay when retrying with the same channel for rate limiting issues
+func shouldDelay(statusCode int, lastChannelID, newChannelID int) bool {
+	if lastChannelID != newChannelID {
+		return false
+	}
+
+	// Only delay for rate limiting or service unavailable errors
 	return statusCode == http.StatusTooManyRequests ||
 		statusCode == http.StatusServiceUnavailable
+}
+
+func relayDelay() {
+	//nolint:gosec
+	time.Sleep(time.Duration(rand.Float64()*float64(time.Second)) + time.Second)
 }
 
 func RelayNotImplemented(c *gin.Context) {
