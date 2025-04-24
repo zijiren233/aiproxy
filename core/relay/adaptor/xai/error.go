@@ -3,6 +3,7 @@ package xai
 import (
 	"io"
 	"net/http"
+	"strings"
 
 	"github.com/bytedance/sonic"
 	"github.com/labring/aiproxy/core/common/conv"
@@ -28,5 +29,12 @@ func ErrorHandler(resp *http.Response) *model.ErrorWithStatusCode {
 	if err != nil {
 		return openai.ErrorWrapperWithMessage(conv.BytesToString(data), nil, http.StatusInternalServerError)
 	}
-	return openai.ErrorWrapperWithMessage(er.Error, er.Code, resp.StatusCode)
+
+	statusCode := resp.StatusCode
+
+	if strings.Contains(er.Error, "Incorrect API key provided") {
+		statusCode = http.StatusUnauthorized
+	}
+
+	return openai.ErrorWrapperWithMessage(er.Error, er.Code, statusCode)
 }

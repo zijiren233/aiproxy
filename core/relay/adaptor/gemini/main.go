@@ -614,10 +614,6 @@ func StreamHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model
 		}
 		data = data[6:]
 
-		if conv.BytesToString(data) == "[DONE]" {
-			break
-		}
-
 		var geminiResponse ChatResponse
 		err := sonic.Unmarshal(data, &geminiResponse)
 		if err != nil {

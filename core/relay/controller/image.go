@@ -51,7 +51,7 @@ func GetImageRequestPrice(c *gin.Context, mc *model.ModelConfig) (model.Price, e
 
 	imageCostPrice, ok := GetImageOutputPrice(mc, imageRequest.Size, imageRequest.Quality)
 	if !ok {
-		return model.Price{}, fmt.Errorf("invalid image size: %s", imageRequest.Size)
+		return model.Price{}, fmt.Errorf("invalid image size `%s` or quality `%s`", imageRequest.Size, imageRequest.Quality)
 	}
 
 	return model.Price{
