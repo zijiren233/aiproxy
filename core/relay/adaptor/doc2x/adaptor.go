@@ -64,7 +64,3 @@ func (a *Adaptor) SetupRequestHeader(meta *meta.Meta, _ *gin.Context, req *http.
 func (a *Adaptor) GetModelList() []*model.ModelConfig {
 	return ModelList
 }
-
-func (a *Adaptor) GetChannelName() string {
-	return "doc2x"
-}

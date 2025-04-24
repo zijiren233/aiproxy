@@ -19,7 +19,3 @@ func (a *Adaptor) GetBaseURL() string {
 func (a *Adaptor) GetModelList() []*model.ModelConfig {
 	return gemini.ModelList
 }
-
-func (a *Adaptor) GetChannelName() string {
-	return "google gemini (openai)"
-}

@@ -50,7 +50,7 @@ type Channel struct {
 	UsedAmount              float64           `gorm:"index"                              json:"used_amount"`
 	RequestCount            int               `gorm:"index"                              json:"request_count"`
 	Status                  int               `gorm:"default:1;index"                    json:"status"`
-	Type                    int               `gorm:"default:0;index"                    json:"type"`
+	Type                    ChannelType       `gorm:"default:0;index"                    json:"type"`
 	Priority                int32             `json:"priority"`
 	EnabledAutoBalanceCheck bool              `json:"enabled_auto_balance_check"`
 	BalanceThreshold        float64           `json:"balance_threshold"`

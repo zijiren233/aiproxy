@@ -17,19 +17,6 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// ChannelTypeNames godoc
-//
-//	@Summary		Get all channel type names
-//	@Description	Returns a list of all available channel type names
-//	@Tags			channels
-//	@Produce		json
-//	@Security		ApiKeyAuth
-//	@Success		200	{object}	middleware.APIResponse{data=map[int]string}
-//	@Router			/api/channels/type_names [get]
-func ChannelTypeNames(c *gin.Context) {
-	middleware.SuccessResponse(c, channeltype.ChannelNames)
-}
-
 // ChannelTypeMetas godoc
 //
 //	@Summary		Get channel type metadata
@@ -202,7 +189,7 @@ type AddChannelRequest struct {
 	Key          string               `json:"key"`
 	BaseURL      string               `json:"base_url"`
 	Models       []string             `json:"models"`
-	Type         int                  `json:"type"`
+	Type         model.ChannelType    `json:"type"`
 	Priority     int32                `json:"priority"`
 	Status       int                  `json:"status"`
 	Sets         []string             `json:"sets"`
@@ -218,9 +205,9 @@ func (r *AddChannelRequest) ToChannel() (*model.Channel, error) {
 		if err != nil {
 			keyHelp := validator.KeyHelp()
 			if keyHelp == "" {
-				return nil, fmt.Errorf("%s [%s(%d)] invalid key: %w", r.Name, channeltype.ChannelNames[r.Type], r.Type, err)
+				return nil, fmt.Errorf("%s [%s(%d)] invalid key: %w", r.Name, r.Type.String(), r.Type, err)
 			}
-			return nil, fmt.Errorf("%s [%s(%d)] invalid key: %w, %s", r.Name, channeltype.ChannelNames[r.Type], r.Type, err, keyHelp)
+			return nil, fmt.Errorf("%s [%s(%d)] invalid key: %w, %s", r.Name, r.Type.String(), r.Type, err, keyHelp)
 		}
 	}
 	return &model.Channel{

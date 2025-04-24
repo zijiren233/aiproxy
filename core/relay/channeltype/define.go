@@ -1,6 +1,7 @@
 package channeltype
 
 import (
+	"github.com/labring/aiproxy/core/model"
 	"github.com/labring/aiproxy/core/relay/adaptor"
 	"github.com/labring/aiproxy/core/relay/adaptor/ai360"
 	"github.com/labring/aiproxy/core/relay/adaptor/ali"
@@ -38,45 +39,45 @@ import (
 	"github.com/labring/aiproxy/core/relay/adaptor/zhipu"
 )
 
-var ChannelAdaptor = map[int]adaptor.Adaptor{
-	1:  &openai.Adaptor{},
-	3:  &azure.Adaptor{},
-	12: &geminiopenai.Adaptor{},
-	13: &baiduv2.Adaptor{},
-	14: &anthropic.Adaptor{},
-	15: &baidu.Adaptor{},
-	16: &zhipu.Adaptor{},
-	17: &ali.Adaptor{},
-	18: &xunfei.Adaptor{},
-	19: &ai360.Adaptor{},
-	20: &openrouter.Adaptor{},
-	23: &tencent.Adaptor{},
-	24: &gemini.Adaptor{},
-	25: &moonshot.Adaptor{},
-	26: &baichuan.Adaptor{},
-	27: &minimax.Adaptor{},
-	28: &mistral.Adaptor{},
-	29: &groq.Adaptor{},
-	30: &ollama.Adaptor{},
-	31: &lingyiwanwu.Adaptor{},
-	32: &stepfun.Adaptor{},
-	33: &aws.Adaptor{},
-	34: &coze.Adaptor{},
-	35: &cohere.Adaptor{},
-	36: &deepseek.Adaptor{},
-	37: &cloudflare.Adaptor{},
-	40: &doubao.Adaptor{},
-	41: &novita.Adaptor{},
-	42: &vertexai.Adaptor{},
-	43: &siliconflow.Adaptor{},
-	44: &doubaoaudio.Adaptor{},
-	45: &xai.Adaptor{},
-	46: &doc2x.Adaptor{},
-	47: &jina.Adaptor{},
+var ChannelAdaptor = map[model.ChannelType]adaptor.Adaptor{
+	model.ChannelTypeOpenAI:             &openai.Adaptor{},
+	model.ChannelTypeAzure:              &azure.Adaptor{},
+	model.ChannelTypeGoogleGeminiOpenAI: &geminiopenai.Adaptor{},
+	model.ChannelTypeBaiduV2:            &baiduv2.Adaptor{},
+	model.ChannelTypeAnthropic:          &anthropic.Adaptor{},
+	model.ChannelTypeBaidu:              &baidu.Adaptor{},
+	model.ChannelTypeZhipu:              &zhipu.Adaptor{},
+	model.ChannelTypeAli:                &ali.Adaptor{},
+	model.ChannelTypeXunfei:             &xunfei.Adaptor{},
+	model.ChannelTypeAI360:              &ai360.Adaptor{},
+	model.ChannelTypeOpenRouter:         &openrouter.Adaptor{},
+	model.ChannelTypeTencent:            &tencent.Adaptor{},
+	model.ChannelTypeGoogleGemini:       &gemini.Adaptor{},
+	model.ChannelTypeMoonshot:           &moonshot.Adaptor{},
+	model.ChannelTypeBaichuan:           &baichuan.Adaptor{},
+	model.ChannelTypeMinimax:            &minimax.Adaptor{},
+	model.ChannelTypeMistral:            &mistral.Adaptor{},
+	model.ChannelTypeGroq:               &groq.Adaptor{},
+	model.ChannelTypeOllama:             &ollama.Adaptor{},
+	model.ChannelTypeLingyiwanwu:        &lingyiwanwu.Adaptor{},
+	model.ChannelTypeStepfun:            &stepfun.Adaptor{},
+	model.ChannelTypeAWS:                &aws.Adaptor{},
+	model.ChannelTypeCoze:               &coze.Adaptor{},
+	model.ChannelTypeCohere:             &cohere.Adaptor{},
+	model.ChannelTypeDeepseek:           &deepseek.Adaptor{},
+	model.ChannelTypeCloudflare:         &cloudflare.Adaptor{},
+	model.ChannelTypeDoubao:             &doubao.Adaptor{},
+	model.ChannelTypeNovita:             &novita.Adaptor{},
+	model.ChannelTypeVertexAI:           &vertexai.Adaptor{},
+	model.ChannelTypeSiliconflow:        &siliconflow.Adaptor{},
+	model.ChannelTypeDoubaoAudio:        &doubaoaudio.Adaptor{},
+	model.ChannelTypeXAI:                &xai.Adaptor{},
+	model.ChannelTypeDoc2x:              &doc2x.Adaptor{},
+	model.ChannelTypeJina:               &jina.Adaptor{},
 }
 
-func GetAdaptor(channel int) (adaptor.Adaptor, bool) {
-	a, ok := ChannelAdaptor[channel]
+func GetAdaptor(channelType model.ChannelType) (adaptor.Adaptor, bool) {
+	a, ok := ChannelAdaptor[channelType]
 	return a, ok
 }
 
@@ -86,25 +87,15 @@ type AdaptorMeta struct {
 	DefaultBaseURL string `json:"defaultBaseUrl"`
 }
 
-var (
-	ChannelNames = map[int]string{}
-	ChannelMetas = map[int]AdaptorMeta{}
-)
+var ChannelMetas = map[model.ChannelType]AdaptorMeta{}
 
 func init() {
-	names := make(map[string]struct{})
 	for i, adaptor := range ChannelAdaptor {
-		name := adaptor.GetChannelName()
-		if _, ok := names[name]; ok {
-			panic("duplicate channel name: " + name)
-		}
-		names[name] = struct{}{}
 		ChannelMetas[i] = AdaptorMeta{
-			Name:           name,
+			Name:           i.String(),
 			KeyHelp:        getAdaptorKeyHelp(adaptor),
 			DefaultBaseURL: adaptor.GetBaseURL(),
 		}
-		ChannelNames[i] = name
 	}
 }
 
@@ -113,8 +104,4 @@ func getAdaptorKeyHelp(a adaptor.Adaptor) string {
 		return keyValidator.KeyHelp()
 	}
 	return ""
-}
-
-func GetChannelName(channel int) string {
-	return ChannelNames[channel]
 }

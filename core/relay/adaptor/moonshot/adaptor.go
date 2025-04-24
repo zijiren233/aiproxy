@@ -18,7 +18,3 @@ func (a *Adaptor) GetBaseURL() string {
 func (a *Adaptor) GetModelList() []*model.ModelConfig {
 	return ModelList
 }
-
-func (a *Adaptor) GetChannelName() string {
-	return "moonshot"
-}

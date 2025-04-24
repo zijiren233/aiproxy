@@ -9,12 +9,11 @@ import (
 )
 
 type ChannelMeta struct {
-	Name     string
-	BaseURL  string
-	Key      string
-	ID       int
-	Type     int
-	TypeName string
+	Name    string
+	BaseURL string
+	Key     string
+	ID      int
+	Type    model.ChannelType
 }
 
 type Meta struct {
@@ -77,12 +76,6 @@ func WithToken(token *model.TokenCache) Option {
 func WithRequestUsage(requestUsage model.Usage) Option {
 	return func(meta *Meta) {
 		meta.RequestUsage = requestUsage
-	}
-}
-
-func WithChannelTypeName(typeName string) Option {
-	return func(meta *Meta) {
-		meta.Channel.TypeName = typeName
 	}
 }
 

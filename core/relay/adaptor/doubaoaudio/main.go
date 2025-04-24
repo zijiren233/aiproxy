@@ -83,7 +83,3 @@ func (a *Adaptor) DoResponse(meta *meta.Meta, c *gin.Context, resp *http.Respons
 		)
 	}
 }
-
-func (a *Adaptor) GetChannelName() string {
-	return "doubao audio"
-}

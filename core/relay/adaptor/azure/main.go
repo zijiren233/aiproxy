@@ -56,7 +56,3 @@ func (a *Adaptor) SetupRequestHeader(meta *meta.Meta, _ *gin.Context, req *http.
 	req.Header.Set("Api-Key", token)
 	return nil
 }
-
-func (a *Adaptor) GetChannelName() string {
-	return "azure"
-}

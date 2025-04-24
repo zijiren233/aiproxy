@@ -148,10 +148,6 @@ func (a *Adaptor) DoResponse(meta *meta.Meta, c *gin.Context, resp *http.Respons
 	return usage, err
 }
 
-func (a *Adaptor) GetChannelName() string {
-	return "doubao"
-}
-
 func (a *Adaptor) GetBalance(_ *model.Channel) (float64, error) {
 	return 0, adaptor.ErrGetBalanceNotImplemented
 }

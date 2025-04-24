@@ -28,10 +28,6 @@ func (a *Adaptor) GetModelList() []*model.ModelConfig {
 	return ModelList
 }
 
-func (a *Adaptor) GetChannelName() string {
-	return "siliconflow"
-}
-
 //nolint:gocritic
 func (a *Adaptor) DoResponse(meta *meta.Meta, c *gin.Context, resp *http.Response) (usage *model.Usage, err *relaymodel.ErrorWithStatusCode) {
 	usage, err = a.Adaptor.DoResponse(meta, c, resp)

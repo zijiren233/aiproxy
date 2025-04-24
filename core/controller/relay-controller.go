@@ -21,7 +21,6 @@ import (
 	"github.com/labring/aiproxy/core/middleware"
 	"github.com/labring/aiproxy/core/model"
 	"github.com/labring/aiproxy/core/monitor"
-	"github.com/labring/aiproxy/core/relay/channeltype"
 	"github.com/labring/aiproxy/core/relay/controller"
 	"github.com/labring/aiproxy/core/relay/meta"
 	"github.com/labring/aiproxy/core/relay/mode"
@@ -143,7 +142,7 @@ func notifyChannelIssue(meta *meta.Meta, issueType string, titleSuffix string, e
 		"channel: %s (type: %d, type name: %s, id: %d)\nmodel: %s\nmode: %s\nstatus code: %d\ndetail: %s\nrequest id: %s",
 		meta.Channel.Name,
 		meta.Channel.Type,
-		meta.Channel.TypeName,
+		meta.Channel.Type.String(),
 		meta.Channel.ID,
 		meta.OriginModel,
 		meta.Mode,
@@ -287,10 +286,6 @@ func NewRelay(mode mode.Mode) func(c *gin.Context) {
 }
 
 func NewMetaByContext(c *gin.Context, channel *model.Channel, mode mode.Mode, opts ...meta.Option) *meta.Meta {
-	channelTypeName := channeltype.GetChannelName(channel.Type)
-	if channelTypeName != "" {
-		opts = append(opts, meta.WithChannelTypeName(channelTypeName))
-	}
 	return middleware.NewMetaByContext(c, channel, mode, opts...)
 }
 

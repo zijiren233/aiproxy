@@ -62,7 +62,7 @@ func SortBuiltinModelConfigsFunc(i, j *BuiltinModelConfig) int {
 var (
 	builtinModels             []*BuiltinModelConfig
 	builtinModelsMap          map[string]*OpenAIModels
-	builtinChannelType2Models map[int][]*BuiltinModelConfig
+	builtinChannelType2Models map[model.ChannelType][]*BuiltinModelConfig
 )
 
 var permission = []OpenAIModelPermission{
@@ -83,7 +83,7 @@ var permission = []OpenAIModelPermission{
 }
 
 func init() {
-	builtinChannelType2Models = make(map[int][]*BuiltinModelConfig)
+	builtinChannelType2Models = make(map[model.ChannelType][]*BuiltinModelConfig)
 	builtinModelsMap = make(map[string]*OpenAIModels)
 	// https://platform.openai.com/docs/models/model-endpoint-compatibility
 	for i, adaptor := range channeltype.ChannelAdaptor {
@@ -91,7 +91,7 @@ func init() {
 		builtinChannelType2Models[i] = make([]*BuiltinModelConfig, len(modelNames))
 		for idx, _model := range modelNames {
 			if _model.Owner == "" {
-				_model.Owner = model.ModelOwner(adaptor.GetChannelName())
+				_model.Owner = model.ModelOwner(i.String())
 			}
 			if v, ok := builtinModelsMap[_model.Model]; !ok {
 				builtinModelsMap[_model.Model] = &OpenAIModels{
@@ -152,7 +152,7 @@ func ChannelBuiltinModels(c *gin.Context) {
 //	@Tags			model
 //	@Produce		json
 //	@Security		ApiKeyAuth
-//	@Param			type	path		string	true	"Channel type"
+//	@Param			type	path		model.ChannelType	true	"Channel type"
 //	@Success		200		{object}	middleware.APIResponse{data=[]BuiltinModelConfig}
 //	@Router			/api/models/builtin/channel/{type} [get]
 func ChannelBuiltinModelsByType(c *gin.Context) {
@@ -166,7 +166,7 @@ func ChannelBuiltinModelsByType(c *gin.Context) {
 		middleware.ErrorResponse(c, http.StatusOK, "invalid type")
 		return
 	}
-	middleware.SuccessResponse(c, builtinChannelType2Models[channelTypeInt])
+	middleware.SuccessResponse(c, builtinChannelType2Models[model.ChannelType(channelTypeInt)])
 }
 
 // ChannelDefaultModelsAndMapping godoc
@@ -223,4 +223,92 @@ func ChannelDefaultModelsAndMappingByType(c *gin.Context) {
 //	@Router			/api/models/enabled [get]
 func EnabledModels(c *gin.Context) {
 	middleware.SuccessResponse(c, model.LoadModelCaches().EnabledModelConfigsBySet)
+}
+
+// EnabledModelsSet godoc
+//
+//	@Summary		Get enabled models by set
+//	@Description	Returns a list of enabled models by set
+//	@Tags			model
+//	@Produce		json
+//	@Security		ApiKeyAuth
+//	@Param			set	path		string	true	"Models set"
+//	@Success		200	{object}	middleware.APIResponse{data=[]model.ModelConfig}
+//	@Router			/api/models/enabled/{set} [get]
+func EnabledModelsSet(c *gin.Context) {
+	set := c.Param("set")
+	if set == "" {
+		middleware.ErrorResponse(c, http.StatusOK, "set is required")
+		return
+	}
+	middleware.SuccessResponse(c, model.LoadModelCaches().EnabledModelConfigsBySet[set])
+}
+
+type EnabledModelChannel struct {
+	ID   int               `json:"id"`
+	Type model.ChannelType `json:"type"`
+	Name string            `json:"name"`
+}
+
+func newEnabledModelChannel(ch *model.Channel) EnabledModelChannel {
+	return EnabledModelChannel{
+		ID:   ch.ID,
+		Type: ch.Type,
+		Name: ch.Name,
+	}
+}
+
+// EnabledModelChannels godoc
+//
+//	@Summary		Get enabled models and channels
+//	@Description	Returns a list of enabled models
+//	@Tags			model
+//	@Produce		json
+//	@Security		ApiKeyAuth
+//	@Success		200	{object}	middleware.APIResponse{data=map[string]map[string][]EnabledModelChannel}
+//	@Router			/api/models/channel [get]
+func EnabledModelChannels(c *gin.Context) {
+	raw := model.LoadModelCaches().EnabledModel2ChannelsBySet
+	result := make(map[string]map[string][]EnabledModelChannel)
+
+	for set, modelChannels := range raw {
+		result[set] = make(map[string][]EnabledModelChannel)
+		for model, channels := range modelChannels {
+			chs := make([]EnabledModelChannel, len(channels))
+			for i, channel := range channels {
+				chs[i] = newEnabledModelChannel(channel)
+			}
+			result[set][model] = chs
+		}
+	}
+
+	middleware.SuccessResponse(c, result)
+}
+
+// EnabledModelChannelsSet godoc
+//
+//	@Summary		Get enabled models and channels by set
+//	@Description	Returns a list of enabled models and channels by set
+//	@Tags			model
+//	@Produce		json
+//	@Security		ApiKeyAuth
+//	@Param			set	path		string	true	"Models set"
+//	@Success		200	{object}	middleware.APIResponse{data=map[string][]EnabledModelChannel}
+//	@Router			/api/models/channel/{set} [get]
+func EnabledModelChannelsSet(c *gin.Context) {
+	set := c.Param("set")
+	if set == "" {
+		middleware.ErrorResponse(c, http.StatusOK, "set is required")
+		return
+	}
+	raw := model.LoadModelCaches().EnabledModel2ChannelsBySet[set]
+	result := make(map[string][]EnabledModelChannel, len(raw))
+	for model, channels := range raw {
+		chs := make([]EnabledModelChannel, len(channels))
+		for i, channel := range channels {
+			chs[i] = newEnabledModelChannel(channel)
+		}
+		result[model] = chs
+	}
+	middleware.SuccessResponse(c, result)
 }
