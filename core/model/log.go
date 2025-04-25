@@ -519,6 +519,7 @@ func buildGetLogsQuery(
 	tokenName string,
 	channelID int,
 	codeType CodeType,
+	code int,
 	ip string,
 	resultOnly bool,
 ) *gorm.DB {
@@ -564,6 +565,10 @@ func buildGetLogsQuery(
 		tx = tx.Where("code = 200")
 	case CodeTypeError:
 		tx = tx.Where("code != 200")
+	default:
+		if code != 0 {
+			tx = tx.Where("code = ?", code)
+		}
 	}
 
 	if tokenID != 0 {
@@ -583,6 +588,7 @@ func getLogs(
 	channelID int,
 	order string,
 	codeType CodeType,
+	code int,
 	withBody bool,
 	ip string,
 	page int,
@@ -605,6 +611,7 @@ func getLogs(
 			tokenName,
 			channelID,
 			codeType,
+			code,
 			ip,
 			resultOnly,
 		).Count(&total).Error
@@ -621,6 +628,7 @@ func getLogs(
 			tokenName,
 			channelID,
 			codeType,
+			code,
 			ip,
 			resultOnly,
 		)
@@ -658,6 +666,7 @@ func GetLogs(
 	channelID int,
 	order string,
 	codeType CodeType,
+	code int,
 	withBody bool,
 	ip string,
 	page int,
@@ -678,7 +687,24 @@ func GetLogs(
 
 	g.Go(func() error {
 		var err error
-		total, logs, err = getLogs(group, startTimestamp, endTimestamp, modelName, requestID, tokenID, tokenName, channelID, order, codeType, withBody, ip, page, perPage, resultOnly)
+		total, logs, err = getLogs(
+			group,
+			startTimestamp,
+			endTimestamp,
+			modelName,
+			requestID,
+			tokenID,
+			tokenName,
+			channelID,
+			order,
+			codeType,
+			code,
+			withBody,
+			ip,
+			page,
+			perPage,
+			resultOnly,
+		)
 		return err
 	})
 
@@ -706,6 +732,7 @@ func GetGroupLogs(
 	channelID int,
 	order string,
 	codeType CodeType,
+	code int,
 	withBody bool,
 	ip string,
 	page int,
@@ -727,7 +754,23 @@ func GetGroupLogs(
 
 	g.Go(func() error {
 		var err error
-		total, logs, err = getLogs(group, startTimestamp, endTimestamp, modelName, requestID, tokenID, tokenName, channelID, order, codeType, withBody, ip, page, perPage, resultOnly)
+		total, logs, err = getLogs(group,
+			startTimestamp,
+			endTimestamp,
+			modelName,
+			requestID,
+			tokenID,
+			tokenName,
+			channelID,
+			order,
+			codeType,
+			code,
+			withBody,
+			ip,
+			page,
+			perPage,
+			resultOnly,
+		)
 		return err
 	})
 
@@ -768,6 +811,7 @@ func buildSearchLogsQuery(
 	endTimestamp time.Time,
 	channelID int,
 	codeType CodeType,
+	code int,
 	ip string,
 	resultOnly bool,
 ) *gorm.DB {
@@ -813,6 +857,10 @@ func buildSearchLogsQuery(
 		tx = tx.Where("code = 200")
 	case CodeTypeError:
 		tx = tx.Where("code != 200")
+	default:
+		if code != 0 {
+			tx = tx.Where("code = ?", code)
+		}
 	}
 
 	if tokenID != 0 {
@@ -881,6 +929,7 @@ func searchLogs(
 	channelID int,
 	order string,
 	codeType CodeType,
+	code int,
 	withBody bool,
 	ip string,
 	page int,
@@ -904,6 +953,7 @@ func searchLogs(
 			endTimestamp,
 			channelID,
 			codeType,
+			code,
 			ip,
 			resultOnly,
 		).Count(&total).Error
@@ -921,6 +971,7 @@ func searchLogs(
 			endTimestamp,
 			channelID,
 			codeType,
+			code,
 			ip,
 			resultOnly,
 		)
@@ -960,6 +1011,7 @@ func SearchLogs(
 	channelID int,
 	order string,
 	codeType CodeType,
+	code int,
 	withBody bool,
 	ip string,
 	page int,
@@ -974,7 +1026,25 @@ func SearchLogs(
 
 	g.Go(func() error {
 		var err error
-		total, logs, err = searchLogs(group, keyword, requestID, tokenID, tokenName, modelName, startTimestamp, endTimestamp, channelID, order, codeType, withBody, ip, page, perPage, resultOnly)
+		total, logs, err = searchLogs(
+			group,
+			keyword,
+			requestID,
+			tokenID,
+			tokenName,
+			modelName,
+			startTimestamp,
+			endTimestamp,
+			channelID,
+			order,
+			codeType,
+			code,
+			withBody,
+			ip,
+			page,
+			perPage,
+			resultOnly,
+		)
 		return err
 	})
 
@@ -1009,6 +1079,7 @@ func SearchGroupLogs(
 	channelID int,
 	order string,
 	codeType CodeType,
+	code int,
 	withBody bool,
 	ip string,
 	page int,
@@ -1030,7 +1101,24 @@ func SearchGroupLogs(
 
 	g.Go(func() error {
 		var err error
-		total, logs, err = searchLogs(group, keyword, requestID, tokenID, tokenName, modelName, startTimestamp, endTimestamp, channelID, order, codeType, withBody, ip, page, perPage, resultOnly)
+		total, logs, err = searchLogs(group,
+			keyword,
+			requestID,
+			tokenID,
+			tokenName,
+			modelName,
+			startTimestamp,
+			endTimestamp,
+			channelID,
+			order,
+			codeType,
+			code,
+			withBody,
+			ip,
+			page,
+			perPage,
+			resultOnly,
+		)
 		return err
 	})
 
