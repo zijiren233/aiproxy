@@ -2916,10 +2916,14 @@ paths:
         in: query
         name: request_id
         type: string
-      - description: Code type
+      - description: Status code type
         in: query
         name: code_type
         type: string
+      - description: Status code
+        in: query
+        name: code
+        type: integer
       - description: With body
         in: query
         name: with_body
@@ -3034,10 +3038,14 @@ paths:
         in: query
         name: request_id
         type: string
-      - description: Code type
+      - description: Status code type
         in: query
         name: code_type
         type: string
+      - description: Status code
+        in: query
+        name: code
+        type: integer
       - description: With body
         in: query
         name: with_body
@@ -3198,10 +3206,14 @@ paths:
         in: query
         name: request_id
         type: string
-      - description: Code type
+      - description: Status code type
         in: query
         name: code_type
         type: string
+      - description: Status code
+        in: query
+        name: code
+        type: integer
       - description: With body
         in: query
         name: with_body
@@ -3390,10 +3402,14 @@ paths:
         in: query
         name: request_id
         type: string
-      - description: Code type
+      - description: Status code type
         in: query
         name: code_type
         type: string
+      - description: Status code
+        in: query
+        name: code
+        type: integer
       - description: With body
         in: query
         name: with_body

@@ -2223,8 +2223,14 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "Code type",
+                        "description": "Status code type",
                         "name": "code_type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Status code",
+                        "name": "code",
                         "in": "query"
                     },
                     {
@@ -2413,8 +2419,14 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "Code type",
+                        "description": "Status code type",
                         "name": "code_type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Status code",
+                        "name": "code",
                         "in": "query"
                     },
                     {
@@ -2640,8 +2652,14 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "Code type",
+                        "description": "Status code type",
                         "name": "code_type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Status code",
+                        "name": "code",
                         "in": "query"
                     },
                     {
@@ -2996,8 +3014,14 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "Code type",
+                        "description": "Status code type",
                         "name": "code_type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Status code",
+                        "name": "code",
                         "in": "query"
                     },
                     {

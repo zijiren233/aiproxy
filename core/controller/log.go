@@ -36,6 +36,7 @@ func parseCommonParams(c *gin.Context) (params struct {
 	order      string
 	requestID  string
 	codeType   string
+	code       int
 	withBody   bool
 	ip         string
 	resultOnly bool
@@ -48,6 +49,7 @@ func parseCommonParams(c *gin.Context) (params struct {
 	params.order = c.Query("order")
 	params.requestID = c.Query("request_id")
 	params.codeType = c.Query("code_type")
+	params.code, _ = strconv.Atoi(c.Query("code"))
 	params.withBody, _ = strconv.ParseBool(c.Query("with_body"))
 	params.ip = c.Query("ip")
 	params.resultOnly, _ = strconv.ParseBool(c.Query("result_only"))
@@ -72,7 +74,8 @@ func parseCommonParams(c *gin.Context) (params struct {
 //	@Param			token_id		query		int		false	"Token ID"
 //	@Param			order			query		string	false	"Order"
 //	@Param			request_id		query		string	false	"Request ID"
-//	@Param			code_type		query		string	false	"Code type"
+//	@Param			code_type		query		string	false	"Status code type"
+//	@Param			code			query		int		false	"Status code"
 //	@Param			with_body		query		bool	false	"With body"
 //	@Param			ip				query		string	false	"IP"
 //	@Param			result_only		query		bool	false	"Result only"
@@ -95,6 +98,7 @@ func GetLogs(c *gin.Context) {
 		params.channelID,
 		params.order,
 		model.CodeType(params.codeType),
+		params.code,
 		params.withBody,
 		params.ip,
 		page,
@@ -126,7 +130,8 @@ func GetLogs(c *gin.Context) {
 //	@Param			token_id		query		int		false	"Token ID"
 //	@Param			order			query		string	false	"Order"
 //	@Param			request_id		query		string	false	"Request ID"
-//	@Param			code_type		query		string	false	"Code type"
+//	@Param			code_type		query		string	false	"Status code type"
+//	@Param			code			query		int		false	"Status code"
 //	@Param			with_body		query		bool	false	"With body"
 //	@Param			ip				query		string	false	"IP"
 //	@Param			result_only		query		bool	false	"Result only"
@@ -154,6 +159,7 @@ func GetGroupLogs(c *gin.Context) {
 		params.channelID,
 		params.order,
 		model.CodeType(params.codeType),
+		params.code,
 		params.withBody,
 		params.ip,
 		page,
@@ -186,7 +192,8 @@ func GetGroupLogs(c *gin.Context) {
 //	@Param			token_id		query		int		false	"Filter by token id"
 //	@Param			order			query		string	false	"Order"
 //	@Param			request_id		query		string	false	"Request ID"
-//	@Param			code_type		query		string	false	"Code type"
+//	@Param			code_type		query		string	false	"Status code type"
+//	@Param			code			query		int		false	"Status code"
 //	@Param			with_body		query		bool	false	"With body"
 //	@Param			ip				query		string	false	"IP"
 //	@Param			result_only		query		bool	false	"Result only"
@@ -212,6 +219,7 @@ func SearchLogs(c *gin.Context) {
 		params.channelID,
 		params.order,
 		model.CodeType(params.codeType),
+		params.code,
 		params.withBody,
 		params.ip,
 		page,
@@ -244,7 +252,8 @@ func SearchLogs(c *gin.Context) {
 //	@Param			token_id		query		int		false	"Filter by token id"
 //	@Param			order			query		string	false	"Order"
 //	@Param			request_id		query		string	false	"Request ID"
-//	@Param			code_type		query		string	false	"Code type"
+//	@Param			code_type		query		string	false	"Status code type"
+//	@Param			code			query		int		false	"Status code"
 //	@Param			with_body		query		bool	false	"With body"
 //	@Param			ip				query		string	false	"IP"
 //	@Param			result_only		query		bool	false	"Result only"
@@ -274,6 +283,7 @@ func SearchGroupLogs(c *gin.Context) {
 		params.channelID,
 		params.order,
 		model.CodeType(params.codeType),
+		params.code,
 		params.withBody,
 		params.ip,
 		page,
