@@ -51,7 +51,7 @@ func BuildRequest(modelConfig *model.ModelConfig) (io.Reader, mode.Mode, error) 
 			return nil, mode.Unknown, err
 		}
 		return body, mode.ImagesGenerations, nil
-	case mode.Edits:
+	case mode.ImagesEdits:
 		return nil, mode.Unknown, NewErrUnsupportedModelType("edits")
 	case mode.AudioSpeech:
 		body, err := BuildAudioSpeechRequest(modelConfig.Model)

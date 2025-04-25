@@ -36,8 +36,8 @@ func SetRelayRouter(router *gin.Engine) {
 			controller.Anthropic()...,
 		)
 		relayRouter.POST(
-			"/edits",
-			controller.Edits()...,
+			"/images/edits",
+			controller.ImagesEdits()...,
 		)
 		relayRouter.POST(
 			"/images/generations",
@@ -76,7 +76,6 @@ func SetRelayRouter(router *gin.Engine) {
 			controller.ParsePdf()...,
 		)
 
-		relayRouter.POST("/images/edits", controller.RelayNotImplemented)
 		relayRouter.POST("/images/variations", controller.RelayNotImplemented)
 		relayRouter.GET("/files", controller.RelayNotImplemented)
 		relayRouter.POST("/files", controller.RelayNotImplemented)

@@ -53,9 +53,12 @@ func relayController(m mode.Mode) RelayController {
 		Handler: relayHandler,
 	}
 	switch m {
-	case mode.ImagesGenerations, mode.Edits:
-		c.GetRequestPrice = controller.GetImageRequestPrice
-		c.GetRequestUsage = controller.GetImageRequestUsage
+	case mode.ImagesGenerations:
+		c.GetRequestPrice = controller.GetImagesRequestPrice
+		c.GetRequestUsage = controller.GetImagesRequestUsage
+	case mode.ImagesEdits:
+		c.GetRequestPrice = controller.GetImagesEditsRequestPrice
+		c.GetRequestUsage = controller.GetImagesEditsRequestUsage
 	case mode.AudioSpeech:
 		c.GetRequestPrice = controller.GetTTSRequestPrice
 		c.GetRequestUsage = controller.GetTTSRequestUsage

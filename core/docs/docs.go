@@ -7792,9 +7792,6 @@ const docTemplate = `{
                 "image_input_tokens": {
                     "type": "integer"
                 },
-                "image_output_numbers": {
-                    "type": "integer"
-                },
                 "input_tokens": {
                     "type": "integer"
                 },
@@ -7868,7 +7865,7 @@ const docTemplate = `{
                 "Embeddings",
                 "Moderations",
                 "ImagesGenerations",
-                "Edits",
+                "ImagesEdits",
                 "AudioSpeech",
                 "AudioTranscription",
                 "AudioTranslation",
@@ -9139,12 +9136,6 @@ const docTemplate = `{
                     "type": "number"
                 },
                 "image_input_price_unit": {
-                    "type": "integer"
-                },
-                "image_output_price": {
-                    "type": "number"
-                },
-                "image_output_price_unit": {
                     "type": "integer"
                 },
                 "input_price": {

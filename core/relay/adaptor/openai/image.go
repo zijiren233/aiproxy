@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"io"
+	"mime/multipart"
 	"net/http"
 
 	"github.com/bytedance/sonic"
@@ -17,7 +18,7 @@ import (
 	relaymodel "github.com/labring/aiproxy/core/relay/model"
 )
 
-func ConvertImageRequest(meta *meta.Meta, req *http.Request) (string, http.Header, io.Reader, error) {
+func ConvertImagesRequest(meta *meta.Meta, req *http.Request) (string, http.Header, io.Reader, error) {
 	node, err := common.UnmarshalBody2Node(req)
 	if err != nil {
 		return "", nil, nil, err
@@ -41,7 +42,66 @@ func ConvertImageRequest(meta *meta.Meta, req *http.Request) (string, http.Heade
 	return http.MethodPost, nil, bytes.NewReader(jsonData), nil
 }
 
-func ImageHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, *relaymodel.ErrorWithStatusCode) {
+func ConvertImagesEditsRequest(meta *meta.Meta, request *http.Request) (string, http.Header, io.Reader, error) {
+	err := request.ParseMultipartForm(1024 * 1024 * 4)
+	if err != nil {
+		return "", nil, nil, err
+	}
+
+	multipartBody := &bytes.Buffer{}
+	multipartWriter := multipart.NewWriter(multipartBody)
+
+	for key, values := range request.MultipartForm.Value {
+		if len(values) == 0 {
+			continue
+		}
+		value := values[0]
+		if key == "model" {
+			err = multipartWriter.WriteField(key, meta.ActualModel)
+			if err != nil {
+				return "", nil, nil, err
+			}
+			continue
+		}
+		if key == "response_format" {
+			meta.Set(MetaResponseFormat, value)
+			continue
+		}
+		err = multipartWriter.WriteField(key, value)
+		if err != nil {
+			return "", nil, nil, err
+		}
+	}
+
+	for key, files := range request.MultipartForm.File {
+		if len(files) == 0 {
+			continue
+		}
+		fileHeader := files[0]
+		file, err := fileHeader.Open()
+		if err != nil {
+			return "", nil, nil, err
+		}
+		w, err := multipartWriter.CreateFormFile(key, fileHeader.Filename)
+		if err != nil {
+			file.Close()
+			return "", nil, nil, err
+		}
+		_, err = io.Copy(w, file)
+		file.Close()
+		if err != nil {
+			return "", nil, nil, err
+		}
+	}
+
+	multipartWriter.Close()
+	ContentType := multipartWriter.FormDataContentType()
+	return http.MethodPost, http.Header{
+		"Content-Type": {ContentType},
+	}, multipartBody, nil
+}
+
+func ImagesHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, *relaymodel.ErrorWithStatusCode) {
 	if resp.StatusCode != http.StatusOK {
 		return nil, ErrorHanlder(resp)
 	}
@@ -61,14 +121,13 @@ func ImageHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.
 	}
 
 	usage := &model.Usage{
-		InputTokens:        meta.RequestUsage.InputTokens,
-		TotalTokens:        meta.RequestUsage.InputTokens,
-		ImageOutputNumbers: meta.RequestUsage.ImageOutputNumbers,
+		InputTokens:  meta.RequestUsage.InputTokens,
+		OutputTokens: meta.RequestUsage.OutputTokens,
+		TotalTokens:  meta.RequestUsage.InputTokens + meta.RequestUsage.OutputTokens,
 	}
 
 	if imageResponse.Usage != nil {
 		usage = imageResponse.Usage.ToModelUsage()
-		usage.ImageOutputNumbers = meta.RequestUsage.ImageOutputNumbers
 	}
 
 	if meta.GetString(MetaResponseFormat) == "b64_json" {

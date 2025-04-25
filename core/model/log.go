@@ -50,9 +50,6 @@ type Price struct {
 	OutputPrice     float64 `json:"output_price,omitempty"`
 	OutputPriceUnit int64   `json:"output_price_unit,omitempty"`
 
-	ImageOutputPrice     float64 `json:"image_output_price,omitempty"`
-	ImageOutputPriceUnit int64   `json:"image_output_price_unit,omitempty"`
-
 	CachedPrice     float64 `json:"cached_price,omitempty"`
 	CachedPriceUnit int64   `json:"cached_price_unit,omitempty"`
 
@@ -73,13 +70,6 @@ func (p *Price) GetInputPriceUnit() int64 {
 func (p *Price) GetImageInputPriceUnit() int64 {
 	if p.ImageInputPriceUnit > 0 {
 		return p.ImageInputPriceUnit
-	}
-	return PriceUnit
-}
-
-func (p *Price) GetImageOutputPriceUnit() int64 {
-	if p.ImageOutputPriceUnit > 0 {
-		return p.ImageOutputPriceUnit
 	}
 	return PriceUnit
 }
@@ -116,7 +106,6 @@ type Usage struct {
 	InputTokens         int64 `json:"input_tokens,omitempty"`
 	ImageInputTokens    int64 `json:"image_input_tokens,omitempty"`
 	OutputTokens        int64 `json:"output_tokens,omitempty"`
-	ImageOutputNumbers  int64 `json:"image_output_numbers,omitempty"`
 	CachedTokens        int64 `json:"cached_tokens,omitempty"`
 	CacheCreationTokens int64 `json:"cache_creation_tokens,omitempty"`
 	TotalTokens         int64 `json:"total_tokens,omitempty"`
@@ -130,7 +119,6 @@ func (u *Usage) Add(other *Usage) {
 	u.InputTokens += other.InputTokens
 	u.ImageInputTokens += other.ImageInputTokens
 	u.OutputTokens += other.OutputTokens
-	u.ImageOutputNumbers += other.ImageOutputNumbers
 	u.CachedTokens += other.CachedTokens
 	u.CacheCreationTokens += other.CacheCreationTokens
 	u.TotalTokens += other.TotalTokens

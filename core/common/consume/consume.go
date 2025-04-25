@@ -143,7 +143,7 @@ func CalculateAmount(
 		Mul(decimal.NewFromFloat(modelPrice.InputPrice)).
 		Div(decimal.NewFromInt(modelPrice.GetInputPriceUnit()))
 
-	inputImageAmount := decimal.NewFromInt(usage.ImageInputTokens).
+	imageInputAmount := decimal.NewFromInt(usage.ImageInputTokens).
 		Mul(decimal.NewFromFloat(modelPrice.ImageInputPrice)).
 		Div(decimal.NewFromInt(modelPrice.GetImageInputPriceUnit()))
 
@@ -163,17 +163,12 @@ func CalculateAmount(
 		Mul(decimal.NewFromFloat(modelPrice.OutputPrice)).
 		Div(decimal.NewFromInt(modelPrice.GetOutputPriceUnit()))
 
-	imageOutputAmount := decimal.NewFromInt(usage.ImageOutputNumbers).
-		Mul(decimal.NewFromFloat(modelPrice.ImageOutputPrice)).
-		Div(decimal.NewFromInt(modelPrice.GetImageOutputPriceUnit()))
-
 	return inputAmount.
-		Add(inputImageAmount).
+		Add(imageInputAmount).
 		Add(cachedAmount).
 		Add(cacheCreationAmount).
 		Add(webSearchAmount).
 		Add(outputAmount).
-		Add(imageOutputAmount).
 		InexactFloat64()
 }
 

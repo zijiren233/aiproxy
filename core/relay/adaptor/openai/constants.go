@@ -154,7 +154,7 @@ var ModelList = []*model.ModelConfig{
 	},
 	{
 		Model: "text-davinci-edit-001",
-		Type:  mode.Edits,
+		Type:  mode.ImagesEdits,
 		Owner: model.ModelOwnerOpenAI,
 	},
 	{

@@ -18,8 +18,8 @@ func (m Mode) String() string {
 		return "Moderations"
 	case ImagesGenerations:
 		return "ImagesGenerations"
-	case Edits:
-		return "Edits"
+	case ImagesEdits:
+		return "ImagesEdits"
 	case AudioSpeech:
 		return "AudioSpeech"
 	case AudioTranscription:
@@ -44,7 +44,7 @@ const (
 	Embeddings
 	Moderations
 	ImagesGenerations
-	Edits
+	ImagesEdits
 	AudioSpeech
 	AudioTranscription
 	AudioTranslation

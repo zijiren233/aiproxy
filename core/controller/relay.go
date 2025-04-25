@@ -105,10 +105,29 @@ func Embeddings() []gin.HandlerFunc {
 	}
 }
 
-func Edits() []gin.HandlerFunc {
+// ImagesEdits godoc
+//
+//	@Summary		ImagesEdits
+//	@Description	ImagesEdits
+//	@Tags			relay
+//	@Produce		json
+//	@Security		ApiKeyAuth
+//	@Param			prompt			formData	string	true	"Prompt"
+//	@Param			model			formData	string	true	"Model"
+//	@Param			image			formData	file	true	"Images"
+//	@Param			Aiproxy-Channel	header		string	false	"Optional Aiproxy-Channel header"
+//	@Success		200				{object}	model.SttJSONResponse
+//	@Header			all				{integer}	X-RateLimit-Limit-Requests		"X-RateLimit-Limit-Requests"
+//	@Header			all				{integer}	X-RateLimit-Limit-Tokens		"X-RateLimit-Limit-Tokens"
+//	@Header			all				{integer}	X-RateLimit-Remaining-Requests	"X-RateLimit-Remaining-Requests"
+//	@Header			all				{integer}	X-RateLimit-Remaining-Tokens	"X-RateLimit-Remaining-Tokens"
+//	@Header			all				{string}	X-RateLimit-Reset-Requests		"X-RateLimit-Reset-Requests"
+//	@Header			all				{string}	X-RateLimit-Reset-Tokens		"X-RateLimit-Reset-Tokens"
+//	@Router			/v1/images/edits [post]
+func ImagesEdits() []gin.HandlerFunc {
 	return []gin.HandlerFunc{
-		middleware.NewDistribute(mode.Edits),
-		NewRelay(mode.Edits),
+		middleware.NewDistribute(mode.ImagesEdits),
+		NewRelay(mode.ImagesEdits),
 	}
 }
 
