@@ -434,7 +434,8 @@ func getRequestModel(c *gin.Context, m mode.Mode) (string, error) {
 
 		fallthrough
 	case m == mode.AudioTranscription,
-		m == mode.AudioTranslation:
+		m == mode.AudioTranslation,
+		m == mode.ImagesEdits:
 		return c.Request.FormValue("model"), nil
 
 	case strings.HasPrefix(path, "/v1/engines") && strings.HasSuffix(path, "/embeddings"):

@@ -43,7 +43,7 @@ func (a *Adaptor) GetRequestURL(meta *meta.Meta) (string, error) {
 		path = "/moderations"
 	case mode.ImagesGenerations:
 		path = "/images/generations"
-	case mode.Edits:
+	case mode.ImagesEdits:
 		path = "/images/edits"
 	case mode.AudioSpeech:
 		path = "/audio/speech"
@@ -81,7 +81,9 @@ func ConvertRequest(meta *meta.Meta, req *http.Request) (string, http.Header, io
 	case mode.ChatCompletions:
 		return ConvertTextRequest(meta, req, false)
 	case mode.ImagesGenerations:
-		return ConvertImageRequest(meta, req)
+		return ConvertImagesRequest(meta, req)
+	case mode.ImagesEdits:
+		return ConvertImagesEditsRequest(meta, req)
 	case mode.AudioTranscription, mode.AudioTranslation:
 		return ConvertSTTRequest(meta, req)
 	case mode.AudioSpeech:
@@ -95,8 +97,8 @@ func ConvertRequest(meta *meta.Meta, req *http.Request) (string, http.Header, io
 
 func DoResponse(meta *meta.Meta, c *gin.Context, resp *http.Response) (usage *model.Usage, err *relaymodel.ErrorWithStatusCode) {
 	switch meta.Mode {
-	case mode.ImagesGenerations:
-		usage, err = ImageHandler(meta, c, resp)
+	case mode.ImagesGenerations, mode.ImagesEdits:
+		usage, err = ImagesHandler(meta, c, resp)
 	case mode.AudioTranscription, mode.AudioTranslation:
 		usage, err = STTHandler(meta, c, resp)
 	case mode.AudioSpeech:

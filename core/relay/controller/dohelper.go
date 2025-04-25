@@ -140,6 +140,8 @@ func getRequestBody(meta *meta.Meta, c *gin.Context, detail *RequestDetail) *rel
 }
 
 func prepareAndDoRequest(a adaptor.Adaptor, c *gin.Context, meta *meta.Meta) (*http.Response, *relaymodel.ErrorWithStatusCode) {
+	log := middleware.GetLogger(c)
+
 	method, header, body, err := a.ConvertRequest(meta, c.Request)
 	if err != nil {
 		return nil, openai.ErrorWrapperWithMessage("convert request failed: "+err.Error(), "convert_request_failed", http.StatusBadRequest)
@@ -258,6 +260,9 @@ func updateUsageMetrics(usage model.Usage, log *log.Entry) {
 	}
 	if usage.InputTokens > 0 {
 		log.Data["t_input"] = usage.InputTokens
+	}
+	if usage.ImageInputTokens > 0 {
+		log.Data["t_image_input"] = usage.ImageInputTokens
 	}
 	if usage.OutputTokens > 0 {
 		log.Data["t_output"] = usage.OutputTokens
