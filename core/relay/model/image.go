@@ -36,7 +36,7 @@ type ImageUsage struct {
 	// The number of tokens (images and text) in the input prompt.
 	InputTokens int64 `json:"input_tokens"`
 	// The number of image tokens in the output image.
-	OutputTokens int64 `jons:"output_tokens"`
+	OutputTokens int64 `json:"output_tokens"`
 	// The total number of tokens (images and text) used for the image generation.
 	TotalTokens int64 `json:"total_tokens"`
 	// The input tokens detailed information for the image generation.

@@ -167,6 +167,7 @@ var ModelList = []*model.ModelConfig{
 		Type:  mode.Completions,
 		Owner: model.ModelOwnerOpenAI,
 	},
+
 	{
 		Model: "dall-e-2",
 		Type:  mode.ImagesGenerations,
@@ -177,6 +178,17 @@ var ModelList = []*model.ModelConfig{
 		Type:  mode.ImagesGenerations,
 		Owner: model.ModelOwnerOpenAI,
 	},
+	{
+		Model: "gpt-image-1",
+		Type:  mode.ImagesGenerations,
+		Owner: model.ModelOwnerOpenAI,
+		Price: model.Price{
+			InputPrice:      0.005,
+			ImageInputPrice: 0.01,
+			OutputPrice:     0.04,
+		},
+	},
+
 	{
 		Model: "whisper-1",
 		Type:  mode.AudioTranscription,
