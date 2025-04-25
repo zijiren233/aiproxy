@@ -45,7 +45,7 @@ func (d *SummaryData) buildUpdateData(tableName string) map[string]any {
 		data["input_tokens"] = gorm.Expr(tableName+".input_tokens + ?", d.Usage.InputTokens)
 	}
 	if d.Usage.ImageInputTokens > 0 {
-		data["input_image_tokens"] = gorm.Expr(tableName+".input_image_tokens + ?", d.Usage.ImageInputTokens)
+		data["image_input_tokens"] = gorm.Expr(tableName+".image_input_tokens + ?", d.Usage.ImageInputTokens)
 	}
 	if d.Usage.OutputTokens > 0 {
 		data["output_tokens"] = gorm.Expr(tableName+".output_tokens + ?", d.Usage.OutputTokens)
