@@ -280,6 +280,9 @@ func CheckRelayMode(requestMode mode.Mode, modelMode mode.Mode) bool {
 		return modelMode == mode.ChatCompletions ||
 			modelMode == mode.Completions ||
 			modelMode == mode.Anthropic
+	case mode.ImagesGenerations, mode.ImagesEdits:
+		return modelMode == mode.ImagesGenerations ||
+			modelMode == mode.ImagesEdits
 	default:
 		return requestMode == modelMode
 	}
