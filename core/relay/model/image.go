@@ -45,10 +45,10 @@ type ImageUsage struct {
 
 func (i *ImageUsage) ToModelUsage() *model.Usage {
 	return &model.Usage{
-		InputTokens:      i.InputTokens,
-		ImageInputTokens: i.InputTokensDetails.ImageTokens,
-		OutputTokens:     i.OutputTokens,
-		TotalTokens:      i.TotalTokens,
+		InputTokens:      model.ZeroNullInt64(i.InputTokens),
+		ImageInputTokens: model.ZeroNullInt64(i.InputTokensDetails.ImageTokens),
+		OutputTokens:     model.ZeroNullInt64(i.OutputTokens),
+		TotalTokens:      model.ZeroNullInt64(i.TotalTokens),
 	}
 }
 

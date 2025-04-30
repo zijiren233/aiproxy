@@ -99,8 +99,8 @@ func ImageHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.
 	c.Writer.WriteHeader(resp.StatusCode)
 	_, _ = c.Writer.Write(jsonResponse)
 	return &model.Usage{
-		OutputTokens: int64(len(jsonResponse)),
-		TotalTokens:  int64(len(jsonResponse)),
+		OutputTokens: model.ZeroNullInt64(len(jsonResponse)),
+		TotalTokens:  model.ZeroNullInt64(len(jsonResponse)),
 	}, nil
 }
 

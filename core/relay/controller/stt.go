@@ -33,7 +33,7 @@ func GetSTTRequestUsage(c *gin.Context, _ *model.ModelConfig) (model.Usage, erro
 	log.Data["duration"] = durationInt
 
 	return model.Usage{
-		InputTokens: durationInt,
+		InputTokens: model.ZeroNullInt64(durationInt),
 	}, nil
 }
 

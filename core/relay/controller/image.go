@@ -69,7 +69,10 @@ func GetImagesRequestUsage(c *gin.Context, _ *model.ModelConfig) (model.Usage, e
 	}
 
 	return model.Usage{
-		InputTokens:  openai.CountTokenInput(imageRequest.Prompt, imageRequest.Model),
-		OutputTokens: int64(imageRequest.N),
+		InputTokens: model.ZeroNullInt64(openai.CountTokenInput(
+			imageRequest.Prompt,
+			imageRequest.Model,
+		)),
+		OutputTokens: model.ZeroNullInt64(imageRequest.N),
 	}, nil
 }

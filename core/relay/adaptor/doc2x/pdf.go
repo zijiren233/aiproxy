@@ -349,8 +349,8 @@ func handleParsePdfResponse(meta *meta.Meta, c *gin.Context, response *StatusRes
 	}
 
 	return &model.Usage{
-		InputTokens: pages,
-		TotalTokens: pages,
+		InputTokens: model.ZeroNullInt64(pages),
+		TotalTokens: model.ZeroNullInt64(pages),
 	}, nil
 }
 

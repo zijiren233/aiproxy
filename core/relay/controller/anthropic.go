@@ -18,6 +18,9 @@ func GetAnthropicRequestUsage(c *gin.Context, _ *model.ModelConfig) (model.Usage
 	}
 
 	return model.Usage{
-		InputTokens: openai.CountTokenMessages(textRequest.Messages, textRequest.Model),
+		InputTokens: model.ZeroNullInt64(openai.CountTokenMessages(
+			textRequest.Messages,
+			textRequest.Model,
+		)),
 	}, nil
 }

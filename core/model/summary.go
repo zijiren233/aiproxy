@@ -3,6 +3,7 @@ package model
 import (
 	"cmp"
 	"errors"
+	"fmt"
 	"slices"
 	"time"
 
@@ -33,34 +34,34 @@ type SummaryData struct {
 func (d *SummaryData) buildUpdateData(tableName string) map[string]any {
 	data := map[string]any{}
 	if d.RequestCount > 0 {
-		data["request_count"] = gorm.Expr(tableName+".request_count + ?", d.RequestCount)
+		data["request_count"] = gorm.Expr(fmt.Sprintf("COALESCE(%s.request_count, 0) + ?", tableName), d.RequestCount)
 	}
 	if d.UsedAmount > 0 {
-		data["used_amount"] = gorm.Expr(tableName+".used_amount + ?", d.UsedAmount)
+		data["used_amount"] = gorm.Expr(fmt.Sprintf("COALESCE(%s.used_amount, 0) + ?", tableName), d.UsedAmount)
 	}
 	if d.ExceptionCount > 0 {
-		data["exception_count"] = gorm.Expr(tableName+".exception_count + ?", d.ExceptionCount)
+		data["exception_count"] = gorm.Expr(fmt.Sprintf("COALESCE(%s.exception_count, 0) + ?", tableName), d.ExceptionCount)
 	}
 	if d.Usage.InputTokens > 0 {
-		data["input_tokens"] = gorm.Expr(tableName+".input_tokens + ?", d.Usage.InputTokens)
+		data["input_tokens"] = gorm.Expr(fmt.Sprintf("COALESCE(%s.input_tokens, 0) + ?", tableName), d.Usage.InputTokens)
 	}
 	if d.Usage.ImageInputTokens > 0 {
-		data["image_input_tokens"] = gorm.Expr(tableName+".image_input_tokens + ?", d.Usage.ImageInputTokens)
+		data["image_input_tokens"] = gorm.Expr(fmt.Sprintf("COALESCE(%s.image_input_tokens, 0) + ?", tableName), d.Usage.ImageInputTokens)
 	}
 	if d.Usage.OutputTokens > 0 {
-		data["output_tokens"] = gorm.Expr(tableName+".output_tokens + ?", d.Usage.OutputTokens)
+		data["output_tokens"] = gorm.Expr(fmt.Sprintf("COALESCE(%s.output_tokens, 0) + ?", tableName), d.Usage.OutputTokens)
 	}
 	if d.Usage.TotalTokens > 0 {
-		data["total_tokens"] = gorm.Expr(tableName+".total_tokens + ?", d.Usage.TotalTokens)
+		data["total_tokens"] = gorm.Expr(fmt.Sprintf("COALESCE(%s.total_tokens, 0) + ?", tableName), d.Usage.TotalTokens)
 	}
 	if d.Usage.CachedTokens > 0 {
-		data["cached_tokens"] = gorm.Expr(tableName+".cached_tokens + ?", d.Usage.CachedTokens)
+		data["cached_tokens"] = gorm.Expr(fmt.Sprintf("COALESCE(%s.cached_tokens, 0) + ?", tableName), d.Usage.CachedTokens)
 	}
 	if d.Usage.CacheCreationTokens > 0 {
-		data["cache_creation_tokens"] = gorm.Expr(tableName+".cache_creation_tokens + ?", d.Usage.CacheCreationTokens)
+		data["cache_creation_tokens"] = gorm.Expr(fmt.Sprintf("COALESCE(%s.cache_creation_tokens, 0) + ?", tableName), d.Usage.CacheCreationTokens)
 	}
 	if d.Usage.WebSearchCount > 0 {
-		data["web_search_count"] = gorm.Expr(tableName+".web_search_count + ?", d.Usage.WebSearchCount)
+		data["web_search_count"] = gorm.Expr(fmt.Sprintf("COALESCE(%s.web_search_count, 0) + ?", tableName), d.Usage.WebSearchCount)
 	}
 	return data
 }

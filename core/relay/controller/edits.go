@@ -47,8 +47,11 @@ func GetImagesEditsRequestUsage(c *gin.Context, mc *model.ModelConfig) (model.Us
 	}
 
 	return model.Usage{
-		InputTokens:      openai.CountTokenInput(prompt, mc.Model),
-		ImageInputTokens: images,
-		OutputTokens:     int64(n),
+		InputTokens: model.ZeroNullInt64(openai.CountTokenInput(
+			prompt,
+			mc.Model,
+		)),
+		ImageInputTokens: model.ZeroNullInt64(images),
+		OutputTokens:     model.ZeroNullInt64(n),
 	}, nil
 }

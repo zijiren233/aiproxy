@@ -211,13 +211,13 @@ func STTDoResponse(meta *meta.Meta, c *gin.Context, _ *http.Response) (usage *mo
 			}
 			continue
 		case "task-finished":
-			usage.InputTokens = msg.Payload.Usage.Characters
-			usage.TotalTokens = msg.Payload.Usage.Characters
+			usage.InputTokens = model.ZeroNullInt64(msg.Payload.Usage.Characters)
+			usage.TotalTokens = model.ZeroNullInt64(msg.Payload.Usage.Characters)
 			c.JSON(http.StatusOK, gin.H{
 				"text": output.String(),
 				"usage": relaymodel.Usage{
-					PromptTokens: usage.InputTokens,
-					TotalTokens:  usage.TotalTokens,
+					PromptTokens: int64(usage.InputTokens),
+					TotalTokens:  int64(usage.TotalTokens),
 				},
 			})
 			return usage, nil

@@ -146,7 +146,7 @@ func TTSHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Us
 
 	usageCharacters := meta.RequestUsage.InputTokens
 	if result.ExtraInfo.UsageCharacters > 0 {
-		usageCharacters = result.ExtraInfo.UsageCharacters
+		usageCharacters = model.ZeroNullInt64(result.ExtraInfo.UsageCharacters)
 	}
 
 	return &model.Usage{
@@ -185,7 +185,7 @@ func ttsStreamHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*mo
 			continue
 		}
 		if result.ExtraInfo.UsageCharacters > 0 {
-			usageCharacters = result.ExtraInfo.UsageCharacters
+			usageCharacters = model.ZeroNullInt64(result.ExtraInfo.UsageCharacters)
 		}
 
 		audioBytes, err := hex.DecodeString(result.Data.Audio)

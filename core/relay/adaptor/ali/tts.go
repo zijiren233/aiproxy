@@ -218,8 +218,8 @@ func TTSDoResponse(meta *meta.Meta, c *gin.Context, _ *http.Response) (usage *mo
 			case "result-generated":
 				continue
 			case "task-finished":
-				usage.InputTokens = msg.Payload.Usage.Characters
-				usage.TotalTokens = msg.Payload.Usage.Characters
+				usage.InputTokens = model.ZeroNullInt64(msg.Payload.Usage.Characters)
+				usage.TotalTokens = model.ZeroNullInt64(msg.Payload.Usage.Characters)
 				return usage, nil
 			case "task-failed":
 				return usage, openai.ErrorWrapperWithMessage(msg.Header.ErrorMessage, msg.Header.ErrorCode, http.StatusInternalServerError)

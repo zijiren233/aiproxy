@@ -18,6 +18,9 @@ func GetCompletionsRequestUsage(c *gin.Context, _ *model.ModelConfig) (model.Usa
 	}
 
 	return model.Usage{
-		InputTokens: openai.CountTokenInput(textRequest.Prompt, textRequest.Model),
+		InputTokens: model.ZeroNullInt64(openai.CountTokenInput(
+			textRequest.Prompt,
+			textRequest.Model,
+		)),
 	}, nil
 }
