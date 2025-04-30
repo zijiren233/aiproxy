@@ -16,7 +16,7 @@ type TestSessionManager struct {
 	m map[string]string
 }
 
-func (t *TestSessionManager) New() (sessionID string) {
+func (t *TestSessionManager) New() string {
 	return "test-session-id"
 }
 
@@ -26,13 +26,13 @@ func (t *TestSessionManager) Set(sessionID string, endpoint string) {
 }
 
 // Get retrieves the backend endpoint for a sessionID
-func (t *TestSessionManager) Get(sessionID string) (_ string, _ bool) {
+func (t *TestSessionManager) Get(sessionID string) (string, bool) {
 	v, ok := t.m[sessionID]
 	return v, ok
 }
 
 // Delete removes a sessionID from the store
-func (t *TestSessionManager) Delete(sessionID string) {
+func (t *TestSessionManager) Delete(string) {
 }
 
 type TestEndpointHandler struct{}
