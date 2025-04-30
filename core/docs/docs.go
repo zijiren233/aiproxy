@@ -6914,6 +6914,86 @@ const docTemplate = `{
                 }
             }
         },
+        "/v1/images/edits": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "ImagesEdits",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "relay"
+                ],
+                "summary": "ImagesEdits",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Prompt",
+                        "name": "prompt",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Model",
+                        "name": "model",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "file",
+                        "description": "Images",
+                        "name": "image",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Optional Aiproxy-Channel header",
+                        "name": "Aiproxy-Channel",
+                        "in": "header"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.SttJSONResponse"
+                        },
+                        "headers": {
+                            "X-RateLimit-Limit-Requests": {
+                                "type": "integer",
+                                "description": "X-RateLimit-Limit-Requests"
+                            },
+                            "X-RateLimit-Limit-Tokens": {
+                                "type": "integer",
+                                "description": "X-RateLimit-Limit-Tokens"
+                            },
+                            "X-RateLimit-Remaining-Requests": {
+                                "type": "integer",
+                                "description": "X-RateLimit-Remaining-Requests"
+                            },
+                            "X-RateLimit-Remaining-Tokens": {
+                                "type": "integer",
+                                "description": "X-RateLimit-Remaining-Tokens"
+                            },
+                            "X-RateLimit-Reset-Requests": {
+                                "type": "string",
+                                "description": "X-RateLimit-Reset-Requests"
+                            },
+                            "X-RateLimit-Reset-Tokens": {
+                                "type": "string",
+                                "description": "X-RateLimit-Reset-Tokens"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/v1/images/generations": {
             "post": {
                 "security": [
@@ -7796,6 +7876,9 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "output_tokens": {
+                    "type": "integer"
+                },
+                "reasoning_tokens": {
                     "type": "integer"
                 },
                 "total_tokens": {
@@ -8768,7 +8851,7 @@ const docTemplate = `{
                         }
                     ]
                 },
-                "outputTokens": {
+                "output_tokens": {
                     "description": "The number of image tokens in the output image.",
                     "type": "integer"
                 },
@@ -9152,6 +9235,13 @@ const docTemplate = `{
                 },
                 "per_request_price": {
                     "type": "number"
+                },
+                "thinking_mode_output_price": {
+                    "description": "when ThinkingModeOutputPrice and ReasoningTokens are not 0, OutputPrice and OutputPriceUnit will be overwritten",
+                    "type": "number"
+                },
+                "thinking_mode_output_price_unit": {
+                    "type": "integer"
                 },
                 "web_search_price": {
                     "type": "number"
