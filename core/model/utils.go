@@ -61,6 +61,12 @@ func (znf *ZeroNullFloat64) Scan(value any) error {
 		return nil
 	}
 	switch v := value.(type) {
+	case string:
+		vf, err := strconv.ParseFloat(v, 64)
+		if err != nil {
+			return err
+		}
+		*znf = ZeroNullFloat64(vf)
 	case int:
 		*znf = ZeroNullFloat64(v)
 	case int64:
