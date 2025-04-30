@@ -46,6 +46,35 @@ func IgnoreNotFound(err error) error {
 	return err
 }
 
+type ZeroNullFloat64 float64
+
+func (znf ZeroNullFloat64) Value() (driver.Value, error) {
+	if znf == 0 {
+		return nil, nil
+	}
+	return float64(znf), nil
+}
+
+func (znf *ZeroNullFloat64) Scan(value any) error {
+	if value == nil {
+		*znf = 0
+		return nil
+	}
+	switch v := value.(type) {
+	case int:
+		*znf = ZeroNullFloat64(v)
+	case int64:
+		*znf = ZeroNullFloat64(v)
+	case float32:
+		*znf = ZeroNullFloat64(v)
+	case float64:
+		*znf = ZeroNullFloat64(v)
+	default:
+		return fmt.Errorf("unsupported type: %T", v)
+	}
+	return nil
+}
+
 type ZeroNullInt64 int64
 
 func (zni ZeroNullInt64) Value() (driver.Value, error) {

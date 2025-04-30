@@ -123,7 +123,7 @@ func CalculateAmount(
 		if code != http.StatusOK {
 			return 0
 		}
-		return modelPrice.PerRequestPrice
+		return float64(modelPrice.PerRequestPrice)
 	}
 
 	inputTokens := usage.InputTokens
@@ -138,33 +138,33 @@ func CalculateAmount(
 	}
 
 	outputTokens := usage.OutputTokens
-	outputPrice := modelPrice.OutputPrice
+	outputPrice := float64(modelPrice.OutputPrice)
 	outputPriceUnit := modelPrice.GetOutputPriceUnit()
 	if usage.ReasoningTokens != 0 && modelPrice.ThinkingModeOutputPrice != 0 {
-		outputPrice = modelPrice.ThinkingModeOutputPrice
+		outputPrice = float64(modelPrice.ThinkingModeOutputPrice)
 		if modelPrice.ThinkingModeOutputPriceUnit != 0 {
-			outputPriceUnit = modelPrice.ThinkingModeOutputPriceUnit
+			outputPriceUnit = int64(modelPrice.ThinkingModeOutputPriceUnit)
 		}
 	}
 
 	inputAmount := decimal.NewFromInt(int64(inputTokens)).
-		Mul(decimal.NewFromFloat(modelPrice.InputPrice)).
+		Mul(decimal.NewFromFloat(float64(modelPrice.InputPrice))).
 		Div(decimal.NewFromInt(modelPrice.GetInputPriceUnit()))
 
 	imageInputAmount := decimal.NewFromInt(int64(usage.ImageInputTokens)).
-		Mul(decimal.NewFromFloat(modelPrice.ImageInputPrice)).
+		Mul(decimal.NewFromFloat(float64(modelPrice.ImageInputPrice))).
 		Div(decimal.NewFromInt(modelPrice.GetImageInputPriceUnit()))
 
 	cachedAmount := decimal.NewFromInt(int64(usage.CachedTokens)).
-		Mul(decimal.NewFromFloat(modelPrice.CachedPrice)).
+		Mul(decimal.NewFromFloat(float64(modelPrice.CachedPrice))).
 		Div(decimal.NewFromInt(modelPrice.GetCachedPriceUnit()))
 
 	cacheCreationAmount := decimal.NewFromInt(int64(usage.CacheCreationTokens)).
-		Mul(decimal.NewFromFloat(modelPrice.CacheCreationPrice)).
+		Mul(decimal.NewFromFloat(float64(modelPrice.CacheCreationPrice))).
 		Div(decimal.NewFromInt(modelPrice.GetCacheCreationPriceUnit()))
 
 	webSearchAmount := decimal.NewFromInt(int64(usage.WebSearchCount)).
-		Mul(decimal.NewFromFloat(modelPrice.WebSearchPrice)).
+		Mul(decimal.NewFromFloat(float64(modelPrice.WebSearchPrice))).
 		Div(decimal.NewFromInt(modelPrice.GetWebSearchPriceUnit()))
 
 	outputAmount := decimal.NewFromInt(int64(outputTokens)).

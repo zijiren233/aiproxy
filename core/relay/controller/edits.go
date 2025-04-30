@@ -24,7 +24,7 @@ func GetImagesEditsRequestPrice(c *gin.Context, mc *model.ModelConfig) (model.Pr
 		InputPriceUnit:      mc.Price.InputPriceUnit,
 		ImageInputPrice:     mc.Price.ImageInputPrice,
 		ImageInputPriceUnit: mc.Price.ImageInputPriceUnit,
-		OutputPrice:         imageCostPrice,
+		OutputPrice:         model.ZeroNullFloat64(imageCostPrice),
 		OutputPriceUnit:     mc.Price.OutputPriceUnit,
 	}, nil
 }

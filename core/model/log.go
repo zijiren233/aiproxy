@@ -39,69 +39,69 @@ func (d *RequestDetail) BeforeSave(_ *gorm.DB) (err error) {
 }
 
 type Price struct {
-	PerRequestPrice float64 `json:"per_request_price,omitempty"`
+	PerRequestPrice ZeroNullFloat64 `json:"per_request_price,omitempty"`
 
-	InputPrice     float64 `json:"input_price,omitempty"`
-	InputPriceUnit int64   `json:"input_price_unit,omitempty"`
+	InputPrice     ZeroNullFloat64 `json:"input_price,omitempty"`
+	InputPriceUnit ZeroNullInt64   `json:"input_price_unit,omitempty"`
 
-	ImageInputPrice     float64 `json:"image_input_price,omitempty"`
-	ImageInputPriceUnit int64   `json:"image_input_price_unit,omitempty"`
+	ImageInputPrice     ZeroNullFloat64 `json:"image_input_price,omitempty"`
+	ImageInputPriceUnit ZeroNullInt64   `json:"image_input_price_unit,omitempty"`
 
-	OutputPrice     float64 `json:"output_price,omitempty"`
-	OutputPriceUnit int64   `json:"output_price_unit,omitempty"`
+	OutputPrice     ZeroNullFloat64 `json:"output_price,omitempty"`
+	OutputPriceUnit ZeroNullInt64   `json:"output_price_unit,omitempty"`
 
 	// when ThinkingModeOutputPrice and ReasoningTokens are not 0, OutputPrice and OutputPriceUnit will be overwritten
-	ThinkingModeOutputPrice     float64 `json:"thinking_mode_output_price,omitempty"`
-	ThinkingModeOutputPriceUnit int64   `json:"thinking_mode_output_price_unit,omitempty"`
+	ThinkingModeOutputPrice     ZeroNullFloat64 `json:"thinking_mode_output_price,omitempty"`
+	ThinkingModeOutputPriceUnit ZeroNullInt64   `json:"thinking_mode_output_price_unit,omitempty"`
 
-	CachedPrice     float64 `json:"cached_price,omitempty"`
-	CachedPriceUnit int64   `json:"cached_price_unit,omitempty"`
+	CachedPrice     ZeroNullFloat64 `json:"cached_price,omitempty"`
+	CachedPriceUnit ZeroNullInt64   `json:"cached_price_unit,omitempty"`
 
-	CacheCreationPrice     float64 `json:"cache_creation_price,omitempty"`
-	CacheCreationPriceUnit int64   `json:"cache_creation_price_unit,omitempty"`
+	CacheCreationPrice     ZeroNullFloat64 `json:"cache_creation_price,omitempty"`
+	CacheCreationPriceUnit ZeroNullInt64   `json:"cache_creation_price_unit,omitempty"`
 
-	WebSearchPrice     float64 `json:"web_search_price,omitempty"`
-	WebSearchPriceUnit int64   `json:"web_search_price_unit,omitempty"`
+	WebSearchPrice     ZeroNullFloat64 `json:"web_search_price,omitempty"`
+	WebSearchPriceUnit ZeroNullInt64   `json:"web_search_price_unit,omitempty"`
 }
 
 func (p *Price) GetInputPriceUnit() int64 {
 	if p.InputPriceUnit > 0 {
-		return p.InputPriceUnit
+		return int64(p.InputPriceUnit)
 	}
 	return PriceUnit
 }
 
 func (p *Price) GetImageInputPriceUnit() int64 {
 	if p.ImageInputPriceUnit > 0 {
-		return p.ImageInputPriceUnit
+		return int64(p.ImageInputPriceUnit)
 	}
 	return PriceUnit
 }
 
 func (p *Price) GetOutputPriceUnit() int64 {
 	if p.OutputPriceUnit > 0 {
-		return p.OutputPriceUnit
+		return int64(p.OutputPriceUnit)
 	}
 	return PriceUnit
 }
 
 func (p *Price) GetCachedPriceUnit() int64 {
 	if p.CachedPriceUnit > 0 {
-		return p.CachedPriceUnit
+		return int64(p.CachedPriceUnit)
 	}
 	return PriceUnit
 }
 
 func (p *Price) GetCacheCreationPriceUnit() int64 {
 	if p.CacheCreationPriceUnit > 0 {
-		return p.CacheCreationPriceUnit
+		return int64(p.CacheCreationPriceUnit)
 	}
 	return PriceUnit
 }
 
 func (p *Price) GetWebSearchPriceUnit() int64 {
 	if p.WebSearchPriceUnit > 0 {
-		return p.WebSearchPriceUnit
+		return int64(p.WebSearchPriceUnit)
 	}
 	return PriceUnit
 }
