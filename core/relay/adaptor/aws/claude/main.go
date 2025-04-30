@@ -204,9 +204,6 @@ func StreamHandler(m *meta.Meta, c *gin.Context) (*model.Usage, *relaymodel.Erro
 				}
 				return usage.ToModelUsage(), err
 			}
-			if response == nil {
-				continue
-			}
 			if response != nil {
 				switch {
 				case response.Usage != nil:
@@ -215,8 +212,8 @@ func StreamHandler(m *meta.Meta, c *gin.Context) (*model.Usage, *relaymodel.Erro
 					}
 					usage.Add(response.Usage)
 					if usage.PromptTokens == 0 {
-						usage.PromptTokens = m.RequestUsage.InputTokens
-						usage.TotalTokens += m.RequestUsage.InputTokens
+						usage.PromptTokens = int64(m.RequestUsage.InputTokens)
+						usage.TotalTokens += int64(m.RequestUsage.InputTokens)
 					}
 					response.Usage = usage
 					responseText.Reset()
@@ -242,9 +239,9 @@ func StreamHandler(m *meta.Meta, c *gin.Context) (*model.Usage, *relaymodel.Erro
 
 	if usage == nil {
 		usage = &relaymodel.Usage{
-			PromptTokens:     m.RequestUsage.InputTokens,
+			PromptTokens:     int64(m.RequestUsage.InputTokens),
 			CompletionTokens: openai.CountTokenText(responseText.String(), m.OriginModel),
-			TotalTokens:      m.RequestUsage.InputTokens + openai.CountTokenText(responseText.String(), m.OriginModel),
+			TotalTokens:      int64(m.RequestUsage.InputTokens) + openai.CountTokenText(responseText.String(), m.OriginModel),
 		}
 		_ = render.ObjectData(c, &relaymodel.ChatCompletionsStreamResponse{
 			ID:      openai.ChatCompletionID(),

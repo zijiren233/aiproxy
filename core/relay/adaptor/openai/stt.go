@@ -113,7 +113,7 @@ func STTHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Us
 	}
 	var promptTokens int64
 	if meta.RequestUsage.InputTokens > 0 {
-		promptTokens = meta.RequestUsage.InputTokens
+		promptTokens = int64(meta.RequestUsage.InputTokens)
 	} else {
 		promptTokens = CountTokenText(text, meta.ActualModel)
 	}

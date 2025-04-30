@@ -96,8 +96,8 @@ func RerankHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model
 		}
 	} else {
 		usage = &model.Usage{
-			InputTokens: rerankResponse.Usage.TotalTokens,
-			TotalTokens: rerankResponse.Usage.TotalTokens,
+			InputTokens: model.ZeroNullInt64(rerankResponse.Usage.TotalTokens),
+			TotalTokens: model.ZeroNullInt64(rerankResponse.Usage.TotalTokens),
 		}
 	}
 

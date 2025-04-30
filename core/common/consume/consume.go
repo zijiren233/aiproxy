@@ -139,27 +139,27 @@ func CalculateAmount(
 		inputTokens -= usage.CacheCreationTokens
 	}
 
-	inputAmount := decimal.NewFromInt(inputTokens).
+	inputAmount := decimal.NewFromInt(int64(inputTokens)).
 		Mul(decimal.NewFromFloat(modelPrice.InputPrice)).
 		Div(decimal.NewFromInt(modelPrice.GetInputPriceUnit()))
 
-	imageInputAmount := decimal.NewFromInt(usage.ImageInputTokens).
+	imageInputAmount := decimal.NewFromInt(int64(usage.ImageInputTokens)).
 		Mul(decimal.NewFromFloat(modelPrice.ImageInputPrice)).
 		Div(decimal.NewFromInt(modelPrice.GetImageInputPriceUnit()))
 
-	cachedAmount := decimal.NewFromInt(usage.CachedTokens).
+	cachedAmount := decimal.NewFromInt(int64(usage.CachedTokens)).
 		Mul(decimal.NewFromFloat(modelPrice.CachedPrice)).
 		Div(decimal.NewFromInt(modelPrice.GetCachedPriceUnit()))
 
-	cacheCreationAmount := decimal.NewFromInt(usage.CacheCreationTokens).
+	cacheCreationAmount := decimal.NewFromInt(int64(usage.CacheCreationTokens)).
 		Mul(decimal.NewFromFloat(modelPrice.CacheCreationPrice)).
 		Div(decimal.NewFromInt(modelPrice.GetCacheCreationPriceUnit()))
 
-	webSearchAmount := decimal.NewFromInt(usage.WebSearchCount).
+	webSearchAmount := decimal.NewFromInt(int64(usage.WebSearchCount)).
 		Mul(decimal.NewFromFloat(modelPrice.WebSearchPrice)).
 		Div(decimal.NewFromInt(modelPrice.GetWebSearchPriceUnit()))
 
-	outputAmount := decimal.NewFromInt(outputTokens).
+	outputAmount := decimal.NewFromInt(int64(outputTokens)).
 		Mul(decimal.NewFromFloat(modelPrice.OutputPrice)).
 		Div(decimal.NewFromInt(modelPrice.GetOutputPriceUnit()))
 

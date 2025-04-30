@@ -604,7 +604,7 @@ func StreamHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model
 	}
 
 	usage := relaymodel.Usage{
-		PromptTokens: meta.RequestUsage.InputTokens,
+		PromptTokens: int64(meta.RequestUsage.InputTokens),
 	}
 
 	for scanner.Scan() {

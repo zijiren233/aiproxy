@@ -103,13 +103,13 @@ func (p *Price) GetWebSearchPriceUnit() int64 {
 }
 
 type Usage struct {
-	InputTokens         int64 `json:"input_tokens,omitempty"`
-	ImageInputTokens    int64 `json:"image_input_tokens,omitempty"`
-	OutputTokens        int64 `json:"output_tokens,omitempty"`
-	CachedTokens        int64 `json:"cached_tokens,omitempty"`
-	CacheCreationTokens int64 `json:"cache_creation_tokens,omitempty"`
-	TotalTokens         int64 `json:"total_tokens,omitempty"`
-	WebSearchCount      int64 `json:"web_search_count,omitempty"`
+	InputTokens         ZeroNullInt64 `json:"input_tokens,omitempty"`
+	ImageInputTokens    ZeroNullInt64 `json:"image_input_tokens,omitempty"`
+	OutputTokens        ZeroNullInt64 `json:"output_tokens,omitempty"`
+	CachedTokens        ZeroNullInt64 `json:"cached_tokens,omitempty"`
+	CacheCreationTokens ZeroNullInt64 `json:"cache_creation_tokens,omitempty"`
+	TotalTokens         ZeroNullInt64 `json:"total_tokens,omitempty"`
+	WebSearchCount      ZeroNullInt64 `json:"web_search_count,omitempty"`
 }
 
 func (u *Usage) Add(other *Usage) {

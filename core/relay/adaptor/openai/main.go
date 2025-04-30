@@ -186,7 +186,11 @@ func StreamHandler(meta *meta.Meta, c *gin.Context, resp *http.Response, preHand
 	}
 
 	if usage == nil || (usage.TotalTokens == 0 && responseText.Len() > 0) {
-		usage = ResponseText2Usage(responseText.String(), meta.ActualModel, meta.RequestUsage.InputTokens)
+		usage = ResponseText2Usage(
+			responseText.String(),
+			meta.ActualModel,
+			int64(meta.RequestUsage.InputTokens),
+		)
 		_ = render.ObjectData(c, &relaymodel.ChatCompletionsStreamResponse{
 			ID:      ChatCompletionID(),
 			Model:   meta.OriginModel,
@@ -196,8 +200,8 @@ func StreamHandler(meta *meta.Meta, c *gin.Context, resp *http.Response, preHand
 			Usage:   usage,
 		})
 	} else if usage.TotalTokens != 0 && usage.PromptTokens == 0 { // some channels don't return prompt tokens & completion tokens
-		usage.PromptTokens = meta.RequestUsage.InputTokens
-		usage.CompletionTokens = usage.TotalTokens - meta.RequestUsage.InputTokens
+		usage.PromptTokens = int64(meta.RequestUsage.InputTokens)
+		usage.CompletionTokens = usage.TotalTokens - int64(meta.RequestUsage.InputTokens)
 	}
 
 	render.Done(c)
@@ -389,17 +393,17 @@ func Handler(meta *meta.Meta, c *gin.Context, resp *http.Response, preHandler Pr
 			completionTokens += CountTokenText(choice.Message.StringContent(), meta.ActualModel)
 		}
 		usage = &relaymodel.Usage{
-			PromptTokens:     meta.RequestUsage.InputTokens,
+			PromptTokens:     int64(meta.RequestUsage.InputTokens),
 			CompletionTokens: completionTokens,
-			TotalTokens:      meta.RequestUsage.InputTokens + completionTokens,
+			TotalTokens:      int64(meta.RequestUsage.InputTokens) + completionTokens,
 		}
 		_, err = node.Set("usage", ast.NewAny(usage))
 		if err != nil {
 			return usage.ToModelUsage(), ErrorWrapper(err, "set_usage_failed", http.StatusInternalServerError)
 		}
 	} else if usage.TotalTokens != 0 && usage.PromptTokens == 0 { // some channels don't return prompt tokens & completion tokens
-		usage.PromptTokens = meta.RequestUsage.InputTokens
-		usage.CompletionTokens = usage.TotalTokens - meta.RequestUsage.InputTokens
+		usage.PromptTokens = int64(meta.RequestUsage.InputTokens)
+		usage.CompletionTokens = usage.TotalTokens - int64(meta.RequestUsage.InputTokens)
 		_, err = node.Set("usage", ast.NewAny(usage))
 		if err != nil {
 			return usage.ToModelUsage(), ErrorWrapper(err, "set_usage_failed", http.StatusInternalServerError)

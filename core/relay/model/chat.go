@@ -22,14 +22,14 @@ func (u *Usage) ToModelUsage() *model.Usage {
 		return nil
 	}
 	usage := &model.Usage{
-		InputTokens:    u.PromptTokens,
-		OutputTokens:   u.CompletionTokens,
-		TotalTokens:    u.TotalTokens,
-		WebSearchCount: u.WebSearchCount,
+		InputTokens:    model.ZeroNullInt64(u.PromptTokens),
+		OutputTokens:   model.ZeroNullInt64(u.CompletionTokens),
+		TotalTokens:    model.ZeroNullInt64(u.TotalTokens),
+		WebSearchCount: model.ZeroNullInt64(u.WebSearchCount),
 	}
 	if u.PromptTokensDetails != nil {
-		usage.CachedTokens = u.PromptTokensDetails.CachedTokens
-		usage.CacheCreationTokens = u.PromptTokensDetails.CacheCreationTokens
+		usage.CachedTokens = model.ZeroNullInt64(u.PromptTokensDetails.CachedTokens)
+		usage.CacheCreationTokens = model.ZeroNullInt64(u.PromptTokensDetails.CacheCreationTokens)
 	}
 	return usage
 }

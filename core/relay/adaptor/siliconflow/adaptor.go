@@ -38,8 +38,8 @@ func (a *Adaptor) DoResponse(meta *meta.Meta, c *gin.Context, resp *http.Respons
 	case mode.AudioSpeech:
 		size := c.Writer.Size()
 		usage = &model.Usage{
-			OutputTokens: int64(size),
-			TotalTokens:  int64(size),
+			OutputTokens: model.ZeroNullInt64(size),
+			TotalTokens:  model.ZeroNullInt64(size),
 		}
 	}
 	return usage, nil

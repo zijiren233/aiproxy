@@ -46,6 +46,6 @@ func GetRerankRequestUsage(c *gin.Context, _ *model.ModelConfig) (model.Usage, e
 		return model.Usage{}, err
 	}
 	return model.Usage{
-		InputTokens: rerankPromptTokens(rerankRequest),
+		InputTokens: model.ZeroNullInt64(rerankPromptTokens(rerankRequest)),
 	}, nil
 }

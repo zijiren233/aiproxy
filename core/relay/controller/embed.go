@@ -18,6 +18,9 @@ func GetEmbedRequestUsage(c *gin.Context, _ *model.ModelConfig) (model.Usage, er
 	}
 
 	return model.Usage{
-		InputTokens: openai.CountTokenInput(textRequest.Input, textRequest.Model),
+		InputTokens: model.ZeroNullInt64(openai.CountTokenInput(
+			textRequest.Input,
+			textRequest.Model,
+		)),
 	}, nil
 }

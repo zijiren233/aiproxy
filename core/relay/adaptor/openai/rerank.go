@@ -66,11 +66,11 @@ func RerankHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model
 		}, nil
 	}
 	if rerankResponse.Meta.Tokens.InputTokens <= 0 {
-		rerankResponse.Meta.Tokens.InputTokens = meta.RequestUsage.InputTokens
+		rerankResponse.Meta.Tokens.InputTokens = int64(meta.RequestUsage.InputTokens)
 	}
 	return &model.Usage{
-		InputTokens:  rerankResponse.Meta.Tokens.InputTokens,
-		OutputTokens: rerankResponse.Meta.Tokens.OutputTokens,
-		TotalTokens:  rerankResponse.Meta.Tokens.InputTokens + rerankResponse.Meta.Tokens.OutputTokens,
+		InputTokens:  model.ZeroNullInt64(rerankResponse.Meta.Tokens.InputTokens),
+		OutputTokens: model.ZeroNullInt64(rerankResponse.Meta.Tokens.OutputTokens),
+		TotalTokens:  model.ZeroNullInt64(rerankResponse.Meta.Tokens.InputTokens + rerankResponse.Meta.Tokens.OutputTokens),
 	}, nil
 }

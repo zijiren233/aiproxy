@@ -44,8 +44,8 @@ func RerankHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model
 	if usage.PromptTokens == 0 && usage.TotalTokens != 0 {
 		usage.PromptTokens = usage.TotalTokens
 	} else if usage.PromptTokens == 0 {
-		usage.PromptTokens = meta.RequestUsage.InputTokens
-		usage.TotalTokens = meta.RequestUsage.InputTokens
+		usage.PromptTokens = int64(meta.RequestUsage.InputTokens)
+		usage.TotalTokens = int64(meta.RequestUsage.InputTokens)
 	}
 	modelUsage := usage.ToModelUsage()
 	_, err = node.SetAny("meta", map[string]any{
