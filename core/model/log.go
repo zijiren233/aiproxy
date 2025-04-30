@@ -50,6 +50,10 @@ type Price struct {
 	OutputPrice     float64 `json:"output_price,omitempty"`
 	OutputPriceUnit int64   `json:"output_price_unit,omitempty"`
 
+	// when ThinkingModeOutputPrice and ReasoningTokens are not 0, OutputPrice and OutputPriceUnit will be overwritten
+	ThinkingModeOutputPrice     float64 `json:"thinking_mode_output_price,omitempty"`
+	ThinkingModeOutputPriceUnit int64   `json:"thinking_mode_output_price_unit,omitempty"`
+
 	CachedPrice     float64 `json:"cached_price,omitempty"`
 	CachedPriceUnit int64   `json:"cached_price_unit,omitempty"`
 
@@ -108,6 +112,7 @@ type Usage struct {
 	OutputTokens        ZeroNullInt64 `json:"output_tokens,omitempty"`
 	CachedTokens        ZeroNullInt64 `json:"cached_tokens,omitempty"`
 	CacheCreationTokens ZeroNullInt64 `json:"cache_creation_tokens,omitempty"`
+	ReasoningTokens     ZeroNullInt64 `json:"reasoning_tokens,omitempty"`
 	TotalTokens         ZeroNullInt64 `json:"total_tokens,omitempty"`
 	WebSearchCount      ZeroNullInt64 `json:"web_search_count,omitempty"`
 }
