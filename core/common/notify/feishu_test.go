@@ -9,6 +9,10 @@ import (
 )
 
 func TestPostToFeiShuv2(t *testing.T) {
+	fshook := os.Getenv("FEISHU_WEBHOOK")
+	if fshook == "" {
+		return
+	}
 	err := notify.PostToFeiShuv2(
 		context.Background(),
 		notify.FeishuColorRed,
