@@ -31,6 +31,9 @@ func (u *Usage) ToModelUsage() *model.Usage {
 		usage.CachedTokens = model.ZeroNullInt64(u.PromptTokensDetails.CachedTokens)
 		usage.CacheCreationTokens = model.ZeroNullInt64(u.PromptTokensDetails.CacheCreationTokens)
 	}
+	if u.CompletionTokensDetails != nil {
+		usage.ReasoningTokens = model.ZeroNullInt64(u.CompletionTokensDetails.ReasoningTokens)
+	}
 	return usage
 }
 

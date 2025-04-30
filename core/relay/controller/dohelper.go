@@ -274,6 +274,9 @@ func updateUsageMetrics(usage model.Usage, log *log.Entry) {
 	if usage.CacheCreationTokens > 0 {
 		log.Data["t_cache_creation"] = usage.CacheCreationTokens
 	}
+	if usage.ReasoningTokens > 0 {
+		log.Data["t_reason"] = usage.ReasoningTokens
+	}
 	if usage.WebSearchCount > 0 {
 		log.Data["t_websearch"] = usage.WebSearchCount
 	}

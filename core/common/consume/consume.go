@@ -127,8 +127,6 @@ func CalculateAmount(
 	}
 
 	inputTokens := usage.InputTokens
-	outputTokens := usage.OutputTokens
-
 	if modelPrice.ImageInputPrice > 0 {
 		inputTokens -= usage.ImageInputTokens
 	}
@@ -137,6 +135,16 @@ func CalculateAmount(
 	}
 	if modelPrice.CacheCreationPrice > 0 {
 		inputTokens -= usage.CacheCreationTokens
+	}
+
+	outputTokens := usage.OutputTokens
+	outputPrice := modelPrice.OutputPrice
+	outputPriceUnit := modelPrice.GetOutputPriceUnit()
+	if usage.ReasoningTokens != 0 && modelPrice.ThinkingModeOutputPrice != 0 {
+		outputPrice = modelPrice.ThinkingModeOutputPrice
+		if modelPrice.ThinkingModeOutputPriceUnit != 0 {
+			outputPriceUnit = modelPrice.ThinkingModeOutputPriceUnit
+		}
 	}
 
 	inputAmount := decimal.NewFromInt(int64(inputTokens)).
@@ -160,8 +168,8 @@ func CalculateAmount(
 		Div(decimal.NewFromInt(modelPrice.GetWebSearchPriceUnit()))
 
 	outputAmount := decimal.NewFromInt(int64(outputTokens)).
-		Mul(decimal.NewFromFloat(modelPrice.OutputPrice)).
-		Div(decimal.NewFromInt(modelPrice.GetOutputPriceUnit()))
+		Mul(decimal.NewFromFloat(outputPrice)).
+		Div(decimal.NewFromInt(outputPriceUnit))
 
 	return inputAmount.
 		Add(imageInputAmount).
