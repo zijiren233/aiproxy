@@ -1,4 +1,4 @@
-package text_embeddings_inference
+package textembeddingsinference
 
 import (
 	"github.com/labring/aiproxy/core/model"
@@ -11,7 +11,10 @@ var ModelList = []*model.ModelConfig{
 		Model: "bge-reranker-v2-m3",
 		Type:  mode.Rerank,
 		Owner: model.ModelOwnerBaai,
-		Price: model.Price{},
+		Price: model.Price{
+			InputPrice:  0.015,
+			OutputPrice: 0.015,
+		},
 		Config: model.NewModelConfig(
 			model.WithModelConfigMaxContextTokens(32768),
 		),

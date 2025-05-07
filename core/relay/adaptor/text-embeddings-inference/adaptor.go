@@ -1,4 +1,4 @@
-package text_embeddings_inference
+package textembeddingsinference
 
 import (
 	"bytes"
@@ -35,9 +35,9 @@ func (a *Adaptor) GetModelList() []*model.ModelConfig {
 func (a *Adaptor) GetRequestURL(meta *meta.Meta) (string, error) {
 	switch meta.Mode {
 	case mode.Rerank:
-		return fmt.Sprintf("%s/rerank", a.GetBaseURL()), nil
+		return a.GetBaseURL() + "/rerank", nil
 	case mode.Embeddings:
-		return fmt.Sprintf("%s/embeddings", a.GetBaseURL()), nil
+		return a.GetBaseURL() + "/embeddings", nil
 	default:
 		return "", fmt.Errorf("unsupported mode: %s", meta.Mode)
 	}
@@ -45,7 +45,7 @@ func (a *Adaptor) GetRequestURL(meta *meta.Meta) (string, error) {
 
 // text-embeddings-inference api see https://huggingface.github.io/text-embeddings-inference/#/Text%20Embeddings%20Inference/rerank
 
-func (a *Adaptor) SetupRequestHeader(meta *meta.Meta, c *gin.Context, req *http.Request) error {
+func (a *Adaptor) SetupRequestHeader(meta *meta.Meta, _ *gin.Context, req *http.Request) error {
 	switch meta.Mode {
 	case mode.Rerank:
 		req.Header.Set("Content-Type", "application/json")
@@ -65,23 +65,28 @@ func (a *Adaptor) ConvertRequest(meta *meta.Meta, req *http.Request) (string, ht
 		if err != nil {
 			return "", nil, nil, fmt.Errorf("failed to read request body: %w", err)
 		}
+
 		// Parse the request body
 		var requestBody map[string]interface{}
 		if err := json.Unmarshal(body, &requestBody); err != nil {
 			return "", nil, nil, fmt.Errorf("failed to parse request body: %w", err)
 		}
+
 		// Create the rerank request, setting model is not supported
 		rerankRequest := map[string]interface{}{
 			// "model": meta.OriginModel,
 			"query": requestBody["query"],
 			"texts": requestBody["documents"],
 		}
+
 		// Convert back to JSON
 		rerankBody, err := json.Marshal(rerankRequest)
 		if err != nil {
 			return "", nil, nil, fmt.Errorf("failed to marshal rerank request: %w", err)
 		}
+
 		return "", req.Header, bytes.NewReader(rerankBody), nil
+
 	case mode.Embeddings:
 		// Handle embeddings request
 		return "", req.Header, req.Body, nil
@@ -98,10 +103,12 @@ func (a *Adaptor) DoRequest(meta *meta.Meta, c *gin.Context, req *http.Request) 
 		return nil, err
 	}
 
-	newReq, err := http.NewRequest(req.Method, url, req.Body)
+	// Create a new request with context
+	newReq, err := http.NewRequestWithContext(req.Context(), req.Method, url, req.Body)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
+
 	for k, v := range req.Header {
 		newReq.Header[k] = v
 	}
@@ -129,7 +136,7 @@ func (a *Adaptor) DoRequest(meta *meta.Meta, c *gin.Context, req *http.Request) 
 	return utils.DoRequest(newReq)
 }
 
-func (a *Adaptor) DoResponse(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, *relaymodel.ErrorWithStatusCode) {
+func (a *Adaptor) DoResponse(_ *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, *relaymodel.ErrorWithStatusCode) {
 	// Read response body
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -162,6 +169,7 @@ func (a *Adaptor) DoResponse(meta *meta.Meta, c *gin.Context, resp *http.Respons
 			StatusCode: http.StatusInternalServerError,
 		}
 	}
+
 	// For text-embeddings-inference, we don't need to track usage
 	return &model.Usage{}, nil
 }
