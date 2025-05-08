@@ -10,7 +10,7 @@ var ModelList = []*model.ModelConfig{
 	{
 		Model: "bge-reranker-v2-m3",
 		Type:  mode.Rerank,
-		Owner: model.ModelOwnerBaai,
+		Owner: model.ModelOwnerBAAI,
 		Price: model.Price{
 			InputPrice:  0.015,
 			OutputPrice: 0.015,

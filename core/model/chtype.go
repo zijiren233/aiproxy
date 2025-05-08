@@ -84,7 +84,7 @@ var channelTypeNames = map[ChannelType]string{
 	ChannelTypeXAI:                     "xai",
 	ChannelTypeDoc2x:                   "doc2x",
 	ChannelTypeJina:                    "jina",
-	ChannelTypeTextEmbeddingsInference: "text-embeddings-inference",
+	ChannelTypeTextEmbeddingsInference: "huggingface text-embeddings-inference",
 }
 
 func AllChannelTypes() []ChannelType {

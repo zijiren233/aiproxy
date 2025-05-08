@@ -24,7 +24,6 @@ const (
 	ModelOwnerAnthropic   ModelOwner = "anthropic"
 	ModelOwnerMeta        ModelOwner = "meta"
 	ModelOwnerBaichuan    ModelOwner = "baichuan"
-	ModelOwnerBaai        ModelOwner = "baai"
 	ModelOwnerMistral     ModelOwner = "mistral"
 	ModelOwnerOpenChat    ModelOwner = "openchat"
 	ModelOwnerMicrosoft   ModelOwner = "microsoft"

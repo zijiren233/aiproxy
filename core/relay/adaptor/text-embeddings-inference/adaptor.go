@@ -2,12 +2,13 @@ package textembeddingsinference
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 
+	"github.com/bytedance/sonic/ast"
 	"github.com/gin-gonic/gin"
+	"github.com/labring/aiproxy/core/common"
 	"github.com/labring/aiproxy/core/model"
 	"github.com/labring/aiproxy/core/relay/adaptor/openai"
 	"github.com/labring/aiproxy/core/relay/meta"
@@ -60,116 +61,79 @@ func (a *Adaptor) SetupRequestHeader(meta *meta.Meta, _ *gin.Context, req *http.
 func (a *Adaptor) ConvertRequest(meta *meta.Meta, req *http.Request) (string, http.Header, io.Reader, error) {
 	switch meta.Mode {
 	case mode.Rerank:
-		// Read the request body
-		body, err := io.ReadAll(req.Body)
+		// Parse request body into AST node
+		node, err := common.UnmarshalBody2Node(req)
 		if err != nil {
-			return "", nil, nil, fmt.Errorf("failed to read request body: %w", err)
-		}
-
-		// Parse the request body
-		var requestBody map[string]interface{}
-		if err := json.Unmarshal(body, &requestBody); err != nil {
 			return "", nil, nil, fmt.Errorf("failed to parse request body: %w", err)
 		}
 
-		// Create the rerank request, setting model is not supported
-		rerankRequest := map[string]interface{}{
-			// "model": meta.OriginModel,
-			"query": requestBody["query"],
-			"texts": requestBody["documents"],
+		// Get the documents array and rename it to texts
+		documentsNode := node.Get("documents")
+		if !documentsNode.Exists() {
+			return "", nil, nil, fmt.Errorf("documents field not found")
+		}
+
+		// Get the raw documents value
+		documentsValue, err := documentsNode.Raw()
+		if err != nil {
+			return "", nil, nil, fmt.Errorf("failed to get documents value: %w", err)
+		}
+
+		// Set the texts field with the documents value
+		_, err = node.Set("texts", ast.NewString(documentsValue))
+		if err != nil {
+			return "", nil, nil, fmt.Errorf("failed to set texts field: %w", err)
+		}
+
+		// Remove the documents field
+		_, err = node.Unset("documents")
+		if err != nil {
+			return "", nil, nil, fmt.Errorf("failed to remove documents field: %w", err)
 		}
 
 		// Convert back to JSON
-		rerankBody, err := json.Marshal(rerankRequest)
+		jsonData, err := node.MarshalJSON()
 		if err != nil {
-			return "", nil, nil, fmt.Errorf("failed to marshal rerank request: %w", err)
+			return "", nil, nil, fmt.Errorf("failed to marshal request: %w", err)
 		}
 
-		return "", req.Header, bytes.NewReader(rerankBody), nil
-
+		return "", nil, bytes.NewReader(jsonData), nil
 	case mode.Embeddings:
 		// Handle embeddings request
-		return "", req.Header, req.Body, nil
-
+		return "", nil, req.Body, nil
 	default:
 		return "", nil, nil, fmt.Errorf("unsupported mode: %s", meta.Mode)
 	}
 }
 
 func (a *Adaptor) DoRequest(meta *meta.Meta, c *gin.Context, req *http.Request) (*http.Response, error) {
-	// Get the request URL
-	url, err := a.GetRequestURL(meta)
-	if err != nil {
-		return nil, err
-	}
-
-	// Create a new request with context
-	newReq, err := http.NewRequestWithContext(req.Context(), req.Method, url, req.Body)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
-	}
-
-	for k, v := range req.Header {
-		newReq.Header[k] = v
-	}
-
-	// Setup headers
-	if err := a.SetupRequestHeader(meta, c, newReq); err != nil {
-		return nil, err
-	}
-
-	// Convert request if needed
-	_, headers, body, err := a.ConvertRequest(meta, newReq)
-	if err != nil {
-		return nil, err
-	}
-
-	// Update request with converted data
-	for k, v := range headers {
-		newReq.Header[k] = v
-	}
-	if body != nil {
-		newReq.Body = io.NopCloser(body)
-	}
-
-	// Send request using utils
-	return utils.DoRequest(newReq)
+	return utils.DoRequest(req)
 }
 
 func (a *Adaptor) DoResponse(_ *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, *relaymodel.ErrorWithStatusCode) {
 	// Read response body
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, &relaymodel.ErrorWithStatusCode{
-			Error: relaymodel.Error{
-				Message: fmt.Sprintf("failed to read response body: %v", err),
-			},
-			StatusCode: resp.StatusCode,
-		}
+		return nil, openai.ErrorWrapper(err, "read_response_body_failed", http.StatusInternalServerError)
 	}
 
 	// Check for error status
 	if resp.StatusCode != http.StatusOK {
-		return nil, &relaymodel.ErrorWithStatusCode{
-			Error: relaymodel.Error{
-				Message: fmt.Sprintf("request failed with status %d: %s", resp.StatusCode, string(body)),
-			},
-			StatusCode: resp.StatusCode,
-		}
+		return nil, openai.ErrorWrapperWithMessage(
+			fmt.Sprintf("request failed with status %d", resp.StatusCode),
+			"upstream_error",
+			resp.StatusCode,
+		)
 	}
 
 	// Write response back to client
 	c.Header("Content-Type", "application/json")
 	c.Status(resp.StatusCode)
 	if _, err := c.Writer.Write(body); err != nil {
-		return nil, &relaymodel.ErrorWithStatusCode{
-			Error: relaymodel.Error{
-				Message: fmt.Sprintf("failed to write response: %v", err),
-			},
-			StatusCode: http.StatusInternalServerError,
-		}
+		return nil, openai.ErrorWrapper(err, "write_response_failed", http.StatusInternalServerError)
 	}
 
 	// For text-embeddings-inference, we don't need to track usage
+	// TODO: add usage tracking
 	return &model.Usage{}, nil
 }
