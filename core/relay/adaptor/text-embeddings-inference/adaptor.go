@@ -2,6 +2,7 @@ package textembeddingsinference
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -70,7 +71,7 @@ func (a *Adaptor) ConvertRequest(meta *meta.Meta, req *http.Request) (string, ht
 		// Get the documents array and rename it to texts
 		documentsNode := node.Get("documents")
 		if !documentsNode.Exists() {
-			return "", nil, nil, fmt.Errorf("documents field not found")
+			return "", nil, nil, errors.New("documents field not found")
 		}
 
 		// Get the raw documents value
@@ -106,7 +107,7 @@ func (a *Adaptor) ConvertRequest(meta *meta.Meta, req *http.Request) (string, ht
 	}
 }
 
-func (a *Adaptor) DoRequest(meta *meta.Meta, c *gin.Context, req *http.Request) (*http.Response, error) {
+func (a *Adaptor) DoRequest(_ *meta.Meta, _ *gin.Context, req *http.Request) (*http.Response, error) {
 	return utils.DoRequest(req)
 }
 
