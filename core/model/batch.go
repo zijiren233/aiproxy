@@ -213,8 +213,10 @@ func BatchRecordConsume(
 	modelPrice Price,
 	amount float64,
 ) error {
+	now := time.Now()
 	err := RecordConsumeLog(
 		requestID,
+		now,
 		requestAt,
 		retryAt,
 		firstByteAt,
@@ -252,10 +254,10 @@ func BatchRecordConsume(
 	updateTokenData(tokenID, amount, amountDecimal)
 
 	if channelID != 0 {
-		updateSummaryData(channelID, modelName, requestAt, code, amountDecimal, usage)
+		updateSummaryData(channelID, modelName, now, code, amountDecimal, usage)
 	}
 
-	updateGroupSummaryData(group, tokenName, modelName, requestAt, code, amountDecimal, usage)
+	updateGroupSummaryData(group, tokenName, modelName, now, code, amountDecimal, usage)
 
 	return err
 }
@@ -302,12 +304,12 @@ func updateTokenData(tokenID int, amount float64, amountDecimal decimal.Decimal)
 	}
 }
 
-func updateGroupSummaryData(group string, tokenName string, modelName string, requestAt time.Time, code int, amountDecimal decimal.Decimal, usage Usage) {
+func updateGroupSummaryData(group string, tokenName string, modelName string, createAt time.Time, code int, amountDecimal decimal.Decimal, usage Usage) {
 	groupUnique := GroupSummaryUnique{
 		GroupID:       group,
 		TokenName:     tokenName,
 		Model:         modelName,
-		HourTimestamp: requestAt.Truncate(time.Hour).Unix(),
+		HourTimestamp: createAt.Truncate(time.Hour).Unix(),
 	}
 
 	groupSummaryKey := groupSummaryUniqueKey(groupUnique)
@@ -329,11 +331,11 @@ func updateGroupSummaryData(group string, tokenName string, modelName string, re
 	}
 }
 
-func updateSummaryData(channelID int, modelName string, requestAt time.Time, code int, amountDecimal decimal.Decimal, usage Usage) {
+func updateSummaryData(channelID int, modelName string, createAt time.Time, code int, amountDecimal decimal.Decimal, usage Usage) {
 	summaryUnique := SummaryUnique{
 		ChannelID:     channelID,
 		Model:         modelName,
-		HourTimestamp: requestAt.Truncate(time.Hour).Unix(),
+		HourTimestamp: createAt.Truncate(time.Hour).Unix(),
 	}
 
 	summaryKey := summaryUniqueKey(summaryUnique)
