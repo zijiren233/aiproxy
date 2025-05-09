@@ -335,6 +335,18 @@ type UsageMetadata struct {
 	PromptTokensDetails  []PromptTokensDetail `json:"promptTokensDetails"`
 }
 
+func (u *UsageMetadata) ToUsage() relaymodel.Usage {
+	return relaymodel.Usage{
+		PromptTokens: u.PromptTokenCount,
+		CompletionTokens: u.CandidatesTokenCount +
+			u.ThoughtsTokenCount,
+		TotalTokens: u.TotalTokenCount,
+		CompletionTokensDetails: &relaymodel.CompletionTokensDetails{
+			ReasoningTokens: u.ThoughtsTokenCount,
+		},
+	}
+}
+
 type PromptTokensDetail struct {
 	Modality   string `json:"modality"`
 	TokenCount int64  `json:"tokenCount"`
@@ -412,23 +424,13 @@ func responseChat2OpenAI(meta *meta.Meta, response *ChatResponse) *relaymodel.Te
 		Choices: make([]*relaymodel.TextResponseChoice, 0, len(response.Candidates)),
 	}
 	if response.UsageMetadata != nil {
-		fullTextResponse.Usage = relaymodel.Usage{
-			PromptTokens:     response.UsageMetadata.PromptTokenCount,
-			CompletionTokens: response.UsageMetadata.CandidatesTokenCount,
-			TotalTokens:      response.UsageMetadata.TotalTokenCount,
-		}
-		if response.UsageMetadata.ThoughtsTokenCount != 0 {
-			fullTextResponse.Usage.CompletionTokensDetails = &relaymodel.CompletionTokensDetails{
-				ReasoningTokens: response.UsageMetadata.ThoughtsTokenCount,
-			}
-		}
+		fullTextResponse.Usage = response.UsageMetadata.ToUsage()
 	}
 	for i, candidate := range response.Candidates {
 		choice := relaymodel.TextResponseChoice{
 			Index: i,
 			Message: relaymodel.Message{
-				Role:    "assistant",
-				Content: "",
+				Role: "assistant",
 			},
 			FinishReason: FinishReason2OpenAI(candidate.FinishReason),
 		}
@@ -491,16 +493,8 @@ func streamResponseChat2OpenAI(meta *meta.Meta, geminiResponse *ChatResponse) *r
 		Choices: make([]*relaymodel.ChatCompletionsStreamResponseChoice, 0, len(geminiResponse.Candidates)),
 	}
 	if geminiResponse.UsageMetadata != nil {
-		response.Usage = &relaymodel.Usage{
-			PromptTokens:     geminiResponse.UsageMetadata.PromptTokenCount,
-			CompletionTokens: geminiResponse.UsageMetadata.CandidatesTokenCount,
-			TotalTokens:      geminiResponse.UsageMetadata.TotalTokenCount,
-		}
-		if geminiResponse.UsageMetadata.ThoughtsTokenCount != 0 {
-			response.Usage.CompletionTokensDetails = &relaymodel.CompletionTokensDetails{
-				ReasoningTokens: geminiResponse.UsageMetadata.ThoughtsTokenCount,
-			}
-		}
+		usage := geminiResponse.UsageMetadata.ToUsage()
+		response.Usage = &usage
 	}
 	for i, candidate := range geminiResponse.Candidates {
 		choice := relaymodel.ChatCompletionsStreamResponseChoice{
