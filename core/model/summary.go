@@ -213,18 +213,18 @@ func GetUsedChannels(group string, start, end time.Time) ([]int, error) {
 	if group != "*" {
 		return []int{}, nil
 	}
-	return getLogGroupByValues[int]("channel_id", group, start, end)
+	return getLogGroupByValues[int]("channel_id", group, "", start, end)
 }
 
-func GetUsedModels(group string, start, end time.Time) ([]string, error) {
-	return getLogGroupByValues[string]("model", group, start, end)
+func GetUsedModels(group string, tokenName string, start, end time.Time) ([]string, error) {
+	return getLogGroupByValues[string]("model", group, tokenName, start, end)
 }
 
 func GetUsedTokenNames(group string, start, end time.Time) ([]string, error) {
-	return getLogGroupByValues[string]("token_name", group, start, end)
+	return getLogGroupByValues[string]("token_name", group, "", start, end)
 }
 
-func getLogGroupByValues[T cmp.Ordered](field string, group string, start, end time.Time) ([]T, error) {
+func getLogGroupByValues[T cmp.Ordered](field string, group string, tokenName string, start, end time.Time) ([]T, error) {
 	type Result struct {
 		Value        T
 		UsedAmount   float64
@@ -241,6 +241,9 @@ func getLogGroupByValues[T cmp.Ordered](field string, group string, start, end t
 		query = LogDB.
 			Model(&GroupSummary{}).
 			Where("group_id = ?", group)
+		if tokenName != "" {
+			query = query.Where("token_name = ?", tokenName)
+		}
 	}
 
 	switch {

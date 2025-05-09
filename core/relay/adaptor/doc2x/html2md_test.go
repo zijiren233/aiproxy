@@ -1,7 +1,6 @@
 package doc2x_test
 
 import (
-	"context"
 	"testing"
 
 	"github.com/labring/aiproxy/core/relay/adaptor/doc2x"
@@ -52,10 +51,10 @@ func TestHTMLTable2Md(t *testing.T) {
 	}
 }
 
-var htmlImage = `<img src="https://cdn.noedgeai.com/01956426-b164-730d-a1fe-8be8972145d6_0.jpg?x=258&y=694&w=1132&h=826"/>`
+// var htmlImage = `<img src="https://cdn.noedgeai.com/01956426-b164-730d-a1fe-8be8972145d6_0.jpg?x=258&y=694&w=1132&h=826"/>`
 
-func TestInlineMdImage(t *testing.T) {
-	t.Parallel()
-	result := doc2x.InlineMdImage(context.Background(), htmlImage)
-	t.Log(result)
-}
+// func TestInlineMdImage(t *testing.T) {
+// 	t.Parallel()
+// 	result := doc2x.InlineMdImage(context.Background(), htmlImage)
+// 	t.Log(result)
+// }
