@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/bytedance/sonic"
 	"github.com/bytedance/sonic/ast"
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/core/common"
@@ -37,9 +38,9 @@ func (a *Adaptor) GetModelList() []*model.ModelConfig {
 func (a *Adaptor) GetRequestURL(meta *meta.Meta) (string, error) {
 	switch meta.Mode {
 	case mode.Rerank:
-		return a.GetBaseURL() + "/rerank", nil
+		return meta.Channel.BaseURL + "/rerank", nil
 	case mode.Embeddings:
-		return a.GetBaseURL() + "/embeddings", nil
+		return meta.Channel.BaseURL + "/embeddings", nil
 	default:
 		return "", fmt.Errorf("unsupported mode: %s", meta.Mode)
 	}
@@ -50,9 +51,9 @@ func (a *Adaptor) GetRequestURL(meta *meta.Meta) (string, error) {
 func (a *Adaptor) SetupRequestHeader(meta *meta.Meta, _ *gin.Context, req *http.Request) error {
 	switch meta.Mode {
 	case mode.Rerank:
-		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer "+meta.Channel.Key)
 	case mode.Embeddings:
-		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer "+meta.Channel.Key)
 	default:
 		return fmt.Errorf("unsupported mode: %s", meta.Mode)
 	}
@@ -68,20 +69,20 @@ func (a *Adaptor) ConvertRequest(meta *meta.Meta, req *http.Request) (string, ht
 			return "", nil, nil, fmt.Errorf("failed to parse request body: %w", err)
 		}
 
+		// Set the actual model in the request
+		_, err = node.Set("model", ast.NewString(meta.ActualModel))
+		if err != nil {
+			return "", nil, nil, err
+		}
+
 		// Get the documents array and rename it to texts
 		documentsNode := node.Get("documents")
 		if !documentsNode.Exists() {
 			return "", nil, nil, errors.New("documents field not found")
 		}
 
-		// Get the raw documents value
-		documentsValue, err := documentsNode.Raw()
-		if err != nil {
-			return "", nil, nil, fmt.Errorf("failed to get documents value: %w", err)
-		}
-
 		// Set the texts field with the documents value
-		_, err = node.Set("texts", ast.NewString(documentsValue))
+		_, err = node.Set("texts", *documentsNode)
 		if err != nil {
 			return "", nil, nil, fmt.Errorf("failed to set texts field: %w", err)
 		}
@@ -98,10 +99,10 @@ func (a *Adaptor) ConvertRequest(meta *meta.Meta, req *http.Request) (string, ht
 			return "", nil, nil, fmt.Errorf("failed to marshal request: %w", err)
 		}
 
-		return "", nil, bytes.NewReader(jsonData), nil
+		return http.MethodPost, nil, bytes.NewReader(jsonData), nil
 	case mode.Embeddings:
 		// Handle embeddings request
-		return "", nil, req.Body, nil
+		return http.MethodPost, nil, req.Body, nil
 	default:
 		return "", nil, nil, fmt.Errorf("unsupported mode: %s", meta.Mode)
 	}
@@ -111,30 +112,59 @@ func (a *Adaptor) DoRequest(_ *meta.Meta, _ *gin.Context, req *http.Request) (*h
 	return utils.DoRequest(req)
 }
 
-func (a *Adaptor) DoResponse(_ *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, *relaymodel.ErrorWithStatusCode) {
-	// Read response body
+type RerankResponse struct {
+	Error     string `json:"error"`
+	ErrorType string `json:"error_type"`
+}
+
+// handleErrorResponse handle error response
+func handleErrorResponse(resp *http.Response, statusCode int) *relaymodel.ErrorWithStatusCode {
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, openai.ErrorWrapper(err, "read_response_body_failed", http.StatusInternalServerError)
+		return openai.ErrorWrapper(err, "read_response_body_failed", http.StatusInternalServerError)
 	}
-
-	// Check for error status
-	if resp.StatusCode != http.StatusOK {
-		return nil, openai.ErrorWrapperWithMessage(
-			fmt.Sprintf("request failed with status %d", resp.StatusCode),
-			"upstream_error",
-			resp.StatusCode,
-		)
+	defer resp.Body.Close()
+	var errResp RerankResponse
+	if err := sonic.Unmarshal(body, &errResp); err != nil {
+		return openai.ErrorWrapper(err, "unmarshal_error_response_failed", http.StatusInternalServerError)
 	}
+	return openai.ErrorWrapperWithMessage(errResp.Error, "upstream_"+errResp.ErrorType, statusCode)
+}
 
-	// Write response back to client
-	c.Header("Content-Type", "application/json")
-	c.Status(resp.StatusCode)
-	if _, err := c.Writer.Write(body); err != nil {
-		return nil, openai.ErrorWrapper(err, "write_response_failed", http.StatusInternalServerError)
+func (a *Adaptor) DoResponse(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, *relaymodel.ErrorWithStatusCode) {
+	usage := &model.Usage{}
+	errorWithStatusCode := &relaymodel.ErrorWithStatusCode{}
+
+	switch meta.Mode {
+	case mode.Rerank:
+		// handle different status codes
+		switch resp.StatusCode {
+
+		// calculate usage
+		case http.StatusOK:
+			usage = &meta.RequestUsage
+
+		// see https://huggingface.github.io/text-embeddings-inference/#/Text%20Embeddings%20Inference/rerank
+		case http.StatusRequestEntityTooLarge, // 413
+			http.StatusUnprocessableEntity, // 422
+			http.StatusFailedDependency,    // 424
+			http.StatusTooManyRequests:     // 429
+
+			errorWithStatusCode = handleErrorResponse(resp, resp.StatusCode)
+		default:
+			errorWithStatusCode = openai.ErrorWrapperWithMessage(
+				fmt.Sprintf("unexpected status code: %d", resp.StatusCode),
+				"unexpected_status_code",
+				resp.StatusCode,
+			)
+		}
+	case mode.Embeddings:
+		// OpenAl compatible route. Returns a 424 status code if the moddel is not an embedding model.
+		if utils.IsStreamResponse(resp) {
+			usage, errorWithStatusCode = openai.StreamHandler(meta, c, resp, nil)
+		} else {
+			usage, errorWithStatusCode = openai.Handler(meta, c, resp, nil)
+		}
 	}
-
-	// For text-embeddings-inference, we don't need to track usage
-	// TODO: add usage tracking
-	return &model.Usage{}, nil
+	return usage, errorWithStatusCode
 }
