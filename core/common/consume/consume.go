@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/labring/aiproxy/core/common/balance"
-	"github.com/labring/aiproxy/core/common/config"
 	"github.com/labring/aiproxy/core/common/notify"
 	"github.com/labring/aiproxy/core/model"
 	"github.com/labring/aiproxy/core/relay/meta"
@@ -33,6 +32,8 @@ func AsyncConsume(
 	retryTimes int,
 	requestDetail *model.RequestDetail,
 	downstreamResult bool,
+	user string,
+	metadata map[string]string,
 ) {
 	consumeWaitGroup.Add(1)
 	defer func() {
@@ -55,6 +56,8 @@ func AsyncConsume(
 		retryTimes,
 		requestDetail,
 		downstreamResult,
+		user,
+		metadata,
 	)
 }
 
@@ -71,17 +74,11 @@ func Consume(
 	retryTimes int,
 	requestDetail *model.RequestDetail,
 	downstreamResult bool,
+	user string,
+	metadata map[string]string,
 ) {
 	amount := CalculateAmount(code, usage, modelPrice)
 	amount = consumeAmount(ctx, amount, postGroupConsumer, meta)
-
-	if requestDetail != nil && config.GetLogContentStorageHours() < 0 {
-		requestDetail = nil
-	}
-
-	if requestDetail == nil && config.GetLogStorageHours() < 0 {
-		return
-	}
 
 	err := recordConsume(
 		meta,
@@ -95,6 +92,8 @@ func Consume(
 		amount,
 		retryTimes,
 		downstreamResult,
+		user,
+		metadata,
 	)
 	if err != nil {
 		log.Error("error batch record consume: " + err.Error())

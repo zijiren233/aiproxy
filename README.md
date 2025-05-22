@@ -105,7 +105,7 @@ docker-compose up -d
 ### Logging Configuration
 
 - `LOG_STORAGE_HOURS`: Hours to store logs (0 means unlimited), default is `0`
-- `LOG_CONTENT_STORAGE_HOURS`: Hours to store log `content` `ip` `endpoint` `ttfb_milliseconds`, default is `0`
+- `RETRY_LOG_STORAGE_HOURS`: Hours to store retry log, default is `0`
 - `SAVE_ALL_LOG_DETAIL`: Save all log details, default is `false`
 - `LOG_DETAIL_REQUEST_BODY_MAX_SIZE`: Maximum size for request body in log details, default is `128KB`
 - `LOG_DETAIL_RESPONSE_BODY_MAX_SIZE`: Maximum size for response body in log details, default is `128KB`

@@ -132,7 +132,7 @@ func (u *Usage) Add(other *Usage) {
 
 type Log struct {
 	RequestDetail    *RequestDetail  `gorm:"foreignKey:LogID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"request_detail,omitempty"`
-	RequestAt        time.Time       `gorm:"index"                                                          json:"request_at"`
+	RequestAt        time.Time       `json:"request_at"`
 	RetryAt          time.Time       `json:"retry_at,omitempty"`
 	TTFBMilliseconds ZeroNullInt64   `json:"ttfb_milliseconds,omitempty"`
 	CreatedAt        time.Time       `gorm:"autoCreateTime;index"                                           json:"created_at"`
@@ -149,10 +149,12 @@ type Log struct {
 	Mode             int             `json:"mode,omitempty"`
 	IP               EmptyNullString `gorm:"index:,where:ip is not null"                                    json:"ip,omitempty"`
 	RetryTimes       ZeroNullInt64   `json:"retry_times,omitempty"`
-	DownstreamResult bool            `json:"downstream_result,omitempty"`
 	Price            Price           `gorm:"embedded"                                                       json:"price,omitempty"`
 	Usage            Usage           `gorm:"embedded"                                                       json:"usage,omitempty"`
 	UsedAmount       float64         `json:"used_amount,omitempty"`
+	// https://platform.openai.com/docs/guides/safety-best-practices#end-user-ids
+	User     EmptyNullString   `json:"user,omitempty"`
+	Metadata map[string]string `gorm:"serializer:fastjson;type:text" json:"metadata,omitempty"`
 }
 
 func CreateLogIndexes(db *gorm.DB) error {
@@ -179,20 +181,20 @@ func CreateLogIndexes(db *gorm.DB) error {
 	} else {
 		indexes = []string{
 			// used by global search logs
-			"CREATE INDEX IF NOT EXISTS idx_model_creat ON logs (model, created_at DESC) INCLUDE (code, downstream_result)",
+			"CREATE INDEX IF NOT EXISTS idx_model_creat ON logs (model, created_at DESC) INCLUDE (code)",
 			// used by global search logs
-			"CREATE INDEX IF NOT EXISTS idx_channel_creat ON logs (channel_id, created_at DESC) INCLUDE (code, downstream_result)",
+			"CREATE INDEX IF NOT EXISTS idx_channel_creat ON logs (channel_id, created_at DESC) INCLUDE (code)",
 			// used by global search logs
-			"CREATE INDEX IF NOT EXISTS idx_channel_model_creat ON logs (channel_id, model, created_at DESC) INCLUDE (code, downstream_result)",
+			"CREATE INDEX IF NOT EXISTS idx_channel_model_creat ON logs (channel_id, model, created_at DESC) INCLUDE (code)",
 
 			// used by search group logs
-			"CREATE INDEX IF NOT EXISTS idx_group_creat ON logs (group_id, created_at DESC) INCLUDE (code, downstream_result)",
+			"CREATE INDEX IF NOT EXISTS idx_group_creat ON logs (group_id, created_at DESC) INCLUDE (code)",
 			// used by search group logs
-			"CREATE INDEX IF NOT EXISTS idx_group_token_creat ON logs (group_id, token_name, created_at DESC) INCLUDE (code, downstream_result)",
+			"CREATE INDEX IF NOT EXISTS idx_group_token_creat ON logs (group_id, token_name, created_at DESC) INCLUDE (code)",
 			// used by search group logs
-			"CREATE INDEX IF NOT EXISTS idx_group_model_creat ON logs (group_id, model, created_at DESC) INCLUDE (code, downstream_result)",
+			"CREATE INDEX IF NOT EXISTS idx_group_model_creat ON logs (group_id, model, created_at DESC) INCLUDE (code)",
 			// used by search group logs
-			"CREATE INDEX IF NOT EXISTS idx_group_token_model_creat ON logs (group_id, token_name, model, created_at DESC) INCLUDE (code, downstream_result)",
+			"CREATE INDEX IF NOT EXISTS idx_group_token_model_creat ON logs (group_id, token_name, model, created_at DESC) INCLUDE (code)",
 		}
 	}
 
@@ -271,18 +273,27 @@ func GetGroupLogDetail(logID int, group string) (*RequestDetail, error) {
 
 const defaultCleanLogBatchSize = 5000
 
-func CleanLog(batchSize int, optimize bool) error {
-	err := cleanLog(batchSize, optimize)
+func CleanLog(batchSize int, optimize bool) (err error) {
+	if optimize {
+		defer func() {
+			if err == nil {
+				optimizeLog()
+			}
+		}()
+	}
+
+	err = cleanLog(batchSize)
 	if err != nil {
 		return err
 	}
-	return cleanLogDetail(batchSize, optimize)
+	return cleanLogDetail(batchSize)
 }
 
-func cleanLog(batchSize int, optimize bool) error {
+func cleanLog(batchSize int) error {
 	if batchSize <= 0 {
 		batchSize = defaultCleanLogBatchSize
 	}
+
 	logStorageHours := config.GetLogStorageHours()
 	if logStorageHours != 0 {
 		subQuery := LogDB.
@@ -303,57 +314,27 @@ func cleanLog(batchSize int, optimize bool) error {
 		}
 	}
 
-	logContentStorageHours := config.GetLogContentStorageHours()
-	if logContentStorageHours == 0 {
-		if optimize {
-			return optimizeLog()
-		}
-		return nil
-	}
-
-	// Find the minimum ID that meets our criteria
-	var id int64
-	err := LogDB.
-		Model(&Log{}).
-		Where(
-			"created_at < ?",
-			time.Now().Truncate(time.Hour).Add(-time.Duration(logContentStorageHours)*time.Hour),
-		).
-		Where("content IS NOT NULL").
-		Order("created_at DESC").
-		Limit(1).
-		Select("id").
-		Scan(&id).Error
-
-	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
-		return err
-	}
-
-	if id > 0 {
-		// Process in batches based on ID range
-		err = LogDB.
-			Model(&Log{}).
-			Session(&gorm.Session{SkipDefaultTransaction: true}).
+	retryLogStorageHours := config.GetRetryLogStorageHours()
+	if retryLogStorageHours != 0 {
+		subQuery := LogDB.
+			Model(&RetryLog{}).
 			Where(
-				"id BETWEEN ? AND ? AND content IS NOT NULL",
-				id-int64(batchSize),
-				id,
+				"created_at < ?",
+				time.Now().Add(-time.Duration(retryLogStorageHours)*time.Hour),
 			).
-			UpdateColumns(map[string]any{
-				"content":           gorm.Expr("NULL"),
-				"ip":                gorm.Expr("NULL"),
-				"endpoint":          gorm.Expr("NULL"),
-				"ttfb_milliseconds": gorm.Expr("NULL"),
-			}).Error
-	}
-	if err != nil {
-		return err
-	}
-	if !optimize {
-		return nil
+			Limit(batchSize).
+			Select("id")
+
+		err := LogDB.
+			Session(&gorm.Session{SkipDefaultTransaction: true}).
+			Where("id IN (?)", subQuery).
+			Delete(&RetryLog{}).Error
+		if err != nil {
+			return err
+		}
 	}
 
-	return optimizeLog()
+	return nil
 }
 
 func optimizeLog() error {
@@ -368,7 +349,7 @@ func optimizeLog() error {
 	return nil
 }
 
-func cleanLogDetail(batchSize int, optimize bool) error {
+func cleanLogDetail(batchSize int) error {
 	detailStorageHours := config.GetLogDetailStorageHours()
 	if detailStorageHours <= 0 {
 		return nil
@@ -393,22 +374,7 @@ func cleanLogDetail(batchSize int, optimize bool) error {
 	if err != nil {
 		return err
 	}
-	if !optimize {
-		return nil
-	}
 
-	return optimizeLogDetail()
-}
-
-func optimizeLogDetail() error {
-	switch {
-	case common.UsingPostgreSQL:
-		return LogDB.Exec("VACUUM ANALYZE request_details").Error
-	case common.UsingMySQL:
-		return LogDB.Exec("OPTIMIZE TABLE request_details").Error
-	case common.UsingSQLite:
-		return LogDB.Exec("VACUUM").Error
-	}
 	return nil
 }
 
@@ -430,10 +396,11 @@ func RecordConsumeLog(
 	ip string,
 	retryTimes int,
 	requestDetail *RequestDetail,
-	downstreamResult bool,
 	usage Usage,
 	modelPrice Price,
 	amount float64,
+	user string,
+	metadata map[string]string,
 ) error {
 	if createAt.IsZero() {
 		createAt = time.Now()
@@ -462,10 +429,11 @@ func RecordConsumeLog(
 		Content:          EmptyNullString(content),
 		RetryTimes:       ZeroNullInt64(retryTimes),
 		RequestDetail:    requestDetail,
-		DownstreamResult: downstreamResult,
 		Price:            modelPrice,
 		Usage:            usage,
 		UsedAmount:       amount,
+		User:             EmptyNullString(user),
+		Metadata:         metadata,
 	}
 	return LogDB.Create(log).Error
 }
@@ -517,7 +485,7 @@ func buildGetLogsQuery(
 	codeType CodeType,
 	code int,
 	ip string,
-	resultOnly bool,
+	user string,
 ) *gorm.DB {
 	tx := LogDB.Model(&Log{})
 
@@ -552,10 +520,6 @@ func buildGetLogsQuery(
 		tx = tx.Where("created_at <= ?", endTimestamp)
 	}
 
-	if resultOnly {
-		tx = tx.Where("downstream_result = true")
-	}
-
 	switch codeType {
 	case CodeTypeSuccess:
 		tx = tx.Where("code = 200")
@@ -570,6 +534,11 @@ func buildGetLogsQuery(
 	if tokenID != 0 {
 		tx = tx.Where("token_id = ?", tokenID)
 	}
+
+	if user != "" {
+		tx = tx.Where("user = ?", user)
+	}
+
 	return tx
 }
 
@@ -587,9 +556,9 @@ func getLogs(
 	code int,
 	withBody bool,
 	ip string,
+	user string,
 	page int,
 	perPage int,
-	resultOnly bool,
 ) (int64, []*Log, error) {
 	var total int64
 	var logs []*Log
@@ -609,7 +578,7 @@ func getLogs(
 			codeType,
 			code,
 			ip,
-			resultOnly,
+			user,
 		).Count(&total).Error
 	})
 
@@ -626,7 +595,7 @@ func getLogs(
 			codeType,
 			code,
 			ip,
-			resultOnly,
+			user,
 		)
 		if withBody {
 			query = query.Preload("RequestDetail")
@@ -665,9 +634,9 @@ func GetLogs(
 	code int,
 	withBody bool,
 	ip string,
+	user string,
 	page int,
 	perPage int,
-	resultOnly bool,
 ) (*GetLogsResult, error) {
 	var total int64
 	var logs []*Log
@@ -697,9 +666,9 @@ func GetLogs(
 			code,
 			withBody,
 			ip,
+			user,
 			page,
 			perPage,
-			resultOnly,
 		)
 		return err
 	})
@@ -731,9 +700,9 @@ func GetGroupLogs(
 	code int,
 	withBody bool,
 	ip string,
+	user string,
 	page int,
 	perPage int,
-	resultOnly bool,
 ) (*GetGroupLogsResult, error) {
 	if group == "" {
 		return nil, errors.New("group is required")
@@ -763,9 +732,9 @@ func GetGroupLogs(
 			code,
 			withBody,
 			ip,
+			user,
 			page,
 			perPage,
-			resultOnly,
 		)
 		return err
 	})
@@ -809,7 +778,7 @@ func buildSearchLogsQuery(
 	codeType CodeType,
 	code int,
 	ip string,
-	resultOnly bool,
+	user string,
 ) *gorm.DB {
 	tx := LogDB.Model(&Log{})
 
@@ -844,10 +813,6 @@ func buildSearchLogsQuery(
 		tx = tx.Where("created_at <= ?", endTimestamp)
 	}
 
-	if resultOnly {
-		tx = tx.Where("downstream_result = true")
-	}
-
 	switch codeType {
 	case CodeTypeSuccess:
 		tx = tx.Where("code = 200")
@@ -861,6 +826,10 @@ func buildSearchLogsQuery(
 
 	if tokenID != 0 {
 		tx = tx.Where("token_id = ?", tokenID)
+	}
+
+	if user != "" {
+		tx = tx.Where("user = ?", user)
 	}
 
 	// Handle keyword search for zero value fields
@@ -928,9 +897,9 @@ func searchLogs(
 	code int,
 	withBody bool,
 	ip string,
+	user string,
 	page int,
 	perPage int,
-	resultOnly bool,
 ) (int64, []*Log, error) {
 	var total int64
 	var logs []*Log
@@ -951,7 +920,7 @@ func searchLogs(
 			codeType,
 			code,
 			ip,
-			resultOnly,
+			user,
 		).Count(&total).Error
 	})
 
@@ -969,7 +938,7 @@ func searchLogs(
 			codeType,
 			code,
 			ip,
-			resultOnly,
+			user,
 		)
 
 		if withBody {
@@ -1010,9 +979,9 @@ func SearchLogs(
 	code int,
 	withBody bool,
 	ip string,
+	user string,
 	page int,
 	perPage int,
-	resultOnly bool,
 ) (*GetLogsResult, error) {
 	var total int64
 	var logs []*Log
@@ -1037,9 +1006,9 @@ func SearchLogs(
 			code,
 			withBody,
 			ip,
+			user,
 			page,
 			perPage,
-			resultOnly,
 		)
 		return err
 	})
@@ -1078,9 +1047,9 @@ func SearchGroupLogs(
 	code int,
 	withBody bool,
 	ip string,
+	user string,
 	page int,
 	perPage int,
-	resultOnly bool,
 ) (*GetGroupLogsResult, error) {
 	if group == "" {
 		return nil, errors.New("group is required")
@@ -1111,9 +1080,9 @@ func SearchGroupLogs(
 			code,
 			withBody,
 			ip,
+			user,
 			page,
 			perPage,
-			resultOnly,
 		)
 		return err
 	})

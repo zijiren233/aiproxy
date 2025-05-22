@@ -355,7 +355,16 @@ func relay(c *gin.Context, mode mode.Mode, relayController RelayController) {
 		retryTimes = int(mc.RetryTimes)
 	}
 	if handleRelayResult(c, result.Error, retry, retryTimes) {
-		recordResult(c, meta, price, result, 0, true)
+		recordResult(
+			c,
+			meta,
+			price,
+			result,
+			0,
+			true,
+			middleware.GetRequestUser(c),
+			middleware.GetRequestMetadata(c),
+		)
 		return
 	}
 
@@ -373,7 +382,16 @@ func relay(c *gin.Context, mode mode.Mode, relayController RelayController) {
 }
 
 // recordResult records the consumption for the final result
-func recordResult(c *gin.Context, meta *meta.Meta, price model.Price, result *controller.HandleResult, retryTimes int, downstreamResult bool) {
+func recordResult(
+	c *gin.Context,
+	meta *meta.Meta,
+	price model.Price,
+	result *controller.HandleResult,
+	retryTimes int,
+	downstreamResult bool,
+	user string,
+	metadata map[string]string,
+) {
 	code := http.StatusOK
 	content := ""
 	if result.Error != nil {
@@ -416,6 +434,8 @@ func recordResult(c *gin.Context, meta *meta.Meta, price model.Price, result *co
 		retryTimes,
 		detail,
 		downstreamResult,
+		user,
+		metadata,
 	)
 }
 
@@ -532,13 +552,31 @@ func retryLoop(c *gin.Context, mode mode.Mode, state *retryState, relayControlle
 			}
 			// when the last request has not recorded the result, record the result
 			if state.meta != nil && state.result != nil {
-				recordResult(c, state.meta, state.price, state.result, i, true)
+				recordResult(
+					c,
+					state.meta,
+					state.price,
+					state.result,
+					i,
+					true,
+					middleware.GetRequestUser(c),
+					middleware.GetRequestMetadata(c),
+				)
 			}
 			break
 		}
 		// when the last request has not recorded the result, record the result
 		if state.meta != nil && state.result != nil {
-			recordResult(c, state.meta, state.price, state.result, i, false)
+			recordResult(
+				c,
+				state.meta,
+				state.price,
+				state.result,
+				i,
+				false,
+				middleware.GetRequestUser(c),
+				middleware.GetRequestMetadata(c),
+			)
 			state.meta = nil
 			state.result = nil
 		}
@@ -569,7 +607,16 @@ func retryLoop(c *gin.Context, mode mode.Mode, state *retryState, relayControlle
 
 		done := handleRetryResult(c, retry, newChannel, state)
 		if done || i == state.retryTimes-1 {
-			recordResult(c, state.meta, state.price, state.result, i+1, true)
+			recordResult(
+				c,
+				state.meta,
+				state.price,
+				state.result,
+				i+1,
+				true,
+				middleware.GetRequestUser(c),
+				middleware.GetRequestMetadata(c),
+			)
 			break
 		}
 

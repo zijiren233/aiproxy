@@ -9,8 +9,12 @@ import (
 	"github.com/labring/aiproxy/core/middleware"
 )
 
+type ModelRequest struct {
+	Model string `form:"model" json:"model"`
+}
+
 func StdGetModelFromJSON(body []byte) (string, error) {
-	var modelRequest middleware.ModelRequest
+	var modelRequest ModelRequest
 	err := json.Unmarshal(body, &modelRequest)
 	if err != nil {
 		return "", err

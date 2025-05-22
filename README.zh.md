@@ -106,7 +106,7 @@ docker-compose up -d
 ### 日志配置
 
 - `LOG_STORAGE_HOURS`: 日志存储时间（0 表示不限），默认 `0`
-- `LOG_CONTENT_STORAGE_HOURS`: 日志 `content` `ip` `endpoint` `ttfb_milliseconds` 存储时间（0 表示不限），默认 `0`
+- `RETRY_LOG_STORAGE_HOURS`: 重试日志存储时间（0 表示不限），默认 `0`
 - `SAVE_ALL_LOG_DETAIL`: 保存所有日志详情，默认 `false` 则只保存错误日志
 - `LOG_DETAIL_REQUEST_BODY_MAX_SIZE`: 日志详情请求体最大大小，默认 `128KB`
 - `LOG_DETAIL_RESPONSE_BODY_MAX_SIZE`: 日志详情响应体最大大小，默认 `128KB`

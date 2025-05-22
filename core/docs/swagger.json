@@ -2237,9 +2237,9 @@
                         "in": "query"
                     },
                     {
-                        "type": "boolean",
-                        "description": "Result only",
-                        "name": "result_only",
+                        "type": "string",
+                        "description": "User",
+                        "name": "user",
                         "in": "query"
                     }
                 ],
@@ -2433,9 +2433,9 @@
                         "in": "query"
                     },
                     {
-                        "type": "boolean",
-                        "description": "Result only",
-                        "name": "result_only",
+                        "type": "string",
+                        "description": "User",
+                        "name": "user",
                         "in": "query"
                     }
                 ],
@@ -2666,9 +2666,9 @@
                         "in": "query"
                     },
                     {
-                        "type": "boolean",
-                        "description": "Result only",
-                        "name": "result_only",
+                        "type": "string",
+                        "description": "User",
+                        "name": "user",
                         "in": "query"
                     }
                 ],
@@ -3028,9 +3028,9 @@
                         "in": "query"
                     },
                     {
-                        "type": "boolean",
-                        "description": "Result only",
-                        "name": "result_only",
+                        "type": "string",
+                        "description": "User",
+                        "name": "user",
                         "in": "query"
                     }
                 ],
@@ -8885,9 +8885,6 @@
                 "created_at": {
                     "type": "string"
                 },
-                "downstream_result": {
-                    "type": "boolean"
-                },
                 "endpoint": {
                     "type": "string"
                 },
@@ -8899,6 +8896,12 @@
                 },
                 "ip": {
                     "type": "string"
+                },
+                "metadata": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
                 },
                 "mode": {
                     "type": "integer"
@@ -8938,6 +8941,10 @@
                 },
                 "used_amount": {
                     "type": "number"
+                },
+                "user": {
+                    "description": "https://platform.openai.com/docs/guides/safety-best-practices#end-user-ids",
+                    "type": "string"
                 }
             }
         },

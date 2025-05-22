@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/labring/aiproxy/core/common/config"
 	"github.com/labring/aiproxy/core/common/notify"
 	"github.com/shopspring/decimal"
 )
@@ -191,7 +192,7 @@ func processSummaryUpdates(wg *sync.WaitGroup) {
 	}
 }
 
-func BatchRecordConsume(
+func BatchRecordLogs(
 	requestID string,
 	requestAt time.Time,
 	retryAt time.Time,
@@ -212,31 +213,55 @@ func BatchRecordConsume(
 	usage Usage,
 	modelPrice Price,
 	amount float64,
-) error {
+	user string,
+	metadata map[string]string,
+) (err error) {
 	now := time.Now()
-	err := RecordConsumeLog(
-		requestID,
-		now,
-		requestAt,
-		retryAt,
-		firstByteAt,
-		group,
-		code,
-		channelID,
-		modelName,
-		tokenID,
-		tokenName,
-		endpoint,
-		content,
-		mode,
-		ip,
-		retryTimes,
-		requestDetail,
-		downstreamResult,
-		usage,
-		modelPrice,
-		amount,
-	)
+
+	if downstreamResult {
+		if config.GetLogStorageHours() > 0 {
+			err = RecordConsumeLog(
+				requestID,
+				now,
+				requestAt,
+				retryAt,
+				firstByteAt,
+				group,
+				code,
+				channelID,
+				modelName,
+				tokenID,
+				tokenName,
+				endpoint,
+				content,
+				mode,
+				ip,
+				retryTimes,
+				requestDetail,
+				usage,
+				modelPrice,
+				amount,
+				user,
+				metadata,
+			)
+		}
+	} else {
+		if config.GetRetryLogStorageHours() > 0 {
+			err = RecordRetryLog(
+				requestID,
+				now,
+				requestAt,
+				retryAt,
+				firstByteAt,
+				code,
+				channelID,
+				modelName,
+				mode,
+				retryTimes,
+				requestDetail,
+			)
+		}
+	}
 
 	amountDecimal := decimal.NewFromFloat(amount)
 

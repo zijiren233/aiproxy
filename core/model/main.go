@@ -194,7 +194,7 @@ func migrateLOGDB() error {
 	err := LogDB.AutoMigrate(
 		&Log{},
 		&RequestDetail{},
-		&Group{},
+		&RetryLog{},
 		&GroupSummary{},
 		&Summary{},
 		&ConsumeError{},

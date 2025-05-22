@@ -358,6 +358,26 @@ func distribute(c *gin.Context, mode mode.Mode) {
 		}
 	}
 
+	user, err := getRequestUser(c, mode)
+	if err != nil {
+		AbortLogWithMessage(c, http.StatusInternalServerError, err.Error(), &ErrorField{
+			Type: "invalid_request_error",
+			Code: "get_request_user_error",
+		})
+		return
+	}
+	c.Set(RequestUser, user)
+
+	metadata, err := getRequestMetadata(c, mode)
+	if err != nil {
+		AbortLogWithMessage(c, http.StatusInternalServerError, err.Error(), &ErrorField{
+			Type: "invalid_request_error",
+			Code: "get_request_metadata_error",
+		})
+		return
+	}
+	c.Set(RequestMetadata, metadata)
+
 	if err := checkGroupModelRPMAndTPM(c, group, mc); err != nil {
 		errMsg := err.Error()
 		consume.AsyncConsume(
@@ -372,6 +392,8 @@ func distribute(c *gin.Context, mode mode.Mode) {
 			0,
 			nil,
 			true,
+			user,
+			metadata,
 		)
 		AbortLogWithMessage(c, http.StatusTooManyRequests, errMsg, &ErrorField{
 			Type: "invalid_request_error",
@@ -385,6 +407,14 @@ func distribute(c *gin.Context, mode mode.Mode) {
 
 func GetRequestModel(c *gin.Context) string {
 	return c.GetString(RequestModel)
+}
+
+func GetRequestUser(c *gin.Context) string {
+	return c.GetString(RequestUser)
+}
+
+func GetRequestMetadata(c *gin.Context) map[string]string {
+	return c.GetStringMapString(RequestMetadata)
 }
 
 func GetModelConfig(c *gin.Context) *model.ModelConfig {
@@ -421,10 +451,7 @@ func NewMetaByContext(c *gin.Context,
 	)
 }
 
-type ModelRequest struct {
-	Model string `form:"model" json:"model"`
-}
-
+// https://platform.openai.com/docs/api-reference/chat
 func getRequestModel(c *gin.Context, m mode.Mode) (string, error) {
 	path := c.Request.URL.Path
 	switch {
@@ -463,4 +490,68 @@ func GetModelFromJSON(body []byte) (string, error) {
 		return "", fmt.Errorf("get request model failed: %w", err)
 	}
 	return node.String()
+}
+
+// https://platform.openai.com/docs/api-reference/chat
+func getRequestUser(c *gin.Context, m mode.Mode) (string, error) {
+	switch m {
+	case mode.ChatCompletions,
+		mode.Completions,
+		mode.Embeddings,
+		mode.ImagesGenerations,
+		mode.ImagesEdits,
+		mode.AudioSpeech,
+		mode.Rerank,
+		mode.Anthropic:
+		body, err := common.GetRequestBody(c.Request)
+		if err != nil {
+			return "", fmt.Errorf("get request model failed: %w", err)
+		}
+		return GetRequestUserFromJSON(body)
+	default:
+		return "", nil
+	}
+}
+
+func GetRequestUserFromJSON(body []byte) (string, error) {
+	node, err := sonic.GetWithOptions(body, ast.SearchOptions{}, "user")
+	if err != nil {
+		return "", fmt.Errorf("get request user failed: %w", err)
+	}
+	if node.Exists() {
+		return node.String()
+	}
+	return "", nil
+}
+
+func getRequestMetadata(c *gin.Context, m mode.Mode) (map[string]string, error) {
+	switch m {
+	case mode.ChatCompletions,
+		mode.Completions,
+		mode.Embeddings,
+		mode.ImagesGenerations,
+		mode.ImagesEdits,
+		mode.AudioSpeech,
+		mode.Rerank,
+		mode.Anthropic:
+		body, err := common.GetRequestBody(c.Request)
+		if err != nil {
+			return nil, fmt.Errorf("get request metadata failed: %w", err)
+		}
+		return GetRequestMetadataFromJSON(body)
+	default:
+		return nil, nil
+	}
+}
+
+type RequestWithMetadata struct {
+	Metadata map[string]string `json:"metadata,omitempty"`
+}
+
+func GetRequestMetadataFromJSON(body []byte) (map[string]string, error) {
+	var requestWithMetadata RequestWithMetadata
+	if err := sonic.Unmarshal(body, &requestWithMetadata); err != nil {
+		return nil, fmt.Errorf("get request metadata failed: %w", err)
+	}
+	return requestWithMetadata.Metadata, nil
 }
