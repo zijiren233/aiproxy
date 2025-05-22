@@ -15,7 +15,10 @@ import (
 )
 
 func SetStaticFileRouter(router *gin.Engine) {
-	if config.WEB_PATH == "" {
+	if config.Disable_Web {
+		return
+	}
+	if config.Web_Path == "" {
 		err := initFSRouter(router, public.Public.(fs.ReadDirFS), ".")
 		if err != nil {
 			panic(err)
@@ -23,7 +26,7 @@ func SetStaticFileRouter(router *gin.Engine) {
 		fs := http.FS(public.Public)
 		router.NoRoute(newIndexNoRouteHandler(fs))
 	} else {
-		absPath, err := filepath.Abs(config.WEB_PATH)
+		absPath, err := filepath.Abs(config.Web_Path)
 		if err != nil {
 			panic(err)
 		}

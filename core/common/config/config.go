@@ -18,8 +18,8 @@ var (
 var (
 	DisableAutoMigrateDB = env.Bool("DISABLE_AUTO_MIGRATE_DB", false)
 	AdminKey             = os.Getenv("ADMIN_KEY")
-	WEB_PATH             = os.Getenv("WEB_PATH")
-	DISABLE_WEB          = env.Bool("DISABLE_WEB", false)
+	Web_Path             = os.Getenv("WEB_PATH")
+	Disable_Web          = env.Bool("DISABLE_WEB", false)
 	FfmpegEnabled        = env.Bool("FFMPEG_ENABLED", false)
 )
 
