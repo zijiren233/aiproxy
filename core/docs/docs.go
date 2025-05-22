@@ -2246,9 +2246,9 @@ const docTemplate = `{
                         "in": "query"
                     },
                     {
-                        "type": "boolean",
-                        "description": "Result only",
-                        "name": "result_only",
+                        "type": "string",
+                        "description": "User",
+                        "name": "user",
                         "in": "query"
                     }
                 ],
@@ -2442,9 +2442,9 @@ const docTemplate = `{
                         "in": "query"
                     },
                     {
-                        "type": "boolean",
-                        "description": "Result only",
-                        "name": "result_only",
+                        "type": "string",
+                        "description": "User",
+                        "name": "user",
                         "in": "query"
                     }
                 ],
@@ -2675,9 +2675,9 @@ const docTemplate = `{
                         "in": "query"
                     },
                     {
-                        "type": "boolean",
-                        "description": "Result only",
-                        "name": "result_only",
+                        "type": "string",
+                        "description": "User",
+                        "name": "user",
                         "in": "query"
                     }
                 ],
@@ -3037,9 +3037,9 @@ const docTemplate = `{
                         "in": "query"
                     },
                     {
-                        "type": "boolean",
-                        "description": "Result only",
-                        "name": "result_only",
+                        "type": "string",
+                        "description": "User",
+                        "name": "user",
                         "in": "query"
                     }
                 ],
@@ -8894,9 +8894,6 @@ const docTemplate = `{
                 "created_at": {
                     "type": "string"
                 },
-                "downstream_result": {
-                    "type": "boolean"
-                },
                 "endpoint": {
                     "type": "string"
                 },
@@ -8908,6 +8905,12 @@ const docTemplate = `{
                 },
                 "ip": {
                     "type": "string"
+                },
+                "metadata": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
                 },
                 "mode": {
                     "type": "integer"
@@ -8947,6 +8950,10 @@ const docTemplate = `{
                 },
                 "used_amount": {
                     "type": "number"
+                },
+                "user": {
+                    "description": "https://platform.openai.com/docs/guides/safety-best-practices#end-user-ids",
+                    "type": "string"
                 }
             }
         },

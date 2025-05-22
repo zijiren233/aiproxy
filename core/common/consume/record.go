@@ -19,8 +19,10 @@ func recordConsume(
 	amount float64,
 	retryTimes int,
 	downstreamResult bool,
+	user string,
+	metadata map[string]string,
 ) error {
-	return model.BatchRecordConsume(
+	return model.BatchRecordLogs(
 		meta.RequestID,
 		meta.RequestAt,
 		meta.RetryAt,
@@ -41,5 +43,7 @@ func recordConsume(
 		usage,
 		modelPrice,
 		amount,
+		user,
+		metadata,
 	)
 }

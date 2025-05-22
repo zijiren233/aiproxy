@@ -1065,8 +1065,6 @@ definitions:
         type: string
       created_at:
         type: string
-      downstream_result:
-        type: boolean
       endpoint:
         type: string
       group:
@@ -1075,6 +1073,10 @@ definitions:
         type: integer
       ip:
         type: string
+      metadata:
+        additionalProperties:
+          type: string
+        type: object
       mode:
         type: integer
       model:
@@ -1101,6 +1103,9 @@ definitions:
         $ref: '#/definitions/github_com_labring_aiproxy_core_model.Usage'
       used_amount:
         type: number
+      user:
+        description: https://platform.openai.com/docs/guides/safety-best-practices#end-user-ids
+        type: string
     type: object
   model.MCPOpenAPIConfig:
     properties:
@@ -2934,10 +2939,10 @@ paths:
         in: query
         name: ip
         type: string
-      - description: Result only
+      - description: User
         in: query
-        name: result_only
-        type: boolean
+        name: user
+        type: string
       produces:
       - application/json
       responses:
@@ -3056,10 +3061,10 @@ paths:
         in: query
         name: ip
         type: string
-      - description: Result only
+      - description: User
         in: query
-        name: result_only
-        type: boolean
+        name: user
+        type: string
       produces:
       - application/json
       responses:
@@ -3224,10 +3229,10 @@ paths:
         in: query
         name: ip
         type: string
-      - description: Result only
+      - description: User
         in: query
-        name: result_only
-        type: boolean
+        name: user
+        type: string
       produces:
       - application/json
       responses:
@@ -3420,10 +3425,10 @@ paths:
         in: query
         name: ip
         type: string
-      - description: Result only
+      - description: User
         in: query
-        name: result_only
-        type: boolean
+        name: user
+        type: string
       produces:
       - application/json
       responses:

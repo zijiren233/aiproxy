@@ -29,17 +29,17 @@ func parseTimeRange(c *gin.Context) (startTime, endTime time.Time) {
 }
 
 func parseCommonParams(c *gin.Context) (params struct {
-	tokenName  string
-	modelName  string
-	channelID  int
-	tokenID    int
-	order      string
-	requestID  string
-	codeType   string
-	code       int
-	withBody   bool
-	ip         string
-	resultOnly bool
+	tokenName string
+	modelName string
+	channelID int
+	tokenID   int
+	order     string
+	requestID string
+	codeType  string
+	code      int
+	withBody  bool
+	ip        string
+	user      string
 },
 ) {
 	params.tokenName = c.Query("token_name")
@@ -52,7 +52,7 @@ func parseCommonParams(c *gin.Context) (params struct {
 	params.code, _ = strconv.Atoi(c.Query("code"))
 	params.withBody, _ = strconv.ParseBool(c.Query("with_body"))
 	params.ip = c.Query("ip")
-	params.resultOnly, _ = strconv.ParseBool(c.Query("result_only"))
+	params.user = c.Query("user")
 	return
 }
 
@@ -78,7 +78,7 @@ func parseCommonParams(c *gin.Context) (params struct {
 //	@Param			code			query		int		false	"Status code"
 //	@Param			with_body		query		bool	false	"With body"
 //	@Param			ip				query		string	false	"IP"
-//	@Param			result_only		query		bool	false	"Result only"
+//	@Param			user			query		string	false	"User"
 //	@Success		200				{object}	middleware.APIResponse{data=model.GetLogsResult}
 //	@Router			/api/logs [get]
 func GetLogs(c *gin.Context) {
@@ -101,9 +101,9 @@ func GetLogs(c *gin.Context) {
 		params.code,
 		params.withBody,
 		params.ip,
+		params.user,
 		page,
 		perPage,
-		params.resultOnly,
 	)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusOK, err.Error())
@@ -134,7 +134,7 @@ func GetLogs(c *gin.Context) {
 //	@Param			code			query		int		false	"Status code"
 //	@Param			with_body		query		bool	false	"With body"
 //	@Param			ip				query		string	false	"IP"
-//	@Param			result_only		query		bool	false	"Result only"
+//	@Param			user			query		string	false	"User"
 //	@Success		200				{object}	middleware.APIResponse{data=model.GetGroupLogsResult}
 //	@Router			/api/log/{group} [get]
 func GetGroupLogs(c *gin.Context) {
@@ -162,9 +162,9 @@ func GetGroupLogs(c *gin.Context) {
 		params.code,
 		params.withBody,
 		params.ip,
+		params.user,
 		page,
 		perPage,
-		params.resultOnly,
 	)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusOK, err.Error())
@@ -196,7 +196,7 @@ func GetGroupLogs(c *gin.Context) {
 //	@Param			code			query		int		false	"Status code"
 //	@Param			with_body		query		bool	false	"With body"
 //	@Param			ip				query		string	false	"IP"
-//	@Param			result_only		query		bool	false	"Result only"
+//	@Param			user			query		string	false	"User"
 //	@Success		200				{object}	middleware.APIResponse{data=model.GetLogsResult}
 //	@Router			/api/logs/search [get]
 func SearchLogs(c *gin.Context) {
@@ -222,9 +222,9 @@ func SearchLogs(c *gin.Context) {
 		params.code,
 		params.withBody,
 		params.ip,
+		params.user,
 		page,
 		perPage,
-		params.resultOnly,
 	)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusOK, err.Error())
@@ -256,7 +256,7 @@ func SearchLogs(c *gin.Context) {
 //	@Param			code			query		int		false	"Status code"
 //	@Param			with_body		query		bool	false	"With body"
 //	@Param			ip				query		string	false	"IP"
-//	@Param			result_only		query		bool	false	"Result only"
+//	@Param			user			query		string	false	"User"
 //	@Success		200				{object}	middleware.APIResponse{data=model.GetGroupLogsResult}
 //	@Router			/api/log/{group}/search [get]
 func SearchGroupLogs(c *gin.Context) {
@@ -286,9 +286,9 @@ func SearchGroupLogs(c *gin.Context) {
 		params.code,
 		params.withBody,
 		params.ip,
+		params.user,
 		page,
 		perPage,
-		params.resultOnly,
 	)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusOK, err.Error())
