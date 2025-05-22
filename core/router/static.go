@@ -1,32 +1,101 @@
 package router
 
 import (
+	"io/fs"
 	"net/http"
+	"net/url"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/labring/aiproxy/core/common/config"
+	"github.com/labring/aiproxy/core/public"
+	"github.com/sirupsen/logrus"
 )
 
-// SetStaticFileRouter configures routes to serve frontend static files
 func SetStaticFileRouter(router *gin.Engine) {
-	// Serve static assets
-	router.Static("/assets", "./web/dist/assets")
+	if config.WEB_PATH == "" {
+		err := initFSRouter(router, public.Public.(fs.ReadDirFS), ".")
+		if err != nil {
+			panic(err)
+		}
+		fs := http.FS(public.Public)
+		router.NoRoute(newIndexNoRouteHandler(fs))
+	} else {
+		absPath, err := filepath.Abs(config.WEB_PATH)
+		if err != nil {
+			panic(err)
+		}
+		logrus.Infof("frontend file path: %s", absPath)
+		err = initFSRouter(router, os.DirFS(absPath).(fs.ReadDirFS), ".")
+		if err != nil {
+			panic(err)
+		}
+		router.NoRoute(newDynamicNoRouteHandler(http.Dir(absPath)))
+	}
+}
 
-	// Serve localization files
-	router.Static("/locales", "./web/dist/locales")
+func checkNoRouteNotFound(path string) bool {
+	if strings.HasPrefix(path, "/api") ||
+		strings.HasPrefix(path, "/mcp") ||
+		strings.HasPrefix(path, "/v1") {
+		return true
+	}
+	return false
+}
 
-	// Serve other static files
-	router.StaticFile("/logo.svg", "./web/dist/logo.svg")
+func newIndexNoRouteHandler(fs http.FileSystem) func(ctx *gin.Context) {
+	return func(ctx *gin.Context) {
+		if checkNoRouteNotFound(ctx.Request.URL.Path) {
+			ctx.String(http.StatusNotFound, "404 page not found")
+			return
+		}
+		ctx.FileFromFS("", fs)
+	}
+}
 
-	// Handle non-API routes, returning the frontend entry point
-	router.NoRoute(func(c *gin.Context) {
-		// Return 404 for API requests
-		if strings.HasPrefix(c.Request.URL.Path, "/api") {
-			c.JSON(http.StatusNotFound, gin.H{"error": "API route not found"})
+func newDynamicNoRouteHandler(fs http.FileSystem) func(ctx *gin.Context) {
+	fileServer := http.StripPrefix("/", http.FileServer(fs))
+	return func(c *gin.Context) {
+		if checkNoRouteNotFound(c.Request.URL.Path) {
+			c.String(http.StatusNotFound, "404 page not found")
 			return
 		}
 
-		// Return the frontend entry file for all other routes
-		c.File("./web/dist/index.html")
-	})
+		f, err := fs.Open(c.Request.URL.Path)
+		if err != nil {
+			c.FileFromFS("", fs)
+			return
+		}
+		f.Close()
+
+		fileServer.ServeHTTP(c.Writer, c.Request)
+	}
+}
+
+type staticFileFS interface {
+	StaticFileFS(relativePath string, filepath string, fs http.FileSystem) gin.IRoutes
+}
+
+func initFSRouter(e staticFileFS, f fs.ReadDirFS, path string) error {
+	dirs, err := f.ReadDir(path)
+	if err != nil {
+		return err
+	}
+	for _, dir := range dirs {
+		u, err := url.JoinPath(path, dir.Name())
+		if err != nil {
+			return err
+		}
+		if dir.IsDir() {
+			err = initFSRouter(e, f, u)
+			if err != nil {
+				return err
+			}
+		} else {
+			e.StaticFileFS(u, u, http.FS(f))
+		}
+	}
+	return nil
 }
