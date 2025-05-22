@@ -219,7 +219,7 @@ func BatchRecordLogs(
 	now := time.Now()
 
 	if downstreamResult {
-		if config.GetLogStorageHours() > 0 {
+		if config.GetLogStorageHours() >= 0 {
 			err = RecordConsumeLog(
 				requestID,
 				now,
@@ -246,7 +246,7 @@ func BatchRecordLogs(
 			)
 		}
 	} else {
-		if config.GetRetryLogStorageHours() > 0 {
+		if config.GetRetryLogStorageHours() >= 0 {
 			err = RecordRetryLog(
 				requestID,
 				now,
