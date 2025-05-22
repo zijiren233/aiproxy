@@ -27,19 +27,19 @@ type RetryLog struct {
 	RetryTimes            ZeroNullInt64   `json:"retry_times,omitempty"`
 }
 
-func (d *RetryLog) BeforeSave(_ *gorm.DB) (err error) {
-	if reqMax := config.GetLogDetailRequestBodyMaxSize(); reqMax > 0 && int64(len(d.RequestBody)) > reqMax {
-		d.RequestBody = common.TruncateByRune(d.RequestBody, int(reqMax)) + "..."
-		d.RequestBodyTruncated = true
+func (r *RetryLog) BeforeSave(_ *gorm.DB) (err error) {
+	if reqMax := config.GetLogDetailRequestBodyMaxSize(); reqMax > 0 && int64(len(r.RequestBody)) > reqMax {
+		r.RequestBody = common.TruncateByRune(r.RequestBody, int(reqMax)) + "..."
+		r.RequestBodyTruncated = true
 	}
-	if respMax := config.GetLogDetailResponseBodyMaxSize(); respMax > 0 && int64(len(d.ResponseBody)) > respMax {
-		d.ResponseBody = common.TruncateByRune(d.ResponseBody, int(respMax)) + "..."
-		d.ResponseBodyTruncated = true
+	if respMax := config.GetLogDetailResponseBodyMaxSize(); respMax > 0 && int64(len(r.ResponseBody)) > respMax {
+		r.ResponseBody = common.TruncateByRune(r.ResponseBody, int(respMax)) + "..."
+		r.ResponseBodyTruncated = true
 	}
 	return
 }
 
-func (l *RetryLog) MarshalJSON() ([]byte, error) {
+func (r *RetryLog) MarshalJSON() ([]byte, error) {
 	type Alias RetryLog
 	a := &struct {
 		*Alias
@@ -47,12 +47,12 @@ func (l *RetryLog) MarshalJSON() ([]byte, error) {
 		RequestAt int64 `json:"request_at"`
 		RetryAt   int64 `json:"retry_at,omitempty"`
 	}{
-		Alias:     (*Alias)(l),
-		CreatedAt: l.CreatedAt.UnixMilli(),
-		RequestAt: l.RequestAt.UnixMilli(),
+		Alias:     (*Alias)(r),
+		CreatedAt: r.CreatedAt.UnixMilli(),
+		RequestAt: r.RequestAt.UnixMilli(),
 	}
-	if !l.RetryAt.IsZero() {
-		a.RetryAt = l.RetryAt.UnixMilli()
+	if !r.RetryAt.IsZero() {
+		a.RetryAt = r.RetryAt.UnixMilli()
 	}
 	return sonic.Marshal(a)
 }

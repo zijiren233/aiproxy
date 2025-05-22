@@ -274,19 +274,19 @@ func GetGroupLogDetail(logID int, group string) (*RequestDetail, error) {
 const defaultCleanLogBatchSize = 5000
 
 func CleanLog(batchSize int, optimize bool) (err error) {
-	if optimize {
-		defer func() {
-			if err == nil {
-				optimizeLog()
-			}
-		}()
-	}
-
 	err = cleanLog(batchSize)
 	if err != nil {
 		return err
 	}
-	return cleanLogDetail(batchSize)
+	err = cleanLogDetail(batchSize)
+	if err != nil {
+		return err
+	}
+
+	if optimize {
+		return optimizeLog()
+	}
+	return nil
 }
 
 func cleanLog(batchSize int) error {
