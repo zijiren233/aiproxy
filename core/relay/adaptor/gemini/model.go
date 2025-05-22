@@ -10,7 +10,8 @@ type ChatRequest struct {
 }
 
 type ThinkingConfig struct {
-	ThinkingBudget int `json:"thinking_budget"`
+	ThinkingBudget  *int `json:"thinking_budget,omitempty"`
+	IncludeThoughts bool `json:"includeThoughts,omitempty"`
 }
 
 type EmbeddingRequest struct {
@@ -63,6 +64,7 @@ type Part struct {
 	FunctionCall     *FunctionCall     `json:"functionCall,omitempty"`
 	FunctionResponse *FunctionResponse `json:"functionResponse,omitempty"`
 	Text             string            `json:"text,omitempty"`
+	Thought          bool              `json:"thought,omitempty"`
 }
 
 type ChatContent struct {
