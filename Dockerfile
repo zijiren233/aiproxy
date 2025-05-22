@@ -20,7 +20,7 @@ WORKDIR /aiproxy/core
 COPY ./ /aiproxy
 
 # Copy frontend dist files
-COPY --from=frontend-builder /aiproxy/web/dist /aiproxy/core/web/dist
+COPY --from=frontend-builder /aiproxy/web/dist/ /aiproxy/core/web/dist/
 
 RUN sh scripts/tiktoken.sh
 
