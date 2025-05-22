@@ -95,6 +95,14 @@ func buildGenerationConfig(meta *meta.Meta, req *http.Request, textRequest *rela
 		config.ThinkingConfig = thinkingConfigOnly.ThinkingConfig
 	}
 
+	// https://ai.google.dev/gemini-api/docs/thinking
+	if strings.Contains(meta.ActualModel, "2.5") {
+		if config.ThinkingConfig == nil {
+			config.ThinkingConfig = &ThinkingConfig{}
+		}
+		config.ThinkingConfig.IncludeThoughts = true
+	}
+
 	return &config, nil
 }
 
@@ -436,6 +444,7 @@ func responseChat2OpenAI(meta *meta.Meta, response *ChatResponse) *relaymodel.Te
 		}
 		if len(candidate.Content.Parts) > 0 {
 			var contents []relaymodel.MessageContent
+			var reasoningContent strings.Builder
 			var builder strings.Builder
 			hasImage := false
 			for _, part := range candidate.Content.Parts {
@@ -461,7 +470,11 @@ func responseChat2OpenAI(meta *meta.Meta, response *ChatResponse) *relaymodel.Te
 							Text: part.Text,
 						})
 					} else {
-						builder.WriteString(part.Text)
+						if part.Thought {
+							reasoningContent.WriteString(part.Text)
+						} else {
+							builder.WriteString(part.Text)
+						}
 					}
 				}
 				if part.InlineData != nil {
@@ -477,6 +490,7 @@ func responseChat2OpenAI(meta *meta.Meta, response *ChatResponse) *relaymodel.Te
 				choice.Message.Content = contents
 			} else {
 				choice.Message.Content = builder.String()
+				choice.Message.ReasoningContent = reasoningContent.String()
 			}
 		}
 		fullTextResponse.Choices = append(fullTextResponse.Choices, &choice)
@@ -506,6 +520,7 @@ func streamResponseChat2OpenAI(meta *meta.Meta, geminiResponse *ChatResponse) *r
 		}
 		if len(candidate.Content.Parts) > 0 {
 			var contents []relaymodel.MessageContent
+			var reasoningContent strings.Builder
 			var builder strings.Builder
 			hasImage := false
 			for _, part := range candidate.Content.Parts {
@@ -531,7 +546,11 @@ func streamResponseChat2OpenAI(meta *meta.Meta, geminiResponse *ChatResponse) *r
 							Text: part.Text,
 						})
 					} else {
-						builder.WriteString(part.Text)
+						if part.Thought {
+							reasoningContent.WriteString(part.Text)
+						} else {
+							builder.WriteString(part.Text)
+						}
 					}
 				}
 				if part.InlineData != nil {
@@ -547,6 +566,7 @@ func streamResponseChat2OpenAI(meta *meta.Meta, geminiResponse *ChatResponse) *r
 				choice.Delta.Content = contents
 			} else {
 				choice.Delta.Content = builder.String()
+				choice.Delta.ReasoningContent = reasoningContent.String()
 			}
 		}
 		response.Choices = append(response.Choices, &choice)
