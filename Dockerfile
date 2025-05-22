@@ -8,8 +8,6 @@ RUN npm install -g pnpm
 
 RUN pnpm install && pnpm run build
 
-RUN ls /aiproxy/web/dist/
-
 FROM golang:1.24-alpine AS builder
 
 RUN apk add --no-cache curl
@@ -18,9 +16,7 @@ WORKDIR /aiproxy/core
 
 COPY ./ /aiproxy
 
-COPY --from=frontend-builder /aiproxy/web/dist/ /aiproxy/core/web/dist/
-
-RUN ls /aiproxy/core/web/dist/
+COPY --from=frontend-builder /aiproxy/web/dist/ /aiproxy/core/public/dist/
 
 RUN sh scripts/tiktoken.sh
 
