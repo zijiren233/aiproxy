@@ -1,14 +1,11 @@
-# Frontend build stage
 FROM node:22-alpine AS frontend-builder
 
 WORKDIR /aiproxy/web
 
 COPY ./web/ ./
 
-# Install pnpm globally
 RUN npm install -g pnpm
 
-# Install dependencies and build with pnpm
 RUN pnpm install && pnpm run build
 
 FROM golang:1.24-alpine AS builder
@@ -19,8 +16,7 @@ WORKDIR /aiproxy/core
 
 COPY ./ /aiproxy
 
-# Copy frontend dist files
-COPY --from=frontend-builder /aiproxy/web/dist/ /aiproxy/core/web/dist/
+COPY --from=frontend-builder /aiproxy/web/dist/* /aiproxy/core/web/dist/
 
 RUN sh scripts/tiktoken.sh
 
