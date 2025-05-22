@@ -49,7 +49,7 @@ func GroupMCPSseServer(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
 		c.JSON(http.StatusBadRequest, CreateMCPErrorResponse(
-			nil,
+			mcp.NewRequestId(nil),
 			mcp.INVALID_REQUEST,
 			"mcp id is required",
 		))
@@ -61,7 +61,7 @@ func GroupMCPSseServer(c *gin.Context) {
 	groupMcp, err := model.GetGroupMCPByID(id, group.ID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, CreateMCPErrorResponse(
-			nil,
+			mcp.NewRequestId(nil),
 			mcp.INVALID_REQUEST,
 			err.Error(),
 		))
@@ -75,7 +75,7 @@ func GroupMCPSseServer(c *gin.Context) {
 		server, err := newOpenAPIMCPServer(groupMcp.OpenAPIConfig)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, CreateMCPErrorResponse(
-				nil,
+				mcp.NewRequestId(nil),
 				mcp.INVALID_REQUEST,
 				err.Error(),
 			))
@@ -84,7 +84,7 @@ func GroupMCPSseServer(c *gin.Context) {
 		handleGroupMCPServer(c, server, model.GroupMCPTypeOpenAPI)
 	default:
 		c.JSON(http.StatusBadRequest, CreateMCPErrorResponse(
-			nil,
+			mcp.NewRequestId(nil),
 			mcp.INVALID_REQUEST,
 			"unsupported mcp type",
 		))
@@ -100,7 +100,7 @@ func handleGroupProxySSE(c *gin.Context, config *model.GroupMCPProxyConfig) {
 	backendURL, err := url.Parse(config.URL)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, CreateMCPErrorResponse(
-			nil,
+			mcp.NewRequestId(nil),
 			mcp.INVALID_REQUEST,
 			err.Error(),
 		))
@@ -167,7 +167,7 @@ func GroupMCPMessage(c *gin.Context) {
 	mcpTypeStr, _ := c.GetQuery("type")
 	if mcpTypeStr == "" {
 		c.JSON(http.StatusBadRequest, CreateMCPErrorResponse(
-			nil,
+			mcp.NewRequestId(nil),
 			mcp.INVALID_REQUEST,
 			"missing mcp type",
 		))
@@ -177,7 +177,7 @@ func GroupMCPMessage(c *gin.Context) {
 	sessionID, _ := c.GetQuery("sessionId")
 	if sessionID == "" {
 		c.JSON(http.StatusBadRequest, CreateMCPErrorResponse(
-			nil,
+			mcp.NewRequestId(nil),
 			mcp.INVALID_REQUEST,
 			"missing sessionId",
 		))
@@ -207,7 +207,7 @@ func GroupMCPStreamable(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
 		c.JSON(http.StatusBadRequest, CreateMCPErrorResponse(
-			nil,
+			mcp.NewRequestId(nil),
 			mcp.INVALID_REQUEST,
 			"mcp id is required",
 		))
@@ -219,7 +219,7 @@ func GroupMCPStreamable(c *gin.Context) {
 	groupMcp, err := model.GetGroupMCPByID(id, group.ID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, CreateMCPErrorResponse(
-			nil,
+			mcp.NewRequestId(nil),
 			mcp.INVALID_REQUEST,
 			err.Error(),
 		))
@@ -233,7 +233,7 @@ func GroupMCPStreamable(c *gin.Context) {
 		server, err := newOpenAPIMCPServer(groupMcp.OpenAPIConfig)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, CreateMCPErrorResponse(
-				nil,
+				mcp.NewRequestId(nil),
 				mcp.INVALID_REQUEST,
 				err.Error(),
 			))
@@ -242,7 +242,7 @@ func GroupMCPStreamable(c *gin.Context) {
 		handleGroupStreamableMCPServer(c, server)
 	default:
 		c.JSON(http.StatusBadRequest, CreateMCPErrorResponse(
-			nil,
+			mcp.NewRequestId(nil),
 			mcp.INVALID_REQUEST,
 			"unsupported mcp type",
 		))
@@ -258,7 +258,7 @@ func handleGroupProxyStreamable(c *gin.Context, config *model.GroupMCPProxyConfi
 	backendURL, err := url.Parse(config.URL)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, CreateMCPErrorResponse(
-			nil,
+			mcp.NewRequestId(nil),
 			mcp.INVALID_REQUEST,
 			err.Error(),
 		))
@@ -284,7 +284,7 @@ func handleGroupProxyStreamable(c *gin.Context, config *model.GroupMCPProxyConfi
 func handleGroupStreamableMCPServer(c *gin.Context, s *server.MCPServer) {
 	if c.Request.Method != http.MethodPost {
 		c.JSON(http.StatusMethodNotAllowed, CreateMCPErrorResponse(
-			nil,
+			mcp.NewRequestId(nil),
 			mcp.METHOD_NOT_FOUND,
 			"method not allowed",
 		))
@@ -293,7 +293,7 @@ func handleGroupStreamableMCPServer(c *gin.Context, s *server.MCPServer) {
 	var rawMessage json.RawMessage
 	if err := sonic.ConfigDefault.NewDecoder(c.Request.Body).Decode(&rawMessage); err != nil {
 		c.JSON(http.StatusBadRequest, CreateMCPErrorResponse(
-			nil,
+			mcp.NewRequestId(nil),
 			mcp.PARSE_ERROR,
 			err.Error(),
 		))

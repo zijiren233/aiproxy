@@ -123,7 +123,7 @@ func PublicMCPSseServer(c *gin.Context) {
 	publicMcp, err := model.GetPublicMCPByID(mcpID)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, CreateMCPErrorResponse(
-			nil,
+			mcp.NewRequestId(nil),
 			mcp.INVALID_REQUEST,
 			err.Error(),
 		))
@@ -137,7 +137,7 @@ func PublicMCPSseServer(c *gin.Context) {
 		server, err := newOpenAPIMCPServer(publicMcp.OpenAPIConfig)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, CreateMCPErrorResponse(
-				nil,
+				mcp.NewRequestId(nil),
 				mcp.INVALID_REQUEST,
 				err.Error(),
 			))
@@ -146,7 +146,7 @@ func PublicMCPSseServer(c *gin.Context) {
 		handleSSEMCPServer(c, server, model.PublicMCPTypeOpenAPI)
 	default:
 		c.JSON(http.StatusBadRequest, CreateMCPErrorResponse(
-			nil,
+			mcp.NewRequestId(nil),
 			mcp.INVALID_REQUEST,
 			"unknown mcp type",
 		))
@@ -163,7 +163,7 @@ func handlePublicProxySSE(c *gin.Context, mcpID string, config *model.PublicMCPP
 	backendURL, err := url.Parse(config.URL)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, CreateMCPErrorResponse(
-			nil,
+			mcp.NewRequestId(nil),
 			mcp.INVALID_REQUEST,
 			err.Error(),
 		))
@@ -178,7 +178,7 @@ func handlePublicProxySSE(c *gin.Context, mcpID string, config *model.PublicMCPP
 	// Process reusing parameters if any
 	if err := processReusingParams(config.ReusingParams, mcpID, group.ID, headers, backendQuery); err != nil {
 		c.JSON(http.StatusBadRequest, CreateMCPErrorResponse(
-			nil,
+			mcp.NewRequestId(nil),
 			mcp.INVALID_REQUEST,
 			err.Error(),
 		))
@@ -353,7 +353,7 @@ func PublicMCPMessage(c *gin.Context) {
 	mcpTypeStr, _ := c.GetQuery("type")
 	if mcpTypeStr == "" {
 		c.JSON(http.StatusBadRequest, CreateMCPErrorResponse(
-			nil,
+			mcp.NewRequestId(nil),
 			mcp.INVALID_REQUEST,
 			"missing mcp type",
 		))
@@ -363,7 +363,7 @@ func PublicMCPMessage(c *gin.Context) {
 	sessionID, _ := c.GetQuery("sessionId")
 	if sessionID == "" {
 		c.JSON(http.StatusBadRequest, CreateMCPErrorResponse(
-			nil,
+			mcp.NewRequestId(nil),
 			mcp.INVALID_REQUEST,
 			"missing sessionId",
 		))
@@ -382,7 +382,7 @@ func PublicMCPMessage(c *gin.Context) {
 		sendMCPSSEMessage(c, mcpTypeStr, sessionID)
 	default:
 		c.JSON(http.StatusBadRequest, CreateMCPErrorResponse(
-			nil,
+			mcp.NewRequestId(nil),
 			mcp.INVALID_REQUEST,
 			"unknown mcp type",
 		))
@@ -393,7 +393,7 @@ func sendMCPSSEMessage(c *gin.Context, mcpType, sessionID string) {
 	backend, ok := getStore().Get(sessionID)
 	if !ok || backend != mcpType {
 		c.JSON(http.StatusBadRequest, CreateMCPErrorResponse(
-			nil,
+			mcp.NewRequestId(nil),
 			mcp.INVALID_REQUEST,
 			"invalid session",
 		))
@@ -403,7 +403,7 @@ func sendMCPSSEMessage(c *gin.Context, mcpType, sessionID string) {
 	body, err := io.ReadAll(c.Request.Body)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, CreateMCPErrorResponse(
-			nil,
+			mcp.NewRequestId(nil),
 			mcp.INTERNAL_ERROR,
 			err.Error(),
 		))
@@ -412,7 +412,7 @@ func sendMCPSSEMessage(c *gin.Context, mcpType, sessionID string) {
 	err = mpscInstance.send(c.Request.Context(), sessionID, body)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, CreateMCPErrorResponse(
-			nil,
+			mcp.NewRequestId(nil),
 			mcp.INTERNAL_ERROR,
 			err.Error(),
 		))
@@ -434,7 +434,7 @@ func PublicMCPStreamable(c *gin.Context) {
 	publicMcp, err := model.GetPublicMCPByID(mcpID)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, CreateMCPErrorResponse(
-			nil,
+			mcp.NewRequestId(nil),
 			mcp.INVALID_REQUEST,
 			err.Error(),
 		))
@@ -448,7 +448,7 @@ func PublicMCPStreamable(c *gin.Context) {
 		server, err := newOpenAPIMCPServer(publicMcp.OpenAPIConfig)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, CreateMCPErrorResponse(
-				nil,
+				mcp.NewRequestId(nil),
 				mcp.INVALID_REQUEST,
 				err.Error(),
 			))
@@ -457,7 +457,7 @@ func PublicMCPStreamable(c *gin.Context) {
 		handleStreamableMCPServer(c, server)
 	default:
 		c.JSON(http.StatusBadRequest, CreateMCPErrorResponse(
-			nil,
+			mcp.NewRequestId(nil),
 			mcp.INVALID_REQUEST,
 			"unknown mcp type",
 		))
@@ -468,7 +468,7 @@ func PublicMCPStreamable(c *gin.Context) {
 func handlePublicProxyStreamable(c *gin.Context, mcpID string, config *model.PublicMCPProxyConfig) {
 	if config == nil || config.URL == "" {
 		c.JSON(http.StatusBadRequest, CreateMCPErrorResponse(
-			nil,
+			mcp.NewRequestId(nil),
 			mcp.INVALID_REQUEST,
 			"invalid proxy configuration",
 		))
@@ -478,7 +478,7 @@ func handlePublicProxyStreamable(c *gin.Context, mcpID string, config *model.Pub
 	backendURL, err := url.Parse(config.URL)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, CreateMCPErrorResponse(
-			nil,
+			mcp.NewRequestId(nil),
 			mcp.INVALID_REQUEST,
 			err.Error(),
 		))
@@ -493,7 +493,7 @@ func handlePublicProxyStreamable(c *gin.Context, mcpID string, config *model.Pub
 	// Process reusing parameters if any
 	if err := processReusingParams(config.ReusingParams, mcpID, group.ID, headers, backendQuery); err != nil {
 		c.JSON(http.StatusBadRequest, CreateMCPErrorResponse(
-			nil,
+			mcp.NewRequestId(nil),
 			mcp.INVALID_REQUEST,
 			err.Error(),
 		))
@@ -525,7 +525,7 @@ func handlePublicProxyStreamable(c *gin.Context, mcpID string, config *model.Pub
 func handleStreamableMCPServer(c *gin.Context, s *server.MCPServer) {
 	if c.Request.Method != http.MethodPost {
 		c.JSON(http.StatusMethodNotAllowed, CreateMCPErrorResponse(
-			nil,
+			mcp.NewRequestId(nil),
 			mcp.METHOD_NOT_FOUND,
 			"method not allowed",
 		))
@@ -534,7 +534,7 @@ func handleStreamableMCPServer(c *gin.Context, s *server.MCPServer) {
 	var rawMessage json.RawMessage
 	if err := sonic.ConfigDefault.NewDecoder(c.Request.Body).Decode(&rawMessage); err != nil {
 		c.JSON(http.StatusBadRequest, CreateMCPErrorResponse(
-			nil,
+			mcp.NewRequestId(nil),
 			mcp.PARSE_ERROR,
 			err.Error(),
 		))
@@ -705,7 +705,7 @@ func (r *redisMCPMPSC) recv(ctx context.Context, id string) ([]byte, error) {
 }
 
 func CreateMCPErrorResponse(
-	id interface{},
+	id mcp.RequestId,
 	code int,
 	message string,
 ) mcp.JSONRPCMessage {

@@ -71,7 +71,7 @@ func NewSSEServer(server *server.MCPServer, opts ...SSEOption) *SSEServer {
 func (s *SSEServer) HandleSSE(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		errorResponse := CreateMCPErrorResponse(
-			nil,
+			mcp.NewRequestId(nil),
 			mcp.METHOD_NOT_FOUND,
 			"method not allowed",
 		)
@@ -88,7 +88,7 @@ func (s *SSEServer) HandleSSE(w http.ResponseWriter, r *http.Request) {
 	flusher, ok := w.(http.Flusher)
 	if !ok {
 		errorResponse := CreateMCPErrorResponse(
-			nil,
+			mcp.NewRequestId(nil),
 			mcp.INTERNAL_ERROR,
 			"streaming unsupported",
 		)
