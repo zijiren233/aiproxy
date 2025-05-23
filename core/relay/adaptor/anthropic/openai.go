@@ -24,10 +24,13 @@ import (
 )
 
 const (
-	toolUseType          = "tool_use"
-	conetentTypeText     = "text"
-	conetentTypeThinking = "thinking"
-	conetentTypeImage    = "image"
+	toolUseType             = "tool_use"
+	serverToolUseType       = "server_tool_use"
+	webSearchToolResult     = "web_search_tool_result"
+	codeExecutionToolResult = "code_execution_tool_result"
+	conetentTypeText        = "text"
+	conetentTypeThinking    = "thinking"
+	conetentTypeImage       = "image"
 )
 
 func stopReasonClaude2OpenAI(reason string) string {
@@ -74,6 +77,11 @@ func OpenAIConvertRequest(meta *meta.Meta, req *http.Request) (*Request, error) 
 				DisplayHeightPx: tool.DisplayHeightPx,
 				DisplayNumber:   tool.DisplayNumber,
 				CacheControl:    tool.CacheControl.ResetTTL(),
+
+				MaxUses:        tool.MaxUses,
+				AllowedDomains: tool.AllowedDomains,
+				BlockedDomains: tool.BlockedDomains,
+				UserLocation:   tool.UserLocation,
 			})
 		} else {
 			if params, ok := tool.Function.Parameters.(map[string]any); ok {
@@ -90,6 +98,11 @@ func OpenAIConvertRequest(meta *meta.Meta, req *http.Request) (*Request, error) 
 						Required:   params["required"],
 					},
 					CacheControl: tool.CacheControl.ResetTTL(),
+
+					MaxUses:        tool.MaxUses,
+					AllowedDomains: tool.AllowedDomains,
+					BlockedDomains: tool.BlockedDomains,
+					UserLocation:   tool.UserLocation,
 				})
 			}
 		}
@@ -315,27 +328,10 @@ func StreamResponse2OpenAI(meta *meta.Meta, respData []byte) (*relaymodel.ChatCo
 		if claudeResponse.Message == nil {
 			return nil, nil
 		}
-		claudeUsage := claudeResponse.Message.Usage
-		usage = &relaymodel.Usage{
-			PromptTokens:     claudeUsage.InputTokens + claudeUsage.CacheReadInputTokens + claudeUsage.CacheCreationInputTokens,
-			CompletionTokens: claudeUsage.OutputTokens,
-			PromptTokensDetails: &relaymodel.PromptTokensDetails{
-				CachedTokens:        claudeUsage.CacheReadInputTokens,
-				CacheCreationTokens: claudeUsage.CacheCreationInputTokens,
-			},
-		}
-		usage.TotalTokens = usage.PromptTokens + usage.CompletionTokens
+		usage = claudeResponse.Message.Usage.ToOpenAIUsage()
 	case "message_delta":
 		if claudeResponse.Usage != nil {
-			usage = &relaymodel.Usage{
-				PromptTokens:     claudeResponse.Usage.InputTokens + claudeResponse.Usage.CacheReadInputTokens + claudeResponse.Usage.CacheCreationInputTokens,
-				CompletionTokens: claudeResponse.Usage.OutputTokens,
-				PromptTokensDetails: &relaymodel.PromptTokensDetails{
-					CachedTokens:        claudeResponse.Usage.CacheReadInputTokens,
-					CacheCreationTokens: claudeResponse.Usage.CacheCreationInputTokens,
-				},
-			}
-			usage.TotalTokens = usage.PromptTokens + usage.CompletionTokens
+			usage = claudeResponse.Usage.ToOpenAIUsage()
 		}
 		if claudeResponse.Delta != nil && claudeResponse.Delta.StopReason != nil {
 			stopReason = *claudeResponse.Delta.StopReason
@@ -384,6 +380,9 @@ func Response2OpenAI(meta *meta.Meta, claudeResponse *Response) *relaymodel.Text
 					Arguments: args,
 				},
 			})
+		case serverToolUseType:
+		case webSearchToolResult:
+		case codeExecutionToolResult:
 		}
 	}
 
