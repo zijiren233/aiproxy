@@ -9,7 +9,7 @@ import (
 	"github.com/labring/aiproxy/core/middleware"
 	"github.com/labring/aiproxy/core/model"
 	"github.com/labring/aiproxy/core/relay/adaptor/openai"
-	"github.com/labring/aiproxy/core/relay/channeltype"
+	"github.com/labring/aiproxy/core/relay/adaptors"
 	"github.com/labring/aiproxy/core/relay/meta"
 	relaymodel "github.com/labring/aiproxy/core/relay/model"
 )
@@ -26,7 +26,7 @@ var ErrInvalidChannelTypeCode = "invalid_channel_type"
 func Handle(meta *meta.Meta, c *gin.Context) *HandleResult {
 	log := middleware.GetLogger(c)
 
-	adaptor, ok := channeltype.GetAdaptor(meta.Channel.Type)
+	adaptor, ok := adaptors.GetAdaptor(meta.Channel.Type)
 	if !ok {
 		return &HandleResult{
 			Error: openai.ErrorWrapperWithMessage(

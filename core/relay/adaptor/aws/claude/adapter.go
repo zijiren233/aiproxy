@@ -7,7 +7,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/core/model"
 	"github.com/labring/aiproxy/core/relay/adaptor/anthropic"
-	"github.com/labring/aiproxy/core/relay/adaptor/aws/utils"
 	"github.com/labring/aiproxy/core/relay/meta"
 	relaymodel "github.com/labring/aiproxy/core/relay/model"
 )
@@ -15,8 +14,6 @@ import (
 const (
 	ConvertedRequest = "convertedRequest"
 )
-
-var _ utils.AwsAdapter = new(Adaptor)
 
 type Adaptor struct{}
 

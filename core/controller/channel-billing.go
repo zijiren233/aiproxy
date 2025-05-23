@@ -13,13 +13,11 @@ import (
 	"github.com/labring/aiproxy/core/middleware"
 	"github.com/labring/aiproxy/core/model"
 	"github.com/labring/aiproxy/core/relay/adaptor"
-	"github.com/labring/aiproxy/core/relay/channeltype"
+	"github.com/labring/aiproxy/core/relay/adaptors"
 )
 
-// https://github.com/labring/aiproxy/core/issues/79
-
 func updateChannelBalance(channel *model.Channel) (float64, error) {
-	adaptorI, ok := channeltype.GetAdaptor(channel.Type)
+	adaptorI, ok := adaptors.GetAdaptor(channel.Type)
 	if !ok {
 		return 0, fmt.Errorf("invalid channel type: %d, channel: %s (id: %d)", channel.Type, channel.Name, channel.ID)
 	}

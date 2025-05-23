@@ -901,7 +901,7 @@
                                         "data": {
                                             "type": "object",
                                             "additionalProperties": {
-                                                "$ref": "#/definitions/channeltype.AdaptorMeta"
+                                                "$ref": "#/definitions/adaptors.AdaptorMeta"
                                             }
                                         }
                                     }
@@ -4459,7 +4459,8 @@
                             44,
                             45,
                             46,
-                            47
+                            47,
+                            48
                         ],
                         "type": "integer",
                         "description": "Channel type",
@@ -7325,11 +7326,17 @@
         }
     },
     "definitions": {
-        "channeltype.AdaptorMeta": {
+        "adaptors.AdaptorMeta": {
             "type": "object",
             "properties": {
                 "defaultBaseUrl": {
                     "type": "string"
+                },
+                "fetures": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 },
                 "keyHelp": {
                     "type": "string"
@@ -8132,7 +8139,8 @@
                 44,
                 45,
                 46,
-                47
+                47,
+                48
             ],
             "x-enum-varnames": [
                 "ChannelTypeOpenAI",
@@ -8168,7 +8176,8 @@
                 "ChannelTypeDoubaoAudio",
                 "ChannelTypeXAI",
                 "ChannelTypeDoc2x",
-                "ChannelTypeJina"
+                "ChannelTypeJina",
+                "ChannelTypeTextEmbeddingsInference"
             ]
         },
         "model.ChartData": {

@@ -910,7 +910,7 @@ const docTemplate = `{
                                         "data": {
                                             "type": "object",
                                             "additionalProperties": {
-                                                "$ref": "#/definitions/channeltype.AdaptorMeta"
+                                                "$ref": "#/definitions/adaptors.AdaptorMeta"
                                             }
                                         }
                                     }
@@ -4468,7 +4468,8 @@ const docTemplate = `{
                             44,
                             45,
                             46,
-                            47
+                            47,
+                            48
                         ],
                         "type": "integer",
                         "description": "Channel type",
@@ -7334,11 +7335,17 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "channeltype.AdaptorMeta": {
+        "adaptors.AdaptorMeta": {
             "type": "object",
             "properties": {
                 "defaultBaseUrl": {
                     "type": "string"
+                },
+                "fetures": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 },
                 "keyHelp": {
                     "type": "string"
@@ -8141,7 +8148,8 @@ const docTemplate = `{
                 44,
                 45,
                 46,
-                47
+                47,
+                48
             ],
             "x-enum-varnames": [
                 "ChannelTypeOpenAI",
@@ -8177,7 +8185,8 @@ const docTemplate = `{
                 "ChannelTypeDoubaoAudio",
                 "ChannelTypeXAI",
                 "ChannelTypeDoc2x",
-                "ChannelTypeJina"
+                "ChannelTypeJina",
+                "ChannelTypeTextEmbeddingsInference"
             ]
         },
         "model.ChartData": {
