@@ -310,12 +310,12 @@ func main() {
 
 	<-ctx.Done()
 
-	shutdownCtx, cancel := context.WithTimeout(context.Background(), 600*time.Second)
-	defer cancel()
+	shutdownSrvCtx, shutdownSrvCancel := context.WithTimeout(context.Background(), 600*time.Second)
+	defer shutdownSrvCancel()
 
 	log.Info("shutting down http server...")
 	log.Info("max wait time: 600s")
-	if err := srv.Shutdown(shutdownCtx); err != nil {
+	if err := srv.Shutdown(shutdownSrvCtx); err != nil {
 		log.Error("server forced to shutdown: " + err.Error())
 	} else {
 		log.Info("server shutdown successfully")
@@ -329,8 +329,11 @@ func main() {
 	log.Info("shutting down sync services...")
 	wg.Wait()
 
-	log.Info("shutting down batch processor...")
-	model.ProcessBatchUpdatesSummary()
+	log.Info("shutting down batch summary...")
+	log.Info("max wait time: 600s")
+	cleanCtx, cleanCancel := context.WithTimeout(context.Background(), 600*time.Second)
+	defer cleanCancel()
+	model.CleanBatchUpdatesSummary(cleanCtx)
 
 	log.Info("server exiting")
 }
