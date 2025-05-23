@@ -135,17 +135,11 @@ func startSyncServices(ctx context.Context, wg *sync.WaitGroup) {
 	go model.SyncModelConfigAndChannelCache(ctx, wg, time.Second*10)
 }
 
-func ginRecoveryHandler(c *gin.Context, err any) {
-	notify.ErrorThrottle("ginRecoveryHandler", time.Minute, "Panic Detected", fmt.Sprintf("%+v", err))
-	c.AbortWithStatus(http.StatusInternalServerError)
-}
-
 func setupHTTPServer() (*http.Server, *gin.Engine) {
 	server := gin.New()
 
-	w := log.StandardLogger().Writer()
 	server.
-		Use(gin.RecoveryWithWriter(w, ginRecoveryHandler)).
+		Use(middleware.GinRecoveryHandler).
 		Use(middleware.NewLog(log.StandardLogger())).
 		Use(middleware.RequestIDMiddleware, middleware.CORS())
 	router.SetRouter(server)
