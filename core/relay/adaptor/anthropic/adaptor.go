@@ -38,6 +38,8 @@ func (a *Adaptor) SetupRequestHeader(meta *meta.Meta, c *gin.Context, req *http.
 		anthropicVersion = AnthropicVersion
 	}
 	req.Header.Set("Anthropic-Version", anthropicVersion)
+
+	// https://docs.anthropic.com/en/api/beta-headers
 	req.Header.Set("Anthropic-Beta", "messages-2023-12-15")
 
 	// https://x.com/alexalbert__/status/1812921642143900036
@@ -49,6 +51,9 @@ func (a *Adaptor) SetupRequestHeader(meta *meta.Meta, c *gin.Context, req *http.
 	if strings.HasPrefix(meta.ActualModel, "claude-3-7-sonnet") {
 		req.Header.Set("Anthropic-Beta", "output-128k-2025-02-19")
 	}
+
+	// https://docs.anthropic.com/en/docs/build-with-claude/prompt-caching#1-hour-cache-duration-beta
+	// req.Header.Set("Anthropic-Beta", "extended-cache-ttl-2025-04-11")
 
 	return nil
 }
