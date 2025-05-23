@@ -12,13 +12,28 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-type BatchUpdateData struct {
+type batchUpdateData struct {
 	Groups         map[string]*GroupUpdate
 	Tokens         map[int]*TokenUpdate
 	Channels       map[int]*ChannelUpdate
 	Summaries      map[string]*SummaryUpdate
 	GroupSummaries map[string]*GroupSummaryUpdate
 	sync.Mutex
+}
+
+func (b *batchUpdateData) IsClean() bool {
+	b.Lock()
+	defer b.Unlock()
+
+	return b.isCleanLocked()
+}
+
+func (b *batchUpdateData) isCleanLocked() bool {
+	return len(b.Groups) == 0 &&
+		len(b.Tokens) == 0 &&
+		len(b.Channels) == 0 &&
+		len(b.Summaries) == 0 &&
+		len(b.GroupSummaries) == 0
 }
 
 type GroupUpdate struct {
@@ -54,10 +69,10 @@ func groupSummaryUniqueKey(unique GroupSummaryUnique) string {
 	return fmt.Sprintf("%s:%s:%s:%d", unique.GroupID, unique.TokenName, unique.Model, unique.HourTimestamp)
 }
 
-var batchData BatchUpdateData
+var batchData batchUpdateData
 
 func init() {
-	batchData = BatchUpdateData{
+	batchData = batchUpdateData{
 		Groups:         make(map[string]*GroupUpdate),
 		Tokens:         make(map[int]*TokenUpdate),
 		Channels:       make(map[int]*ChannelUpdate),
@@ -80,6 +95,22 @@ func StartBatchProcessorSummary(ctx context.Context, wg *sync.WaitGroup) {
 		case <-ticker.C:
 			ProcessBatchUpdatesSummary()
 		}
+	}
+}
+
+func CleanBatchUpdatesSummary(ctx context.Context) {
+	for {
+		select {
+		case <-ctx.Done():
+			ProcessBatchUpdatesSummary()
+			return
+		default:
+			if batchData.IsClean() {
+				return
+			}
+		}
+		ProcessBatchUpdatesSummary()
+		time.Sleep(time.Second * 1)
 	}
 }
 
