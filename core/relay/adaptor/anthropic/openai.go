@@ -73,7 +73,7 @@ func OpenAIConvertRequest(meta *meta.Meta, req *http.Request) (*Request, error) 
 				DisplayWidthPx:  tool.DisplayWidthPx,
 				DisplayHeightPx: tool.DisplayHeightPx,
 				DisplayNumber:   tool.DisplayNumber,
-				CacheControl:    tool.CacheControl,
+				CacheControl:    tool.CacheControl.ResetTTL(),
 			})
 		} else {
 			if params, ok := tool.Function.Parameters.(map[string]any); ok {
@@ -89,7 +89,7 @@ func OpenAIConvertRequest(meta *meta.Meta, req *http.Request) (*Request, error) 
 						Properties: params["properties"],
 						Required:   params["required"],
 					},
-					CacheControl: tool.CacheControl,
+					CacheControl: tool.CacheControl.ResetTTL(),
 				})
 			}
 		}
@@ -154,7 +154,7 @@ func OpenAIConvertRequest(meta *meta.Meta, req *http.Request) (*Request, error) 
 			claudeRequest.System = append(claudeRequest.System, Content{
 				Type:         conetentTypeText,
 				Text:         message.StringContent(),
-				CacheControl: message.CacheControl,
+				CacheControl: message.CacheControl.ResetTTL(),
 			})
 			continue
 		}
@@ -162,7 +162,7 @@ func OpenAIConvertRequest(meta *meta.Meta, req *http.Request) (*Request, error) 
 			Role: message.Role,
 		}
 		var content Content
-		content.CacheControl = message.CacheControl
+		content.CacheControl = message.CacheControl.ResetTTL()
 		if message.IsStringContent() {
 			content.Type = conetentTypeText
 			content.Text = message.StringContent()

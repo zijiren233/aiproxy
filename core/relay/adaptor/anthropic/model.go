@@ -74,6 +74,16 @@ type Tool struct {
 
 type CacheControl struct {
 	Type string `json:"type"`
+	// "5m" | "1h"
+	TTL string `json:"ttl,omitempty"`
+}
+
+func (cc *CacheControl) ResetTTL() *CacheControl {
+	if cc == nil {
+		return nil
+	}
+	cc.TTL = ""
+	return cc
 }
 
 type InputSchema struct {
@@ -106,8 +116,15 @@ type Usage struct {
 	InputTokens  int64 `json:"input_tokens"`
 	OutputTokens int64 `json:"output_tokens"`
 
-	CacheCreationInputTokens int64 `json:"cache_creation_input_tokens"`
-	CacheReadInputTokens     int64 `json:"cache_read_input_tokens"`
+	CacheCreationInputTokens int64          `json:"cache_creation_input_tokens"`
+	CacheReadInputTokens     int64          `json:"cache_read_input_tokens"`
+	CacheCreation            *CacheCreation `json:"cache_creation,omitempty"`
+}
+
+// https://docs.anthropic.com/en/docs/build-with-claude/prompt-caching#1-hour-cache-duration-beta
+type CacheCreation struct {
+	Ephemeral5mInputTokens int64 `json:"ephemeral_5m_input_tokens,omitempty"`
+	Ephemeral1hInputTokens int64 `json:"ephemeral_1h_input_tokens,omitempty"`
 }
 
 type Error struct {
