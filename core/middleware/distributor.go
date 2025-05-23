@@ -499,7 +499,6 @@ func getRequestUser(c *gin.Context, m mode.Mode) (string, error) {
 		mode.Completions,
 		mode.Embeddings,
 		mode.ImagesGenerations,
-		mode.ImagesEdits,
 		mode.AudioSpeech,
 		mode.Rerank,
 		mode.Anthropic:
@@ -533,7 +532,6 @@ func getRequestMetadata(c *gin.Context, m mode.Mode) (map[string]string, error) 
 		mode.Completions,
 		mode.Embeddings,
 		mode.ImagesGenerations,
-		mode.ImagesEdits,
 		mode.AudioSpeech,
 		mode.Rerank,
 		mode.Anthropic:
