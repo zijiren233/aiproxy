@@ -31,3 +31,7 @@ type KeyValidator interface {
 	ValidateKey(key string) error
 	KeyHelp() string
 }
+
+type Features interface {
+	Features() []string
+}

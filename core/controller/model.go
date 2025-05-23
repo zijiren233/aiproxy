@@ -11,7 +11,7 @@ import (
 	"github.com/labring/aiproxy/core/common/config"
 	"github.com/labring/aiproxy/core/middleware"
 	"github.com/labring/aiproxy/core/model"
-	"github.com/labring/aiproxy/core/relay/channeltype"
+	"github.com/labring/aiproxy/core/relay/adaptors"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -86,7 +86,7 @@ func init() {
 	builtinChannelType2Models = make(map[model.ChannelType][]*BuiltinModelConfig)
 	builtinModelsMap = make(map[string]*OpenAIModels)
 	// https://platform.openai.com/docs/models/model-endpoint-compatibility
-	for i, adaptor := range channeltype.ChannelAdaptor {
+	for i, adaptor := range adaptors.ChannelAdaptor {
 		modelNames := adaptor.GetModelList()
 		builtinChannelType2Models[i] = make([]*BuiltinModelConfig, len(modelNames))
 		for idx, _model := range modelNames {

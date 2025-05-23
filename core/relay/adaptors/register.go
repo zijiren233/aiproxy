@@ -1,4 +1,4 @@
-package channeltype
+package adaptors
 
 import (
 	"github.com/labring/aiproxy/core/model"
@@ -84,9 +84,10 @@ func GetAdaptor(channelType model.ChannelType) (adaptor.Adaptor, bool) {
 }
 
 type AdaptorMeta struct {
-	Name           string `json:"name"`
-	KeyHelp        string `json:"keyHelp"`
-	DefaultBaseURL string `json:"defaultBaseUrl"`
+	Name           string   `json:"name"`
+	KeyHelp        string   `json:"keyHelp"`
+	DefaultBaseURL string   `json:"defaultBaseUrl"`
+	Fetures        []string `json:"fetures,omitempty"`
 }
 
 var ChannelMetas = map[model.ChannelType]AdaptorMeta{}
@@ -97,6 +98,7 @@ func init() {
 			Name:           i.String(),
 			KeyHelp:        getAdaptorKeyHelp(adaptor),
 			DefaultBaseURL: adaptor.GetBaseURL(),
+			Fetures:        getAdaptorFetures(adaptor),
 		}
 	}
 }
@@ -106,4 +108,11 @@ func getAdaptorKeyHelp(a adaptor.Adaptor) string {
 		return keyValidator.KeyHelp()
 	}
 	return ""
+}
+
+func getAdaptorFetures(a adaptor.Adaptor) []string {
+	if fetures, ok := a.(adaptor.Features); ok {
+		return fetures.Features()
+	}
+	return nil
 }

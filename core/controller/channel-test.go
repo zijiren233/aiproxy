@@ -22,7 +22,7 @@ import (
 	"github.com/labring/aiproxy/core/middleware"
 	"github.com/labring/aiproxy/core/model"
 	"github.com/labring/aiproxy/core/monitor"
-	"github.com/labring/aiproxy/core/relay/channeltype"
+	"github.com/labring/aiproxy/core/relay/adaptors"
 	"github.com/labring/aiproxy/core/relay/meta"
 	"github.com/labring/aiproxy/core/relay/mode"
 	"github.com/labring/aiproxy/core/relay/utils"
@@ -38,7 +38,7 @@ var (
 
 func guessModelConfig(model string) *model.ModelConfig {
 	modelConfigCacheOnce.Do(func() {
-		for _, c := range channeltype.ChannelAdaptor {
+		for _, c := range adaptors.ChannelAdaptor {
 			for _, m := range c.GetModelList() {
 				if _, ok := modelConfigCache[m.Model]; !ok {
 					modelConfigCache[m.Model] = m

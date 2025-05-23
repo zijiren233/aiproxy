@@ -13,7 +13,7 @@ import (
 	"github.com/labring/aiproxy/core/model"
 	"github.com/labring/aiproxy/core/monitor"
 	"github.com/labring/aiproxy/core/relay/adaptor"
-	"github.com/labring/aiproxy/core/relay/channeltype"
+	"github.com/labring/aiproxy/core/relay/adaptors"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -24,10 +24,10 @@ import (
 //	@Tags			channels
 //	@Produce		json
 //	@Security		ApiKeyAuth
-//	@Success		200	{object}	middleware.APIResponse{data=map[int]channeltype.AdaptorMeta}
+//	@Success		200	{object}	middleware.APIResponse{data=map[int]adaptors.AdaptorMeta}
 //	@Router			/api/channels/type_metas [get]
 func ChannelTypeMetas(c *gin.Context) {
-	middleware.SuccessResponse(c, channeltype.ChannelMetas)
+	middleware.SuccessResponse(c, adaptors.ChannelMetas)
 }
 
 // GetChannels godoc
@@ -196,11 +196,11 @@ type AddChannelRequest struct {
 }
 
 func (r *AddChannelRequest) ToChannel() (*model.Channel, error) {
-	channelType, ok := channeltype.GetAdaptor(r.Type)
+	a, ok := adaptors.GetAdaptor(r.Type)
 	if !ok {
 		return nil, fmt.Errorf("invalid channel type: %d", r.Type)
 	}
-	if validator, ok := channelType.(adaptor.KeyValidator); ok {
+	if validator, ok := a.(adaptor.KeyValidator); ok {
 		err := validator.ValidateKey(r.Key)
 		if err != nil {
 			keyHelp := validator.KeyHelp()
