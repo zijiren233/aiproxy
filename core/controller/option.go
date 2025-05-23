@@ -17,7 +17,7 @@ import (
 //	@Produce		json
 //	@Security		ApiKeyAuth
 //	@Success		200	{object}	middleware.APIResponse{data=map[string]string}
-//	@Router			/api/options [get]
+//	@Router			/api/option/ [get]
 func GetOptions(c *gin.Context) {
 	dbOptions, err := model.GetAllOption()
 	if err != nil {
@@ -40,7 +40,7 @@ func GetOptions(c *gin.Context) {
 //	@Security		ApiKeyAuth
 //	@Param			key	path		string	true	"Option key"
 //	@Success		200	{object}	middleware.APIResponse{data=model.Option}
-//	@Router			/api/options/{key} [get]
+//	@Router			/api/option/{key} [get]
 func GetOption(c *gin.Context) {
 	key := c.Param("key")
 	if key == "" {
@@ -64,8 +64,8 @@ func GetOption(c *gin.Context) {
 //	@Security		ApiKeyAuth
 //	@Param			value	body		model.Option	true	"Option value"
 //	@Success		200		{object}	middleware.APIResponse
-//	@Router			/api/options/ [put]
-//	@Router			/api/options/ [post]
+//	@Router			/api/option/ [put]
+//	@Router			/api/option/ [post]
 func UpdateOption(c *gin.Context) {
 	var option model.Option
 	err := c.BindJSON(&option)
@@ -91,7 +91,7 @@ func UpdateOption(c *gin.Context) {
 //	@Param			key		path		string	true	"Option key"
 //	@Param			value	body		string	true	"Option value"
 //	@Success		200		{object}	middleware.APIResponse
-//	@Router			/api/options/{key} [put]
+//	@Router			/api/option/{key} [put]
 func UpdateOptionByKey(c *gin.Context) {
 	key := c.Param("key")
 	body, err := io.ReadAll(c.Request.Body)
@@ -116,7 +116,7 @@ func UpdateOptionByKey(c *gin.Context) {
 //	@Security		ApiKeyAuth
 //	@Param			options	body		map[string]string	true	"Options"
 //	@Success		200		{object}	middleware.APIResponse
-//	@Router			/api/options [post]
+//	@Router			/api/option/batch [post]
 func UpdateOptions(c *gin.Context) {
 	var options map[string]string
 	err := c.BindJSON(&options)

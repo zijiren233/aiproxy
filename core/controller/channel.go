@@ -46,7 +46,7 @@ func ChannelTypeMetas(c *gin.Context) {
 //	@Param			base_url		query		string	false	"Filter by base URL"
 //	@Param			order			query		string	false	"Order by field"
 //	@Success		200				{object}	middleware.APIResponse{data=map[string]any{channels=[]model.Channel,total=int}}
-//	@Router			/api/channels [get]
+//	@Router			/api/channels/ [get]
 func GetChannels(c *gin.Context) {
 	page, perPage := parsePageParams(c)
 	id, _ := strconv.Atoi(c.Query("id"))
@@ -94,7 +94,7 @@ func GetAllChannels(c *gin.Context) {
 //	@Security		ApiKeyAuth
 //	@Param			channels	body		[]AddChannelRequest	true	"Channel information"
 //	@Success		200			{object}	middleware.APIResponse
-//	@Router			/api/channels [post]
+//	@Router			/api/channels/ [post]
 func AddChannels(c *gin.Context) {
 	channels := make([]*AddChannelRequest, 0)
 	err := c.ShouldBindJSON(&channels)
@@ -258,7 +258,7 @@ func (r *AddChannelRequest) ToChannels() ([]*model.Channel, error) {
 //	@Security		ApiKeyAuth
 //	@Param			channel	body		AddChannelRequest	true	"Channel information"
 //	@Success		200		{object}	middleware.APIResponse
-//	@Router			/api/channel [post]
+//	@Router			/api/channel/ [post]
 func AddChannel(c *gin.Context) {
 	channel := AddChannelRequest{}
 	err := c.ShouldBindJSON(&channel)

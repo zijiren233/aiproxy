@@ -49,7 +49,7 @@ func Completions() []gin.HandlerFunc {
 //	@Header			all				{integer}	X-RateLimit-Remaining-Tokens	"X-RateLimit-Remaining-Tokens"
 //	@Header			all				{string}	X-RateLimit-Reset-Requests		"X-RateLimit-Reset-Requests"
 //	@Header			all				{string}	X-RateLimit-Reset-Tokens		"X-RateLimit-Reset-Tokens"
-//	@Router			/v1/message [post]
+//	@Router			/v1/messages [post]
 func Anthropic() []gin.HandlerFunc {
 	return []gin.HandlerFunc{
 		middleware.NewDistribute(mode.Anthropic),
@@ -196,7 +196,7 @@ func AudioSpeech() []gin.HandlerFunc {
 //	@Header			all				{integer}	X-RateLimit-Remaining-Tokens	"X-RateLimit-Remaining-Tokens"
 //	@Header			all				{string}	X-RateLimit-Reset-Requests		"X-RateLimit-Reset-Requests"
 //	@Header			all				{string}	X-RateLimit-Reset-Tokens		"X-RateLimit-Reset-Tokens"
-//	@Router			/v1/audio/transcription [post]
+//	@Router			/v1/audio/transcriptions [post]
 func AudioTranscription() []gin.HandlerFunc {
 	return []gin.HandlerFunc{
 		middleware.NewDistribute(mode.AudioTranscription),
@@ -221,7 +221,7 @@ func AudioTranscription() []gin.HandlerFunc {
 //	@Header			all				{integer}	X-RateLimit-Remaining-Tokens	"X-RateLimit-Remaining-Tokens"
 //	@Header			all				{string}	X-RateLimit-Reset-Requests		"X-RateLimit-Reset-Requests"
 //	@Header			all				{string}	X-RateLimit-Reset-Tokens		"X-RateLimit-Reset-Tokens"
-//	@Router			/v1/audio/translation [post]
+//	@Router			/v1/audio/translations [post]
 func AudioTranslation() []gin.HandlerFunc {
 	return []gin.HandlerFunc{
 		middleware.NewDistribute(mode.AudioTranslation),
@@ -277,7 +277,7 @@ func Rerank() []gin.HandlerFunc {
 //	@Header			all				{integer}	X-RateLimit-Remaining-Tokens	"X-RateLimit-Remaining-Tokens"
 //	@Header			all				{string}	X-RateLimit-Reset-Requests		"X-RateLimit-Reset-Requests"
 //	@Header			all				{string}	X-RateLimit-Reset-Tokens		"X-RateLimit-Reset-Tokens"
-//	@Router			/v1/parse-pdf [post]
+//	@Router			/v1/parse/pdf [post]
 func ParsePdf() []gin.HandlerFunc {
 	return []gin.HandlerFunc{
 		middleware.NewDistribute(mode.ParsePdf),

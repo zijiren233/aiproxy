@@ -251,7 +251,7 @@ func processTestResult(mc *model.ModelCaches, channel *model.Channel, modelName 
 //	@Param			success_body	query		bool	false	"Success body"
 //	@Param			stream			query		bool	false	"Stream"
 //	@Success		200				{object}	middleware.APIResponse{data=[]TestResult}
-//	@Router			/api/channel/{id}/models [get]
+//	@Router			/api/channel/{id}/test [get]
 func TestChannelModels(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {

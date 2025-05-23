@@ -116,7 +116,7 @@ func buildTokenResponses(tokens []*model.Token) []*TokenResponse {
 //	@Param			order		query		string	false	"Order"
 //	@Param			status		query		int		false	"Status"
 //	@Success		200			{object}	middleware.APIResponse{data=map[string]any{tokens=[]TokenResponse,total=int}}
-//	@Router			/api/tokens [get]
+//	@Router			/api/tokens/ [get]
 func GetTokens(c *gin.Context) {
 	page, perPage := parsePageParams(c)
 	group := c.Query("group")

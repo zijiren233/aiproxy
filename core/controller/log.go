@@ -80,7 +80,7 @@ func parseCommonParams(c *gin.Context) (params struct {
 //	@Param			ip				query		string	false	"IP"
 //	@Param			user			query		string	false	"User"
 //	@Success		200				{object}	middleware.APIResponse{data=model.GetLogsResult}
-//	@Router			/api/logs [get]
+//	@Router			/api/logs/ [get]
 func GetLogs(c *gin.Context) {
 	page, perPage := parsePageParams(c)
 	startTime, endTime := parseTimeRange(c)
@@ -444,7 +444,7 @@ func GetGroupUsedTokenNames(c *gin.Context) {
 //	@Security		ApiKeyAuth
 //	@Param			timestamp	query		int	true	"Timestamp (milliseconds)"
 //	@Success		200			{object}	middleware.APIResponse{data=int}
-//	@Router			/api/logs [delete]
+//	@Router			/api/logs/ [delete]
 func DeleteHistoryLogs(c *gin.Context) {
 	timestamp, _ := strconv.ParseInt(c.Query("timestamp"), 10, 64)
 	if timestamp == 0 {

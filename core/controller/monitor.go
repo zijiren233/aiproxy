@@ -17,7 +17,7 @@ import (
 //	@Produce		json
 //	@Security		ApiKeyAuth
 //	@Success		200	{object}	middleware.APIResponse{data=map[int64]map[string]float64}
-//	@Router			/api/monitor [get]
+//	@Router			/api/monitor/ [get]
 func GetAllChannelModelErrorRates(c *gin.Context) {
 	rates, err := monitor.GetAllChannelModelErrorRates(c.Request.Context())
 	if err != nil {
@@ -59,7 +59,7 @@ func GetChannelModelErrorRates(c *gin.Context) {
 //	@Produce		json
 //	@Security		ApiKeyAuth
 //	@Success		200	{object}	middleware.APIResponse
-//	@Router			/api/monitor [delete]
+//	@Router			/api/monitor/ [delete]
 func ClearAllModelErrors(c *gin.Context) {
 	err := monitor.ClearAllModelErrors(c.Request.Context())
 	if err != nil {

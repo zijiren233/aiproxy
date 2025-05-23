@@ -152,7 +152,7 @@ func fillGaps(data []*model.ChartData, start, end time.Time, t model.TimeSpanTyp
 //	@Param			end_timestamp	query		int64	false	"End second timestamp"
 //	@Param			timezone		query		string	false	"Timezone, default is Local"
 //	@Success		200				{object}	middleware.APIResponse{data=model.DashboardResponse}
-//	@Router			/api/dashboard [get]
+//	@Router			/api/dashboard/ [get]
 func GetDashboard(c *gin.Context) {
 	log := middleware.GetLogger(c)
 
@@ -294,7 +294,7 @@ func GetGroupDashboardModels(c *gin.Context) {
 //	@Param			start_timestamp	query		int64	false	"Start timestamp"
 //	@Param			end_timestamp	query		int64	false	"End timestamp"
 //	@Success		200				{object}	middleware.APIResponse{data=[]model.ModelCostRank}
-//	@Router			/api/model_cost_rank [get]
+//	@Router			/api/model_cost_rank/ [get]
 func GetModelCostRank(c *gin.Context) {
 	group := c.Query("group")
 	channelID, _ := strconv.Atoi(c.Query("channel"))

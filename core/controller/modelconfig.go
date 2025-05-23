@@ -17,7 +17,7 @@ import (
 //	@Security		ApiKeyAuth
 //	@Param			model	query		string	false	"Model name"
 //	@Success		200		{object}	middleware.APIResponse{data=map[string]any{configs=[]model.ModelConfig,total=int}}
-//	@Router			/api/model_configs [get]
+//	@Router			/api/model_configs/ [get]
 func GetModelConfigs(c *gin.Context) {
 	page, perPage := parsePageParams(c)
 	_model := c.Query("model")
@@ -124,7 +124,7 @@ type SaveModelConfigsRequest struct {
 //	@Security		ApiKeyAuth
 //	@Param			configs	body		[]SaveModelConfigsRequest	true	"Model configs"
 //	@Success		200		{object}	middleware.APIResponse
-//	@Router			/api/model_configs [post]
+//	@Router			/api/model_configs/ [post]
 func SaveModelConfigs(c *gin.Context) {
 	var configs []*SaveModelConfigsRequest
 	if err := c.ShouldBindJSON(&configs); err != nil {
@@ -152,7 +152,7 @@ func SaveModelConfigs(c *gin.Context) {
 //	@Security		ApiKeyAuth
 //	@Param			config	body		SaveModelConfigsRequest	true	"Model config"
 //	@Success		200		{object}	middleware.APIResponse
-//	@Router			/api/model_config [post]
+//	@Router			/api/model_config/ [post]
 func SaveModelConfig(c *gin.Context) {
 	var config SaveModelConfigsRequest
 	if err := c.ShouldBindJSON(&config); err != nil {
