@@ -15,7 +15,7 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/api/channel": {
+        "/api/channel/": {
             "post": {
                 "security": [
                     {
@@ -234,7 +234,53 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/channel/{id}/models": {
+        "/api/channel/{id}/status": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Updates the status of a channel by its ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "channel"
+                ],
+                "summary": "Update channel status",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Channel ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Status information",
+                        "name": "status",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/controller.UpdateChannelStatusRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/channel/{id}/test": {
             "get": {
                 "security": [
                     {
@@ -301,52 +347,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/channel/{id}/status": {
-            "post": {
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ],
-                "description": "Updates the status of a channel by its ID",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "channel"
-                ],
-                "summary": "Update channel status",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "Channel ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "Status information",
-                        "name": "status",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/controller.UpdateChannelStatusRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/middleware.APIResponse"
-                        }
-                    }
-                }
-            }
-        },
         "/api/channel/{id}/{model}": {
             "get": {
                 "security": [
@@ -400,7 +400,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/channels": {
+        "/api/channels/": {
             "get": {
                 "security": [
                     {
@@ -921,7 +921,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/dashboard": {
+        "/api/dashboard/": {
             "get": {
                 "security": [
                     {
@@ -1835,7 +1835,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/groups": {
+        "/api/groups/": {
             "get": {
                 "security": [
                     {
@@ -2568,7 +2568,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/logs": {
+        "/api/logs/": {
             "get": {
                 "security": [
                     {
@@ -3774,7 +3774,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/model_config": {
+        "/api/model_config/": {
             "post": {
                 "security": [
                     {
@@ -3888,7 +3888,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/model_configs": {
+        "/api/model_configs/": {
             "get": {
                 "security": [
                     {
@@ -4207,7 +4207,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/model_cost_rank": {
+        "/api/model_cost_rank/": {
             "get": {
                 "security": [
                     {
@@ -4820,7 +4820,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/monitor": {
+        "/api/monitor/": {
             "get": {
                 "security": [
                     {
@@ -5094,7 +5094,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/options": {
+        "/api/option/": {
             "get": {
                 "security": [
                     {
@@ -5133,45 +5133,6 @@ const docTemplate = `{
                     }
                 }
             },
-            "post": {
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ],
-                "description": "Updates multiple options",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "option"
-                ],
-                "summary": "Update options",
-                "parameters": [
-                    {
-                        "description": "Options",
-                        "name": "options",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/middleware.APIResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/options/": {
             "put": {
                 "security": [
                     {
@@ -5241,7 +5202,46 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/options/{key}": {
+        "/api/option/batch": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Updates multiple options",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "option"
+                ],
+                "summary": "Update options",
+                "parameters": [
+                    {
+                        "description": "Options",
+                        "name": "options",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/option/{key}": {
             "get": {
                 "security": [
                     {
@@ -5844,7 +5844,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/tokens": {
+        "/api/tokens/": {
             "get": {
                 "security": [
                     {
@@ -6515,7 +6515,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/v1/audio/transcription": {
+        "/v1/audio/transcriptions": {
             "post": {
                 "security": [
                     {
@@ -6588,7 +6588,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/v1/audio/translation": {
+        "/v1/audio/translations": {
             "post": {
                 "security": [
                     {
@@ -7063,7 +7063,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/v1/message": {
+        "/v1/messages": {
             "post": {
                 "security": [
                     {
@@ -7192,7 +7192,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/v1/parse-pdf": {
+        "/v1/parse/pdf": {
             "post": {
                 "security": [
                     {

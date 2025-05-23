@@ -39,7 +39,7 @@ func (g *GroupResponse) MarshalJSON() ([]byte, error) {
 //	@Param			page		query		int	false	"Page number"
 //	@Param			per_page	query		int	false	"Items per page"
 //	@Success		200			{object}	middleware.APIResponse{data=map[string]any{groups=[]GroupResponse,total=int}}
-//	@Router			/api/groups [get]
+//	@Router			/api/groups/ [get]
 func GetGroups(c *gin.Context) {
 	page, perPage := parsePageParams(c)
 	order := c.DefaultQuery("order", "")
