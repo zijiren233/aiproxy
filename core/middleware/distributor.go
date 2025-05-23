@@ -516,6 +516,9 @@ func getRequestUser(c *gin.Context, m mode.Mode) (string, error) {
 func GetRequestUserFromJSON(body []byte) (string, error) {
 	node, err := sonic.GetWithOptions(body, ast.SearchOptions{}, "user")
 	if err != nil {
+		if errors.Is(err, ast.ErrNotExist) {
+			return "", nil
+		}
 		return "", fmt.Errorf("get request user failed: %w", err)
 	}
 	if node.Exists() {
