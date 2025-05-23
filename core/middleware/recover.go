@@ -32,7 +32,7 @@ func GinRecoveryHandler(c *gin.Context) {
 					}
 				}
 			}
-			fileLine, stack := stack(5)
+			fileLine, stack := stack(3)
 			httpRequest, _ := httputil.DumpRequest(c.Request, false)
 			headers := strings.Split(string(httpRequest), "\r\n")
 			for idx, header := range headers {
@@ -42,14 +42,23 @@ func GinRecoveryHandler(c *gin.Context) {
 				}
 			}
 			headersToStr := strings.Join(headers, "\r\n")
-			if brokenPipe {
-				notify.ErrorThrottle("ginPanicRecovery:"+fileLine, time.Minute, "Panic Detected", fmt.Sprintf("%s\n%s", err, headersToStr))
-			} else if gin.IsDebugging() {
-				notify.ErrorThrottle("ginPanicRecovery:"+fileLine, time.Minute, "Panic Detected", fmt.Sprintf("[Recovery] panic recovered:\n%s\n%s\n%s",
-					headersToStr, err, stack))
-			} else {
-				notify.ErrorThrottle("ginPanicRecovery:"+fileLine, time.Minute, "Panic Detected", fmt.Sprintf("[Recovery] panic recovered:\n%s\n%s",
-					err, stack))
+			switch {
+			case brokenPipe:
+				notify.ErrorThrottle("ginPanicRecovery:"+fileLine,
+					time.Minute, "Panic Detected",
+					fmt.Sprintf("%s\n%s", err, headersToStr))
+			case gin.IsDebugging():
+				notify.ErrorThrottle("ginPanicRecovery:"+fileLine,
+					time.Minute, "Panic Detected",
+					fmt.Sprintf("[Recovery] panic recovered:\n%s\n%s\n%s",
+						headersToStr, err, stack),
+				)
+			default:
+				notify.ErrorThrottle("ginPanicRecovery:"+fileLine,
+					time.Minute, "Panic Detected",
+					fmt.Sprintf("[Recovery] panic recovered:\n%s\n%s",
+						err, stack),
+				)
 			}
 			if brokenPipe {
 				// If the connection is dead, we can't write a status to it.
