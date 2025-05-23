@@ -1,6 +1,7 @@
 package router
 
 import (
+	"html/template"
 	"io/fs"
 	"net/http"
 	"net/url"
@@ -15,9 +16,18 @@ import (
 )
 
 func SetStaticFileRouter(router *gin.Engine) {
+	router.SetHTMLTemplate(template.Must(template.New("").Funcs(router.FuncMap).ParseFS(public.Templates, "templates/*")))
+
 	if config.DisableWeb {
+		router.GET("/", func(ctx *gin.Context) {
+			ctx.HTML(http.StatusOK, "index.tmpl", gin.H{
+				"URL":               "https://github.com/labring/aiproxy",
+				"INITIAL_COUNTDOWN": 15,
+			})
+		})
 		return
 	}
+
 	if config.WebPath == "" {
 		err := initFSRouter(router, public.Public.(fs.ReadDirFS), ".")
 		if err != nil {
