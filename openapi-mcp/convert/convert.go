@@ -115,7 +115,7 @@ func getServerURL(from string, dir string) (string, error) {
 // TODO: valid operation
 func newHandler(defaultServer, authorization string, path, method string, _ *openapi3.Operation) server.ToolHandlerFunc {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		arg := getArgs(request.Params.Arguments)
+		arg := getArgs(request.GetArguments())
 
 		// Build the URL
 		serverURL := arg.ServerAddr
