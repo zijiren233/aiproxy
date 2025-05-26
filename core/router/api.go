@@ -191,6 +191,7 @@ func SetAPIRouter(router *gin.Engine) {
 			publicMcpRoute.POST("/", controller.CreatePublicMCP)
 			publicMcpRoute.PUT("/:id", controller.UpdatePublicMCP)
 			publicMcpRoute.DELETE("/:id", controller.DeletePublicMCP)
+			publicMcpRoute.POST("/:id/status", controller.UpdatePublicMCPStatus)
 			publicMcpRoute.GET("/:id/group/:group/params", controller.GetGroupPublicMCPReusingParam)
 			publicMcpRoute.POST("/:id/group/:group/params", controller.SaveGroupPublicMCPReusingParam)
 		}
@@ -202,6 +203,13 @@ func SetAPIRouter(router *gin.Engine) {
 			groupMcpRoute.POST("/:group", controller.CreateGroupMCP)
 			groupMcpRoute.PUT("/:group/:id", controller.UpdateGroupMCP)
 			groupMcpRoute.DELETE("/:group/:id", controller.DeleteGroupMCP)
+			groupMcpRoute.POST("/:group/:id/status", controller.UpdateGroupMCPStatus)
+		}
+
+		embedMcpRoute := apiRouter.Group("/embedmcp")
+		{
+			embedMcpRoute.GET("/", controller.GetEmbedMCPs)
+			embedMcpRoute.POST("/", controller.SaveEmbedMCP)
 		}
 	}
 }

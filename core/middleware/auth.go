@@ -108,7 +108,7 @@ func TokenAuth(c *gin.Context) {
 	if useInternalToken {
 		group = &model.GroupCache{
 			Status:        model.GroupStatusInternal,
-			AvailableSets: slices.AppendSeq(make([]string, 0, len(modelCaches.EnabledModelsBySet)), maps.Keys(modelCaches.EnabledModelsBySet)),
+			AvailableSets: slices.Collect(maps.Keys(modelCaches.EnabledModelsBySet)),
 		}
 	} else {
 		var err error

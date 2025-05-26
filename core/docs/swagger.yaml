@@ -111,6 +111,38 @@ definitions:
       tpm_ratio:
         type: number
     type: object
+  controller.EmbedMCP:
+    properties:
+      config_templates:
+        $ref: '#/definitions/controller.EmbedMCPConfigTemplates'
+      enabled:
+        type: boolean
+      id:
+        type: string
+      name:
+        type: string
+      readme:
+        type: string
+      tags:
+        items:
+          type: string
+        type: array
+    type: object
+  controller.EmbedMCPConfigTemplate:
+    properties:
+      description:
+        type: string
+      example:
+        type: string
+      name:
+        type: string
+      required:
+        type: boolean
+    type: object
+  controller.EmbedMCPConfigTemplates:
+    additionalProperties:
+      $ref: '#/definitions/controller.EmbedMCPConfigTemplate'
+    type: object
   controller.EnabledModelChannel:
     properties:
       id:
@@ -204,6 +236,17 @@ definitions:
         type: array
       root:
         type: string
+    type: object
+  controller.SaveEmbedMCPRequest:
+    properties:
+      enabled:
+        type: boolean
+      id:
+        type: string
+      init_config:
+        additionalProperties:
+          type: string
+        type: object
     type: object
   controller.SaveGroupModelConfigRequest:
     properties:
@@ -314,6 +357,11 @@ definitions:
       status:
         type: integer
     type: object
+  controller.UpdateGroupMCPStatusRequest:
+    properties:
+      status:
+        $ref: '#/definitions/model.GroupMCPStatus'
+    type: object
   controller.UpdateGroupRPMRatioRequest:
     properties:
       rpm_ratio:
@@ -337,6 +385,11 @@ definitions:
         type: array
       status:
         type: integer
+    type: object
+  controller.UpdatePublicMCPStatusRequest:
+    properties:
+      status:
+        $ref: '#/definitions/model.PublicMCPStatus'
     type: object
   controller.UpdateTokenNameRequest:
     properties:
@@ -914,6 +967,8 @@ definitions:
         $ref: '#/definitions/model.MCPOpenAPIConfig'
       proxy_config:
         $ref: '#/definitions/model.GroupMCPProxyConfig'
+      status:
+        $ref: '#/definitions/model.GroupMCPStatus'
       type:
         $ref: '#/definitions/model.GroupMCPType'
       update_at:
@@ -932,6 +987,14 @@ definitions:
       url:
         type: string
     type: object
+  model.GroupMCPStatus:
+    enum:
+    - 1
+    - 2
+    type: integer
+    x-enum-varnames:
+    - GroupMCPStatusEnabled
+    - GroupMCPStatusDisabled
   model.GroupMCPType:
     enum:
     - mcp_proxy_sse
@@ -1112,6 +1175,26 @@ definitions:
       user:
         description: https://platform.openai.com/docs/guides/safety-best-practices#end-user-ids
         type: string
+    type: object
+  model.MCPEmbeddingConfig:
+    properties:
+      init:
+        additionalProperties:
+          type: string
+        type: object
+      reusing:
+        additionalProperties:
+          $ref: '#/definitions/model.MCPEmbeddingReusingConfig'
+        type: object
+    type: object
+  model.MCPEmbeddingReusingConfig:
+    properties:
+      description:
+        type: string
+      name:
+        type: string
+      required:
+        type: boolean
     type: object
   model.MCPOpenAPIConfig:
     properties:
@@ -1346,10 +1429,10 @@ definitions:
     type: object
   model.PublicMCP:
     properties:
-      author:
-        type: string
       created_at:
         type: string
+      embed_config:
+        $ref: '#/definitions/model.MCPEmbeddingConfig'
       id:
         type: string
       logo_url:
@@ -1368,6 +1451,8 @@ definitions:
         type: string
       repo_url:
         type: string
+      status:
+        $ref: '#/definitions/model.PublicMCPStatus'
       tags:
         items:
           type: string
@@ -1409,12 +1494,21 @@ definitions:
       update_at:
         type: string
     type: object
+  model.PublicMCPStatus:
+    enum:
+    - 1
+    - 2
+    type: integer
+    x-enum-varnames:
+    - PublicMCPStatusEnabled
+    - PublicMCPStatusDisabled
   model.PublicMCPType:
     enum:
     - mcp_proxy_sse
     - mcp_proxy_streamable
     - mcp_git_repo
     - mcp_openapi
+    - mcp_embed
     type: string
     x-enum-comments:
       PublicMCPTypeGitRepo: read only
@@ -1423,6 +1517,7 @@ definitions:
     - PublicMCPTypeProxyStreamable
     - PublicMCPTypeGitRepo
     - PublicMCPTypeOpenAPI
+    - PublicMCPTypeEmbed
   model.RequestDetail:
     properties:
       id:
@@ -2268,6 +2363,46 @@ paths:
       summary: Get model usage data for a specific group
       tags:
       - dashboard
+  /api/embedmcp/:
+    get:
+      consumes:
+      - application/json
+      description: Get embed mcp
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/controller.EmbedMCP'
+            type: array
+      security:
+      - ApiKeyAuth: []
+      summary: Get embed mcp
+      tags:
+      - embedmcp
+    post:
+      consumes:
+      - application/json
+      description: Save embed mcp
+      parameters:
+      - description: Save embed mcp request
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/controller.SaveEmbedMCPRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+      security:
+      - ApiKeyAuth: []
+      summary: Save embed mcp
+      tags:
+      - embedmcp
   /api/group/{group}:
     delete:
       description: Deletes a group by its name
@@ -3531,6 +3666,10 @@ paths:
         in: query
         name: keyword
         type: string
+      - description: MCP status
+        in: query
+        name: status
+        type: integer
       produces:
       - application/json
       responses:
@@ -3677,6 +3816,40 @@ paths:
       summary: Update Group MCP
       tags:
       - mcp
+  /api/mcp/group/{group}/{id}/status:
+    post:
+      consumes:
+      - application/json
+      description: Update the status of a Group MCP
+      parameters:
+      - description: MCP ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Group ID
+        in: path
+        name: group
+        required: true
+        type: string
+      - description: MCP status
+        in: body
+        name: status
+        required: true
+        schema:
+          $ref: '#/definitions/controller.UpdateGroupMCPStatusRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/middleware.APIResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Update Group MCP status
+      tags:
+      - mcp
   /api/mcp/public/:
     get:
       description: Get a list of MCPs with pagination and filtering
@@ -3697,6 +3870,10 @@ paths:
         in: query
         name: keyword
         type: string
+      - description: MCP status
+        in: query
+        name: status
+        type: integer
       produces:
       - application/json
       responses:
@@ -3875,6 +4052,35 @@ paths:
       security:
       - ApiKeyAuth: []
       summary: Create or update group MCP reusing parameters
+      tags:
+      - mcp
+  /api/mcp/public/{id}/status:
+    post:
+      consumes:
+      - application/json
+      description: Update the status of an MCP
+      parameters:
+      - description: MCP ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: MCP status
+        in: body
+        name: status
+        required: true
+        schema:
+          $ref: '#/definitions/controller.UpdatePublicMCPStatusRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/middleware.APIResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Update MCP status
       tags:
       - mcp
   /api/model_config/:
@@ -5449,38 +5655,58 @@ paths:
   /mcp/group/{id}/sse:
     get:
       responses: {}
+      security:
+      - ApiKeyAuth: []
       summary: Group MCP SSE Server
   /mcp/group/{id}/streamable:
     delete:
       responses: {}
+      security:
+      - ApiKeyAuth: []
       summary: Group MCP Streamable Server
     get:
       responses: {}
+      security:
+      - ApiKeyAuth: []
       summary: Group MCP Streamable Server
     post:
       responses: {}
+      security:
+      - ApiKeyAuth: []
       summary: Group MCP Streamable Server
   /mcp/group/message:
     post:
       responses: {}
+      security:
+      - ApiKeyAuth: []
       summary: MCP SSE Proxy
   /mcp/public/{id}/sse:
     get:
       responses: {}
+      security:
+      - ApiKeyAuth: []
       summary: Public MCP SSE Server
   /mcp/public/{id}/streamable:
     delete:
       responses: {}
+      security:
+      - ApiKeyAuth: []
       summary: Public MCP Streamable Server
     get:
       responses: {}
+      security:
+      - ApiKeyAuth: []
       summary: Public MCP Streamable Server
     post:
       responses: {}
+      security:
+      - ApiKeyAuth: []
       summary: Public MCP Streamable Server
   /mcp/public/message:
     post:
       responses: {}
+      security:
+      - ApiKeyAuth: []
       summary: Public MCP SSE Server
   /v1/audio/speech:
     post:

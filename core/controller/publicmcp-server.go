@@ -17,6 +17,7 @@ import (
 	"github.com/labring/aiproxy/core/common"
 	"github.com/labring/aiproxy/core/common/mcpproxy"
 	statelessmcp "github.com/labring/aiproxy/core/common/stateless-mcp"
+	"github.com/labring/aiproxy/core/embedmcp"
 	"github.com/labring/aiproxy/core/middleware"
 	"github.com/labring/aiproxy/core/model"
 	"github.com/labring/aiproxy/openapi-mcp/convert"
@@ -117,11 +118,12 @@ func (r *redisStoreManager) Delete(session string) {
 // PublicMCPSseServer godoc
 //
 //	@Summary	Public MCP SSE Server
+//	@Security	ApiKeyAuth
 //	@Router		/mcp/public/{id}/sse [get]
 func PublicMCPSseServer(c *gin.Context) {
 	mcpID := c.Param("id")
 
-	publicMcp, err := model.GetPublicMCPByID(mcpID)
+	publicMcp, err := model.GetEnabledPublicMCPByID(mcpID)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, CreateMCPErrorResponse(
 			mcp.NewRequestId(nil),
@@ -145,6 +147,8 @@ func PublicMCPSseServer(c *gin.Context) {
 			return
 		}
 		handleSSEMCPServer(c, server, model.PublicMCPTypeOpenAPI)
+	case model.PublicMCPTypeEmbed:
+		handlePublicEmbedMCP(c, publicMcp.ID, publicMcp.EmbedConfig)
 	default:
 		c.JSON(http.StatusBadRequest, CreateMCPErrorResponse(
 			mcp.NewRequestId(nil),
@@ -153,6 +157,33 @@ func PublicMCPSseServer(c *gin.Context) {
 		))
 		return
 	}
+}
+
+func handlePublicEmbedMCP(c *gin.Context, mcpID string, config *model.MCPEmbeddingConfig) {
+	var reusingConfig map[string]string
+	if len(config.Reusing) != 0 {
+		group := middleware.GetGroup(c)
+		param, err := model.GetGroupPublicMCPReusingParam(mcpID, group.ID)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, CreateMCPErrorResponse(
+				mcp.NewRequestId(nil),
+				mcp.INVALID_REQUEST,
+				err.Error(),
+			))
+			return
+		}
+		reusingConfig = param.ReusingParams
+	}
+	server, err := embedmcp.GetMCPServer(mcpID, config.Init, reusingConfig)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, CreateMCPErrorResponse(
+			mcp.NewRequestId(nil),
+			mcp.INVALID_REQUEST,
+			err.Error(),
+		))
+		return
+	}
+	handleSSEMCPServer(c, server, model.PublicMCPTypeEmbed)
 }
 
 // handlePublicProxySSE processes SSE proxy requests
@@ -348,6 +379,7 @@ func processReusingParams(reusingParams map[string]model.ReusingParam, mcpID str
 // PublicMCPMessage godoc
 //
 //	@Summary	Public MCP SSE Server
+//	@Security	ApiKeyAuth
 //	@Router		/mcp/public/message [post]
 func PublicMCPMessage(c *gin.Context) {
 	token := middleware.GetToken(c)
@@ -380,6 +412,8 @@ func PublicMCPMessage(c *gin.Context) {
 			newPublicMcpEndpoint(token.Key, mcpType),
 		)
 	case model.PublicMCPTypeOpenAPI:
+		sendMCPSSEMessage(c, mcpTypeStr, sessionID)
+	case model.PublicMCPTypeEmbed:
 		sendMCPSSEMessage(c, mcpTypeStr, sessionID)
 	default:
 		c.JSON(http.StatusBadRequest, CreateMCPErrorResponse(
@@ -425,6 +459,7 @@ func sendMCPSSEMessage(c *gin.Context, mcpType, sessionID string) {
 // PublicMCPStreamable godoc
 //
 //	@Summary	Public MCP Streamable Server
+//	@Security	ApiKeyAuth
 //	@Router		/mcp/public/{id}/streamable [get]
 //	@Router		/mcp/public/{id}/streamable [post]
 //	@Router		/mcp/public/{id}/streamable [delete]
@@ -432,7 +467,7 @@ func sendMCPSSEMessage(c *gin.Context, mcpType, sessionID string) {
 // TODO: batch and sse support
 func PublicMCPStreamable(c *gin.Context) {
 	mcpID := c.Param("id")
-	publicMcp, err := model.GetPublicMCPByID(mcpID)
+	publicMcp, err := model.GetEnabledPublicMCPByID(mcpID)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, CreateMCPErrorResponse(
 			mcp.NewRequestId(nil),
@@ -456,6 +491,8 @@ func PublicMCPStreamable(c *gin.Context) {
 			return
 		}
 		handleStreamableMCPServer(c, server)
+	case model.PublicMCPTypeEmbed:
+		handlePublicEmbedStreamable(c, mcpID, publicMcp.EmbedConfig)
 	default:
 		c.JSON(http.StatusBadRequest, CreateMCPErrorResponse(
 			mcp.NewRequestId(nil),
@@ -463,6 +500,33 @@ func PublicMCPStreamable(c *gin.Context) {
 			"unknown mcp type",
 		))
 	}
+}
+
+func handlePublicEmbedStreamable(c *gin.Context, mcpID string, config *model.MCPEmbeddingConfig) {
+	var reusingConfig map[string]string
+	if len(config.Reusing) != 0 {
+		group := middleware.GetGroup(c)
+		param, err := model.GetGroupPublicMCPReusingParam(mcpID, group.ID)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, CreateMCPErrorResponse(
+				mcp.NewRequestId(nil),
+				mcp.INVALID_REQUEST,
+				err.Error(),
+			))
+			return
+		}
+		reusingConfig = param.ReusingParams
+	}
+	server, err := embedmcp.GetMCPServer(mcpID, config.Init, reusingConfig)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, CreateMCPErrorResponse(
+			mcp.NewRequestId(nil),
+			mcp.INVALID_REQUEST,
+			err.Error(),
+		))
+		return
+	}
+	handleStreamableMCPServer(c, server)
 }
 
 // handlePublicProxyStreamable processes Streamable proxy requests

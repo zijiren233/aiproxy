@@ -45,6 +45,7 @@ func (m *groupMcpEndpointProvider) LoadEndpoint(endpoint string) (session string
 // GroupMCPSseServer godoc
 //
 //	@Summary	Group MCP SSE Server
+//	@Security	ApiKeyAuth
 //	@Router		/mcp/group/{id}/sse [get]
 func GroupMCPSseServer(c *gin.Context) {
 	id := c.Param("id")
@@ -59,7 +60,7 @@ func GroupMCPSseServer(c *gin.Context) {
 
 	group := middleware.GetGroup(c)
 
-	groupMcp, err := model.GetGroupMCPByID(id, group.ID)
+	groupMcp, err := model.GetEnabledGroupMCPByID(id, group.ID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, CreateMCPErrorResponse(
 			mcp.NewRequestId(nil),
@@ -162,6 +163,7 @@ func handleGroupMCPServer(c *gin.Context, s *server.MCPServer, mcpType model.Gro
 // GroupMCPMessage godoc
 //
 //	@Summary	MCP SSE Proxy
+//	@Security	ApiKeyAuth
 //	@Router		/mcp/group/message [post]
 func GroupMCPMessage(c *gin.Context) {
 	token := middleware.GetToken(c)
@@ -201,6 +203,7 @@ func GroupMCPMessage(c *gin.Context) {
 // GroupMCPStreamable godoc
 //
 //	@Summary	Group MCP Streamable Server
+//	@Security	ApiKeyAuth
 //	@Router		/mcp/group/{id}/streamable [get]
 //	@Router		/mcp/group/{id}/streamable [post]
 //	@Router		/mcp/group/{id}/streamable [delete]
@@ -217,7 +220,7 @@ func GroupMCPStreamable(c *gin.Context) {
 
 	group := middleware.GetGroup(c)
 
-	groupMcp, err := model.GetGroupMCPByID(id, group.ID)
+	groupMcp, err := model.GetEnabledGroupMCPByID(id, group.ID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, CreateMCPErrorResponse(
 			mcp.NewRequestId(nil),

@@ -1133,6 +1133,71 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/embedmcp/": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Get embed mcp",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "embedmcp"
+                ],
+                "summary": "Get embed mcp",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/controller.EmbedMCP"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Save embed mcp",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "embedmcp"
+                ],
+                "summary": "Save embed mcp",
+                "parameters": [
+                    {
+                        "description": "Save embed mcp request",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/controller.SaveEmbedMCPRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
         "/api/group/{group}": {
             "get": {
                 "security": [
@@ -3207,6 +3272,12 @@ const docTemplate = `{
                         "description": "Search keyword",
                         "name": "keyword",
                         "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "MCP status",
+                        "name": "status",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -3445,6 +3516,59 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/mcp/group/{group}/{id}/status": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Update the status of a Group MCP",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "mcp"
+                ],
+                "summary": "Update Group MCP status",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "MCP ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Group ID",
+                        "name": "group",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "MCP status",
+                        "name": "status",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/controller.UpdateGroupMCPStatusRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/mcp/public/": {
             "get": {
                 "security": [
@@ -3483,6 +3607,12 @@ const docTemplate = `{
                         "type": "string",
                         "description": "Search keyword",
                         "name": "keyword",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "MCP status",
+                        "name": "status",
                         "in": "query"
                     }
                 ],
@@ -3761,6 +3891,52 @@ const docTemplate = `{
                         "required": true,
                         "schema": {
                             "$ref": "#/definitions/model.PublicMCPReusingParam"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/mcp/public/{id}/status": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Update the status of an MCP",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "mcp"
+                ],
+                "summary": "Update MCP status",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "MCP ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "MCP status",
+                        "name": "status",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/controller.UpdatePublicMCPStatusRequest"
                         }
                     }
                 ],
@@ -6397,52 +6573,102 @@ const docTemplate = `{
         },
         "/mcp/group/message": {
             "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
                 "summary": "MCP SSE Proxy",
                 "responses": {}
             }
         },
         "/mcp/group/{id}/sse": {
             "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
                 "summary": "Group MCP SSE Server",
                 "responses": {}
             }
         },
         "/mcp/group/{id}/streamable": {
             "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
                 "summary": "Group MCP Streamable Server",
                 "responses": {}
             },
             "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
                 "summary": "Group MCP Streamable Server",
                 "responses": {}
             },
             "delete": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
                 "summary": "Group MCP Streamable Server",
                 "responses": {}
             }
         },
         "/mcp/public/message": {
             "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
                 "summary": "Public MCP SSE Server",
                 "responses": {}
             }
         },
         "/mcp/public/{id}/sse": {
             "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
                 "summary": "Public MCP SSE Server",
                 "responses": {}
             }
         },
         "/mcp/public/{id}/streamable": {
             "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
                 "summary": "Public MCP Streamable Server",
                 "responses": {}
             },
             "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
                 "summary": "Public MCP Streamable Server",
                 "responses": {}
             },
             "delete": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
                 "summary": "Public MCP Streamable Server",
                 "responses": {}
             }
@@ -7504,6 +7730,55 @@ const docTemplate = `{
                 }
             }
         },
+        "controller.EmbedMCP": {
+            "type": "object",
+            "properties": {
+                "config_templates": {
+                    "$ref": "#/definitions/controller.EmbedMCPConfigTemplates"
+                },
+                "enabled": {
+                    "type": "boolean"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "readme": {
+                    "type": "string"
+                },
+                "tags": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "controller.EmbedMCPConfigTemplate": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "example": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "required": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "controller.EmbedMCPConfigTemplates": {
+            "type": "object",
+            "additionalProperties": {
+                "$ref": "#/definitions/controller.EmbedMCPConfigTemplate"
+            }
+        },
         "controller.EnabledModelChannel": {
             "type": "object",
             "properties": {
@@ -7645,6 +7920,23 @@ const docTemplate = `{
                 },
                 "root": {
                     "type": "string"
+                }
+            }
+        },
+        "controller.SaveEmbedMCPRequest": {
+            "type": "object",
+            "properties": {
+                "enabled": {
+                    "type": "boolean"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "init_config": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
                 }
             }
         },
@@ -7813,6 +8105,14 @@ const docTemplate = `{
                 }
             }
         },
+        "controller.UpdateGroupMCPStatusRequest": {
+            "type": "object",
+            "properties": {
+                "status": {
+                    "$ref": "#/definitions/model.GroupMCPStatus"
+                }
+            }
+        },
         "controller.UpdateGroupRPMRatioRequest": {
             "type": "object",
             "properties": {
@@ -7848,6 +8148,14 @@ const docTemplate = `{
                 },
                 "status": {
                     "type": "integer"
+                }
+            }
+        },
+        "controller.UpdatePublicMCPStatusRequest": {
+            "type": "object",
+            "properties": {
+                "status": {
+                    "$ref": "#/definitions/model.PublicMCPStatus"
                 }
             }
         },
@@ -8671,6 +8979,9 @@ const docTemplate = `{
                 "proxy_config": {
                     "$ref": "#/definitions/model.GroupMCPProxyConfig"
                 },
+                "status": {
+                    "$ref": "#/definitions/model.GroupMCPStatus"
+                },
                 "type": {
                     "$ref": "#/definitions/model.GroupMCPType"
                 },
@@ -8698,6 +9009,17 @@ const docTemplate = `{
                     "type": "string"
                 }
             }
+        },
+        "model.GroupMCPStatus": {
+            "type": "integer",
+            "enum": [
+                1,
+                2
+            ],
+            "x-enum-varnames": [
+                "GroupMCPStatusEnabled",
+                "GroupMCPStatusDisabled"
+            ]
         },
         "model.GroupMCPType": {
             "type": "string",
@@ -8963,6 +9285,37 @@ const docTemplate = `{
                 "user": {
                     "description": "https://platform.openai.com/docs/guides/safety-best-practices#end-user-ids",
                     "type": "string"
+                }
+            }
+        },
+        "model.MCPEmbeddingConfig": {
+            "type": "object",
+            "properties": {
+                "init": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
+                "reusing": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "$ref": "#/definitions/model.MCPEmbeddingReusingConfig"
+                    }
+                }
+            }
+        },
+        "model.MCPEmbeddingReusingConfig": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "required": {
+                    "type": "boolean"
                 }
             }
         },
@@ -9284,11 +9637,11 @@ const docTemplate = `{
         "model.PublicMCP": {
             "type": "object",
             "properties": {
-                "author": {
-                    "type": "string"
-                },
                 "created_at": {
                     "type": "string"
+                },
+                "embed_config": {
+                    "$ref": "#/definitions/model.MCPEmbeddingConfig"
                 },
                 "id": {
                     "type": "string"
@@ -9316,6 +9669,9 @@ const docTemplate = `{
                 },
                 "repo_url": {
                     "type": "string"
+                },
+                "status": {
+                    "$ref": "#/definitions/model.PublicMCPStatus"
                 },
                 "tags": {
                     "type": "array",
@@ -9380,13 +9736,25 @@ const docTemplate = `{
                 }
             }
         },
+        "model.PublicMCPStatus": {
+            "type": "integer",
+            "enum": [
+                1,
+                2
+            ],
+            "x-enum-varnames": [
+                "PublicMCPStatusEnabled",
+                "PublicMCPStatusDisabled"
+            ]
+        },
         "model.PublicMCPType": {
             "type": "string",
             "enum": [
                 "mcp_proxy_sse",
                 "mcp_proxy_streamable",
                 "mcp_git_repo",
-                "mcp_openapi"
+                "mcp_openapi",
+                "mcp_embed"
             ],
             "x-enum-comments": {
                 "PublicMCPTypeGitRepo": "read only"
@@ -9395,7 +9763,8 @@ const docTemplate = `{
                 "PublicMCPTypeProxySSE",
                 "PublicMCPTypeProxyStreamable",
                 "PublicMCPTypeGitRepo",
-                "PublicMCPTypeOpenAPI"
+                "PublicMCPTypeOpenAPI",
+                "PublicMCPTypeEmbed"
             ]
         },
         "model.RequestDetail": {

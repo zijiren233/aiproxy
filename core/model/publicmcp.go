@@ -10,6 +10,13 @@ import (
 	"gorm.io/gorm"
 )
 
+type PublicMCPStatus int
+
+const (
+	PublicMCPStatusEnabled PublicMCPStatus = iota + 1
+	PublicMCPStatusDisabled
+)
+
 const (
 	ErrPublicMCPNotFound       = "public mcp"
 	ErrMCPReusingParamNotFound = "mcp reusing param"
@@ -22,6 +29,7 @@ const (
 	PublicMCPTypeProxyStreamable PublicMCPType = "mcp_proxy_streamable"
 	PublicMCPTypeGitRepo         PublicMCPType = "mcp_git_repo" // read only
 	PublicMCPTypeOpenAPI         PublicMCPType = "mcp_openapi"
+	PublicMCPTypeEmbed           PublicMCPType = "mcp_embed"
 )
 
 type ParamType string
@@ -91,10 +99,22 @@ type MCPOpenAPIConfig struct {
 	Authorization  string `json:"authorization,omitempty"`
 }
 
+type MCPEmbeddingReusingConfig struct {
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	Required    bool   `json:"required"`
+}
+
+type MCPEmbeddingConfig struct {
+	Init    map[string]string                    `json:"init"`
+	Reusing map[string]MCPEmbeddingReusingConfig `json:"reusing"`
+}
+
 type PublicMCP struct {
 	ID                     string                  `gorm:"primaryKey"                    json:"id"`
-	CreatedAt              time.Time               `gorm:"index"                         json:"created_at"`
-	UpdateAt               time.Time               `gorm:"index"                         json:"update_at"`
+	Status                 PublicMCPStatus         `gorm:"index;default:1"               json:"status"`
+	CreatedAt              time.Time               `gorm:"index,autoCreateTime"          json:"created_at"`
+	UpdateAt               time.Time               `gorm:"index,autoUpdateTime"          json:"update_at"`
 	PublicMCPReusingParams []PublicMCPReusingParam `gorm:"foreignKey:MCPID"              json:"-"`
 	Name                   string                  `json:"name"`
 	Type                   PublicMCPType           `gorm:"index"                         json:"type"`
@@ -102,16 +122,20 @@ type PublicMCP struct {
 	ReadmeURL              string                  `json:"readme_url"`
 	Readme                 string                  `gorm:"type:text"                     json:"readme"`
 	Tags                   []string                `gorm:"serializer:fastjson;type:text" json:"tags,omitempty"`
-	Author                 string                  `json:"author"`
 	LogoURL                string                  `json:"logo_url"`
 	Price                  MCPPrice                `gorm:"embedded"                      json:"price"`
 	ProxyConfig            *PublicMCPProxyConfig   `gorm:"serializer:fastjson;type:text" json:"proxy_config,omitempty"`
 	OpenAPIConfig          *MCPOpenAPIConfig       `gorm:"serializer:fastjson;type:text" json:"openapi_config,omitempty"`
+	EmbedConfig            *MCPEmbeddingConfig     `gorm:"serializer:fastjson;type:text" json:"embed_config,omitempty"`
 }
 
-func (p *PublicMCP) BeforeCreate(_ *gorm.DB) error {
+func (p *PublicMCP) BeforeSave(_ *gorm.DB) error {
 	if p.ID == "" {
 		return errors.New("mcp id is empty")
+	}
+
+	if p.Status == 0 {
+		p.Status = PublicMCPStatusEnabled
 	}
 
 	if p.OpenAPIConfig != nil {
@@ -173,6 +197,10 @@ func CreatePublicMCP(mcp *PublicMCP) error {
 	return err
 }
 
+func SavePublicMCP(mcp *PublicMCP) error {
+	return DB.Save(mcp).Error
+}
+
 // UpdatePublicMCP updates an existing MCP
 func UpdatePublicMCP(mcp *PublicMCP) error {
 	selects := []string{
@@ -183,6 +211,10 @@ func UpdatePublicMCP(mcp *PublicMCP) error {
 		"logo_url",
 		"proxy_sse_config",
 		"openapi_config",
+		"embed_config",
+	}
+	if mcp.Status != 0 {
+		selects = append(selects, "status")
 	}
 	if mcp.Name != "" {
 		selects = append(selects, "name")
@@ -198,6 +230,11 @@ func UpdatePublicMCP(mcp *PublicMCP) error {
 		Select(selects).
 		Where("id = ?", mcp.ID).
 		Updates(mcp)
+	return HandleUpdateResult(result, ErrPublicMCPNotFound)
+}
+
+func UpdatePublicMCPStatus(id string, status PublicMCPStatus) error {
+	result := DB.Model(&PublicMCP{}).Where("id = ?", id).Update("status", status)
 	return HandleUpdateResult(result, ErrPublicMCPNotFound)
 }
 
@@ -220,8 +257,18 @@ func GetPublicMCPByID(id string) (*PublicMCP, error) {
 	return &mcp, HandleNotFound(err, ErrPublicMCPNotFound)
 }
 
+// GetEnabledPublicMCPByID retrieves an MCP by ID
+func GetEnabledPublicMCPByID(id string) (*PublicMCP, error) {
+	if id == "" {
+		return nil, errors.New("MCP id is empty")
+	}
+	var mcp PublicMCP
+	err := DB.Where("id = ? AND status = ?", id, PublicMCPStatusEnabled).First(&mcp).Error
+	return &mcp, HandleNotFound(err, ErrPublicMCPNotFound)
+}
+
 // GetPublicMCPs retrieves MCPs with pagination and filtering
-func GetPublicMCPs(page int, perPage int, mcpType PublicMCPType, keyword string) (mcps []*PublicMCP, total int64, err error) {
+func GetPublicMCPs(page int, perPage int, mcpType PublicMCPType, keyword string, status PublicMCPStatus) (mcps []*PublicMCP, total int64, err error) {
 	tx := DB.Model(&PublicMCP{})
 
 	if mcpType != "" {
@@ -235,6 +282,10 @@ func GetPublicMCPs(page int, perPage int, mcpType PublicMCPType, keyword string)
 		} else {
 			tx = tx.Where("name LIKE ? OR author LIKE ? OR tags LIKE ? OR id LIKE ?", keyword, keyword, keyword, keyword)
 		}
+	}
+
+	if status != 0 {
+		tx = tx.Where("status = ?", status)
 	}
 
 	err = tx.Count(&total).Error
@@ -254,6 +305,19 @@ func GetPublicMCPs(page int, perPage int, mcpType PublicMCPType, keyword string)
 		Error
 
 	return mcps, total, err
+}
+
+func GetPublicMCPsEnabled(ids []string) ([]string, error) {
+	var mcpIDs []string
+	err := DB.Model(&PublicMCP{}).
+		Select("id").
+		Where("id IN (?) AND status = ?", ids, PublicMCPStatusEnabled).
+		Pluck("id", &mcpIDs).
+		Error
+	if err != nil {
+		return nil, err
+	}
+	return mcpIDs, nil
 }
 
 func SaveGroupPublicMCPReusingParam(param *PublicMCPReusingParam) (err error) {
