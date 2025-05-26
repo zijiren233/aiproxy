@@ -141,13 +141,14 @@ type EmbedMcp struct {
 	NewServer       NewServerFunc
 }
 
-func (e EmbedMcp) ToPublicMCP(initConfig map[string]string, enabled bool) (*model.PublicMCP, error) {
+func EmbedMCPToPublicMCP(e EmbedMcp, initConfig map[string]string, enabled bool) (*model.PublicMCP, error) {
 	embedConfig, err := GetEmbedConfig(e.ConfigTemplates, initConfig)
 	if err != nil {
 		return nil, err
 	}
 	pmcp := &model.PublicMCP{
 		ID:          e.ID,
+		Type:        model.PublicMCPTypeEmbed,
 		Name:        e.Name,
 		Readme:      e.Readme,
 		Tags:        e.Tags,
