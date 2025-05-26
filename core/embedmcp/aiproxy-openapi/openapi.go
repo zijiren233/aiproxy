@@ -14,7 +14,7 @@ var configTemplates = map[string]embedmcp.ConfigTemplate{
 	"host": {
 		Name:        "host",
 		Required:    embedmcp.ConfigRequiredTypeInitOnly,
-		Example:     "http://localhost:8080",
+		Example:     "http://localhost:3000",
 		Description: "The host of the OpenAPI server",
 		Validator: func(value string) error {
 			u, err := url.Parse(value)
