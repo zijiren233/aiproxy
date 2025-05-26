@@ -22,6 +22,7 @@ const (
 	PublicMCPTypeProxyStreamable PublicMCPType = "mcp_proxy_streamable"
 	PublicMCPTypeGitRepo         PublicMCPType = "mcp_git_repo" // read only
 	PublicMCPTypeOpenAPI         PublicMCPType = "mcp_openapi"
+	PublicMCPTypeEmbed           PublicMCPType = "mcp_embed"
 )
 
 type ParamType string
@@ -91,6 +92,10 @@ type MCPOpenAPIConfig struct {
 	Authorization  string `json:"authorization,omitempty"`
 }
 
+type MCPEmbeddingConfig struct {
+	Init map[string]string `json:"init"`
+}
+
 type PublicMCP struct {
 	ID                     string                  `gorm:"primaryKey"                    json:"id"`
 	CreatedAt              time.Time               `gorm:"index"                         json:"created_at"`
@@ -102,11 +107,11 @@ type PublicMCP struct {
 	ReadmeURL              string                  `json:"readme_url"`
 	Readme                 string                  `gorm:"type:text"                     json:"readme"`
 	Tags                   []string                `gorm:"serializer:fastjson;type:text" json:"tags,omitempty"`
-	Author                 string                  `json:"author"`
 	LogoURL                string                  `json:"logo_url"`
 	Price                  MCPPrice                `gorm:"embedded"                      json:"price"`
 	ProxyConfig            *PublicMCPProxyConfig   `gorm:"serializer:fastjson;type:text" json:"proxy_config,omitempty"`
 	OpenAPIConfig          *MCPOpenAPIConfig       `gorm:"serializer:fastjson;type:text" json:"openapi_config,omitempty"`
+	EmbeddingConfig        *MCPEmbeddingConfig     `gorm:"serializer:fastjson;type:text" json:"embedding_config,omitempty"`
 }
 
 func (p *PublicMCP) BeforeCreate(_ *gorm.DB) error {

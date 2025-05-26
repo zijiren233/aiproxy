@@ -17,6 +17,7 @@ import (
 	"github.com/labring/aiproxy/core/common"
 	"github.com/labring/aiproxy/core/common/mcpproxy"
 	statelessmcp "github.com/labring/aiproxy/core/common/stateless-mcp"
+	"github.com/labring/aiproxy/core/embedmcp"
 	"github.com/labring/aiproxy/core/middleware"
 	"github.com/labring/aiproxy/core/model"
 	"github.com/labring/aiproxy/openapi-mcp/convert"
@@ -145,6 +146,17 @@ func PublicMCPSseServer(c *gin.Context) {
 			return
 		}
 		handleSSEMCPServer(c, server, model.PublicMCPTypeOpenAPI)
+	case model.PublicMCPTypeEmbed:
+		server, err := embedmcp.GetServer(publicMcp.ID, publicMcp.EmbeddingConfig.Init, nil)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, CreateMCPErrorResponse(
+				mcp.NewRequestId(nil),
+				mcp.INVALID_REQUEST,
+				err.Error(),
+			))
+			return
+		}
+		handleSSEMCPServer(c, server, model.PublicMCPTypeEmbed)
 	default:
 		c.JSON(http.StatusBadRequest, CreateMCPErrorResponse(
 			mcp.NewRequestId(nil),
@@ -381,6 +393,8 @@ func PublicMCPMessage(c *gin.Context) {
 		)
 	case model.PublicMCPTypeOpenAPI:
 		sendMCPSSEMessage(c, mcpTypeStr, sessionID)
+	case model.PublicMCPTypeEmbed:
+		sendMCPSSEMessage(c, mcpTypeStr, sessionID)
 	default:
 		c.JSON(http.StatusBadRequest, CreateMCPErrorResponse(
 			mcp.NewRequestId(nil),
@@ -447,6 +461,17 @@ func PublicMCPStreamable(c *gin.Context) {
 		handlePublicProxyStreamable(c, mcpID, publicMcp.ProxyConfig)
 	case model.PublicMCPTypeOpenAPI:
 		server, err := newOpenAPIMCPServer(publicMcp.OpenAPIConfig)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, CreateMCPErrorResponse(
+				mcp.NewRequestId(nil),
+				mcp.INVALID_REQUEST,
+				err.Error(),
+			))
+			return
+		}
+		handleStreamableMCPServer(c, server)
+	case model.PublicMCPTypeEmbed:
+		server, err := embedmcp.GetServer(publicMcp.ID, publicMcp.EmbeddingConfig.Init, nil)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, CreateMCPErrorResponse(
 				mcp.NewRequestId(nil),
