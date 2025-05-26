@@ -1,7 +1,6 @@
 package reqlimit
 
 import (
-	"fmt"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -31,8 +30,8 @@ func NewInMemoryRecord() *InMemoryRecord {
 	return rl
 }
 
-func (m *InMemoryRecord) getEntry(key1, key2 string) *entry {
-	key := fmt.Sprintf("%s:%s", key1, key2)
+func (m *InMemoryRecord) getEntry(keys []string) *entry {
+	key := strings.Join(keys, ":")
 	actual, _ := m.entries.LoadOrStore(key, &entry{
 		windows: make(map[int64]*windowCounts),
 	})
@@ -57,14 +56,13 @@ func (m *InMemoryRecord) cleanupAndCount(e *entry, cutoff int64) (int64, int64) 
 	return normalCount, overCount
 }
 
-func (m *InMemoryRecord) PushRequest(key1, key2 string, max int64, duration time.Duration, n int64) (normalCount int64, overCount int64, secondCount int64) {
-	e := m.getEntry(key1, key2)
+func (m *InMemoryRecord) PushRequest(max int64, duration time.Duration, n int64, keys ...string) (normalCount int64, overCount int64, secondCount int64) {
+	e := m.getEntry(keys)
 
 	e.Lock()
 	defer e.Unlock()
 
 	now := time.Now()
-
 	e.lastAccess.Store(now)
 
 	windowStart := now.Unix()
@@ -89,16 +87,15 @@ func (m *InMemoryRecord) PushRequest(key1, key2 string, max int64, duration time
 	return normalCount, overCount, wc.normal + wc.over
 }
 
-func (m *InMemoryRecord) GetRequest(key1, key2 string, duration time.Duration) (totalCount int64, secondCount int64) {
+func (m *InMemoryRecord) GetRequest(duration time.Duration, keys ...string) (totalCount int64, secondCount int64) {
 	nowSecond := time.Now().Unix()
 	cutoff := nowSecond - int64(duration.Seconds())
 
 	m.entries.Range(func(key, value any) bool {
 		k, _ := key.(string)
-		currentKey1, currentKey2 := parseKey(k)
+		currentKeys := parseKeys(k)
 
-		if (key1 == "*" || key1 == currentKey1) &&
-			(key2 == "" || key2 == "*" || key2 == currentKey2) {
+		if matchKeys(keys, currentKeys) {
 			e, _ := value.(*entry)
 			e.Lock()
 			normalCount, overCount := m.cleanupAndCount(e, cutoff)
@@ -134,10 +131,19 @@ func (m *InMemoryRecord) cleanupInactiveEntries(interval time.Duration, maxInact
 	}
 }
 
-func parseKey(key string) (key1, key2 string) {
-	parts := strings.SplitN(key, ":", 2)
-	if len(parts) != 2 {
-		return "", ""
+func parseKeys(key string) []string {
+	return strings.Split(key, ":")
+}
+
+func matchKeys(pattern []string, keys []string) bool {
+	if len(pattern) != len(keys) {
+		return false
 	}
-	return parts[0], parts[1]
+
+	for i, p := range pattern {
+		if p != "*" && p != keys[i] {
+			return false
+		}
+	}
+	return true
 }

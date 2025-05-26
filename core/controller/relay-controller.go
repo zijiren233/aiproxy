@@ -446,6 +446,13 @@ func recordResult(
 				int64(meta.ModelConfig.TPM),
 				int64(result.Usage.TotalTokens),
 			)
+			reqlimit.PushGroupModelTokennameTokensRequest(
+				context.Background(),
+				gbc.Group,
+				meta.OriginModel,
+				meta.Token.Name,
+				int64(result.Usage.TotalTokens),
+			)
 		},
 		nil,
 	)

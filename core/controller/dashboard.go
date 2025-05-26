@@ -144,7 +144,6 @@ func fillGaps(data []*model.ChartData, start, end time.Time, t model.TimeSpanTyp
 //	@Tags			dashboard
 //	@Produce		json
 //	@Security		ApiKeyAuth
-//	@Param			group			query		string	false	"Group or *"
 //	@Param			channel			query		int		false	"Channel ID"
 //	@Param			type			query		string	false	"Type of time span (day, week, month, two_week)"
 //	@Param			model			query		string	false	"Model name"
@@ -154,19 +153,15 @@ func fillGaps(data []*model.ChartData, start, end time.Time, t model.TimeSpanTyp
 //	@Success		200				{object}	middleware.APIResponse{data=model.DashboardResponse}
 //	@Router			/api/dashboard/ [get]
 func GetDashboard(c *gin.Context) {
-	log := middleware.GetLogger(c)
-
-	group := c.Query("group")
 	startTimestamp, _ := strconv.ParseInt(c.Query("start_timestamp"), 10, 64)
 	endTimestamp, _ := strconv.ParseInt(c.Query("end_timestamp"), 10, 64)
 	timezoneLocation, _ := time.LoadLocation(c.DefaultQuery("timezone", "Local"))
 	start, end, timeSpan := getDashboardTime(c.Query("type"), startTimestamp, endTimestamp, timezoneLocation)
 	modelName := c.Query("model")
-	channelID, _ := strconv.Atoi(c.Query("channel"))
+	channelStr := c.Query("channel")
+	channelID, _ := strconv.Atoi(channelStr)
 
-	needRPM := channelID != 0
-
-	dashboards, err := model.GetDashboardData(group, start, end, modelName, channelID, timeSpan, needRPM, timezoneLocation)
+	dashboards, err := model.GetDashboardData(start, end, modelName, channelID, timeSpan, timezoneLocation)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusOK, err.Error())
 		return
@@ -174,14 +169,13 @@ func GetDashboard(c *gin.Context) {
 
 	dashboards.ChartData = fillGaps(dashboards.ChartData, start, end, timeSpan)
 
-	if !needRPM {
-		rpm, _, err := reqlimit.GetGroupModelRequest(c.Request.Context(), group, modelName)
-		if err != nil {
-			log.Errorf("failed to get rpm: %v", err)
-		} else {
-			dashboards.RPM = rpm
-		}
+	if channelID == 0 {
+		channelStr = "*"
 	}
+	rpm, _ := reqlimit.GetChannelModelRequest(c.Request.Context(), channelStr, modelName)
+	dashboards.RPM = rpm
+	tpm, _ := reqlimit.GetChannelModelTokensRequest(c.Request.Context(), channelStr, modelName)
+	dashboards.TPM = tpm
 
 	middleware.SuccessResponse(c, dashboards)
 }
@@ -203,8 +197,6 @@ func GetDashboard(c *gin.Context) {
 //	@Success		200				{object}	middleware.APIResponse{data=model.GroupDashboardResponse}
 //	@Router			/api/dashboard/{group} [get]
 func GetGroupDashboard(c *gin.Context) {
-	log := middleware.GetLogger(c)
-
 	group := c.Param("group")
 	if group == "" || group == "*" {
 		middleware.ErrorResponse(c, http.StatusOK, "invalid group parameter")
@@ -218,9 +210,7 @@ func GetGroupDashboard(c *gin.Context) {
 	tokenName := c.Query("token_name")
 	modelName := c.Query("model")
 
-	needRPM := tokenName != ""
-
-	dashboards, err := model.GetGroupDashboardData(group, start, end, tokenName, modelName, timeSpan, needRPM, timezoneLocation)
+	dashboards, err := model.GetGroupDashboardData(group, start, end, tokenName, modelName, timeSpan, timezoneLocation)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusOK, "failed to get statistics")
 		return
@@ -228,14 +218,10 @@ func GetGroupDashboard(c *gin.Context) {
 
 	dashboards.ChartData = fillGaps(dashboards.ChartData, start, end, timeSpan)
 
-	if !needRPM {
-		rpm, _, err := reqlimit.GetGroupModelRequest(c.Request.Context(), group, modelName)
-		if err != nil {
-			log.Errorf("failed to get rpm: %v", err)
-		} else {
-			dashboards.RPM = rpm
-		}
-	}
+	rpm, _ := reqlimit.GetGroupModelTokennameRequest(c.Request.Context(), group, modelName, tokenName)
+	dashboards.RPM = rpm
+	tpm, _ := reqlimit.GetGroupModelTokennameTokensRequest(c.Request.Context(), group, modelName, tokenName)
+	dashboards.TPM = tpm
 
 	middleware.SuccessResponse(c, dashboards)
 }

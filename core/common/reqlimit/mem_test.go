@@ -19,7 +19,7 @@ func TestNewInMemoryRateLimiter(t *testing.T) {
 func TestPushRequestBasic(t *testing.T) {
 	rl := reqlimit.NewInMemoryRecord()
 
-	normalCount, overCount, secondCount := rl.PushRequest("group1", "model1", 10, 60*time.Second, 1)
+	normalCount, overCount, secondCount := rl.PushRequest(10, 60*time.Second, 1, "group1", "model1")
 
 	if normalCount != 1 {
 		t.Errorf("Expected normalCount to be 1, got %d", normalCount)
@@ -39,7 +39,7 @@ func TestPushRequestRateLimit(t *testing.T) {
 	duration := 60 * time.Second
 
 	for i := 0; i < 4; i++ {
-		normalCount, overCount, _ := rl.PushRequest("group1", "model1", maxReq, duration, 1)
+		normalCount, overCount, _ := rl.PushRequest(maxReq, duration, 1, "group1", "model1")
 
 		if i < 2 {
 			if normalCount != int64(i+1) {
@@ -70,7 +70,7 @@ func TestPushRequestUnlimited(t *testing.T) {
 	rl := reqlimit.NewInMemoryRecord()
 
 	for i := 0; i < 5; i++ {
-		normalCount, overCount, _ := rl.PushRequest("group1", "model1", 0, 60*time.Second, 1)
+		normalCount, overCount, _ := rl.PushRequest(0, 60*time.Second, 1, "group1", "model1")
 
 		if normalCount != int64(i+1) {
 			t.Errorf("Request %d: expected normalCount %d, got %d", i+1, i+1, normalCount)
@@ -84,11 +84,11 @@ func TestPushRequestUnlimited(t *testing.T) {
 func TestGetRequest(t *testing.T) {
 	rl := reqlimit.NewInMemoryRecord()
 
-	rl.PushRequest("group1", "model1", 10, 60*time.Second, 1)
-	rl.PushRequest("group1", "model2", 10, 60*time.Second, 1)
-	rl.PushRequest("group2", "model1", 10, 60*time.Second, 1)
+	rl.PushRequest(10, 60*time.Second, 1, "group1", "model1")
+	rl.PushRequest(10, 60*time.Second, 1, "group1", "model2")
+	rl.PushRequest(10, 60*time.Second, 1, "group2", "model1")
 
-	totalCount, secondCount := rl.GetRequest("group1", "model1", 60*time.Second)
+	totalCount, secondCount := rl.GetRequest(60*time.Second, "group1", "model1")
 	if totalCount != 1 {
 		t.Errorf("Expected totalCount 1, got %d", totalCount)
 	}
@@ -96,12 +96,12 @@ func TestGetRequest(t *testing.T) {
 		t.Errorf("Expected secondCount 1, got %d", secondCount)
 	}
 
-	totalCount, _ = rl.GetRequest("*", "*", 60*time.Second)
+	totalCount, _ = rl.GetRequest(60*time.Second, "*", "*")
 	if totalCount != 3 {
 		t.Errorf("Expected totalCount 3 for wildcard query, got %d", totalCount)
 	}
 
-	totalCount, _ = rl.GetRequest("group1", "*", 60*time.Second)
+	totalCount, _ = rl.GetRequest(60*time.Second, "group1", "*")
 	if totalCount != 2 {
 		t.Errorf("Expected totalCount 2 for group1 wildcard, got %d", totalCount)
 	}
@@ -115,11 +115,11 @@ func TestMultipleGroupsAndModels(t *testing.T) {
 
 	for _, group := range groups {
 		for _, model := range models {
-			rl.PushRequest(group, model, 10, 60*time.Second, 1)
+			rl.PushRequest(10, 60*time.Second, 1, group, model)
 		}
 	}
 
-	totalCount, _ := rl.GetRequest("*", "*", 60*time.Second)
+	totalCount, _ := rl.GetRequest(60*time.Second, "*", "*")
 	expected := len(groups) * len(models)
 	if totalCount != int64(expected) {
 		t.Errorf("Expected totalCount %d, got %d", expected, totalCount)
@@ -129,16 +129,16 @@ func TestMultipleGroupsAndModels(t *testing.T) {
 func TestTimeWindowCleanup(t *testing.T) {
 	rl := reqlimit.NewInMemoryRecord()
 
-	rl.PushRequest("group1", "model1", 10, 2*time.Second, 1)
+	rl.PushRequest(10, 2*time.Second, 1, "group1", "model1")
 
-	totalCount, _ := rl.GetRequest("group1", "model1", 2*time.Second)
+	totalCount, _ := rl.GetRequest(2*time.Second, "group1", "model1")
 	if totalCount != 1 {
 		t.Errorf("Expected totalCount 1, got %d", totalCount)
 	}
 
 	time.Sleep(3 * time.Second)
 
-	totalCount, _ = rl.GetRequest("group1", "model1", 2*time.Second)
+	totalCount, _ = rl.GetRequest(2*time.Second, "group1", "model1")
 	if totalCount != 0 {
 		t.Errorf("Expected totalCount 0 after cleanup, got %d", totalCount)
 	}
@@ -157,14 +157,14 @@ func TestConcurrentAccess(t *testing.T) {
 		go func(id int) {
 			defer wg.Done()
 			for j := 0; j < requestsPerGoroutine; j++ {
-				rl.PushRequest("group1", "model1", 0, 60*time.Second, 1)
+				rl.PushRequest(0, 60*time.Second, 1, "group1", "model1")
 			}
 		}(i)
 	}
 
 	wg.Wait()
 
-	totalCount, _ := rl.GetRequest("group1", "model1", 60*time.Second)
+	totalCount, _ := rl.GetRequest(60*time.Second, "group1", "model1")
 	expected := int64(numGoroutines * requestsPerGoroutine)
 	if totalCount != expected {
 		t.Errorf("Expected totalCount %d, got %d", expected, totalCount)
@@ -183,14 +183,14 @@ func TestConcurrentDifferentKeys(t *testing.T) {
 			defer wg.Done()
 			group := fmt.Sprintf("group%d", id%5)
 			model := fmt.Sprintf("model%d", id%3)
-			rl.PushRequest(group, model, 10, 60*time.Second, 1)
+			rl.PushRequest(10, 60*time.Second, 1, group, model)
 		}(i)
 	}
 
 	wg.Wait()
 
 	// 验证总数
-	totalCount, _ := rl.GetRequest("*", "*", 60*time.Second)
+	totalCount, _ := rl.GetRequest(60*time.Second, "*", "*")
 	if totalCount != int64(numGoroutines) {
 		t.Errorf("Expected totalCount %d, got %d", numGoroutines, totalCount)
 	}
@@ -203,7 +203,7 @@ func TestRateLimitWithOverflow(t *testing.T) {
 	duration := 60 * time.Second
 
 	for i := 0; i < 10; i++ {
-		normalCount, overCount, _ := rl.PushRequest("group1", "model1", int64(maxReq), duration, 1)
+		normalCount, overCount, _ := rl.PushRequest(int64(maxReq), duration, 1, "group1", "model1")
 
 		if i < maxReq {
 			if normalCount != int64(i+1) || overCount != 0 {
@@ -223,12 +223,12 @@ func TestRateLimitWithOverflow(t *testing.T) {
 func TestEmptyQueries(t *testing.T) {
 	rl := reqlimit.NewInMemoryRecord()
 
-	totalCount, secondCount := rl.GetRequest("*", "*", 60*time.Second)
+	totalCount, secondCount := rl.GetRequest(60*time.Second, "*", "*")
 	if totalCount != 0 || secondCount != 0 {
 		t.Errorf("Expected empty results, got total=%d, second=%d", totalCount, secondCount)
 	}
 
-	totalCount, secondCount = rl.GetRequest("nonexistent", "model", 60*time.Second)
+	totalCount, secondCount = rl.GetRequest(60*time.Second, "nonexistent", "model")
 	if totalCount != 0 || secondCount != 0 {
 		t.Errorf("Expected empty results for nonexistent key, got total=%d, second=%d", totalCount, secondCount)
 	}
@@ -243,7 +243,7 @@ func BenchmarkPushRequest(b *testing.B) {
 		for pb.Next() {
 			group := fmt.Sprintf("group%d", i%10)
 			model := fmt.Sprintf("model%d", i%5)
-			rl.PushRequest(group, model, 100, 60*time.Second, 1)
+			rl.PushRequest(100, 60*time.Second, 1, group, model)
 			i++
 		}
 	})
@@ -255,7 +255,7 @@ func BenchmarkGetRequest(b *testing.B) {
 	for i := 0; i < 100; i++ {
 		group := fmt.Sprintf("group%d", i%10)
 		model := fmt.Sprintf("model%d", i%5)
-		rl.PushRequest(group, model, 100, 60*time.Second, 1)
+		rl.PushRequest(100, 60*time.Second, 1, group, model)
 	}
 
 	b.ResetTimer()
@@ -264,7 +264,7 @@ func BenchmarkGetRequest(b *testing.B) {
 		for pb.Next() {
 			group := fmt.Sprintf("group%d", i%10)
 			model := fmt.Sprintf("model%d", i%5)
-			rl.GetRequest(group, model, 60*time.Second)
+			rl.GetRequest(60*time.Second, group, model)
 			i++
 		}
 	})

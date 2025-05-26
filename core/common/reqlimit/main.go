@@ -13,35 +13,62 @@ var (
 	redisGroupModelLimiter  = NewRedisGroupModelRecord()
 )
 
-func memoryPushRequest(group, model string, maxReq int64) (normalCount int64, overCount int64, secondCount int64) {
-	return memoryGroupModelLimiter.PushRequest(group, model, maxReq, time.Minute, 1)
-}
-
-func memoryGetRequest(group, model string) (int64, int64, error) {
-	totalCount, secondCount := memoryGroupModelLimiter.GetRequest(group, model, time.Minute)
-	return totalCount, secondCount, nil
-}
-
-func PushGroupModelRequest(ctx context.Context, group, model string, maxRequestNum int64) (int64, int64, int64) {
+func PushGroupModelRequest(ctx context.Context, group, model string, max int64) (int64, int64, int64) {
 	if common.RedisEnabled {
-		count, overLimitCount, secondCount, err := redisGroupModelLimiter.PushRequest(ctx, group, model, maxRequestNum, time.Minute, 1)
+		count, overLimitCount, secondCount, err := redisGroupModelLimiter.PushRequest(ctx, max, time.Minute, 1, group, model)
 		if err == nil {
 			return count, overLimitCount, secondCount
 		}
 		log.Error("redis push request error: " + err.Error())
 	}
-	return memoryPushRequest(group, model, maxRequestNum)
+	return memoryGroupModelLimiter.PushRequest(max, time.Minute, 1, group, model)
 }
 
-func GetGroupModelRequest(ctx context.Context, group, model string) (int64, int64, error) {
+func GetGroupModelRequest(ctx context.Context, group, model string) (int64, int64) {
+	if model == "" {
+		model = "*"
+	}
 	if common.RedisEnabled {
-		totalCount, secondCount, err := redisGroupModelLimiter.GetRequest(ctx, group, model)
+		totalCount, secondCount, err := redisGroupModelLimiter.GetRequest(ctx, time.Minute, group, model)
 		if err == nil {
-			return totalCount, secondCount, nil
+			return totalCount, secondCount
 		}
 		log.Error("redis get request error: " + err.Error())
 	}
-	return memoryGetRequest(group, model)
+	return memoryGroupModelLimiter.GetRequest(time.Minute, group, model)
+}
+
+var (
+	memoryGroupModelTokennameLimiter = NewInMemoryRecord()
+	redisGroupModelTokennameLimiter  = NewRedisGroupModelTokennameRecord()
+)
+
+func PushGroupModelTokennameRequest(ctx context.Context, group, model, tokenname string) (int64, int64, int64) {
+	if common.RedisEnabled {
+		count, overLimitCount, secondCount, err := redisGroupModelTokennameLimiter.PushRequest(ctx, 0, time.Minute, 1, group, model, tokenname)
+		if err == nil {
+			return count, overLimitCount, secondCount
+		}
+		log.Error("redis push request error: " + err.Error())
+	}
+	return memoryGroupModelTokennameLimiter.PushRequest(0, time.Minute, 1, group, model, tokenname)
+}
+
+func GetGroupModelTokennameRequest(ctx context.Context, group, model, tokenname string) (int64, int64) {
+	if model == "" {
+		model = "*"
+	}
+	if tokenname == "" {
+		tokenname = "*"
+	}
+	if common.RedisEnabled {
+		totalCount, secondCount, err := redisGroupModelTokennameLimiter.GetRequest(ctx, time.Minute, group, model)
+		if err == nil {
+			return totalCount, secondCount
+		}
+		log.Error("redis get request error: " + err.Error())
+	}
+	return memoryGroupModelTokennameLimiter.GetRequest(time.Minute, group, model, tokenname)
 }
 
 var (
@@ -49,73 +76,95 @@ var (
 	redisChannelModelRecord  = NewRedisChannelModelRecord()
 )
 
-func memoryRecordChannelModelRequest(channel, model string) (int64, int64) {
-	count, overLimitCount, secondCount := memoryChannelModelRecord.PushRequest(channel, model, 0, time.Minute, 1)
-	return count + overLimitCount, secondCount
-}
-
-func memoryGetChannelModelRequest(channel, model string) (int64, int64) {
-	totalCount, secondCount := memoryChannelModelRecord.GetRequest(channel, model, time.Minute)
-	return totalCount, secondCount
-}
-
-func PushChannelModelRequest(ctx context.Context, channel, model string) (int64, int64) {
+func PushChannelModelRequest(ctx context.Context, channel, model string) (int64, int64, int64) {
 	if common.RedisEnabled {
-		count, overLimitCount, secondCount, err := redisChannelModelRecord.PushRequest(ctx, channel, model, 0, time.Minute, 1)
+		count, overLimitCount, secondCount, err := redisChannelModelRecord.PushRequest(ctx, 0, time.Minute, 1, channel, model)
 		if err == nil {
-			return count + overLimitCount, secondCount
+			return count, overLimitCount, secondCount
 		}
 		log.Error("redis push request error: " + err.Error())
 	}
-	return memoryRecordChannelModelRequest(channel, model)
+	return memoryChannelModelRecord.PushRequest(0, time.Minute, 1, channel, model)
 }
 
 func GetChannelModelRequest(ctx context.Context, channel, model string) (int64, int64) {
+	if channel == "" {
+		channel = "*"
+	}
+	if model == "" {
+		model = "*"
+	}
 	if common.RedisEnabled {
-		totalCount, secondCount, err := redisChannelModelRecord.GetRequest(ctx, channel, model)
+		totalCount, secondCount, err := redisChannelModelRecord.GetRequest(ctx, time.Minute, channel, model)
 		if err == nil {
 			return totalCount, secondCount
 		}
 		log.Error("redis get request error: " + err.Error())
 	}
-	return memoryGetChannelModelRequest(channel, model)
+	return memoryChannelModelRecord.GetRequest(time.Minute, channel, model)
 }
 
 var (
 	memoryGroupModelTokensLimiter = NewInMemoryRecord()
-	redisGroupModelTokensLimiter  = NewRedisGroupModelTokensRecord()
+	redisGroupModelTokensLimiter  = NewRedisGroupModelTokennameTokensRecord()
 )
 
-func memoryRecordGroupModelTokensRequest(group, model string, maxTokens int64, tokens int64) (int64, int64) {
-	count, overLimitCount, secondCount := memoryGroupModelTokensLimiter.PushRequest(group, model, maxTokens, time.Minute, tokens)
-	return count + overLimitCount, secondCount
-}
-
-func memoryGetGroupModelTokensRequest(group, model string) (int64, int64) {
-	totalCount, secondCount := memoryGroupModelTokensLimiter.GetRequest(group, model, time.Minute)
-	return totalCount, secondCount
-}
-
-func PushGroupModelTokensRequest(ctx context.Context, group, model string, maxTokens int64, tokens int64) (int64, int64) {
+func PushGroupModelTokensRequest(ctx context.Context, group, model string, maxTokens int64, tokens int64) (int64, int64, int64) {
 	if common.RedisEnabled {
-		count, overLimitCount, secondCount, err := redisGroupModelTokensLimiter.PushRequest(ctx, group, model, maxTokens, time.Minute, tokens)
+		count, overLimitCount, secondCount, err := redisGroupModelTokensLimiter.PushRequest(ctx, maxTokens, time.Minute, tokens, group, model)
 		if err == nil {
-			return count + overLimitCount, secondCount
+			return count, overLimitCount, secondCount
 		}
 		log.Error("redis push request error: " + err.Error())
 	}
-	return memoryRecordGroupModelTokensRequest(group, model, maxTokens, tokens)
+	return memoryGroupModelTokensLimiter.PushRequest(maxTokens, time.Minute, tokens, group, model)
 }
 
 func GetGroupModelTokensRequest(ctx context.Context, group, model string) (int64, int64) {
+	if model == "" {
+		model = "*"
+	}
 	if common.RedisEnabled {
-		totalCount, secondCount, err := redisGroupModelTokensLimiter.GetRequest(ctx, group, model)
+		totalCount, secondCount, err := redisGroupModelTokensLimiter.GetRequest(ctx, time.Minute, group, model)
 		if err == nil {
 			return totalCount, secondCount
 		}
 		log.Error("redis get request error: " + err.Error())
 	}
-	return memoryGetGroupModelTokensRequest(group, model)
+	return memoryGroupModelTokensLimiter.GetRequest(time.Minute, group, model)
+}
+
+var (
+	memoryGroupModelTokennameTokensLimiter = NewInMemoryRecord()
+	redisGroupModelTokennameTokensLimiter  = NewRedisGroupModelTokennameTokensRecord()
+)
+
+func PushGroupModelTokennameTokensRequest(ctx context.Context, group, model, tokenname string, tokens int64) (int64, int64, int64) {
+	if common.RedisEnabled {
+		count, overLimitCount, secondCount, err := redisGroupModelTokennameTokensLimiter.PushRequest(ctx, 0, time.Minute, tokens, group, model, tokenname)
+		if err == nil {
+			return count, overLimitCount, secondCount
+		}
+		log.Error("redis push request error: " + err.Error())
+	}
+	return memoryGroupModelTokennameTokensLimiter.PushRequest(0, time.Minute, tokens, group, model, tokenname)
+}
+
+func GetGroupModelTokennameTokensRequest(ctx context.Context, group, model, tokenname string) (int64, int64) {
+	if model == "" {
+		model = "*"
+	}
+	if tokenname == "" {
+		tokenname = "*"
+	}
+	if common.RedisEnabled {
+		totalCount, secondCount, err := redisGroupModelTokennameTokensLimiter.GetRequest(ctx, time.Minute, group, model, tokenname)
+		if err == nil {
+			return totalCount, secondCount
+		}
+		log.Error("redis get request error: " + err.Error())
+	}
+	return memoryGroupModelTokennameTokensLimiter.GetRequest(time.Minute, group, model, tokenname)
 }
 
 var (
@@ -123,34 +172,30 @@ var (
 	redisChannelModelTokensRecord  = NewRedisChannelModelTokensRecord()
 )
 
-func memoryRecordChannelModelTokensRequest(channel, model string, tokens int64) (int64, int64) {
-	count, overLimitCount, secondCount := memoryChannelModelTokensRecord.PushRequest(channel, model, 0, time.Minute, tokens)
-	return count + overLimitCount, secondCount
-}
-
-func memoryGetChannelModelTokensRequest(channel, model string) (int64, int64) {
-	totalCount, secondCount := memoryChannelModelTokensRecord.GetRequest(channel, model, time.Minute)
-	return totalCount, secondCount
-}
-
-func PushChannelModelTokensRequest(ctx context.Context, channel, model string, tokens int64) (int64, int64) {
+func PushChannelModelTokensRequest(ctx context.Context, channel, model string, tokens int64) (int64, int64, int64) {
 	if common.RedisEnabled {
-		count, overLimitCount, secondCount, err := redisChannelModelTokensRecord.PushRequest(ctx, channel, model, 0, time.Minute, tokens)
+		count, overLimitCount, secondCount, err := redisChannelModelTokensRecord.PushRequest(ctx, 0, time.Minute, tokens, channel, model)
 		if err == nil {
-			return count + overLimitCount, secondCount
+			return count, overLimitCount, secondCount
 		}
 		log.Error("redis push request error: " + err.Error())
 	}
-	return memoryRecordChannelModelTokensRequest(channel, model, tokens)
+	return memoryChannelModelTokensRecord.PushRequest(0, time.Minute, tokens, channel, model)
 }
 
 func GetChannelModelTokensRequest(ctx context.Context, channel, model string) (int64, int64) {
+	if channel == "" {
+		channel = "*"
+	}
+	if model == "" {
+		model = "*"
+	}
 	if common.RedisEnabled {
-		totalCount, secondCount, err := redisChannelModelTokensRecord.GetRequest(ctx, channel, model)
+		totalCount, secondCount, err := redisChannelModelTokensRecord.GetRequest(ctx, time.Minute, channel, model)
 		if err == nil {
 			return totalCount, secondCount
 		}
 		log.Error("redis get request error: " + err.Error())
 	}
-	return memoryGetChannelModelTokensRequest(channel, model)
+	return memoryChannelModelTokensRecord.GetRequest(time.Minute, channel, model)
 }

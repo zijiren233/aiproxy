@@ -1284,65 +1284,12 @@ func sumDashboardResponse(chartData []*ChartData) DashboardResponse {
 	return dashboardResponse
 }
 
-func GetRPM(group string, end time.Time, tokenName, modelName string, channelID int) (int64, error) {
-	query := LogDB.Model(&Log{})
-
-	if group == "" {
-		query = query.Where("group_id = ''")
-	} else if group != "*" {
-		query = query.Where("group_id = ?", group)
-	}
-	if channelID != 0 {
-		query = query.Where("channel_id = ?", channelID)
-	}
-	if modelName != "" {
-		query = query.Where("model = ?", modelName)
-	}
-	if tokenName != "" {
-		query = query.Where("token_name = ?", tokenName)
-	}
-
-	var count int64
-	err := query.
-		Where("created_at BETWEEN ? AND ?", end.Add(-time.Minute), end).
-		Count(&count).Error
-	return count, err
-}
-
-func GetTPM(group string, end time.Time, tokenName, modelName string, channelID int) (int64, error) {
-	query := LogDB.Model(&Log{}).
-		Select("COALESCE(SUM(total_tokens), 0)")
-
-	if group == "" {
-		query = query.Where("group_id = ''")
-	} else if group != "*" {
-		query = query.Where("group_id = ?", group)
-	}
-	if channelID != 0 {
-		query = query.Where("channel_id = ?", channelID)
-	}
-	if modelName != "" {
-		query = query.Where("model = ?", modelName)
-	}
-	if tokenName != "" {
-		query = query.Where("token_name = ?", tokenName)
-	}
-
-	var tpm int64
-	err := query.
-		Where("created_at BETWEEN ? AND ?", end.Add(-time.Minute), end).
-		Scan(&tpm).Error
-	return tpm, err
-}
-
 func GetDashboardData(
-	group string,
 	start,
 	end time.Time,
 	modelName string,
 	channelID int,
 	timeSpan TimeSpanType,
-	needRPM bool,
 	timezone *time.Location,
 ) (*DashboardResponse, error) {
 	if end.IsZero() {
@@ -1353,8 +1300,6 @@ func GetDashboardData(
 
 	var (
 		chartData []*ChartData
-		rpm       int64
-		tpm       int64
 		channels  []int
 	)
 
@@ -1362,27 +1307,13 @@ func GetDashboardData(
 
 	g.Go(func() error {
 		var err error
-		chartData, err = getChartData(group, start, end, "", modelName, channelID, timeSpan, timezone)
-		return err
-	})
-
-	if needRPM {
-		g.Go(func() error {
-			var err error
-			rpm, err = GetRPM(group, end, "", modelName, channelID)
-			return err
-		})
-	}
-
-	g.Go(func() error {
-		var err error
-		tpm, err = GetTPM(group, end, "", modelName, channelID)
+		chartData, err = getChartData("*", start, end, "", modelName, channelID, timeSpan, timezone)
 		return err
 	})
 
 	g.Go(func() error {
 		var err error
-		channels, err = GetUsedChannels(group, start, end)
+		channels, err = GetUsedChannels("*", start, end)
 		return err
 	})
 
@@ -1392,8 +1323,6 @@ func GetDashboardData(
 
 	dashboardResponse := sumDashboardResponse(chartData)
 	dashboardResponse.Channels = channels
-	dashboardResponse.RPM = rpm
-	dashboardResponse.TPM = tpm
 
 	return &dashboardResponse, nil
 }
@@ -1404,7 +1333,6 @@ func GetGroupDashboardData(
 	tokenName string,
 	modelName string,
 	timeSpan TimeSpanType,
-	needRPM bool,
 	timezone *time.Location,
 ) (*GroupDashboardResponse, error) {
 	if group == "" || group == "*" {
@@ -1421,8 +1349,6 @@ func GetGroupDashboardData(
 		chartData  []*ChartData
 		tokenNames []string
 		models     []string
-		rpm        int64
-		tpm        int64
 	)
 
 	g := new(errgroup.Group)
@@ -1445,45 +1371,17 @@ func GetGroupDashboardData(
 		return err
 	})
 
-	if needRPM {
-		g.Go(func() error {
-			var err error
-			rpm, err = GetRPM(group, end, tokenName, modelName, 0)
-			return err
-		})
-	}
-
-	g.Go(func() error {
-		var err error
-		tpm, err = GetTPM(group, end, tokenName, modelName, 0)
-		return err
-	})
-
 	if err := g.Wait(); err != nil {
 		return nil, err
 	}
 
 	dashboardResponse := sumDashboardResponse(chartData)
-	dashboardResponse.RPM = rpm
-	dashboardResponse.TPM = tpm
 
 	return &GroupDashboardResponse{
 		DashboardResponse: dashboardResponse,
 		Models:            models,
 		TokenNames:        tokenNames,
 	}, nil
-}
-
-func GetGroupModelTPM(group string, model string) (int64, error) {
-	end := time.Now()
-	start := end.Add(-time.Minute)
-	var tpm int64
-	err := LogDB.
-		Model(&Log{}).
-		Where("group_id = ? AND created_at >= ? AND created_at <= ? AND model = ?", group, start, end, model).
-		Select("COALESCE(SUM(total_tokens), 0)").
-		Scan(&tpm).Error
-	return tpm, err
 }
 
 //nolint:revive

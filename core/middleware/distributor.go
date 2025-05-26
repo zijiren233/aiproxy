@@ -96,41 +96,49 @@ func setTpmHeaders(c *gin.Context, tpm int64, remainingRequests int64) {
 	c.Header(XRateLimitResetTokens, "1m0s")
 }
 
-func checkGroupModelRPMAndTPM(c *gin.Context, group *model.GroupCache, mc *model.ModelConfig) error {
+func checkGroupModelRPMAndTPM(c *gin.Context, group *model.GroupCache, mc *model.ModelConfig, tokenName string) error {
 	log := GetLogger(c)
 
 	adjustedModelConfig := GetGroupAdjustedModelConfig(group, *mc)
 
-	count, overLimitCount, secondCount := reqlimit.PushGroupModelRequest(c.Request.Context(), group.ID, mc.Model, adjustedModelConfig.RPM)
-	c.Set(RPM, count+overLimitCount)
-	c.Set(RPS, secondCount)
-	log.Data["rpm"] = strconv.FormatInt(count+overLimitCount, 10)
-	log.Data["rps"] = strconv.FormatInt(secondCount, 10)
+	groupModelCount, groupModelOverLimitCount, groupModelSecondCount := reqlimit.PushGroupModelRequest(c.Request.Context(), group.ID, mc.Model, adjustedModelConfig.RPM)
+	c.Set(GroupModelRPM, groupModelCount+groupModelOverLimitCount)
+	c.Set(GroupModelRPS, groupModelSecondCount)
+	log.Data["rpm"] = strconv.FormatInt(groupModelCount+groupModelOverLimitCount, 10)
+	log.Data["rps"] = strconv.FormatInt(groupModelSecondCount, 10)
+
+	groupModelTokenCount, groupModelTokenOverLimitCount, groupModelTokenSecondCount := reqlimit.PushGroupModelTokennameRequest(c.Request.Context(), group.ID, mc.Model, tokenName)
+	c.Set(GroupModelTokenRPM, groupModelTokenCount+groupModelTokenOverLimitCount)
+	c.Set(GroupModelTokenRPS, groupModelTokenSecondCount)
 
 	if group.Status != model.GroupStatusInternal &&
 		adjustedModelConfig.RPM > 0 {
 		log.Data["rpm_limit"] = strconv.FormatInt(adjustedModelConfig.RPM, 10)
-		if count > adjustedModelConfig.RPM {
+		if groupModelCount > adjustedModelConfig.RPM {
 			setRpmHeaders(c, adjustedModelConfig.RPM, 0)
 			return ErrRequestRateLimitExceeded
 		}
-		setRpmHeaders(c, adjustedModelConfig.RPM, adjustedModelConfig.RPM-count)
+		setRpmHeaders(c, adjustedModelConfig.RPM, adjustedModelConfig.RPM-groupModelCount)
 	}
 
-	tpm, tps := reqlimit.GetGroupModelTokensRequest(c.Request.Context(), group.ID, mc.Model)
-	c.Set(TPM, tpm)
-	c.Set(TPS, tps)
-	log.Data["tpm"] = strconv.FormatInt(tpm, 10)
-	log.Data["tps"] = strconv.FormatInt(tps, 10)
+	groupModelCountTPM, groupModelCountTPS := reqlimit.GetGroupModelTokensRequest(c.Request.Context(), group.ID, mc.Model)
+	c.Set(GroupModelTPM, groupModelCountTPM)
+	c.Set(GroupModelTPS, groupModelCountTPS)
+	log.Data["tpm"] = strconv.FormatInt(groupModelCountTPM, 10)
+	log.Data["tps"] = strconv.FormatInt(groupModelCountTPS, 10)
+
+	groupModelTokenCountTPM, groupModelTokenCountTPS := reqlimit.GetGroupModelTokennameTokensRequest(c.Request.Context(), group.ID, mc.Model, tokenName)
+	c.Set(GroupModelTokenTPM, groupModelTokenCountTPM)
+	c.Set(GroupModelTokenTPS, groupModelTokenCountTPS)
 
 	if group.Status != model.GroupStatusInternal &&
 		adjustedModelConfig.TPM > 0 {
 		log.Data["tpm_limit"] = strconv.FormatInt(adjustedModelConfig.TPM, 10)
-		if tpm >= adjustedModelConfig.TPM {
+		if groupModelCountTPM >= adjustedModelConfig.TPM {
 			setTpmHeaders(c, adjustedModelConfig.TPM, 0)
 			return ErrRequestTpmLimitExceeded
 		}
-		setTpmHeaders(c, adjustedModelConfig.TPM, adjustedModelConfig.TPM-tpm)
+		setTpmHeaders(c, adjustedModelConfig.TPM, adjustedModelConfig.TPM-groupModelCountTPM)
 	}
 
 	return nil
@@ -382,7 +390,9 @@ func distribute(c *gin.Context, mode mode.Mode) {
 	}
 	c.Set(RequestMetadata, metadata)
 
-	if err := checkGroupModelRPMAndTPM(c, group, mc); err != nil {
+	token := GetToken(c)
+
+	if err := checkGroupModelRPMAndTPM(c, group, mc, token.Name); err != nil {
 		errMsg := err.Error()
 		consume.AsyncConsume(
 			nil,
@@ -411,20 +421,36 @@ func distribute(c *gin.Context, mode mode.Mode) {
 	c.Next()
 }
 
-func GetRPM(c *gin.Context) int64 {
-	return c.GetInt64(RPM)
+func GetGroupModelRPM(c *gin.Context) int64 {
+	return c.GetInt64(GroupModelRPM)
 }
 
-func GetRPS(c *gin.Context) int64 {
-	return c.GetInt64(RPS)
+func GetGroupModelRPS(c *gin.Context) int64 {
+	return c.GetInt64(GroupModelRPS)
 }
 
-func GetTPM(c *gin.Context) int64 {
-	return c.GetInt64(TPM)
+func GetGroupModelTPM(c *gin.Context) int64 {
+	return c.GetInt64(GroupModelTPM)
 }
 
-func GetTPS(c *gin.Context) int64 {
-	return c.GetInt64(TPS)
+func GetGroupModelTPS(c *gin.Context) int64 {
+	return c.GetInt64(GroupModelTPS)
+}
+
+func GetGroupModelTokenRPM(c *gin.Context) int64 {
+	return c.GetInt64(GroupModelTokenRPM)
+}
+
+func GetGroupModelTokenRPS(c *gin.Context) int64 {
+	return c.GetInt64(GroupModelTokenRPS)
+}
+
+func GetGroupModelTokenTPM(c *gin.Context) int64 {
+	return c.GetInt64(GroupModelTokenTPM)
+}
+
+func GetGroupModelTokenTPS(c *gin.Context) int64 {
+	return c.GetInt64(GroupModelTokenTPS)
 }
 
 func GetRequestModel(c *gin.Context) string {

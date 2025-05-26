@@ -3,7 +3,6 @@ package reqlimit
 import (
 	"context"
 	"errors"
-	"fmt"
 	"strconv"
 	"strings"
 	"time"
@@ -16,27 +15,45 @@ type redisRateRecord struct {
 	prefix string
 }
 
+func NewRedisRecord(prefix string) *redisRateRecord {
+	return &redisRateRecord{
+		prefix: prefix,
+	}
+}
+
 func NewRedisGroupModelRecord() *redisRateRecord {
 	return &redisRateRecord{
-		prefix: "group-model-record:%s:%s",
+		prefix: "group-model-record",
+	}
+}
+
+func NewRedisGroupModelTokennameRecord() *redisRateRecord {
+	return &redisRateRecord{
+		prefix: "group-model-tokenname-record",
 	}
 }
 
 func NewRedisChannelModelRecord() *redisRateRecord {
 	return &redisRateRecord{
-		prefix: "channel-model-record:%s:%s",
+		prefix: "channel-model-record",
 	}
 }
 
 func NewRedisGroupModelTokensRecord() *redisRateRecord {
 	return &redisRateRecord{
-		prefix: "group-model-tokens-record:%s:%s",
+		prefix: "group-model-tokens-record",
+	}
+}
+
+func NewRedisGroupModelTokennameTokensRecord() *redisRateRecord {
+	return &redisRateRecord{
+		prefix: "group-model-tokenname-tokens-record",
 	}
 }
 
 func NewRedisChannelModelTokensRecord() *redisRateRecord {
 	return &redisRateRecord{
-		prefix: "channel-model-tokens-record:%s:%s",
+		prefix: "channel-model-tokens-record",
 	}
 }
 
@@ -133,25 +150,22 @@ var (
 	getRequestCountScript = redis.NewScript(getRequestCountLuaScript)
 )
 
-func (r *redisRateRecord) GetRequest(ctx context.Context, key1, key2 string) (totalCount int64, secondCount int64, err error) {
+func (r *redisRateRecord) buildKey(keys ...string) string {
+	return r.prefix + ":" + strings.Join(keys, ":")
+}
+
+func (r *redisRateRecord) GetRequest(ctx context.Context, duration time.Duration, keys ...string) (totalCount int64, secondCount int64, err error) {
 	if !common.RedisEnabled {
 		return 0, 0, nil
 	}
 
-	var pattern string
-	switch {
-	case key2 == "":
-		key2 = "*"
-		fallthrough
-	default:
-		pattern = fmt.Sprintf(r.prefix, key1, key2)
-	}
+	pattern := r.buildKey(keys...)
 
 	result, err := getRequestCountScript.Run(
 		ctx,
 		common.RDB,
 		[]string{pattern},
-		time.Minute.Seconds(),
+		duration.Seconds(),
 		time.Now().Unix(),
 	).Text()
 	if err != nil {
@@ -176,11 +190,13 @@ func (r *redisRateRecord) GetRequest(ctx context.Context, key1, key2 string) (to
 	return totalCountInt, secondCountInt, nil
 }
 
-func (r *redisRateRecord) PushRequest(ctx context.Context, key1, key2 string, max int64, duration time.Duration, n int64) (normalCount int64, overCount int64, secondCount int64, err error) {
+func (r *redisRateRecord) PushRequest(ctx context.Context, max int64, duration time.Duration, n int64, keys ...string) (normalCount int64, overCount int64, secondCount int64, err error) {
+	key := r.buildKey(keys...)
+
 	result, err := pushRequestScript.Run(
 		ctx,
 		common.RDB,
-		[]string{fmt.Sprintf(r.prefix, key1, key2)},
+		[]string{key},
 		duration.Seconds(),
 		time.Now().Unix(),
 		max,
