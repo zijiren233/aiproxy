@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/labring/aiproxy/core/common/rpmlimit"
+	"github.com/labring/aiproxy/core/common/reqlimit"
 	"github.com/labring/aiproxy/core/middleware"
 	"github.com/labring/aiproxy/core/model"
 	"gorm.io/gorm"
@@ -175,7 +175,7 @@ func GetDashboard(c *gin.Context) {
 	dashboards.ChartData = fillGaps(dashboards.ChartData, start, end, timeSpan)
 
 	if !needRPM {
-		rpm, err := rpmlimit.GetRPM(c.Request.Context(), group, modelName)
+		rpm, _, err := reqlimit.GetGroupModelRequest(c.Request.Context(), group, modelName)
 		if err != nil {
 			log.Errorf("failed to get rpm: %v", err)
 		} else {
@@ -229,7 +229,7 @@ func GetGroupDashboard(c *gin.Context) {
 	dashboards.ChartData = fillGaps(dashboards.ChartData, start, end, timeSpan)
 
 	if !needRPM {
-		rpm, err := rpmlimit.GetRPM(c.Request.Context(), group, modelName)
+		rpm, _, err := reqlimit.GetGroupModelRequest(c.Request.Context(), group, modelName)
 		if err != nil {
 			log.Errorf("failed to get rpm: %v", err)
 		} else {

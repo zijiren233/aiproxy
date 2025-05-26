@@ -34,6 +34,8 @@ func AsyncConsume(
 	downstreamResult bool,
 	user string,
 	metadata map[string]string,
+	preHook func(),
+	postHook func(),
 ) {
 	consumeWaitGroup.Add(1)
 	defer func() {
@@ -43,22 +45,30 @@ func AsyncConsume(
 		}
 	}()
 
-	go Consume(
-		context.Background(),
-		postGroupConsumer,
-		firstByteAt,
-		code,
-		meta,
-		usage,
-		modelPrice,
-		content,
-		ip,
-		retryTimes,
-		requestDetail,
-		downstreamResult,
-		user,
-		metadata,
-	)
+	go func() {
+		if preHook != nil {
+			preHook()
+		}
+		if postHook != nil {
+			defer postHook()
+		}
+		Consume(
+			context.Background(),
+			postGroupConsumer,
+			firstByteAt,
+			code,
+			meta,
+			usage,
+			modelPrice,
+			content,
+			ip,
+			retryTimes,
+			requestDetail,
+			downstreamResult,
+			user,
+			metadata,
+		)
+	}()
 }
 
 func Consume(

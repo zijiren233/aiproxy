@@ -2,6 +2,10 @@ package middleware
 
 const (
 	Channel         = "channel"
+	RPM             = "rpm"
+	RPS             = "rps"
+	TPM             = "tpm"
+	TPS             = "tps"
 	Group           = "group"
 	Token           = "token"
 	GroupBalance    = "group_balance"

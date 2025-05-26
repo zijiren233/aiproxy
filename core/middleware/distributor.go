@@ -16,7 +16,7 @@ import (
 	"github.com/labring/aiproxy/core/common/config"
 	"github.com/labring/aiproxy/core/common/consume"
 	"github.com/labring/aiproxy/core/common/notify"
-	"github.com/labring/aiproxy/core/common/rpmlimit"
+	"github.com/labring/aiproxy/core/common/reqlimit"
 	"github.com/labring/aiproxy/core/model"
 	"github.com/labring/aiproxy/core/relay/meta"
 	"github.com/labring/aiproxy/core/relay/mode"
@@ -101,8 +101,12 @@ func checkGroupModelRPMAndTPM(c *gin.Context, group *model.GroupCache, mc *model
 
 	adjustedModelConfig := GetGroupAdjustedModelConfig(group, *mc)
 
-	count, overLimitCount := rpmlimit.PushRequestAnyWay(c.Request.Context(), group.ID, mc.Model, adjustedModelConfig.RPM, time.Minute)
+	count, overLimitCount, secondCount := reqlimit.PushGroupModelRequest(c.Request.Context(), group.ID, mc.Model, adjustedModelConfig.RPM)
+	c.Set(RPM, count+overLimitCount)
+	c.Set(RPS, secondCount)
 	log.Data["rpm"] = strconv.FormatInt(count+overLimitCount, 10)
+	log.Data["rps"] = strconv.FormatInt(secondCount, 10)
+
 	if group.Status != model.GroupStatusInternal &&
 		adjustedModelConfig.RPM > 0 {
 		log.Data["rpm_limit"] = strconv.FormatInt(adjustedModelConfig.RPM, 10)
@@ -113,22 +117,22 @@ func checkGroupModelRPMAndTPM(c *gin.Context, group *model.GroupCache, mc *model
 		setRpmHeaders(c, adjustedModelConfig.RPM, adjustedModelConfig.RPM-count)
 	}
 
+	tpm, tps := reqlimit.GetGroupModelTokensRequest(c.Request.Context(), group.ID, mc.Model)
+	c.Set(TPM, tpm)
+	c.Set(TPS, tps)
+	log.Data["tpm"] = strconv.FormatInt(tpm, 10)
+	log.Data["tps"] = strconv.FormatInt(tps, 10)
+
 	if group.Status != model.GroupStatusInternal &&
 		adjustedModelConfig.TPM > 0 {
-		tpm, err := model.CacheGetGroupModelTPM(group.ID, mc.Model)
-		if err != nil {
-			log.Errorf("get group model tpm (%s:%s) error: %s", group.ID, mc.Model, err.Error())
-			// ignore error
-			return nil
-		}
 		log.Data["tpm_limit"] = strconv.FormatInt(adjustedModelConfig.TPM, 10)
-		log.Data["tpm"] = strconv.FormatInt(tpm, 10)
 		if tpm >= adjustedModelConfig.TPM {
 			setTpmHeaders(c, adjustedModelConfig.TPM, 0)
 			return ErrRequestTpmLimitExceeded
 		}
 		setTpmHeaders(c, adjustedModelConfig.TPM, adjustedModelConfig.TPM-tpm)
 	}
+
 	return nil
 }
 
@@ -394,6 +398,8 @@ func distribute(c *gin.Context, mode mode.Mode) {
 			true,
 			user,
 			metadata,
+			nil,
+			nil,
 		)
 		AbortLogWithMessage(c, http.StatusTooManyRequests, errMsg, &ErrorField{
 			Type: "invalid_request_error",
@@ -403,6 +409,22 @@ func distribute(c *gin.Context, mode mode.Mode) {
 	}
 
 	c.Next()
+}
+
+func GetRPM(c *gin.Context) int64 {
+	return c.GetInt64(RPM)
+}
+
+func GetRPS(c *gin.Context) int64 {
+	return c.GetInt64(RPS)
+}
+
+func GetTPM(c *gin.Context) int64 {
+	return c.GetInt64(TPM)
+}
+
+func GetTPS(c *gin.Context) int64 {
+	return c.GetInt64(TPS)
 }
 
 func GetRequestModel(c *gin.Context) string {

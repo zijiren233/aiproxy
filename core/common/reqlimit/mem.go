@@ -1,4 +1,4 @@
-package rpmlimit
+package reqlimit
 
 import (
 	"fmt"
@@ -19,22 +19,20 @@ type entry struct {
 	lastAccess atomic.Value
 }
 
-type InMemoryRateLimiter struct {
+type InMemoryRecord struct {
 	entries sync.Map
 }
 
-func newInMemoryRateLimiter() *InMemoryRateLimiter {
-	rl := &InMemoryRateLimiter{
+func NewInMemoryRecord() *InMemoryRecord {
+	rl := &InMemoryRecord{
 		entries: sync.Map{},
 	}
 	go rl.cleanupInactiveEntries(2*time.Minute, 1*time.Minute)
 	return rl
 }
 
-var memoryRateLimiter = newInMemoryRateLimiter()
-
-func (m *InMemoryRateLimiter) getEntry(group, model string) *entry {
-	key := fmt.Sprintf("%s:%s", group, model)
+func (m *InMemoryRecord) getEntry(key1, key2 string) *entry {
+	key := fmt.Sprintf("%s:%s", key1, key2)
 	actual, _ := m.entries.LoadOrStore(key, &entry{
 		windows: make(map[int64]*windowCounts),
 	})
@@ -45,7 +43,7 @@ func (m *InMemoryRateLimiter) getEntry(group, model string) *entry {
 	return e
 }
 
-func (m *InMemoryRateLimiter) cleanupAndCount(e *entry, cutoff int64) (int64, int64) {
+func (m *InMemoryRecord) cleanupAndCount(e *entry, cutoff int64) (int64, int64) {
 	normalCount := int64(0)
 	overCount := int64(0)
 	for ts, wc := range e.windows {
@@ -59,8 +57,8 @@ func (m *InMemoryRateLimiter) cleanupAndCount(e *entry, cutoff int64) (int64, in
 	return normalCount, overCount
 }
 
-func (m *InMemoryRateLimiter) pushRequest(group, model string, maxReq int64, duration time.Duration) (int64, int64) {
-	e := m.getEntry(group, model)
+func (m *InMemoryRecord) PushRequest(key1, key2 string, max int64, duration time.Duration, n int64) (normalCount int64, overCount int64, secondCount int64) {
+	e := m.getEntry(key1, key2)
 
 	e.Lock()
 	defer e.Unlock()
@@ -72,7 +70,7 @@ func (m *InMemoryRateLimiter) pushRequest(group, model string, maxReq int64, dur
 	windowStart := now.Unix()
 	cutoff := windowStart - int64(duration.Seconds())
 
-	normalCount, overCount := m.cleanupAndCount(e, cutoff)
+	normalCount, overCount = m.cleanupAndCount(e, cutoff)
 
 	wc, exists := e.windows[windowStart]
 	if !exists {
@@ -80,40 +78,44 @@ func (m *InMemoryRateLimiter) pushRequest(group, model string, maxReq int64, dur
 		e.windows[windowStart] = wc
 	}
 
-	if maxReq == 0 || normalCount <= maxReq {
-		wc.normal++
-		normalCount++
+	if max == 0 || normalCount <= max {
+		wc.normal += n
+		normalCount += n
 	} else {
-		wc.over++
-		overCount++
+		wc.over += n
+		overCount += n
 	}
 
-	return normalCount, overCount
+	return normalCount, overCount, wc.normal + wc.over
 }
 
-func (m *InMemoryRateLimiter) getRPM(group, model string, duration time.Duration) int {
-	total := 0
-	cutoff := time.Now().Unix() - int64(duration.Seconds())
+func (m *InMemoryRecord) GetRequest(key1, key2 string, duration time.Duration) (totalCount int64, secondCount int64) {
+	nowSecond := time.Now().Unix()
+	cutoff := nowSecond - int64(duration.Seconds())
 
 	m.entries.Range(func(key, value any) bool {
 		k, _ := key.(string)
-		currentGroup, currentModel := parseKey(k)
+		currentKey1, currentKey2 := parseKey(k)
 
-		if (group == "*" || group == currentGroup) &&
-			(model == "" || model == "*" || model == currentModel) {
+		if (key1 == "*" || key1 == currentKey1) &&
+			(key2 == "" || key2 == "*" || key2 == currentKey2) {
 			e, _ := value.(*entry)
 			e.Lock()
 			normalCount, overCount := m.cleanupAndCount(e, cutoff)
+			nowWindow := e.windows[nowSecond]
 			e.Unlock()
-			total += int(normalCount + overCount)
+			totalCount += normalCount + overCount
+			if nowWindow != nil {
+				secondCount += nowWindow.normal + nowWindow.over
+			}
 		}
 		return true
 	})
 
-	return total
+	return totalCount, secondCount
 }
 
-func (m *InMemoryRateLimiter) cleanupInactiveEntries(interval time.Duration, maxInactivity time.Duration) {
+func (m *InMemoryRecord) cleanupInactiveEntries(interval time.Duration, maxInactivity time.Duration) {
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 	for range ticker.C {
@@ -132,23 +134,10 @@ func (m *InMemoryRateLimiter) cleanupInactiveEntries(interval time.Duration, max
 	}
 }
 
-func parseKey(key string) (group, model string) {
+func parseKey(key string) (key1, key2 string) {
 	parts := strings.SplitN(key, ":", 2)
 	if len(parts) != 2 {
 		return "", ""
 	}
 	return parts[0], parts[1]
-}
-
-func MemoryPushRequest(group, model string, maxReq int64, duration time.Duration) (int64, int64) {
-	return memoryRateLimiter.pushRequest(group, model, maxReq, duration)
-}
-
-func MemoryRateLimit(group, model string, maxReq int64, duration time.Duration) bool {
-	current, _ := memoryRateLimiter.pushRequest(group, model, maxReq, duration)
-	return current <= maxReq
-}
-
-func GetMemoryRPM(group, model string) (int64, error) {
-	return int64(memoryRateLimiter.getRPM(group, model, time.Minute)), nil
 }

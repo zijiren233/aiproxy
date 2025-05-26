@@ -17,6 +17,7 @@ import (
 	"github.com/labring/aiproxy/core/common/config"
 	"github.com/labring/aiproxy/core/common/consume"
 	"github.com/labring/aiproxy/core/common/notify"
+	"github.com/labring/aiproxy/core/common/reqlimit"
 	"github.com/labring/aiproxy/core/common/trylock"
 	"github.com/labring/aiproxy/core/middleware"
 	"github.com/labring/aiproxy/core/model"
@@ -165,20 +166,10 @@ func notifyChannelIssue(meta *meta.Meta, issueType string, titleSuffix string, e
 			notifyFunc = notify.Error
 		}
 
-		now := time.Now()
-		group := "*"
-		rpm, rpmErr := model.GetRPM(group, now, "", meta.OriginModel, meta.Channel.ID)
-		tpm, tpmErr := model.GetTPM(group, now, "", meta.OriginModel, meta.Channel.ID)
-		if rpmErr != nil {
-			message += fmt.Sprintf("\nrpm: %v", rpmErr)
-		} else {
-			message += fmt.Sprintf("\nrpm: %d", rpm)
-		}
-		if tpmErr != nil {
-			message += fmt.Sprintf("\ntpm: %v", tpmErr)
-		} else {
-			message += fmt.Sprintf("\ntpm: %d", tpm)
-		}
+		rpm, rps := reqlimit.GetChannelModelRequest(context.Background(), strconv.Itoa(meta.Channel.ID), meta.OriginModel)
+		tpm, tps := reqlimit.GetChannelModelTokensRequest(context.Background(), strconv.Itoa(meta.Channel.ID), meta.OriginModel)
+
+		message += fmt.Sprintf("\nrpm: %d\nrps: %d\ntpm: %d\ntps: %d", rpm, rps, tpm, tps)
 	}
 
 	notifyFunc(
@@ -436,6 +427,27 @@ func recordResult(
 		downstreamResult,
 		user,
 		metadata,
+		func() {
+			reqlimit.PushChannelModelRequest(
+				context.Background(),
+				strconv.Itoa(meta.Channel.ID),
+				meta.OriginModel,
+			)
+			reqlimit.PushChannelModelTokensRequest(
+				context.Background(),
+				strconv.Itoa(meta.Channel.ID),
+				meta.OriginModel,
+				int64(result.Usage.TotalTokens),
+			)
+			reqlimit.PushGroupModelTokensRequest(
+				context.Background(),
+				gbc.Group,
+				meta.OriginModel,
+				int64(meta.ModelConfig.TPM),
+				int64(result.Usage.TotalTokens),
+			)
+		},
+		nil,
 	)
 }
 
