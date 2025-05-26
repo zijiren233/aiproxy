@@ -3,6 +3,7 @@ package aiproxyopenapi
 import (
 	"fmt"
 	"net/url"
+	"sync"
 
 	"github.com/labring/aiproxy/core/docs"
 	"github.com/labring/aiproxy/core/embedmcp"
@@ -12,7 +13,7 @@ import (
 
 var configTemplates = map[string]embedmcp.ConfigTemplate{
 	"host": {
-		Name:        "host",
+		Name:        "Host",
 		Required:    embedmcp.ConfigRequiredTypeInitOnly,
 		Example:     "http://localhost:3000",
 		Description: "The host of the OpenAPI server",
@@ -27,16 +28,35 @@ var configTemplates = map[string]embedmcp.ConfigTemplate{
 			return nil
 		},
 	},
+
+	"authorization": {
+		Name:        "Authorization",
+		Required:    embedmcp.ConfigRequiredTypeReusingOptional,
+		Example:     "aiproxy-admin-key",
+		Description: "The admin key of the OpenAPI server",
+	},
 }
 
-func NewServer(config map[string]string, _ map[string]string) (*server.MCPServer, error) {
-	parser := convert.NewParser()
-	err := parser.Parse([]byte(docs.SwaggerInfo.ReadDoc()))
-	if err != nil {
-		return nil, err
-	}
-	converter := convert.NewConverter(parser, convert.Options{
-		OpenAPIFrom: config["host"],
+var (
+	parser    *convert.Parser
+	parseOnce sync.Once
+)
+
+func getParser() *convert.Parser {
+	parseOnce.Do(func() {
+		parser = convert.NewParser()
+		err := parser.Parse([]byte(docs.SwaggerInfo.ReadDoc()))
+		if err != nil {
+			panic(err)
+		}
+	})
+	return parser
+}
+
+func NewServer(config map[string]string, reusingConfig map[string]string) (*server.MCPServer, error) {
+	converter := convert.NewConverter(getParser(), convert.Options{
+		OpenAPIFrom:   config["host"],
+		Authorization: reusingConfig["authorization"],
 	})
 	return converter.Convert()
 }
