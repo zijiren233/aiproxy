@@ -19,21 +19,21 @@ const (
 	ConfigRequiredTypeInitOrReusingOnly
 )
 
-func (c ConfigRequiredType) Validate(config any, reusingConfig any) error {
+func (c ConfigRequiredType) Validate(config string, reusingConfig string) error {
 	switch c {
 	case ConfigRequiredTypeInitOnly:
-		if config == nil {
+		if config == "" {
 			return fmt.Errorf("config is required")
 		}
 	case ConfigRequiredTypeReusingOnly:
-		if reusingConfig == nil {
+		if reusingConfig == "" {
 			return fmt.Errorf("reusing config is required")
 		}
 	case ConfigRequiredTypeInitOrReusingOnly:
-		if config == nil && reusingConfig == nil {
+		if config == "" && reusingConfig == "" {
 			return fmt.Errorf("config or reusing config is required")
 		}
-		if config != nil && reusingConfig != nil {
+		if config != "" && reusingConfig != "" {
 			return fmt.Errorf("config and reusing config are both provided, but only one is allowed")
 		}
 	}
@@ -103,7 +103,7 @@ func GetEmbedConfig(ct ConfigTemplates, initConfig map[string]string) (*model.MC
 	for key, value := range ct {
 		switch value.Required {
 		case ConfigRequiredTypeInitOnly:
-			if _, ok := initConfig[key]; !ok {
+			if v, ok := initConfig[key]; !ok || v == "" {
 				return nil, fmt.Errorf("config %s is required", key)
 			}
 		case ConfigRequiredTypeReusingOnly:
@@ -116,7 +116,10 @@ func GetEmbedConfig(ct ConfigTemplates, initConfig map[string]string) (*model.MC
 				Required:    true,
 			}
 		case ConfigRequiredTypeInitOrReusingOnly:
-			if _, ok := initConfig[key]; ok {
+			if v, ok := initConfig[key]; ok {
+				if v == "" {
+					return nil, fmt.Errorf("config %s is required", key)
+				}
 				continue
 			}
 			reusingConfig[key] = model.MCPEmbeddingReusingConfig{
