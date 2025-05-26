@@ -7,9 +7,11 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/core/embedmcp"
-	_ "github.com/labring/aiproxy/core/embedmcp/mcpregister"
 	"github.com/labring/aiproxy/core/middleware"
 	"github.com/labring/aiproxy/core/model"
+
+	// init embed mcp
+	_ "github.com/labring/aiproxy/core/embedmcp/mcpregister"
 )
 
 type EmbedMCPConfigTemplate struct {
@@ -115,7 +117,7 @@ func SaveEmbedMCP(c *gin.Context) {
 		return
 	}
 
-	pmcp, err := embedmcp.EmbedMCPToPublicMCP(emcp, req.InitConfig, req.Enabled)
+	pmcp, err := embedmcp.ToPublicMCP(emcp, req.InitConfig, req.Enabled)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return

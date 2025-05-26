@@ -22,14 +22,14 @@ var configTemplates = map[string]embedmcp.ConfigTemplate{
 				return err
 			}
 			if u.Scheme != "http" && u.Scheme != "https" {
-				return fmt.Errorf("invalid scheme")
+				return fmt.Errorf("invalid scheme: %s", u.Scheme)
 			}
 			return nil
 		},
 	},
 }
 
-func NewServer(config map[string]string, reusingConfig map[string]string) (*server.MCPServer, error) {
+func NewServer(config map[string]string, _ map[string]string) (*server.MCPServer, error) {
 	parser := convert.NewParser()
 	err := parser.Parse([]byte(docs.SwaggerInfo.ReadDoc()))
 	if err != nil {

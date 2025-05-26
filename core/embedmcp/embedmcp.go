@@ -1,6 +1,7 @@
 package embedmcp
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/labring/aiproxy/core/model"
@@ -23,18 +24,18 @@ func (c ConfigRequiredType) Validate(config string, reusingConfig string) error 
 	switch c {
 	case ConfigRequiredTypeInitOnly:
 		if config == "" {
-			return fmt.Errorf("config is required")
+			return errors.New("config is required")
 		}
 	case ConfigRequiredTypeReusingOnly:
 		if reusingConfig == "" {
-			return fmt.Errorf("reusing config is required")
+			return errors.New("reusing config is required")
 		}
 	case ConfigRequiredTypeInitOrReusingOnly:
 		if config == "" && reusingConfig == "" {
-			return fmt.Errorf("config or reusing config is required")
+			return errors.New("config or reusing config is required")
 		}
 		if config != "" && reusingConfig != "" {
-			return fmt.Errorf("config and reusing config are both provided, but only one is allowed")
+			return errors.New("config and reusing config are both provided, but only one is allowed")
 		}
 	}
 	return nil
@@ -144,7 +145,7 @@ type EmbedMcp struct {
 	NewServer       NewServerFunc
 }
 
-func EmbedMCPToPublicMCP(e EmbedMcp, initConfig map[string]string, enabled bool) (*model.PublicMCP, error) {
+func ToPublicMCP(e EmbedMcp, initConfig map[string]string, enabled bool) (*model.PublicMCP, error) {
 	embedConfig, err := GetEmbedConfig(e.ConfigTemplates, initConfig)
 	if err != nil {
 		return nil, err
