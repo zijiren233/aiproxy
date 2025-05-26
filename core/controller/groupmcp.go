@@ -2,6 +2,7 @@ package controller
 
 import (
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/core/middleware"
@@ -20,6 +21,7 @@ import (
 //	@Param			per_page	query		int		false	"Items per page"
 //	@Param			type		query		string	false	"MCP type"
 //	@Param			keyword		query		string	false	"Search keyword"
+//	@Param			status		query		int		false	"MCP status"
 //	@Success		200			{object}	middleware.APIResponse{data=[]model.GroupMCP}
 //	@Router			/api/mcp/group/{group} [get]
 func GetGroupMCPs(c *gin.Context) {
@@ -32,8 +34,9 @@ func GetGroupMCPs(c *gin.Context) {
 	page, perPage := parsePageParams(c)
 	mcpType := model.PublicMCPType(c.Query("type"))
 	keyword := c.Query("keyword")
+	status, _ := strconv.Atoi(c.Query("status"))
 
-	mcps, total, err := model.GetGroupMCPs(groupID, page, perPage, mcpType, keyword)
+	mcps, total, err := model.GetGroupMCPs(groupID, page, perPage, mcpType, keyword, model.GroupMCPStatus(status))
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
@@ -146,6 +149,46 @@ func UpdateGroupMCP(c *gin.Context) {
 	}
 
 	middleware.SuccessResponse(c, mcp)
+}
+
+type UpdateGroupMCPStatusRequest struct {
+	Status model.GroupMCPStatus `json:"status"`
+}
+
+// UpdateGroupMCPStatus godoc
+//
+//	@Summary		Update Group MCP status
+//	@Description	Update the status of a Group MCP
+//	@Tags			mcp
+//	@Accept			json
+//	@Produce		json
+//	@Security		ApiKeyAuth
+//	@Param			id		path		string						true	"MCP ID"
+//	@Param			group	path		string						true	"Group ID"
+//	@Param			status	body		UpdateGroupMCPStatusRequest	true	"MCP status"
+//	@Success		200		{object}	middleware.APIResponse
+//	@Router			/api/mcp/group/{group}/{id}/status [post]
+func UpdateGroupMCPStatus(c *gin.Context) {
+	id := c.Param("id")
+	groupID := c.Param("group")
+
+	if id == "" || groupID == "" {
+		middleware.ErrorResponse(c, http.StatusBadRequest, "MCP ID and Group ID are required")
+		return
+	}
+
+	var status UpdateGroupMCPStatusRequest
+	if err := c.ShouldBindJSON(&status); err != nil {
+		middleware.ErrorResponse(c, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	if err := model.UpdateGroupMCPStatus(id, groupID, status.Status); err != nil {
+		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	middleware.SuccessResponse(c, nil)
 }
 
 // DeleteGroupMCP godoc

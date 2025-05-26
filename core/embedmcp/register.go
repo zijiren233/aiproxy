@@ -8,12 +8,12 @@ import (
 )
 
 var (
-	servers            = make(map[string]EmbeddingMcp)
+	servers            = make(map[string]EmbedMcp)
 	mcpServerCache     = make(map[string]*server.MCPServer)
 	mcpServerCacheLock = sync.RWMutex{}
 )
 
-func Register(mcp EmbeddingMcp) {
+func Register(mcp EmbedMcp) {
 	if mcp.ID == "" {
 		panic("mcp id is required")
 	}
@@ -24,7 +24,7 @@ func Register(mcp EmbeddingMcp) {
 		panic(fmt.Sprintf("mcp %s new server is required", mcp.ID))
 	}
 	if mcp.ConfigTemplates != nil {
-		if err := CheckConfigTemplatesExample(mcp.ConfigTemplates); err != nil {
+		if err := CheckConfigTemplatesValidate(mcp.ConfigTemplates); err != nil {
 			panic(fmt.Sprintf("mcp %s config templates example is invalid: %v", mcp.ID, err))
 		}
 	}
@@ -34,7 +34,7 @@ func Register(mcp EmbeddingMcp) {
 	servers[mcp.ID] = mcp
 }
 
-func GetServer(id string, config map[string]string, reusingConfig map[string]string) (*server.MCPServer, error) {
+func GetMCPServer(id string, config map[string]string, reusingConfig map[string]string) (*server.MCPServer, error) {
 	embedServer, ok := servers[id]
 	if !ok {
 		return nil, fmt.Errorf("mcp %s not found", id)
@@ -42,13 +42,13 @@ func GetServer(id string, config map[string]string, reusingConfig map[string]str
 	if len(embedServer.ConfigTemplates) == 0 {
 		return getNoConfigServer(embedServer)
 	}
-	if err := ValidateConfigTemplates(embedServer.ConfigTemplates, config, reusingConfig); err != nil {
+	if err := ValidateConfigTemplatesConfig(embedServer.ConfigTemplates, config, reusingConfig); err != nil {
 		return nil, fmt.Errorf("mcp %s config is invalid: %w", id, err)
 	}
 	return embedServer.NewServer(config, reusingConfig)
 }
 
-func getNoConfigServer(embedServer EmbeddingMcp) (*server.MCPServer, error) {
+func getNoConfigServer(embedServer EmbedMcp) (*server.MCPServer, error) {
 	mcpServerCacheLock.RLock()
 	server, ok := mcpServerCache[embedServer.ID]
 	mcpServerCacheLock.RUnlock()
@@ -71,10 +71,11 @@ func getNoConfigServer(embedServer EmbeddingMcp) (*server.MCPServer, error) {
 	return server, nil
 }
 
-func Range(f func(id string, mcp EmbeddingMcp) bool) {
-	for id, mcp := range servers {
-		if !f(id, mcp) {
-			break
-		}
-	}
+func Servers() map[string]EmbedMcp {
+	return servers
+}
+
+func GetEmbedMCP(id string) (EmbedMcp, bool) {
+	mcp, ok := servers[id]
+	return mcp, ok
 }

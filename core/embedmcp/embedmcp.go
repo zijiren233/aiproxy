@@ -41,15 +41,16 @@ func (c ConfigRequiredType) Validate(config any, reusingConfig any) error {
 }
 
 type ConfigTemplate struct {
-	Required  ConfigRequiredType   `json:"required"`
-	Example   string               `json:"example,omitempty"`
-	Help      string               `json:"help,omitempty"`
-	Validator ConfigValueValidator `json:"-"`
+	Name        string               `json:"name"`
+	Required    ConfigRequiredType   `json:"required"`
+	Example     string               `json:"example,omitempty"`
+	Description string               `json:"description,omitempty"`
+	Validator   ConfigValueValidator `json:"-"`
 }
 
 type ConfigTemplates = map[string]ConfigTemplate
 
-func ValidateConfigTemplates(ct ConfigTemplates, config map[string]string, reusingConfig map[string]string) error {
+func ValidateConfigTemplatesConfig(ct ConfigTemplates, config map[string]string, reusingConfig map[string]string) error {
 	if len(ct) == 0 {
 		return nil
 	}
@@ -76,8 +77,14 @@ func ValidateConfigTemplates(ct ConfigTemplates, config map[string]string, reusi
 	return nil
 }
 
-func CheckConfigTemplatesExample(ct ConfigTemplates) error {
+func CheckConfigTemplatesValidate(ct ConfigTemplates) error {
 	for key, value := range ct {
+		if value.Name == "" {
+			return fmt.Errorf("config %s name is required", key)
+		}
+		if value.Description == "" {
+			return fmt.Errorf("config %s description is required", key)
+		}
 		if value.Example == "" || value.Validator == nil {
 			continue
 		}
@@ -88,9 +95,44 @@ func CheckConfigTemplatesExample(ct ConfigTemplates) error {
 	return nil
 }
 
+func GetEmbedConfig(ct ConfigTemplates, initConfig map[string]string) (*model.MCPEmbeddingConfig, error) {
+	reusingConfig := make(map[string]model.MCPEmbeddingReusingConfig)
+	embedConfig := &model.MCPEmbeddingConfig{
+		Init: initConfig,
+	}
+	for key, value := range ct {
+		switch value.Required {
+		case ConfigRequiredTypeInitOnly:
+			if _, ok := initConfig[key]; !ok {
+				return nil, fmt.Errorf("config %s is required", key)
+			}
+		case ConfigRequiredTypeReusingOnly:
+			if _, ok := initConfig[key]; ok {
+				return nil, fmt.Errorf("config %s is provided, but it is not allowed", key)
+			}
+			reusingConfig[key] = model.MCPEmbeddingReusingConfig{
+				Name:        value.Name,
+				Description: value.Description,
+				Required:    true,
+			}
+		case ConfigRequiredTypeInitOrReusingOnly:
+			if _, ok := initConfig[key]; ok {
+				continue
+			}
+			reusingConfig[key] = model.MCPEmbeddingReusingConfig{
+				Name:        value.Name,
+				Description: value.Description,
+				Required:    true,
+			}
+		}
+	}
+	embedConfig.Reusing = reusingConfig
+	return embedConfig, nil
+}
+
 type NewServerFunc func(config map[string]string, reusingConfig map[string]string) (*server.MCPServer, error)
 
-type EmbeddingMcp struct {
+type EmbedMcp struct {
 	ID              string
 	Name            string
 	Readme          string
@@ -99,11 +141,22 @@ type EmbeddingMcp struct {
 	NewServer       NewServerFunc
 }
 
-func (e *EmbeddingMcp) ToPublicMCP() *model.PublicMCP {
-	return &model.PublicMCP{
-		ID:     e.ID,
-		Name:   e.Name,
-		Readme: e.Readme,
-		Tags:   e.Tags,
+func (e EmbedMcp) ToPublicMCP(initConfig map[string]string, enabled bool) (*model.PublicMCP, error) {
+	embedConfig, err := GetEmbedConfig(e.ConfigTemplates, initConfig)
+	if err != nil {
+		return nil, err
 	}
+	pmcp := &model.PublicMCP{
+		ID:          e.ID,
+		Name:        e.Name,
+		Readme:      e.Readme,
+		Tags:        e.Tags,
+		EmbedConfig: embedConfig,
+	}
+	if enabled {
+		pmcp.Status = model.PublicMCPStatusEnabled
+	} else {
+		pmcp.Status = model.PublicMCPStatusDisabled
+	}
+	return pmcp, nil
 }

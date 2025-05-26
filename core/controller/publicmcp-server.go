@@ -118,11 +118,12 @@ func (r *redisStoreManager) Delete(session string) {
 // PublicMCPSseServer godoc
 //
 //	@Summary	Public MCP SSE Server
+//	@Security	ApiKeyAuth
 //	@Router		/mcp/public/{id}/sse [get]
 func PublicMCPSseServer(c *gin.Context) {
 	mcpID := c.Param("id")
 
-	publicMcp, err := model.GetPublicMCPByID(mcpID)
+	publicMcp, err := model.GetEnabledPublicMCPByID(mcpID)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, CreateMCPErrorResponse(
 			mcp.NewRequestId(nil),
@@ -147,7 +148,7 @@ func PublicMCPSseServer(c *gin.Context) {
 		}
 		handleSSEMCPServer(c, server, model.PublicMCPTypeOpenAPI)
 	case model.PublicMCPTypeEmbed:
-		server, err := embedmcp.GetServer(publicMcp.ID, publicMcp.EmbeddingConfig.Init, nil)
+		server, err := embedmcp.GetMCPServer(publicMcp.ID, publicMcp.EmbedConfig.Init, nil)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, CreateMCPErrorResponse(
 				mcp.NewRequestId(nil),
@@ -360,6 +361,7 @@ func processReusingParams(reusingParams map[string]model.ReusingParam, mcpID str
 // PublicMCPMessage godoc
 //
 //	@Summary	Public MCP SSE Server
+//	@Security	ApiKeyAuth
 //	@Router		/mcp/public/message [post]
 func PublicMCPMessage(c *gin.Context) {
 	token := middleware.GetToken(c)
@@ -439,6 +441,7 @@ func sendMCPSSEMessage(c *gin.Context, mcpType, sessionID string) {
 // PublicMCPStreamable godoc
 //
 //	@Summary	Public MCP Streamable Server
+//	@Security	ApiKeyAuth
 //	@Router		/mcp/public/{id}/streamable [get]
 //	@Router		/mcp/public/{id}/streamable [post]
 //	@Router		/mcp/public/{id}/streamable [delete]
@@ -446,7 +449,7 @@ func sendMCPSSEMessage(c *gin.Context, mcpType, sessionID string) {
 // TODO: batch and sse support
 func PublicMCPStreamable(c *gin.Context) {
 	mcpID := c.Param("id")
-	publicMcp, err := model.GetPublicMCPByID(mcpID)
+	publicMcp, err := model.GetEnabledPublicMCPByID(mcpID)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, CreateMCPErrorResponse(
 			mcp.NewRequestId(nil),
@@ -471,7 +474,7 @@ func PublicMCPStreamable(c *gin.Context) {
 		}
 		handleStreamableMCPServer(c, server)
 	case model.PublicMCPTypeEmbed:
-		server, err := embedmcp.GetServer(publicMcp.ID, publicMcp.EmbeddingConfig.Init, nil)
+		server, err := embedmcp.GetMCPServer(publicMcp.ID, publicMcp.EmbedConfig.Init, nil)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, CreateMCPErrorResponse(
 				mcp.NewRequestId(nil),

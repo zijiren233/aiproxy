@@ -2,6 +2,7 @@ package controller
 
 import (
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -20,14 +21,16 @@ import (
 //	@Param			per_page	query		int		false	"Items per page"
 //	@Param			type		query		string	false	"MCP type"
 //	@Param			keyword		query		string	false	"Search keyword"
+//	@Param			status		query		int		false	"MCP status"
 //	@Success		200			{object}	middleware.APIResponse{data=[]model.PublicMCP}
 //	@Router			/api/mcp/public/ [get]
 func GetPublicMCPs(c *gin.Context) {
 	page, perPage := parsePageParams(c)
 	mcpType := model.PublicMCPType(c.Query("type"))
 	keyword := c.Query("keyword")
+	status, _ := strconv.Atoi(c.Query("status"))
 
-	mcps, total, err := model.GetPublicMCPs(page, perPage, mcpType, keyword)
+	mcps, total, err := model.GetPublicMCPs(page, perPage, mcpType, keyword, model.PublicMCPStatus(status))
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
@@ -92,6 +95,43 @@ func CreatePublicMCP(c *gin.Context) {
 	}
 
 	middleware.SuccessResponse(c, mcp)
+}
+
+type UpdatePublicMCPStatusRequest struct {
+	Status model.PublicMCPStatus `json:"status"`
+}
+
+// UpdatePublicMCPStatus godoc
+//
+//	@Summary		Update MCP status
+//	@Description	Update the status of an MCP
+//	@Tags			mcp
+//	@Accept			json
+//	@Produce		json
+//	@Security		ApiKeyAuth
+//	@Param			id		path		string							true	"MCP ID"
+//	@Param			status	body		UpdatePublicMCPStatusRequest	true	"MCP status"
+//	@Success		200		{object}	middleware.APIResponse
+//	@Router			/api/mcp/public/{id}/status [post]
+func UpdatePublicMCPStatus(c *gin.Context) {
+	id := c.Param("id")
+	if id == "" {
+		middleware.ErrorResponse(c, http.StatusBadRequest, "MCP ID is required")
+		return
+	}
+
+	var status UpdatePublicMCPStatusRequest
+	if err := c.ShouldBindJSON(&status); err != nil {
+		middleware.ErrorResponse(c, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	if err := model.UpdatePublicMCPStatus(id, status.Status); err != nil {
+		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	middleware.SuccessResponse(c, nil)
 }
 
 // UpdatePublicMCP godoc
