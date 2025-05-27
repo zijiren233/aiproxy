@@ -215,7 +215,7 @@ func GetGroupPublicMCPReusingParam(c *gin.Context) {
 		return
 	}
 
-	param, err := model.GetGroupPublicMCPReusingParam(mcpID, groupID)
+	param, err := model.GetPublicMCPReusingParam(mcpID, groupID)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusNotFound, err.Error())
 		return
@@ -255,7 +255,7 @@ func SaveGroupPublicMCPReusingParam(c *gin.Context) {
 	param.MCPID = mcpID
 	param.GroupID = groupID
 
-	if err := model.SaveGroupPublicMCPReusingParam(&param); err != nil {
+	if err := model.SavePublicMCPReusingParam(&param); err != nil {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}

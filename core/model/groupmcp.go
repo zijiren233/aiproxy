@@ -6,6 +6,7 @@ import (
 
 	"github.com/bytedance/sonic"
 	"github.com/labring/aiproxy/core/common"
+	log "github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 )
 
@@ -102,10 +103,18 @@ func CreateGroupMCP(mcp *GroupMCP) error {
 }
 
 // UpdateGroupMCP updates an existing GroupMCP
-func UpdateGroupMCP(mcp *GroupMCP) error {
+func UpdateGroupMCP(mcp *GroupMCP) (err error) {
+	defer func() {
+		if err == nil {
+			if err := CacheDeleteGroupMCP(mcp.GroupID, mcp.ID); err != nil {
+				log.Error("cache delete group mcp error: " + err.Error())
+			}
+		}
+	}()
+
 	selects := []string{
 		"name",
-		"proxy_sse_config",
+		"proxy_config",
 		"openapi_config",
 	}
 	if mcp.Type != "" {
@@ -121,13 +130,29 @@ func UpdateGroupMCP(mcp *GroupMCP) error {
 	return HandleUpdateResult(result, ErrGroupMCPNotFound)
 }
 
-func UpdateGroupMCPStatus(id string, groupID string, status GroupMCPStatus) error {
+func UpdateGroupMCPStatus(id string, groupID string, status GroupMCPStatus) (err error) {
+	defer func() {
+		if err == nil {
+			if err := CacheDeleteGroupMCP(groupID, id); err != nil {
+				log.Error("cache delete group mcp error: " + err.Error())
+			}
+		}
+	}()
+
 	result := DB.Model(&GroupMCP{}).Where("id = ? AND group_id = ?", id, groupID).Update("status", status)
 	return HandleUpdateResult(result, ErrGroupMCPNotFound)
 }
 
 // DeleteGroupMCP deletes a GroupMCP by ID and GroupID
-func DeleteGroupMCP(id string, groupID string) error {
+func DeleteGroupMCP(id string, groupID string) (err error) {
+	defer func() {
+		if err == nil {
+			if err := CacheDeleteGroupMCP(groupID, id); err != nil {
+				log.Error("cache delete group mcp error: " + err.Error())
+			}
+		}
+	}()
+
 	if id == "" || groupID == "" {
 		return errors.New("group mcp id or group id is empty")
 	}
@@ -142,16 +167,6 @@ func GetGroupMCPByID(id string, groupID string) (*GroupMCP, error) {
 	}
 	var mcp GroupMCP
 	err := DB.Where("id = ? AND group_id = ?", id, groupID).First(&mcp).Error
-	return &mcp, HandleNotFound(err, ErrGroupMCPNotFound)
-}
-
-// GetEnabledGroupMCPByID retrieves a GroupMCP by ID and GroupID
-func GetEnabledGroupMCPByID(id string, groupID string) (*GroupMCP, error) {
-	if id == "" || groupID == "" {
-		return nil, errors.New("group mcp id or group id is empty")
-	}
-	var mcp GroupMCP
-	err := DB.Where("id = ? AND group_id = ? AND status = ?", id, groupID, GroupMCPStatusEnabled).First(&mcp).Error
 	return &mcp, HandleNotFound(err, ErrGroupMCPNotFound)
 }
 
