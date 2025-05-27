@@ -113,7 +113,7 @@ func (w *warpAdaptor) DoResponse(meta *meta.Meta, c *gin.Context, resp *http.Res
 		context.Background(),
 		meta.Group.ID,
 		meta.OriginModel,
-		int64(meta.ModelConfig.TPM),
+		meta.ModelConfig.TPM,
 		int64(usage.TotalTokens),
 	)
 	reqlimit.PushGroupModelTokennameTokensRequest(

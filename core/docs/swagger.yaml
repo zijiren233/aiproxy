@@ -654,6 +654,14 @@ definitions:
         type: integer
       input_tokens:
         type: integer
+      max_rpm:
+        type: integer
+      max_rps:
+        type: integer
+      max_tpm:
+        type: integer
+      max_tps:
+        type: integer
       output_tokens:
         type: integer
       request_count:
@@ -678,6 +686,35 @@ definitions:
       rejected_prediction_tokens:
         type: integer
     type: object
+  model.CostRank:
+    properties:
+      cache_creation_tokens:
+        type: integer
+      cached_tokens:
+        type: integer
+      input_tokens:
+        type: integer
+      max_rpm:
+        type: integer
+      max_rps:
+        type: integer
+      max_tpm:
+        type: integer
+      max_tps:
+        type: integer
+      model:
+        type: string
+      output_tokens:
+        type: integer
+      request_count:
+        type: integer
+      total_tokens:
+        type: integer
+      used_amount:
+        type: number
+      web_search_count:
+        type: integer
+    type: object
   model.DashboardResponse:
     properties:
       cache_creation_tokens:
@@ -695,6 +732,14 @@ definitions:
       exception_count:
         type: integer
       input_tokens:
+        type: integer
+      max_rpm:
+        type: integer
+      max_rps:
+        type: integer
+      max_tpm:
+        type: integer
+      max_tps:
         type: integer
       output_tokens:
         type: integer
@@ -929,6 +974,14 @@ definitions:
       exception_count:
         type: integer
       input_tokens:
+        type: integer
+      max_rpm:
+        type: integer
+      max_rps:
+        type: integer
+      max_tpm:
+        type: integer
+      max_tps:
         type: integer
       models:
         items:
@@ -1271,27 +1324,6 @@ definitions:
         $ref: '#/definitions/mode.Mode'
       updated_at:
         type: string
-    type: object
-  model.ModelCostRank:
-    properties:
-      cache_creation_tokens:
-        type: integer
-      cached_tokens:
-        type: integer
-      input_tokens:
-        type: integer
-      model:
-        type: string
-      output_tokens:
-        type: integer
-      request_count:
-        type: integer
-      total_tokens:
-        type: integer
-      used_amount:
-        type: number
-      web_search_count:
-        type: integer
     type: object
   model.ModelOwner:
     enum:
@@ -2240,10 +2272,6 @@ paths:
       description: Returns the general dashboard data including usage statistics and
         metrics
       parameters:
-      - description: Group or *
-        in: query
-        name: group
-        type: string
       - description: Channel ID
         in: query
         name: channel
@@ -4368,7 +4396,7 @@ paths:
             - properties:
                 data:
                   items:
-                    $ref: '#/definitions/model.ModelCostRank'
+                    $ref: '#/definitions/model.CostRank'
                   type: array
               type: object
       security:
@@ -4404,7 +4432,7 @@ paths:
             - properties:
                 data:
                   items:
-                    $ref: '#/definitions/model.ModelCostRank'
+                    $ref: '#/definitions/model.CostRank'
                   type: array
               type: object
       security:

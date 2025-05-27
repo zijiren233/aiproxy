@@ -38,24 +38,25 @@ func TestPushRequestRateLimit(t *testing.T) {
 	maxReq := int64(2)
 	duration := 60 * time.Second
 
-	for i := 0; i < 4; i++ {
+	for i := range 4 {
 		normalCount, overCount, _ := rl.PushRequest(maxReq, duration, 1, "group1", "model1")
 
-		if i < 2 {
+		switch {
+		case i < 2:
 			if normalCount != int64(i+1) {
 				t.Errorf("Request %d: expected normalCount %d, got %d", i+1, i+1, normalCount)
 			}
 			if overCount != 0 {
 				t.Errorf("Request %d: expected overCount 0, got %d", i+1, overCount)
 			}
-		} else if i == 2 {
+		case i == 2:
 			if normalCount != 3 {
 				t.Errorf("Request %d: expected normalCount 3, got %d", i+1, normalCount)
 			}
 			if overCount != 0 {
 				t.Errorf("Request %d: expected overCount 0, got %d", i+1, overCount)
 			}
-		} else {
+		case i == 3:
 			if normalCount != 3 {
 				t.Errorf("Request %d: expected normalCount 3, got %d", i+1, normalCount)
 			}
@@ -69,7 +70,7 @@ func TestPushRequestRateLimit(t *testing.T) {
 func TestPushRequestUnlimited(t *testing.T) {
 	rl := reqlimit.NewInMemoryRecord()
 
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		normalCount, overCount, _ := rl.PushRequest(0, 60*time.Second, 1, "group1", "model1")
 
 		if normalCount != int64(i+1) {
@@ -153,8 +154,8 @@ func TestConcurrentAccess(t *testing.T) {
 	var wg sync.WaitGroup
 	wg.Add(numGoroutines)
 
-	for i := 0; i < numGoroutines; i++ {
-		go func(id int) {
+	for i := range numGoroutines {
+		go func(_ int) {
 			defer wg.Done()
 			for j := 0; j < requestsPerGoroutine; j++ {
 				rl.PushRequest(0, 60*time.Second, 1, "group1", "model1")
@@ -178,7 +179,7 @@ func TestConcurrentDifferentKeys(t *testing.T) {
 	var wg sync.WaitGroup
 	wg.Add(numGoroutines)
 
-	for i := 0; i < numGoroutines; i++ {
+	for i := range numGoroutines {
 		go func(id int) {
 			defer wg.Done()
 			group := fmt.Sprintf("group%d", id%5)
@@ -202,7 +203,7 @@ func TestRateLimitWithOverflow(t *testing.T) {
 	maxReq := 5
 	duration := 60 * time.Second
 
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		normalCount, overCount, _ := rl.PushRequest(int64(maxReq), duration, 1, "group1", "model1")
 
 		if i < maxReq {
@@ -252,7 +253,7 @@ func BenchmarkPushRequest(b *testing.B) {
 func BenchmarkGetRequest(b *testing.B) {
 	rl := reqlimit.NewInMemoryRecord()
 
-	for i := 0; i < 100; i++ {
+	for i := range 100 {
 		group := fmt.Sprintf("group%d", i%10)
 		model := fmt.Sprintf("model%d", i%5)
 		rl.PushRequest(100, 60*time.Second, 1, group, model)

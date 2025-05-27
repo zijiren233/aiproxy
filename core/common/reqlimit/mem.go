@@ -56,7 +56,7 @@ func (m *InMemoryRecord) cleanupAndCount(e *entry, cutoff int64) (int64, int64) 
 	return normalCount, overCount
 }
 
-func (m *InMemoryRecord) PushRequest(max int64, duration time.Duration, n int64, keys ...string) (normalCount int64, overCount int64, secondCount int64) {
+func (m *InMemoryRecord) PushRequest(overed int64, duration time.Duration, n int64, keys ...string) (normalCount int64, overCount int64, secondCount int64) {
 	e := m.getEntry(keys)
 
 	e.Lock()
@@ -76,7 +76,7 @@ func (m *InMemoryRecord) PushRequest(max int64, duration time.Duration, n int64,
 		e.windows[windowStart] = wc
 	}
 
-	if max == 0 || normalCount <= max {
+	if overed == 0 || normalCount <= overed {
 		wc.normal += n
 		normalCount += n
 	} else {

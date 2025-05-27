@@ -10,7 +10,7 @@ import (
 
 var (
 	memoryGroupModelLimiter = NewInMemoryRecord()
-	redisGroupModelLimiter  = NewRedisGroupModelRecord()
+	redisGroupModelLimiter  = newRedisGroupModelRecord()
 )
 
 func PushGroupModelRequest(ctx context.Context, group, model string, max int64) (int64, int64, int64) {
@@ -40,7 +40,7 @@ func GetGroupModelRequest(ctx context.Context, group, model string) (int64, int6
 
 var (
 	memoryGroupModelTokennameLimiter = NewInMemoryRecord()
-	redisGroupModelTokennameLimiter  = NewRedisGroupModelTokennameRecord()
+	redisGroupModelTokennameLimiter  = newRedisGroupModelTokennameRecord()
 )
 
 func PushGroupModelTokennameRequest(ctx context.Context, group, model, tokenname string) (int64, int64, int64) {
@@ -73,7 +73,7 @@ func GetGroupModelTokennameRequest(ctx context.Context, group, model, tokenname 
 
 var (
 	memoryChannelModelRecord = NewInMemoryRecord()
-	redisChannelModelRecord  = NewRedisChannelModelRecord()
+	redisChannelModelRecord  = newRedisChannelModelRecord()
 )
 
 func PushChannelModelRequest(ctx context.Context, channel, model string) (int64, int64, int64) {
@@ -106,7 +106,7 @@ func GetChannelModelRequest(ctx context.Context, channel, model string) (int64, 
 
 var (
 	memoryGroupModelTokensLimiter = NewInMemoryRecord()
-	redisGroupModelTokensLimiter  = NewRedisGroupModelTokennameTokensRecord()
+	redisGroupModelTokensLimiter  = newRedisGroupModelTokensRecord()
 )
 
 func PushGroupModelTokensRequest(ctx context.Context, group, model string, maxTokens int64, tokens int64) (int64, int64, int64) {
@@ -136,7 +136,7 @@ func GetGroupModelTokensRequest(ctx context.Context, group, model string) (int64
 
 var (
 	memoryGroupModelTokennameTokensLimiter = NewInMemoryRecord()
-	redisGroupModelTokennameTokensLimiter  = NewRedisGroupModelTokennameTokensRecord()
+	redisGroupModelTokennameTokensLimiter  = newRedisGroupModelTokennameTokensRecord()
 )
 
 func PushGroupModelTokennameTokensRequest(ctx context.Context, group, model, tokenname string, tokens int64) (int64, int64, int64) {
@@ -169,7 +169,7 @@ func GetGroupModelTokennameTokensRequest(ctx context.Context, group, model, toke
 
 var (
 	memoryChannelModelTokensRecord = NewInMemoryRecord()
-	redisChannelModelTokensRecord  = NewRedisChannelModelTokensRecord()
+	redisChannelModelTokensRecord  = newRedisChannelModelTokensRecord()
 )
 
 func PushChannelModelTokensRequest(ctx context.Context, channel, model string, tokens int64) (int64, int64, int64) {

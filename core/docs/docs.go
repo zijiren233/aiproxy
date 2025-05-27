@@ -938,12 +938,6 @@ const docTemplate = `{
                 "summary": "Get dashboard data",
                 "parameters": [
                     {
-                        "type": "string",
-                        "description": "Group or *",
-                        "name": "group",
-                        "in": "query"
-                    },
-                    {
                         "type": "integer",
                         "description": "Channel ID",
                         "name": "channel",
@@ -4438,7 +4432,7 @@ const docTemplate = `{
                                         "data": {
                                             "type": "array",
                                             "items": {
-                                                "$ref": "#/definitions/model.ModelCostRank"
+                                                "$ref": "#/definitions/model.CostRank"
                                             }
                                         }
                                     }
@@ -4499,7 +4493,7 @@ const docTemplate = `{
                                         "data": {
                                             "type": "array",
                                             "items": {
-                                                "$ref": "#/definitions/model.ModelCostRank"
+                                                "$ref": "#/definitions/model.CostRank"
                                             }
                                         }
                                     }
@@ -8512,6 +8506,18 @@ const docTemplate = `{
                 "input_tokens": {
                     "type": "integer"
                 },
+                "max_rpm": {
+                    "type": "integer"
+                },
+                "max_rps": {
+                    "type": "integer"
+                },
+                "max_tpm": {
+                    "type": "integer"
+                },
+                "max_tps": {
+                    "type": "integer"
+                },
                 "output_tokens": {
                     "type": "integer"
                 },
@@ -8549,6 +8555,50 @@ const docTemplate = `{
                 }
             }
         },
+        "model.CostRank": {
+            "type": "object",
+            "properties": {
+                "cache_creation_tokens": {
+                    "type": "integer"
+                },
+                "cached_tokens": {
+                    "type": "integer"
+                },
+                "input_tokens": {
+                    "type": "integer"
+                },
+                "max_rpm": {
+                    "type": "integer"
+                },
+                "max_rps": {
+                    "type": "integer"
+                },
+                "max_tpm": {
+                    "type": "integer"
+                },
+                "max_tps": {
+                    "type": "integer"
+                },
+                "model": {
+                    "type": "string"
+                },
+                "output_tokens": {
+                    "type": "integer"
+                },
+                "request_count": {
+                    "type": "integer"
+                },
+                "total_tokens": {
+                    "type": "integer"
+                },
+                "used_amount": {
+                    "type": "number"
+                },
+                "web_search_count": {
+                    "type": "integer"
+                }
+            }
+        },
         "model.DashboardResponse": {
             "type": "object",
             "properties": {
@@ -8574,6 +8624,18 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "input_tokens": {
+                    "type": "integer"
+                },
+                "max_rpm": {
+                    "type": "integer"
+                },
+                "max_rps": {
+                    "type": "integer"
+                },
+                "max_tpm": {
+                    "type": "integer"
+                },
+                "max_tps": {
                     "type": "integer"
                 },
                 "output_tokens": {
@@ -8921,6 +8983,18 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "input_tokens": {
+                    "type": "integer"
+                },
+                "max_rpm": {
+                    "type": "integer"
+                },
+                "max_rps": {
+                    "type": "integer"
+                },
+                "max_tpm": {
+                    "type": "integer"
+                },
+                "max_tps": {
                     "type": "integer"
                 },
                 "models": {
@@ -9430,38 +9504,6 @@ const docTemplate = `{
                 },
                 "updated_at": {
                     "type": "string"
-                }
-            }
-        },
-        "model.ModelCostRank": {
-            "type": "object",
-            "properties": {
-                "cache_creation_tokens": {
-                    "type": "integer"
-                },
-                "cached_tokens": {
-                    "type": "integer"
-                },
-                "input_tokens": {
-                    "type": "integer"
-                },
-                "model": {
-                    "type": "string"
-                },
-                "output_tokens": {
-                    "type": "integer"
-                },
-                "request_count": {
-                    "type": "integer"
-                },
-                "total_tokens": {
-                    "type": "integer"
-                },
-                "used_amount": {
-                    "type": "number"
-                },
-                "web_search_count": {
-                    "type": "integer"
                 }
             }
         },

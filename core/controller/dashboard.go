@@ -279,7 +279,7 @@ func GetGroupDashboardModels(c *gin.Context) {
 //	@Param			channel			query		int		false	"Channel ID"
 //	@Param			start_timestamp	query		int64	false	"Start timestamp"
 //	@Param			end_timestamp	query		int64	false	"End timestamp"
-//	@Success		200				{object}	middleware.APIResponse{data=[]model.ModelCostRank}
+//	@Success		200				{object}	middleware.APIResponse{data=[]model.CostRank}
 //	@Router			/api/model_cost_rank/ [get]
 func GetModelCostRank(c *gin.Context) {
 	group := c.Query("group")
@@ -303,7 +303,7 @@ func GetModelCostRank(c *gin.Context) {
 //	@Param			group			path		string	true	"Group"
 //	@Param			start_timestamp	query		int64	false	"Start timestamp"
 //	@Param			end_timestamp	query		int64	false	"End timestamp"
-//	@Success		200				{object}	middleware.APIResponse{data=[]model.ModelCostRank}
+//	@Success		200				{object}	middleware.APIResponse{data=[]model.CostRank}
 //	@Router			/api/model_cost_rank/{group} [get]
 func GetGroupModelCostRank(c *gin.Context) {
 	group := c.Param("group")

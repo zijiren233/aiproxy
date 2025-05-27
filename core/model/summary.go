@@ -301,7 +301,7 @@ func getLogGroupByValues[T cmp.Ordered](field string, group string, tokenName st
 	return values, nil
 }
 
-type ModelCostRank struct {
+type CostRank struct {
 	Model               string  `json:"model"`
 	UsedAmount          float64 `json:"used_amount"`
 	InputTokens         int64   `json:"input_tokens"`
@@ -318,8 +318,8 @@ type ModelCostRank struct {
 	MaxTPS int64 `json:"max_tps"`
 }
 
-func GetModelCostRank(group string, channelID int, start, end time.Time) ([]*ModelCostRank, error) {
-	var ranks []*ModelCostRank
+func GetModelCostRank(group string, channelID int, start, end time.Time) ([]*CostRank, error) {
+	var ranks []*CostRank
 
 	var query *gorm.DB
 	if group == "*" || channelID != 0 {
@@ -350,7 +350,7 @@ func GetModelCostRank(group string, channelID int, start, end time.Time) ([]*Mod
 		return nil, err
 	}
 
-	slices.SortFunc(ranks, func(a, b *ModelCostRank) int {
+	slices.SortFunc(ranks, func(a, b *CostRank) int {
 		if a.UsedAmount != b.UsedAmount {
 			return cmp.Compare(b.UsedAmount, a.UsedAmount)
 		}

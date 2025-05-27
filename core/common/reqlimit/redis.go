@@ -15,43 +15,37 @@ type redisRateRecord struct {
 	prefix string
 }
 
-func NewRedisRecord(prefix string) *redisRateRecord {
-	return &redisRateRecord{
-		prefix: prefix,
-	}
-}
-
-func NewRedisGroupModelRecord() *redisRateRecord {
+func newRedisGroupModelRecord() *redisRateRecord {
 	return &redisRateRecord{
 		prefix: "group-model-record",
 	}
 }
 
-func NewRedisGroupModelTokennameRecord() *redisRateRecord {
+func newRedisGroupModelTokennameRecord() *redisRateRecord {
 	return &redisRateRecord{
 		prefix: "group-model-tokenname-record",
 	}
 }
 
-func NewRedisChannelModelRecord() *redisRateRecord {
+func newRedisChannelModelRecord() *redisRateRecord {
 	return &redisRateRecord{
 		prefix: "channel-model-record",
 	}
 }
 
-func NewRedisGroupModelTokensRecord() *redisRateRecord {
+func newRedisGroupModelTokensRecord() *redisRateRecord {
 	return &redisRateRecord{
 		prefix: "group-model-tokens-record",
 	}
 }
 
-func NewRedisGroupModelTokennameTokensRecord() *redisRateRecord {
+func newRedisGroupModelTokennameTokensRecord() *redisRateRecord {
 	return &redisRateRecord{
 		prefix: "group-model-tokenname-tokens-record",
 	}
 }
 
-func NewRedisChannelModelTokensRecord() *redisRateRecord {
+func newRedisChannelModelTokensRecord() *redisRateRecord {
 	return &redisRateRecord{
 		prefix: "channel-model-tokens-record",
 	}
@@ -190,7 +184,7 @@ func (r *redisRateRecord) GetRequest(ctx context.Context, duration time.Duration
 	return totalCountInt, secondCountInt, nil
 }
 
-func (r *redisRateRecord) PushRequest(ctx context.Context, max int64, duration time.Duration, n int64, keys ...string) (normalCount int64, overCount int64, secondCount int64, err error) {
+func (r *redisRateRecord) PushRequest(ctx context.Context, overed int64, duration time.Duration, n int64, keys ...string) (normalCount int64, overCount int64, secondCount int64, err error) {
 	key := r.buildKey(keys...)
 
 	result, err := pushRequestScript.Run(
@@ -199,7 +193,7 @@ func (r *redisRateRecord) PushRequest(ctx context.Context, max int64, duration t
 		[]string{key},
 		duration.Seconds(),
 		time.Now().Unix(),
-		max,
+		overed,
 		n,
 	).Text()
 	if err != nil {
