@@ -54,7 +54,8 @@ jobs:
       - name: Auto Fix Diff Content
         if: ${{ failure() }}
         run: |
-          git diff
+          git diff --color=always
+          exit 1
 
   golangci-lint-mcpservers:
     name: Lint MCP Servers
@@ -91,7 +92,8 @@ jobs:
       - name: Auto Fix Diff Content
         if: ${{ failure() }}
         run: |
-          git diff
+          git diff --color=always
+          exit 1
 
   golangci-lint-openapimcp:
     name: Lint OpneAPI MCP
@@ -123,4 +125,5 @@ jobs:
       - name: Auto Fix Diff Content
         if: ${{ failure() }}
         run: |
-          git diff
+          git diff --color=always
+          exit 1
