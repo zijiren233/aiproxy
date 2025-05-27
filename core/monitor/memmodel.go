@@ -4,8 +4,6 @@ import (
 	"context"
 	"sync"
 	"time"
-
-	"github.com/labring/aiproxy/core/common/config"
 )
 
 var memModelMonitor *MemModelMonitor
@@ -94,7 +92,7 @@ func (m *MemModelMonitor) cleanupExpiredData() {
 	}
 }
 
-func (m *MemModelMonitor) AddRequest(model string, channelID int64, isError, tryBan bool) (beyondThreshold, banExecution bool) {
+func (m *MemModelMonitor) AddRequest(model string, channelID int64, isError, tryBan bool, maxErrorRate float64) (beyondThreshold, banExecution bool) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -121,11 +119,11 @@ func (m *MemModelMonitor) AddRequest(model string, channelID int64, isError, try
 	modelData.totalStats.AddRequest(now, isError)
 	channel.timeWindows.AddRequest(now, isError)
 
-	return m.checkAndBan(now, channel, tryBan)
+	return m.checkAndBan(now, channel, tryBan, maxErrorRate)
 }
 
-func (m *MemModelMonitor) checkAndBan(now time.Time, channel *ChannelStats, tryBan bool) (beyondThreshold, banExecution bool) {
-	canBan := config.GetEnableModelErrorAutoBan()
+func (m *MemModelMonitor) checkAndBan(now time.Time, channel *ChannelStats, tryBan bool, maxErrorRate float64) (beyondThreshold, banExecution bool) {
+	canBan := maxErrorRate > 0
 	if tryBan && canBan {
 		if channel.bannedUntil.After(now) {
 			return false, false
@@ -139,7 +137,7 @@ func (m *MemModelMonitor) checkAndBan(now time.Time, channel *ChannelStats, tryB
 		return false, false
 	}
 
-	if float64(err)/float64(req) >= config.GetModelErrorAutoBanRate() {
+	if float64(err)/float64(req) >= maxErrorRate {
 		if !canBan || channel.bannedUntil.After(now) {
 			return true, false
 		}

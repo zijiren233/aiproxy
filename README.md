@@ -1,123 +1,260 @@
-English | [简体中文](./README.zh.md)
+<div align="center">
+  <h1>AI Proxy</h1>
+  <p>Next-generation AI gateway with OpenAI-compatible protocol</p>
+  
+  [![Release](https://img.shields.io/github/release/labring/aiproxy)](https://github.com/labring/aiproxy/releases)
+  [![License](https://img.shields.io/github/license/labring/aiproxy)](https://github.com/labring/aiproxy/blob/main/LICENSE)
+  [![Go Version](https://img.shields.io/github/go-mod/go-version/labring/aiproxy?filename=core%2Fgo.mod)](https://github.com/labring/aiproxy/blob/main/core/go.mod)
+  [![Build Status](https://img.shields.io/github/actions/workflow/status/labring/aiproxy/release.yml?branch=main)](https://github.com/labring/aiproxy/actions)
+  
+  [English](./README.md) | [简体中文](./README.zh.md)
+</div>
 
-# AI Proxy
+---
 
-Next-generation AI gateway, using OpenAI as the protocol entry point.
+## 🚀 Overview
 
-## Feature
+AI Proxy is a powerful, production-ready AI gateway that provides intelligent request routing, comprehensive monitoring, and seamless multi-tenant management. Built with OpenAI-compatible protocols, it serves as the perfect middleware for AI applications requiring reliability, scalability, and advanced features.
 
-- Intelligent error retry
-- Channel selection based on priority and error rate
-- Alert notifications
-  - Channel balance warning
-  - Error rate warning
-  - Unauthorized channel warning
-  - and more...
-- Logging and auditing
-  - Comprehensive request log data
-  - Request and response body recording
-  - Request log tracing
-- Data statistics and analysis
-  - Request volume statistics
-  - Error volume statistics
-  - RPM TPM statistics
-  - Consumption statistics
-  - Model statistics
-  - Channel error rate analysis
-  - and more...
-- Rerank support
-- PDF support
-- STT model mapping support
-- Multi-tenant system separation
-- Model RPM TPM limits
-- Think model support `<think>` split to `reasoning_content`
-- Prompt Token Cache billing support
-- Inline tiktoken, no need to download tiktoken file
-- API `Swagger` documentation support `http://host:port/swagger/index.html`
+## ✨ Key Features
 
-## How to use
+### 🔄 **Intelligent Request Management**
 
-### Sealos
+- **Smart Retry Logic**: Intelligent retry strategies with automatic error recovery
+- **Priority-based Channel Selection**: Route requests based on channel priority and error rates
+- **Load Balancing**: Efficiently distribute traffic across multiple AI providers
 
-Use Sealos built-in model capabilities, click to [Sealos](https://usw.sealos.io/?openapp=system-aiproxy).
+### 📊 **Comprehensive Monitoring & Analytics**
 
-### FastGPT
+- **Real-time Alerts**: Proactive notifications for balance warnings, error rates, and anomalies
+- **Detailed Logging**: Complete request/response tracking with audit trails
+- **Advanced Analytics**: Request volume, error statistics, RPM/TPM metrics, and cost analysis
+- **Channel Performance**: Error rate analysis and performance monitoring
 
-Use AI Proxy to access models, click to [FastGPT](https://doc.tryfastgpt.ai/docs/development/modelconfig/ai-proxy/).
+### 🏢 **Multi-tenant Architecture**
 
-## Deploy
+- **Organization Isolation**: Complete separation between different organizations
+- **Flexible Access Control**: Token-based authentication with subnet restrictions
+- **Resource Quotas**: RPM/TPM limits and usage quotas per group
+- **Custom Pricing**: Per-group model pricing and billing configuration
 
-### Use Docker
+### 🤖 **MCP (Model Context Protocol) Support**
 
-```bash
-docker run -d --name aiproxy -p 3000:3000 -v $(pwd)/aiproxy:/aiproxy ghcr.io/labring/aiproxy:latest
+- **Public MCP Servers**: Ready-to-use MCP integrations
+- **Organization MCP Servers**: Private MCP servers for organizations
+- **Embedded MCP**: Built-in MCP servers with configuration templates
+- **OpenAPI to MCP**: Automatic conversion of OpenAPI specs to MCP tools
+
+### 🔧 **Advanced Capabilities**
+
+- **Multi-format Support**: Text, image, audio, and document processing
+- **Model Mapping**: Flexible model aliasing and routing
+- **Prompt Caching**: Intelligent caching with billing support
+- **Think Mode**: Support for reasoning models with content splitting
+- **Built-in Tokenizer**: No external tiktoken dependencies
+
+## 🏗️ Architecture
+
+```mermaid
+graph TB
+    Client[Client Applications] --> Gateway[AI Proxy Gateway]
+    Gateway --> Auth[Authentication & Authorization]
+    Gateway --> Router[Intelligent Router]
+    Gateway --> Monitor[Monitoring & Analytics]
+    
+    Router --> Provider1[OpenAI]
+    Router --> Provider2[Anthropic]
+    Router --> Provider3[Azure OpenAI]
+    Router --> ProviderN[Other Providers]
+    
+    Gateway --> MCP[MCP Servers]
+    MCP --> PublicMCP[Public MCP]
+    MCP --> GroupMCP[Organization MCP]
+    MCP --> EmbedMCP[Embedded MCP]
+    
+    Monitor --> Alerts[Alert System]
+    Monitor --> Analytics[Analytics Dashboard]
+    Monitor --> Logs[Audit Logs]
 ```
 
-### Use Docker Compose
+## 🚀 Quick Start
 
-Copy [docker-compose.yaml](./docker-compose.yaml) to directory. default access key is `aiproxy`. default listen port is `3000`.
+### Docker (Recommended)
 
 ```bash
+# Quick start with default configuration
+docker run -d \
+  --name aiproxy \
+  -p 3000:3000 \
+  -v $(pwd)/aiproxy:/aiproxy \
+  ghcr.io/labring/aiproxy:latest
+
+# Nightly build
+docker run -d \
+  --name aiproxy \
+  -p 3000:3000 \
+  -v $(pwd)/aiproxy:/aiproxy \
+  ghcr.io/labring/aiproxy:main
+```
+
+### Docker Compose
+
+```bash
+# Download docker-compose.yaml
+curl -O https://raw.githubusercontent.com/labring/aiproxy/main/docker-compose.yaml
+
+# Start services
 docker-compose up -d
 ```
 
-## Envs
+## 🔧 Configuration
 
-### Basic Configuration
+### Environment Variables
 
-- `LISTEN`: The listen address, default is `:3000`
-- `ADMIN_KEY`: The admin key for the AI Proxy Service, admin key is used to admin api and relay api, default is empty
-- `INTERNAL_TOKEN`: Internal token for service authentication, default is empty
-- `FFMPEG_ENABLED`: Whether to enable ffmpeg, default is `false`
+#### **Core Settings**
 
-### Debug Options
+```bash
+LISTEN=:3000                    # Server listen address
+ADMIN_KEY=your-admin-key        # Admin API key
+```
 
-- `DEBUG`: Enable debug mode, default is `false`
-- `DEBUG_SQL`: Enable SQL debugging, default is `false`
+#### **Database Configuration**
 
-### Database Options
+```bash
+SQL_DSN=postgres://user:pass@host:5432/db    # Primary database
+LOG_SQL_DSN=postgres://user:pass@host:5432/log_db  # Log database (optional)
+REDIS_CONN_STRING=redis://localhost:6379     # Redis for caching
+```
 
-- `SQL_DSN`: The database connection string, default is empty, eg: `postgres://postgres:postgres@localhost:5432/postgres`
-- `LOG_SQL_DSN`: The log database connection string, default is empty, eg: `postgres://postgres:postgres@localhost:5432/postgres`
-- `REDIS_CONN_STRING`: The redis connection string, default is empty, eg: `redis://localhost:6379`
-- `DISABLE_AUTO_MIGRATE_DB`: Disable automatic database migration, default is `false`
-- `SQL_MAX_IDLE_CONNS`: The maximum number of idle connections in the database, default is `100`
-- `SQL_MAX_OPEN_CONNS`: The maximum number of open connections to the database, default is `1000`
-- `SQL_MAX_LIFETIME`: The maximum lifetime of a connection in seconds, default is `60`
-- `SQLITE_PATH`: The path to the sqlite database, default is `aiproxy.db`
-- `SQL_BUSY_TIMEOUT`: The busy timeout for the database, default is `3000`
+#### **Feature Toggles**
 
-### Notify Options
+```bash
+BILLING_ENABLED=true           # Enable billing features
+ENABLE_MODEL_ERROR_AUTO_BAN=true  # Auto-ban problematic models
+SAVE_ALL_LOG_DETAIL=false     # Log all request details
+```
 
-- `NOTIFY_NOTE`: Custom notification note, default is `AI Proxy`
-- `NOTIFY_FEISHU_WEBHOOK`: The feishu notify webhook url, default is empty, eg: `https://open.feishu.cn/open-apis/bot/v2/hook/xxxx`
+### Advanced Configuration
 
-### Model Configuration
+<details>
+<summary>Click to expand advanced configuration options</summary>
 
-- `DISABLE_MODEL_CONFIG`: Disable model configuration, default is `false`
-- `RETRY_TIMES`: Number of retry attempts, default is `0`
-- `ENABLE_MODEL_ERROR_AUTO_BAN`: Enable automatic banning of models with errors, default is `false`
-- `MODEL_ERROR_AUTO_BAN_RATE`: Rate threshold for auto-banning models with errors, default is `0.3`
-- `TIMEOUT_WITH_MODEL_TYPE`: Timeout settings for different model types, default is `{}`
-- `DEFAULT_CHANNEL_MODELS`: Default models for each channel, default is `{}`
-- `DEFAULT_CHANNEL_MODEL_MAPPING`: Model mapping for each channel, default is `{}`
+#### **Rate Limiting & Quotas**
 
-### Logging Configuration
+```bash
+GROUP_MAX_TOKEN_NUM=100        # Max tokens per group
+MODEL_ERROR_AUTO_BAN_RATE=0.3  # Error rate threshold for auto-ban
+```
 
-- `LOG_STORAGE_HOURS`: Hours to store logs (0 means unlimited), default is `0`
-- `RETRY_LOG_STORAGE_HOURS`: Hours to store retry log, default is `0`
-- `SAVE_ALL_LOG_DETAIL`: Save all log details, default is `false`
-- `LOG_DETAIL_REQUEST_BODY_MAX_SIZE`: Maximum size for request body in log details, default is `128KB`
-- `LOG_DETAIL_RESPONSE_BODY_MAX_SIZE`: Maximum size for response body in log details, default is `128KB`
-- `LOG_DETAIL_STORAGE_HOURS`: Hours to store log details, default is `72` (3 days)
-- `CLEAN_LOG_BATCH_SIZE`: Batch size for cleaning logs, cleaning interval is 1 minute, default is `2000`
+#### **Logging & Retention**
 
-### Service Control
+```bash
+LOG_STORAGE_HOURS=168          # Log retention (0 = unlimited)
+LOG_DETAIL_STORAGE_HOURS=72    # Detail log retention
+CLEAN_LOG_BATCH_SIZE=2000      # Log cleanup batch size
+```
 
-- `DISABLE_SERVE`: Disable serving requests, default `false`
-- `GROUP_MAX_TOKEN_NUM`: Maximum number of tokens per group (0 means unlimited), default is `0`
-- `GROUP_CONSUME_LEVEL_RATIO`: Consumption level ratio for groups, default is `{}`
-- `GEMINI_SAFETY_SETTING`: Safety setting for Gemini models, default is `BLOCK_NONE`
-- `BILLING_ENABLED`: Enable billing functionality, default is `true`
-- `IP_GROUPS_THRESHOLD`: IP group threshold, when the same IP is used by multiple groups, send a warning, default is `0`
-- `IP_GROUPS_BAN_THRESHOLD`: IP group ban threshold, when the same IP is used by multiple groups, ban it and all groups, default is `0`
+#### **Security & Access Control**
+
+```bash
+IP_GROUPS_THRESHOLD=5          # IP sharing alert threshold
+IP_GROUPS_BAN_THRESHOLD=10     # IP sharing ban threshold
+```
+
+</details>
+
+## 📚 API Documentation
+
+### Interactive API Explorer
+
+Visit `http://localhost:3000/swagger/index.html` for the complete API documentation with interactive examples.
+
+### Quick API Examples
+
+#### **List Available Models**
+
+```bash
+curl -H "Authorization: Bearer your-token" \
+  http://localhost:3000/v1/models
+```
+
+#### **Chat Completion**
+
+```bash
+curl -X POST http://localhost:3000/v1/chat/completions \
+  -H "Authorization: Bearer your-token" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "gpt-4",
+    "messages": [{"role": "user", "content": "Hello!"}]
+  }'
+```
+
+## 🔌 Integrations
+
+### Sealos Platform
+
+Deploy instantly on Sealos with built-in model capabilities:
+[Deploy to Sealos](https://hzh.sealos.run/?openapp=system-aiproxy)
+
+### FastGPT Integration
+
+Seamlessly integrate with FastGPT for enhanced AI workflows:
+[FastGPT Documentation](https://doc.tryfastgpt.ai/docs/development/modelconfig/ai-proxy/)
+
+### MCP (Model Context Protocol)
+
+AI Proxy provides comprehensive MCP support for extending AI capabilities:
+
+- **Public MCP Servers**: Community-maintained integrations
+- **Organization MCP Servers**: Private organizational tools
+- **Embedded MCP**: Easy-to-configure built-in functionality
+- **OpenAPI to MCP**: Automatic tool generation from API specifications
+
+## 🛠️ Development
+
+### Prerequisites
+
+- Go 1.24+
+- Node.js 22+ (for frontend development)
+- PostgreSQL/MySQL (optional, SQLite by default)
+- Redis (optional, for caching)
+
+### Building from Source
+
+```bash
+# Clone repository
+git clone https://github.com/labring/aiproxy.git
+cd aiproxy
+
+# Build frontend (optional)
+cd web && npm install -g pnpm && pnpm install && pnpm run build && cp -r dist ../core/public/dist/ && cd ..
+
+# Build backend
+cd core && go build -o aiproxy .
+
+# Run
+./aiproxy
+```
+
+## 🤝 Contributing
+
+We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
+
+### Ways to Contribute
+
+- 🐛 Report bugs and issues
+- 💡 Suggest new features
+- 📝 Improve documentation
+- 🔧 Submit pull requests
+- ⭐ Star the repository
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+- OpenAI for the API specification
+- The open-source community for various integrations
+- All contributors and users of AI Proxy
