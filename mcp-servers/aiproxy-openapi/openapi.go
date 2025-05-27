@@ -6,7 +6,7 @@ import (
 	"sync"
 
 	"github.com/labring/aiproxy/core/docs"
-	"github.com/labring/aiproxy/core/mcpservers"
+	mcpservers "github.com/labring/aiproxy/mcp-servers"
 	"github.com/labring/aiproxy/openapi-mcp/convert"
 	"github.com/mark3labs/mcp-go/server"
 )
@@ -63,10 +63,12 @@ func NewServer(config map[string]string, reusingConfig map[string]string) (*serv
 
 // need import in mcpregister/init.go
 func init() {
-	mcpservers.Register(mcpservers.EmbedMcp{
-		ID:              "aiproxy-openapi",
-		Name:            "AI Proxy OpenAPI",
-		NewServer:       NewServer,
-		ConfigTemplates: configTemplates,
-	})
+	mcpservers.Register(
+		mcpservers.NewEmbedMcp(
+			"aiproxy-openapi",
+			"AI Proxy OpenAPI",
+			NewServer,
+			mcpservers.WithConfigTemplates(configTemplates),
+		),
+	)
 }

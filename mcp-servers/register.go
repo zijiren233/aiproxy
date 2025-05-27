@@ -20,7 +20,7 @@ func Register(mcp EmbedMcp) {
 	if mcp.Name == "" {
 		panic("mcp name is required")
 	}
-	if mcp.NewServer == nil {
+	if mcp.newServer == nil {
 		panic(fmt.Sprintf("mcp %s new server is required", mcp.ID))
 	}
 	if mcp.ConfigTemplates != nil {

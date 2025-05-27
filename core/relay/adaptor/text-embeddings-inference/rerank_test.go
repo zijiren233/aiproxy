@@ -2,7 +2,6 @@ package textembeddingsinference_test
 
 import (
 	"bytes"
-	"context"
 	"io"
 	"net/http"
 	"testing"
@@ -31,7 +30,7 @@ func TestConvertRerankRequestSuccess(t *testing.T) {
 	require.NoError(t, err)
 
 	// Create mock HTTP request with context
-	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, "/rerank", bytes.NewReader(jsonBody))
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, "/rerank", bytes.NewReader(jsonBody))
 	require.NoError(t, err)
 	req.Header.Set("Content-Type", "application/json")
 
@@ -88,7 +87,7 @@ func TestConvertRerankRequestMissingDocuments(t *testing.T) {
 	require.NoError(t, err)
 
 	// Create mock HTTP request with context
-	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, "/rerank", bytes.NewReader(jsonBody))
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, "/rerank", bytes.NewReader(jsonBody))
 	require.NoError(t, err)
 	req.Header.Set("Content-Type", "application/json")
 
@@ -112,7 +111,7 @@ func TestConvertRerankRequestInvalidJSON(t *testing.T) {
 	invalidJSON := []byte(`{"model": "test", "documents": [`)
 
 	// Create mock HTTP request with context
-	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, "/rerank", bytes.NewReader(invalidJSON))
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, "/rerank", bytes.NewReader(invalidJSON))
 	require.NoError(t, err)
 	req.Header.Set("Content-Type", "application/json")
 

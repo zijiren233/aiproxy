@@ -12,14 +12,14 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/core/common/mcpproxy"
 	statelessmcp "github.com/labring/aiproxy/core/common/stateless-mcp"
-	"github.com/labring/aiproxy/core/mcpservers"
 	"github.com/labring/aiproxy/core/middleware"
 	"github.com/labring/aiproxy/core/model"
+	mcpservers "github.com/labring/aiproxy/mcp-servers"
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 
 	// init embed mcp
-	_ "github.com/labring/aiproxy/core/mcpservers/mcpregister"
+	_ "github.com/labring/aiproxy/mcp-servers/mcpregister"
 )
 
 type EmbedMCPConfigTemplate struct {
@@ -101,6 +101,65 @@ type SaveEmbedMCPRequest struct {
 	InitConfig map[string]string `json:"init_config"`
 }
 
+func GetEmbedConfig(ct mcpservers.ConfigTemplates, initConfig map[string]string) (*model.MCPEmbeddingConfig, error) {
+	reusingConfig := make(map[string]model.MCPEmbeddingReusingConfig)
+	embedConfig := &model.MCPEmbeddingConfig{
+		Init: initConfig,
+	}
+	for key, value := range ct {
+		switch value.Required {
+		case mcpservers.ConfigRequiredTypeInitOnly:
+			if v, ok := initConfig[key]; !ok || v == "" {
+				return nil, fmt.Errorf("config %s is required", key)
+			}
+		case mcpservers.ConfigRequiredTypeReusingOnly:
+			if _, ok := initConfig[key]; ok {
+				return nil, fmt.Errorf("config %s is provided, but it is not allowed", key)
+			}
+			reusingConfig[key] = model.MCPEmbeddingReusingConfig{
+				Name:        value.Name,
+				Description: value.Description,
+				Required:    true,
+			}
+		case mcpservers.ConfigRequiredTypeInitOrReusingOnly:
+			if v, ok := initConfig[key]; ok {
+				if v == "" {
+					return nil, fmt.Errorf("config %s is required", key)
+				}
+				continue
+			}
+			reusingConfig[key] = model.MCPEmbeddingReusingConfig{
+				Name:        value.Name,
+				Description: value.Description,
+				Required:    true,
+			}
+		}
+	}
+	embedConfig.Reusing = reusingConfig
+	return embedConfig, nil
+}
+
+func ToPublicMCP(e mcpservers.EmbedMcp, initConfig map[string]string, enabled bool) (*model.PublicMCP, error) {
+	embedConfig, err := GetEmbedConfig(e.ConfigTemplates, initConfig)
+	if err != nil {
+		return nil, err
+	}
+	pmcp := &model.PublicMCP{
+		ID:          e.ID,
+		Type:        model.PublicMCPTypeEmbed,
+		Name:        e.Name,
+		Readme:      e.Readme,
+		Tags:        e.Tags,
+		EmbedConfig: embedConfig,
+	}
+	if enabled {
+		pmcp.Status = model.PublicMCPStatusEnabled
+	} else {
+		pmcp.Status = model.PublicMCPStatusDisabled
+	}
+	return pmcp, nil
+}
+
 // SaveEmbedMCP godoc
 //
 //	@Summary		Save embed mcp
@@ -125,7 +184,7 @@ func SaveEmbedMCP(c *gin.Context) {
 		return
 	}
 
-	pmcp, err := mcpservers.ToPublicMCP(emcp, req.InitConfig, req.Enabled)
+	pmcp, err := ToPublicMCP(emcp, req.InitConfig, req.Enabled)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
