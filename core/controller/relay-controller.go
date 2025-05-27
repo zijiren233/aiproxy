@@ -22,6 +22,9 @@ import (
 	"github.com/labring/aiproxy/core/middleware"
 	"github.com/labring/aiproxy/core/model"
 	"github.com/labring/aiproxy/core/monitor"
+	"github.com/labring/aiproxy/core/relay/adaptor"
+	"github.com/labring/aiproxy/core/relay/adaptor/openai"
+	"github.com/labring/aiproxy/core/relay/adaptors"
 	"github.com/labring/aiproxy/core/relay/controller"
 	"github.com/labring/aiproxy/core/relay/meta"
 	"github.com/labring/aiproxy/core/relay/mode"
@@ -32,7 +35,7 @@ import (
 // https://platform.openai.com/docs/api-reference/chat
 
 type (
-	RelayHandler    func(*meta.Meta, *gin.Context) *controller.HandleResult
+	RelayHandler    func(*gin.Context, *meta.Meta) *controller.HandleResult
 	GetRequestUsage func(*gin.Context, *model.ModelConfig) (model.Usage, error)
 	GetRequestPrice func(*gin.Context, *model.ModelConfig) (model.Price, error)
 )
@@ -43,10 +46,103 @@ type RelayController struct {
 	Handler         RelayHandler
 }
 
-func relayHandler(meta *meta.Meta, c *gin.Context) *controller.HandleResult {
+var ErrInvalidChannelTypeCode = "invalid_channel_type"
+
+type warpAdaptor struct {
+	adaptor.Adaptor
+}
+
+const (
+	MetaChannelModelKeyRPM = "channel_model_rpm"
+	MetaChannelModelKeyRPS = "channel_model_rps"
+	MetaChannelModelKeyTPM = "channel_model_tpm"
+	MetaChannelModelKeyTPS = "channel_model_tps"
+)
+
+func getChannelModelRequestRate(meta *meta.Meta) model.RequestRate {
+	rate := model.RequestRate{}
+
+	if rpm, ok := meta.Get(MetaChannelModelKeyRPM); ok {
+		rate.RPM, _ = rpm.(int64)
+		rate.RPS = meta.GetInt64(MetaChannelModelKeyRPS)
+	} else {
+		rpm, rps := reqlimit.GetChannelModelRequest(context.Background(), strconv.Itoa(meta.Channel.ID), meta.OriginModel)
+		rate.RPM = rpm
+		rate.RPS = rps
+	}
+
+	if tpm, ok := meta.Get(MetaChannelModelKeyTPM); ok {
+		rate.TPM, _ = tpm.(int64)
+		rate.TPS = meta.GetInt64(MetaChannelModelKeyTPS)
+	} else {
+		tpm, tps := reqlimit.GetChannelModelTokensRequest(context.Background(), strconv.Itoa(meta.Channel.ID), meta.OriginModel)
+		rate.TPM = tpm
+		rate.TPS = tps
+	}
+
+	return rate
+}
+
+func (w *warpAdaptor) DoRequest(meta *meta.Meta, c *gin.Context, req *http.Request) (*http.Response, error) {
+	count, overLimitCount, secondCount := reqlimit.PushChannelModelRequest(
+		context.Background(),
+		strconv.Itoa(meta.Channel.ID),
+		meta.OriginModel,
+	)
+	meta.Set(MetaChannelModelKeyRPM, count+overLimitCount)
+	meta.Set(MetaChannelModelKeyRPS, secondCount)
+	return w.Adaptor.DoRequest(meta, c, req)
+}
+
+func (w *warpAdaptor) DoResponse(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, *relaymodel.ErrorWithStatusCode) {
+	usage, relayErr := w.Adaptor.DoResponse(meta, c, resp)
+	if usage == nil {
+		return nil, relayErr
+	}
+
+	count, overLimitCount, secondCount := reqlimit.PushChannelModelTokensRequest(
+		context.Background(),
+		strconv.Itoa(meta.Channel.ID),
+		meta.OriginModel,
+		int64(usage.TotalTokens),
+	)
+	meta.Set(MetaChannelModelKeyTPM, count+overLimitCount)
+	meta.Set(MetaChannelModelKeyTPS, secondCount)
+
+	reqlimit.PushGroupModelTokensRequest(
+		context.Background(),
+		meta.Group.ID,
+		meta.OriginModel,
+		int64(meta.ModelConfig.TPM),
+		int64(usage.TotalTokens),
+	)
+	reqlimit.PushGroupModelTokennameTokensRequest(
+		context.Background(),
+		meta.Group.ID,
+		meta.OriginModel,
+		meta.Token.Name,
+		int64(usage.TotalTokens),
+	)
+
+	return usage, relayErr
+}
+
+func relayHandler(c *gin.Context, meta *meta.Meta) *controller.HandleResult {
 	log := middleware.GetLogger(c)
 	middleware.SetLogFieldsFromMeta(meta, log.Data)
-	return controller.Handle(meta, c)
+
+	adaptor, ok := adaptors.GetAdaptor(meta.Channel.Type)
+	if !ok {
+		return &controller.HandleResult{
+			Error: openai.ErrorWrapperWithMessage(
+				fmt.Sprintf("invalid channel type: %d", meta.Channel.Type),
+				ErrInvalidChannelTypeCode,
+				http.StatusInternalServerError,
+			),
+		}
+	}
+
+	return controller.Handle(&warpAdaptor{adaptor}, c, meta)
 }
 
 func relayController(m mode.Mode) RelayController {
@@ -88,8 +184,8 @@ func relayController(m mode.Mode) RelayController {
 	return c
 }
 
-func RelayHelper(meta *meta.Meta, c *gin.Context, handel RelayHandler) (*controller.HandleResult, bool) {
-	result := handel(meta, c)
+func RelayHelper(c *gin.Context, meta *meta.Meta, handel RelayHandler) (*controller.HandleResult, bool) {
+	result := handel(c, meta)
 	if result.Error == nil {
 		if _, _, err := monitor.AddRequest(
 			context.Background(),
@@ -166,10 +262,8 @@ func notifyChannelIssue(meta *meta.Meta, issueType string, titleSuffix string, e
 			notifyFunc = notify.Error
 		}
 
-		rpm, rps := reqlimit.GetChannelModelRequest(context.Background(), strconv.Itoa(meta.Channel.ID), meta.OriginModel)
-		tpm, tps := reqlimit.GetChannelModelTokensRequest(context.Background(), strconv.Itoa(meta.Channel.ID), meta.OriginModel)
-
-		message += fmt.Sprintf("\nrpm: %d\nrps: %d\ntpm: %d\ntps: %d", rpm, rps, tpm, tps)
+		rate := getChannelModelRequestRate(meta)
+		message += fmt.Sprintf("\nrpm: %d\nrps: %d\ntpm: %d\ntps: %d", rate.RPM, rate.RPS, rate.TPM, rate.TPS)
 	}
 
 	notifyFunc(
@@ -339,7 +433,7 @@ func relay(c *gin.Context, mode mode.Mode, relayController RelayController) {
 	}
 
 	// First attempt
-	result, retry := RelayHelper(meta, c, relayController.Handler)
+	result, retry := RelayHelper(c, meta, relayController.Handler)
 
 	retryTimes := int(config.GetRetryTimes())
 	if mc.RetryTimes > 0 {
@@ -427,34 +521,8 @@ func recordResult(
 		downstreamResult,
 		user,
 		metadata,
-		func() {
-			reqlimit.PushChannelModelRequest(
-				context.Background(),
-				strconv.Itoa(meta.Channel.ID),
-				meta.OriginModel,
-			)
-			reqlimit.PushChannelModelTokensRequest(
-				context.Background(),
-				strconv.Itoa(meta.Channel.ID),
-				meta.OriginModel,
-				int64(result.Usage.TotalTokens),
-			)
-			reqlimit.PushGroupModelTokensRequest(
-				context.Background(),
-				gbc.Group,
-				meta.OriginModel,
-				int64(meta.ModelConfig.TPM),
-				int64(result.Usage.TotalTokens),
-			)
-			reqlimit.PushGroupModelTokennameTokensRequest(
-				context.Background(),
-				gbc.Group,
-				meta.OriginModel,
-				meta.Token.Name,
-				int64(result.Usage.TotalTokens),
-			)
-		},
-		nil,
+		getChannelModelRequestRate(meta),
+		middleware.GetGroupModelTokenRequestRate(c),
 	)
 }
 
@@ -622,7 +690,7 @@ func retryLoop(c *gin.Context, mode mode.Mode, state *retryState, relayControlle
 			meta.WithRetryAt(time.Now()),
 		)
 		var retry bool
-		state.result, retry = RelayHelper(state.meta, c, relayController)
+		state.result, retry = RelayHelper(c, state.meta, relayController)
 
 		done := handleRetryResult(c, retry, newChannel, state)
 		if done || i == state.retryTimes-1 {
@@ -712,7 +780,7 @@ var channelNoRetryStatusCodesMap = map[int]struct{}{
 
 // 仅当是channel错误时，才需要记录，用户请求参数错误时，不需要记录
 func shouldRetry(_ *gin.Context, relayErr relaymodel.ErrorWithStatusCode) bool {
-	if relayErr.Error.Code == controller.ErrInvalidChannelTypeCode {
+	if relayErr.Error.Code == ErrInvalidChannelTypeCode {
 		return false
 	}
 	_, ok := channelNoRetryStatusCodesMap[relayErr.StatusCode]
@@ -727,7 +795,7 @@ var channelNoPermissionStatusCodesMap = map[int]struct{}{
 }
 
 func channelHasPermission(relayErr relaymodel.ErrorWithStatusCode) bool {
-	if relayErr.Error.Code == controller.ErrInvalidChannelTypeCode {
+	if relayErr.Error.Code == ErrInvalidChannelTypeCode {
 		return false
 	}
 	_, ok := channelNoPermissionStatusCodesMap[relayErr.StatusCode]

@@ -21,6 +21,8 @@ func recordConsume(
 	downstreamResult bool,
 	user string,
 	metadata map[string]string,
+	channelModelRate model.RequestRate,
+	groupModelTokenRate model.RequestRate,
 ) error {
 	return model.BatchRecordLogs(
 		meta.RequestID,
@@ -45,5 +47,7 @@ func recordConsume(
 		amount,
 		user,
 		metadata,
+		channelModelRate,
+		groupModelTokenRate,
 	)
 }

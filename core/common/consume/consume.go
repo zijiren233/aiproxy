@@ -34,8 +34,8 @@ func AsyncConsume(
 	downstreamResult bool,
 	user string,
 	metadata map[string]string,
-	preHook func(),
-	postHook func(),
+	channelRate model.RequestRate,
+	groupRate model.RequestRate,
 ) {
 	consumeWaitGroup.Add(1)
 	defer func() {
@@ -45,30 +45,24 @@ func AsyncConsume(
 		}
 	}()
 
-	go func() {
-		if preHook != nil {
-			preHook()
-		}
-		if postHook != nil {
-			defer postHook()
-		}
-		Consume(
-			context.Background(),
-			postGroupConsumer,
-			firstByteAt,
-			code,
-			meta,
-			usage,
-			modelPrice,
-			content,
-			ip,
-			retryTimes,
-			requestDetail,
-			downstreamResult,
-			user,
-			metadata,
-		)
-	}()
+	go Consume(
+		context.Background(),
+		postGroupConsumer,
+		firstByteAt,
+		code,
+		meta,
+		usage,
+		modelPrice,
+		content,
+		ip,
+		retryTimes,
+		requestDetail,
+		downstreamResult,
+		user,
+		metadata,
+		channelRate,
+		groupRate,
+	)
 }
 
 func Consume(
@@ -86,6 +80,8 @@ func Consume(
 	downstreamResult bool,
 	user string,
 	metadata map[string]string,
+	channelRate model.RequestRate,
+	groupRate model.RequestRate,
 ) {
 	amount := CalculateAmount(code, usage, modelPrice)
 	amount = consumeAmount(ctx, amount, postGroupConsumer, meta)
@@ -104,6 +100,8 @@ func Consume(
 		downstreamResult,
 		user,
 		metadata,
+		channelRate,
+		groupRate,
 	)
 	if err != nil {
 		log.Error("error batch record consume: " + err.Error())

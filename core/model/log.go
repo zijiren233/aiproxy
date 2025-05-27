@@ -1139,6 +1139,11 @@ type ChartData struct {
 	TotalTokens         int64   `json:"total_tokens,omitempty"`
 	ExceptionCount      int64   `json:"exception_count"`
 	WebSearchCount      int64   `json:"web_search_count,omitempty"`
+
+	MaxRPM int64 `json:"max_rpm"`
+	MaxTPM int64 `json:"max_tpm"`
+	MaxRPS int64 `json:"max_rps"`
+	MaxTPS int64 `json:"max_tps"`
 }
 
 type DashboardResponse struct {
@@ -1148,6 +1153,11 @@ type DashboardResponse struct {
 
 	RPM int64 `json:"rpm"`
 	TPM int64 `json:"tpm"`
+
+	MaxRPM int64 `json:"max_rpm"`
+	MaxTPM int64 `json:"max_tpm"`
+	MaxRPS int64 `json:"max_rps"`
+	MaxTPS int64 `json:"max_tps"`
 
 	UsedAmount          float64 `json:"used_amount"`
 	InputTokens         int64   `json:"input_tokens,omitempty"`
@@ -1206,6 +1216,19 @@ func aggregateHourDataToDay(hourlyData []*ChartData, timezone *time.Location) []
 		day.CacheCreationTokens += data.CacheCreationTokens
 		day.TotalTokens += data.TotalTokens
 		day.WebSearchCount += data.WebSearchCount
+
+		if data.MaxRPM > day.MaxRPM {
+			day.MaxRPM = data.MaxRPM
+		}
+		if data.MaxTPM > day.MaxTPM {
+			day.MaxTPM = data.MaxTPM
+		}
+		if data.MaxRPS > day.MaxRPS {
+			day.MaxRPS = data.MaxRPS
+		}
+		if data.MaxTPS > day.MaxTPS {
+			day.MaxTPS = data.MaxTPS
+		}
 	}
 
 	result := make([]*ChartData, 0, len(dayData))
@@ -1279,6 +1302,19 @@ func sumDashboardResponse(chartData []*ChartData) DashboardResponse {
 		dashboardResponse.CachedTokens += data.CachedTokens
 		dashboardResponse.CacheCreationTokens += data.CacheCreationTokens
 		dashboardResponse.WebSearchCount += data.WebSearchCount
+
+		if data.MaxRPM > dashboardResponse.MaxRPM {
+			dashboardResponse.MaxRPM = data.MaxRPM
+		}
+		if data.MaxTPM > dashboardResponse.MaxTPM {
+			dashboardResponse.MaxTPM = data.MaxTPM
+		}
+		if data.MaxRPS > dashboardResponse.MaxRPS {
+			dashboardResponse.MaxRPS = data.MaxRPS
+		}
+		if data.MaxTPS > dashboardResponse.MaxTPS {
+			dashboardResponse.MaxTPS = data.MaxTPS
+		}
 	}
 	dashboardResponse.UsedAmount = usedAmount.InexactFloat64()
 	return dashboardResponse
@@ -1382,19 +1418,6 @@ func GetGroupDashboardData(
 		Models:            models,
 		TokenNames:        tokenNames,
 	}, nil
-}
-
-//nolint:revive
-type ModelCostRank struct {
-	Model               string  `json:"model"`
-	UsedAmount          float64 `json:"used_amount"`
-	InputTokens         int64   `json:"input_tokens"`
-	OutputTokens        int64   `json:"output_tokens"`
-	CachedTokens        int64   `json:"cached_tokens"`
-	CacheCreationTokens int64   `json:"cache_creation_tokens"`
-	TotalTokens         int64   `json:"total_tokens"`
-	RequestCount        int64   `json:"request_count"`
-	WebSearchCount      int64   `json:"web_search_count"`
 }
 
 func GetIPGroups(threshold int, start, end time.Time) (map[string][]string, error) {

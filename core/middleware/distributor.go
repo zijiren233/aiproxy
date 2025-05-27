@@ -102,18 +102,18 @@ func checkGroupModelRPMAndTPM(c *gin.Context, group *model.GroupCache, mc *model
 	adjustedModelConfig := GetGroupAdjustedModelConfig(group, *mc)
 
 	groupModelCount, groupModelOverLimitCount, groupModelSecondCount := reqlimit.PushGroupModelRequest(c.Request.Context(), group.ID, mc.Model, adjustedModelConfig.RPM)
-	c.Set(GroupModelRPM, groupModelCount+groupModelOverLimitCount)
-	c.Set(GroupModelRPS, groupModelSecondCount)
-	log.Data["rpm"] = strconv.FormatInt(groupModelCount+groupModelOverLimitCount, 10)
-	log.Data["rps"] = strconv.FormatInt(groupModelSecondCount, 10)
+	log.Data["group_rpm"] = strconv.FormatInt(groupModelCount+groupModelOverLimitCount, 10)
+	log.Data["group_rps"] = strconv.FormatInt(groupModelSecondCount, 10)
 
 	groupModelTokenCount, groupModelTokenOverLimitCount, groupModelTokenSecondCount := reqlimit.PushGroupModelTokennameRequest(c.Request.Context(), group.ID, mc.Model, tokenName)
 	c.Set(GroupModelTokenRPM, groupModelTokenCount+groupModelTokenOverLimitCount)
 	c.Set(GroupModelTokenRPS, groupModelTokenSecondCount)
+	log.Data["rpm"] = strconv.FormatInt(groupModelTokenCount+groupModelTokenOverLimitCount, 10)
+	log.Data["rps"] = strconv.FormatInt(groupModelTokenSecondCount, 10)
 
 	if group.Status != model.GroupStatusInternal &&
 		adjustedModelConfig.RPM > 0 {
-		log.Data["rpm_limit"] = strconv.FormatInt(adjustedModelConfig.RPM, 10)
+		log.Data["group_rpm_limit"] = strconv.FormatInt(adjustedModelConfig.RPM, 10)
 		if groupModelCount > adjustedModelConfig.RPM {
 			setRpmHeaders(c, adjustedModelConfig.RPM, 0)
 			return ErrRequestRateLimitExceeded
@@ -122,18 +122,18 @@ func checkGroupModelRPMAndTPM(c *gin.Context, group *model.GroupCache, mc *model
 	}
 
 	groupModelCountTPM, groupModelCountTPS := reqlimit.GetGroupModelTokensRequest(c.Request.Context(), group.ID, mc.Model)
-	c.Set(GroupModelTPM, groupModelCountTPM)
-	c.Set(GroupModelTPS, groupModelCountTPS)
-	log.Data["tpm"] = strconv.FormatInt(groupModelCountTPM, 10)
-	log.Data["tps"] = strconv.FormatInt(groupModelCountTPS, 10)
+	log.Data["group_tpm"] = strconv.FormatInt(groupModelCountTPM, 10)
+	log.Data["group_tps"] = strconv.FormatInt(groupModelCountTPS, 10)
 
 	groupModelTokenCountTPM, groupModelTokenCountTPS := reqlimit.GetGroupModelTokennameTokensRequest(c.Request.Context(), group.ID, mc.Model, tokenName)
 	c.Set(GroupModelTokenTPM, groupModelTokenCountTPM)
 	c.Set(GroupModelTokenTPS, groupModelTokenCountTPS)
+	log.Data["tpm"] = strconv.FormatInt(groupModelTokenCountTPM, 10)
+	log.Data["tps"] = strconv.FormatInt(groupModelTokenCountTPS, 10)
 
 	if group.Status != model.GroupStatusInternal &&
 		adjustedModelConfig.TPM > 0 {
-		log.Data["tpm_limit"] = strconv.FormatInt(adjustedModelConfig.TPM, 10)
+		log.Data["group_tpm_limit"] = strconv.FormatInt(adjustedModelConfig.TPM, 10)
 		if groupModelCountTPM >= adjustedModelConfig.TPM {
 			setTpmHeaders(c, adjustedModelConfig.TPM, 0)
 			return ErrRequestTpmLimitExceeded
@@ -408,8 +408,8 @@ func distribute(c *gin.Context, mode mode.Mode) {
 			true,
 			user,
 			metadata,
-			nil,
-			nil,
+			model.RequestRate{},
+			GetGroupModelTokenRequestRate(c),
 		)
 		AbortLogWithMessage(c, http.StatusTooManyRequests, errMsg, &ErrorField{
 			Type: "invalid_request_error",
@@ -421,20 +421,13 @@ func distribute(c *gin.Context, mode mode.Mode) {
 	c.Next()
 }
 
-func GetGroupModelRPM(c *gin.Context) int64 {
-	return c.GetInt64(GroupModelRPM)
-}
-
-func GetGroupModelRPS(c *gin.Context) int64 {
-	return c.GetInt64(GroupModelRPS)
-}
-
-func GetGroupModelTPM(c *gin.Context) int64 {
-	return c.GetInt64(GroupModelTPM)
-}
-
-func GetGroupModelTPS(c *gin.Context) int64 {
-	return c.GetInt64(GroupModelTPS)
+func GetGroupModelTokenRequestRate(c *gin.Context) model.RequestRate {
+	return model.RequestRate{
+		RPM: GetGroupModelTokenRPM(c),
+		RPS: GetGroupModelTokenRPS(c),
+		TPM: GetGroupModelTokenTPM(c),
+		TPS: GetGroupModelTokenTPS(c),
+	}
 }
 
 func GetGroupModelTokenRPM(c *gin.Context) int64 {
