@@ -130,7 +130,6 @@ REDIS_CONN_STRING=redis://localhost:6379     # Redis 缓存
 
 ```bash
 BILLING_ENABLED=true           # 启用计费功能
-ENABLE_MODEL_ERROR_AUTO_BAN=true  # 自动禁用问题模型
 SAVE_ALL_LOG_DETAIL=false     # 记录所有请求详情
 ```
 
