@@ -157,7 +157,7 @@ func TestConcurrentAccess(t *testing.T) {
 	for i := range numGoroutines {
 		go func(_ int) {
 			defer wg.Done()
-			for j := 0; j < requestsPerGoroutine; j++ {
+			for range requestsPerGoroutine {
 				rl.PushRequest(0, 60*time.Second, 1, "group1", "model1")
 			}
 		}(i)

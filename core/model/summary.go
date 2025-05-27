@@ -38,13 +38,13 @@ type SummaryData struct {
 func (d *SummaryData) buildUpdateData(tableName string) map[string]any {
 	data := map[string]any{}
 	if d.RequestCount > 0 {
-		data["request_count"] = gorm.Expr(fmt.Sprintf("%s.request_count + ?", tableName), d.RequestCount)
+		data["request_count"] = gorm.Expr(tableName+".request_count + ?", d.RequestCount)
 	}
 	if d.UsedAmount > 0 {
-		data["used_amount"] = gorm.Expr(fmt.Sprintf("%s.used_amount + ?", tableName), d.UsedAmount)
+		data["used_amount"] = gorm.Expr(tableName+".used_amount + ?", d.UsedAmount)
 	}
 	if d.ExceptionCount > 0 {
-		data["exception_count"] = gorm.Expr(fmt.Sprintf("%s.exception_count + ?", tableName), d.ExceptionCount)
+		data["exception_count"] = gorm.Expr(tableName+".exception_count + ?", d.ExceptionCount)
 	}
 
 	// max rpm tpm update

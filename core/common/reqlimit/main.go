@@ -13,15 +13,15 @@ var (
 	redisGroupModelLimiter  = newRedisGroupModelRecord()
 )
 
-func PushGroupModelRequest(ctx context.Context, group, model string, max int64) (int64, int64, int64) {
+func PushGroupModelRequest(ctx context.Context, group, model string, overed int64) (int64, int64, int64) {
 	if common.RedisEnabled {
-		count, overLimitCount, secondCount, err := redisGroupModelLimiter.PushRequest(ctx, max, time.Minute, 1, group, model)
+		count, overLimitCount, secondCount, err := redisGroupModelLimiter.PushRequest(ctx, overed, time.Minute, 1, group, model)
 		if err == nil {
 			return count, overLimitCount, secondCount
 		}
 		log.Error("redis push request error: " + err.Error())
 	}
-	return memoryGroupModelLimiter.PushRequest(max, time.Minute, 1, group, model)
+	return memoryGroupModelLimiter.PushRequest(overed, time.Minute, 1, group, model)
 }
 
 func GetGroupModelRequest(ctx context.Context, group, model string) (int64, int64) {
