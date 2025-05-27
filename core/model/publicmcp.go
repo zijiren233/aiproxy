@@ -68,26 +68,26 @@ type PublicMCPReusingParam struct {
 	ReusingParams map[string]string `gorm:"serializer:fastjson;type:text" json:"reusing_params"`
 }
 
-func (l *PublicMCPReusingParam) BeforeCreate(_ *gorm.DB) (err error) {
-	if l.MCPID == "" {
+func (p *PublicMCPReusingParam) BeforeCreate(_ *gorm.DB) (err error) {
+	if p.MCPID == "" {
 		return errors.New("mcp id is empty")
 	}
-	if l.GroupID == "" {
+	if p.GroupID == "" {
 		return errors.New("group is empty")
 	}
 	return
 }
 
-func (l *PublicMCPReusingParam) MarshalJSON() ([]byte, error) {
+func (p *PublicMCPReusingParam) MarshalJSON() ([]byte, error) {
 	type Alias PublicMCPReusingParam
 	a := &struct {
 		*Alias
 		CreatedAt int64 `json:"created_at"`
 		UpdateAt  int64 `json:"update_at"`
 	}{
-		Alias:     (*Alias)(l),
-		CreatedAt: l.CreatedAt.UnixMilli(),
-		UpdateAt:  l.UpdateAt.UnixMilli(),
+		Alias:     (*Alias)(p),
+		CreatedAt: p.CreatedAt.UnixMilli(),
+		UpdateAt:  p.UpdateAt.UnixMilli(),
 	}
 	return sonic.Marshal(a)
 }
