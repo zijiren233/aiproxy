@@ -60,12 +60,20 @@ func GroupMCPSseServer(c *gin.Context) {
 
 	group := middleware.GetGroup(c)
 
-	groupMcp, err := model.GetEnabledGroupMCPByID(id, group.ID)
+	groupMcp, err := model.CacheGetGroupMCP(group.ID, id)
 	if err != nil {
 		c.JSON(http.StatusNotFound, CreateMCPErrorResponse(
 			mcp.NewRequestId(nil),
 			mcp.INVALID_REQUEST,
 			err.Error(),
+		))
+		return
+	}
+	if groupMcp.Status != model.GroupMCPStatusEnabled {
+		c.JSON(http.StatusNotFound, CreateMCPErrorResponse(
+			mcp.NewRequestId(nil),
+			mcp.INVALID_REQUEST,
+			"mcp is not enabled",
 		))
 		return
 	}
@@ -222,12 +230,20 @@ func GroupMCPStreamable(c *gin.Context) {
 
 	group := middleware.GetGroup(c)
 
-	groupMcp, err := model.GetEnabledGroupMCPByID(id, group.ID)
+	groupMcp, err := model.CacheGetGroupMCP(group.ID, id)
 	if err != nil {
 		c.JSON(http.StatusNotFound, CreateMCPErrorResponse(
 			mcp.NewRequestId(nil),
 			mcp.INVALID_REQUEST,
 			err.Error(),
+		))
+		return
+	}
+	if groupMcp.Status != model.GroupMCPStatusEnabled {
+		c.JSON(http.StatusNotFound, CreateMCPErrorResponse(
+			mcp.NewRequestId(nil),
+			mcp.INVALID_REQUEST,
+			"mcp is not enabled",
 		))
 		return
 	}

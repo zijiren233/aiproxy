@@ -123,12 +123,20 @@ func (r *redisStoreManager) Delete(session string) {
 func PublicMCPSseServer(c *gin.Context) {
 	mcpID := c.Param("id")
 
-	publicMcp, err := model.GetEnabledPublicMCPByID(mcpID)
+	publicMcp, err := model.CacheGetPublicMCP(mcpID)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, CreateMCPErrorResponse(
 			mcp.NewRequestId(nil),
 			mcp.INVALID_REQUEST,
 			err.Error(),
+		))
+		return
+	}
+	if publicMcp.Status != model.PublicMCPStatusEnabled {
+		c.JSON(http.StatusNotFound, CreateMCPErrorResponse(
+			mcp.NewRequestId(nil),
+			mcp.INVALID_REQUEST,
+			"mcp is not enabled",
 		))
 		return
 	}
@@ -163,7 +171,7 @@ func handlePublicEmbedMCP(c *gin.Context, mcpID string, config *model.MCPEmbeddi
 	var reusingConfig map[string]string
 	if len(config.Reusing) != 0 {
 		group := middleware.GetGroup(c)
-		param, err := model.GetGroupPublicMCPReusingParam(mcpID, group.ID)
+		param, err := model.CacheGetPublicMCPReusingParam(mcpID, group.ID)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, CreateMCPErrorResponse(
 				mcp.NewRequestId(nil),
@@ -349,7 +357,7 @@ func processReusingParams(reusingParams map[string]model.ReusingParam, mcpID str
 		return nil
 	}
 
-	param, err := model.GetGroupPublicMCPReusingParam(mcpID, groupID)
+	param, err := model.CacheGetPublicMCPReusingParam(mcpID, groupID)
 	if err != nil {
 		return err
 	}
@@ -467,12 +475,20 @@ func sendMCPSSEMessage(c *gin.Context, mcpType, sessionID string) {
 // TODO: batch and sse support
 func PublicMCPStreamable(c *gin.Context) {
 	mcpID := c.Param("id")
-	publicMcp, err := model.GetEnabledPublicMCPByID(mcpID)
+	publicMcp, err := model.CacheGetPublicMCP(mcpID)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, CreateMCPErrorResponse(
 			mcp.NewRequestId(nil),
 			mcp.INVALID_REQUEST,
 			err.Error(),
+		))
+		return
+	}
+	if publicMcp.Status != model.PublicMCPStatusEnabled {
+		c.JSON(http.StatusNotFound, CreateMCPErrorResponse(
+			mcp.NewRequestId(nil),
+			mcp.INVALID_REQUEST,
+			"mcp is not enabled",
 		))
 		return
 	}
@@ -506,7 +522,7 @@ func handlePublicEmbedStreamable(c *gin.Context, mcpID string, config *model.MCP
 	var reusingConfig map[string]string
 	if len(config.Reusing) != 0 {
 		group := middleware.GetGroup(c)
-		param, err := model.GetGroupPublicMCPReusingParam(mcpID, group.ID)
+		param, err := model.CacheGetPublicMCPReusingParam(mcpID, group.ID)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, CreateMCPErrorResponse(
 				mcp.NewRequestId(nil),

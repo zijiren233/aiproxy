@@ -7,6 +7,7 @@ import (
 
 	"github.com/bytedance/sonic"
 	"github.com/labring/aiproxy/core/common"
+	log "github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 )
 
@@ -67,26 +68,26 @@ type PublicMCPReusingParam struct {
 	ReusingParams map[string]string `gorm:"serializer:fastjson;type:text" json:"reusing_params"`
 }
 
-func (l *PublicMCPReusingParam) BeforeCreate(_ *gorm.DB) (err error) {
-	if l.MCPID == "" {
+func (p *PublicMCPReusingParam) BeforeCreate(_ *gorm.DB) (err error) {
+	if p.MCPID == "" {
 		return errors.New("mcp id is empty")
 	}
-	if l.GroupID == "" {
+	if p.GroupID == "" {
 		return errors.New("group is empty")
 	}
 	return
 }
 
-func (l *PublicMCPReusingParam) MarshalJSON() ([]byte, error) {
+func (p *PublicMCPReusingParam) MarshalJSON() ([]byte, error) {
 	type Alias PublicMCPReusingParam
 	a := &struct {
 		*Alias
 		CreatedAt int64 `json:"created_at"`
 		UpdateAt  int64 `json:"update_at"`
 	}{
-		Alias:     (*Alias)(l),
-		CreatedAt: l.CreatedAt.UnixMilli(),
-		UpdateAt:  l.UpdateAt.UnixMilli(),
+		Alias:     (*Alias)(p),
+		CreatedAt: p.CreatedAt.UnixMilli(),
+		UpdateAt:  p.UpdateAt.UnixMilli(),
 	}
 	return sonic.Marshal(a)
 }
@@ -197,19 +198,36 @@ func CreatePublicMCP(mcp *PublicMCP) error {
 	return err
 }
 
-func SavePublicMCP(mcp *PublicMCP) error {
+func SavePublicMCP(mcp *PublicMCP) (err error) {
+	defer func() {
+		if err == nil {
+			if err := CacheDeletePublicMCP(mcp.ID); err != nil {
+				log.Error("cache delete public mcp error: " + err.Error())
+			}
+		}
+	}()
+
 	return DB.Save(mcp).Error
 }
 
 // UpdatePublicMCP updates an existing MCP
-func UpdatePublicMCP(mcp *PublicMCP) error {
+func UpdatePublicMCP(mcp *PublicMCP) (err error) {
+	defer func() {
+		if err == nil {
+			if err := CacheDeletePublicMCP(mcp.ID); err != nil {
+				log.Error("cache delete public mcp error: " + err.Error())
+			}
+		}
+	}()
+
 	selects := []string{
 		"repo_url",
 		"readme",
+		"readme_url",
 		"tags",
 		"author",
 		"logo_url",
-		"proxy_sse_config",
+		"proxy_config",
 		"openapi_config",
 		"embed_config",
 	}
@@ -233,13 +251,29 @@ func UpdatePublicMCP(mcp *PublicMCP) error {
 	return HandleUpdateResult(result, ErrPublicMCPNotFound)
 }
 
-func UpdatePublicMCPStatus(id string, status PublicMCPStatus) error {
+func UpdatePublicMCPStatus(id string, status PublicMCPStatus) (err error) {
+	defer func() {
+		if err == nil {
+			if err := CacheUpdatePublicMCPStatus(id, status); err != nil {
+				log.Error("cache update public mcp status error: " + err.Error())
+			}
+		}
+	}()
+
 	result := DB.Model(&PublicMCP{}).Where("id = ?", id).Update("status", status)
 	return HandleUpdateResult(result, ErrPublicMCPNotFound)
 }
 
 // DeletePublicMCP deletes an MCP by ID
-func DeletePublicMCP(id string) error {
+func DeletePublicMCP(id string) (err error) {
+	defer func() {
+		if err == nil {
+			if err := CacheDeletePublicMCP(id); err != nil {
+				log.Error("cache delete public mcp error: " + err.Error())
+			}
+		}
+	}()
+
 	if id == "" {
 		return errors.New("MCP id is empty")
 	}
@@ -254,16 +288,6 @@ func GetPublicMCPByID(id string) (*PublicMCP, error) {
 	}
 	var mcp PublicMCP
 	err := DB.Where("id = ?", id).First(&mcp).Error
-	return &mcp, HandleNotFound(err, ErrPublicMCPNotFound)
-}
-
-// GetEnabledPublicMCPByID retrieves an MCP by ID
-func GetEnabledPublicMCPByID(id string) (*PublicMCP, error) {
-	if id == "" {
-		return nil, errors.New("MCP id is empty")
-	}
-	var mcp PublicMCP
-	err := DB.Where("id = ? AND status = ?", id, PublicMCPStatusEnabled).First(&mcp).Error
 	return &mcp, HandleNotFound(err, ErrPublicMCPNotFound)
 }
 
@@ -320,12 +344,28 @@ func GetPublicMCPsEnabled(ids []string) ([]string, error) {
 	return mcpIDs, nil
 }
 
-func SaveGroupPublicMCPReusingParam(param *PublicMCPReusingParam) (err error) {
+func SavePublicMCPReusingParam(param *PublicMCPReusingParam) (err error) {
+	defer func() {
+		if err == nil {
+			if err := CacheDeletePublicMCPReusingParam(param.MCPID, param.GroupID); err != nil {
+				log.Error("cache delete public mcp reusing param error: " + err.Error())
+			}
+		}
+	}()
+
 	return DB.Save(param).Error
 }
 
-// UpdateGroupPublicMCPReusingParam updates an existing GroupMCPReusingParam
-func UpdateGroupPublicMCPReusingParam(param *PublicMCPReusingParam) error {
+// UpdatePublicMCPReusingParam updates an existing GroupMCPReusingParam
+func UpdatePublicMCPReusingParam(param *PublicMCPReusingParam) (err error) {
+	defer func() {
+		if err == nil {
+			if err := CacheDeletePublicMCPReusingParam(param.MCPID, param.GroupID); err != nil {
+				log.Error("cache delete public mcp reusing param error: " + err.Error())
+			}
+		}
+	}()
+
 	result := DB.
 		Select([]string{
 			"reusing_params",
@@ -335,8 +375,16 @@ func UpdateGroupPublicMCPReusingParam(param *PublicMCPReusingParam) error {
 	return HandleUpdateResult(result, ErrMCPReusingParamNotFound)
 }
 
-// DeleteGroupPublicMCPReusingParam deletes a GroupMCPReusingParam
-func DeleteGroupPublicMCPReusingParam(mcpID string, groupID string) error {
+// DeletePublicMCPReusingParam deletes a GroupMCPReusingParam
+func DeletePublicMCPReusingParam(mcpID string, groupID string) (err error) {
+	defer func() {
+		if err == nil {
+			if err := CacheDeletePublicMCPReusingParam(mcpID, groupID); err != nil {
+				log.Error("cache delete public mcp reusing param error: " + err.Error())
+			}
+		}
+	}()
+
 	if mcpID == "" || groupID == "" {
 		return errors.New("MCP ID or Group ID is empty")
 	}
@@ -346,8 +394,8 @@ func DeleteGroupPublicMCPReusingParam(mcpID string, groupID string) error {
 	return HandleUpdateResult(result, ErrMCPReusingParamNotFound)
 }
 
-// GetGroupPublicMCPReusingParam retrieves a GroupMCPReusingParam by MCP ID and Group ID
-func GetGroupPublicMCPReusingParam(mcpID string, groupID string) (*PublicMCPReusingParam, error) {
+// GetPublicMCPReusingParam retrieves a GroupMCPReusingParam by MCP ID and Group ID
+func GetPublicMCPReusingParam(mcpID string, groupID string) (*PublicMCPReusingParam, error) {
 	if mcpID == "" || groupID == "" {
 		return nil, errors.New("MCP ID or Group ID is empty")
 	}
