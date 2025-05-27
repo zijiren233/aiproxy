@@ -15,7 +15,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func getDashboardTime(t string, startTimestamp int64, endTimestamp int64, timezoneLocation *time.Location) (time.Time, time.Time, model.TimeSpanType) {
+func getDashboardTime(t string, timespan string, startTimestamp int64, endTimestamp int64, timezoneLocation *time.Location) (time.Time, time.Time, model.TimeSpanType) {
 	end := time.Now()
 	if endTimestamp != 0 {
 		end = time.Unix(endTimestamp, 0)
@@ -46,6 +46,10 @@ func getDashboardTime(t string, startTimestamp int64, endTimestamp int64, timezo
 	}
 	if startTimestamp != 0 {
 		start = time.Unix(startTimestamp, 0)
+	}
+	switch model.TimeSpanType(timespan) {
+	case model.TimeSpanDay, model.TimeSpanHour:
+		timeSpan = model.TimeSpanType(timespan)
 	}
 	return start, end, timeSpan
 }
@@ -150,13 +154,15 @@ func fillGaps(data []*model.ChartData, start, end time.Time, t model.TimeSpanTyp
 //	@Param			start_timestamp	query		int64	false	"Start second timestamp"
 //	@Param			end_timestamp	query		int64	false	"End second timestamp"
 //	@Param			timezone		query		string	false	"Timezone, default is Local"
+//	@Param			timespan		query		string	false	"Time span type (day, hour)"
 //	@Success		200				{object}	middleware.APIResponse{data=model.DashboardResponse}
 //	@Router			/api/dashboard/ [get]
 func GetDashboard(c *gin.Context) {
 	startTimestamp, _ := strconv.ParseInt(c.Query("start_timestamp"), 10, 64)
 	endTimestamp, _ := strconv.ParseInt(c.Query("end_timestamp"), 10, 64)
 	timezoneLocation, _ := time.LoadLocation(c.DefaultQuery("timezone", "Local"))
-	start, end, timeSpan := getDashboardTime(c.Query("type"), startTimestamp, endTimestamp, timezoneLocation)
+	timespan := c.Query("timespan")
+	start, end, timeSpan := getDashboardTime(c.Query("type"), timespan, startTimestamp, endTimestamp, timezoneLocation)
 	modelName := c.Query("model")
 	channelStr := c.Query("channel")
 	channelID, _ := strconv.Atoi(channelStr)
@@ -194,6 +200,7 @@ func GetDashboard(c *gin.Context) {
 //	@Param			start_timestamp	query		int64	false	"Start second timestamp"
 //	@Param			end_timestamp	query		int64	false	"End second timestamp"
 //	@Param			timezone		query		string	false	"Timezone, default is Local"
+//	@Param			timespan		query		string	false	"Time span type (day, hour)"
 //	@Success		200				{object}	middleware.APIResponse{data=model.GroupDashboardResponse}
 //	@Router			/api/dashboard/{group} [get]
 func GetGroupDashboard(c *gin.Context) {
@@ -206,7 +213,8 @@ func GetGroupDashboard(c *gin.Context) {
 	startTimestamp, _ := strconv.ParseInt(c.Query("start_timestamp"), 10, 64)
 	endTimestamp, _ := strconv.ParseInt(c.Query("end_timestamp"), 10, 64)
 	timezoneLocation, _ := time.LoadLocation(c.DefaultQuery("timezone", "Local"))
-	start, end, timeSpan := getDashboardTime(c.Query("type"), startTimestamp, endTimestamp, timezoneLocation)
+	timespan := c.Query("timespan")
+	start, end, timeSpan := getDashboardTime(c.Query("type"), timespan, startTimestamp, endTimestamp, timezoneLocation)
 	tokenName := c.Query("token_name")
 	modelName := c.Query("model")
 
