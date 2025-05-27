@@ -2296,6 +2296,10 @@ paths:
         in: query
         name: timezone
         type: string
+      - description: Time span type (day, hour)
+        in: query
+        name: timespan
+        type: string
       produces:
       - application/json
       responses:
@@ -2345,6 +2349,10 @@ paths:
       - description: Timezone, default is Local
         in: query
         name: timezone
+        type: string
+      - description: Time span type (day, hour)
+        in: query
+        name: timespan
         type: string
       produces:
       - application/json

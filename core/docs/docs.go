@@ -972,6 +972,12 @@ const docTemplate = `{
                         "description": "Timezone, default is Local",
                         "name": "timezone",
                         "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Time span type (day, hour)",
+                        "name": "timespan",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -1053,6 +1059,12 @@ const docTemplate = `{
                         "type": "string",
                         "description": "Timezone, default is Local",
                         "name": "timezone",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Time span type (day, hour)",
+                        "name": "timespan",
                         "in": "query"
                     }
                 ],
