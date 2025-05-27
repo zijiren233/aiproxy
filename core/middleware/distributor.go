@@ -96,22 +96,52 @@ func setTpmHeaders(c *gin.Context, tpm int64, remainingRequests int64) {
 	c.Header(XRateLimitResetTokens, "1m0s")
 }
 
+func UpdateGroupModelRequest(c *gin.Context, group *model.GroupCache, rpm, rps int64) {
+	if group.Status == model.GroupStatusInternal {
+		return
+	}
+
+	log := GetLogger(c)
+	log.Data["group_rpm"] = strconv.FormatInt(rpm, 10)
+	log.Data["group_rps"] = strconv.FormatInt(rps, 10)
+}
+
+func UpdateGroupModelTokensRequest(c *gin.Context, group *model.GroupCache, tpm, tps int64) {
+	if group.Status == model.GroupStatusInternal {
+		return
+	}
+
+	log := GetLogger(c)
+	log.Data["group_tpm"] = strconv.FormatInt(tpm, 10)
+	log.Data["group_tps"] = strconv.FormatInt(tps, 10)
+}
+
+func UpdateGroupModelTokennameRequest(c *gin.Context, rpm, rps int64) {
+	c.Set(GroupModelTokenRPM, rpm)
+	c.Set(GroupModelTokenRPS, rps)
+	// log := GetLogger(c)
+	// log.Data["rpm"] = strconv.FormatInt(rpm, 10)
+	// log.Data["rps"] = strconv.FormatInt(rps, 10)
+}
+
+func UpdateGroupModelTokennameTokensRequest(c *gin.Context, tpm, tps int64) {
+	c.Set(GroupModelTokenTPM, tpm)
+	c.Set(GroupModelTokenTPS, tps)
+	// log := GetLogger(c)
+	// log.Data["tpm"] = strconv.FormatInt(tpm, 10)
+	// log.Data["tps"] = strconv.FormatInt(tps, 10)
+}
+
 func checkGroupModelRPMAndTPM(c *gin.Context, group *model.GroupCache, mc *model.ModelConfig, tokenName string) error {
 	log := GetLogger(c)
 
 	adjustedModelConfig := GetGroupAdjustedModelConfig(group, *mc)
 
 	groupModelCount, groupModelOverLimitCount, groupModelSecondCount := reqlimit.PushGroupModelRequest(c.Request.Context(), group.ID, mc.Model, adjustedModelConfig.RPM)
-	if group.Status != model.GroupStatusInternal {
-		log.Data["group_rpm"] = strconv.FormatInt(groupModelCount+groupModelOverLimitCount, 10)
-		log.Data["group_rps"] = strconv.FormatInt(groupModelSecondCount, 10)
-	}
+	UpdateGroupModelRequest(c, group, groupModelCount+groupModelOverLimitCount, groupModelSecondCount)
 
 	groupModelTokenCount, groupModelTokenOverLimitCount, groupModelTokenSecondCount := reqlimit.PushGroupModelTokennameRequest(c.Request.Context(), group.ID, mc.Model, tokenName)
-	c.Set(GroupModelTokenRPM, groupModelTokenCount+groupModelTokenOverLimitCount)
-	c.Set(GroupModelTokenRPS, groupModelTokenSecondCount)
-	// log.Data["rpm"] = strconv.FormatInt(groupModelTokenCount+groupModelTokenOverLimitCount, 10)
-	// log.Data["rps"] = strconv.FormatInt(groupModelTokenSecondCount, 10)
+	UpdateGroupModelTokennameRequest(c, groupModelTokenCount+groupModelTokenOverLimitCount, groupModelTokenSecondCount)
 
 	if group.Status != model.GroupStatusInternal &&
 		adjustedModelConfig.RPM > 0 {
@@ -124,16 +154,10 @@ func checkGroupModelRPMAndTPM(c *gin.Context, group *model.GroupCache, mc *model
 	}
 
 	groupModelCountTPM, groupModelCountTPS := reqlimit.GetGroupModelTokensRequest(c.Request.Context(), group.ID, mc.Model)
-	if group.Status != model.GroupStatusInternal {
-		log.Data["group_tpm"] = strconv.FormatInt(groupModelCountTPM, 10)
-		log.Data["group_tps"] = strconv.FormatInt(groupModelCountTPS, 10)
-	}
+	UpdateGroupModelTokensRequest(c, group, groupModelCountTPM, groupModelCountTPS)
 
 	groupModelTokenCountTPM, groupModelTokenCountTPS := reqlimit.GetGroupModelTokennameTokensRequest(c.Request.Context(), group.ID, mc.Model, tokenName)
-	c.Set(GroupModelTokenTPM, groupModelTokenCountTPM)
-	c.Set(GroupModelTokenTPS, groupModelTokenCountTPS)
-	// log.Data["tpm"] = strconv.FormatInt(groupModelTokenCountTPM, 10)
-	// log.Data["tps"] = strconv.FormatInt(groupModelTokenCountTPS, 10)
+	UpdateGroupModelTokennameTokensRequest(c, groupModelTokenCountTPM, groupModelTokenCountTPS)
 
 	if group.Status != model.GroupStatusInternal &&
 		adjustedModelConfig.TPM > 0 {
