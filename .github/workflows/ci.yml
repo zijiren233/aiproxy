@@ -43,6 +43,19 @@ jobs:
           working-directory: core
           args: "--out-format colored-line-number --max-issues-per-linter 0 --max-same-issues 0 --config ./.golangci.yml"
 
+      - name: Run Fix Linter
+        uses: golangci/golangci-lint-action@v6
+        if: ${{ failure() }}
+        with:
+          version: none
+          working-directory: core
+          args: "--fix --out-format colored-line-number --max-issues-per-linter 0 --max-same-issues 0 --config ./.golangci.yml"
+
+      - name: Auto Fix Diff Content
+        if: ${{ failure() }}
+        run: |
+          git diff
+
   golangci-lint-mcpservers:
     name: Lint MCP Servers
     runs-on: ubuntu-24.04
@@ -67,6 +80,19 @@ jobs:
           working-directory: mcp-servers
           args: "--out-format colored-line-number --max-issues-per-linter 0 --max-same-issues 0 --config ./.golangci.yml"
 
+      - name: Run Fix Linter
+        uses: golangci/golangci-lint-action@v6
+        if: ${{ failure() }}
+        with:
+          version: none
+          working-directory: mcp-servers
+          args: "--fix --out-format colored-line-number --max-issues-per-linter 0 --max-same-issues 0 --config ./.golangci.yml"
+
+      - name: Auto Fix Diff Content
+        if: ${{ failure() }}
+        run: |
+          git diff
+
   golangci-lint-openapimcp:
     name: Lint OpneAPI MCP
     runs-on: ubuntu-24.04
@@ -85,3 +111,16 @@ jobs:
           version: v1.64.8
           working-directory: openapi-mcp
           args: "--out-format colored-line-number --max-issues-per-linter 0 --max-same-issues 0 --config ./.golangci.yml"
+
+      - name: Run Fix Linter
+        uses: golangci/golangci-lint-action@v6
+        if: ${{ failure() }}
+        with:
+          version: none
+          working-directory: openapi-mcp
+          args: "--fix --out-format colored-line-number --max-issues-per-linter 0 --max-same-issues 0 --config ./.golangci.yml"
+
+      - name: Auto Fix Diff Content
+        if: ${{ failure() }}
+        run: |
+          git diff
