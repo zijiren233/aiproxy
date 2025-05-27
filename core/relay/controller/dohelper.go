@@ -6,6 +6,7 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
@@ -126,8 +127,12 @@ func DoHelper(
 }
 
 func getRequestBody(meta *meta.Meta, c *gin.Context, detail *RequestDetail) *relaymodel.ErrorWithStatusCode {
-	switch meta.Mode {
-	case mode.AudioTranscription, mode.AudioTranslation:
+	switch {
+	case meta.Mode == mode.AudioTranscription,
+		meta.Mode == mode.AudioTranslation,
+		meta.Mode == mode.ImagesEdits:
+		return nil
+	case !strings.Contains(c.GetHeader("Content-Type"), "/json"):
 		return nil
 	default:
 		reqBody, err := common.GetRequestBody(c.Request)
