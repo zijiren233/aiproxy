@@ -6,7 +6,7 @@ import (
 	"sync"
 
 	"github.com/labring/aiproxy/core/docs"
-	"github.com/labring/aiproxy/mcp-servers"
+	mcpservers "github.com/labring/aiproxy/mcp-servers"
 	"github.com/labring/aiproxy/openapi-mcp/convert"
 	"github.com/mark3labs/mcp-go/server"
 )
