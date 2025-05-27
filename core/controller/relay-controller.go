@@ -57,6 +57,9 @@ const (
 	MetaChannelModelKeyRPS = "channel_model_rps"
 	MetaChannelModelKeyTPM = "channel_model_tpm"
 	MetaChannelModelKeyTPS = "channel_model_tps"
+
+	MetaGroupModelTokennameTPM = "group_model_tokenname_tpm"
+	MetaGroupModelTokennameTPS = "group_model_tokenname_tps"
 )
 
 func getChannelModelRequestRate(meta *meta.Meta) model.RequestRate {
@@ -83,12 +86,31 @@ func getChannelModelRequestRate(meta *meta.Meta) model.RequestRate {
 	return rate
 }
 
+func getGroupModelTokenRequestRate(c *gin.Context, meta *meta.Meta) model.RequestRate {
+	r := model.RequestRate{
+		RPM: middleware.GetGroupModelTokenRPM(c),
+		RPS: middleware.GetGroupModelTokenRPS(c),
+		TPM: middleware.GetGroupModelTokenTPM(c),
+		TPS: middleware.GetGroupModelTokenTPS(c),
+	}
+
+	if tpm, ok := meta.Get(MetaGroupModelTokennameTPM); ok {
+		r.TPM, _ = tpm.(int64)
+		r.TPS = meta.GetInt64(MetaGroupModelTokennameTPS)
+	}
+
+	return r
+}
+
 func (w *warpAdaptor) DoRequest(meta *meta.Meta, c *gin.Context, req *http.Request) (*http.Response, error) {
 	count, overLimitCount, secondCount := reqlimit.PushChannelModelRequest(
 		context.Background(),
 		strconv.Itoa(meta.Channel.ID),
 		meta.OriginModel,
 	)
+	log := middleware.GetLogger(c)
+	log.Data["ch_rpm"] = count + overLimitCount
+	log.Data["ch_rps"] = secondCount
 	meta.Set(MetaChannelModelKeyRPM, count+overLimitCount)
 	meta.Set(MetaChannelModelKeyRPS, secondCount)
 	return w.Adaptor.DoRequest(meta, c, req)
@@ -106,23 +128,33 @@ func (w *warpAdaptor) DoResponse(meta *meta.Meta, c *gin.Context, resp *http.Res
 		meta.OriginModel,
 		int64(usage.TotalTokens),
 	)
+	log := middleware.GetLogger(c)
+	log.Data["ch_tpm"] = count + overLimitCount
+	log.Data["ch_tps"] = secondCount
 	meta.Set(MetaChannelModelKeyTPM, count+overLimitCount)
 	meta.Set(MetaChannelModelKeyTPS, secondCount)
 
-	reqlimit.PushGroupModelTokensRequest(
+	count, overLimitCount, secondCount = reqlimit.PushGroupModelTokensRequest(
 		context.Background(),
 		meta.Group.ID,
 		meta.OriginModel,
 		meta.ModelConfig.TPM,
 		int64(usage.TotalTokens),
 	)
-	reqlimit.PushGroupModelTokennameTokensRequest(
+	log.Data["group_tpm"] = count + overLimitCount
+	log.Data["group_tps"] = secondCount
+
+	count, overLimitCount, secondCount = reqlimit.PushGroupModelTokennameTokensRequest(
 		context.Background(),
 		meta.Group.ID,
 		meta.OriginModel,
 		meta.Token.Name,
 		int64(usage.TotalTokens),
 	)
+	log.Data["tpm"] = count + overLimitCount
+	log.Data["tps"] = secondCount
+	meta.Set(MetaGroupModelTokennameTPM, count+overLimitCount)
+	meta.Set(MetaGroupModelTokennameTPS, secondCount)
 
 	return usage, relayErr
 }
@@ -522,7 +554,7 @@ func recordResult(
 		user,
 		metadata,
 		getChannelModelRequestRate(meta),
-		middleware.GetGroupModelTokenRequestRate(c),
+		getGroupModelTokenRequestRate(c, meta),
 	)
 }
 
