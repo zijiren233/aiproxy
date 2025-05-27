@@ -5542,6 +5542,229 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/test-embedmcp/message": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Send a message to the test embed MCP server",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "embedmcp"
+                ],
+                "summary": "Test Embed MCP Message",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Session ID",
+                        "name": "sessionId",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "400": {
+                        "description": "Bad Request"
+                    }
+                }
+            }
+        },
+        "/api/test-embedmcp/{id}/sse": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Test Embed MCP SSE Server",
+                "tags": [
+                    "embedmcp"
+                ],
+                "summary": "Test Embed MCP SSE Server",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "MCP ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Initial configuration parameters (e.g., config[host]=http://localhost:3000)",
+                        "name": "config[key]",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Reusing configuration parameters (e.g., reusing[authorization]=apikey)",
+                        "name": "reusing[key]",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "400": {
+                        "description": "Bad Request"
+                    }
+                }
+            }
+        },
+        "/api/test-embedmcp/{id}/streamable": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Test Embed MCP Streamable Server with various HTTP methods",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "embedmcp"
+                ],
+                "summary": "Test Embed MCP Streamable Server",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "MCP ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Initial configuration parameters (e.g., config[host]=http://localhost:3000)",
+                        "name": "config[key]",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Reusing configuration parameters (e.g., reusing[authorization]=apikey)",
+                        "name": "reusing[key]",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "400": {
+                        "description": "Bad Request"
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Test Embed MCP Streamable Server with various HTTP methods",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "embedmcp"
+                ],
+                "summary": "Test Embed MCP Streamable Server",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "MCP ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Initial configuration parameters (e.g., config[host]=http://localhost:3000)",
+                        "name": "config[key]",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Reusing configuration parameters (e.g., reusing[authorization]=apikey)",
+                        "name": "reusing[key]",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "400": {
+                        "description": "Bad Request"
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Test Embed MCP Streamable Server with various HTTP methods",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "embedmcp"
+                ],
+                "summary": "Test Embed MCP Streamable Server",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "MCP ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Initial configuration parameters (e.g., config[host]=http://localhost:3000)",
+                        "name": "config[key]",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Reusing configuration parameters (e.g., reusing[authorization]=apikey)",
+                        "name": "reusing[key]",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "400": {
+                        "description": "Bad Request"
+                    }
+                }
+            }
+        },
         "/api/token/{group}": {
             "post": {
                 "security": [

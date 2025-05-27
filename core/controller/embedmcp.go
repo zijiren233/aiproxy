@@ -1,17 +1,25 @@
 package controller
 
 import (
+	"context"
+	"fmt"
 	"maps"
 	"net/http"
+	"net/url"
 	"slices"
+	"strings"
 
 	"github.com/gin-gonic/gin"
-	"github.com/labring/aiproxy/core/embedmcp"
+	"github.com/labring/aiproxy/core/common/mcpproxy"
+	statelessmcp "github.com/labring/aiproxy/core/common/stateless-mcp"
+	"github.com/labring/aiproxy/core/mcpservers"
 	"github.com/labring/aiproxy/core/middleware"
 	"github.com/labring/aiproxy/core/model"
+	"github.com/mark3labs/mcp-go/mcp"
+	"github.com/mark3labs/mcp-go/server"
 
 	// init embed mcp
-	_ "github.com/labring/aiproxy/core/embedmcp/mcpregister"
+	_ "github.com/labring/aiproxy/core/mcpservers/mcpregister"
 )
 
 type EmbedMCPConfigTemplate struct {
@@ -21,10 +29,10 @@ type EmbedMCPConfigTemplate struct {
 	Description string `json:"description,omitempty"`
 }
 
-func newEmbedMCPConfigTemplate(template embedmcp.ConfigTemplate) EmbedMCPConfigTemplate {
+func newEmbedMCPConfigTemplate(template mcpservers.ConfigTemplate) EmbedMCPConfigTemplate {
 	return EmbedMCPConfigTemplate{
 		Name:        template.Name,
-		Required:    template.Required == embedmcp.ConfigRequiredTypeInitOnly,
+		Required:    template.Required == mcpservers.ConfigRequiredTypeInitOnly,
 		Example:     template.Example,
 		Description: template.Description,
 	}
@@ -32,7 +40,7 @@ func newEmbedMCPConfigTemplate(template embedmcp.ConfigTemplate) EmbedMCPConfigT
 
 type EmbedMCPConfigTemplates = map[string]EmbedMCPConfigTemplate
 
-func newEmbedMCPConfigTemplates(templates embedmcp.ConfigTemplates) EmbedMCPConfigTemplates {
+func newEmbedMCPConfigTemplates(templates mcpservers.ConfigTemplates) EmbedMCPConfigTemplates {
 	emcpTemplates := make(EmbedMCPConfigTemplates, len(templates))
 	for key, template := range templates {
 		emcpTemplates[key] = newEmbedMCPConfigTemplate(template)
@@ -49,7 +57,7 @@ type EmbedMCP struct {
 	ConfigTemplates EmbedMCPConfigTemplates `json:"config_templates"`
 }
 
-func newEmbedMCP(mcp *embedmcp.EmbedMcp, enabled bool) *EmbedMCP {
+func newEmbedMCP(mcp *mcpservers.EmbedMcp, enabled bool) *EmbedMCP {
 	emcp := &EmbedMCP{
 		ID:              mcp.ID,
 		Enabled:         enabled,
@@ -72,7 +80,7 @@ func newEmbedMCP(mcp *embedmcp.EmbedMcp, enabled bool) *EmbedMCP {
 //	@Success		200	{array}	EmbedMCP
 //	@Router			/api/embedmcp/ [get]
 func GetEmbedMCPs(c *gin.Context) {
-	embeds := embedmcp.Servers()
+	embeds := mcpservers.Servers()
 	enabledMCPs, err := model.GetPublicMCPsEnabled(slices.Collect(maps.Keys(embeds)))
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
@@ -111,13 +119,13 @@ func SaveEmbedMCP(c *gin.Context) {
 		return
 	}
 
-	emcp, ok := embedmcp.GetEmbedMCP(req.ID)
+	emcp, ok := mcpservers.GetEmbedMCP(req.ID)
 	if !ok {
 		middleware.ErrorResponse(c, http.StatusNotFound, "embed mcp not found")
 		return
 	}
 
-	pmcp, err := embedmcp.ToPublicMCP(emcp, req.InitConfig, req.Enabled)
+	pmcp, err := mcpservers.ToPublicMCP(emcp, req.InitConfig, req.Enabled)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
@@ -129,4 +137,190 @@ func SaveEmbedMCP(c *gin.Context) {
 	}
 
 	middleware.SuccessResponse(c, nil)
+}
+
+type testEmbedMcpEndpointProvider struct {
+	key string
+}
+
+func newTestEmbedMcpEndpoint(key string) mcpproxy.EndpointProvider {
+	return &testEmbedMcpEndpointProvider{
+		key: key,
+	}
+}
+
+func (m *testEmbedMcpEndpointProvider) NewEndpoint(session string) (newEndpoint string) {
+	endpoint := fmt.Sprintf("/api/test-embedmcp/message?sessionId=%s&key=%s", session, m.key)
+	return endpoint
+}
+
+func (m *testEmbedMcpEndpointProvider) LoadEndpoint(endpoint string) (session string) {
+	parsedURL, err := url.Parse(endpoint)
+	if err != nil {
+		return ""
+	}
+	return parsedURL.Query().Get("sessionId")
+}
+
+// query like: /api/test-embedmcp/aiproxy-openapi/sse?key=adminkey&config[key1]=value1&config[key2]=value2&reusing[key3]=value3
+func getConfigFromQuery(c *gin.Context) (map[string]string, map[string]string) {
+	initConfig := make(map[string]string)
+	reusingConfig := make(map[string]string)
+
+	queryParams := c.Request.URL.Query()
+
+	for paramName, paramValues := range queryParams {
+		if len(paramValues) == 0 {
+			continue
+		}
+
+		paramValue := paramValues[0]
+
+		if strings.HasPrefix(paramName, "config[") && strings.HasSuffix(paramName, "]") {
+			key := paramName[7 : len(paramName)-1]
+			if key != "" {
+				initConfig[key] = paramValue
+			}
+		}
+
+		if strings.HasPrefix(paramName, "reusing[") && strings.HasSuffix(paramName, "]") {
+			key := paramName[8 : len(paramName)-1]
+			if key != "" {
+				reusingConfig[key] = paramValue
+			}
+		}
+	}
+
+	return initConfig, reusingConfig
+}
+
+// TestEmbedMCPSseServer godoc
+//
+//	@Summary		Test Embed MCP SSE Server
+//	@Description	Test Embed MCP SSE Server
+//	@Tags			embedmcp
+//	@Security		ApiKeyAuth
+//	@Param			id				path		string	true	"MCP ID"
+//	@Param			config[key]		query		string	false	"Initial configuration parameters (e.g., config[host]=http://localhost:3000)"
+//	@Param			reusing[key]	query		string	false	"Reusing configuration parameters (e.g., reusing[authorization]=apikey)"
+//	@Success		200				{object}	nil
+//	@Failure		400				{object}	nil
+//	@Router			/api/test-embedmcp/{id}/sse [get]
+func TestEmbedMCPSseServer(c *gin.Context) {
+	id := c.Param("id")
+	if id == "" {
+		c.JSON(http.StatusBadRequest, CreateMCPErrorResponse(
+			mcp.NewRequestId(nil),
+			mcp.INVALID_REQUEST,
+			"mcp id is required",
+		))
+		return
+	}
+
+	initConfig, reusingConfig := getConfigFromQuery(c)
+	emcp, err := mcpservers.GetMCPServer(id, initConfig, reusingConfig)
+	if err != nil {
+		middleware.ErrorResponse(c, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	handleTestEmbedMCPServer(c, emcp)
+}
+
+const (
+	testEmbedMcpType = "test-embedmcp"
+)
+
+func handleTestEmbedMCPServer(c *gin.Context, s *server.MCPServer) {
+	token := middleware.GetToken(c)
+
+	// Store the session
+	store := getStore()
+	newSession := store.New()
+
+	newEndpoint := newTestEmbedMcpEndpoint(token.Key).NewEndpoint(newSession)
+	server := statelessmcp.NewSSEServer(
+		s,
+		statelessmcp.WithMessageEndpoint(newEndpoint),
+	)
+
+	store.Set(newSession, testEmbedMcpType)
+	defer func() {
+		store.Delete(newSession)
+	}()
+
+	ctx, cancel := context.WithCancel(c.Request.Context())
+	defer cancel()
+
+	// Start message processing goroutine
+	go processMCPSseMpscMessages(ctx, newSession, server)
+
+	// Handle SSE connection
+	server.HandleSSE(c.Writer, c.Request)
+}
+
+// TestEmbedMCPMessage godoc
+//
+//	@Summary		Test Embed MCP Message
+//	@Description	Send a message to the test embed MCP server
+//	@Tags			embedmcp
+//	@Security		ApiKeyAuth
+//	@Param			sessionId	query	string	true	"Session ID"
+//	@Accept			json
+//	@Produce		json
+//	@Success		200	{object}	nil
+//	@Failure		400	{object}	nil
+//	@Router			/api/test-embedmcp/message [post]
+func TestEmbedMCPMessage(c *gin.Context) {
+	sessionID, _ := c.GetQuery("sessionId")
+	if sessionID == "" {
+		c.JSON(http.StatusBadRequest, CreateMCPErrorResponse(
+			mcp.NewRequestId(nil),
+			mcp.INVALID_REQUEST,
+			"missing sessionId",
+		))
+		return
+	}
+
+	sendMCPSSEMessage(c, testEmbedMcpType, sessionID)
+}
+
+// TestEmbedMCPStreamable godoc
+//
+//	@Summary		Test Embed MCP Streamable Server
+//	@Description	Test Embed MCP Streamable Server with various HTTP methods
+//	@Tags			embedmcp
+//	@Security		ApiKeyAuth
+//	@Param			id				path	string	true	"MCP ID"
+//	@Param			config[key]		query	string	false	"Initial configuration parameters (e.g., config[host]=http://localhost:3000)"
+//	@Param			reusing[key]	query	string	false	"Reusing configuration parameters (e.g., reusing[authorization]=apikey)"
+//	@Accept			json
+//	@Produce		json
+//	@Success		200	{object}	nil
+//	@Failure		400	{object}	nil
+//	@Router			/api/test-embedmcp/{id}/streamable [get]
+//	@Router			/api/test-embedmcp/{id}/streamable [post]
+//	@Router			/api/test-embedmcp/{id}/streamable [delete]
+func TestEmbedMCPStreamable(c *gin.Context) {
+	id := c.Param("id")
+	if id == "" {
+		c.JSON(http.StatusBadRequest, CreateMCPErrorResponse(
+			mcp.NewRequestId(nil),
+			mcp.INVALID_REQUEST,
+			"mcp id is required",
+		))
+		return
+	}
+
+	initConfig, reusingConfig := getConfigFromQuery(c)
+	server, err := mcpservers.GetMCPServer(id, initConfig, reusingConfig)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, CreateMCPErrorResponse(
+			mcp.NewRequestId(nil),
+			mcp.INVALID_REQUEST,
+			err.Error(),
+		))
+		return
+	}
+	handleGroupStreamableMCPServer(c, server)
 }

@@ -37,8 +37,20 @@ func ErrorResponse(c *gin.Context, code int, message string) {
 }
 
 func AdminAuth(c *gin.Context) {
+	if config.AdminKey == "" {
+		ErrorResponse(c, http.StatusUnauthorized, "unauthorized, admin key is not set")
+		c.Abort()
+		return
+	}
+
 	accessToken := c.Request.Header.Get("Authorization")
-	if config.AdminKey != "" && (accessToken == "" || strings.TrimPrefix(accessToken, "Bearer ") != config.AdminKey) {
+	if accessToken == "" {
+		accessToken = c.Query("key")
+	}
+	accessToken = strings.TrimPrefix(accessToken, "Bearer ")
+	accessToken = strings.TrimPrefix(accessToken, "sk-")
+
+	if accessToken != config.AdminKey {
 		ErrorResponse(c, http.StatusUnauthorized, "unauthorized, no access token provided")
 		c.Abort()
 		return

@@ -1,4 +1,4 @@
-package embedmcp
+package mcpservers
 
 import (
 	"errors"

@@ -6,15 +6,15 @@ import (
 	"sync"
 
 	"github.com/labring/aiproxy/core/docs"
-	"github.com/labring/aiproxy/core/embedmcp"
+	"github.com/labring/aiproxy/core/mcpservers"
 	"github.com/labring/aiproxy/openapi-mcp/convert"
 	"github.com/mark3labs/mcp-go/server"
 )
 
-var configTemplates = map[string]embedmcp.ConfigTemplate{
+var configTemplates = map[string]mcpservers.ConfigTemplate{
 	"host": {
 		Name:        "Host",
-		Required:    embedmcp.ConfigRequiredTypeInitOnly,
+		Required:    mcpservers.ConfigRequiredTypeInitOnly,
 		Example:     "http://localhost:3000",
 		Description: "The host of the OpenAPI server",
 		Validator: func(value string) error {
@@ -31,7 +31,7 @@ var configTemplates = map[string]embedmcp.ConfigTemplate{
 
 	"authorization": {
 		Name:        "Authorization",
-		Required:    embedmcp.ConfigRequiredTypeReusingOptional,
+		Required:    mcpservers.ConfigRequiredTypeReusingOptional,
 		Example:     "aiproxy-admin-key",
 		Description: "The admin key of the OpenAPI server",
 	},
@@ -63,7 +63,7 @@ func NewServer(config map[string]string, reusingConfig map[string]string) (*serv
 
 // need import in mcpregister/init.go
 func init() {
-	embedmcp.Register(embedmcp.EmbedMcp{
+	mcpservers.Register(mcpservers.EmbedMcp{
 		ID:              "aiproxy-openapi",
 		Name:            "AI Proxy OpenAPI",
 		NewServer:       NewServer,
