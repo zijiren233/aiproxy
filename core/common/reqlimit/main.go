@@ -62,7 +62,7 @@ func GetGroupModelTokennameRequest(ctx context.Context, group, model, tokenname 
 		tokenname = "*"
 	}
 	if common.RedisEnabled {
-		totalCount, secondCount, err := redisGroupModelTokennameLimiter.GetRequest(ctx, time.Minute, group, model)
+		totalCount, secondCount, err := redisGroupModelTokennameLimiter.GetRequest(ctx, time.Minute, group, model, tokenname)
 		if err == nil {
 			return totalCount, secondCount
 		}
