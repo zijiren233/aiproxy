@@ -1,6 +1,7 @@
-go 1.23.8
+go 1.24
 
 use (
 	./core
+	./mcp-servers
 	./openapi-mcp
 )

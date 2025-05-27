@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/labring/aiproxy/core/model"
 	"github.com/mark3labs/mcp-go/server"
 )
 
@@ -96,44 +95,6 @@ func CheckConfigTemplatesValidate(ct ConfigTemplates) error {
 	return nil
 }
 
-func GetEmbedConfig(ct ConfigTemplates, initConfig map[string]string) (*model.MCPEmbeddingConfig, error) {
-	reusingConfig := make(map[string]model.MCPEmbeddingReusingConfig)
-	embedConfig := &model.MCPEmbeddingConfig{
-		Init: initConfig,
-	}
-	for key, value := range ct {
-		switch value.Required {
-		case ConfigRequiredTypeInitOnly:
-			if v, ok := initConfig[key]; !ok || v == "" {
-				return nil, fmt.Errorf("config %s is required", key)
-			}
-		case ConfigRequiredTypeReusingOnly:
-			if _, ok := initConfig[key]; ok {
-				return nil, fmt.Errorf("config %s is provided, but it is not allowed", key)
-			}
-			reusingConfig[key] = model.MCPEmbeddingReusingConfig{
-				Name:        value.Name,
-				Description: value.Description,
-				Required:    true,
-			}
-		case ConfigRequiredTypeInitOrReusingOnly:
-			if v, ok := initConfig[key]; ok {
-				if v == "" {
-					return nil, fmt.Errorf("config %s is required", key)
-				}
-				continue
-			}
-			reusingConfig[key] = model.MCPEmbeddingReusingConfig{
-				Name:        value.Name,
-				Description: value.Description,
-				Required:    true,
-			}
-		}
-	}
-	embedConfig.Reusing = reusingConfig
-	return embedConfig, nil
-}
-
 type NewServerFunc func(config map[string]string, reusingConfig map[string]string) (*server.MCPServer, error)
 
 type EmbedMcp struct {
@@ -142,26 +103,44 @@ type EmbedMcp struct {
 	Readme          string
 	Tags            []string
 	ConfigTemplates ConfigTemplates
-	NewServer       NewServerFunc
+	newServer       NewServerFunc
 }
 
-func ToPublicMCP(e EmbedMcp, initConfig map[string]string, enabled bool) (*model.PublicMCP, error) {
-	embedConfig, err := GetEmbedConfig(e.ConfigTemplates, initConfig)
-	if err != nil {
-		return nil, err
+type EmbedMcpConfig func(*EmbedMcp)
+
+func WithReadme(readme string) EmbedMcpConfig {
+	return func(e *EmbedMcp) {
+		e.Readme = readme
 	}
-	pmcp := &model.PublicMCP{
-		ID:          e.ID,
-		Type:        model.PublicMCPTypeEmbed,
-		Name:        e.Name,
-		Readme:      e.Readme,
-		Tags:        e.Tags,
-		EmbedConfig: embedConfig,
+}
+
+func WithTags(tags []string) EmbedMcpConfig {
+	return func(e *EmbedMcp) {
+		e.Tags = tags
 	}
-	if enabled {
-		pmcp.Status = model.PublicMCPStatusEnabled
-	} else {
-		pmcp.Status = model.PublicMCPStatusDisabled
+}
+
+func WithConfigTemplates(configTemplates ConfigTemplates) EmbedMcpConfig {
+	return func(e *EmbedMcp) {
+		e.ConfigTemplates = configTemplates
 	}
-	return pmcp, nil
+}
+
+func NewEmbedMcp(id, name string, newServer NewServerFunc, opts ...EmbedMcpConfig) EmbedMcp {
+	e := EmbedMcp{
+		ID:        id,
+		Name:      name,
+		newServer: newServer,
+	}
+	for _, opt := range opts {
+		opt(&e)
+	}
+	return e
+}
+
+func (e *EmbedMcp) NewServer(config map[string]string, reusingConfig map[string]string) (*server.MCPServer, error) {
+	if err := ValidateConfigTemplatesConfig(e.ConfigTemplates, config, reusingConfig); err != nil {
+		return nil, fmt.Errorf("mcp %s config is invalid: %w", e.ID, err)
+	}
+	return e.newServer(config, reusingConfig)
 }
