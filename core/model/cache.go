@@ -411,37 +411,6 @@ func CacheUpdateGroupUsedAmountOnlyIncrease(id string, amount float64) error {
 	return updateGroupUsedAmountOnlyIncreaseScript.Run(context.Background(), common.RDB, []string{fmt.Sprintf(GroupCacheKey, id)}, amount).Err()
 }
 
-//nolint:gosec
-func CacheGetGroupModelTPM(group string, model string) (int64, error) {
-	if !common.RedisEnabled {
-		return GetGroupModelTPM(group, model)
-	}
-
-	cacheKey := fmt.Sprintf(GroupModelTPMKey, group)
-	tpm, err := common.RDB.HGet(context.Background(), cacheKey, model).Int64()
-	if err == nil {
-		return tpm, nil
-	} else if !errors.Is(err, redis.Nil) {
-		log.Errorf("get group model tpm (%s:%s) from redis error: %s", group, model, err.Error())
-	}
-
-	tpm, err = GetGroupModelTPM(group, model)
-	if err != nil {
-		return 0, err
-	}
-
-	pipe := common.RDB.Pipeline()
-	pipe.HSet(context.Background(), cacheKey, model, tpm)
-	// 2-5 seconds
-	pipe.Expire(context.Background(), cacheKey, 2*time.Second+time.Duration(rand.Int64N(3))*time.Second)
-	_, err = pipe.Exec(context.Background())
-	if err != nil {
-		log.Errorf("set group model tpm (%s:%s) to redis error: %s", group, model, err.Error())
-	}
-
-	return tpm, nil
-}
-
 //nolint:revive
 type ModelConfigCache interface {
 	GetModelConfig(model string) (*ModelConfig, bool)

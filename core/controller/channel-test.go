@@ -101,7 +101,7 @@ func testSingleModel(mc *model.ModelCaches, channel *model.Channel, modelName st
 		modelConfig,
 		meta.WithRequestID(channelTestRequestID),
 	)
-	result := relayHandler(meta, newc)
+	result := relayHandler(newc, meta)
 	success := result.Error == nil
 	var respStr string
 	var code int

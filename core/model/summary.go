@@ -28,20 +28,40 @@ type SummaryData struct {
 	RequestCount   int64   `json:"request_count"`
 	UsedAmount     float64 `json:"used_amount"`
 	ExceptionCount int64   `json:"exception_count"`
+	MaxRPM         int64   `json:"max_rpm"`
+	MaxRPS         int64   `json:"max_rps"`
+	MaxTPM         int64   `json:"max_tpm"`
+	MaxTPS         int64   `json:"max_tps"`
 	Usage          Usage   `gorm:"embedded"        json:"usage,omitempty"`
 }
 
 func (d *SummaryData) buildUpdateData(tableName string) map[string]any {
 	data := map[string]any{}
 	if d.RequestCount > 0 {
-		data["request_count"] = gorm.Expr(fmt.Sprintf("COALESCE(%s.request_count, 0) + ?", tableName), d.RequestCount)
+		data["request_count"] = gorm.Expr(tableName+".request_count + ?", d.RequestCount)
 	}
 	if d.UsedAmount > 0 {
-		data["used_amount"] = gorm.Expr(fmt.Sprintf("COALESCE(%s.used_amount, 0) + ?", tableName), d.UsedAmount)
+		data["used_amount"] = gorm.Expr(tableName+".used_amount + ?", d.UsedAmount)
 	}
 	if d.ExceptionCount > 0 {
-		data["exception_count"] = gorm.Expr(fmt.Sprintf("COALESCE(%s.exception_count, 0) + ?", tableName), d.ExceptionCount)
+		data["exception_count"] = gorm.Expr(tableName+".exception_count + ?", d.ExceptionCount)
 	}
+
+	// max rpm tpm update
+	if d.MaxRPM > 0 {
+		data["max_rpm"] = gorm.Expr(fmt.Sprintf("CASE WHEN %s.max_rpm < ? THEN ? ELSE %s.max_rpm END", tableName, tableName), d.MaxRPM, d.MaxRPM)
+	}
+	if d.MaxRPS > 0 {
+		data["max_rps"] = gorm.Expr(fmt.Sprintf("CASE WHEN %s.max_rps < ? THEN ? ELSE %s.max_rps END", tableName, tableName), d.MaxRPS, d.MaxRPS)
+	}
+	if d.MaxTPM > 0 {
+		data["max_tpm"] = gorm.Expr(fmt.Sprintf("CASE WHEN %s.max_tpm < ? THEN ? ELSE %s.max_tpm END", tableName, tableName), d.MaxTPM, d.MaxTPM)
+	}
+	if d.MaxTPS > 0 {
+		data["max_tps"] = gorm.Expr(fmt.Sprintf("CASE WHEN %s.max_tps < ? THEN ? ELSE %s.max_tps END", tableName, tableName), d.MaxTPS, d.MaxTPS)
+	}
+
+	// usage update
 	if d.Usage.InputTokens > 0 {
 		data["input_tokens"] = gorm.Expr(fmt.Sprintf("COALESCE(%s.input_tokens, 0) + ?", tableName), d.Usage.InputTokens)
 	}
@@ -191,7 +211,7 @@ func getChartData(
 	}
 
 	query = query.
-		Select("hour_timestamp as timestamp, sum(request_count) as request_count, sum(used_amount) as used_amount, sum(exception_count) as exception_count, sum(input_tokens) as input_tokens, sum(output_tokens) as output_tokens, sum(cached_tokens) as cached_tokens, sum(cache_creation_tokens) as cache_creation_tokens, sum(total_tokens) as total_tokens, sum(web_search_count) as web_search_count").
+		Select("hour_timestamp as timestamp, sum(request_count) as request_count, sum(used_amount) as used_amount, sum(exception_count) as exception_count, sum(input_tokens) as input_tokens, sum(output_tokens) as output_tokens, sum(cached_tokens) as cached_tokens, sum(cache_creation_tokens) as cache_creation_tokens, sum(total_tokens) as total_tokens, sum(web_search_count) as web_search_count, max(max_rpm) as max_rpm, max(max_rps) as max_rps, max(max_tpm) as max_tpm, max(max_tps) as max_tps").
 		Group("timestamp").
 		Order("timestamp ASC")
 
@@ -281,8 +301,25 @@ func getLogGroupByValues[T cmp.Ordered](field string, group string, tokenName st
 	return values, nil
 }
 
-func GetModelCostRank(group string, channelID int, start, end time.Time) ([]*ModelCostRank, error) {
-	var ranks []*ModelCostRank
+type CostRank struct {
+	Model               string  `json:"model"`
+	UsedAmount          float64 `json:"used_amount"`
+	InputTokens         int64   `json:"input_tokens"`
+	OutputTokens        int64   `json:"output_tokens"`
+	CachedTokens        int64   `json:"cached_tokens"`
+	CacheCreationTokens int64   `json:"cache_creation_tokens"`
+	TotalTokens         int64   `json:"total_tokens"`
+	RequestCount        int64   `json:"request_count"`
+	WebSearchCount      int64   `json:"web_search_count"`
+
+	MaxRPM int64 `json:"max_rpm"`
+	MaxRPS int64 `json:"max_rps"`
+	MaxTPM int64 `json:"max_tpm"`
+	MaxTPS int64 `json:"max_tps"`
+}
+
+func GetModelCostRank(group string, channelID int, start, end time.Time) ([]*CostRank, error) {
+	var ranks []*CostRank
 
 	var query *gorm.DB
 	if group == "*" || channelID != 0 {
@@ -305,7 +342,7 @@ func GetModelCostRank(group string, channelID int, start, end time.Time) ([]*Mod
 	}
 
 	query = query.
-		Select("model, SUM(used_amount) as used_amount, SUM(request_count) as request_count, SUM(input_tokens) as input_tokens, SUM(output_tokens) as output_tokens, SUM(cached_tokens) as cached_tokens, SUM(cache_creation_tokens) as cache_creation_tokens, SUM(total_tokens) as total_tokens").
+		Select("model, SUM(used_amount) as used_amount, SUM(request_count) as request_count, SUM(input_tokens) as input_tokens, SUM(output_tokens) as output_tokens, SUM(cached_tokens) as cached_tokens, SUM(cache_creation_tokens) as cache_creation_tokens, SUM(total_tokens) as total_tokens, max(max_rpm) as max_rpm, max(max_rps) as max_rps, max(max_tpm) as max_tps, max(max_tps) as max_tps").
 		Group("model")
 
 	err := query.Scan(&ranks).Error
@@ -313,7 +350,7 @@ func GetModelCostRank(group string, channelID int, start, end time.Time) ([]*Mod
 		return nil, err
 	}
 
-	slices.SortFunc(ranks, func(a, b *ModelCostRank) int {
+	slices.SortFunc(ranks, func(a, b *CostRank) int {
 		if a.UsedAmount != b.UsedAmount {
 			return cmp.Compare(b.UsedAmount, a.UsedAmount)
 		}

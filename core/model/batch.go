@@ -223,6 +223,13 @@ func processSummaryUpdates(wg *sync.WaitGroup) {
 	}
 }
 
+type RequestRate struct {
+	RPM int64
+	RPS int64
+	TPM int64
+	TPS int64
+}
+
 func BatchRecordLogs(
 	requestID string,
 	requestAt time.Time,
@@ -246,6 +253,8 @@ func BatchRecordLogs(
 	amount float64,
 	user string,
 	metadata map[string]string,
+	channelModelRate RequestRate,
+	groupModelTokenRate RequestRate,
 ) (err error) {
 	now := time.Now()
 
@@ -310,10 +319,10 @@ func BatchRecordLogs(
 	updateTokenData(tokenID, amount, amountDecimal)
 
 	if channelID != 0 {
-		updateSummaryData(channelID, modelName, now, code, amountDecimal, usage)
+		updateSummaryData(channelID, modelName, now, code, amountDecimal, usage, channelModelRate)
 	}
 
-	updateGroupSummaryData(group, tokenName, modelName, now, code, amountDecimal, usage)
+	updateGroupSummaryData(group, tokenName, modelName, now, code, amountDecimal, usage, groupModelTokenRate)
 
 	return err
 }
@@ -360,7 +369,7 @@ func updateTokenData(tokenID int, amount float64, amountDecimal decimal.Decimal)
 	}
 }
 
-func updateGroupSummaryData(group string, tokenName string, modelName string, createAt time.Time, code int, amountDecimal decimal.Decimal, usage Usage) {
+func updateGroupSummaryData(group string, tokenName string, modelName string, createAt time.Time, code int, amountDecimal decimal.Decimal, usage Usage, groupModelTokenRate RequestRate) {
 	groupUnique := GroupSummaryUnique{
 		GroupID:       group,
 		TokenName:     tokenName,
@@ -381,13 +390,27 @@ func updateGroupSummaryData(group string, tokenName string, modelName string, cr
 	groupSummary.UsedAmount = amountDecimal.
 		Add(decimal.NewFromFloat(groupSummary.UsedAmount)).
 		InexactFloat64()
+
+	if groupModelTokenRate.RPM > groupSummary.MaxRPM {
+		groupSummary.MaxRPM = groupModelTokenRate.RPM
+	}
+	if groupModelTokenRate.RPS > groupSummary.MaxRPS {
+		groupSummary.MaxRPS = groupModelTokenRate.RPS
+	}
+	if groupModelTokenRate.TPM > groupSummary.MaxTPM {
+		groupSummary.MaxTPM = groupModelTokenRate.TPM
+	}
+	if groupModelTokenRate.TPS > groupSummary.MaxTPS {
+		groupSummary.MaxTPS = groupModelTokenRate.TPS
+	}
+
 	groupSummary.Usage.Add(&usage)
 	if code != http.StatusOK {
 		groupSummary.ExceptionCount++
 	}
 }
 
-func updateSummaryData(channelID int, modelName string, createAt time.Time, code int, amountDecimal decimal.Decimal, usage Usage) {
+func updateSummaryData(channelID int, modelName string, createAt time.Time, code int, amountDecimal decimal.Decimal, usage Usage, channelModelRate RequestRate) {
 	summaryUnique := SummaryUnique{
 		ChannelID:     channelID,
 		Model:         modelName,
@@ -407,6 +430,20 @@ func updateSummaryData(channelID int, modelName string, createAt time.Time, code
 	summary.UsedAmount = amountDecimal.
 		Add(decimal.NewFromFloat(summary.UsedAmount)).
 		InexactFloat64()
+
+	if channelModelRate.RPM > summary.MaxRPM {
+		summary.MaxRPM = channelModelRate.RPM
+	}
+	if channelModelRate.RPS > summary.MaxRPS {
+		summary.MaxRPS = channelModelRate.RPS
+	}
+	if channelModelRate.TPM > summary.MaxTPM {
+		summary.MaxTPM = channelModelRate.TPM
+	}
+	if channelModelRate.TPS > summary.MaxTPS {
+		summary.MaxTPS = channelModelRate.TPS
+	}
+
 	summary.Usage.Add(&usage)
 	if code != http.StatusOK {
 		summary.ExceptionCount++
