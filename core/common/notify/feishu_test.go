@@ -1,7 +1,6 @@
 package notify_test
 
 import (
-	"context"
 	"os"
 	"testing"
 
@@ -14,7 +13,7 @@ func TestPostToFeiShuv2(t *testing.T) {
 		return
 	}
 	err := notify.PostToFeiShuv2(
-		context.Background(),
+		t.Context(),
 		notify.FeishuColorRed,
 		"Error",
 		"Error Message",
