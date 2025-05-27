@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/labring/aiproxy/core/common"
-	"github.com/labring/aiproxy/core/common/config"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -67,17 +66,10 @@ func GetModelsErrorRate(ctx context.Context) (map[string]float64, error) {
 	return result, nil
 }
 
-func canBan() int {
-	if config.GetEnableModelErrorAutoBan() {
-		return 1
-	}
-	return 0
-}
-
 // AddRequest adds a request record and checks if channel should be banned
-func AddRequest(ctx context.Context, model string, channelID int64, isError, tryBan bool) (beyondThreshold bool, banExecution bool, err error) {
+func AddRequest(ctx context.Context, model string, channelID int64, isError, tryBan bool, maxErrorRate float64) (beyondThreshold bool, banExecution bool, err error) {
 	if !common.RedisEnabled {
-		beyondThreshold, banExecution = memModelMonitor.AddRequest(model, channelID, isError, tryBan)
+		beyondThreshold, banExecution = memModelMonitor.AddRequest(model, channelID, isError, tryBan, maxErrorRate)
 		return beyondThreshold, banExecution, nil
 	}
 
@@ -96,8 +88,8 @@ func AddRequest(ctx context.Context, model string, channelID int64, isError, try
 		channelID,
 		errorFlag,
 		now,
-		config.GetModelErrorAutoBanRate(),
-		canBan(),
+		maxErrorRate,
+		maxErrorRate > 0,
 		tryBan,
 	).Int64()
 	if err != nil {
@@ -203,10 +195,6 @@ func GetModelChannelErrorRate(ctx context.Context, model string) (map[int64]floa
 
 // GetBannedChannelsWithModel gets banned channels for a specific model
 func GetBannedChannelsWithModel(ctx context.Context, model string) ([]int64, error) {
-	if !config.GetEnableModelErrorAutoBan() {
-		return []int64{}, nil
-	}
-
 	if !common.RedisEnabled {
 		return memModelMonitor.GetBannedChannelsWithModel(ctx, model)
 	}
@@ -271,10 +259,6 @@ func ClearAllModelErrors(ctx context.Context) error {
 
 // GetAllBannedModelChannels gets all banned channels for all models
 func GetAllBannedModelChannels(ctx context.Context) (map[string][]int64, error) {
-	if !config.GetEnableModelErrorAutoBan() {
-		return map[string][]int64{}, nil
-	}
-
 	if !common.RedisEnabled {
 		return memModelMonitor.GetAllBannedModelChannels(ctx)
 	}

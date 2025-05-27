@@ -69,13 +69,6 @@ func initOptionMap() error {
 	optionMap["DisableServe"] = strconv.FormatBool(config.GetDisableServe())
 	optionMap["BillingEnabled"] = strconv.FormatBool(config.GetBillingEnabled())
 	optionMap["RetryTimes"] = strconv.FormatInt(config.GetRetryTimes(), 10)
-	optionMap["ModelErrorAutoBanRate"] = strconv.FormatFloat(config.GetModelErrorAutoBanRate(), 'f', -1, 64)
-	optionMap["EnableModelErrorAutoBan"] = strconv.FormatBool(config.GetEnableModelErrorAutoBan())
-	timeoutWithModelTypeJSON, err := sonic.Marshal(config.GetTimeoutWithModelType())
-	if err != nil {
-		return err
-	}
-	optionMap["TimeoutWithModelType"] = conv.BytesToString(timeoutWithModelTypeJSON)
 	defaultChannelModelsJSON, err := sonic.Marshal(config.GetDefaultChannelModels())
 	if err != nil {
 		return err
@@ -86,14 +79,12 @@ func initOptionMap() error {
 		return err
 	}
 	optionMap["DefaultChannelModelMapping"] = conv.BytesToString(defaultChannelModelMappingJSON)
-	optionMap["GeminiSafetySetting"] = config.GetGeminiSafetySetting()
 	optionMap["GroupMaxTokenNum"] = strconv.FormatInt(config.GetGroupMaxTokenNum(), 10)
 	groupConsumeLevelRatioJSON, err := sonic.Marshal(config.GetGroupConsumeLevelRatioStringKeyMap())
 	if err != nil {
 		return err
 	}
 	optionMap["GroupConsumeLevelRatio"] = conv.BytesToString(groupConsumeLevelRatioJSON)
-	optionMap["InternalToken"] = config.GetInternalToken()
 	optionMap["NotifyNote"] = config.GetNotifyNote()
 
 	optionKeys = make([]string, 0, len(optionMap))
@@ -194,8 +185,6 @@ func toBool(value string) bool {
 //nolint:gocyclo
 func updateOption(key string, value string, isInit bool) (err error) {
 	switch key {
-	case "InternalToken":
-		config.SetInternalToken(value)
 	case "LogStorageHours":
 		logStorageHours, err := strconv.ParseInt(value, 10, 64)
 		if err != nil {
@@ -259,8 +248,6 @@ func updateOption(key string, value string, isInit bool) (err error) {
 			return errors.New("group max token num must be greater than 0")
 		}
 		config.SetGroupMaxTokenNum(groupMaxTokenNum)
-	case "GeminiSafetySetting":
-		config.SetGeminiSafetySetting(value)
 	case "DefaultChannelModels":
 		var newModels map[int][]string
 		err := sonic.Unmarshal(conv.StringToBytes(value), &newModels)
@@ -315,29 +302,6 @@ func updateOption(key string, value string, isInit bool) (err error) {
 			return errors.New("retry times must be greater than 0")
 		}
 		config.SetRetryTimes(retryTimes)
-	case "EnableModelErrorAutoBan":
-		config.SetEnableModelErrorAutoBan(toBool(value))
-	case "ModelErrorAutoBanRate":
-		modelErrorAutoBanRate, err := strconv.ParseFloat(value, 64)
-		if err != nil {
-			return err
-		}
-		if modelErrorAutoBanRate < 0 || modelErrorAutoBanRate > 1 {
-			return errors.New("model error auto ban rate must be between 0 and 1")
-		}
-		config.SetModelErrorAutoBanRate(modelErrorAutoBanRate)
-	case "TimeoutWithModelType":
-		var newTimeoutWithModelType map[int]int64
-		err := sonic.Unmarshal(conv.StringToBytes(value), &newTimeoutWithModelType)
-		if err != nil {
-			return err
-		}
-		for _, v := range newTimeoutWithModelType {
-			if v < 0 {
-				return errors.New("timeout must be greater than 0")
-			}
-		}
-		config.SetTimeoutWithModelType(newTimeoutWithModelType)
 	case "GroupConsumeLevelRatio":
 		var newGroupRpmRatio map[string]float64
 		err := sonic.Unmarshal(conv.StringToBytes(value), &newGroupRpmRatio)

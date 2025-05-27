@@ -1,124 +1,260 @@
+<div align="center">
+  <h1>AI Proxy</h1>
+  <p>新一代 AI 网关，采用 OpenAI 兼容协议</p>
+  
+  [![Release](https://img.shields.io/github/release/labring/aiproxy)](https://github.com/labring/aiproxy/releases)
+  [![License](https://img.shields.io/github/license/labring/aiproxy)](https://github.com/labring/aiproxy/blob/main/LICENSE)
+  [![Go Version](https://img.shields.io/github/go-mod/go-version/labring/aiproxy?filename=core%2Fgo.mod)](https://github.com/labring/aiproxy/blob/main/core/go.mod)
+  [![Build Status](https://img.shields.io/github/actions/workflow/status/labring/aiproxy/release.yml?branch=main)](https://github.com/labring/aiproxy/actions)
 
-[English](./README.md) | 简体中文
+  [English](./README.md) | [简体中文](./README.zh.md)
+</div>
 
-# AI Proxy
+---
 
-新一代 AI 网关，使用 OpenAI 作为协议入口。
+## 🚀 项目概述
 
-## 特性
+AI Proxy 是一个强大的、生产就绪的 AI 网关，提供智能请求路由、全面监控和无缝多租户管理。基于 OpenAI 兼容协议构建，是需要可靠性、可扩展性和高级功能的 AI 应用的完美中间件。
 
-- 智能错误重试
-- 基于优先级与错误率选择渠道
-- 告警通知
-  - 渠道余额预警
-  - 错误率预警
-  - 无权限渠道预警
-  - 更多...
-- 日志与审计
-  - 完善的请求日志数据
-  - 请求体、响应体记录
-  - 请求日志链路追踪
-- 数据统计分析
-  - 请求量统计
-  - 错误量统计
-  - RPM TPM 统计
-  - 消费统计
-  - 模型统计
-  - 渠道错误率分析
-  - 更多...
-- Rerank 支持
-- PDF 支持
-- STT 模型映射支持
-- 多租户系统分离
-- 模型 RPM TPM 限制
-- Think 模型支持 `<think>` 切分到 `reasoning_content`
-- 提示词缓存计费支持
-- 内敛分词器，无需额外下载 tiktoken 文件
-- API `Swagger` 文档支持 `http://host:port/swagger/index.html`
+## ✨ 核心特性
 
-## 如何使用
+### 🔄 **智能请求管理**
 
-### Sealos
+- **智能重试机制**：智能重试策略与自动错误恢复
+- **基于优先级的渠道选择**：根据渠道优先级和错误率路由请求
+- **负载均衡**：高效地在多个 AI 提供商之间分配流量
 
-使用Sealos 内置模型能力，点击前往 [Sealos](https://hzh.sealos.run/?openapp=system-aiproxy)。
+### 📊 **全面监控与分析**
 
-### FastGPT
+- **实时告警**：余额预警、错误率和异常等主动通知
+- **详细日志**：完整的请求/响应跟踪和审计轨迹
+- **高级分析**：请求量、错误统计、RPM/TPM 指标和成本分析
+- **渠道性能**：错误率分析和性能监控
 
-通过 AI Proxy 接入模型，点击前往 [FastGPT](https://doc.tryfastgpt.ai/docs/development/modelconfig/ai-proxy/)。
+### 🏢 **多租户架构**
 
-## 部署
+- **组织隔离**：不同组织间的完全分离
+- **灵活访问控制**：基于令牌的身份验证和子网限制
+- **资源配额**：每组的 RPM/TPM 限制和使用配额
+- **自定义定价**：每组模型定价和计费配置
 
-### 使用 Docker
+### 🤖 **MCP (模型上下文协议) 支持**
 
-```bash
-docker run -d --name aiproxy -p 3000:3000 -v $(pwd)/aiproxy:/aiproxy ghcr.io/labring/aiproxy:latest
+- **公共 MCP 服务器**：开箱即用的 MCP 集成
+- **组织 MCP 服务器**：组织专用的私有 MCP 服务器
+- **嵌入式 MCP**：带配置模板的内置 MCP 服务器
+- **OpenAPI 转 MCP**：自动将 OpenAPI 规范转换为 MCP 工具
+
+### 🔧 **高级功能**
+
+- **多格式支持**：文本、图像、音频和文档处理
+- **模型映射**：灵活的模型别名和路由
+- **提示词缓存**：智能缓存和计费支持
+- **思考模式**：支持推理模型的内容分割
+- **内置分词器**：无需外部 tiktoken 依赖
+
+## 🏗️ 架构图
+
+```mermaid
+graph TB
+    Client[客户端应用] --> Gateway[AI Proxy 网关]
+    Gateway --> Auth[身份验证与授权]
+    Gateway --> Router[智能路由器]
+    Gateway --> Monitor[监控与分析]
+    
+    Router --> Provider1[OpenAI]
+    Router --> Provider2[Anthropic]
+    Router --> Provider3[Azure OpenAI]
+    Router --> ProviderN[其他提供商]
+    
+    Gateway --> MCP[MCP 服务器]
+    MCP --> PublicMCP[公共 MCP]
+    MCP --> GroupMCP[组织 MCP]
+    MCP --> EmbedMCP[嵌入式 MCP]
+    
+    Monitor --> Alerts[告警系统]
+    Monitor --> Analytics[分析仪表板]
+    Monitor --> Logs[审计日志]
 ```
 
-### 使用 Docker Compose
+## 🚀 快速开始
 
-将 [docker-compose.yaml](./docker-compose.yaml) 复制到目录。
+### Docker（推荐）
 
 ```bash
+# 使用默认配置快速启动
+docker run -d \
+  --name aiproxy \
+  -p 3000:3000 \
+  -v $(pwd)/aiproxy:/aiproxy \
+  registry.cn-hangzhou.aliyuncs.com/labring/aiproxy:latest
+
+# 夜间构建
+docker run -d \
+  --name aiproxy \
+  -p 3000:3000 \
+  -v $(pwd)/aiproxy:/aiproxy \
+  registry.cn-hangzhou.aliyuncs.com/labring/aiproxy:main
+```
+
+### Docker Compose
+
+```bash
+# 下载 docker-compose.yaml
+curl -O https://raw.githubusercontent.com/labring/aiproxy/main/docker-compose.yaml
+
+# 启动服务
 docker-compose up -d
 ```
 
-## 环境变量
+## 🔧 配置说明
 
-### 基础配置
+### 环境变量
 
-- `LISTEN`: 监听地址，默认 `:3000`
-- `ADMIN_KEY`: 管理员密钥，用于管理 API 和转发 API，默认空
-- `INTERNAL_TOKEN`: 内部服务认证 token，默认空
-- `FFMPEG_ENABLED`: 是否启用 ffmpeg，默认 `false`
+#### **核心设置**
 
-### Debug 选项
+```bash
+LISTEN=:3000                    # 服务器监听地址
+ADMIN_KEY=your-admin-key        # 管理员 API 密钥
+```
 
-- `DEBUG`: 启用调试模式，默认 `false`
-- `DEBUG_SQL`: 启用 SQL 调试，默认 `false`
+#### **数据库配置**
 
-### 数据库选项
+```bash
+SQL_DSN=postgres://user:pass@host:5432/db    # 主数据库
+LOG_SQL_DSN=postgres://user:pass@host:5432/log_db  # 日志数据库（可选）
+REDIS_CONN_STRING=redis://localhost:6379     # Redis 缓存
+```
 
-- `SQL_DSN`: 数据库连接字符串，默认空，eg: `postgres://postgres:postgres@localhost:5432/postgres`
-- `LOG_SQL_DSN`: 日志数据库连接字符串，默认空，eg: `postgres://postgres:postgres@localhost:5432/postgres`
-- `REDIS_CONN_STRING`: Redis 连接字符串，默认空，eg: `redis://localhost:6379`
-- `DISABLE_AUTO_MIGRATE_DB`: 禁用自动数据库迁移，默认 `false`
-- `SQL_MAX_IDLE_CONNS`: 数据库最大空闲连接数，默认 `100`
-- `SQL_MAX_OPEN_CONNS`: 数据库最大打开连接数，默认 `1000`
-- `SQL_MAX_LIFETIME`: 数据库连接最大生命周期，默认 `60`
-- `SQLITE_PATH`: SQLite 数据库路径，默认 `aiproxy.db`
-- `SQL_BUSY_TIMEOUT`: 数据库繁忙超时时间，默认 `3000`
+#### **功能开关**
 
-### 通知选项
+```bash
+BILLING_ENABLED=true           # 启用计费功能
+ENABLE_MODEL_ERROR_AUTO_BAN=true  # 自动禁用问题模型
+SAVE_ALL_LOG_DETAIL=false     # 记录所有请求详情
+```
 
-- `NOTIFY_NOTE`: 自定义通知备注，默认 `AI Proxy`
-- `NOTIFY_FEISHU_WEBHOOK`: 飞书通知 webhook url，默认空，eg: `https://open.feishu.cn/open-apis/bot/v2/hook/xxxx`
+### 高级配置
 
-### 模型配置
+<details>
+<summary>点击展开高级配置选项</summary>
 
-- `DISABLE_MODEL_CONFIG`: 禁用模型配置，默认 `false`
-- `RETRY_TIMES`: 重试次数，默认 `0`
-- `ENABLE_MODEL_ERROR_AUTO_BAN`: 启用模型错误自动禁用，默认 `false`
-- `MODEL_ERROR_AUTO_BAN_RATE`: 模型错误自动禁用阈值，默认 `0.3`
-- `TIMEOUT_WITH_MODEL_TYPE`: 不同模型类型超时设置，默认 `{}`
-- `DEFAULT_CHANNEL_MODELS`: 每个渠道默认模型，默认 `{}`
-- `DEFAULT_CHANNEL_MODEL_MAPPING`: 每个渠道模型映射，默认 `{}`
+#### **速率限制与配额**
 
-### 日志配置
+```bash
+GROUP_MAX_TOKEN_NUM=100        # 每组最大令牌数
+MODEL_ERROR_AUTO_BAN_RATE=0.3  # 自动禁用的错误率阈值
+```
 
-- `LOG_STORAGE_HOURS`: 日志存储时间（0 表示不限），默认 `0`
-- `RETRY_LOG_STORAGE_HOURS`: 重试日志存储时间（0 表示不限），默认 `0`
-- `SAVE_ALL_LOG_DETAIL`: 保存所有日志详情，默认 `false` 则只保存错误日志
-- `LOG_DETAIL_REQUEST_BODY_MAX_SIZE`: 日志详情请求体最大大小，默认 `128KB`
-- `LOG_DETAIL_RESPONSE_BODY_MAX_SIZE`: 日志详情响应体最大大小，默认 `128KB`
-- `LOG_DETAIL_STORAGE_HOURS`: 日志详情存储时间，默认 `72`（3 天）
-- `CLEAN_LOG_BATCH_SIZE`: 日志清理批量大小，清理间隔一分钟，默认 `2000`
+#### **日志与保留**
 
-### 服务控制
+```bash
+LOG_STORAGE_HOURS=168          # 日志保留时间（0 = 无限制）
+LOG_DETAIL_STORAGE_HOURS=72    # 详细日志保留时间
+CLEAN_LOG_BATCH_SIZE=2000      # 日志清理批次大小
+```
 
-- `DISABLE_SERVICE_CONTROL`: 禁用服务控制，默认 `false`
-- `GROUP_MAX_TOKEN_NUM`: 每个组最大 token 数量（0 表示不限），默认 `0`
-- `GROUP_CONSUME_LEVEL_RATIO`: 每个组消费等级比例，默认 `{}`
-- `GEMINI_SAFETY_SETTING`: Gemini 模型安全设置，默认 `BLOCK_NONE`
-- `BILLING_ENABLED`: 启用计费功能，默认 `true`
-- `IP_GROUPS_THRESHOLD`: IP 组阈值，当同一个 IP 被多个组使用时发出预警，默认 `0`
-- `IP_GROUPS_BAN_THRESHOLD`: IP 组禁用阈值，当同一个 IP 被多个组使用时禁用其所有组和 IP，默认 `0`
+#### **安全与访问控制**
+
+```bash
+IP_GROUPS_THRESHOLD=5          # IP 共享告警阈值
+IP_GROUPS_BAN_THRESHOLD=10     # IP 共享禁用阈值
+```
+
+</details>
+
+## 📚 API 文档
+
+### 交互式 API 浏览器
+
+访问 `http://localhost:3000/swagger/index.html` 查看完整的 API 文档和交互示例。
+
+### 快速 API 示例
+
+#### **列出可用模型**
+
+```bash
+curl -H "Authorization: Bearer your-token" \
+  http://localhost:3000/v1/models
+```
+
+#### **聊天补全**
+
+```bash
+curl -X POST http://localhost:3000/v1/chat/completions \
+  -H "Authorization: Bearer your-token" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "gpt-4",
+    "messages": [{"role": "user", "content": "你好！"}]
+  }'
+```
+
+## 🔌 集成方案
+
+### Sealos 平台
+
+在 Sealos 上一键部署，享受内置模型能力：
+[部署到 Sealos](https://hzh.sealos.run/?openapp=system-aiproxy)
+
+### FastGPT 集成
+
+与 FastGPT 无缝集成，增强 AI 工作流：
+[FastGPT 文档](https://doc.tryfastgpt.ai/docs/development/modelconfig/ai-proxy/)
+
+### MCP (模型上下文协议)
+
+AI Proxy 提供全面的 MCP 支持，扩展 AI 能力：
+
+- **公共 MCP 服务器**：社区维护的集成
+- **组织 MCP 服务器**：私有组织工具
+- **嵌入式 MCP**：易于配置的内置功能
+- **OpenAPI 转 MCP**：从 API 规范自动生成工具
+
+## 🛠️ 开发指南
+
+### 前置要求
+
+- Go 1.24+
+- Node.js 22+（前端开发）
+- PostgreSQL/MySQL（可选，默认 SQLite）
+- Redis（可选，用于缓存）
+
+### 从源码构建
+
+```bash
+# 克隆仓库
+git clone https://github.com/labring/aiproxy.git
+cd aiproxy
+
+# 构建前端（可选）
+cd web && npm install -g pnpm && pnpm install && pnpm run build && cp -r dist ../core/public/dist/ && cd ..
+
+# 构建后端
+cd core && go build -o aiproxy .
+
+# 运行
+./aiproxy
+```
+
+## 🤝 参与贡献
+
+我们欢迎贡献！请查看我们的[贡献指南](CONTRIBUTING.md)了解详情。
+
+### 贡献方式
+
+- 🐛 报告错误和问题
+- 💡 建议新功能
+- 📝 改进文档
+- 🔧 提交拉取请求
+- ⭐ 为仓库点星
+
+## 📄 开源协议
+
+本项目采用 MIT 协议 - 详见 [LICENSE](LICENSE) 文件。
+
+## 🙏 致谢
+
+- OpenAI 提供的 API 规范
+- 开源社区的各种集成贡献
+- 所有 AI Proxy 的贡献者和用户

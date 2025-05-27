@@ -15,7 +15,6 @@ import (
 	"github.com/bytedance/sonic"
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/core/common"
-	"github.com/labring/aiproxy/core/common/config"
 	"github.com/labring/aiproxy/core/common/conv"
 	"github.com/labring/aiproxy/core/common/image"
 	"github.com/labring/aiproxy/core/common/render"
@@ -48,7 +47,7 @@ type CountTokensResponse struct {
 }
 
 func buildSafetySettings() []ChatSafetySettings {
-	safetySetting := config.GetGeminiSafetySetting()
+	safetySetting := "BLOCK_NONE"
 	return []ChatSafetySettings{
 		{Category: "HARM_CATEGORY_HARASSMENT", Threshold: safetySetting},
 		{Category: "HARM_CATEGORY_HATE_SPEECH", Threshold: safetySetting},

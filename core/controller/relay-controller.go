@@ -214,6 +214,7 @@ func RelayHelper(c *gin.Context, meta *meta.Meta, handel RelayHandler) (*control
 			int64(meta.Channel.ID),
 			false,
 			false,
+			meta.ModelConfig.MaxErrorRate,
 		); err != nil {
 			log.Errorf("add request failed: %+v", err)
 		}
@@ -228,6 +229,7 @@ func RelayHelper(c *gin.Context, meta *meta.Meta, handel RelayHandler) (*control
 			int64(meta.Channel.ID),
 			true,
 			!hasPermission,
+			meta.ModelConfig.MaxErrorRate,
 		)
 		if err != nil {
 			log.Errorf("add request failed: %+v", err)

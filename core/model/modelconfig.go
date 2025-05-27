@@ -30,9 +30,11 @@ type ModelConfig struct {
 	// map[size]map[quality]price_per_image
 	ImageQualityPrices map[string]map[string]float64 `gorm:"serializer:fastjson;type:text" json:"image_quality_prices,omitempty"`
 	// map[size]price_per_image
-	ImagePrices map[string]float64 `gorm:"serializer:fastjson;type:text" json:"image_prices,omitempty"`
-	Price       Price              `gorm:"embedded"                      json:"price,omitempty"`
-	RetryTimes  int64              `json:"retry_times"`
+	ImagePrices  map[string]float64 `gorm:"serializer:fastjson;type:text" json:"image_prices,omitempty"`
+	Price        Price              `gorm:"embedded"                      json:"price,omitempty"`
+	RetryTimes   int64              `json:"retry_times"`
+	Timeout      int64              `json:"timeout"`
+	MaxErrorRate float64            `json:"max_error_rate"`
 }
 
 func NewDefaultModelConfig(model string) *ModelConfig {

@@ -1,7 +1,6 @@
 package config
 
 import (
-	"math"
 	"os"
 	"slices"
 	"strconv"
@@ -21,6 +20,7 @@ var (
 	WebPath              = os.Getenv("WEB_PATH")
 	DisableWeb           = env.Bool("DISABLE_WEB", false)
 	FfmpegEnabled        = env.Bool("FFMPEG_ENABLED", false)
+	InternalToken        = os.Getenv("INTERNAL_TOKEN")
 )
 
 var (
@@ -32,18 +32,14 @@ var (
 	logDetailResponseBodyMaxSize int64 = 128 * 1024 // 128KB
 	logDetailStorageHours        int64 = 3 * 24     // 3 days
 	cleanLogBatchSize            int64 = 2000
-	internalToken                atomic.Value
 	notifyNote                   atomic.Value
 	ipGroupsThreshold            int64
 	ipGroupsBanThreshold         int64
 )
 
 var (
-	retryTimes              atomic.Int64
-	enableModelErrorAutoBan atomic.Bool
-	modelErrorAutoBanRate   = math.Float64bits(0.3)
-	timeoutWithModelType    atomic.Value
-	disableModelConfig      = env.Bool("DISABLE_MODEL_CONFIG", false)
+	retryTimes         atomic.Int64
+	disableModelConfig = env.Bool("DISABLE_MODEL_CONFIG", false)
 )
 
 var (
@@ -53,18 +49,13 @@ var (
 	groupConsumeLevelRatio     atomic.Value
 )
 
-var geminiSafetySetting atomic.Value
-
 var billingEnabled atomic.Bool
 
 func init() {
-	timeoutWithModelType.Store(make(map[int]int64))
 	defaultChannelModels.Store(make(map[int][]string))
 	defaultChannelModelMapping.Store(make(map[int]map[string]string))
 	groupConsumeLevelRatio.Store(make(map[float64]float64))
-	geminiSafetySetting.Store("BLOCK_NONE")
 	billingEnabled.Store(true)
-	internalToken.Store(os.Getenv("INTERNAL_TOKEN"))
 	notifyNote.Store(os.Getenv("NOTIFY_NOTE"))
 }
 
@@ -79,34 +70,6 @@ func GetRetryTimes() int64 {
 func SetRetryTimes(times int64) {
 	times = env.Int64("RETRY_TIMES", times)
 	retryTimes.Store(times)
-}
-
-func GetEnableModelErrorAutoBan() bool {
-	return enableModelErrorAutoBan.Load()
-}
-
-func SetEnableModelErrorAutoBan(enabled bool) {
-	enabled = env.Bool("ENABLE_MODEL_ERROR_AUTO_BAN", enabled)
-	enableModelErrorAutoBan.Store(enabled)
-}
-
-func GetModelErrorAutoBanRate() float64 {
-	return math.Float64frombits(atomic.LoadUint64(&modelErrorAutoBanRate))
-}
-
-func SetModelErrorAutoBanRate(rate float64) {
-	rate = env.Float64("MODEL_ERROR_AUTO_BAN_RATE", rate)
-	atomic.StoreUint64(&modelErrorAutoBanRate, math.Float64bits(rate))
-}
-
-func GetTimeoutWithModelType() map[int]int64 {
-	t, _ := timeoutWithModelType.Load().(map[int]int64)
-	return t
-}
-
-func SetTimeoutWithModelType(timeout map[int]int64) {
-	timeout = env.JSON("TIMEOUT_WITH_MODEL_TYPE", timeout)
-	timeoutWithModelType.Store(timeout)
 }
 
 func GetLogStorageHours() int64 {
@@ -252,16 +215,6 @@ func SetGroupMaxTokenNum(num int64) {
 	groupMaxTokenNum.Store(num)
 }
 
-func GetGeminiSafetySetting() string {
-	s, _ := geminiSafetySetting.Load().(string)
-	return s
-}
-
-func SetGeminiSafetySetting(setting string) {
-	setting = env.String("GEMINI_SAFETY_SETTING", setting)
-	geminiSafetySetting.Store(setting)
-}
-
 func GetBillingEnabled() bool {
 	return billingEnabled.Load()
 }
@@ -269,16 +222,6 @@ func GetBillingEnabled() bool {
 func SetBillingEnabled(enabled bool) {
 	enabled = env.Bool("BILLING_ENABLED", enabled)
 	billingEnabled.Store(enabled)
-}
-
-func GetInternalToken() string {
-	t, _ := internalToken.Load().(string)
-	return t
-}
-
-func SetInternalToken(token string) {
-	token = env.String("INTERNAL_TOKEN", token)
-	internalToken.Store(token)
 }
 
 func GetNotifyNote() string {

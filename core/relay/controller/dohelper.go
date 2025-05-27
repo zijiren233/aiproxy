@@ -12,7 +12,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/core/common"
-	"github.com/labring/aiproxy/core/common/config"
 	"github.com/labring/aiproxy/core/common/conv"
 	"github.com/labring/aiproxy/core/middleware"
 	"github.com/labring/aiproxy/core/model"
@@ -167,7 +166,7 @@ func prepareAndDoRequest(a adaptor.Adaptor, c *gin.Context, meta *meta.Meta) (*h
 	log.Debugf("request url: %s %s", method, fullRequestURL)
 
 	ctx := context.Background()
-	if timeout := config.GetTimeoutWithModelType()[int(meta.Mode)]; timeout > 0 {
+	if timeout := meta.ModelConfig.Timeout; timeout > 0 {
 		// donot use c.Request.Context() because it will be canceled by the client
 		// which will cause the usage of non-streaming requests to be unable to be recorded
 		var cancel context.CancelFunc
