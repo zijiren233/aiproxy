@@ -17,7 +17,7 @@ import (
 	"github.com/labring/aiproxy/core/common"
 	"github.com/labring/aiproxy/core/common/mcpproxy"
 	statelessmcp "github.com/labring/aiproxy/core/common/stateless-mcp"
-	"github.com/labring/aiproxy/core/embedmcp"
+	"github.com/labring/aiproxy/core/mcpservers"
 	"github.com/labring/aiproxy/core/middleware"
 	"github.com/labring/aiproxy/core/model"
 	"github.com/labring/aiproxy/openapi-mcp/convert"
@@ -174,7 +174,7 @@ func handlePublicEmbedMCP(c *gin.Context, mcpID string, config *model.MCPEmbeddi
 		}
 		reusingConfig = param.ReusingParams
 	}
-	server, err := embedmcp.GetMCPServer(mcpID, config.Init, reusingConfig)
+	server, err := mcpservers.GetMCPServer(mcpID, config.Init, reusingConfig)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, CreateMCPErrorResponse(
 			mcp.NewRequestId(nil),
@@ -517,7 +517,7 @@ func handlePublicEmbedStreamable(c *gin.Context, mcpID string, config *model.MCP
 		}
 		reusingConfig = param.ReusingParams
 	}
-	server, err := embedmcp.GetMCPServer(mcpID, config.Init, reusingConfig)
+	server, err := mcpservers.GetMCPServer(mcpID, config.Init, reusingConfig)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, CreateMCPErrorResponse(
 			mcp.NewRequestId(nil),

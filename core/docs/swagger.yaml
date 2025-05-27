@@ -5048,6 +5048,147 @@ paths:
       summary: Get status
       tags:
       - misc
+  /api/test-embedmcp/{id}/sse:
+    get:
+      description: Test Embed MCP SSE Server
+      parameters:
+      - description: MCP ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Initial configuration parameters (e.g., config[host]=http://localhost:3000)
+        in: query
+        name: config[key]
+        type: string
+      - description: Reusing configuration parameters (e.g., reusing[authorization]=apikey)
+        in: query
+        name: reusing[key]
+        type: string
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+      security:
+      - ApiKeyAuth: []
+      summary: Test Embed MCP SSE Server
+      tags:
+      - embedmcp
+  /api/test-embedmcp/{id}/streamable:
+    delete:
+      consumes:
+      - application/json
+      description: Test Embed MCP Streamable Server with various HTTP methods
+      parameters:
+      - description: MCP ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Initial configuration parameters (e.g., config[host]=http://localhost:3000)
+        in: query
+        name: config[key]
+        type: string
+      - description: Reusing configuration parameters (e.g., reusing[authorization]=apikey)
+        in: query
+        name: reusing[key]
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+      security:
+      - ApiKeyAuth: []
+      summary: Test Embed MCP Streamable Server
+      tags:
+      - embedmcp
+    get:
+      consumes:
+      - application/json
+      description: Test Embed MCP Streamable Server with various HTTP methods
+      parameters:
+      - description: MCP ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Initial configuration parameters (e.g., config[host]=http://localhost:3000)
+        in: query
+        name: config[key]
+        type: string
+      - description: Reusing configuration parameters (e.g., reusing[authorization]=apikey)
+        in: query
+        name: reusing[key]
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+      security:
+      - ApiKeyAuth: []
+      summary: Test Embed MCP Streamable Server
+      tags:
+      - embedmcp
+    post:
+      consumes:
+      - application/json
+      description: Test Embed MCP Streamable Server with various HTTP methods
+      parameters:
+      - description: MCP ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Initial configuration parameters (e.g., config[host]=http://localhost:3000)
+        in: query
+        name: config[key]
+        type: string
+      - description: Reusing configuration parameters (e.g., reusing[authorization]=apikey)
+        in: query
+        name: reusing[key]
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+      security:
+      - ApiKeyAuth: []
+      summary: Test Embed MCP Streamable Server
+      tags:
+      - embedmcp
+  /api/test-embedmcp/message:
+    post:
+      consumes:
+      - application/json
+      description: Send a message to the test embed MCP server
+      parameters:
+      - description: Session ID
+        in: query
+        name: sessionId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+      security:
+      - ApiKeyAuth: []
+      summary: Test Embed MCP Message
+      tags:
+      - embedmcp
   /api/token/{group}:
     post:
       consumes:

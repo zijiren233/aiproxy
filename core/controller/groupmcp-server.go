@@ -125,7 +125,7 @@ func handleGroupProxySSE(c *gin.Context, config *model.GroupMCPProxyConfig) {
 		c.Writer,
 		c.Request,
 		getStore(),
-		newPublicMcpEndpoint(token.Key, model.PublicMCPTypeProxySSE),
+		newGroupMcpEndpoint(token.Key, model.GroupMCPTypeProxySSE),
 		backendURL.String(),
 		headers,
 	)
@@ -167,6 +167,7 @@ func handleGroupMCPServer(c *gin.Context, s *server.MCPServer, mcpType model.Gro
 //	@Router		/mcp/group/message [post]
 func GroupMCPMessage(c *gin.Context) {
 	token := middleware.GetToken(c)
+
 	mcpTypeStr, _ := c.GetQuery("type")
 	if mcpTypeStr == "" {
 		c.JSON(http.StatusBadRequest, CreateMCPErrorResponse(
@@ -177,6 +178,7 @@ func GroupMCPMessage(c *gin.Context) {
 		return
 	}
 	mcpType := model.GroupMCPType(mcpTypeStr)
+
 	sessionID, _ := c.GetQuery("sessionId")
 	if sessionID == "" {
 		c.JSON(http.StatusBadRequest, CreateMCPErrorResponse(
