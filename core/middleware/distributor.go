@@ -102,14 +102,16 @@ func checkGroupModelRPMAndTPM(c *gin.Context, group *model.GroupCache, mc *model
 	adjustedModelConfig := GetGroupAdjustedModelConfig(group, *mc)
 
 	groupModelCount, groupModelOverLimitCount, groupModelSecondCount := reqlimit.PushGroupModelRequest(c.Request.Context(), group.ID, mc.Model, adjustedModelConfig.RPM)
-	log.Data["group_rpm"] = strconv.FormatInt(groupModelCount+groupModelOverLimitCount, 10)
-	log.Data["group_rps"] = strconv.FormatInt(groupModelSecondCount, 10)
+	if group.Status != model.GroupStatusInternal {
+		log.Data["group_rpm"] = strconv.FormatInt(groupModelCount+groupModelOverLimitCount, 10)
+		log.Data["group_rps"] = strconv.FormatInt(groupModelSecondCount, 10)
+	}
 
 	groupModelTokenCount, groupModelTokenOverLimitCount, groupModelTokenSecondCount := reqlimit.PushGroupModelTokennameRequest(c.Request.Context(), group.ID, mc.Model, tokenName)
 	c.Set(GroupModelTokenRPM, groupModelTokenCount+groupModelTokenOverLimitCount)
 	c.Set(GroupModelTokenRPS, groupModelTokenSecondCount)
-	log.Data["rpm"] = strconv.FormatInt(groupModelTokenCount+groupModelTokenOverLimitCount, 10)
-	log.Data["rps"] = strconv.FormatInt(groupModelTokenSecondCount, 10)
+	// log.Data["rpm"] = strconv.FormatInt(groupModelTokenCount+groupModelTokenOverLimitCount, 10)
+	// log.Data["rps"] = strconv.FormatInt(groupModelTokenSecondCount, 10)
 
 	if group.Status != model.GroupStatusInternal &&
 		adjustedModelConfig.RPM > 0 {
@@ -122,14 +124,16 @@ func checkGroupModelRPMAndTPM(c *gin.Context, group *model.GroupCache, mc *model
 	}
 
 	groupModelCountTPM, groupModelCountTPS := reqlimit.GetGroupModelTokensRequest(c.Request.Context(), group.ID, mc.Model)
-	log.Data["group_tpm"] = strconv.FormatInt(groupModelCountTPM, 10)
-	log.Data["group_tps"] = strconv.FormatInt(groupModelCountTPS, 10)
+	if group.Status != model.GroupStatusInternal {
+		log.Data["group_tpm"] = strconv.FormatInt(groupModelCountTPM, 10)
+		log.Data["group_tps"] = strconv.FormatInt(groupModelCountTPS, 10)
+	}
 
 	groupModelTokenCountTPM, groupModelTokenCountTPS := reqlimit.GetGroupModelTokennameTokensRequest(c.Request.Context(), group.ID, mc.Model, tokenName)
 	c.Set(GroupModelTokenTPM, groupModelTokenCountTPM)
 	c.Set(GroupModelTokenTPS, groupModelTokenCountTPS)
-	log.Data["tpm"] = strconv.FormatInt(groupModelTokenCountTPM, 10)
-	log.Data["tps"] = strconv.FormatInt(groupModelTokenCountTPS, 10)
+	// log.Data["tpm"] = strconv.FormatInt(groupModelTokenCountTPM, 10)
+	// log.Data["tps"] = strconv.FormatInt(groupModelTokenCountTPS, 10)
 
 	if group.Status != model.GroupStatusInternal &&
 		adjustedModelConfig.TPM > 0 {

@@ -109,10 +109,10 @@ func (w *warpAdaptor) DoRequest(meta *meta.Meta, c *gin.Context, req *http.Reque
 		meta.OriginModel,
 	)
 	log := middleware.GetLogger(c)
-	log.Data["ch_rpm"] = count + overLimitCount
-	log.Data["ch_rps"] = secondCount
 	meta.Set(MetaChannelModelKeyRPM, count+overLimitCount)
 	meta.Set(MetaChannelModelKeyRPS, secondCount)
+	log.Data["ch_rpm"] = count + overLimitCount
+	log.Data["ch_rps"] = secondCount
 	return w.Adaptor.DoRequest(meta, c, req)
 }
 
@@ -129,10 +129,10 @@ func (w *warpAdaptor) DoResponse(meta *meta.Meta, c *gin.Context, resp *http.Res
 		int64(usage.TotalTokens),
 	)
 	log := middleware.GetLogger(c)
-	log.Data["ch_tpm"] = count + overLimitCount
-	log.Data["ch_tps"] = secondCount
 	meta.Set(MetaChannelModelKeyTPM, count+overLimitCount)
 	meta.Set(MetaChannelModelKeyTPS, secondCount)
+	log.Data["ch_tpm"] = count + overLimitCount
+	log.Data["ch_tps"] = secondCount
 
 	count, overLimitCount, secondCount = reqlimit.PushGroupModelTokensRequest(
 		context.Background(),
@@ -141,8 +141,10 @@ func (w *warpAdaptor) DoResponse(meta *meta.Meta, c *gin.Context, resp *http.Res
 		meta.ModelConfig.TPM,
 		int64(usage.TotalTokens),
 	)
-	log.Data["group_tpm"] = count + overLimitCount
-	log.Data["group_tps"] = secondCount
+	if meta.Group.Status != model.GroupStatusInternal {
+		log.Data["group_tpm"] = count + overLimitCount
+		log.Data["group_tps"] = secondCount
+	}
 
 	count, overLimitCount, secondCount = reqlimit.PushGroupModelTokennameTokensRequest(
 		context.Background(),
@@ -151,10 +153,10 @@ func (w *warpAdaptor) DoResponse(meta *meta.Meta, c *gin.Context, resp *http.Res
 		meta.Token.Name,
 		int64(usage.TotalTokens),
 	)
-	log.Data["tpm"] = count + overLimitCount
-	log.Data["tps"] = secondCount
 	meta.Set(MetaGroupModelTokennameTPM, count+overLimitCount)
 	meta.Set(MetaGroupModelTokennameTPS, secondCount)
+	// log.Data["tpm"] = count + overLimitCount
+	// log.Data["tps"] = secondCount
 
 	return usage, relayErr
 }
