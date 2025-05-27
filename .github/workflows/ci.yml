@@ -26,10 +26,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Golang with cache
-        uses: magnetikonline/action-golang-cache@v5
+      - name: Setup Go
+        uses: actions/setup-go@v5
         with:
-          go-version: "1.23"
+          go-version-file: "core/go.mod"
 
       - name: Go test
         working-directory: core
@@ -39,8 +39,32 @@ jobs:
       - name: Run Linter
         uses: golangci/golangci-lint-action@v6
         with:
-          version: v1.64.6
+          version: v1.64.8
           working-directory: core
+          args: "--out-format colored-line-number --max-issues-per-linter 0 --max-same-issues 0 --config ./.golangci.yml"
+
+  golangci-lint-mcpservers:
+    name: Lint MCP Servers
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: "mcp-servers/go.mod"
+
+      - name: Go test
+        working-directory: mcp-servers
+        run: |
+          go test -v -timeout 30s -count=1 ./...
+
+      - name: Run Linter
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: v1.64.8
+          working-directory: mcp-servers
           args: "--out-format colored-line-number --max-issues-per-linter 0 --max-same-issues 0 --config ./.golangci.yml"
 
   golangci-lint-openapimcp:
@@ -50,14 +74,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Golang with cache
-        uses: magnetikonline/action-golang-cache@v5
+      - name: Setup Go
+        uses: actions/setup-go@v5
         with:
-          go-version: "1.23"
+          go-version-file: "openapi-mcp/go.mod"
 
       - name: Run Linter
         uses: golangci/golangci-lint-action@v6
         with:
-          version: v1.64.6
+          version: v1.64.8
           working-directory: openapi-mcp
           args: "--out-format colored-line-number --max-issues-per-linter 0 --max-same-issues 0 --config ./.golangci.yml"
