@@ -130,7 +130,6 @@ REDIS_CONN_STRING=redis://localhost:6379     # Redis for caching
 
 ```bash
 BILLING_ENABLED=true           # Enable billing features
-ENABLE_MODEL_ERROR_AUTO_BAN=true  # Auto-ban problematic models
 SAVE_ALL_LOG_DETAIL=false     # Log all request details
 ```
 
