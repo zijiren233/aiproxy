@@ -2,16 +2,55 @@ package mcpservers
 
 import (
 	"fmt"
+	"sort"
+	"strings"
 	"sync"
+	"sync/atomic"
+	"time"
 
 	"github.com/mark3labs/mcp-go/server"
 )
 
+type mcpServerCacheItem struct {
+	MCPServer         *server.MCPServer
+	LastUsedTimestamp atomic.Int64
+}
+
 var (
-	servers            = make(map[string]EmbedMcp)
-	mcpServerCache     = make(map[string]*server.MCPServer)
-	mcpServerCacheLock = sync.RWMutex{}
+	servers             = make(map[string]EmbedMcp)
+	mcpServerCache      = make(map[string]*mcpServerCacheItem)
+	mcpServerCacheLock  = sync.RWMutex{}
+	cacheExpirationTime = 3 * time.Minute
 )
+
+func startCacheCleaner(interval time.Duration) {
+	go func() {
+		ticker := time.NewTicker(interval)
+		defer ticker.Stop()
+
+		for range ticker.C {
+			cleanupExpiredCache()
+		}
+	}()
+}
+
+func cleanupExpiredCache() {
+	now := time.Now().Unix()
+	expiredTime := now - int64(cacheExpirationTime.Seconds())
+
+	mcpServerCacheLock.Lock()
+	defer mcpServerCacheLock.Unlock()
+
+	for key, item := range mcpServerCache {
+		if item.LastUsedTimestamp.Load() < expiredTime {
+			delete(mcpServerCache, key)
+		}
+	}
+}
+
+func init() {
+	startCacheCleaner(time.Minute)
+}
 
 func Register(mcp EmbedMcp) {
 	if mcp.ID == "" {
@@ -40,35 +79,64 @@ func GetMCPServer(id string, config map[string]string, reusingConfig map[string]
 		return nil, fmt.Errorf("mcp %s not found", id)
 	}
 	if len(embedServer.ConfigTemplates) == 0 {
-		return getNoConfigServer(embedServer)
+		return loadCacheServer(embedServer, nil)
 	}
+
 	if err := ValidateConfigTemplatesConfig(embedServer.ConfigTemplates, config, reusingConfig); err != nil {
 		return nil, fmt.Errorf("mcp %s config is invalid: %w", id, err)
 	}
-	return embedServer.NewServer(config, reusingConfig)
+
+	for _, template := range embedServer.ConfigTemplates {
+		switch template.Required {
+		case ConfigRequiredTypeReusingOptional, ConfigRequiredTypeReusingOnly, ConfigRequiredTypeInitOrReusingOnly:
+			return embedServer.NewServer(config, reusingConfig)
+		}
+	}
+
+	return loadCacheServer(embedServer, config)
 }
 
-func getNoConfigServer(embedServer EmbedMcp) (*server.MCPServer, error) {
+func buildNoReusingConfigCacheKey(config map[string]string) string {
+	keys := make([]string, 0, len(config))
+	for key, value := range config {
+		keys = append(keys, fmt.Sprintf("%s:%s", key, value))
+	}
+	sort.Strings(keys)
+	return strings.Join(keys, ":")
+}
+
+func loadCacheServer(embedServer EmbedMcp, config map[string]string) (*server.MCPServer, error) {
+	cacheKey := embedServer.ID
+	if len(config) > 0 {
+		cacheKey = fmt.Sprintf("%s:%s", embedServer.ID, buildNoReusingConfigCacheKey(config))
+	}
 	mcpServerCacheLock.RLock()
-	server, ok := mcpServerCache[embedServer.ID]
+	server, ok := mcpServerCache[cacheKey]
 	mcpServerCacheLock.RUnlock()
 	if ok {
-		return server, nil
+		server.LastUsedTimestamp.Store(time.Now().Unix())
+		return server.MCPServer, nil
 	}
 
 	mcpServerCacheLock.Lock()
 	defer mcpServerCacheLock.Unlock()
-	server, ok = mcpServerCache[embedServer.ID]
+	server, ok = mcpServerCache[cacheKey]
 	if ok {
-		return server, nil
+		server.LastUsedTimestamp.Store(time.Now().Unix())
+		return server.MCPServer, nil
 	}
 
-	server, err := embedServer.NewServer(nil, nil)
+	mcpServer, err := embedServer.NewServer(config, nil)
 	if err != nil {
 		return nil, fmt.Errorf("mcp %s new server is invalid: %w", embedServer.ID, err)
 	}
-	mcpServerCache[embedServer.ID] = server
-	return server, nil
+	mcpServerCacheItem := &mcpServerCacheItem{
+		MCPServer:         mcpServer,
+		LastUsedTimestamp: atomic.Int64{},
+	}
+	mcpServerCacheItem.LastUsedTimestamp.Store(time.Now().Unix())
+	mcpServerCache[cacheKey] = mcpServerCacheItem
+	return mcpServer, nil
 }
 
 func Servers() map[string]EmbedMcp {
