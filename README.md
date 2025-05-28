@@ -138,11 +138,10 @@ SAVE_ALL_LOG_DETAIL=false     # Log all request details
 <details>
 <summary>Click to expand advanced configuration options</summary>
 
-#### **Rate Limiting & Quotas**
+#### **Quotas**
 
 ```bash
 GROUP_MAX_TOKEN_NUM=100        # Max tokens per group
-MODEL_ERROR_AUTO_BAN_RATE=0.3  # Error rate threshold for auto-ban
 ```
 
 #### **Logging & Retention**

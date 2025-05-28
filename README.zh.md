@@ -138,11 +138,10 @@ SAVE_ALL_LOG_DETAIL=false     # 记录所有请求详情
 <details>
 <summary>点击展开高级配置选项</summary>
 
-#### **速率限制与配额**
+#### **配额**
 
 ```bash
 GROUP_MAX_TOKEN_NUM=100        # 每组最大令牌数
-MODEL_ERROR_AUTO_BAN_RATE=0.3  # 自动禁用的错误率阈值
 ```
 
 #### **日志与保留**
