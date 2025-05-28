@@ -258,7 +258,7 @@ func (r redisMap[K, V]) MarshalBinary() ([]byte, error) {
 }
 
 type (
-	redisGroupModelConfigMap redisMap[string, GroupModelConfig]
+	redisGroupModelConfigMap = redisMap[string, GroupModelConfig]
 )
 
 type GroupCache struct {
@@ -282,8 +282,8 @@ func (g *GroupCache) GetAvailableSets() []string {
 }
 
 func (g *Group) ToGroupCache() *GroupCache {
-	modelConfigs := make(redisGroupModelConfigMap, len(g.ModelConfigs))
-	for _, modelConfig := range g.ModelConfigs {
+	modelConfigs := make(redisGroupModelConfigMap, len(g.GroupModelConfigs))
+	for _, modelConfig := range g.GroupModelConfigs {
 		modelConfigs[modelConfig.Model] = modelConfig
 	}
 	return &GroupCache{
