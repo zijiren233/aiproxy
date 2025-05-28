@@ -70,7 +70,7 @@ func EmbeddingHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*mo
 	c.Writer.Header().Set("Content-Type", "application/json")
 	c.Writer.WriteHeader(resp.StatusCode)
 	_, _ = c.Writer.Write(jsonResponse)
-	return fullTextResponse.Usage.ToModelUsage(), nil
+	return fullTextResponse.ToModelUsage(), nil
 }
 
 func embeddingResponse2OpenAI(meta *meta.Meta, response *EmbeddingResponse) *relaymodel.EmbeddingResponse {
@@ -78,7 +78,10 @@ func embeddingResponse2OpenAI(meta *meta.Meta, response *EmbeddingResponse) *rel
 		Object: "list",
 		Data:   make([]*relaymodel.EmbeddingResponseItem, 0, len(response.Embeddings)),
 		Model:  meta.OriginModel,
-		Usage:  relaymodel.Usage{TotalTokens: 0},
+		Usage: relaymodel.Usage{
+			TotalTokens:  int64(meta.RequestUsage.InputTokens),
+			PromptTokens: int64(meta.RequestUsage.InputTokens),
+		},
 	}
 	for _, item := range response.Embeddings {
 		openAIEmbeddingResponse.Data = append(openAIEmbeddingResponse.Data, &relaymodel.EmbeddingResponseItem{
