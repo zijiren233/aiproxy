@@ -53,7 +53,7 @@ func (g *GoogleEngine) Search(ctx context.Context, query SearchQuery) ([]SearchR
 	querys.Set("key", g.apiKey)
 
 	if query.Language != "" {
-		querys.Set("lr", fmt.Sprintf("lang_%s", query.Language))
+		querys.Set("lr", "lang_"+query.Language)
 	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://www.googleapis.com/customsearch/v1?"+querys.Encode(), nil)

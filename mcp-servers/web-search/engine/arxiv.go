@@ -38,7 +38,7 @@ type arxivEntry struct {
 }
 
 func (a *ArxivEngine) Search(ctx context.Context, query SearchQuery) ([]SearchResult, error) {
-	searchQuery := fmt.Sprintf("all:%s", url.QueryEscape(query.Query))
+	searchQuery := "all:" + url.QueryEscape(query.Query)
 	if query.ArxivCategory != "" {
 		searchQuery = fmt.Sprintf("%s+AND+cat:%s", searchQuery, query.ArxivCategory)
 	}
@@ -79,7 +79,7 @@ func (a *ArxivEngine) Search(ctx context.Context, query SearchQuery) ([]SearchRe
 
 		// Convert arxiv ID to URL
 		arxivID := strings.TrimPrefix(entry.ID, "http://arxiv.org/abs/")
-		link := fmt.Sprintf("https://arxiv.org/abs/%s", arxivID)
+		link := "https://arxiv.org/abs/" + arxivID
 
 		content := fmt.Sprintf("%s\nAuthors: %s\nPublished: %s",
 			entry.Summary,

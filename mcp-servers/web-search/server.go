@@ -2,6 +2,7 @@ package websearch
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"slices"
 	"strconv"
@@ -67,10 +68,10 @@ var configTemplates = map[string]mcpservers.ConfigTemplate{
 			// Validate it's a number between 1 and 50
 			var num int
 			if _, err := fmt.Sscanf(value, "%d", &num); err != nil {
-				return fmt.Errorf("must be a number")
+				return errors.New("must be a number")
 			}
 			if num < 1 || num > 50 {
-				return fmt.Errorf("must be between 1 and 50")
+				return errors.New("must be between 1 and 50")
 			}
 			return nil
 		},
@@ -187,7 +188,7 @@ func addWebSearchTool(mcpServer *server.MCPServer, engines map[string]engine.Eng
 
 			query, ok := args["query"].(string)
 			if !ok || query == "" {
-				return nil, fmt.Errorf("query is required")
+				return nil, errors.New("query is required")
 			}
 
 			engineName := defaultEngine
@@ -292,7 +293,7 @@ func addMultiSearchTool(mcpServer *server.MCPServer, engines map[string]engine.E
 
 			query, ok := args["query"].(string)
 			if !ok || query == "" {
-				return nil, fmt.Errorf("query is required")
+				return nil, errors.New("query is required")
 			}
 
 			engineNames := getAvailableEngines(engines)
@@ -390,7 +391,7 @@ func addSmartSearchTool(mcpServer *server.MCPServer, engines map[string]engine.E
 
 			question, ok := args["question"].(string)
 			if !ok || question == "" {
-				return nil, fmt.Errorf("question is required")
+				return nil, errors.New("question is required")
 			}
 
 			searchDepth := "normal"
@@ -499,7 +500,7 @@ func generateSearchQueries(question string, depth string) []searchQuery {
 	if baseQueries >= 2 {
 		// Add a more specific query
 		queries = append(queries, searchQuery{
-			Query:      fmt.Sprintf("%s latest news", question),
+			Query:      question + " latest news",
 			MaxResults: 5,
 			Type:       "news",
 		})
@@ -508,7 +509,7 @@ func generateSearchQueries(question string, depth string) []searchQuery {
 	if baseQueries >= 3 {
 		// Add an academic query
 		queries = append(queries, searchQuery{
-			Query:      fmt.Sprintf("%s research papers", question),
+			Query:      question + " research papers",
 			MaxResults: 5,
 			Type:       "academic",
 		})
