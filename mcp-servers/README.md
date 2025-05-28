@@ -334,7 +334,7 @@ func NewServer(config map[string]string, reusingConfig map[string]string) (*serv
         Description: "Retrieve data from the API",
         InputSchema: mcp.ToolInputSchema{
             Type: "object",
-            Properties: map[string]interface{}{
+            Properties: map[string]any{
                 "query": {
                     "type":        "string",
                     "description": "Search query",
@@ -342,14 +342,14 @@ func NewServer(config map[string]string, reusingConfig map[string]string) (*serv
             },
             Required: []string{"query"},
         },
-    }, func(arguments map[string]interface{}) (*server.ToolResult, error) {
+    }, func(arguments map[string]any) (*server.ToolResult, error) {
         query := arguments["query"].(string)
         
         // Implement your tool logic here
         // Use endpoint and apiKey for API calls
         
         return &server.ToolResult{
-            Content: []interface{}{
+            Content: []any{
                 server.TextContent{
                     Type: "text",
                     Text: fmt.Sprintf("Retrieved data for query: %s", query),

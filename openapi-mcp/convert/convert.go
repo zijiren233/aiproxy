@@ -235,7 +235,7 @@ type Args struct {
 	Forms           map[string]any
 }
 
-func getArgs(args map[string]interface{}) Args {
+func getArgs(args map[string]any) Args {
 	arg := Args{
 		Headers: make(map[string]any),
 		Query:   make(map[string]any),
@@ -414,7 +414,7 @@ func (c *Converter) generateResponseDescription(responses openapi3.Responses) st
 		response := responseRef.Value
 		desc := fmt.Sprintf("- status: %s, description: %s", code, *response.Description)
 
-		rawSchema, ok := response.Extensions["schema"].(map[string]interface{})
+		rawSchema, ok := response.Extensions["schema"].(map[string]any)
 		if ok && len(rawSchema) > 0 {
 			jsonStr, err := json.Marshal(rawSchema)
 			if err != nil {
@@ -654,8 +654,8 @@ func (c *Converter) convertParameters(parameters openapi3.Parameters) []mcp.Tool
 }
 
 // processSchemaItems processes schema items for array types
-func (c *Converter) processSchemaItems(schema *openapi3.Schema, visited map[string]bool) map[string]interface{} {
-	item := make(map[string]interface{})
+func (c *Converter) processSchemaItems(schema *openapi3.Schema, visited map[string]bool) map[string]any {
+	item := make(map[string]any)
 
 	if schema.Type != nil {
 		item["type"] = schema.Type
@@ -667,7 +667,7 @@ func (c *Converter) processSchemaItems(schema *openapi3.Schema, visited map[stri
 
 	// Process nested properties if this is an object
 	if len(schema.Properties) > 0 {
-		properties := make(map[string]interface{})
+		properties := make(map[string]any)
 		for propName, propRef := range schema.Properties {
 			if propRef.Value != nil {
 				properties[propName] = c.processSchemaProperty(propRef.Value, visited)
@@ -685,8 +685,8 @@ func (c *Converter) processSchemaItems(schema *openapi3.Schema, visited map[stri
 }
 
 // processSchemaProperties processes schema properties for object types
-func (c *Converter) processSchemaProperties(schema *openapi3.Schema, visited map[string]bool) map[string]interface{} {
-	obj := make(map[string]interface{})
+func (c *Converter) processSchemaProperties(schema *openapi3.Schema, visited map[string]bool) map[string]any {
+	obj := make(map[string]any)
 
 	for propName, propRef := range schema.Properties {
 		if propRef.Value != nil {
@@ -698,13 +698,13 @@ func (c *Converter) processSchemaProperties(schema *openapi3.Schema, visited map
 }
 
 // processSchemaProperty processes a single schema property
-func (c *Converter) processSchemaProperty(schema *openapi3.Schema, visited map[string]bool) map[string]interface{} {
+func (c *Converter) processSchemaProperty(schema *openapi3.Schema, visited map[string]bool) map[string]any {
 	// Check for circular references
 	if schema.Title != "" {
 		refKey := schema.Title
 		if visited[refKey] {
 			// We've seen this schema before, return a simplified reference to avoid circular references
-			return map[string]interface{}{
+			return map[string]any{
 				"type":        "reference",
 				"description": "Circular reference to " + refKey,
 				"title":       refKey,
@@ -724,8 +724,8 @@ func (c *Converter) processSchemaProperty(schema *openapi3.Schema, visited map[s
 
 // buildPropertyMap builds the property map for a schema
 // This function was extracted to reduce cyclomatic complexity
-func (c *Converter) buildPropertyMap(schema *openapi3.Schema, visited map[string]bool) map[string]interface{} {
-	property := make(map[string]interface{})
+func (c *Converter) buildPropertyMap(schema *openapi3.Schema, visited map[string]bool) map[string]any {
+	property := make(map[string]any)
 
 	// Add basic schema information
 	c.addBasicSchemaInfo(schema, property)
@@ -749,7 +749,7 @@ func (c *Converter) buildPropertyMap(schema *openapi3.Schema, visited map[string
 }
 
 // addBasicSchemaInfo adds basic schema information to the property map
-func (c *Converter) addBasicSchemaInfo(schema *openapi3.Schema, property map[string]interface{}) {
+func (c *Converter) addBasicSchemaInfo(schema *openapi3.Schema, property map[string]any) {
 	if schema.Type != nil {
 		property["type"] = schema.Type
 	}
@@ -776,7 +776,7 @@ func (c *Converter) addBasicSchemaInfo(schema *openapi3.Schema, property map[str
 }
 
 // addSchemaValidations adds schema validations to the property map
-func (c *Converter) addSchemaValidations(schema *openapi3.Schema, property map[string]interface{}) {
+func (c *Converter) addSchemaValidations(schema *openapi3.Schema, property map[string]any) {
 	// Boolean flags
 	if schema.Nullable {
 		property["nullable"] = schema.Nullable
@@ -846,10 +846,10 @@ func (c *Converter) addSchemaValidations(schema *openapi3.Schema, property map[s
 }
 
 // addSchemaComposition adds schema composition to the property map
-func (c *Converter) addSchemaComposition(schema *openapi3.Schema, property map[string]interface{}, visited map[string]bool) {
+func (c *Converter) addSchemaComposition(schema *openapi3.Schema, property map[string]any, visited map[string]bool) {
 	// Schema composition
 	if len(schema.OneOf) > 0 {
-		oneOf := make([]interface{}, 0, len(schema.OneOf))
+		oneOf := make([]any, 0, len(schema.OneOf))
 		for _, schemaRef := range schema.OneOf {
 			if schemaRef.Value != nil {
 				oneOf = append(oneOf, c.processSchemaProperty(schemaRef.Value, visited))
@@ -861,7 +861,7 @@ func (c *Converter) addSchemaComposition(schema *openapi3.Schema, property map[s
 	}
 
 	if len(schema.AnyOf) > 0 {
-		anyOf := make([]interface{}, 0, len(schema.AnyOf))
+		anyOf := make([]any, 0, len(schema.AnyOf))
 		for _, schemaRef := range schema.AnyOf {
 			if schemaRef.Value != nil {
 				anyOf = append(anyOf, c.processSchemaProperty(schemaRef.Value, visited))
@@ -873,7 +873,7 @@ func (c *Converter) addSchemaComposition(schema *openapi3.Schema, property map[s
 	}
 
 	if len(schema.AllOf) > 0 {
-		allOf := make([]interface{}, 0, len(schema.AllOf))
+		allOf := make([]any, 0, len(schema.AllOf))
 		for _, schemaRef := range schema.AllOf {
 			if schemaRef.Value != nil {
 				allOf = append(allOf, c.processSchemaProperty(schemaRef.Value, visited))
@@ -890,7 +890,7 @@ func (c *Converter) addSchemaComposition(schema *openapi3.Schema, property map[s
 }
 
 // addObjectProperties adds object properties to the property map
-func (c *Converter) addObjectProperties(schema *openapi3.Schema, property map[string]interface{}, visited map[string]bool) {
+func (c *Converter) addObjectProperties(schema *openapi3.Schema, property map[string]any, visited map[string]bool) {
 	// Handle AdditionalProperties
 	if schema.AdditionalProperties.Has != nil {
 		property["additionalProperties"] = *schema.AdditionalProperties.Has
@@ -900,7 +900,7 @@ func (c *Converter) addObjectProperties(schema *openapi3.Schema, property map[st
 
 	// Handle discriminator
 	if schema.Discriminator != nil {
-		discriminator := make(map[string]interface{})
+		discriminator := make(map[string]any)
 		discriminator["propertyName"] = schema.Discriminator.PropertyName
 		if len(schema.Discriminator.Mapping) > 0 {
 			discriminator["mapping"] = schema.Discriminator.Mapping
@@ -910,7 +910,7 @@ func (c *Converter) addObjectProperties(schema *openapi3.Schema, property map[st
 
 	// Recursively process nested objects
 	if schema.Type != nil && schema.Type.Is("object") && len(schema.Properties) > 0 {
-		nestedProps := make(map[string]interface{})
+		nestedProps := make(map[string]any)
 		for propName, propRef := range schema.Properties {
 			if propRef.Value != nil {
 				nestedProps[propName] = c.processSchemaProperty(propRef.Value, visited)
@@ -920,17 +920,17 @@ func (c *Converter) addObjectProperties(schema *openapi3.Schema, property map[st
 	}
 }
 
-func (c *Converter) addArrayItems(schema *openapi3.Schema, property map[string]interface{}, visited map[string]bool) {
+func (c *Converter) addArrayItems(schema *openapi3.Schema, property map[string]any, visited map[string]bool) {
 	// Recursively process array items
 	if schema.Type != nil && schema.Type.Is("array") && schema.Items != nil && schema.Items.Value != nil {
 		property["items"] = c.processSchemaItems(schema.Items.Value, visited)
 	}
 }
 
-func (c *Converter) addAdditionalMetadata(schema *openapi3.Schema, property map[string]interface{}) {
+func (c *Converter) addAdditionalMetadata(schema *openapi3.Schema, property map[string]any) {
 	// Handle external docs if present
 	if schema.ExternalDocs != nil {
-		externalDocs := make(map[string]interface{})
+		externalDocs := make(map[string]any)
 		if schema.ExternalDocs.Description != "" {
 			externalDocs["description"] = schema.ExternalDocs.Description
 		}
@@ -942,7 +942,7 @@ func (c *Converter) addAdditionalMetadata(schema *openapi3.Schema, property map[
 
 	// Handle XML object if present
 	if schema.XML != nil {
-		xml := make(map[string]interface{})
+		xml := make(map[string]any)
 		if schema.XML.Name != "" {
 			xml["name"] = schema.XML.Name
 		}
