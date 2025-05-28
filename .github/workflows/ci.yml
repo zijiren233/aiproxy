@@ -41,7 +41,7 @@ jobs:
         with:
           version: v1.64.8
           working-directory: core
-          args: "--out-format colored-line-number --max-issues-per-linter 0 --max-same-issues 0 --config ./.golangci.yml"
+          args: "--color always --out-format colored-line-number --max-issues-per-linter 0 --max-same-issues 0 --config ./.golangci.yml"
 
       - name: Run Fix Linter
         uses: golangci/golangci-lint-action@v6
@@ -49,7 +49,7 @@ jobs:
         with:
           install-mode: none
           working-directory: core
-          args: "--fix --out-format colored-line-number --max-issues-per-linter 0 --max-same-issues 0 --config ./.golangci.yml"
+          args: "--fix --color always --out-format colored-line-number --max-issues-per-linter 0 --max-same-issues 0 --config ./.golangci.yml"
 
       - name: Auto Fix Diff Content
         if: ${{ failure() }}
@@ -79,7 +79,7 @@ jobs:
         with:
           version: v1.64.8
           working-directory: mcp-servers
-          args: "--out-format colored-line-number --max-issues-per-linter 0 --max-same-issues 0 --config ./.golangci.yml"
+          args: "--color always --out-format colored-line-number --max-issues-per-linter 0 --max-same-issues 0 --config ./.golangci.yml"
 
       - name: Run Fix Linter
         uses: golangci/golangci-lint-action@v6
@@ -87,7 +87,7 @@ jobs:
         with:
           install-mode: none
           working-directory: mcp-servers
-          args: "--fix --out-format colored-line-number --max-issues-per-linter 0 --max-same-issues 0 --config ./.golangci.yml"
+          args: "--fix --color always --out-format colored-line-number --max-issues-per-linter 0 --max-same-issues 0 --config ./.golangci.yml"
 
       - name: Auto Fix Diff Content
         if: ${{ failure() }}
@@ -112,7 +112,7 @@ jobs:
         with:
           version: v1.64.8
           working-directory: openapi-mcp
-          args: "--out-format colored-line-number --max-issues-per-linter 0 --max-same-issues 0 --config ./.golangci.yml"
+          args: "--color always --out-format colored-line-number --max-issues-per-linter 0 --max-same-issues 0 --config ./.golangci.yml"
 
       - name: Run Fix Linter
         uses: golangci/golangci-lint-action@v6
@@ -120,7 +120,7 @@ jobs:
         with:
           install-mode: none
           working-directory: openapi-mcp
-          args: "--fix --out-format colored-line-number --max-issues-per-linter 0 --max-same-issues 0 --config ./.golangci.yml"
+          args: "--fix --color always --out-format colored-line-number --max-issues-per-linter 0 --max-same-issues 0 --config ./.golangci.yml"
 
       - name: Auto Fix Diff Content
         if: ${{ failure() }}
