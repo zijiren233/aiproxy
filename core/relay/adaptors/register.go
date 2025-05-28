@@ -95,22 +95,20 @@ type AdaptorMeta struct {
 var ChannelMetas = map[model.ChannelType]AdaptorMeta{}
 
 func init() {
-	for i, adaptor := range ChannelAdaptor {
+	for i, a := range ChannelAdaptor {
 		meta := AdaptorMeta{
 			Name:            i.String(),
-			KeyHelp:         GetKeyValidator(adaptor).KeyHelp(),
-			DefaultBaseURL:  adaptor.GetBaseURL(),
-			Fetures:         getAdaptorFetures(adaptor),
-			ConfigTemplates: GetConfigTemplates(adaptor),
+			KeyHelp:         GetKeyValidator(a).KeyHelp(),
+			DefaultBaseURL:  a.GetBaseURL(),
+			Fetures:         getAdaptorFetures(a),
+			ConfigTemplates: GetConfigTemplates(a),
 		}
 		for key, template := range meta.ConfigTemplates {
 			if template.Name == "" {
 				log.Fatalf("config template %s is invalid: name is empty", key)
 			}
-			if template.Example != nil && template.Validator != nil {
-				if err := template.Validator(template.Example); err != nil {
-					log.Fatalf("config template %s(%s) is invalid: %v", key, template.Name, err)
-				}
+			if err := adaptor.ValidateConfigTemplate(template); err != nil {
+				log.Fatalf("config template %s(%s) is invalid: %v", key, template.Name, err)
 			}
 		}
 

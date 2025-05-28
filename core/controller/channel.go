@@ -14,6 +14,7 @@ import (
 	"github.com/labring/aiproxy/core/middleware"
 	"github.com/labring/aiproxy/core/model"
 	"github.com/labring/aiproxy/core/monitor"
+	"github.com/labring/aiproxy/core/relay/adaptor"
 	"github.com/labring/aiproxy/core/relay/adaptors"
 	log "github.com/sirupsen/logrus"
 )
@@ -234,7 +235,7 @@ func (r *AddChannelRequest) ToChannel() (*model.Channel, error) {
 				if err != nil {
 					return nil, fmt.Errorf("config %s is invalid: %w", key, err)
 				}
-				err = template.Validator(i)
+				err = adaptor.ValidateConfigTemplateValue(template, i)
 				if err != nil {
 					return nil, fmt.Errorf("config %s is invalid: %w", key, err)
 				}

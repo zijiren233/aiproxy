@@ -17,6 +17,7 @@ var ConfigTemplates = adaptor.ConfigTemplates{
 		Name:        "Safety",
 		Description: "Safety settings: https://ai.google.dev/gemini-api/docs/safety-settings, default is BLOCK_NONE",
 		Example:     "BLOCK_NONE",
+		Type:        adaptor.ConfigTypeString,
 		Validator: func(a any) error {
 			s, ok := a.(string)
 			if !ok {
