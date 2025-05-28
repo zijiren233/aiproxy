@@ -32,7 +32,7 @@ type SummaryData struct {
 	MaxRPS         int64   `json:"max_rps,omitempty"`
 	MaxTPM         int64   `json:"max_tpm,omitempty"`
 	MaxTPS         int64   `json:"max_tps,omitempty"`
-	Usage          Usage   `gorm:"embedded"        json:"usage,omitempty"`
+	Usage          Usage   `gorm:"embedded"          json:"usage,omitempty"`
 }
 
 func (d *SummaryData) buildUpdateData(tableName string) map[string]any {
