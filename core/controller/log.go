@@ -106,7 +106,7 @@ func GetLogs(c *gin.Context) {
 		perPage,
 	)
 	if err != nil {
-		middleware.ErrorResponse(c, http.StatusOK, err.Error())
+		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 	middleware.SuccessResponse(c, result)
@@ -140,7 +140,7 @@ func GetLogs(c *gin.Context) {
 func GetGroupLogs(c *gin.Context) {
 	group := c.Param("group")
 	if group == "" || group == "*" {
-		middleware.ErrorResponse(c, http.StatusOK, "invalid group parameter")
+		middleware.ErrorResponse(c, http.StatusBadRequest, "invalid group parameter")
 		return
 	}
 
@@ -167,7 +167,7 @@ func GetGroupLogs(c *gin.Context) {
 		perPage,
 	)
 	if err != nil {
-		middleware.ErrorResponse(c, http.StatusOK, err.Error())
+		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 	middleware.SuccessResponse(c, result)
@@ -227,7 +227,7 @@ func SearchLogs(c *gin.Context) {
 		perPage,
 	)
 	if err != nil {
-		middleware.ErrorResponse(c, http.StatusOK, err.Error())
+		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 	middleware.SuccessResponse(c, result)
@@ -262,7 +262,7 @@ func SearchLogs(c *gin.Context) {
 func SearchGroupLogs(c *gin.Context) {
 	group := c.Param("group")
 	if group == "" || group == "*" {
-		middleware.ErrorResponse(c, http.StatusOK, "invalid group parameter")
+		middleware.ErrorResponse(c, http.StatusBadRequest, "invalid group parameter")
 		return
 	}
 
@@ -291,7 +291,7 @@ func SearchGroupLogs(c *gin.Context) {
 		perPage,
 	)
 	if err != nil {
-		middleware.ErrorResponse(c, http.StatusOK, err.Error())
+		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 	middleware.SuccessResponse(c, result)
@@ -312,7 +312,7 @@ func GetUsedModels(c *gin.Context) {
 	startTime, endTime := parseTimeRange(c)
 	models, err := model.GetUsedModelsFromLog(group, startTime, endTime)
 	if err != nil {
-		middleware.ErrorResponse(c, http.StatusOK, err.Error())
+		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 	middleware.SuccessResponse(c, models)
@@ -331,13 +331,13 @@ func GetUsedModels(c *gin.Context) {
 func GetGroupUsedModels(c *gin.Context) {
 	group := c.Param("group")
 	if group == "" || group == "*" {
-		middleware.ErrorResponse(c, http.StatusOK, "invalid group parameter")
+		middleware.ErrorResponse(c, http.StatusBadRequest, "invalid group parameter")
 		return
 	}
 	startTime, endTime := parseTimeRange(c)
 	models, err := model.GetUsedModelsFromLog(group, startTime, endTime)
 	if err != nil {
-		middleware.ErrorResponse(c, http.StatusOK, err.Error())
+		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 	middleware.SuccessResponse(c, models)
@@ -357,7 +357,7 @@ func GetLogDetail(c *gin.Context) {
 	logID, _ := strconv.Atoi(c.Param("log_id"))
 	log, err := model.GetLogDetail(logID)
 	if err != nil {
-		middleware.ErrorResponse(c, http.StatusOK, err.Error())
+		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 	middleware.SuccessResponse(c, log)
@@ -377,13 +377,13 @@ func GetLogDetail(c *gin.Context) {
 func GetGroupLogDetail(c *gin.Context) {
 	group := c.Param("group")
 	if group == "" || group == "*" {
-		middleware.ErrorResponse(c, http.StatusOK, "invalid group parameter")
+		middleware.ErrorResponse(c, http.StatusBadRequest, "invalid group parameter")
 		return
 	}
 	logID, _ := strconv.Atoi(c.Param("log_id"))
 	log, err := model.GetGroupLogDetail(logID, group)
 	if err != nil {
-		middleware.ErrorResponse(c, http.StatusOK, err.Error())
+		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 	middleware.SuccessResponse(c, log)
@@ -404,7 +404,7 @@ func GetUsedTokenNames(c *gin.Context) {
 	startTime, endTime := parseTimeRange(c)
 	tokenNames, err := model.GetUsedTokenNamesFromLog(group, startTime, endTime)
 	if err != nil {
-		middleware.ErrorResponse(c, http.StatusOK, err.Error())
+		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 	middleware.SuccessResponse(c, tokenNames)
@@ -423,13 +423,13 @@ func GetUsedTokenNames(c *gin.Context) {
 func GetGroupUsedTokenNames(c *gin.Context) {
 	group := c.Param("group")
 	if group == "" || group == "*" {
-		middleware.ErrorResponse(c, http.StatusOK, "invalid group parameter")
+		middleware.ErrorResponse(c, http.StatusBadRequest, "invalid group parameter")
 		return
 	}
 	startTime, endTime := parseTimeRange(c)
 	tokenNames, err := model.GetUsedTokenNamesFromLog(group, startTime, endTime)
 	if err != nil {
-		middleware.ErrorResponse(c, http.StatusOK, err.Error())
+		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 	middleware.SuccessResponse(c, tokenNames)
@@ -448,12 +448,12 @@ func GetGroupUsedTokenNames(c *gin.Context) {
 func DeleteHistoryLogs(c *gin.Context) {
 	timestamp, _ := strconv.ParseInt(c.Query("timestamp"), 10, 64)
 	if timestamp == 0 {
-		middleware.ErrorResponse(c, http.StatusOK, "timestamp is required")
+		middleware.ErrorResponse(c, http.StatusBadRequest, "timestamp is required")
 		return
 	}
 	count, err := model.DeleteOldLog(time.UnixMilli(timestamp))
 	if err != nil {
-		middleware.ErrorResponse(c, http.StatusOK, err.Error())
+		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 	middleware.SuccessResponse(c, count)
@@ -502,7 +502,7 @@ func SearchConsumeError(c *gin.Context) {
 		order,
 	)
 	if err != nil {
-		middleware.ErrorResponse(c, http.StatusOK, err.Error())
+		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 	middleware.SuccessResponse(c, gin.H{

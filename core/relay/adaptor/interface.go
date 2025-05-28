@@ -11,6 +11,16 @@ import (
 	relaymodel "github.com/labring/aiproxy/core/relay/model"
 )
 
+type ConfigTemplate struct {
+	Name        string          `json:"name"`
+	Description string          `json:"description"`
+	Example     any             `json:"example"`
+	Validator   func(any) error `json:"-"`
+	Required    bool            `json:"required"`
+}
+
+type ConfigTemplates = map[string]ConfigTemplate
+
 type Adaptor interface {
 	GetBaseURL() string
 	GetRequestURL(meta *meta.Meta) (string, error)
@@ -34,4 +44,8 @@ type KeyValidator interface {
 
 type Features interface {
 	Features() []string
+}
+
+type Config interface {
+	ConfigTemplates() ConfigTemplates
 }

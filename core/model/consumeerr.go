@@ -71,7 +71,7 @@ func SearchConsumeError(keyword string, requestID string, group string, tokenNam
 	// Handle keyword search for zero value fields
 	if keyword != "" {
 		var conditions []string
-		var values []interface{}
+		var values []any
 
 		if tokenID == 0 {
 			conditions = append(conditions, "token_id = ?")

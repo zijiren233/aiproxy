@@ -46,8 +46,10 @@ type CountTokensResponse struct {
 	TotalTokens int    `json:"totalTokens"`
 }
 
-func buildSafetySettings() []ChatSafetySettings {
-	safetySetting := "BLOCK_NONE"
+func buildSafetySettings(safetySetting string) []ChatSafetySettings {
+	if safetySetting == "" {
+		safetySetting = "BLOCK_NONE"
+	}
 	return []ChatSafetySettings{
 		{Category: "HARM_CATEGORY_HARASSMENT", Threshold: safetySetting},
 		{Category: "HARM_CATEGORY_HATE_SPEECH", Threshold: safetySetting},
@@ -140,9 +142,9 @@ func buildToolConfig(textRequest *relaymodel.GeneralOpenAIRequest) *ToolConfig {
 		if toolChoiceType, ok := toolChoiceTypeMap[mode]; ok {
 			toolConfig.FunctionCallingConfig.Mode = toolChoiceType
 		}
-	case map[string]interface{}:
+	case map[string]any:
 		toolConfig.FunctionCallingConfig.Mode = "ANY"
-		if fn, ok := mode["function"].(map[string]interface{}); ok {
+		if fn, ok := mode["function"].(map[string]any); ok {
 			if fnName, ok := fn["name"].(string); ok {
 				toolConfig.FunctionCallingConfig.AllowedFunctionNames = []string{fnName}
 			}
@@ -287,6 +289,12 @@ func processImageTasks(ctx context.Context, imageTasks []*Part) error {
 
 // Setting safety to the lowest possible values since Gemini is already powerless enough
 func ConvertRequest(meta *meta.Meta, req *http.Request) (string, http.Header, io.Reader, error) {
+	adaptorConfig := Config{}
+	err := meta.ChannelConfig.SpecConfig(&adaptorConfig)
+	if err != nil {
+		return "", nil, nil, err
+	}
+
 	textRequest, err := utils.UnmarshalGeneralOpenAIRequest(req)
 	if err != nil {
 		return "", nil, nil, err
@@ -313,7 +321,7 @@ func ConvertRequest(meta *meta.Meta, req *http.Request) (string, http.Header, io
 	geminiRequest := ChatRequest{
 		Contents:          contents,
 		SystemInstruction: systemContent,
-		SafetySettings:    buildSafetySettings(),
+		SafetySettings:    buildSafetySettings(adaptorConfig.Safety),
 		GenerationConfig:  config,
 		Tools:             buildTools(textRequest),
 		ToolConfig:        buildToolConfig(textRequest),

@@ -33,11 +33,12 @@ import (
 	"github.com/labring/aiproxy/core/relay/adaptor/siliconflow"
 	"github.com/labring/aiproxy/core/relay/adaptor/stepfun"
 	"github.com/labring/aiproxy/core/relay/adaptor/tencent"
-	text_embeddings_inference "github.com/labring/aiproxy/core/relay/adaptor/text-embeddings-inference"
+	textembeddingsinference "github.com/labring/aiproxy/core/relay/adaptor/text-embeddings-inference"
 	"github.com/labring/aiproxy/core/relay/adaptor/vertexai"
 	"github.com/labring/aiproxy/core/relay/adaptor/xai"
 	"github.com/labring/aiproxy/core/relay/adaptor/xunfei"
 	"github.com/labring/aiproxy/core/relay/adaptor/zhipu"
+	log "github.com/sirupsen/logrus"
 )
 
 var ChannelAdaptor = map[model.ChannelType]adaptor.Adaptor{
@@ -75,7 +76,7 @@ var ChannelAdaptor = map[model.ChannelType]adaptor.Adaptor{
 	model.ChannelTypeXAI:                     &xai.Adaptor{},
 	model.ChannelTypeDoc2x:                   &doc2x.Adaptor{},
 	model.ChannelTypeJina:                    &jina.Adaptor{},
-	model.ChannelTypeTextEmbeddingsInference: &text_embeddings_inference.Adaptor{},
+	model.ChannelTypeTextEmbeddingsInference: &textembeddingsinference.Adaptor{},
 }
 
 func GetAdaptor(channelType model.ChannelType) (adaptor.Adaptor, bool) {
@@ -84,35 +85,68 @@ func GetAdaptor(channelType model.ChannelType) (adaptor.Adaptor, bool) {
 }
 
 type AdaptorMeta struct {
-	Name           string   `json:"name"`
-	KeyHelp        string   `json:"keyHelp"`
-	DefaultBaseURL string   `json:"defaultBaseUrl"`
-	Fetures        []string `json:"fetures,omitempty"`
+	Name            string                  `json:"name"`
+	KeyHelp         string                  `json:"keyHelp"`
+	DefaultBaseURL  string                  `json:"defaultBaseUrl"`
+	Fetures         []string                `json:"fetures,omitempty"`
+	ConfigTemplates adaptor.ConfigTemplates `json:"configTemplates,omitempty"`
 }
 
 var ChannelMetas = map[model.ChannelType]AdaptorMeta{}
 
 func init() {
 	for i, adaptor := range ChannelAdaptor {
-		ChannelMetas[i] = AdaptorMeta{
-			Name:           i.String(),
-			KeyHelp:        getAdaptorKeyHelp(adaptor),
-			DefaultBaseURL: adaptor.GetBaseURL(),
-			Fetures:        getAdaptorFetures(adaptor),
+		meta := AdaptorMeta{
+			Name:            i.String(),
+			KeyHelp:         GetKeyValidator(adaptor).KeyHelp(),
+			DefaultBaseURL:  adaptor.GetBaseURL(),
+			Fetures:         getAdaptorFetures(adaptor),
+			ConfigTemplates: GetConfigTemplates(adaptor),
 		}
+		for key, template := range meta.ConfigTemplates {
+			if template.Name == "" {
+				log.Fatalf("config template %s is invalid: name is empty", key)
+			}
+			if template.Example != nil && template.Validator != nil {
+				if err := template.Validator(template.Example); err != nil {
+					log.Fatalf("config template %s(%s) is invalid: %v", key, template.Name, err)
+				}
+			}
+		}
+
+		ChannelMetas[i] = meta
 	}
 }
 
-func getAdaptorKeyHelp(a adaptor.Adaptor) string {
-	if keyValidator, ok := a.(adaptor.KeyValidator); ok {
-		return keyValidator.KeyHelp()
-	}
+var defaultKeyValidator adaptor.KeyValidator = (*KeyValidatorNoop)(nil)
+
+type KeyValidatorNoop struct{}
+
+func (a *KeyValidatorNoop) ValidateKey(_ string) error {
+	return nil
+}
+
+func (a *KeyValidatorNoop) KeyHelp() string {
 	return ""
+}
+
+func GetKeyValidator(a adaptor.Adaptor) adaptor.KeyValidator {
+	if keyValidator, ok := a.(adaptor.KeyValidator); ok {
+		return keyValidator
+	}
+	return defaultKeyValidator
 }
 
 func getAdaptorFetures(a adaptor.Adaptor) []string {
 	if fetures, ok := a.(adaptor.Features); ok {
 		return fetures.Features()
+	}
+	return nil
+}
+
+func GetConfigTemplates(a adaptor.Adaptor) adaptor.ConfigTemplates {
+	if config, ok := a.(adaptor.Config); ok {
+		return config.ConfigTemplates()
 	}
 	return nil
 }
