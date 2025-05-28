@@ -4,8 +4,8 @@ import (
 	"net/http"
 
 	"github.com/bytedance/sonic"
-	"github.com/labring/aiproxy/core/relay/adaptor/openai"
-	"github.com/labring/aiproxy/core/relay/model"
+	"github.com/labring/aiproxy/core/relay/adaptor"
+	relaymodel "github.com/labring/aiproxy/core/relay/model"
 )
 
 type RerankErrorResponse struct {
@@ -13,23 +13,16 @@ type RerankErrorResponse struct {
 	ErrorType string `json:"error_type"`
 }
 
-func RerankErrorHanlder(resp *http.Response) *model.ErrorWithStatusCode {
+func RerankErrorHanlder(resp *http.Response) adaptor.Error {
 	defer resp.Body.Close()
 
 	errResp := RerankErrorResponse{}
 	err := sonic.ConfigDefault.NewDecoder(resp.Body).Decode(&errResp)
 	if err != nil {
-		return openai.ErrorWrapper(err, "read_response_body_failed", http.StatusInternalServerError)
+		return relaymodel.WrapperOpenAIError(err, "read_response_body_failed", http.StatusInternalServerError)
 	}
 
-	return &model.ErrorWithStatusCode{
-		Error: model.Error{
-			Message: errResp.Error,
-			Type:    errResp.ErrorType,
-			Code:    resp.StatusCode,
-		},
-		StatusCode: resp.StatusCode,
-	}
+	return relaymodel.WrapperOpenAIErrorWithMessage(errResp.Error, errResp.ErrorType, resp.StatusCode)
 }
 
 type EmbeddingsErrorResponse struct {
@@ -37,21 +30,14 @@ type EmbeddingsErrorResponse struct {
 	Message string `json:"message"`
 }
 
-func EmbeddingsErrorHanlder(resp *http.Response) *model.ErrorWithStatusCode {
+func EmbeddingsErrorHanlder(resp *http.Response) adaptor.Error {
 	defer resp.Body.Close()
 
 	errResp := EmbeddingsErrorResponse{}
 	err := sonic.ConfigDefault.NewDecoder(resp.Body).Decode(&errResp)
 	if err != nil {
-		return openai.ErrorWrapper(err, "read_response_body_failed", http.StatusInternalServerError)
+		return relaymodel.WrapperOpenAIError(err, "read_response_body_failed", http.StatusInternalServerError)
 	}
 
-	return &model.ErrorWithStatusCode{
-		Error: model.Error{
-			Message: errResp.Message,
-			Type:    errResp.Type,
-			Code:    resp.StatusCode,
-		},
-		StatusCode: resp.StatusCode,
-	}
+	return relaymodel.WrapperOpenAIErrorWithMessage(errResp.Message, errResp.Type, resp.StatusCode)
 }

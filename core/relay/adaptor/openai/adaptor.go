@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
 
 	"github.com/bytedance/sonic"
@@ -65,13 +64,13 @@ func (a *Adaptor) SetupRequestHeader(meta *meta.Meta, _ *gin.Context, req *http.
 	return nil
 }
 
-func (a *Adaptor) ConvertRequest(meta *meta.Meta, req *http.Request) (string, http.Header, io.Reader, error) {
+func (a *Adaptor) ConvertRequest(meta *meta.Meta, req *http.Request) (*adaptor.ConvertRequestResult, error) {
 	return ConvertRequest(meta, req)
 }
 
-func ConvertRequest(meta *meta.Meta, req *http.Request) (string, http.Header, io.Reader, error) {
+func ConvertRequest(meta *meta.Meta, req *http.Request) (*adaptor.ConvertRequestResult, error) {
 	if req == nil {
-		return "", nil, nil, errors.New("request is nil")
+		return nil, errors.New("request is nil")
 	}
 	switch meta.Mode {
 	case mode.Moderations:
@@ -91,11 +90,11 @@ func ConvertRequest(meta *meta.Meta, req *http.Request) (string, http.Header, io
 	case mode.Rerank:
 		return ConvertRerankRequest(meta, req)
 	default:
-		return "", nil, nil, fmt.Errorf("unsupported mode: %s", meta.Mode)
+		return nil, fmt.Errorf("unsupported mode: %s", meta.Mode)
 	}
 }
 
-func DoResponse(meta *meta.Meta, c *gin.Context, resp *http.Response) (usage *model.Usage, err *relaymodel.ErrorWithStatusCode) {
+func DoResponse(meta *meta.Meta, c *gin.Context, resp *http.Response) (usage *model.Usage, err adaptor.Error) {
 	switch meta.Mode {
 	case mode.ImagesGenerations, mode.ImagesEdits:
 		usage, err = ImagesHandler(meta, c, resp)
@@ -116,30 +115,34 @@ func DoResponse(meta *meta.Meta, c *gin.Context, resp *http.Response) (usage *mo
 			usage, err = Handler(meta, c, resp, nil)
 		}
 	default:
-		return nil, ErrorWrapperWithMessage(fmt.Sprintf("unsupported mode: %s", meta.Mode), "unsupported_mode", http.StatusBadRequest)
+		return nil, relaymodel.WrapperOpenAIErrorWithMessage(fmt.Sprintf("unsupported mode: %s", meta.Mode), "unsupported_mode", http.StatusBadRequest)
 	}
 	return usage, err
 }
 
-func ConvertTextRequest(meta *meta.Meta, req *http.Request, doNotPatchStreamOptionsIncludeUsage bool) (string, http.Header, io.Reader, error) {
+func ConvertTextRequest(meta *meta.Meta, req *http.Request, doNotPatchStreamOptionsIncludeUsage bool) (*adaptor.ConvertRequestResult, error) {
 	reqMap := make(map[string]any)
 	err := common.UnmarshalBodyReusable(req, &reqMap)
 	if err != nil {
-		return "", nil, nil, err
+		return nil, err
 	}
 
 	if !doNotPatchStreamOptionsIncludeUsage {
 		if err := patchStreamOptions(reqMap); err != nil {
-			return "", nil, nil, err
+			return nil, err
 		}
 	}
 
 	reqMap["model"] = meta.ActualModel
 	jsonData, err := sonic.Marshal(reqMap)
 	if err != nil {
-		return "", nil, nil, err
+		return nil, err
 	}
-	return http.MethodPost, nil, bytes.NewReader(jsonData), nil
+	return &adaptor.ConvertRequestResult{
+		Method: http.MethodPost,
+		Header: nil,
+		Body:   bytes.NewReader(jsonData),
+	}, nil
 }
 
 func patchStreamOptions(reqMap map[string]any) error {
@@ -178,7 +181,7 @@ func (a *Adaptor) DoRequest(_ *meta.Meta, _ *gin.Context, req *http.Request) (*h
 	return utils.DoRequest(req)
 }
 
-func (a *Adaptor) DoResponse(meta *meta.Meta, c *gin.Context, resp *http.Response) (usage *model.Usage, err *relaymodel.ErrorWithStatusCode) {
+func (a *Adaptor) DoResponse(meta *meta.Meta, c *gin.Context, resp *http.Response) (usage *model.Usage, err adaptor.Error) {
 	return DoResponse(meta, c, resp)
 }
 

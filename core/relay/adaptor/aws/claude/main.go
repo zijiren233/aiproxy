@@ -15,6 +15,7 @@ import (
 	"github.com/labring/aiproxy/core/common/render"
 	"github.com/labring/aiproxy/core/middleware"
 	"github.com/labring/aiproxy/core/model"
+	"github.com/labring/aiproxy/core/relay/adaptor"
 	"github.com/labring/aiproxy/core/relay/adaptor/anthropic"
 	"github.com/labring/aiproxy/core/relay/adaptor/aws/utils"
 	"github.com/labring/aiproxy/core/relay/adaptor/openai"
@@ -91,10 +92,10 @@ func awsModelID(requestModel string) (string, error) {
 	return "", errors.Errorf("model %s not found", requestModel)
 }
 
-func Handler(meta *meta.Meta, c *gin.Context) (*model.Usage, *relaymodel.ErrorWithStatusCode) {
+func Handler(meta *meta.Meta, c *gin.Context) (*model.Usage, adaptor.Error) {
 	awsModelID, err := awsModelID(meta.ActualModel)
 	if err != nil {
-		return nil, utils.WrapErr(errors.Wrap(err, "awsModelID"))
+		return nil, relaymodel.WrapperOpenAIErrorWithMessage(err.Error(), nil, http.StatusInternalServerError)
 	}
 
 	awsReq := &bedrockruntime.InvokeModelInput{
@@ -105,35 +106,35 @@ func Handler(meta *meta.Meta, c *gin.Context) (*model.Usage, *relaymodel.ErrorWi
 
 	convReq, ok := meta.Get(ConvertedRequest)
 	if !ok {
-		return nil, utils.WrapErr(errors.New("request not found"))
+		return nil, relaymodel.WrapperOpenAIErrorWithMessage("request not found", nil, http.StatusInternalServerError)
 	}
 	claudeReq := convReq.(*anthropic.Request)
 	awsClaudeReq := &Request{
 		AnthropicVersion: "bedrock-2023-05-31",
 	}
 	if err = copier.Copy(awsClaudeReq, claudeReq); err != nil {
-		return nil, utils.WrapErr(errors.Wrap(err, "copy request"))
+		return nil, relaymodel.WrapperOpenAIErrorWithMessage(err.Error(), nil, http.StatusInternalServerError)
 	}
 
 	awsReq.Body, err = sonic.Marshal(awsClaudeReq)
 	if err != nil {
-		return nil, utils.WrapErr(errors.Wrap(err, "marshal request"))
+		return nil, relaymodel.WrapperOpenAIErrorWithMessage(err.Error(), nil, http.StatusInternalServerError)
 	}
 
 	awsClient, err := utils.AwsClientFromMeta(meta)
 	if err != nil {
-		return nil, utils.WrapErr(errors.Wrap(err, "get aws client"))
+		return nil, relaymodel.WrapperOpenAIErrorWithMessage(err.Error(), nil, http.StatusInternalServerError)
 	}
 
 	awsResp, err := awsClient.InvokeModel(c.Request.Context(), awsReq)
 	if err != nil {
-		return nil, utils.WrapErr(errors.Wrap(err, "InvokeModel"))
+		return nil, relaymodel.WrapperOpenAIErrorWithMessage(err.Error(), nil, http.StatusInternalServerError)
 	}
 
 	claudeResponse := new(anthropic.Response)
 	err = sonic.Unmarshal(awsResp.Body, claudeResponse)
 	if err != nil {
-		return nil, utils.WrapErr(errors.Wrap(err, "unmarshal response"))
+		return nil, relaymodel.WrapperOpenAIErrorWithMessage(err.Error(), nil, http.StatusInternalServerError)
 	}
 
 	openaiResp := anthropic.Response2OpenAI(meta, claudeResponse)
@@ -141,11 +142,11 @@ func Handler(meta *meta.Meta, c *gin.Context) (*model.Usage, *relaymodel.ErrorWi
 	return openaiResp.Usage.ToModelUsage(), nil
 }
 
-func StreamHandler(m *meta.Meta, c *gin.Context) (*model.Usage, *relaymodel.ErrorWithStatusCode) {
+func StreamHandler(m *meta.Meta, c *gin.Context) (*model.Usage, adaptor.Error) {
 	log := middleware.GetLogger(c)
 	awsModelID, err := awsModelID(m.ActualModel)
 	if err != nil {
-		return nil, utils.WrapErr(errors.Wrap(err, "awsModelID"))
+		return nil, relaymodel.WrapperOpenAIErrorWithMessage(err.Error(), nil, http.StatusInternalServerError)
 	}
 
 	awsReq := &bedrockruntime.InvokeModelWithResponseStreamInput{
@@ -156,32 +157,32 @@ func StreamHandler(m *meta.Meta, c *gin.Context) (*model.Usage, *relaymodel.Erro
 
 	convReq, ok := m.Get(ConvertedRequest)
 	if !ok {
-		return nil, utils.WrapErr(errors.New("request not found"))
+		return nil, relaymodel.WrapperOpenAIErrorWithMessage("request not found", nil, http.StatusInternalServerError)
 	}
 	claudeReq, ok := convReq.(*anthropic.Request)
 	if !ok {
-		return nil, utils.WrapErr(errors.New("request not found"))
+		return nil, relaymodel.WrapperOpenAIErrorWithMessage("request not found", nil, http.StatusInternalServerError)
 	}
 
 	awsClaudeReq := &Request{
 		AnthropicVersion: "bedrock-2023-05-31",
 	}
 	if err = copier.Copy(awsClaudeReq, claudeReq); err != nil {
-		return nil, utils.WrapErr(errors.Wrap(err, "copy request"))
+		return nil, relaymodel.WrapperOpenAIErrorWithMessage(err.Error(), nil, http.StatusInternalServerError)
 	}
 	awsReq.Body, err = sonic.Marshal(awsClaudeReq)
 	if err != nil {
-		return nil, utils.WrapErr(errors.Wrap(err, "marshal request"))
+		return nil, relaymodel.WrapperOpenAIErrorWithMessage(err.Error(), nil, http.StatusInternalServerError)
 	}
 
 	awsClient, err := utils.AwsClientFromMeta(m)
 	if err != nil {
-		return nil, utils.WrapErr(errors.Wrap(err, "get aws client"))
+		return nil, relaymodel.WrapperOpenAIErrorWithMessage(err.Error(), nil, http.StatusInternalServerError)
 	}
 
 	awsResp, err := awsClient.InvokeModelWithResponseStream(c.Request.Context(), awsReq)
 	if err != nil {
-		return nil, utils.WrapErr(errors.Wrap(err, "InvokeModelWithResponseStream"))
+		return nil, relaymodel.WrapperOpenAIErrorWithMessage(err.Error(), nil, http.StatusInternalServerError)
 	}
 	stream := awsResp.GetStream()
 	defer stream.Close()

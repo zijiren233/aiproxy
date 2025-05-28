@@ -1,17 +1,16 @@
 package vertexai
 
 import (
-	"io"
 	"net/http"
 	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/core/model"
+	"github.com/labring/aiproxy/core/relay/adaptor"
 	"github.com/labring/aiproxy/core/relay/adaptor/gemini"
 	vertexclaude "github.com/labring/aiproxy/core/relay/adaptor/vertexai/claude"
 	vertexgemini "github.com/labring/aiproxy/core/relay/adaptor/vertexai/gemini"
 	"github.com/labring/aiproxy/core/relay/meta"
-	relaymodel "github.com/labring/aiproxy/core/relay/model"
 )
 
 type ModelType int
@@ -30,8 +29,8 @@ func init() {
 }
 
 type innerAIAdapter interface {
-	ConvertRequest(meta *meta.Meta, request *http.Request) (string, http.Header, io.Reader, error)
-	DoResponse(meta *meta.Meta, c *gin.Context, resp *http.Response) (usage *model.Usage, err *relaymodel.ErrorWithStatusCode)
+	ConvertRequest(meta *meta.Meta, request *http.Request) (*adaptor.ConvertRequestResult, error)
+	DoResponse(meta *meta.Meta, c *gin.Context, resp *http.Response) (usage *model.Usage, err adaptor.Error)
 }
 
 func GetAdaptor(model string) innerAIAdapter {

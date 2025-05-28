@@ -16,4 +16,5 @@ const (
 	RequestID          = "request_id"
 	ModelCaches        = "model_caches"
 	ModelConfig        = "model_config"
+	Mode               = "mode"
 )

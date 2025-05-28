@@ -3,7 +3,6 @@ package ali
 import (
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
 
 	"github.com/bytedance/sonic"
@@ -11,6 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/core/common"
 	"github.com/labring/aiproxy/core/model"
+	"github.com/labring/aiproxy/core/relay/adaptor"
 	"github.com/labring/aiproxy/core/relay/adaptor/openai"
 	"github.com/labring/aiproxy/core/relay/meta"
 	"github.com/labring/aiproxy/core/relay/mode"
@@ -58,7 +58,7 @@ func (a *Adaptor) SetupRequestHeader(meta *meta.Meta, _ *gin.Context, req *http.
 	return nil
 }
 
-func (a *Adaptor) ConvertRequest(meta *meta.Meta, req *http.Request) (string, http.Header, io.Reader, error) {
+func (a *Adaptor) ConvertRequest(meta *meta.Meta, req *http.Request) (*adaptor.ConvertRequestResult, error) {
 	switch meta.Mode {
 	case mode.ImagesGenerations:
 		return ConvertImageRequest(meta, req)
@@ -71,7 +71,7 @@ func (a *Adaptor) ConvertRequest(meta *meta.Meta, req *http.Request) (string, ht
 	case mode.AudioTranscription:
 		return ConvertSTTRequest(meta, req)
 	default:
-		return "", nil, nil, fmt.Errorf("unsupported mode: %s", meta.Mode)
+		return nil, fmt.Errorf("unsupported mode: %s", meta.Mode)
 	}
 }
 
@@ -88,7 +88,7 @@ func (a *Adaptor) DoRequest(meta *meta.Meta, _ *gin.Context, req *http.Request) 
 	}
 }
 
-func (a *Adaptor) DoResponse(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, *relaymodel.ErrorWithStatusCode) {
+func (a *Adaptor) DoResponse(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, adaptor.Error) {
 	switch meta.Mode {
 	case mode.ImagesGenerations:
 		return ImageHandler(meta, c, resp)
@@ -97,11 +97,11 @@ func (a *Adaptor) DoResponse(meta *meta.Meta, c *gin.Context, resp *http.Respons
 	case mode.ChatCompletions:
 		reqBody, err := common.GetRequestBody(c.Request)
 		if err != nil {
-			return nil, openai.ErrorWrapperWithMessage(fmt.Sprintf("get request body failed: %s", err), "get_request_body_failed", http.StatusInternalServerError)
+			return nil, relaymodel.WrapperOpenAIErrorWithMessage(fmt.Sprintf("get request body failed: %s", err), "get_request_body_failed", http.StatusInternalServerError)
 		}
 		enableSearch, err := getEnableSearch(reqBody)
 		if err != nil {
-			return nil, openai.ErrorWrapperWithMessage(fmt.Sprintf("get enable_search failed: %s", err), "get_enable_search_failed", http.StatusInternalServerError)
+			return nil, relaymodel.WrapperOpenAIErrorWithMessage(fmt.Sprintf("get enable_search failed: %s", err), "get_enable_search_failed", http.StatusInternalServerError)
 		}
 		u, e := openai.DoResponse(meta, c, resp)
 		if e != nil {
@@ -118,7 +118,7 @@ func (a *Adaptor) DoResponse(meta *meta.Meta, c *gin.Context, resp *http.Respons
 	case mode.AudioTranscription:
 		return STTDoResponse(meta, c, resp)
 	default:
-		return nil, openai.ErrorWrapperWithMessage(fmt.Sprintf("unsupported mode: %s", meta.Mode), "unsupported_mode", http.StatusBadRequest)
+		return nil, relaymodel.WrapperOpenAIErrorWithMessage(fmt.Sprintf("unsupported mode: %s", meta.Mode), "unsupported_mode", http.StatusBadRequest)
 	}
 }
 

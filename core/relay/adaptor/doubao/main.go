@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"strings"
 
@@ -53,23 +52,23 @@ func (a *Adaptor) GetRequestURL(meta *meta.Meta) (string, error) {
 	return GetRequestURL(meta)
 }
 
-func (a *Adaptor) ConvertRequest(meta *meta.Meta, req *http.Request) (string, http.Header, io.Reader, error) {
-	method, header, body, err := a.Adaptor.ConvertRequest(meta, req)
+func (a *Adaptor) ConvertRequest(meta *meta.Meta, req *http.Request) (*adaptor.ConvertRequestResult, error) {
+	result, err := a.Adaptor.ConvertRequest(meta, req)
 	if err != nil {
-		return "", nil, nil, err
+		return nil, err
 	}
 	if meta.Mode != mode.ChatCompletions || meta.OriginModel != "deepseek-reasoner" {
-		return method, header, body, nil
+		return result, nil
 	}
 
 	m := make(map[string]any)
-	err = sonic.ConfigDefault.NewDecoder(body).Decode(&m)
+	err = sonic.ConfigDefault.NewDecoder(result.Body).Decode(&m)
 	if err != nil {
-		return "", nil, nil, err
+		return nil, err
 	}
 	messages, _ := m["messages"].([]any)
 	if len(messages) == 0 {
-		return "", nil, nil, errors.New("messages is empty")
+		return nil, errors.New("messages is empty")
 	}
 	sysMessage := relaymodel.Message{
 		Role:    "system",
@@ -79,10 +78,14 @@ func (a *Adaptor) ConvertRequest(meta *meta.Meta, req *http.Request) (string, ht
 	m["messages"] = messages
 	newBody, err := sonic.Marshal(m)
 	if err != nil {
-		return "", nil, nil, err
+		return nil, err
 	}
 
-	return method, header, bytes.NewReader(newBody), nil
+	return &adaptor.ConvertRequestResult{
+		Method: result.Method,
+		Header: result.Header,
+		Body:   bytes.NewReader(newBody),
+	}, nil
 }
 
 func newHandlerPreHandler(websearchCount *int64) func(_ *meta.Meta, node *ast.Node) error {
@@ -130,7 +133,7 @@ func handlerPreHandler(meta *meta.Meta, node *ast.Node, websearchCount *int64) e
 	})
 }
 
-func (a *Adaptor) DoResponse(meta *meta.Meta, c *gin.Context, resp *http.Response) (usage *model.Usage, err *relaymodel.ErrorWithStatusCode) {
+func (a *Adaptor) DoResponse(meta *meta.Meta, c *gin.Context, resp *http.Response) (usage *model.Usage, err adaptor.Error) {
 	switch meta.Mode {
 	case mode.ChatCompletions:
 		websearchCount := int64(0)

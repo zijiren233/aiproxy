@@ -235,9 +235,7 @@ func checkGroupBalance(c *gin.Context, group *model.GroupCache) bool {
 	gbc, err := GetGroupBalanceConsumer(c, group)
 	if err != nil {
 		if errors.Is(err, balance.ErrNoRealNameUsedAmountLimit) {
-			AbortLogWithMessage(c, http.StatusForbidden, err.Error(), &ErrorField{
-				Code: "no_real_name_used_amount_limit",
-			})
+			AbortLogWithMessage(c, http.StatusForbidden, err.Error(), "no_real_name_used_amount_limit")
 			return false
 		}
 		notify.ErrorThrottle(
@@ -246,9 +244,7 @@ func checkGroupBalance(c *gin.Context, group *model.GroupCache) bool {
 			fmt.Sprintf("Get group `%s` balance error", group.ID),
 			err.Error(),
 		)
-		AbortWithMessage(c, http.StatusInternalServerError, fmt.Sprintf("get group `%s` balance error", group.ID), &ErrorField{
-			Code: "get_group_balance_error",
-		})
+		AbortWithMessage(c, http.StatusInternalServerError, fmt.Sprintf("get group `%s` balance error", group.ID), "get_group_balance_error")
 		return false
 	}
 
@@ -264,9 +260,7 @@ func checkGroupBalance(c *gin.Context, group *model.GroupCache) bool {
 	}
 
 	if !gbc.CheckBalance(0) {
-		AbortLogWithMessage(c, http.StatusForbidden, fmt.Sprintf("group `%s` balance not enough", group.ID), &ErrorField{
-			Code: GroupBalanceNotEnough,
-		})
+		AbortLogWithMessage(c, http.StatusForbidden, fmt.Sprintf("group `%s` balance not enough", group.ID), GroupBalanceNotEnough)
 		return false
 	}
 	return true
@@ -329,6 +323,8 @@ func CheckRelayMode(requestMode mode.Mode, modelMode mode.Mode) bool {
 }
 
 func distribute(c *gin.Context, mode mode.Mode) {
+	c.Set(Mode, mode)
+
 	if config.GetDisableServe() {
 		AbortLogWithMessage(c, http.StatusServiceUnavailable, "service is under maintenance")
 		return
@@ -344,17 +340,11 @@ func distribute(c *gin.Context, mode mode.Mode) {
 
 	requestModel, err := getRequestModel(c, mode)
 	if err != nil {
-		AbortLogWithMessage(c, http.StatusInternalServerError, err.Error(), &ErrorField{
-			Type: "invalid_request_error",
-			Code: "get_request_model_error",
-		})
+		AbortLogWithMessage(c, http.StatusInternalServerError, err.Error(), "get_request_model_error")
 		return
 	}
 	if requestModel == "" {
-		AbortLogWithMessage(c, http.StatusBadRequest, "no model provided", &ErrorField{
-			Type: "invalid_request_error",
-			Code: "no_model_provided",
-		})
+		AbortLogWithMessage(c, http.StatusBadRequest, "no model provided", "no_model_provided")
 		return
 	}
 
@@ -367,10 +357,7 @@ func distribute(c *gin.Context, mode mode.Mode) {
 		AbortLogWithMessage(c,
 			http.StatusNotFound,
 			fmt.Sprintf("The model `%s` does not exist or you do not have access to it.", requestModel),
-			&ErrorField{
-				Type: "invalid_request_error",
-				Code: "model_not_found",
-			},
+			"model_not_found",
 		)
 		return
 	}
@@ -389,10 +376,7 @@ func distribute(c *gin.Context, mode mode.Mode) {
 			AbortLogWithMessage(c,
 				http.StatusNotFound,
 				fmt.Sprintf("The model `%s` does not exist or you do not have access to it.", requestModel),
-				&ErrorField{
-					Type: "invalid_request_error",
-					Code: "model_not_found",
-				},
+				"model_not_found",
 			)
 			return
 		}
@@ -400,20 +384,14 @@ func distribute(c *gin.Context, mode mode.Mode) {
 
 	user, err := getRequestUser(c, mode)
 	if err != nil {
-		AbortLogWithMessage(c, http.StatusInternalServerError, err.Error(), &ErrorField{
-			Type: "invalid_request_error",
-			Code: "get_request_user_error",
-		})
+		AbortLogWithMessage(c, http.StatusInternalServerError, err.Error(), "get_request_user_error")
 		return
 	}
 	c.Set(RequestUser, user)
 
 	metadata, err := getRequestMetadata(c, mode)
 	if err != nil {
-		AbortLogWithMessage(c, http.StatusInternalServerError, err.Error(), &ErrorField{
-			Type: "invalid_request_error",
-			Code: "get_request_metadata_error",
-		})
+		AbortLogWithMessage(c, http.StatusInternalServerError, err.Error(), "get_request_metadata_error")
 		return
 	}
 	c.Set(RequestMetadata, metadata)
@@ -439,10 +417,7 @@ func distribute(c *gin.Context, mode mode.Mode) {
 			model.RequestRate{},
 			GetGroupModelTokenRequestRate(c),
 		)
-		AbortLogWithMessage(c, http.StatusTooManyRequests, errMsg, &ErrorField{
-			Type: "invalid_request_error",
-			Code: "request_rate_limit_exceeded",
-		})
+		AbortLogWithMessage(c, http.StatusTooManyRequests, errMsg, "request_rate_limit_exceeded")
 		return
 	}
 

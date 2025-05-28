@@ -1,7 +1,6 @@
 package stepfun
 
 import (
-	"io"
 	"net/http"
 
 	"github.com/labring/aiproxy/core/model"
@@ -21,7 +20,7 @@ func (a *Adaptor) GetBaseURL() string {
 	return baseURL
 }
 
-func (a *Adaptor) ConvertRequest(meta *meta.Meta, req *http.Request) (string, http.Header, io.Reader, error) {
+func (a *Adaptor) ConvertRequest(meta *meta.Meta, req *http.Request) (*adaptor.ConvertRequestResult, error) {
 	switch meta.Mode {
 	case mode.AudioSpeech:
 		return openai.ConvertTTSRequest(meta, req, "cixingnansheng")

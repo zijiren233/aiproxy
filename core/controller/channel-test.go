@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/labring/aiproxy/core/common/conv"
 	"github.com/labring/aiproxy/core/common/notify"
 	"github.com/labring/aiproxy/core/common/render"
 	"github.com/labring/aiproxy/core/common/trylock"
@@ -115,8 +116,9 @@ func testSingleModel(mc *model.ModelCaches, channel *model.Channel, modelName st
 		}
 		code = w.Code
 	} else {
-		respStr = result.Error.JSONOrEmpty()
-		code = result.Error.StatusCode
+		respBody, _ := result.Error.MarshalJSON()
+		respStr = conv.BytesToString(respBody)
+		code = result.Error.StatusCode()
 	}
 
 	return channel.UpdateModelTest(

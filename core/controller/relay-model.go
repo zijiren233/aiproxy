@@ -6,7 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/core/middleware"
-	model "github.com/labring/aiproxy/core/relay/model"
+	relaymodel "github.com/labring/aiproxy/core/relay/model"
 )
 
 // ListModels godoc
@@ -65,8 +65,8 @@ func RetrieveModel(c *gin.Context) {
 	}
 
 	if !ok {
-		c.JSON(200, gin.H{
-			"error": &model.Error{
+		c.JSON(http.StatusNotFound, gin.H{
+			"error": &relaymodel.OpenAIError{
 				Message: fmt.Sprintf("the model '%s' does not exist", modelName),
 				Type:    "invalid_request_error",
 				Param:   "model",
@@ -76,7 +76,7 @@ func RetrieveModel(c *gin.Context) {
 		return
 	}
 
-	c.JSON(200, &OpenAIModels{
+	c.JSON(http.StatusOK, &OpenAIModels{
 		ID:         modelName,
 		Object:     "model",
 		Created:    1626777600,

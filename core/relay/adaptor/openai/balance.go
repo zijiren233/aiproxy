@@ -13,11 +13,26 @@ import (
 var _ adaptor.Balancer = (*Adaptor)(nil)
 
 func (a *Adaptor) GetBalance(channel *model.Channel) (float64, error) {
-	return GetBalance(channel)
+	return GetBalance(channel.BaseURL, channel.Key)
 }
 
-func GetBalance(channel *model.Channel) (float64, error) {
-	u := channel.BaseURL
+type SubscriptionResponse struct {
+	Object             string  `json:"object"`
+	HasPaymentMethod   bool    `json:"has_payment_method"`
+	SoftLimitUSD       float64 `json:"soft_limit_usd"`
+	HardLimitUSD       float64 `json:"hard_limit_usd"`
+	SystemHardLimitUSD float64 `json:"system_hard_limit_usd"`
+	AccessUntil        int64   `json:"access_until"`
+}
+
+type UsageResponse struct {
+	Object string `json:"object"`
+	// DailyCosts []OpenAIUsageDailyCost `json:"daily_costs"`
+	TotalUsage float64 `json:"total_usage"` // unit: 0.01 dollar
+}
+
+func GetBalance(baseURL string, key string) (float64, error) {
+	u := baseURL
 	if u == "" {
 		u = baseURL
 	}
@@ -27,7 +42,7 @@ func GetBalance(channel *model.Channel) (float64, error) {
 	if err != nil {
 		return 0, err
 	}
-	req1.Header.Set("Authorization", "Bearer "+channel.Key)
+	req1.Header.Set("Authorization", "Bearer "+key)
 	res1, err := http.DefaultClient.Do(req1)
 	if err != nil {
 		return 0, err
@@ -49,7 +64,7 @@ func GetBalance(channel *model.Channel) (float64, error) {
 	if err != nil {
 		return 0, err
 	}
-	req2.Header.Set("Authorization", "Bearer "+channel.Key)
+	req2.Header.Set("Authorization", "Bearer "+key)
 	res2, err := http.DefaultClient.Do(req2)
 	if err != nil {
 		return 0, err

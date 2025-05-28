@@ -2,7 +2,6 @@ package utils
 
 import (
 	"errors"
-	"io"
 	"net/http"
 	"strings"
 
@@ -11,13 +10,13 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/bedrockruntime"
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/core/model"
+	"github.com/labring/aiproxy/core/relay/adaptor"
 	"github.com/labring/aiproxy/core/relay/meta"
-	relaymodel "github.com/labring/aiproxy/core/relay/model"
 )
 
 type AwsAdapter interface {
-	ConvertRequest(meta *meta.Meta, req *http.Request) (string, http.Header, io.Reader, error)
-	DoResponse(meta *meta.Meta, c *gin.Context) (usage *model.Usage, err *relaymodel.ErrorWithStatusCode)
+	ConvertRequest(meta *meta.Meta, req *http.Request) (*adaptor.ConvertRequestResult, error)
+	DoResponse(meta *meta.Meta, c *gin.Context) (usage *model.Usage, err adaptor.Error)
 }
 
 type AwsConfig struct {

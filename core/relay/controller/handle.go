@@ -7,12 +7,11 @@ import (
 	"github.com/labring/aiproxy/core/model"
 	"github.com/labring/aiproxy/core/relay/adaptor"
 	"github.com/labring/aiproxy/core/relay/meta"
-	relaymodel "github.com/labring/aiproxy/core/relay/model"
 )
 
 // HandleResult contains all the information needed for consumption recording
 type HandleResult struct {
-	Error  *relaymodel.ErrorWithStatusCode
+	Error  adaptor.Error
 	Usage  model.Usage
 	Detail *RequestDetail
 }

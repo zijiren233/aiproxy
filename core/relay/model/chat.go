@@ -1,9 +1,8 @@
 package model
 
 import (
-	"github.com/bytedance/sonic"
-	"github.com/labring/aiproxy/core/common/conv"
 	"github.com/labring/aiproxy/core/model"
+	"github.com/labring/aiproxy/core/relay/adaptor"
 )
 
 type Usage struct {
@@ -74,40 +73,31 @@ type CompletionTokensDetails struct {
 	RejectedPredictionTokens int64 `json:"rejected_prediction_tokens"`
 }
 
-type Error struct {
+type OpenAIErrorResponse struct {
+	Error OpenAIError `json:"error"`
+}
+
+type OpenAIError struct {
 	Code    any    `json:"code,omitempty"`
 	Message string `json:"message,omitempty"`
 	Type    string `json:"type,omitempty"`
 	Param   string `json:"param,omitempty"`
 }
 
-func (e *Error) IsEmpty() bool {
-	return e == nil || (e.Code == nil && e.Message == "" && e.Type == "" && e.Param == "")
+func NewOpenAIError(statusCode int, err OpenAIError) adaptor.Error {
+	return adaptor.NewError(statusCode, OpenAIErrorResponse{
+		Error: err,
+	})
 }
 
-func (e *Error) JSONOrEmpty() string {
-	if e.IsEmpty() {
-		return ""
-	}
-	jsonBuf, err := sonic.Marshal(e)
-	if err != nil {
-		return ""
-	}
-	return conv.BytesToString(jsonBuf)
+func WrapperOpenAIError(err error, code any, statusCode int) adaptor.Error {
+	return WrapperOpenAIErrorWithMessage(err.Error(), code, statusCode)
 }
 
-type ErrorWithStatusCode struct {
-	Error      Error `json:"error,omitempty"`
-	StatusCode int   `json:"-"`
-}
-
-func (e *ErrorWithStatusCode) JSONOrEmpty() string {
-	if e.StatusCode == 0 && e.Error.IsEmpty() {
-		return ""
-	}
-	jsonBuf, err := sonic.MarshalString(e)
-	if err != nil {
-		return ""
-	}
-	return jsonBuf
+func WrapperOpenAIErrorWithMessage(message string, code any, statusCode int) adaptor.Error {
+	return NewOpenAIError(statusCode, OpenAIError{
+		Message: message,
+		Type:    ErrorTypeAIPROXY,
+		Code:    code,
+	})
 }

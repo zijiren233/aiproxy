@@ -19,6 +19,7 @@ import (
 	"github.com/labring/aiproxy/core/common/splitter"
 	"github.com/labring/aiproxy/core/middleware"
 	"github.com/labring/aiproxy/core/model"
+	"github.com/labring/aiproxy/core/relay/adaptor"
 	"github.com/labring/aiproxy/core/relay/meta"
 	relaymodel "github.com/labring/aiproxy/core/relay/model"
 )
@@ -90,7 +91,7 @@ func GetUsageOrChatChoicesResponseFromNode(node *ast.Node) (*relaymodel.Usage, [
 
 type PreHandler func(meta *meta.Meta, node *ast.Node) error
 
-func StreamHandler(meta *meta.Meta, c *gin.Context, resp *http.Response, preHandler PreHandler) (*model.Usage, *relaymodel.ErrorWithStatusCode) {
+func StreamHandler(meta *meta.Meta, c *gin.Context, resp *http.Response, preHandler PreHandler) (*model.Usage, adaptor.Error) {
 	if resp.StatusCode != http.StatusOK {
 		return nil, ErrorHanlder(resp)
 	}
@@ -354,7 +355,7 @@ func GetUsageOrChoicesResponseFromNode(node *ast.Node) (*relaymodel.Usage, []*re
 	return nil, choices, nil
 }
 
-func Handler(meta *meta.Meta, c *gin.Context, resp *http.Response, preHandler PreHandler) (*model.Usage, *relaymodel.ErrorWithStatusCode) {
+func Handler(meta *meta.Meta, c *gin.Context, resp *http.Response, preHandler PreHandler) (*model.Usage, adaptor.Error) {
 	if resp.StatusCode != http.StatusOK {
 		return nil, ErrorHanlder(resp)
 	}
@@ -365,22 +366,22 @@ func Handler(meta *meta.Meta, c *gin.Context, resp *http.Response, preHandler Pr
 
 	responseBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, ErrorWrapper(err, "read_response_body_failed", http.StatusInternalServerError)
+		return nil, relaymodel.WrapperOpenAIError(err, "read_response_body_failed", http.StatusInternalServerError)
 	}
 
 	node, err := sonic.Get(responseBody)
 	if err != nil {
-		return nil, ErrorWrapper(err, "unmarshal_response_body_failed", http.StatusInternalServerError)
+		return nil, relaymodel.WrapperOpenAIError(err, "unmarshal_response_body_failed", http.StatusInternalServerError)
 	}
 	if preHandler != nil {
 		err := preHandler(meta, &node)
 		if err != nil {
-			return nil, ErrorWrapper(err, "pre_handler_failed", http.StatusInternalServerError)
+			return nil, relaymodel.WrapperOpenAIError(err, "pre_handler_failed", http.StatusInternalServerError)
 		}
 	}
 	usage, choices, err := GetUsageOrChoicesResponseFromNode(&node)
 	if err != nil {
-		return nil, ErrorWrapper(err, "unmarshal_response_body_failed", http.StatusInternalServerError)
+		return nil, relaymodel.WrapperOpenAIError(err, "unmarshal_response_body_failed", http.StatusInternalServerError)
 	}
 
 	if usage == nil || usage.TotalTokens == 0 || (usage.PromptTokens == 0 && usage.CompletionTokens == 0) {
@@ -399,26 +400,26 @@ func Handler(meta *meta.Meta, c *gin.Context, resp *http.Response, preHandler Pr
 		}
 		_, err = node.Set("usage", ast.NewAny(usage))
 		if err != nil {
-			return usage.ToModelUsage(), ErrorWrapper(err, "set_usage_failed", http.StatusInternalServerError)
+			return usage.ToModelUsage(), relaymodel.WrapperOpenAIError(err, "set_usage_failed", http.StatusInternalServerError)
 		}
 	} else if usage.TotalTokens != 0 && usage.PromptTokens == 0 { // some channels don't return prompt tokens & completion tokens
 		usage.PromptTokens = int64(meta.RequestUsage.InputTokens)
 		usage.CompletionTokens = usage.TotalTokens - int64(meta.RequestUsage.InputTokens)
 		_, err = node.Set("usage", ast.NewAny(usage))
 		if err != nil {
-			return usage.ToModelUsage(), ErrorWrapper(err, "set_usage_failed", http.StatusInternalServerError)
+			return usage.ToModelUsage(), relaymodel.WrapperOpenAIError(err, "set_usage_failed", http.StatusInternalServerError)
 		}
 	}
 
 	_, err = node.Set("model", ast.NewString(meta.OriginModel))
 	if err != nil {
-		return usage.ToModelUsage(), ErrorWrapper(err, "set_model_failed", http.StatusInternalServerError)
+		return usage.ToModelUsage(), relaymodel.WrapperOpenAIError(err, "set_model_failed", http.StatusInternalServerError)
 	}
 
 	if meta.ChannelConfig.SplitThink {
 		respMap, err := node.Map()
 		if err != nil {
-			return usage.ToModelUsage(), ErrorWrapper(err, "unmarshal_response_body_failed", http.StatusInternalServerError)
+			return usage.ToModelUsage(), relaymodel.WrapperOpenAIError(err, "unmarshal_response_body_failed", http.StatusInternalServerError)
 		}
 		SplitThink(respMap)
 		c.JSON(http.StatusOK, respMap)
@@ -427,7 +428,7 @@ func Handler(meta *meta.Meta, c *gin.Context, resp *http.Response, preHandler Pr
 
 	newData, err := sonic.Marshal(&node)
 	if err != nil {
-		return usage.ToModelUsage(), ErrorWrapper(err, "marshal_response_body_failed", http.StatusInternalServerError)
+		return usage.ToModelUsage(), relaymodel.WrapperOpenAIError(err, "marshal_response_body_failed", http.StatusInternalServerError)
 	}
 
 	_, err = c.Writer.Write(newData)

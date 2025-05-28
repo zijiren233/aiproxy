@@ -10,9 +10,10 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/core/common"
 	"github.com/labring/aiproxy/core/middleware"
-	"github.com/labring/aiproxy/core/relay/adaptor/openai"
+	"github.com/labring/aiproxy/core/model"
+	"github.com/labring/aiproxy/core/relay/adaptor"
 	"github.com/labring/aiproxy/core/relay/meta"
-	model "github.com/labring/aiproxy/core/relay/model"
+	relaymodel "github.com/labring/aiproxy/core/relay/model"
 )
 
 // Deprecated: Use openai.ConvertRequest instead
@@ -55,16 +56,16 @@ func ConvertEmbeddingsRequest(meta *meta.Meta, req *http.Request) (string, http.
 	return http.MethodPost, nil, bytes.NewReader(jsonData), nil
 }
 
-func embeddingResponse2OpenAI(meta *meta.Meta, response *EmbeddingResponse) *model.EmbeddingResponse {
-	openAIEmbeddingResponse := model.EmbeddingResponse{
+func embeddingResponse2OpenAI(meta *meta.Meta, response *EmbeddingResponse) *relaymodel.EmbeddingResponse {
+	openAIEmbeddingResponse := relaymodel.EmbeddingResponse{
 		Object: "list",
-		Data:   make([]*model.EmbeddingResponseItem, 0, 1),
+		Data:   make([]*relaymodel.EmbeddingResponseItem, 0, 1),
 		Model:  meta.OriginModel,
 		Usage:  response.Usage,
 	}
 
 	for i, embedding := range response.Output.Embeddings {
-		openAIEmbeddingResponse.Data = append(openAIEmbeddingResponse.Data, &model.EmbeddingResponseItem{
+		openAIEmbeddingResponse.Data = append(openAIEmbeddingResponse.Data, &relaymodel.EmbeddingResponseItem{
 			Object:    "embedding",
 			Index:     i,
 			Embedding: embedding.Embedding,
@@ -73,19 +74,19 @@ func embeddingResponse2OpenAI(meta *meta.Meta, response *EmbeddingResponse) *mod
 	return &openAIEmbeddingResponse
 }
 
-func EmbeddingsHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, *model.ErrorWithStatusCode) {
+func EmbeddingsHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, adaptor.Error) {
 	defer resp.Body.Close()
 
 	log := middleware.GetLogger(c)
 
 	responseBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, openai.ErrorWrapper(err, "read_response_body_failed", resp.StatusCode)
+		return nil, relaymodel.WrapperOpenAIError(err, "read_response_body_failed", resp.StatusCode)
 	}
 	var respBody EmbeddingResponse
 	err = sonic.Unmarshal(responseBody, &respBody)
 	if err != nil {
-		return nil, openai.ErrorWrapper(err, "unmarshal_response_body_failed", resp.StatusCode)
+		return nil, relaymodel.WrapperOpenAIError(err, "unmarshal_response_body_failed", resp.StatusCode)
 	}
 	if respBody.Usage.PromptTokens == 0 {
 		respBody.Usage.PromptTokens = respBody.Usage.TotalTokens
@@ -93,11 +94,11 @@ func EmbeddingsHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*m
 	openaiResponse := embeddingResponse2OpenAI(meta, &respBody)
 	data, err := sonic.Marshal(openaiResponse)
 	if err != nil {
-		return &respBody.Usage, openai.ErrorWrapper(err, "marshal_response_body_failed", resp.StatusCode)
+		return openaiResponse.Usage.ToModelUsage(), relaymodel.WrapperOpenAIError(err, "marshal_response_body_failed", resp.StatusCode)
 	}
 	_, err = c.Writer.Write(data)
 	if err != nil {
 		log.Warnf("write response body failed: %v", err)
 	}
-	return &openaiResponse.Usage, nil
+	return openaiResponse.Usage.ToModelUsage(), nil
 }
