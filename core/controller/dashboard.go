@@ -283,17 +283,15 @@ func GetGroupDashboardModels(c *gin.Context) {
 //	@Tags			dashboard
 //	@Produce		json
 //	@Security		ApiKeyAuth
-//	@Param			group			query		string	false	"Group or *"
 //	@Param			channel			query		int		false	"Channel ID"
 //	@Param			start_timestamp	query		int64	false	"Start timestamp"
 //	@Param			end_timestamp	query		int64	false	"End timestamp"
 //	@Success		200				{object}	middleware.APIResponse{data=[]model.CostRank}
 //	@Router			/api/model_cost_rank/ [get]
 func GetModelCostRank(c *gin.Context) {
-	group := c.Query("group")
 	channelID, _ := strconv.Atoi(c.Query("channel"))
 	startTime, endTime := parseTimeRange(c)
-	models, err := model.GetModelCostRank(group, channelID, startTime, endTime)
+	models, err := model.GetModelCostRank("*", "", channelID, startTime, endTime)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
@@ -309,6 +307,7 @@ func GetModelCostRank(c *gin.Context) {
 //	@Produce		json
 //	@Security		ApiKeyAuth
 //	@Param			group			path		string	true	"Group"
+//	@Param			token_name		query		string	false	"Token name"
 //	@Param			start_timestamp	query		int64	false	"Start timestamp"
 //	@Param			end_timestamp	query		int64	false	"End timestamp"
 //	@Success		200				{object}	middleware.APIResponse{data=[]model.CostRank}
@@ -319,8 +318,9 @@ func GetGroupModelCostRank(c *gin.Context) {
 		middleware.ErrorResponse(c, http.StatusBadRequest, "invalid group parameter")
 		return
 	}
+	tokenName := c.Query("token_name")
 	startTime, endTime := parseTimeRange(c)
-	models, err := model.GetModelCostRank(group, 0, startTime, endTime)
+	models, err := model.GetModelCostRank(group, tokenName, 0, startTime, endTime)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
