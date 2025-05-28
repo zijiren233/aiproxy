@@ -17,7 +17,7 @@ import (
 func TestConvertRerankRequestSuccess(t *testing.T) {
 	t.Parallel()
 	// Create mock request body
-	requestBody := map[string]interface{}{
+	requestBody := map[string]any{
 		"model": "original-model",
 		"documents": []string{
 			"This is document 1",
@@ -53,7 +53,7 @@ func TestConvertRerankRequestSuccess(t *testing.T) {
 	require.NoError(t, err)
 
 	// Parse the body back to verify the transformation
-	var transformedBody map[string]interface{}
+	var transformedBody map[string]any
 	err = sonic.Unmarshal(bodyBytes, &transformedBody)
 	require.NoError(t, err)
 
@@ -64,7 +64,7 @@ func TestConvertRerankRequestSuccess(t *testing.T) {
 	assert.NotContains(t, transformedBody, "documents")
 
 	// Verify texts contains the documents content
-	textsArray, ok := transformedBody["texts"].([]interface{})
+	textsArray, ok := transformedBody["texts"].([]any)
 	assert.True(t, ok, "texts should be an array")
 	assert.Len(t, textsArray, 2)
 	assert.Equal(t, "This is document 1", textsArray[0])
@@ -78,7 +78,7 @@ func TestConvertRerankRequestSuccess(t *testing.T) {
 func TestConvertRerankRequestMissingDocuments(t *testing.T) {
 	t.Parallel()
 	// Create mock request body without documents
-	requestBody := map[string]interface{}{
+	requestBody := map[string]any{
 		"model": "original-model",
 		"query": "Find relevant documents",
 	}

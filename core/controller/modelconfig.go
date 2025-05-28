@@ -23,7 +23,7 @@ func GetModelConfigs(c *gin.Context) {
 	_model := c.Query("model")
 	configs, total, err := model.GetModelConfigs(page, perPage, _model)
 	if err != nil {
-		middleware.ErrorResponse(c, http.StatusOK, err.Error())
+		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 	middleware.SuccessResponse(c, gin.H{
@@ -44,7 +44,7 @@ func GetModelConfigs(c *gin.Context) {
 func GetAllModelConfigs(c *gin.Context) {
 	configs, err := model.GetAllModelConfigs()
 	if err != nil {
-		middleware.ErrorResponse(c, http.StatusOK, err.Error())
+		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 	middleware.SuccessResponse(c, configs)
@@ -68,12 +68,12 @@ func GetModelConfigsByModelsContains(c *gin.Context) {
 	request := GetModelConfigsByModelsContainsRequest{}
 	err := c.ShouldBindJSON(&request)
 	if err != nil {
-		middleware.ErrorResponse(c, http.StatusOK, err.Error())
+		middleware.ErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
 	}
 	configs, err := model.GetModelConfigsByModels(request.Models)
 	if err != nil {
-		middleware.ErrorResponse(c, http.StatusOK, err.Error())
+		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 	middleware.SuccessResponse(c, configs)
@@ -100,7 +100,7 @@ func SearchModelConfigs(c *gin.Context) {
 	owner := c.Query("owner")
 	configs, total, err := model.SearchModelConfigs(keyword, page, perPage, _model, model.ModelOwner(owner))
 	if err != nil {
-		middleware.ErrorResponse(c, http.StatusOK, err.Error())
+		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 	middleware.SuccessResponse(c, gin.H{
@@ -128,7 +128,7 @@ type SaveModelConfigsRequest struct {
 func SaveModelConfigs(c *gin.Context) {
 	var configs []*SaveModelConfigsRequest
 	if err := c.ShouldBindJSON(&configs); err != nil {
-		middleware.ErrorResponse(c, http.StatusOK, err.Error())
+		middleware.ErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
 	}
 	modelConfigs := make([]*model.ModelConfig, len(configs))
@@ -137,7 +137,7 @@ func SaveModelConfigs(c *gin.Context) {
 	}
 	err := model.SaveModelConfigs(modelConfigs)
 	if err != nil {
-		middleware.ErrorResponse(c, http.StatusOK, err.Error())
+		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 	middleware.SuccessResponse(c, nil)
@@ -156,12 +156,12 @@ func SaveModelConfigs(c *gin.Context) {
 func SaveModelConfig(c *gin.Context) {
 	var config SaveModelConfigsRequest
 	if err := c.ShouldBindJSON(&config); err != nil {
-		middleware.ErrorResponse(c, http.StatusOK, err.Error())
+		middleware.ErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
 	}
 	err := model.SaveModelConfig(config.ModelConfig)
 	if err != nil {
-		middleware.ErrorResponse(c, http.StatusOK, err.Error())
+		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 	middleware.SuccessResponse(c, nil)
@@ -181,7 +181,7 @@ func DeleteModelConfig(c *gin.Context) {
 	_model := c.Param("model")
 	err := model.DeleteModelConfig(_model)
 	if err != nil {
-		middleware.ErrorResponse(c, http.StatusOK, err.Error())
+		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 	middleware.SuccessResponse(c, nil)
@@ -201,12 +201,12 @@ func DeleteModelConfigs(c *gin.Context) {
 	models := []string{}
 	err := c.ShouldBindJSON(&models)
 	if err != nil {
-		middleware.ErrorResponse(c, http.StatusOK, err.Error())
+		middleware.ErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
 	}
 	err = model.DeleteModelConfigsByModels(models)
 	if err != nil {
-		middleware.ErrorResponse(c, http.StatusOK, err.Error())
+		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 	middleware.SuccessResponse(c, nil)
@@ -226,7 +226,7 @@ func GetModelConfig(c *gin.Context) {
 	_model := c.Param("model")
 	config, err := model.GetModelConfig(_model)
 	if err != nil {
-		middleware.ErrorResponse(c, http.StatusOK, err.Error())
+		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 	middleware.SuccessResponse(c, config)

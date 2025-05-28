@@ -2,12 +2,14 @@ package model
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"slices"
 	"strings"
 	"time"
 
 	"github.com/bytedance/sonic"
+	"github.com/bytedance/sonic/ast"
 	"github.com/labring/aiproxy/core/common"
 	"github.com/labring/aiproxy/core/common/config"
 	"github.com/labring/aiproxy/core/monitor"
@@ -31,7 +33,38 @@ const (
 )
 
 type ChannelConfig struct {
-	SplitThink bool `json:"split_think"`
+	SplitThink bool            `json:"split_think"`
+	Spec       json.RawMessage `json:"spec"`
+}
+
+// validate spec json is map[string]any
+func (c *ChannelConfig) UnmarshalJSON(data []byte) error {
+	type Alias ChannelConfig
+	alias := (*Alias)(c)
+	if err := sonic.Unmarshal(data, alias); err != nil {
+		return err
+	}
+	if len(alias.Spec) > 0 {
+		var spec map[string]any
+		if err := sonic.Unmarshal(alias.Spec, &spec); err != nil {
+			return fmt.Errorf("invalid spec json: %w", err)
+		}
+	}
+	return nil
+}
+
+func (c *ChannelConfig) SpecConfig(obj any) error {
+	if c == nil || len(c.Spec) == 0 {
+		return nil
+	}
+	return sonic.Unmarshal(c.Spec, obj)
+}
+
+func (c *ChannelConfig) Get(key ...any) (ast.Node, error) {
+	if c == nil || len(c.Spec) == 0 {
+		return ast.Node{}, ast.ErrNotExist
+	}
+	return sonic.Get(c.Spec, key...)
 }
 
 type Channel struct {
@@ -228,7 +261,7 @@ func SearchChannels(keyword string, page int, perPage int, id int, name string, 
 	// Handle keyword search for zero value fields
 	if keyword != "" {
 		var conditions []string
-		var values []interface{}
+		var values []any
 
 		if id == 0 {
 			conditions = append(conditions, "id = ?")
@@ -441,7 +474,7 @@ func UpdateChannelStatusByID(id int, status int) error {
 func UpdateChannelUsedAmount(id int, amount float64, requestCount int) error {
 	result := DB.Model(&Channel{}).
 		Where("id = ?", id).
-		Updates(map[string]interface{}{
+		Updates(map[string]any{
 			"used_amount":   gorm.Expr("used_amount + ?", amount),
 			"request_count": gorm.Expr("request_count + ?", requestCount),
 		})

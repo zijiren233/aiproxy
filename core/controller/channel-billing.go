@@ -118,7 +118,7 @@ func updateAllChannelsBalance() error {
 func UpdateAllChannelsBalance(c *gin.Context) {
 	err := updateAllChannelsBalance()
 	if err != nil {
-		middleware.ErrorResponse(c, http.StatusOK, err.Error())
+		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 	middleware.SuccessResponse(c, nil)

@@ -201,7 +201,7 @@ func UpdateGroupUsedAmountAndRequestCount(id string, amount float64, count int) 
 			},
 		}).
 		Where("id = ?", id).
-		Updates(map[string]interface{}{
+		Updates(map[string]any{
 			"used_amount":   gorm.Expr("used_amount + ?", amount),
 			"request_count": gorm.Expr("request_count + ?", count),
 		})

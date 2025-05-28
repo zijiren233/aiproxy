@@ -158,12 +158,12 @@ func ChannelBuiltinModels(c *gin.Context) {
 func ChannelBuiltinModelsByType(c *gin.Context) {
 	channelType := c.Param("type")
 	if channelType == "" {
-		middleware.ErrorResponse(c, http.StatusOK, "type is required")
+		middleware.ErrorResponse(c, http.StatusBadRequest, "type is required")
 		return
 	}
 	channelTypeInt, err := strconv.Atoi(channelType)
 	if err != nil {
-		middleware.ErrorResponse(c, http.StatusOK, "invalid type")
+		middleware.ErrorResponse(c, http.StatusBadRequest, "invalid type")
 		return
 	}
 	middleware.SuccessResponse(c, builtinChannelType2Models[model.ChannelType(channelTypeInt)])
@@ -198,12 +198,12 @@ func ChannelDefaultModelsAndMapping(c *gin.Context) {
 func ChannelDefaultModelsAndMappingByType(c *gin.Context) {
 	channelType := c.Param("type")
 	if channelType == "" {
-		middleware.ErrorResponse(c, http.StatusOK, "type is required")
+		middleware.ErrorResponse(c, http.StatusBadRequest, "type is required")
 		return
 	}
 	channelTypeInt, err := strconv.Atoi(channelType)
 	if err != nil {
-		middleware.ErrorResponse(c, http.StatusOK, "invalid type")
+		middleware.ErrorResponse(c, http.StatusBadRequest, "invalid type")
 		return
 	}
 	middleware.SuccessResponse(c, gin.H{
@@ -238,7 +238,7 @@ func EnabledModels(c *gin.Context) {
 func EnabledModelsSet(c *gin.Context) {
 	set := c.Param("set")
 	if set == "" {
-		middleware.ErrorResponse(c, http.StatusOK, "set is required")
+		middleware.ErrorResponse(c, http.StatusBadRequest, "set is required")
 		return
 	}
 	middleware.SuccessResponse(c, model.LoadModelCaches().EnabledModelConfigsBySet[set])
@@ -298,7 +298,7 @@ func EnabledModelChannels(c *gin.Context) {
 func EnabledModelChannelsSet(c *gin.Context) {
 	set := c.Param("set")
 	if set == "" {
-		middleware.ErrorResponse(c, http.StatusOK, "set is required")
+		middleware.ErrorResponse(c, http.StatusBadRequest, "set is required")
 		return
 	}
 	raw := model.LoadModelCaches().EnabledModel2ChannelsBySet[set]

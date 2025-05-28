@@ -835,7 +835,7 @@ func buildSearchLogsQuery(
 	// Handle keyword search for zero value fields
 	if keyword != "" {
 		var conditions []string
-		var values []interface{}
+		var values []any
 
 		if requestID == "" {
 			conditions = append(conditions, "request_id = ?")

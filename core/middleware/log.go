@@ -11,7 +11,7 @@ import (
 )
 
 var fieldsPool = sync.Pool{
-	New: func() interface{} {
+	New: func() any {
 		return make(logrus.Fields, 6)
 	},
 }

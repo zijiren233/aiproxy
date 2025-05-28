@@ -169,7 +169,7 @@ func GetDashboard(c *gin.Context) {
 
 	dashboards, err := model.GetDashboardData(start, end, modelName, channelID, timeSpan, timezoneLocation)
 	if err != nil {
-		middleware.ErrorResponse(c, http.StatusOK, err.Error())
+		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -206,7 +206,7 @@ func GetDashboard(c *gin.Context) {
 func GetGroupDashboard(c *gin.Context) {
 	group := c.Param("group")
 	if group == "" || group == "*" {
-		middleware.ErrorResponse(c, http.StatusOK, "invalid group parameter")
+		middleware.ErrorResponse(c, http.StatusBadRequest, "invalid group parameter")
 		return
 	}
 
@@ -220,7 +220,7 @@ func GetGroupDashboard(c *gin.Context) {
 
 	dashboards, err := model.GetGroupDashboardData(group, start, end, tokenName, modelName, timeSpan, timezoneLocation)
 	if err != nil {
-		middleware.ErrorResponse(c, http.StatusOK, "failed to get statistics")
+		middleware.ErrorResponse(c, http.StatusInternalServerError, "failed to get statistics")
 		return
 	}
 
@@ -247,7 +247,7 @@ func GetGroupDashboard(c *gin.Context) {
 func GetGroupDashboardModels(c *gin.Context) {
 	group := c.Param("group")
 	if group == "" || group == "*" {
-		middleware.ErrorResponse(c, http.StatusOK, "invalid group parameter")
+		middleware.ErrorResponse(c, http.StatusBadRequest, "invalid group parameter")
 		return
 	}
 	groupCache, err := model.CacheGetGroup(group)
@@ -255,7 +255,7 @@ func GetGroupDashboardModels(c *gin.Context) {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			middleware.SuccessResponse(c, model.LoadModelCaches().EnabledModelConfigsBySet[model.ChannelDefaultSet])
 		} else {
-			middleware.ErrorResponse(c, http.StatusOK, fmt.Sprintf("failed to get group: %v", err))
+			middleware.ErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("failed to get group: %v", err))
 		}
 		return
 	}
@@ -295,7 +295,7 @@ func GetModelCostRank(c *gin.Context) {
 	startTime, endTime := parseTimeRange(c)
 	models, err := model.GetModelCostRank(group, channelID, startTime, endTime)
 	if err != nil {
-		middleware.ErrorResponse(c, http.StatusOK, err.Error())
+		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 	middleware.SuccessResponse(c, models)
@@ -316,13 +316,13 @@ func GetModelCostRank(c *gin.Context) {
 func GetGroupModelCostRank(c *gin.Context) {
 	group := c.Param("group")
 	if group == "" || group == "*" {
-		middleware.ErrorResponse(c, http.StatusOK, "invalid group parameter")
+		middleware.ErrorResponse(c, http.StatusBadRequest, "invalid group parameter")
 		return
 	}
 	startTime, endTime := parseTimeRange(c)
 	models, err := model.GetModelCostRank(group, 0, startTime, endTime)
 	if err != nil {
-		middleware.ErrorResponse(c, http.StatusOK, err.Error())
+		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 	middleware.SuccessResponse(c, models)

@@ -41,13 +41,13 @@ type ParameterSpec struct {
 }
 
 type ToolResult struct {
-	Call    ToolCall                 `json:"call"`
-	Outputs []map[string]interface{} `json:"outputs"`
+	Call    ToolCall         `json:"call"`
+	Outputs []map[string]any `json:"outputs"`
 }
 
 type ToolCall struct {
-	Parameters map[string]interface{} `json:"parameters" required:"true"`
-	Name       string                 `json:"name"       required:"true"`
+	Parameters map[string]any `json:"parameters" required:"true"`
+	Name       string         `json:"name"       required:"true"`
 }
 
 type StreamResponse struct {

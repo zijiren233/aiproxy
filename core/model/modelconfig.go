@@ -166,7 +166,7 @@ func SearchModelConfigs(keyword string, page int, perPage int, model string, own
 	}
 	if keyword != "" {
 		var conditions []string
-		var values []interface{}
+		var values []any
 
 		if model == "" {
 			if common.UsingPostgreSQL {

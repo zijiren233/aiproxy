@@ -794,9 +794,9 @@ func CreateMCPErrorResponse(
 		JSONRPC: mcp.JSONRPC_VERSION,
 		ID:      id,
 		Error: struct {
-			Code    int         `json:"code"`
-			Message string      `json:"message"`
-			Data    interface{} `json:"data,omitempty"`
+			Code    int    `json:"code"`
+			Message string `json:"message"`
+			Data    any    `json:"data,omitempty"`
 		}{
 			Code:    code,
 			Message: message,

@@ -21,7 +21,7 @@ import (
 func GetAllChannelModelErrorRates(c *gin.Context) {
 	rates, err := monitor.GetAllChannelModelErrorRates(c.Request.Context())
 	if err != nil {
-		middleware.ErrorResponse(c, http.StatusOK, err.Error())
+		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 	middleware.SuccessResponse(c, rates)
@@ -40,12 +40,12 @@ func GetAllChannelModelErrorRates(c *gin.Context) {
 func GetChannelModelErrorRates(c *gin.Context) {
 	channelID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		middleware.ErrorResponse(c, http.StatusOK, "Invalid channel ID")
+		middleware.ErrorResponse(c, http.StatusBadRequest, "Invalid channel ID")
 		return
 	}
 	rates, err := monitor.GetChannelModelErrorRates(c.Request.Context(), channelID)
 	if err != nil {
-		middleware.ErrorResponse(c, http.StatusOK, err.Error())
+		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 	middleware.SuccessResponse(c, rates)
@@ -63,7 +63,7 @@ func GetChannelModelErrorRates(c *gin.Context) {
 func ClearAllModelErrors(c *gin.Context) {
 	err := monitor.ClearAllModelErrors(c.Request.Context())
 	if err != nil {
-		middleware.ErrorResponse(c, http.StatusOK, err.Error())
+		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 	middleware.SuccessResponse(c, nil)
@@ -82,12 +82,12 @@ func ClearAllModelErrors(c *gin.Context) {
 func ClearChannelAllModelErrors(c *gin.Context) {
 	channelID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		middleware.ErrorResponse(c, http.StatusOK, "Invalid channel ID")
+		middleware.ErrorResponse(c, http.StatusBadRequest, "Invalid channel ID")
 		return
 	}
 	err = monitor.ClearChannelAllModelErrors(c.Request.Context(), int(channelID))
 	if err != nil {
-		middleware.ErrorResponse(c, http.StatusOK, err.Error())
+		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 	middleware.SuccessResponse(c, nil)
@@ -108,12 +108,12 @@ func ClearChannelModelErrors(c *gin.Context) {
 	model := c.Param("model")
 	channelID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		middleware.ErrorResponse(c, http.StatusOK, "Invalid channel ID")
+		middleware.ErrorResponse(c, http.StatusBadRequest, "Invalid channel ID")
 		return
 	}
 	err = monitor.ClearChannelModelErrors(c.Request.Context(), model, int(channelID))
 	if err != nil {
-		middleware.ErrorResponse(c, http.StatusOK, err.Error())
+		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 	middleware.SuccessResponse(c, nil)
@@ -131,7 +131,7 @@ func ClearChannelModelErrors(c *gin.Context) {
 func GetModelsErrorRate(c *gin.Context) {
 	rates, err := monitor.GetModelsErrorRate(c.Request.Context())
 	if err != nil {
-		middleware.ErrorResponse(c, http.StatusOK, err.Error())
+		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 	middleware.SuccessResponse(c, rates)
@@ -149,7 +149,7 @@ func GetModelsErrorRate(c *gin.Context) {
 func GetAllBannedModelChannels(c *gin.Context) {
 	channels, err := monitor.GetAllBannedModelChannels(c.Request.Context())
 	if err != nil {
-		middleware.ErrorResponse(c, http.StatusOK, err.Error())
+		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 	middleware.SuccessResponse(c, channels)

@@ -155,7 +155,7 @@ func SearchTokens(group string, keyword string, page int, perPage int, order str
 
 	if keyword != "" {
 		var conditions []string
-		var values []interface{}
+		var values []any
 
 		if group == "" {
 			if common.UsingPostgreSQL {
@@ -230,7 +230,7 @@ func SearchGroupTokens(group string, keyword string, page int, perPage int, orde
 
 	if keyword != "" {
 		var conditions []string
-		var values []interface{}
+		var values []any
 
 		if name == "" {
 			if common.UsingPostgreSQL {
@@ -349,7 +349,7 @@ func UpdateTokenStatus(id int, status int) (err error) {
 		}).
 		Where("id = ?", id).
 		Updates(
-			map[string]interface{}{
+			map[string]any{
 				"status": status,
 			},
 		)
@@ -377,7 +377,7 @@ func UpdateGroupTokenStatus(group string, id int, status int) (err error) {
 		}).
 		Where("id = ? and group_id = ?", id, group).
 		Updates(
-			map[string]interface{}{
+			map[string]any{
 				"status": status,
 			},
 		)
@@ -581,7 +581,7 @@ func UpdateTokenUsedAmount(id int, amount float64, requestCount int) (err error)
 		}).
 		Where("id = ?", id).
 		Updates(
-			map[string]interface{}{
+			map[string]any{
 				"used_amount":   gorm.Expr("used_amount + ?", amount),
 				"request_count": gorm.Expr("request_count + ?", requestCount),
 			},

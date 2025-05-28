@@ -125,7 +125,7 @@ func GetTokens(c *gin.Context) {
 
 	tokens, total, err := model.GetTokens(group, page, perPage, order, status)
 	if err != nil {
-		middleware.ErrorResponse(c, http.StatusOK, err.Error())
+		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -152,7 +152,7 @@ func GetTokens(c *gin.Context) {
 func GetGroupTokens(c *gin.Context) {
 	group := c.Param("group")
 	if group == "" {
-		middleware.ErrorResponse(c, http.StatusOK, "group is required")
+		middleware.ErrorResponse(c, http.StatusBadRequest, "group is required")
 		return
 	}
 
@@ -162,7 +162,7 @@ func GetGroupTokens(c *gin.Context) {
 
 	tokens, total, err := model.GetTokens(group, page, perPage, order, status)
 	if err != nil {
-		middleware.ErrorResponse(c, http.StatusOK, err.Error())
+		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -200,7 +200,7 @@ func SearchTokens(c *gin.Context) {
 
 	tokens, total, err := model.SearchTokens(group, keyword, page, perPage, order, status, name, key)
 	if err != nil {
-		middleware.ErrorResponse(c, http.StatusOK, err.Error())
+		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -230,7 +230,7 @@ func SearchTokens(c *gin.Context) {
 func SearchGroupTokens(c *gin.Context) {
 	group := c.Param("group")
 	if group == "" {
-		middleware.ErrorResponse(c, http.StatusOK, "group is required")
+		middleware.ErrorResponse(c, http.StatusBadRequest, "group is required")
 		return
 	}
 
@@ -243,7 +243,7 @@ func SearchGroupTokens(c *gin.Context) {
 
 	tokens, total, err := model.SearchGroupTokens(group, keyword, page, perPage, order, status, name, key)
 	if err != nil {
-		middleware.ErrorResponse(c, http.StatusOK, err.Error())
+		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -266,13 +266,13 @@ func SearchGroupTokens(c *gin.Context) {
 func GetToken(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		middleware.ErrorResponse(c, http.StatusOK, err.Error())
+		middleware.ErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	token, err := model.GetTokenByID(id)
 	if err != nil {
-		middleware.ErrorResponse(c, http.StatusOK, err.Error())
+		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -293,19 +293,19 @@ func GetToken(c *gin.Context) {
 func GetGroupToken(c *gin.Context) {
 	group := c.Param("group")
 	if group == "" {
-		middleware.ErrorResponse(c, http.StatusOK, "group is required")
+		middleware.ErrorResponse(c, http.StatusBadRequest, "group is required")
 		return
 	}
 
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		middleware.ErrorResponse(c, http.StatusOK, err.Error())
+		middleware.ErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	token, err := model.GetGroupTokenByID(group, id)
 	if err != nil {
-		middleware.ErrorResponse(c, http.StatusOK, err.Error())
+		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -330,12 +330,12 @@ func AddGroupToken(c *gin.Context) {
 	group := c.Param("group")
 	var req AddTokenRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		middleware.ErrorResponse(c, http.StatusOK, err.Error())
+		middleware.ErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	if err := validateToken(req); err != nil {
-		middleware.ErrorResponse(c, http.StatusOK, "parameter error: "+err.Error())
+		middleware.ErrorResponse(c, http.StatusBadRequest, "parameter error: "+err.Error())
 		return
 	}
 
@@ -343,7 +343,7 @@ func AddGroupToken(c *gin.Context) {
 	token.GroupID = group
 
 	if err := model.InsertToken(token, c.Query("auto_create_group") == "true", c.Query("ignore_exist") == "true"); err != nil {
-		middleware.ErrorResponse(c, http.StatusOK, err.Error())
+		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -363,12 +363,12 @@ func AddGroupToken(c *gin.Context) {
 func DeleteToken(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		middleware.ErrorResponse(c, http.StatusOK, err.Error())
+		middleware.ErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	if err := model.DeleteTokenByID(id); err != nil {
-		middleware.ErrorResponse(c, http.StatusOK, err.Error())
+		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -389,12 +389,12 @@ func DeleteToken(c *gin.Context) {
 func DeleteTokens(c *gin.Context) {
 	var ids []int
 	if err := c.ShouldBindJSON(&ids); err != nil {
-		middleware.ErrorResponse(c, http.StatusOK, err.Error())
+		middleware.ErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	if err := model.DeleteTokensByIDs(ids); err != nil {
-		middleware.ErrorResponse(c, http.StatusOK, err.Error())
+		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -416,12 +416,12 @@ func DeleteGroupToken(c *gin.Context) {
 	group := c.Param("group")
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		middleware.ErrorResponse(c, http.StatusOK, err.Error())
+		middleware.ErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	if err := model.DeleteGroupTokenByID(group, id); err != nil {
-		middleware.ErrorResponse(c, http.StatusOK, err.Error())
+		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -443,12 +443,12 @@ func DeleteGroupTokens(c *gin.Context) {
 	group := c.Param("group")
 	var ids []int
 	if err := c.ShouldBindJSON(&ids); err != nil {
-		middleware.ErrorResponse(c, http.StatusOK, err.Error())
+		middleware.ErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	if err := model.DeleteGroupTokensByIDs(group, ids); err != nil {
-		middleware.ErrorResponse(c, http.StatusOK, err.Error())
+		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -470,25 +470,25 @@ func DeleteGroupTokens(c *gin.Context) {
 func UpdateToken(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		middleware.ErrorResponse(c, http.StatusOK, err.Error())
+		middleware.ErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	var req AddTokenRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		middleware.ErrorResponse(c, http.StatusOK, err.Error())
+		middleware.ErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	if err := validateTokenUpdate(req); err != nil {
-		middleware.ErrorResponse(c, http.StatusOK, "parameter error: "+err.Error())
+		middleware.ErrorResponse(c, http.StatusBadRequest, "parameter error: "+err.Error())
 		return
 	}
 
 	token := req.ToToken()
 
 	if err := model.UpdateToken(id, token); err != nil {
-		middleware.ErrorResponse(c, http.StatusOK, err.Error())
+		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -512,25 +512,25 @@ func UpdateGroupToken(c *gin.Context) {
 	group := c.Param("group")
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		middleware.ErrorResponse(c, http.StatusOK, err.Error())
+		middleware.ErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	var req AddTokenRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		middleware.ErrorResponse(c, http.StatusOK, err.Error())
+		middleware.ErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	if err := validateTokenUpdate(req); err != nil {
-		middleware.ErrorResponse(c, http.StatusOK, "parameter error: "+err.Error())
+		middleware.ErrorResponse(c, http.StatusBadRequest, "parameter error: "+err.Error())
 		return
 	}
 
 	token := req.ToToken()
 
 	if err := model.UpdateGroupToken(id, group, token); err != nil {
-		middleware.ErrorResponse(c, http.StatusOK, err.Error())
+		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -552,18 +552,18 @@ func UpdateGroupToken(c *gin.Context) {
 func UpdateTokenStatus(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		middleware.ErrorResponse(c, http.StatusOK, err.Error())
+		middleware.ErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	var req UpdateTokenStatusRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		middleware.ErrorResponse(c, http.StatusOK, err.Error())
+		middleware.ErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	if err := model.UpdateTokenStatus(id, req.Status); err != nil {
-		middleware.ErrorResponse(c, http.StatusOK, err.Error())
+		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -587,18 +587,18 @@ func UpdateGroupTokenStatus(c *gin.Context) {
 	group := c.Param("group")
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		middleware.ErrorResponse(c, http.StatusOK, err.Error())
+		middleware.ErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	var req UpdateTokenStatusRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		middleware.ErrorResponse(c, http.StatusOK, err.Error())
+		middleware.ErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	if err := model.UpdateGroupTokenStatus(group, id, req.Status); err != nil {
-		middleware.ErrorResponse(c, http.StatusOK, err.Error())
+		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -620,18 +620,18 @@ func UpdateGroupTokenStatus(c *gin.Context) {
 func UpdateTokenName(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		middleware.ErrorResponse(c, http.StatusOK, err.Error())
+		middleware.ErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	var req UpdateTokenNameRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		middleware.ErrorResponse(c, http.StatusOK, err.Error())
+		middleware.ErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	if err := model.UpdateTokenName(id, req.Name); err != nil {
-		middleware.ErrorResponse(c, http.StatusOK, err.Error())
+		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -655,18 +655,18 @@ func UpdateGroupTokenName(c *gin.Context) {
 	group := c.Param("group")
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		middleware.ErrorResponse(c, http.StatusOK, err.Error())
+		middleware.ErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	var req UpdateTokenNameRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		middleware.ErrorResponse(c, http.StatusOK, err.Error())
+		middleware.ErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	if err := model.UpdateGroupTokenName(group, id, req.Name); err != nil {
-		middleware.ErrorResponse(c, http.StatusOK, err.Error())
+		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 
