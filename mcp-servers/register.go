@@ -17,10 +17,40 @@ type mcpServerCacheItem struct {
 }
 
 var (
-	servers            = make(map[string]EmbedMcp)
-	mcpServerCache     = make(map[string]*mcpServerCacheItem)
-	mcpServerCacheLock = sync.RWMutex{}
+	servers             = make(map[string]EmbedMcp)
+	mcpServerCache      = make(map[string]*mcpServerCacheItem)
+	mcpServerCacheLock  = sync.RWMutex{}
+	cacheExpirationTime = 3 * time.Minute
 )
+
+func startCacheCleaner(interval time.Duration) {
+	go func() {
+		ticker := time.NewTicker(interval)
+		defer ticker.Stop()
+
+		for range ticker.C {
+			cleanupExpiredCache()
+		}
+	}()
+}
+
+func cleanupExpiredCache() {
+	now := time.Now().Unix()
+	expiredTime := now - int64(cacheExpirationTime.Seconds())
+
+	mcpServerCacheLock.Lock()
+	defer mcpServerCacheLock.Unlock()
+
+	for key, item := range mcpServerCache {
+		if item.LastUsedTimestamp.Load() < expiredTime {
+			delete(mcpServerCache, key)
+		}
+	}
+}
+
+func init() {
+	startCacheCleaner(time.Minute)
+}
 
 func Register(mcp EmbedMcp) {
 	if mcp.ID == "" {
