@@ -5,8 +5,8 @@ import (
 	"net/http"
 
 	"github.com/bytedance/sonic"
-	"github.com/labring/aiproxy/core/relay/adaptor/openai"
-	"github.com/labring/aiproxy/core/relay/model"
+	"github.com/labring/aiproxy/core/relay/adaptor"
+	relaymodel "github.com/labring/aiproxy/core/relay/model"
 )
 
 type Detail struct {
@@ -15,21 +15,21 @@ type Detail struct {
 	Type string   `json:"type"`
 }
 
-func ErrorHanlder(resp *http.Response) *model.ErrorWithStatusCode {
+func ErrorHanlder(resp *http.Response) adaptor.Error {
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return openai.ErrorWrapper(err, "read_response_body_failed", resp.StatusCode)
+		return relaymodel.WrapperOpenAIError(err, "read_response_body_failed", resp.StatusCode)
 	}
 
 	detailValue, err := sonic.Get(body, "detail")
 	if err != nil {
-		return openai.ErrorWrapper(err, "unmarshal_response_body_failed", resp.StatusCode)
+		return relaymodel.WrapperOpenAIError(err, "unmarshal_response_body_failed", resp.StatusCode)
 	}
 
 	errorMessage := "unknown error"
-	errorType := openai.ErrorTypeUpstream
+	errorType := relaymodel.ErrorTypeUpstream
 
 	if detailStr, err := detailValue.String(); err == nil {
 		errorMessage = detailStr
@@ -44,12 +44,9 @@ func ErrorHanlder(resp *http.Response) *model.ErrorWithStatusCode {
 		}
 	}
 
-	return &model.ErrorWithStatusCode{
-		Error: model.Error{
-			Message: errorMessage,
-			Type:    errorType,
-			Code:    resp.StatusCode,
-		},
-		StatusCode: resp.StatusCode,
-	}
+	return relaymodel.NewOpenAIError(resp.StatusCode, relaymodel.OpenAIError{
+		Message: errorMessage,
+		Type:    errorType,
+		Code:    resp.StatusCode,
+	})
 }

@@ -9,7 +9,6 @@ import (
 	"github.com/labring/aiproxy/core/relay/adaptor/openai"
 	"github.com/labring/aiproxy/core/relay/meta"
 	"github.com/labring/aiproxy/core/relay/mode"
-	relaymodel "github.com/labring/aiproxy/core/relay/model"
 )
 
 var _ adaptor.Adaptor = (*Adaptor)(nil)
@@ -29,7 +28,7 @@ func (a *Adaptor) GetModelList() []*model.ModelConfig {
 }
 
 //nolint:gocritic
-func (a *Adaptor) DoResponse(meta *meta.Meta, c *gin.Context, resp *http.Response) (usage *model.Usage, err *relaymodel.ErrorWithStatusCode) {
+func (a *Adaptor) DoResponse(meta *meta.Meta, c *gin.Context, resp *http.Response) (usage *model.Usage, err adaptor.Error) {
 	usage, err = a.Adaptor.DoResponse(meta, c, resp)
 	if err != nil {
 		return nil, err

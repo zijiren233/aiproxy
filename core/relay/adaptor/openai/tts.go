@@ -11,51 +11,55 @@ import (
 	"github.com/labring/aiproxy/core/common"
 	"github.com/labring/aiproxy/core/middleware"
 	"github.com/labring/aiproxy/core/model"
+	"github.com/labring/aiproxy/core/relay/adaptor"
 	"github.com/labring/aiproxy/core/relay/meta"
-	relaymodel "github.com/labring/aiproxy/core/relay/model"
 )
 
-func ConvertTTSRequest(meta *meta.Meta, req *http.Request, defaultVoice string) (string, http.Header, io.Reader, error) {
+func ConvertTTSRequest(meta *meta.Meta, req *http.Request, defaultVoice string) (*adaptor.ConvertRequestResult, error) {
 	node, err := common.UnmarshalBody2Node(req)
 	if err != nil {
-		return "", nil, nil, err
+		return nil, err
 	}
 
 	input, err := node.Get("input").String()
 	if err != nil {
 		if errors.Is(err, ast.ErrNotExist) {
-			return "", nil, nil, errors.New("input is required")
+			return nil, errors.New("input is required")
 		}
-		return "", nil, nil, err
+		return nil, err
 	}
 	if len(input) > 4096 {
-		return "", nil, nil, errors.New("input is too long (over 4096 characters)")
+		return nil, errors.New("input is too long (over 4096 characters)")
 	}
 
 	voice, err := node.Get("voice").String()
 	if err != nil && !errors.Is(err, ast.ErrNotExist) {
-		return "", nil, nil, err
+		return nil, err
 	}
 	if voice == "" && defaultVoice != "" {
 		_, err = node.Set("voice", ast.NewString(defaultVoice))
 		if err != nil {
-			return "", nil, nil, err
+			return nil, err
 		}
 	}
 
 	_, err = node.Set("model", ast.NewString(meta.ActualModel))
 	if err != nil {
-		return "", nil, nil, err
+		return nil, err
 	}
 
 	jsonData, err := node.MarshalJSON()
 	if err != nil {
-		return "", nil, nil, err
+		return nil, err
 	}
-	return http.MethodPost, nil, bytes.NewReader(jsonData), nil
+	return &adaptor.ConvertRequestResult{
+		Method: http.MethodPost,
+		Header: nil,
+		Body:   bytes.NewReader(jsonData),
+	}, nil
 }
 
-func TTSHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, *relaymodel.ErrorWithStatusCode) {
+func TTSHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, adaptor.Error) {
 	if resp.StatusCode != http.StatusOK {
 		return nil, ErrorHanlder(resp)
 	}

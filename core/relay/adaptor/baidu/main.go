@@ -3,7 +3,6 @@ package baidu
 import (
 	"bufio"
 	"bytes"
-	"io"
 	"net/http"
 
 	"github.com/bytedance/sonic"
@@ -12,6 +11,7 @@ import (
 	"github.com/labring/aiproxy/core/common/render"
 	"github.com/labring/aiproxy/core/middleware"
 	"github.com/labring/aiproxy/core/model"
+	"github.com/labring/aiproxy/core/relay/adaptor"
 	"github.com/labring/aiproxy/core/relay/adaptor/openai"
 	"github.com/labring/aiproxy/core/relay/meta"
 	relaymodel "github.com/labring/aiproxy/core/relay/model"
@@ -38,10 +38,10 @@ type ChatRequest struct {
 	EnableCitation  bool                  `json:"enable_citation,omitempty"`
 }
 
-func ConvertRequest(meta *meta.Meta, req *http.Request) (string, http.Header, io.Reader, error) {
+func ConvertRequest(meta *meta.Meta, req *http.Request) (*adaptor.ConvertRequestResult, error) {
 	request, err := utils.UnmarshalGeneralOpenAIRequest(req)
 	if err != nil {
-		return "", nil, nil, err
+		return nil, err
 	}
 	request.Model = meta.ActualModel
 	baiduRequest := ChatRequest{
@@ -78,9 +78,13 @@ func ConvertRequest(meta *meta.Meta, req *http.Request) (string, http.Header, io
 
 	data, err := sonic.Marshal(baiduRequest)
 	if err != nil {
-		return "", nil, nil, err
+		return nil, err
 	}
-	return http.MethodPost, nil, bytes.NewReader(data), nil
+	return &adaptor.ConvertRequestResult{
+		Method: http.MethodPost,
+		Header: nil,
+		Body:   bytes.NewReader(data),
+	}, nil
 }
 
 func response2OpenAI(meta *meta.Meta, response *ChatResponse) *relaymodel.TextResponse {
@@ -122,7 +126,7 @@ func streamResponse2OpenAI(meta *meta.Meta, baiduResponse *ChatStreamResponse) *
 	return &response
 }
 
-func StreamHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, *relaymodel.ErrorWithStatusCode) {
+func StreamHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, adaptor.Error) {
 	defer resp.Body.Close()
 
 	log := middleware.GetLogger(c)
@@ -166,13 +170,13 @@ func StreamHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model
 	return usage.ToModelUsage(), nil
 }
 
-func Handler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, *relaymodel.ErrorWithStatusCode) {
+func Handler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, adaptor.Error) {
 	defer resp.Body.Close()
 
 	var baiduResponse ChatResponse
 	err := sonic.ConfigDefault.NewDecoder(resp.Body).Decode(&baiduResponse)
 	if err != nil {
-		return nil, openai.ErrorWrapper(err, "unmarshal_response_body_failed", http.StatusInternalServerError)
+		return nil, relaymodel.WrapperOpenAIError(err, "unmarshal_response_body_failed", http.StatusInternalServerError)
 	}
 	if baiduResponse.Error != nil && baiduResponse.Error.ErrorCode != 0 {
 		return nil, ErrorHandler(baiduResponse.Error)
@@ -180,7 +184,7 @@ func Handler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage
 	fullTextResponse := response2OpenAI(meta, &baiduResponse)
 	jsonResponse, err := sonic.Marshal(fullTextResponse)
 	if err != nil {
-		return nil, openai.ErrorWrapper(err, "marshal_response_body_failed", http.StatusInternalServerError)
+		return nil, relaymodel.WrapperOpenAIError(err, "marshal_response_body_failed", http.StatusInternalServerError)
 	}
 	c.Writer.Header().Set("Content-Type", "application/json")
 	c.Writer.WriteHeader(resp.StatusCode)

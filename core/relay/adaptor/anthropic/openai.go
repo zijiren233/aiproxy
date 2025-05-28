@@ -17,6 +17,7 @@ import (
 	"github.com/labring/aiproxy/core/common/render"
 	"github.com/labring/aiproxy/core/middleware"
 	"github.com/labring/aiproxy/core/model"
+	"github.com/labring/aiproxy/core/relay/adaptor"
 	"github.com/labring/aiproxy/core/relay/adaptor/openai"
 	"github.com/labring/aiproxy/core/relay/meta"
 	relaymodel "github.com/labring/aiproxy/core/relay/model"
@@ -273,7 +274,7 @@ func batchPatchImage2Base64(ctx context.Context, imageTasks []*Content) error {
 }
 
 // https://docs.anthropic.com/claude/reference/messages-streaming
-func StreamResponse2OpenAI(meta *meta.Meta, respData []byte) (*relaymodel.ChatCompletionsStreamResponse, *relaymodel.ErrorWithStatusCode) {
+func StreamResponse2OpenAI(meta *meta.Meta, respData []byte) (*relaymodel.ChatCompletionsStreamResponse, adaptor.Error) {
 	var usage *relaymodel.Usage
 	var content string
 	var thinking string
@@ -283,7 +284,7 @@ func StreamResponse2OpenAI(meta *meta.Meta, respData []byte) (*relaymodel.ChatCo
 	var claudeResponse StreamResponse
 	err := sonic.Unmarshal(respData, &claudeResponse)
 	if err != nil {
-		return nil, openai.ErrorWrapper(err, "unmarshal_response", http.StatusInternalServerError)
+		return nil, relaymodel.WrapperOpenAIError(err, "unmarshal_response", http.StatusInternalServerError)
 	}
 
 	switch claudeResponse.Type {
@@ -420,7 +421,7 @@ func Response2OpenAI(meta *meta.Meta, claudeResponse *Response) *relaymodel.Text
 	return &fullTextResponse
 }
 
-func OpenAIStreamHandler(m *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, *relaymodel.ErrorWithStatusCode) {
+func OpenAIStreamHandler(m *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, adaptor.Error) {
 	if resp.StatusCode != http.StatusOK {
 		return nil, OpenAIErrorHandler(resp)
 	}
@@ -511,7 +512,7 @@ func OpenAIStreamHandler(m *meta.Meta, c *gin.Context, resp *http.Response) (*mo
 	return usage.ToModelUsage(), nil
 }
 
-func OpenAIHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, *relaymodel.ErrorWithStatusCode) {
+func OpenAIHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, adaptor.Error) {
 	if resp.StatusCode != http.StatusOK {
 		return nil, OpenAIErrorHandler(resp)
 	}
@@ -521,12 +522,12 @@ func OpenAIHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model
 	var claudeResponse Response
 	err := sonic.ConfigDefault.NewDecoder(resp.Body).Decode(&claudeResponse)
 	if err != nil {
-		return nil, openai.ErrorWrapper(err, "unmarshal_response_body_failed", http.StatusInternalServerError)
+		return nil, relaymodel.WrapperOpenAIError(err, "unmarshal_response_body_failed", http.StatusInternalServerError)
 	}
 	fullTextResponse := Response2OpenAI(meta, &claudeResponse)
 	jsonResponse, err := sonic.Marshal(fullTextResponse)
 	if err != nil {
-		return nil, openai.ErrorWrapper(err, "marshal_response_body_failed", http.StatusInternalServerError)
+		return nil, relaymodel.WrapperOpenAIError(err, "marshal_response_body_failed", http.StatusInternalServerError)
 	}
 	c.Writer.Header().Set("Content-Type", "application/json")
 	c.Writer.WriteHeader(resp.StatusCode)

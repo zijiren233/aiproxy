@@ -6,7 +6,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"strings"
 	"sync"
@@ -20,6 +19,7 @@ import (
 	"github.com/labring/aiproxy/core/common/render"
 	"github.com/labring/aiproxy/core/middleware"
 	"github.com/labring/aiproxy/core/model"
+	"github.com/labring/aiproxy/core/relay/adaptor"
 	"github.com/labring/aiproxy/core/relay/adaptor/openai"
 	"github.com/labring/aiproxy/core/relay/meta"
 	relaymodel "github.com/labring/aiproxy/core/relay/model"
@@ -288,16 +288,16 @@ func processImageTasks(ctx context.Context, imageTasks []*Part) error {
 }
 
 // Setting safety to the lowest possible values since Gemini is already powerless enough
-func ConvertRequest(meta *meta.Meta, req *http.Request) (string, http.Header, io.Reader, error) {
+func ConvertRequest(meta *meta.Meta, req *http.Request) (*adaptor.ConvertRequestResult, error) {
 	adaptorConfig := Config{}
 	err := meta.ChannelConfig.SpecConfig(&adaptorConfig)
 	if err != nil {
-		return "", nil, nil, err
+		return nil, err
 	}
 
 	textRequest, err := utils.UnmarshalGeneralOpenAIRequest(req)
 	if err != nil {
-		return "", nil, nil, err
+		return nil, err
 	}
 
 	textRequest.Model = meta.ActualModel
@@ -308,13 +308,13 @@ func ConvertRequest(meta *meta.Meta, req *http.Request) (string, http.Header, io
 	// Process image tasks concurrently
 	if len(imageTasks) > 0 {
 		if err := processImageTasks(req.Context(), imageTasks); err != nil {
-			return "", nil, nil, err
+			return nil, err
 		}
 	}
 
 	config, err := buildGenerationConfig(meta, req, textRequest)
 	if err != nil {
-		return "", nil, nil, err
+		return nil, err
 	}
 
 	// Build actual request
@@ -329,10 +329,14 @@ func ConvertRequest(meta *meta.Meta, req *http.Request) (string, http.Header, io
 
 	data, err := sonic.Marshal(geminiRequest)
 	if err != nil {
-		return "", nil, nil, err
+		return nil, err
 	}
 
-	return http.MethodPost, nil, bytes.NewReader(data), nil
+	return &adaptor.ConvertRequestResult{
+		Method: http.MethodPost,
+		Header: nil,
+		Body:   bytes.NewReader(data),
+	}, nil
 }
 
 type ChatResponse struct {
@@ -602,7 +606,7 @@ func PutImageScannerBuffer(buf *[]byte) {
 	scannerBufferPool.Put(buf)
 }
 
-func StreamHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, *relaymodel.ErrorWithStatusCode) {
+func StreamHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, adaptor.Error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
@@ -660,7 +664,7 @@ func StreamHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model
 	return usage.ToModelUsage(), nil
 }
 
-func Handler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, *relaymodel.ErrorWithStatusCode) {
+func Handler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, adaptor.Error) {
 	if resp.StatusCode != http.StatusOK {
 		return nil, openai.ErrorHanlder(resp)
 	}
@@ -670,12 +674,12 @@ func Handler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage
 	var geminiResponse ChatResponse
 	err := sonic.ConfigDefault.NewDecoder(resp.Body).Decode(&geminiResponse)
 	if err != nil {
-		return nil, openai.ErrorWrapper(err, "unmarshal_response_body_failed", http.StatusInternalServerError)
+		return nil, relaymodel.WrapperOpenAIError(err, "unmarshal_response_body_failed", http.StatusInternalServerError)
 	}
 	fullTextResponse := responseChat2OpenAI(meta, &geminiResponse)
 	jsonResponse, err := sonic.Marshal(fullTextResponse)
 	if err != nil {
-		return nil, openai.ErrorWrapper(err, "marshal_response_body_failed", http.StatusInternalServerError)
+		return nil, relaymodel.WrapperOpenAIError(err, "marshal_response_body_failed", http.StatusInternalServerError)
 	}
 	c.Writer.Header().Set("Content-Type", "application/json")
 	c.Writer.WriteHeader(resp.StatusCode)

@@ -1,45 +1,39 @@
 package middleware
 
 import (
-	"fmt"
-
 	"github.com/gin-gonic/gin"
-	"github.com/labring/aiproxy/core/relay/model"
+	"github.com/labring/aiproxy/core/relay/mode"
+	relaymodel "github.com/labring/aiproxy/core/relay/model"
 )
 
-const (
-	ErrorTypeAIPROXY = "aiproxy_error"
-)
-
-func MessageWithRequestID(c *gin.Context, message string) string {
-	return fmt.Sprintf("%s (aiproxy: %s)", message, GetRequestID(c))
-}
-
-func AbortLogWithMessage(c *gin.Context, statusCode int, message string, fields ...*ErrorField) {
+func AbortLogWithMessageWithMode(m mode.Mode, c *gin.Context, statusCode int, message string, typ ...string) {
 	GetLogger(c).Error(message)
-	AbortWithMessage(c, statusCode, message, fields...)
+	AbortWithMessageWithMode(m, c, statusCode, message, typ...)
 }
 
-type ErrorField struct {
-	Type string `json:"type"`
-	Code any    `json:"code"`
-}
-
-func AbortWithMessage(c *gin.Context, statusCode int, message string, fields ...*ErrorField) {
-	typeName := ErrorTypeAIPROXY
-	var code any
-	if len(fields) > 0 {
-		if fields[0].Type != "" {
-			typeName = fields[0].Type
-		}
-		code = fields[0].Code
-	}
-	c.JSON(statusCode, gin.H{
-		"error": &model.Error{
-			Message: MessageWithRequestID(c, message),
-			Type:    typeName,
-			Code:    code,
-		},
-	})
+func AbortWithMessageWithMode(m mode.Mode, c *gin.Context, statusCode int, message string, typ ...string) {
+	c.JSON(statusCode,
+		relaymodel.WrapperErrorWithMessage(m, statusCode, message, typ...),
+	)
 	c.Abort()
+}
+
+func AbortLogWithMessage(c *gin.Context, statusCode int, message string, typ ...string) {
+	GetLogger(c).Error(message)
+	AbortWithMessage(c, statusCode, message, typ...)
+}
+
+func AbortWithMessage(c *gin.Context, statusCode int, message string, typ ...string) {
+	c.JSON(statusCode,
+		relaymodel.WrapperErrorWithMessage(GetMode(c), statusCode, message, typ...),
+	)
+	c.Abort()
+}
+
+func GetMode(c *gin.Context) mode.Mode {
+	m, exists := c.Get(Mode)
+	if !exists {
+		return mode.Unknown
+	}
+	return m.(mode.Mode)
 }

@@ -1,7 +1,6 @@
 package xunfei
 
 import (
-	"io"
 	"net/http"
 
 	"github.com/labring/aiproxy/core/model"
@@ -20,18 +19,14 @@ func (a *Adaptor) GetBaseURL() string {
 
 const baseURL = "https://spark-api-open.xf-yun.com/v1"
 
-func (a *Adaptor) ConvertRequest(meta *meta.Meta, req *http.Request) (string, http.Header, io.Reader, error) {
+func (a *Adaptor) ConvertRequest(meta *meta.Meta, req *http.Request) (*adaptor.ConvertRequestResult, error) {
 	domain := getXunfeiDomain(meta.ActualModel)
 	model := meta.ActualModel
 	meta.ActualModel = domain
 	defer func() {
 		meta.ActualModel = model
 	}()
-	method, h, body, err := a.Adaptor.ConvertRequest(meta, req)
-	if err != nil {
-		return "", nil, nil, err
-	}
-	return method, h, body, nil
+	return a.Adaptor.ConvertRequest(meta, req)
 }
 
 func (a *Adaptor) GetModelList() []*model.ModelConfig {

@@ -4,22 +4,22 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/labring/aiproxy/core/relay/adaptor/openai"
-	model "github.com/labring/aiproxy/core/relay/model"
+	"github.com/labring/aiproxy/core/relay/adaptor"
+	relaymodel "github.com/labring/aiproxy/core/relay/model"
 )
 
 // https://cloud.baidu.com/doc/WENXINWORKSHOP/s/tlmyncueh
 
-func ErrorHandler(baiduError *Error) *model.ErrorWithStatusCode {
+func ErrorHandler(baiduError *Error) adaptor.Error {
 	switch baiduError.ErrorCode {
 	case 13, 14, 100, 110:
-		return openai.ErrorWrapperWithMessage(
+		return relaymodel.WrapperOpenAIErrorWithMessage(
 			baiduError.ErrorMsg,
 			"upstream_"+strconv.Itoa(baiduError.ErrorCode),
 			http.StatusUnauthorized,
 		)
 	case 17, 19, 111:
-		return openai.ErrorWrapperWithMessage(
+		return relaymodel.WrapperOpenAIErrorWithMessage(
 			baiduError.ErrorMsg,
 			"upstream_"+strconv.Itoa(baiduError.ErrorCode),
 			http.StatusForbidden,
@@ -30,7 +30,7 @@ func ErrorHandler(baiduError *Error) *model.ErrorWithStatusCode {
 		336106, 336118, 336122,
 		336123, 336221, 337006,
 		337008, 337009:
-		return openai.ErrorWrapperWithMessage(
+		return relaymodel.WrapperOpenAIErrorWithMessage(
 			baiduError.ErrorMsg,
 			"upstream_"+strconv.Itoa(baiduError.ErrorCode),
 			http.StatusBadRequest,
@@ -38,11 +38,11 @@ func ErrorHandler(baiduError *Error) *model.ErrorWithStatusCode {
 	case 4, 18, 336117, 336501, 336502,
 		336503, 336504, 336505,
 		336507:
-		return openai.ErrorWrapperWithMessage(
+		return relaymodel.WrapperOpenAIErrorWithMessage(
 			baiduError.ErrorMsg,
 			"upstream_"+strconv.Itoa(baiduError.ErrorCode),
 			http.StatusTooManyRequests,
 		)
 	}
-	return openai.ErrorWrapperWithMessage(baiduError.ErrorMsg, "upstream_"+strconv.Itoa(baiduError.ErrorCode), http.StatusInternalServerError)
+	return relaymodel.WrapperOpenAIErrorWithMessage(baiduError.ErrorMsg, "upstream_"+strconv.Itoa(baiduError.ErrorCode), http.StatusInternalServerError)
 }

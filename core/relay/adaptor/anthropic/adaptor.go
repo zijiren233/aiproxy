@@ -3,14 +3,13 @@ package anthropic
 import (
 	"bytes"
 	"fmt"
-	"io"
 	"net/http"
 	"strings"
 
 	"github.com/bytedance/sonic"
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/core/model"
-	"github.com/labring/aiproxy/core/relay/adaptor/openai"
+	"github.com/labring/aiproxy/core/relay/adaptor"
 	"github.com/labring/aiproxy/core/relay/meta"
 	"github.com/labring/aiproxy/core/relay/mode"
 	relaymodel "github.com/labring/aiproxy/core/relay/model"
@@ -58,23 +57,27 @@ func (a *Adaptor) SetupRequestHeader(meta *meta.Meta, c *gin.Context, req *http.
 	return nil
 }
 
-func (a *Adaptor) ConvertRequest(meta *meta.Meta, req *http.Request) (string, http.Header, io.Reader, error) {
+func (a *Adaptor) ConvertRequest(meta *meta.Meta, req *http.Request) (*adaptor.ConvertRequestResult, error) {
 	switch meta.Mode {
 	case mode.ChatCompletions:
 		data, err := OpenAIConvertRequest(meta, req)
 		if err != nil {
-			return "", nil, nil, err
+			return nil, err
 		}
 
 		data2, err := sonic.Marshal(data)
 		if err != nil {
-			return "", nil, nil, err
+			return nil, err
 		}
-		return http.MethodPost, nil, bytes.NewReader(data2), nil
+		return &adaptor.ConvertRequestResult{
+			Method: http.MethodPost,
+			Header: nil,
+			Body:   bytes.NewReader(data2),
+		}, nil
 	case mode.Anthropic:
 		return ConvertRequest(meta, req)
 	default:
-		return "", nil, nil, fmt.Errorf("unsupported mode: %s", meta.Mode)
+		return nil, fmt.Errorf("unsupported mode: %s", meta.Mode)
 	}
 }
 
@@ -82,7 +85,7 @@ func (a *Adaptor) DoRequest(_ *meta.Meta, _ *gin.Context, req *http.Request) (*h
 	return utils.DoRequest(req)
 }
 
-func (a *Adaptor) DoResponse(meta *meta.Meta, c *gin.Context, resp *http.Response) (usage *model.Usage, err *relaymodel.ErrorWithStatusCode) {
+func (a *Adaptor) DoResponse(meta *meta.Meta, c *gin.Context, resp *http.Response) (usage *model.Usage, err adaptor.Error) {
 	switch meta.Mode {
 	case mode.ChatCompletions:
 		if utils.IsStreamResponse(resp) {
@@ -97,7 +100,7 @@ func (a *Adaptor) DoResponse(meta *meta.Meta, c *gin.Context, resp *http.Respons
 			usage, err = Handler(meta, c, resp)
 		}
 	default:
-		return nil, openai.ErrorWrapperWithMessage(fmt.Sprintf("unsupported mode: %s", meta.Mode), "unsupported_mode", http.StatusBadRequest)
+		return nil, relaymodel.WrapperOpenAIErrorWithMessage(fmt.Sprintf("unsupported mode: %s", meta.Mode), "unsupported_mode", http.StatusBadRequest)
 	}
 	return
 }

@@ -2,22 +2,22 @@ package gemini
 
 import (
 	"bytes"
-	"io"
 	"net/http"
 
 	"github.com/bytedance/sonic"
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/core/model"
+	"github.com/labring/aiproxy/core/relay/adaptor"
 	"github.com/labring/aiproxy/core/relay/adaptor/openai"
 	"github.com/labring/aiproxy/core/relay/meta"
 	relaymodel "github.com/labring/aiproxy/core/relay/model"
 	"github.com/labring/aiproxy/core/relay/utils"
 )
 
-func ConvertEmbeddingRequest(meta *meta.Meta, req *http.Request) (string, http.Header, io.Reader, error) {
+func ConvertEmbeddingRequest(meta *meta.Meta, req *http.Request) (*adaptor.ConvertRequestResult, error) {
 	request, err := utils.UnmarshalGeneralOpenAIRequest(req)
 	if err != nil {
-		return "", nil, nil, err
+		return nil, err
 	}
 	request.Model = meta.ActualModel
 
@@ -42,12 +42,16 @@ func ConvertEmbeddingRequest(meta *meta.Meta, req *http.Request) (string, http.H
 		Requests: requests,
 	})
 	if err != nil {
-		return "", nil, nil, err
+		return nil, err
 	}
-	return http.MethodPost, nil, bytes.NewReader(data), nil
+	return &adaptor.ConvertRequestResult{
+		Method: http.MethodPost,
+		Header: nil,
+		Body:   bytes.NewReader(data),
+	}, nil
 }
 
-func EmbeddingHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, *relaymodel.ErrorWithStatusCode) {
+func EmbeddingHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, adaptor.Error) {
 	if resp.StatusCode != http.StatusOK {
 		return nil, openai.ErrorHanlder(resp)
 	}
@@ -57,15 +61,15 @@ func EmbeddingHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*mo
 	var geminiEmbeddingResponse EmbeddingResponse
 	err := sonic.ConfigDefault.NewDecoder(resp.Body).Decode(&geminiEmbeddingResponse)
 	if err != nil {
-		return nil, openai.ErrorWrapper(err, "unmarshal_response_body_failed", http.StatusInternalServerError)
+		return nil, relaymodel.WrapperOpenAIError(err, "unmarshal_response_body_failed", http.StatusInternalServerError)
 	}
 	if geminiEmbeddingResponse.Error != nil {
-		return nil, openai.ErrorWrapperWithMessage(geminiEmbeddingResponse.Error.Message, geminiEmbeddingResponse.Error.Code, resp.StatusCode)
+		return nil, relaymodel.WrapperOpenAIErrorWithMessage(geminiEmbeddingResponse.Error.Message, geminiEmbeddingResponse.Error.Code, resp.StatusCode)
 	}
 	fullTextResponse := embeddingResponse2OpenAI(meta, &geminiEmbeddingResponse)
 	jsonResponse, err := sonic.Marshal(fullTextResponse)
 	if err != nil {
-		return nil, openai.ErrorWrapper(err, "marshal_response_body_failed", http.StatusInternalServerError)
+		return nil, relaymodel.WrapperOpenAIError(err, "marshal_response_body_failed", http.StatusInternalServerError)
 	}
 	c.Writer.Header().Set("Content-Type", "application/json")
 	c.Writer.WriteHeader(resp.StatusCode)

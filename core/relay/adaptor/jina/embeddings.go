@@ -2,20 +2,20 @@ package jina
 
 import (
 	"bytes"
-	"io"
 	"net/http"
 
 	"github.com/bytedance/sonic"
 	"github.com/labring/aiproxy/core/common"
+	"github.com/labring/aiproxy/core/relay/adaptor"
 	"github.com/labring/aiproxy/core/relay/meta"
 )
 
 //nolint:gocritic
-func ConvertEmbeddingsRequest(meta *meta.Meta, req *http.Request) (string, http.Header, io.Reader, error) {
+func ConvertEmbeddingsRequest(meta *meta.Meta, req *http.Request) (*adaptor.ConvertRequestResult, error) {
 	reqMap := make(map[string]any)
 	err := common.UnmarshalBodyReusable(req, &reqMap)
 	if err != nil {
-		return "", nil, nil, err
+		return nil, err
 	}
 
 	reqMap["model"] = meta.ActualModel
@@ -29,7 +29,11 @@ func ConvertEmbeddingsRequest(meta *meta.Meta, req *http.Request) (string, http.
 
 	jsonData, err := sonic.Marshal(reqMap)
 	if err != nil {
-		return "", nil, nil, err
+		return nil, err
 	}
-	return http.MethodPost, nil, bytes.NewReader(jsonData), nil
+	return &adaptor.ConvertRequestResult{
+		Method: http.MethodPost,
+		Header: nil,
+		Body:   bytes.NewReader(jsonData),
+	}, nil
 }

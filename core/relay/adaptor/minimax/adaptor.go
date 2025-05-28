@@ -2,7 +2,6 @@ package minimax
 
 import (
 	"fmt"
-	"io"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -11,7 +10,6 @@ import (
 	"github.com/labring/aiproxy/core/relay/adaptor/openai"
 	"github.com/labring/aiproxy/core/relay/meta"
 	"github.com/labring/aiproxy/core/relay/mode"
-	relaymodel "github.com/labring/aiproxy/core/relay/model"
 )
 
 type Adaptor struct {
@@ -54,7 +52,7 @@ func (a *Adaptor) GetRequestURL(meta *meta.Meta) (string, error) {
 	}
 }
 
-func (a *Adaptor) ConvertRequest(meta *meta.Meta, req *http.Request) (string, http.Header, io.Reader, error) {
+func (a *Adaptor) ConvertRequest(meta *meta.Meta, req *http.Request) (*adaptor.ConvertRequestResult, error) {
 	switch meta.Mode {
 	case mode.ChatCompletions:
 		return openai.ConvertTextRequest(meta, req, true)
@@ -65,7 +63,7 @@ func (a *Adaptor) ConvertRequest(meta *meta.Meta, req *http.Request) (string, ht
 	}
 }
 
-func (a *Adaptor) DoResponse(meta *meta.Meta, c *gin.Context, resp *http.Response) (usage *model.Usage, err *relaymodel.ErrorWithStatusCode) {
+func (a *Adaptor) DoResponse(meta *meta.Meta, c *gin.Context, resp *http.Response) (usage *model.Usage, err adaptor.Error) {
 	switch meta.Mode {
 	case mode.AudioSpeech:
 		return TTSHandler(meta, c, resp)

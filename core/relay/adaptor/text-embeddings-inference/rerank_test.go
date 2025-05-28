@@ -40,16 +40,16 @@ func TestConvertRerankRequestSuccess(t *testing.T) {
 	}
 
 	// Call the function under test
-	method, _, bodyReader, err := textembeddingsinference.ConvertRerankRequest(testMeta, req)
+	result, err := textembeddingsinference.ConvertRerankRequest(testMeta, req)
 
 	// Assert no error
 	require.NoError(t, err)
 
 	// Assert method
-	assert.Equal(t, http.MethodPost, method)
+	assert.Equal(t, http.MethodPost, result.Method)
 
 	// Read the transformed body
-	bodyBytes, err := io.ReadAll(bodyReader)
+	bodyBytes, err := io.ReadAll(result.Body)
 	require.NoError(t, err)
 
 	// Parse the body back to verify the transformation
@@ -97,7 +97,7 @@ func TestConvertRerankRequestMissingDocuments(t *testing.T) {
 	}
 
 	// Call the function under test
-	_, _, _, err = textembeddingsinference.ConvertRerankRequest(testMeta, req)
+	_, err = textembeddingsinference.ConvertRerankRequest(testMeta, req)
 
 	// Assert error for missing documents
 	require.Error(t, err)
@@ -121,7 +121,7 @@ func TestConvertRerankRequestInvalidJSON(t *testing.T) {
 	}
 
 	// Call the function under test
-	_, _, _, err = textembeddingsinference.ConvertRerankRequest(testMeta, req)
+	_, err = textembeddingsinference.ConvertRerankRequest(testMeta, req)
 
 	// Assert error for invalid JSON
 	require.Error(t, err)

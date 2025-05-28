@@ -8,7 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/core/middleware"
 	"github.com/labring/aiproxy/core/model"
-	"github.com/labring/aiproxy/core/relay/adaptor/openai"
+	"github.com/labring/aiproxy/core/relay/adaptor"
 	"github.com/labring/aiproxy/core/relay/meta"
 	relaymodel "github.com/labring/aiproxy/core/relay/model"
 )
@@ -18,19 +18,19 @@ type RerankResponse struct {
 	Usage relaymodel.Usage `json:"usage"`
 }
 
-func RerankHandler(_ *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, *relaymodel.ErrorWithStatusCode) {
+func RerankHandler(_ *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, adaptor.Error) {
 	defer resp.Body.Close()
 
 	log := middleware.GetLogger(c)
 
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, openai.ErrorWrapper(err, "read_response_body_failed", http.StatusInternalServerError)
+		return nil, relaymodel.WrapperOpenAIError(err, "read_response_body_failed", http.StatusInternalServerError)
 	}
 	reRankResp := &RerankResponse{}
 	err = sonic.Unmarshal(respBody, reRankResp)
 	if err != nil {
-		return nil, openai.ErrorWrapper(err, "unmarshal_response_body_failed", http.StatusInternalServerError)
+		return nil, relaymodel.WrapperOpenAIError(err, "unmarshal_response_body_failed", http.StatusInternalServerError)
 	}
 	if reRankResp.Error != nil && reRankResp.Error.ErrorCode != 0 {
 		return nil, ErrorHandler(reRankResp.Error)
@@ -38,7 +38,7 @@ func RerankHandler(_ *meta.Meta, c *gin.Context, resp *http.Response) (*model.Us
 	respMap := make(map[string]any)
 	err = sonic.Unmarshal(respBody, &respMap)
 	if err != nil {
-		return reRankResp.Usage.ToModelUsage(), openai.ErrorWrapper(err, "unmarshal_response_body_failed", http.StatusInternalServerError)
+		return reRankResp.Usage.ToModelUsage(), relaymodel.WrapperOpenAIError(err, "unmarshal_response_body_failed", http.StatusInternalServerError)
 	}
 	delete(respMap, "model")
 	delete(respMap, "usage")
@@ -52,7 +52,7 @@ func RerankHandler(_ *meta.Meta, c *gin.Context, resp *http.Response) (*model.Us
 	delete(respMap, "results")
 	jsonData, err := sonic.Marshal(respMap)
 	if err != nil {
-		return reRankResp.Usage.ToModelUsage(), openai.ErrorWrapper(err, "marshal_response_body_failed", http.StatusInternalServerError)
+		return reRankResp.Usage.ToModelUsage(), relaymodel.WrapperOpenAIError(err, "marshal_response_body_failed", http.StatusInternalServerError)
 	}
 	_, err = c.Writer.Write(jsonData)
 	if err != nil {

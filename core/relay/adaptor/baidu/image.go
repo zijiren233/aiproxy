@@ -8,7 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/core/middleware"
 	"github.com/labring/aiproxy/core/model"
-	"github.com/labring/aiproxy/core/relay/adaptor/openai"
+	"github.com/labring/aiproxy/core/relay/adaptor"
 	"github.com/labring/aiproxy/core/relay/meta"
 	relaymodel "github.com/labring/aiproxy/core/relay/model"
 )
@@ -24,19 +24,19 @@ type ImageResponse struct {
 	Created int64        `json:"created"`
 }
 
-func ImageHandler(_ *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, *relaymodel.ErrorWithStatusCode) {
+func ImageHandler(_ *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, adaptor.Error) {
 	defer resp.Body.Close()
 
 	log := middleware.GetLogger(c)
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, openai.ErrorWrapper(err, "read_response_body_failed", http.StatusInternalServerError)
+		return nil, relaymodel.WrapperOpenAIErrorWithMessage(err.Error(), nil, http.StatusInternalServerError)
 	}
 	var imageResponse ImageResponse
 	err = sonic.Unmarshal(body, &imageResponse)
 	if err != nil {
-		return nil, openai.ErrorWrapper(err, "unmarshal_response_body_failed", http.StatusInternalServerError)
+		return nil, relaymodel.WrapperOpenAIErrorWithMessage(err.Error(), nil, http.StatusInternalServerError)
 	}
 
 	usage := &model.Usage{
@@ -51,7 +51,7 @@ func ImageHandler(_ *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usa
 	openaiResponse := ToOpenAIImageResponse(&imageResponse)
 	data, err := sonic.Marshal(openaiResponse)
 	if err != nil {
-		return usage, openai.ErrorWrapper(err, "marshal_response_body_failed", http.StatusInternalServerError)
+		return usage, relaymodel.WrapperOpenAIErrorWithMessage(err.Error(), nil, http.StatusInternalServerError)
 	}
 	_, err = c.Writer.Write(data)
 	if err != nil {

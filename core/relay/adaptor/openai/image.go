@@ -14,38 +14,43 @@ import (
 	"github.com/labring/aiproxy/core/common/image"
 	"github.com/labring/aiproxy/core/middleware"
 	"github.com/labring/aiproxy/core/model"
+	"github.com/labring/aiproxy/core/relay/adaptor"
 	"github.com/labring/aiproxy/core/relay/meta"
 	relaymodel "github.com/labring/aiproxy/core/relay/model"
 )
 
-func ConvertImagesRequest(meta *meta.Meta, req *http.Request) (string, http.Header, io.Reader, error) {
+func ConvertImagesRequest(meta *meta.Meta, req *http.Request) (*adaptor.ConvertRequestResult, error) {
 	node, err := common.UnmarshalBody2Node(req)
 	if err != nil {
-		return "", nil, nil, err
+		return nil, err
 	}
 	responseFormat, err := node.Get("response_format").String()
 	if err != nil && !errors.Is(err, ast.ErrNotExist) {
-		return "", nil, nil, err
+		return nil, err
 	}
 	meta.Set(MetaResponseFormat, responseFormat)
 
 	_, err = node.Set("model", ast.NewString(meta.ActualModel))
 	if err != nil {
-		return "", nil, nil, err
+		return nil, err
 	}
 
 	jsonData, err := node.MarshalJSON()
 	if err != nil {
-		return "", nil, nil, err
+		return nil, err
 	}
 
-	return http.MethodPost, nil, bytes.NewReader(jsonData), nil
+	return &adaptor.ConvertRequestResult{
+		Method: http.MethodPost,
+		Header: nil,
+		Body:   bytes.NewReader(jsonData),
+	}, nil
 }
 
-func ConvertImagesEditsRequest(meta *meta.Meta, request *http.Request) (string, http.Header, io.Reader, error) {
+func ConvertImagesEditsRequest(meta *meta.Meta, request *http.Request) (*adaptor.ConvertRequestResult, error) {
 	err := request.ParseMultipartForm(1024 * 1024 * 4)
 	if err != nil {
-		return "", nil, nil, err
+		return nil, err
 	}
 
 	multipartBody := &bytes.Buffer{}
@@ -59,7 +64,7 @@ func ConvertImagesEditsRequest(meta *meta.Meta, request *http.Request) (string, 
 		if key == "model" {
 			err = multipartWriter.WriteField(key, meta.ActualModel)
 			if err != nil {
-				return "", nil, nil, err
+				return nil, err
 			}
 			continue
 		}
@@ -69,7 +74,7 @@ func ConvertImagesEditsRequest(meta *meta.Meta, request *http.Request) (string, 
 		}
 		err = multipartWriter.WriteField(key, value)
 		if err != nil {
-			return "", nil, nil, err
+			return nil, err
 		}
 	}
 
@@ -80,28 +85,32 @@ func ConvertImagesEditsRequest(meta *meta.Meta, request *http.Request) (string, 
 		fileHeader := files[0]
 		file, err := fileHeader.Open()
 		if err != nil {
-			return "", nil, nil, err
+			return nil, err
 		}
 		w, err := multipartWriter.CreateFormFile(key, fileHeader.Filename)
 		if err != nil {
 			file.Close()
-			return "", nil, nil, err
+			return nil, err
 		}
 		_, err = io.Copy(w, file)
 		file.Close()
 		if err != nil {
-			return "", nil, nil, err
+			return nil, err
 		}
 	}
 
 	multipartWriter.Close()
 	ContentType := multipartWriter.FormDataContentType()
-	return http.MethodPost, http.Header{
-		"Content-Type": {ContentType},
-	}, multipartBody, nil
+	return &adaptor.ConvertRequestResult{
+		Method: http.MethodPost,
+		Header: http.Header{
+			"Content-Type": {ContentType},
+		},
+		Body: multipartBody,
+	}, nil
 }
 
-func ImagesHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, *relaymodel.ErrorWithStatusCode) {
+func ImagesHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, adaptor.Error) {
 	if resp.StatusCode != http.StatusOK {
 		return nil, ErrorHanlder(resp)
 	}
@@ -112,12 +121,12 @@ func ImagesHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model
 
 	responseBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, ErrorWrapper(err, "read_response_body_failed", http.StatusInternalServerError)
+		return nil, relaymodel.WrapperOpenAIError(err, "read_response_body_failed", http.StatusInternalServerError)
 	}
 	var imageResponse relaymodel.ImageResponse
 	err = sonic.Unmarshal(responseBody, &imageResponse)
 	if err != nil {
-		return nil, ErrorWrapper(err, "unmarshal_response_body_failed", http.StatusInternalServerError)
+		return nil, relaymodel.WrapperOpenAIError(err, "unmarshal_response_body_failed", http.StatusInternalServerError)
 	}
 
 	usage := &model.Usage{
@@ -137,14 +146,14 @@ func ImagesHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model
 			}
 			_, data.B64Json, err = image.GetImageFromURL(c.Request.Context(), data.URL)
 			if err != nil {
-				return usage, ErrorWrapper(err, "get_image_from_url_failed", http.StatusInternalServerError)
+				return usage, relaymodel.WrapperOpenAIError(err, "get_image_from_url_failed", http.StatusInternalServerError)
 			}
 		}
 	}
 
 	data, err := sonic.Marshal(imageResponse)
 	if err != nil {
-		return usage, ErrorWrapper(err, "marshal_response_body_failed", http.StatusInternalServerError)
+		return usage, relaymodel.WrapperOpenAIError(err, "marshal_response_body_failed", http.StatusInternalServerError)
 	}
 
 	_, err = c.Writer.Write(data)

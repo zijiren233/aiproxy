@@ -13,16 +13,17 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/core/middleware"
 	"github.com/labring/aiproxy/core/model"
+	"github.com/labring/aiproxy/core/relay/adaptor"
 	"github.com/labring/aiproxy/core/relay/adaptor/openai"
 	"github.com/labring/aiproxy/core/relay/meta"
 	relaymodel "github.com/labring/aiproxy/core/relay/model"
 	"github.com/labring/aiproxy/core/relay/utils"
 )
 
-func ConvertTTSRequest(meta *meta.Meta, req *http.Request) (string, http.Header, io.Reader, error) {
+func ConvertTTSRequest(meta *meta.Meta, req *http.Request) (*adaptor.ConvertRequestResult, error) {
 	reqMap, err := utils.UnmarshalMap(req)
 	if err != nil {
-		return "", nil, nil, err
+		return nil, err
 	}
 
 	reqMap["model"] = meta.ActualModel
@@ -79,10 +80,14 @@ func ConvertTTSRequest(meta *meta.Meta, req *http.Request) (string, http.Header,
 
 	body, err := sonic.Marshal(reqMap)
 	if err != nil {
-		return "", nil, nil, err
+		return nil, err
 	}
 
-	return http.MethodPost, nil, bytes.NewReader(body), nil
+	return &adaptor.ConvertRequestResult{
+		Method: http.MethodPost,
+		Header: nil,
+		Body:   bytes.NewReader(body),
+	}, nil
 }
 
 type TTSExtraInfo struct {
@@ -106,7 +111,7 @@ type TTSResponse struct {
 	Data      TTSData      `json:"data"`
 }
 
-func TTSHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, *relaymodel.ErrorWithStatusCode) {
+func TTSHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, adaptor.Error) {
 	if resp.StatusCode != http.StatusOK {
 		return nil, openai.ErrorHanlder(resp)
 	}
@@ -121,22 +126,22 @@ func TTSHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Us
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, openai.ErrorWrapper(err, "TTS_ERROR", http.StatusInternalServerError)
+		return nil, relaymodel.WrapperOpenAIError(err, "TTS_ERROR", http.StatusInternalServerError)
 	}
 
 	var result TTSResponse
 	if err := sonic.Unmarshal(body, &result); err != nil {
-		return nil, openai.ErrorWrapper(err, "TTS_ERROR", http.StatusInternalServerError)
+		return nil, relaymodel.WrapperOpenAIError(err, "TTS_ERROR", http.StatusInternalServerError)
 	}
 	if result.BaseResp != nil && result.BaseResp.StatusCode != 0 {
-		return nil, openai.ErrorWrapperWithMessage(result.BaseResp.StatusMsg, "TTS_ERROR_"+strconv.Itoa(result.BaseResp.StatusCode), http.StatusInternalServerError)
+		return nil, relaymodel.WrapperOpenAIErrorWithMessage(result.BaseResp.StatusMsg, "TTS_ERROR_"+strconv.Itoa(result.BaseResp.StatusCode), http.StatusInternalServerError)
 	}
 
 	resp.Header.Set("Content-Type", "audio/"+result.ExtraInfo.AudioFormat)
 
 	audioBytes, err := hex.DecodeString(result.Data.Audio)
 	if err != nil {
-		return nil, openai.ErrorWrapper(err, "TTS_ERROR", http.StatusInternalServerError)
+		return nil, relaymodel.WrapperOpenAIError(err, "TTS_ERROR", http.StatusInternalServerError)
 	}
 
 	_, err = c.Writer.Write(audioBytes)
@@ -155,7 +160,7 @@ func TTSHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Us
 	}, nil
 }
 
-func ttsStreamHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, *relaymodel.ErrorWithStatusCode) {
+func ttsStreamHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, adaptor.Error) {
 	defer resp.Body.Close()
 
 	resp.Header.Set("Content-Type", "application/octet-stream")

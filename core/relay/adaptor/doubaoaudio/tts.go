@@ -16,7 +16,7 @@ import (
 	"github.com/labring/aiproxy/core/common/conv"
 	"github.com/labring/aiproxy/core/middleware"
 	"github.com/labring/aiproxy/core/model"
-	"github.com/labring/aiproxy/core/relay/adaptor/openai"
+	"github.com/labring/aiproxy/core/relay/adaptor"
 	"github.com/labring/aiproxy/core/relay/meta"
 	relaymodel "github.com/labring/aiproxy/core/relay/model"
 	"github.com/labring/aiproxy/core/relay/utils"
@@ -64,20 +64,20 @@ type RequestConfig struct {
 var defaultHeader = []byte{0x11, 0x10, 0x11, 0x00}
 
 //nolint:gosec
-func ConvertTTSRequest(meta *meta.Meta, req *http.Request) (string, http.Header, io.Reader, error) {
+func ConvertTTSRequest(meta *meta.Meta, req *http.Request) (*adaptor.ConvertRequestResult, error) {
 	request, err := utils.UnmarshalTTSRequest(req)
 	if err != nil {
-		return "", nil, nil, err
+		return nil, err
 	}
 
 	reqMap, err := utils.UnmarshalMap(req)
 	if err != nil {
-		return "", nil, nil, err
+		return nil, err
 	}
 
 	appID, token, err := getAppIDAndToken(meta.Channel.Key)
 	if err != nil {
-		return "", nil, nil, err
+		return nil, err
 	}
 
 	cluster := "volcano_tts"
@@ -128,12 +128,12 @@ func ConvertTTSRequest(meta *meta.Meta, req *http.Request) (string, http.Header,
 
 	data, err := sonic.Marshal(doubaoRequest)
 	if err != nil {
-		return "", nil, nil, err
+		return nil, err
 	}
 
 	compressedData, err := gzipCompress(data)
 	if err != nil {
-		return "", nil, nil, err
+		return nil, err
 	}
 
 	payloadArr := make([]byte, 4)
@@ -145,7 +145,11 @@ func ConvertTTSRequest(meta *meta.Meta, req *http.Request) (string, http.Header,
 	//nolint:makezero
 	clientRequest = append(clientRequest, compressedData...)
 
-	return http.MethodPost, nil, bytes.NewReader(clientRequest), nil
+	return &adaptor.ConvertRequestResult{
+		Method: http.MethodPost,
+		Header: nil,
+		Body:   bytes.NewReader(clientRequest),
+	}, nil
 }
 
 func TTSDoRequest(meta *meta.Meta, req *http.Request) (*http.Response, error) {
@@ -175,7 +179,7 @@ func TTSDoRequest(meta *meta.Meta, req *http.Request) (*http.Response, error) {
 	}, nil
 }
 
-func TTSDoResponse(meta *meta.Meta, c *gin.Context, _ *http.Response) (*model.Usage, *relaymodel.ErrorWithStatusCode) {
+func TTSDoResponse(meta *meta.Meta, c *gin.Context, _ *http.Response) (*model.Usage, adaptor.Error) {
 	log := middleware.GetLogger(c)
 
 	conn := meta.MustGet("ws_conn").(*websocket.Conn)
@@ -189,12 +193,12 @@ func TTSDoResponse(meta *meta.Meta, c *gin.Context, _ *http.Response) (*model.Us
 	for {
 		_, message, err := conn.ReadMessage()
 		if err != nil {
-			return usage, openai.ErrorWrapperWithMessage(err.Error(), "doubao_wss_read_msg_failed", http.StatusInternalServerError)
+			return usage, relaymodel.WrapperOpenAIError(err, "doubao_wss_read_msg_failed", http.StatusInternalServerError)
 		}
 
 		resp, err := parseResponse(message)
 		if err != nil {
-			return usage, openai.ErrorWrapperWithMessage(err.Error(), "doubao_tts_parse_response_failed", http.StatusInternalServerError)
+			return usage, relaymodel.WrapperOpenAIError(err, "doubao_tts_parse_response_failed", http.StatusInternalServerError)
 		}
 
 		_, err = c.Writer.Write(resp.Audio)

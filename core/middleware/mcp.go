@@ -34,9 +34,7 @@ func MCPAuth(c *gin.Context) {
 		var err error
 		token, err = model.ValidateAndGetToken(key)
 		if err != nil {
-			AbortLogWithMessage(c, http.StatusUnauthorized, err.Error(), &ErrorField{
-				Code: "invalid_token",
-			})
+			AbortLogWithMessage(c, http.StatusUnauthorized, err.Error(), "invalid_token")
 			return
 		}
 	}

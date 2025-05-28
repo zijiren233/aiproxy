@@ -14,6 +14,7 @@ import (
 	"github.com/labring/aiproxy/core/common/image"
 	"github.com/labring/aiproxy/core/middleware"
 	"github.com/labring/aiproxy/core/model"
+	"github.com/labring/aiproxy/core/relay/adaptor"
 	"github.com/labring/aiproxy/core/relay/adaptor/openai"
 	"github.com/labring/aiproxy/core/relay/meta"
 	relaymodel "github.com/labring/aiproxy/core/relay/model"
@@ -23,10 +24,10 @@ import (
 
 const MetaResponseFormat = "response_format"
 
-func ConvertImageRequest(meta *meta.Meta, req *http.Request) (string, http.Header, io.Reader, error) {
+func ConvertImageRequest(meta *meta.Meta, req *http.Request) (*adaptor.ConvertRequestResult, error) {
 	request, err := utils.UnmarshalImageRequest(req)
 	if err != nil {
-		return "", nil, nil, err
+		return nil, err
 	}
 	request.Model = meta.ActualModel
 
@@ -41,14 +42,18 @@ func ConvertImageRequest(meta *meta.Meta, req *http.Request) (string, http.Heade
 
 	data, err := sonic.Marshal(&imageRequest)
 	if err != nil {
-		return "", nil, nil, err
+		return nil, err
 	}
-	return http.MethodPost, http.Header{
-		"X-Dashscope-Async": {"enable"},
-	}, bytes.NewReader(data), nil
+	return &adaptor.ConvertRequestResult{
+		Method: http.MethodPost,
+		Header: http.Header{
+			"X-Dashscope-Async": {"enable"},
+		},
+		Body: bytes.NewReader(data),
+	}, nil
 }
 
-func ImageHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, *relaymodel.ErrorWithStatusCode) {
+func ImageHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, adaptor.Error) {
 	if resp.StatusCode != http.StatusOK {
 		return nil, openai.ErrorHanlder(resp)
 	}
@@ -62,38 +67,31 @@ func ImageHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.
 	var aliTaskResponse TaskResponse
 	responseBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, openai.ErrorWrapper(err, "read_response_body_failed", http.StatusInternalServerError)
+		return nil, relaymodel.WrapperOpenAIError(err, "read_response_body_failed", http.StatusInternalServerError)
 	}
 	err = sonic.Unmarshal(responseBody, &aliTaskResponse)
 	if err != nil {
-		return nil, openai.ErrorWrapper(err, "unmarshal_response_body_failed", http.StatusInternalServerError)
+		return nil, relaymodel.WrapperOpenAIError(err, "unmarshal_response_body_failed", http.StatusInternalServerError)
 	}
 
 	if aliTaskResponse.Message != "" {
 		log.Error("aliAsyncTask err: " + aliTaskResponse.Message)
-		return nil, openai.ErrorWrapper(errors.New(aliTaskResponse.Message), "ali_async_task_failed", http.StatusInternalServerError)
+		return nil, relaymodel.WrapperOpenAIError(errors.New(aliTaskResponse.Message), "ali_async_task_failed", http.StatusInternalServerError)
 	}
 
 	aliResponse, err := asyncTaskWait(c, aliTaskResponse.Output.TaskID, meta.Channel.Key)
 	if err != nil {
-		return nil, openai.ErrorWrapper(err, "ali_async_task_wait_failed", http.StatusInternalServerError)
+		return nil, relaymodel.WrapperOpenAIError(err, "ali_async_task_wait_failed", http.StatusInternalServerError)
 	}
 
 	if aliResponse.Output.TaskStatus != "SUCCEEDED" {
-		return nil, &relaymodel.ErrorWithStatusCode{
-			Error: relaymodel.Error{
-				Message: aliResponse.Output.Message,
-				Type:    "ali_error",
-				Code:    aliResponse.Output.Code,
-			},
-			StatusCode: resp.StatusCode,
-		}
+		return nil, relaymodel.WrapperOpenAIErrorWithMessage(aliResponse.Output.Message, "ali_error", resp.StatusCode)
 	}
 
 	fullTextResponse := responseAli2OpenAIImage(c.Request.Context(), aliResponse, responseFormat)
 	jsonResponse, err := sonic.Marshal(fullTextResponse)
 	if err != nil {
-		return nil, openai.ErrorWrapper(err, "marshal_response_body_failed", http.StatusInternalServerError)
+		return nil, relaymodel.WrapperOpenAIError(err, "marshal_response_body_failed", http.StatusInternalServerError)
 	}
 	c.Writer.Header().Set("Content-Type", "application/json")
 	c.Writer.WriteHeader(resp.StatusCode)

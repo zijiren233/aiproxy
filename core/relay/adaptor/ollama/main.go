@@ -3,7 +3,6 @@ package ollama
 import (
 	"bufio"
 	"bytes"
-	"io"
 	"net/http"
 	"time"
 
@@ -15,17 +14,18 @@ import (
 	"github.com/labring/aiproxy/core/common/splitter"
 	"github.com/labring/aiproxy/core/middleware"
 	"github.com/labring/aiproxy/core/model"
+	"github.com/labring/aiproxy/core/relay/adaptor"
 	"github.com/labring/aiproxy/core/relay/adaptor/openai"
 	"github.com/labring/aiproxy/core/relay/meta"
 	relaymodel "github.com/labring/aiproxy/core/relay/model"
 	"github.com/labring/aiproxy/core/relay/utils"
 )
 
-func ConvertRequest(meta *meta.Meta, req *http.Request) (string, http.Header, io.Reader, error) {
+func ConvertRequest(meta *meta.Meta, req *http.Request) (*adaptor.ConvertRequestResult, error) {
 	var request relaymodel.GeneralOpenAIRequest
 	err := common.UnmarshalBodyReusable(req, &request)
 	if err != nil {
-		return "", nil, nil, err
+		return nil, err
 	}
 
 	ollamaRequest := ChatRequest{
@@ -64,7 +64,7 @@ func ConvertRequest(meta *meta.Meta, req *http.Request) (string, http.Header, io
 			case relaymodel.ContentTypeImageURL:
 				_, data, err := image.GetImageFromURL(req.Context(), part.ImageURL.URL)
 				if err != nil {
-					return "", nil, nil, err
+					return nil, err
 				}
 				imageUrls = append(imageUrls, data)
 			}
@@ -106,10 +106,14 @@ func ConvertRequest(meta *meta.Meta, req *http.Request) (string, http.Header, io
 
 	data, err := sonic.Marshal(ollamaRequest)
 	if err != nil {
-		return "", nil, nil, err
+		return nil, err
 	}
 
-	return http.MethodPost, nil, bytes.NewReader(data), nil
+	return &adaptor.ConvertRequestResult{
+		Method: http.MethodPost,
+		Header: nil,
+		Body:   bytes.NewReader(data),
+	}, nil
 }
 
 func getToolCalls(ollamaResponse *ChatResponse) []*relaymodel.Tool {
@@ -196,7 +200,7 @@ func streamResponse2OpenAI(meta *meta.Meta, ollamaResponse *ChatResponse) *relay
 	return &response
 }
 
-func StreamHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, *relaymodel.ErrorWithStatusCode) {
+func StreamHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, adaptor.Error) {
 	if resp.StatusCode != http.StatusOK {
 		return nil, ErrorHandler(resp)
 	}
@@ -250,10 +254,10 @@ func StreamHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model
 	return usage.ToModelUsage(), nil
 }
 
-func ConvertEmbeddingRequest(meta *meta.Meta, req *http.Request) (string, http.Header, io.Reader, error) {
+func ConvertEmbeddingRequest(meta *meta.Meta, req *http.Request) (*adaptor.ConvertRequestResult, error) {
 	request, err := utils.UnmarshalGeneralOpenAIRequest(req)
 	if err != nil {
-		return "", nil, nil, err
+		return nil, err
 	}
 	request.Model = meta.ActualModel
 	data, err := sonic.Marshal(&EmbeddingRequest{
@@ -268,12 +272,16 @@ func ConvertEmbeddingRequest(meta *meta.Meta, req *http.Request) (string, http.H
 		},
 	})
 	if err != nil {
-		return "", nil, nil, err
+		return nil, err
 	}
-	return http.MethodPost, nil, bytes.NewReader(data), nil
+	return &adaptor.ConvertRequestResult{
+		Method: http.MethodPost,
+		Header: nil,
+		Body:   bytes.NewReader(data),
+	}, nil
 }
 
-func EmbeddingHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, *relaymodel.ErrorWithStatusCode) {
+func EmbeddingHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, adaptor.Error) {
 	if resp.StatusCode != http.StatusOK {
 		return nil, ErrorHandler(resp)
 	}
@@ -283,17 +291,17 @@ func EmbeddingHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*mo
 	var ollamaResponse EmbeddingResponse
 	err := sonic.ConfigDefault.NewDecoder(resp.Body).Decode(&ollamaResponse)
 	if err != nil {
-		return nil, openai.ErrorWrapper(err, "unmarshal_response_body_failed", http.StatusInternalServerError)
+		return nil, relaymodel.WrapperOpenAIError(err, "unmarshal_response_body_failed", http.StatusInternalServerError)
 	}
 
 	if ollamaResponse.Error != "" {
-		return nil, openai.ErrorWrapperWithMessage(ollamaResponse.Error, openai.ErrorTypeUpstream, resp.StatusCode)
+		return nil, relaymodel.WrapperOpenAIErrorWithMessage(ollamaResponse.Error, relaymodel.ErrorTypeUpstream, resp.StatusCode)
 	}
 
 	fullTextResponse := embeddingResponseOllama2OpenAI(meta, &ollamaResponse)
 	jsonResponse, err := sonic.Marshal(fullTextResponse)
 	if err != nil {
-		return nil, openai.ErrorWrapper(err, "marshal_response_body_failed", http.StatusInternalServerError)
+		return nil, relaymodel.WrapperOpenAIError(err, "marshal_response_body_failed", http.StatusInternalServerError)
 	}
 	c.Writer.Header().Set("Content-Type", "application/json")
 	c.Writer.WriteHeader(resp.StatusCode)
@@ -321,7 +329,7 @@ func embeddingResponseOllama2OpenAI(meta *meta.Meta, response *EmbeddingResponse
 	return &openAIEmbeddingResponse
 }
 
-func Handler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, *relaymodel.ErrorWithStatusCode) {
+func Handler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, adaptor.Error) {
 	if resp.StatusCode != http.StatusOK {
 		return nil, ErrorHandler(resp)
 	}
@@ -331,10 +339,10 @@ func Handler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage
 	var ollamaResponse ChatResponse
 	err := sonic.ConfigDefault.NewDecoder(resp.Body).Decode(&ollamaResponse)
 	if err != nil {
-		return nil, openai.ErrorWrapper(err, "unmarshal_response_body_failed", http.StatusInternalServerError)
+		return nil, relaymodel.WrapperOpenAIError(err, "unmarshal_response_body_failed", http.StatusInternalServerError)
 	}
 	if ollamaResponse.Error != "" {
-		return nil, openai.ErrorWrapperWithMessage(ollamaResponse.Error, openai.ErrorTypeUpstream, resp.StatusCode)
+		return nil, relaymodel.WrapperOpenAIErrorWithMessage(ollamaResponse.Error, relaymodel.ErrorTypeUpstream, resp.StatusCode)
 	}
 	fullTextResponse := response2OpenAI(meta, &ollamaResponse)
 
@@ -344,7 +352,7 @@ func Handler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage
 
 	jsonResponse, err := sonic.Marshal(fullTextResponse)
 	if err != nil {
-		return nil, openai.ErrorWrapper(err, "marshal_response_body_failed", http.StatusInternalServerError)
+		return nil, relaymodel.WrapperOpenAIError(err, "marshal_response_body_failed", http.StatusInternalServerError)
 	}
 	c.Writer.Header().Set("Content-Type", "application/json")
 	c.Writer.WriteHeader(resp.StatusCode)

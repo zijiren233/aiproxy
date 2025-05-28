@@ -173,20 +173,9 @@ type CacheCreation struct {
 	Ephemeral1hInputTokens int64 `json:"ephemeral_1h_input_tokens,omitempty"`
 }
 
-type Error struct {
-	Type    string `json:"type"`
-	Message string `json:"message"`
-}
-
-type ErrorResponse struct {
-	Type  string `json:"type"`
-	Error Error  `json:"error"`
-}
-
 type Response struct {
 	StopReason   string    `json:"stop_reason,omitempty"`
 	StopSequence *string   `json:"stop_sequence"`
-	Error        *Error    `json:"error"`
 	ID           string    `json:"id"`
 	Type         string    `json:"type"`
 	Role         string    `json:"role"`
