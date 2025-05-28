@@ -1,6 +1,36 @@
 definitions:
+  adaptor.ConfigTemplate:
+    properties:
+      description:
+        type: string
+      example: {}
+      name:
+        type: string
+      required:
+        type: boolean
+      type:
+        $ref: '#/definitions/adaptor.ConfigType'
+    type: object
+  adaptor.ConfigTemplates:
+    additionalProperties:
+      $ref: '#/definitions/adaptor.ConfigTemplate'
+    type: object
+  adaptor.ConfigType:
+    enum:
+    - string
+    - number
+    - bool
+    - object
+    type: string
+    x-enum-varnames:
+    - ConfigTypeString
+    - ConfigTypeNumber
+    - ConfigTypeBool
+    - ConfigTypeObject
   adaptors.AdaptorMeta:
     properties:
+      configTemplates:
+        $ref: '#/definitions/adaptor.ConfigTemplates'
       defaultBaseUrl:
         type: string
       fetures:
@@ -79,6 +109,8 @@ definitions:
           type: object
         description: map[size]map[quality]price_per_image
         type: object
+      max_error_rate:
+        type: number
       model:
         type: string
       owner:
@@ -88,6 +120,8 @@ definitions:
       retry_times:
         type: integer
       rpm:
+        type: integer
+      timeout:
         type: integer
       tpm:
         type: integer
@@ -288,6 +322,8 @@ definitions:
           type: object
         description: map[size]map[quality]price_per_image
         type: object
+      max_error_rate:
+        type: number
       model:
         type: string
       owner:
@@ -297,6 +333,8 @@ definitions:
       retry_times:
         type: integer
       rpm:
+        type: integer
+      timeout:
         type: integer
       tpm:
         type: integer
@@ -542,6 +580,10 @@ definitions:
     type: object
   model.ChannelConfig:
     properties:
+      spec:
+        items:
+          type: integer
+        type: array
       split_think:
         type: boolean
     type: object
@@ -741,6 +783,10 @@ definitions:
         type: integer
       max_tps:
         type: integer
+      models:
+        items:
+          type: string
+        type: array
       output_tokens:
         type: integer
       rpm:
@@ -1172,7 +1218,7 @@ definitions:
       name:
         type: string
       schema:
-        additionalProperties: true
+        additionalProperties: {}
         type: object
       strict:
         type: boolean
@@ -1308,6 +1354,8 @@ definitions:
           type: object
         description: map[size]map[quality]price_per_image
         type: object
+      max_error_rate:
+        type: number
       model:
         type: string
       owner:
@@ -1317,6 +1365,8 @@ definitions:
       retry_times:
         type: integer
       rpm:
+        type: integer
+      timeout:
         type: integer
       tpm:
         type: integer
@@ -4377,10 +4427,6 @@ paths:
     get:
       description: Returns ranking data for models based on cost
       parameters:
-      - description: Group or *
-        in: query
-        name: group
-        type: string
       - description: Channel ID
         in: query
         name: channel
@@ -4420,6 +4466,10 @@ paths:
         in: path
         name: group
         required: true
+        type: string
+      - description: Token name
+        in: query
+        name: token_name
         type: string
       - description: Start timestamp
         in: query

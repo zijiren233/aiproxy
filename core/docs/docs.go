@@ -4406,12 +4406,6 @@ const docTemplate = `{
                 "summary": "Get model cost ranking data",
                 "parameters": [
                     {
-                        "type": "string",
-                        "description": "Group or *",
-                        "name": "group",
-                        "in": "query"
-                    },
-                    {
                         "type": "integer",
                         "description": "Channel ID",
                         "name": "channel",
@@ -4477,6 +4471,12 @@ const docTemplate = `{
                         "name": "group",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Token name",
+                        "name": "token_name",
+                        "in": "query"
                     },
                     {
                         "type": "integer",
@@ -7790,9 +7790,51 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "adaptor.ConfigTemplate": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "example": {},
+                "name": {
+                    "type": "string"
+                },
+                "required": {
+                    "type": "boolean"
+                },
+                "type": {
+                    "$ref": "#/definitions/adaptor.ConfigType"
+                }
+            }
+        },
+        "adaptor.ConfigTemplates": {
+            "type": "object",
+            "additionalProperties": {
+                "$ref": "#/definitions/adaptor.ConfigTemplate"
+            }
+        },
+        "adaptor.ConfigType": {
+            "type": "string",
+            "enum": [
+                "string",
+                "number",
+                "bool",
+                "object"
+            ],
+            "x-enum-varnames": [
+                "ConfigTypeString",
+                "ConfigTypeNumber",
+                "ConfigTypeBool",
+                "ConfigTypeObject"
+            ]
+        },
         "adaptors.AdaptorMeta": {
             "type": "object",
             "properties": {
+                "configTemplates": {
+                    "$ref": "#/definitions/adaptor.ConfigTemplates"
+                },
                 "defaultBaseUrl": {
                     "type": "string"
                 },
@@ -7910,6 +7952,9 @@ const docTemplate = `{
                         }
                     }
                 },
+                "max_error_rate": {
+                    "type": "number"
+                },
                 "model": {
                     "type": "string"
                 },
@@ -7923,6 +7968,9 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "rpm": {
+                    "type": "integer"
+                },
+                "timeout": {
                     "type": "integer"
                 },
                 "tpm": {
@@ -8228,6 +8276,9 @@ const docTemplate = `{
                         }
                     }
                 },
+                "max_error_rate": {
+                    "type": "number"
+                },
                 "model": {
                     "type": "string"
                 },
@@ -8241,6 +8292,9 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "rpm": {
+                    "type": "integer"
+                },
+                "timeout": {
                     "type": "integer"
                 },
                 "tpm": {
@@ -8606,6 +8660,12 @@ const docTemplate = `{
         "model.ChannelConfig": {
             "type": "object",
             "properties": {
+                "spec": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
                 "split_think": {
                     "type": "boolean"
                 }
@@ -8872,6 +8932,12 @@ const docTemplate = `{
                 },
                 "max_tps": {
                     "type": "integer"
+                },
+                "models": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 },
                 "output_tokens": {
                     "type": "integer"
@@ -9512,7 +9578,7 @@ const docTemplate = `{
                 },
                 "schema": {
                     "type": "object",
-                    "additionalProperties": true
+                    "additionalProperties": {}
                 },
                 "strict": {
                     "type": "boolean"
@@ -9716,6 +9782,9 @@ const docTemplate = `{
                         }
                     }
                 },
+                "max_error_rate": {
+                    "type": "number"
+                },
                 "model": {
                     "type": "string"
                 },
@@ -9729,6 +9798,9 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "rpm": {
+                    "type": "integer"
+                },
+                "timeout": {
                     "type": "integer"
                 },
                 "tpm": {

@@ -28,10 +28,10 @@ type SummaryData struct {
 	RequestCount   int64   `json:"request_count"`
 	UsedAmount     float64 `json:"used_amount"`
 	ExceptionCount int64   `json:"exception_count"`
-	MaxRPM         int64   `json:"max_rpm"`
-	MaxRPS         int64   `json:"max_rps"`
-	MaxTPM         int64   `json:"max_tpm"`
-	MaxTPS         int64   `json:"max_tps"`
+	MaxRPM         int64   `json:"max_rpm,omitempty"`
+	MaxRPS         int64   `json:"max_rps,omitempty"`
+	MaxTPM         int64   `json:"max_tpm,omitempty"`
+	MaxTPS         int64   `json:"max_tps,omitempty"`
 	Usage          Usage   `gorm:"embedded"        json:"usage,omitempty"`
 }
 
@@ -210,8 +210,22 @@ func getChartData(
 		query = query.Where("hour_timestamp <= ?", end.Unix())
 	}
 
+	// Only include max metrics when we have specific channel and model
+	selectFields := "hour_timestamp as timestamp, sum(request_count) as request_count, sum(used_amount) as used_amount, " +
+		"sum(exception_count) as exception_count, sum(input_tokens) as input_tokens, sum(output_tokens) as output_tokens, " +
+		"sum(cached_tokens) as cached_tokens, sum(cache_creation_tokens) as cache_creation_tokens, " +
+		"sum(total_tokens) as total_tokens, sum(web_search_count) as web_search_count"
+
+	// Only include max metrics when querying for a specific channel and model
+	if (channelID != 0 && modelName != "") || (group != "*" && tokenName != "" && modelName != "") {
+		selectFields += ", max(max_rpm) as max_rpm, max(max_rps) as max_rps, max(max_tpm) as max_tpm, max(max_tps) as max_tps"
+	} else {
+		// Set max metrics to 0 when not querying for specific channel and model
+		selectFields += ", 0 as max_rpm, 0 as max_rps, 0 as max_tpm, 0 as max_tps"
+	}
+
 	query = query.
-		Select("hour_timestamp as timestamp, sum(request_count) as request_count, sum(used_amount) as used_amount, sum(exception_count) as exception_count, sum(input_tokens) as input_tokens, sum(output_tokens) as output_tokens, sum(cached_tokens) as cached_tokens, sum(cache_creation_tokens) as cache_creation_tokens, sum(total_tokens) as total_tokens, sum(web_search_count) as web_search_count, max(max_rpm) as max_rpm, max(max_rps) as max_rps, max(max_tpm) as max_tpm, max(max_tps) as max_tps").
+		Select(selectFields).
 		Group("timestamp").
 		Order("timestamp ASC")
 
@@ -312,13 +326,13 @@ type CostRank struct {
 	RequestCount        int64   `json:"request_count"`
 	WebSearchCount      int64   `json:"web_search_count"`
 
-	MaxRPM int64 `json:"max_rpm"`
-	MaxRPS int64 `json:"max_rps"`
-	MaxTPM int64 `json:"max_tpm"`
-	MaxTPS int64 `json:"max_tps"`
+	MaxRPM int64 `json:"max_rpm,omitempty"`
+	MaxRPS int64 `json:"max_rps,omitempty"`
+	MaxTPM int64 `json:"max_tpm,omitempty"`
+	MaxTPS int64 `json:"max_tps,omitempty"`
 }
 
-func GetModelCostRank(group string, channelID int, start, end time.Time) ([]*CostRank, error) {
+func GetModelCostRank(group string, tokenName string, channelID int, start, end time.Time) ([]*CostRank, error) {
 	var ranks []*CostRank
 
 	var query *gorm.DB
@@ -330,6 +344,9 @@ func GetModelCostRank(group string, channelID int, start, end time.Time) ([]*Cos
 	} else {
 		query = LogDB.Model(&GroupSummary{}).
 			Where("group_id = ?", group)
+		if tokenName != "" {
+			query = query.Where("token_name = ?", tokenName)
+		}
 	}
 
 	switch {
@@ -341,8 +358,15 @@ func GetModelCostRank(group string, channelID int, start, end time.Time) ([]*Cos
 		query = query.Where("hour_timestamp <= ?", end.Unix())
 	}
 
+	selectFields := "model, SUM(used_amount) as used_amount, SUM(request_count) as request_count, SUM(input_tokens) as input_tokens, SUM(output_tokens) as output_tokens, SUM(cached_tokens) as cached_tokens, SUM(cache_creation_tokens) as cache_creation_tokens, SUM(total_tokens) as total_tokens"
+	if (channelID != 0) || (group != "*" && tokenName != "") {
+		selectFields += ", max(max_rpm) as max_rpm, max(max_rps) as max_rps, max(max_tpm) as max_tps, max(max_tps) as max_tps"
+	} else {
+		selectFields += ", 0 as max_rpm, 0 as max_rps, 0 as max_tpm, 0 as max_tps"
+	}
+
 	query = query.
-		Select("model, SUM(used_amount) as used_amount, SUM(request_count) as request_count, SUM(input_tokens) as input_tokens, SUM(output_tokens) as output_tokens, SUM(cached_tokens) as cached_tokens, SUM(cache_creation_tokens) as cache_creation_tokens, SUM(total_tokens) as total_tokens, max(max_rpm) as max_rpm, max(max_rps) as max_rps, max(max_tpm) as max_tps, max(max_tps) as max_tps").
+		Select(selectFields).
 		Group("model")
 
 	err := query.Scan(&ranks).Error

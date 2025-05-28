@@ -1140,10 +1140,10 @@ type ChartData struct {
 	ExceptionCount      int64   `json:"exception_count"`
 	WebSearchCount      int64   `json:"web_search_count,omitempty"`
 
-	MaxRPM int64 `json:"max_rpm"`
-	MaxTPM int64 `json:"max_tpm"`
-	MaxRPS int64 `json:"max_rps"`
-	MaxTPS int64 `json:"max_tps"`
+	MaxRPM int64 `json:"max_rpm,omitempty"`
+	MaxTPM int64 `json:"max_tpm,omitempty"`
+	MaxRPS int64 `json:"max_rps,omitempty"`
+	MaxTPS int64 `json:"max_tps,omitempty"`
 }
 
 type DashboardResponse struct {
@@ -1154,10 +1154,10 @@ type DashboardResponse struct {
 	RPM int64 `json:"rpm"`
 	TPM int64 `json:"tpm"`
 
-	MaxRPM int64 `json:"max_rpm"`
-	MaxTPM int64 `json:"max_tpm"`
-	MaxRPS int64 `json:"max_rps"`
-	MaxTPS int64 `json:"max_tps"`
+	MaxRPM int64 `json:"max_rpm,omitempty"`
+	MaxTPM int64 `json:"max_tpm,omitempty"`
+	MaxRPS int64 `json:"max_rps,omitempty"`
+	MaxTPS int64 `json:"max_tps,omitempty"`
 
 	UsedAmount          float64 `json:"used_amount"`
 	InputTokens         int64   `json:"input_tokens,omitempty"`
@@ -1167,12 +1167,12 @@ type DashboardResponse struct {
 	CacheCreationTokens int64   `json:"cache_creation_tokens,omitempty"`
 	WebSearchCount      int64   `json:"web_search_count,omitempty"`
 
-	Channels []int `json:"channels,omitempty"`
+	Channels []int    `json:"channels,omitempty"`
+	Models   []string `json:"models,omitempty"`
 }
 
 type GroupDashboardResponse struct {
 	DashboardResponse
-	Models     []string `json:"models"`
 	TokenNames []string `json:"token_names"`
 }
 
@@ -1337,6 +1337,7 @@ func GetDashboardData(
 	var (
 		chartData []*ChartData
 		channels  []int
+		models    []string
 	)
 
 	g := new(errgroup.Group)
@@ -1353,12 +1354,19 @@ func GetDashboardData(
 		return err
 	})
 
+	g.Go(func() error {
+		var err error
+		models, err = GetUsedModels("*", "", start, end)
+		return err
+	})
+
 	if err := g.Wait(); err != nil {
 		return nil, err
 	}
 
 	dashboardResponse := sumDashboardResponse(chartData)
 	dashboardResponse.Channels = channels
+	dashboardResponse.Models = models
 
 	return &dashboardResponse, nil
 }
@@ -1412,10 +1420,10 @@ func GetGroupDashboardData(
 	}
 
 	dashboardResponse := sumDashboardResponse(chartData)
+	dashboardResponse.Models = models
 
 	return &GroupDashboardResponse{
 		DashboardResponse: dashboardResponse,
-		Models:            models,
 		TokenNames:        tokenNames,
 	}, nil
 }
