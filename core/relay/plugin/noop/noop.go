@@ -10,26 +10,26 @@ import (
 	"github.com/labring/aiproxy/core/relay/plugin"
 )
 
-var _ plugin.Plugin = (*NoopPlugin)(nil)
+var _ plugin.Plugin = (*Noop)(nil)
 
-type NoopPlugin struct{}
+type Noop struct{}
 
-func (n *NoopPlugin) GetRequestURL(meta *meta.Meta, do adaptor.GetRequestURL) (string, error) {
+func (n *Noop) GetRequestURL(meta *meta.Meta, do adaptor.GetRequestURL) (string, error) {
 	return do.GetRequestURL(meta)
 }
 
-func (n *NoopPlugin) SetupRequestHeader(meta *meta.Meta, c *gin.Context, req *http.Request, do adaptor.SetupRequestHeader) error {
+func (n *Noop) SetupRequestHeader(meta *meta.Meta, c *gin.Context, req *http.Request, do adaptor.SetupRequestHeader) error {
 	return do.SetupRequestHeader(meta, c, req)
 }
 
-func (n *NoopPlugin) ConvertRequest(meta *meta.Meta, req *http.Request, do adaptor.ConvertRequest) (*adaptor.ConvertRequestResult, error) {
+func (n *Noop) ConvertRequest(meta *meta.Meta, req *http.Request, do adaptor.ConvertRequest) (*adaptor.ConvertRequestResult, error) {
 	return do.ConvertRequest(meta, req)
 }
 
-func (n *NoopPlugin) DoRequest(meta *meta.Meta, c *gin.Context, req *http.Request, do adaptor.DoRequest) (*http.Response, error) {
+func (n *Noop) DoRequest(meta *meta.Meta, c *gin.Context, req *http.Request, do adaptor.DoRequest) (*http.Response, error) {
 	return do.DoRequest(meta, c, req)
 }
 
-func (n *NoopPlugin) DoResponse(meta *meta.Meta, c *gin.Context, resp *http.Response, do adaptor.DoResponse) (*model.Usage, adaptor.Error) {
+func (n *Noop) DoResponse(meta *meta.Meta, c *gin.Context, resp *http.Response, do adaptor.DoResponse) (*model.Usage, adaptor.Error) {
 	return do.DoResponse(meta, c, resp)
 }

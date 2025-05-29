@@ -38,9 +38,9 @@ type arxivEntry struct {
 }
 
 func (a *ArxivEngine) Search(ctx context.Context, query SearchQuery) ([]SearchResult, error) {
-	var searchQueryItems []string
+	searchQueryItems := make([]string, 0)
 	for _, q := range query.Queries {
-		searchQueryItems = append(searchQueryItems, fmt.Sprintf("all:%s", url.QueryEscape(q)))
+		searchQueryItems = append(searchQueryItems, "all:"+url.QueryEscape(q))
 	}
 	searchQuery := strings.Join(searchQueryItems, "+AND+")
 	if query.ArxivCategory != "" {

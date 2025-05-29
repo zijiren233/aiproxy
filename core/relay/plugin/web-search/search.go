@@ -32,25 +32,25 @@ import (
 	"github.com/labring/aiproxy/mcp-servers/web-search/engine"
 )
 
-var _ plugin.Plugin = (*WebSearchPlugin)(nil)
+var _ plugin.Plugin = (*WebSearch)(nil)
 
 type GetChannel func(modelName string) (*model.Channel, error)
 
-// WebSearchPlugin implements web search functionality
-type WebSearchPlugin struct {
-	noop.NoopPlugin
+// WebSearch implements web search functionality
+type WebSearch struct {
+	noop.Noop
 	GetChannel GetChannel
 }
 
 // NewWebSearchPlugin creates a new web search plugin
-func NewWebSearchPlugin(getChannel GetChannel) *WebSearchPlugin {
-	return &WebSearchPlugin{
+func NewWebSearchPlugin(getChannel GetChannel) *WebSearch {
+	return &WebSearch{
 		GetChannel: getChannel,
 	}
 }
 
 // Configuration structures
-type WebSearchConfig struct {
+type Config struct {
 	EnablePlugin      bool           `json:"enable_plugin"`
 	DefaultEnable     bool           `json:"default_enable"`
 	MaxResults        int            `json:"max_results"`
@@ -99,30 +99,21 @@ type BingSpec struct {
 
 type ArxivSpec struct{}
 
-//go:embed prompts/full.md
-var fullSearchPrompts string
-
 //go:embed prompts/arxiv.md
 var arxivSearchPrompts string
 
 //go:embed prompts/internet.md
 var internetSearchPrompts string
 
-//go:embed prompts/private.md
-var privateSearchPrompts string
-
-//go:embed prompts/chinese-internet.md
-var chineseInternetSearchPrompts string
-
 // ConvertRequest intercepts and modifies requests to add web search capabilities
-func (p *WebSearchPlugin) ConvertRequest(meta *meta.Meta, req *http.Request, do adaptor.ConvertRequest) (*adaptor.ConvertRequestResult, error) {
+func (p *WebSearch) ConvertRequest(meta *meta.Meta, req *http.Request, do adaptor.ConvertRequest) (*adaptor.ConvertRequestResult, error) {
 	// Skip if not chat completions mode
 	if meta.Mode != mode.ChatCompletions {
 		return do.ConvertRequest(meta, req)
 	}
 
 	// Load plugin configuration
-	pluginConfig := WebSearchConfig{}
+	pluginConfig := Config{}
 	if err := meta.ModelConfig.LoadPluginConfig("web-search", &pluginConfig); err != nil {
 		return do.ConvertRequest(meta, req)
 	}
@@ -208,7 +199,7 @@ func (p *WebSearchPlugin) ConvertRequest(meta *meta.Meta, req *http.Request, do 
 }
 
 // validateAndApplyDefaults validates configuration and applies default values
-func (p *WebSearchPlugin) validateAndApplyDefaults(config *WebSearchConfig) error {
+func (p *WebSearch) validateAndApplyDefaults(config *Config) error {
 	// Set default max results
 	if config.MaxResults == 0 {
 		config.MaxResults = 10
@@ -278,7 +269,7 @@ func (p *WebSearchPlugin) validateAndApplyDefaults(config *WebSearchConfig) erro
 }
 
 // initializeSearchEngines creates search engine instances based on configuration
-func (p *WebSearchPlugin) initializeSearchEngines(configs []EngineConfig) ([]engine.Engine, bool, error) {
+func (p *WebSearch) initializeSearchEngines(configs []EngineConfig) ([]engine.Engine, bool, error) {
 	var engines []engine.Engine
 	var arxivExists bool
 
@@ -308,7 +299,7 @@ func (p *WebSearchPlugin) initializeSearchEngines(configs []EngineConfig) ([]eng
 }
 
 // extractUserQuery finds the last user message in the conversation
-func (p *WebSearchPlugin) extractUserQuery(messages []any) (int, string) {
+func (p *WebSearch) extractUserQuery(messages []any) (int, string) {
 	for i := len(messages) - 1; i >= 0; i-- {
 		msg, ok := messages[i].(map[string]any)
 		if !ok {
@@ -326,7 +317,7 @@ func (p *WebSearchPlugin) extractUserQuery(messages []any) (int, string) {
 }
 
 // prepareSearchRewritePrompt prepares the prompt for search query rewriting
-func (p *WebSearchPlugin) prepareSearchRewritePrompt(searchRewrite SearchRewrite, arxivExists bool, webSearchOptions map[string]any) string {
+func (p *WebSearch) prepareSearchRewritePrompt(searchRewrite SearchRewrite, arxivExists bool, webSearchOptions map[string]any) string {
 	if !searchRewrite.Enable {
 		return ""
 	}
@@ -359,7 +350,7 @@ func (p *WebSearchPlugin) prepareSearchRewritePrompt(searchRewrite SearchRewrite
 }
 
 // generateSearchContexts creates search contexts based on the user query
-func (p *WebSearchPlugin) generateSearchContexts(m *meta.Meta, config WebSearchConfig, query string, searchRewritePrompt string) []engine.SearchQuery {
+func (p *WebSearch) generateSearchContexts(m *meta.Meta, config Config, query string, searchRewritePrompt string) []engine.SearchQuery {
 	if searchRewritePrompt == "" {
 		return []engine.SearchQuery{{
 			Queries:  []string{query},
@@ -479,7 +470,7 @@ func (p *WebSearchPlugin) generateSearchContexts(m *meta.Meta, config WebSearchC
 }
 
 // executeSearches performs searches using all configured engines
-func (p *WebSearchPlugin) executeSearches(ctx context.Context, engines []engine.Engine, searchContexts []engine.SearchQuery) ([]engine.SearchResult, error) {
+func (p *WebSearch) executeSearches(ctx context.Context, engines []engine.Engine, searchContexts []engine.SearchQuery) ([]engine.SearchResult, error) {
 	var allResults []engine.SearchResult
 	resultsChan := make(chan []engine.SearchResult, len(engines)*len(searchContexts))
 	errorsChan := make(chan error, len(engines)*len(searchContexts))
@@ -533,7 +524,7 @@ func (p *WebSearchPlugin) executeSearches(ctx context.Context, engines []engine.
 }
 
 // formatSearchResults formats search results for the prompt
-func (p *WebSearchPlugin) formatSearchResults(chatRequest map[string]any, queryIndex int, query string, searchResults []engine.SearchResult, config WebSearchConfig) (map[string]any, string) {
+func (p *WebSearch) formatSearchResults(chatRequest map[string]any, queryIndex int, query string, searchResults []engine.SearchResult, config Config) (map[string]any, string) {
 	var formattedResults []string
 	var formattedReferences []string
 
@@ -612,7 +603,7 @@ func (rw *responseWriter) WriteString(s string) (int, error) {
 }
 
 // DoResponse handles response modification for references
-func (p *WebSearchPlugin) DoResponse(meta *meta.Meta, c *gin.Context, resp *http.Response, do adaptor.DoResponse) (*model.Usage, adaptor.Error) {
+func (p *WebSearch) DoResponse(meta *meta.Meta, c *gin.Context, resp *http.Response, do adaptor.DoResponse) (*model.Usage, adaptor.Error) {
 	references := meta.GetString("references")
 	if references == "" {
 		return do.DoResponse(meta, c, resp)
