@@ -2,14 +2,17 @@ package cache
 
 import (
 	"bytes"
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
 	"sync"
 	"time"
 
+	"github.com/bytedance/sonic"
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/core/common"
 	"github.com/labring/aiproxy/core/model"
@@ -18,6 +21,7 @@ import (
 	"github.com/labring/aiproxy/core/relay/plugin"
 	"github.com/labring/aiproxy/core/relay/plugin/noop"
 	gcache "github.com/patrickmn/go-cache"
+	"github.com/redis/go-redis/v9"
 )
 
 // Constants for cache metadata keys
@@ -31,6 +35,7 @@ const (
 const (
 	pluginConfigCacheKey = "cache-config"
 	cacheHeader          = "X-Aiproxy-Cache"
+	redisCachePrefix     = "cache:"
 )
 
 // Buffer size constants
@@ -41,20 +46,21 @@ const (
 
 // Item represents a cached response
 type Item struct {
-	Body   []byte
-	Header http.Header
-	Usage  *model.Usage
+	Body   []byte              `json:"body"`
+	Header map[string][]string `json:"header"`
+	Usage  *model.Usage        `json:"usage"`
 }
 
 // Cache implements caching functionality for AI requests
 type Cache struct {
 	noop.Noop
+	rdb *redis.Client
 }
 
 var (
 	_ plugin.Plugin = (*Cache)(nil)
 	// Global cache instance with 5 minute default TTL and 10 minute cleanup interval
-	cache = gcache.New(5*time.Minute, 10*time.Minute)
+	cache = gcache.New(30*time.Second, 5*time.Minute)
 	// Buffer pool for response writers
 	bufferPool = sync.Pool{
 		New: func() any {
@@ -64,8 +70,8 @@ var (
 )
 
 // NewCachePlugin creates a new cache plugin
-func NewCachePlugin() plugin.Plugin {
-	return &Cache{}
+func NewCachePlugin(rdb *redis.Client) plugin.Plugin {
+	return &Cache{rdb: rdb}
 }
 
 // Cache metadata helpers
@@ -130,6 +136,78 @@ func getPluginConfig(meta *meta.Meta) (config *Config, err error) {
 	return &pluginConfig, nil
 }
 
+// Redis cache operations
+func (c *Cache) getFromRedis(ctx context.Context, key string) (*Item, error) {
+	if c.rdb == nil {
+		return nil, nil
+	}
+
+	data, err := c.rdb.Get(ctx, redisCachePrefix+key).Bytes()
+	if err != nil {
+		if errors.Is(err, redis.Nil) {
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	var item Item
+	if err := sonic.Unmarshal(data, &item); err != nil {
+		return nil, err
+	}
+
+	return &item, nil
+}
+
+func (c *Cache) setToRedis(ctx context.Context, key string, item *Item, ttl time.Duration) error {
+	if c.rdb == nil {
+		return nil
+	}
+
+	data, err := sonic.Marshal(item)
+	if err != nil {
+		return err
+	}
+
+	return c.rdb.Set(ctx, redisCachePrefix+key, data, ttl).Err()
+}
+
+// getFromCache retrieves item from cache (Redis or memory)
+func (c *Cache) getFromCache(ctx context.Context, key string) (*Item, bool) {
+	// Try Redis first if available
+	if c.rdb != nil {
+		item, err := c.getFromRedis(ctx, key)
+		if err == nil && item != nil {
+			return item, true
+		}
+		// If Redis fails, fallback to memory cache
+	}
+
+	// Try memory cache
+	if v, ok := cache.Get(key); ok {
+		if item, ok := v.(Item); ok {
+			return &item, true
+		}
+	}
+
+	return nil, false
+}
+
+// setToCache stores item in cache (Redis and/or memory)
+func (c *Cache) setToCache(ctx context.Context, key string, item Item, ttl time.Duration) {
+	// Set to Redis if available
+	if c.rdb != nil {
+		if err := c.setToRedis(ctx, key, &item, ttl); err == nil {
+			// If Redis succeeds, also set to memory cache for faster access
+			cache.Set(key, item, ttl)
+			return
+		}
+		// If Redis fails, fallback to memory cache only
+	}
+
+	// Set to memory cache
+	cache.Set(key, item, ttl)
+}
+
 // ConvertRequest handles the request conversion phase
 func (c *Cache) ConvertRequest(meta *meta.Meta, req *http.Request, do adaptor.ConvertRequest) (*adaptor.ConvertRequestResult, error) {
 	pluginConfig, err := getPluginConfig(meta)
@@ -150,13 +228,10 @@ func (c *Cache) ConvertRequest(meta *meta.Meta, req *http.Request, do adaptor.Co
 	cacheKey := fmt.Sprintf("%d:%s", meta.Mode, hex.EncodeToString(hash[:]))
 	setCacheKey(meta, cacheKey)
 
-	item, ok := cache.Get(cacheKey)
-	if ok {
-		cacheItem, ok := item.(Item)
-		if !ok {
-			panic(fmt.Sprintf("cache item type not match: %T", item))
-		}
-		setCacheHit(meta, &cacheItem)
+	// Check cache
+	ctx := req.Context()
+	if item, ok := c.getFromCache(ctx, cacheKey); ok {
+		setCacheHit(meta, item)
 		return &adaptor.ConvertRequestResult{}, nil
 	}
 
@@ -206,6 +281,16 @@ func (rw *responseWriter) WriteString(s string) (int, error) {
 	return rw.ResponseWriter.WriteString(s)
 }
 
+func (c *Cache) writeCacheHeader(ctx *gin.Context, pluginConfig *Config, value string) {
+	if pluginConfig.AddCacheHitHeader {
+		header := pluginConfig.CacheHitHeader
+		if header == "" {
+			header = cacheHeader
+		}
+		ctx.Header(header, value)
+	}
+}
+
 // DoResponse handles the response processing phase
 func (c *Cache) DoResponse(meta *meta.Meta, ctx *gin.Context, resp *http.Response, do adaptor.DoResponse) (usage *model.Usage, adapterErr adaptor.Error) {
 	pluginConfig, err := getPluginConfig(meta)
@@ -220,15 +305,19 @@ func (c *Cache) DoResponse(meta *meta.Meta, ctx *gin.Context, resp *http.Respons
 			return do.DoResponse(meta, ctx, resp)
 		}
 
-		ctx.Header("Content-Type", item.Header.Get("Content-Type"))
-		ctx.Header("Content-Length", strconv.Itoa(len(item.Body)))
-		if pluginConfig.AddCacheHitHeader {
-			header := pluginConfig.CacheHitHeader
-			if header == "" {
-				header = cacheHeader
+		// Restore headers from cache
+		for k, v := range item.Header {
+			for _, val := range v {
+				ctx.Header(k, val)
 			}
-			ctx.Header(header, "hit")
 		}
+
+		// Override specific headers
+		ctx.Header("Content-Type", item.Header["Content-Type"][0])
+		ctx.Header("Content-Length", strconv.Itoa(len(item.Body)))
+
+		c.writeCacheHeader(ctx, pluginConfig, "hit")
+
 		ctx.Status(http.StatusOK)
 		_, _ = ctx.Writer.Write(item.Body)
 		return item.Usage, nil
@@ -238,13 +327,15 @@ func (c *Cache) DoResponse(meta *meta.Meta, ctx *gin.Context, resp *http.Respons
 		return do.DoResponse(meta, ctx, resp)
 	}
 
+	c.writeCacheHeader(ctx, pluginConfig, "miss")
+
 	// Set up response capture for caching
 	buf := getBuffer()
 	defer putBuffer(buf)
 
 	rw := &responseWriter{
 		ResponseWriter: ctx.Writer,
-		maxSize:        pluginConfig.MaxSize,
+		maxSize:        pluginConfig.ItemMaxSize,
 		cacheBody:      buf,
 	}
 	ctx.Writer = rw
@@ -253,13 +344,22 @@ func (c *Cache) DoResponse(meta *meta.Meta, ctx *gin.Context, resp *http.Respons
 		if adapterErr != nil || rw.overflow {
 			return
 		}
-		respBody := rw.cacheBody.Bytes()
-		respHeader := rw.Header()
-		cache.Set(getCacheKey(meta), Item{
-			Body:   bytes.Clone(respBody),
-			Header: respHeader,
+
+		// Convert http.Header to map[string][]string for JSON serialization
+		headerMap := make(map[string][]string)
+		for k, v := range rw.Header() {
+			headerMap[k] = v
+		}
+
+		// Store in cache
+		item := Item{
+			Body:   bytes.Clone(rw.cacheBody.Bytes()),
+			Header: headerMap,
 			Usage:  usage,
-		}, time.Duration(pluginConfig.TTL)*time.Second)
+		}
+
+		ttl := time.Duration(pluginConfig.TTL) * time.Second
+		c.setToCache(ctx.Request.Context(), getCacheKey(meta), item, ttl)
 	}()
 
 	return do.DoResponse(meta, ctx, resp)
