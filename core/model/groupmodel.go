@@ -1,6 +1,8 @@
 package model
 
 import (
+	"errors"
+
 	log "github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 )
@@ -24,6 +26,13 @@ type GroupModelConfig struct {
 
 	OverrideRetryTimes bool  `json:"override_retry_times"`
 	RetryTimes         int64 `json:"retry_times"`
+}
+
+func (g *GroupModelConfig) BeforeSave(_ *gorm.DB) (err error) {
+	if g.Model == "" {
+		return errors.New("model is required")
+	}
+	return nil
 }
 
 func SaveGroupModelConfig(groupModelConfig GroupModelConfig) (err error) {

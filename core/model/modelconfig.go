@@ -2,6 +2,7 @@ package model
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -37,6 +38,13 @@ type ModelConfig struct {
 	RetryTimes   int64              `json:"retry_times,omitempty"`
 	Timeout      int64              `json:"timeout,omitempty"`
 	MaxErrorRate float64            `json:"max_error_rate,omitempty"`
+}
+
+func (c *ModelConfig) BeforeSave(_ *gorm.DB) (err error) {
+	if c.Model == "" {
+		return errors.New("model is required")
+	}
+	return nil
 }
 
 func NewDefaultModelConfig(model string) ModelConfig {

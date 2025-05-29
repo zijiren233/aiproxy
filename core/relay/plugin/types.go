@@ -27,16 +27,15 @@ func WrapperAdaptor(adaptor adaptor.Adaptor, plugins ...Plugin) adaptor.Adaptor 
 		return adaptor
 	}
 
-	wrapped := &wrappedAdaptor{
-		Adaptor: adaptor,
-		plugin:  plugins[0],
+	result := adaptor
+	for i := len(plugins) - 1; i >= 0; i-- {
+		result = &wrappedAdaptor{
+			Adaptor: result,
+			plugin:  plugins[i],
+		}
 	}
 
-	if len(plugins) > 1 {
-		return WrapperAdaptor(wrapped, plugins[1:]...)
-	}
-
-	return wrapped
+	return result
 }
 
 var _ adaptor.Adaptor = (*wrappedAdaptor)(nil)
