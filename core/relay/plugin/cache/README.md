@@ -1,20 +1,20 @@
-# Cache 插件配置指南
+# Cache Plugin Configuration Guide
 
-## 概述
+## Overview
 
-Cache 插件是一个高性能的 AI API 请求缓存解决方案，通过存储和重用相同请求的响应来帮助减少延迟和成本。它支持内存缓存和 Redis，适用于分布式部署。
+The Cache Plugin is a high-performance caching solution for AI API requests that helps reduce latency and costs by storing and reusing responses for identical requests. It supports both in-memory caching and Redis, making it suitable for distributed deployments.
 
-## 功能特性
+## Features
 
-- **双重存储**：支持内存缓存和 Redis，提供灵活的部署选项
-- **自动降级**：Redis 不可用时自动降级到内存缓存
-- **基于内容的缓存**：使用请求体的 SHA256 哈希值生成缓存键
-- **可配置 TTL**：为缓存项设置自定义生存时间
-- **大小限制**：可配置最大项目大小以防止内存问题
-- **缓存头部**：可选的头部信息来指示缓存命中
-- **零拷贝设计**：通过缓冲池实现高效的内存使用
+- **Dual Storage**: Supports both in-memory cache and Redis for flexible deployment options
+- **Automatic Fallback**: Automatically falls back to in-memory cache when Redis is unavailable
+- **Content-Based Caching**: Uses SHA256 hash of request body to generate cache keys
+- **Configurable TTL**: Set custom time-to-live for cached items
+- **Size Limits**: Configurable maximum item size to prevent memory issues
+- **Cache Headers**: Optional headers to indicate cache hits
+- **Zero-Copy Design**: Efficient memory usage through buffer pooling
 
-## 配置示例
+## Configuration Example
 
 ```json
 {
@@ -32,51 +32,51 @@ Cache 插件是一个高性能的 AI API 请求缓存解决方案，通过存储
 }
 ```
 
-## 配置字段说明
+## Configuration Fields
 
-### 插件配置
+### Plugin Configuration
 
-| 字段 | 类型 | 必填 | 默认值 | 说明 |
-|------|------|------|--------|------|
-| `enable_plugin` | bool | 是 | false | 是否启用 Cache 插件 |
-| `ttl` | int | 否 | 300 | 缓存项的生存时间（秒） |
-| `item_max_size` | int | 否 | 1048576 (1MB) | 单个缓存项的最大大小（字节） |
-| `add_cache_hit_header` | bool | 否 | false | 是否添加指示缓存命中的头部 |
-| `cache_hit_header` | string | 否 | "X-Aiproxy-Cache" | 缓存命中头部的名称 |
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `enable_plugin` | bool | Yes | false | Whether to enable the Cache plugin |
+| `ttl` | int | No | 300 | Time-to-live for cached items (in seconds) |
+| `item_max_size` | int | No | 1048576 (1MB) | Maximum size of a single cached item (in bytes) |
+| `add_cache_hit_header` | bool | No | false | Whether to add a header indicating cache hit |
+| `cache_hit_header` | string | No | "X-Aiproxy-Cache" | Name of the cache hit header |
 
-## 工作原理
+## How It Works
 
-### 缓存键生成
+### Cache Key Generation
 
-插件基于以下内容生成缓存键：
+The plugin generates cache keys based on:
 
-1. 请求模式（如 chat completions）
-2. 请求体的 SHA256 哈希值
+1. Request pattern (e.g., chat completions)
+2. SHA256 hash of the request body
 
-这确保了相同的请求会命中缓存，而不同的请求不会相互干扰。
+This ensures identical requests hit the cache while different requests don't interfere with each other.
 
-### 缓存存储
+### Cache Storage
 
-插件使用两层缓存策略：
+The plugin uses a two-tier caching strategy:
 
-1. **Redis（如果可用）**：分布式缓存的主要存储
-2. **内存**：备用存储或未配置 Redis 时的主要存储
+1. **Redis (if available)**: Primary storage for distributed caching
+2. **Memory**: Fallback storage or primary when Redis is not configured
 
-### 请求流程
+### Request Flow
 
-1. **请求阶段**：
-   - 插件检查是否启用缓存
-   - 从请求体生成缓存键
-   - 查找缓存（先查 Redis，再查内存）
-   - 如果命中，立即返回缓存的响应
-   - 如果未命中，继续请求上游 API
+1. **Request Phase**:
+   - Plugin checks if caching is enabled
+   - Generates cache key from request body
+   - Looks up cache (Redis first, then memory)
+   - If hit, immediately returns cached response
+   - If miss, continues to upstream API
 
-2. **响应阶段**：
-   - 捕获响应体和头部
-   - 如果响应成功，存储到缓存
-   - 遵守大小限制以防止内存问题
+2. **Response Phase**:
+   - Captures response body and headers
+   - If response is successful, stores in cache
+   - Respects size limits to prevent memory issues
 
-## 使用示例
+## Usage Example
 
 ```json
 {
@@ -91,17 +91,17 @@ Cache 插件是一个高性能的 AI API 请求缓存解决方案，通过存储
 }
 ```
 
-## 响应头部示例
+## Response Header Example
 
-当 `add_cache_hit_header` 启用时：
+When `add_cache_hit_header` is enabled:
 
-**缓存命中：**
+**Cache Hit:**
 
 ```
 X-Aiproxy-Cache: hit
 ```
 
-**缓存未命中：**
+**Cache Miss:**
 
 ```
 X-Aiproxy-Cache: miss
