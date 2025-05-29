@@ -180,6 +180,8 @@ func (p *WebSearch) ConvertRequest(meta *meta.Meta, req *http.Request, do adapto
 	// Format search results and modify request
 	modifiedRequest, references := p.formatSearchResults(chatRequest, queryIndex, query, searchResults, pluginConfig)
 
+	delete(modifiedRequest, "web_search_options")
+
 	// Create new request body
 	modifiedBody, err := sonic.Marshal(modifiedRequest)
 	if err != nil {
