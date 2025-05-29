@@ -37,7 +37,7 @@ func (rw *responseWriter) Write(b []byte) (int, error) {
 	if rw.firstByteAt.IsZero() {
 		rw.firstByteAt = time.Now()
 	}
-	if total := rw.body.Len() + len(b); total <= maxBufferSize {
+	if rw.body.Len()+len(b) <= maxBufferSize {
 		rw.body.Write(b)
 	} else {
 		rw.body.Write(b[:maxBufferSize-rw.body.Len()])
@@ -49,7 +49,7 @@ func (rw *responseWriter) WriteString(s string) (int, error) {
 	if rw.firstByteAt.IsZero() {
 		rw.firstByteAt = time.Now()
 	}
-	if total := rw.body.Len() + len(s); total <= maxBufferSize {
+	if rw.body.Len()+len(s) <= maxBufferSize {
 		rw.body.WriteString(s)
 	} else {
 		rw.body.WriteString(s[:maxBufferSize-rw.body.Len()])
@@ -111,7 +111,9 @@ func DoHelper(
 		return model.Usage{}, &detail, relayErr
 	}
 
-	defer resp.Body.Close()
+	if resp.Body != nil {
+		defer resp.Body.Close()
+	}
 
 	// 4. Handle success response
 	usage, relayErr := handleResponse(a, c, meta, resp, &detail)
@@ -235,8 +237,6 @@ func handleResponse(a adaptor.Adaptor, c *gin.Context, meta *meta.Meta, resp *ht
 		detail.FirstByteAt = rw.firstByteAt
 	}()
 	c.Writer = rw
-
-	c.Header("Content-Type", resp.Header.Get("Content-Type"))
 
 	usage, relayErr := a.DoResponse(meta, c, resp)
 	if relayErr != nil {
