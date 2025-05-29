@@ -45,6 +45,12 @@ AI Proxy 是一个强大的、生产就绪的 AI 网关，提供智能请求路�
 - **嵌入式 MCP**：带配置模板的内置 MCP 服务器
 - **OpenAPI 转 MCP**：自动将 OpenAPI 规范转换为 MCP 工具
 
+### 🔌 **插件系统**
+
+- **缓存插件**：高性能缓存，支持 Redis/内存存储，用于相同请求
+- **网络搜索插件**：实时网络搜索功能，支持 Google、Bing 和 Arxiv
+- **可扩展架构**：易于添加自定义插件以实现额外功能
+
 ### 🔧 **高级功能**
 
 - **多格式支持**：文本、图像、音频和文档处理
@@ -61,6 +67,10 @@ graph TB
     Gateway --> Auth[身份验证与授权]
     Gateway --> Router[智能路由器]
     Gateway --> Monitor[监控与分析]
+    Gateway --> Plugins[插件系统]
+    
+    Plugins --> CachePlugin[缓存插件]
+    Plugins --> SearchPlugin[网络搜索插件]
     
     Router --> Provider1[OpenAI]
     Router --> Provider2[Anthropic]
@@ -160,6 +170,32 @@ IP_GROUPS_BAN_THRESHOLD=10     # IP 共享禁用阈值
 ```
 
 </details>
+
+## 🔌 插件
+
+AI Proxy 支持插件系统来扩展其功能。当前可用的插件：
+
+### 缓存插件
+
+缓存插件为 AI API 请求提供高性能缓存：
+
+- **双重存储**：支持 Redis 和内存缓存
+- **基于内容的键**：使用请求体的 SHA256 哈希
+- **可配置 TTL**：缓存项的自定义生存时间
+- **大小限制**：通过可配置限制防止内存问题
+
+[查看缓存插件文档](./core/relay/plugin/cache/README.zh.md)
+
+### 网络搜索插件
+
+网络搜索插件添加实时网络搜索功能：
+
+- **多搜索引擎**：支持 Google、Bing 和 Arxiv
+- **智能查询重写**：AI 驱动的查询优化
+- **引用管理**：自动引用格式化
+- **动态控制**：用户可控的搜索深度
+
+[查看网络搜索插件文档](./core/relay/plugin/web-search/README.zh.md)
 
 ## 📚 API 文档
 

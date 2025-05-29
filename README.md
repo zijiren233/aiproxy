@@ -45,6 +45,12 @@ AI Proxy is a powerful, production-ready AI gateway that provides intelligent re
 - **Embedded MCP**: Built-in MCP servers with configuration templates
 - **OpenAPI to MCP**: Automatic conversion of OpenAPI specs to MCP tools
 
+### 🔌 **Plugin System**
+
+- **Cache Plugin**: High-performance caching for identical requests with Redis/memory storage
+- **Web Search Plugin**: Real-time web search capabilities with support for Google, Bing, and Arxiv
+- **Extensible Architecture**: Easy to add custom plugins for additional functionality
+
 ### 🔧 **Advanced Capabilities**
 
 - **Multi-format Support**: Text, image, audio, and document processing
@@ -61,6 +67,10 @@ graph TB
     Gateway --> Auth[Authentication & Authorization]
     Gateway --> Router[Intelligent Router]
     Gateway --> Monitor[Monitoring & Analytics]
+    Gateway --> Plugins[Plugin System]
+    
+    Plugins --> CachePlugin[Cache Plugin]
+    Plugins --> SearchPlugin[Web Search Plugin]
     
     Router --> Provider1[OpenAI]
     Router --> Provider2[Anthropic]
@@ -160,6 +170,32 @@ IP_GROUPS_BAN_THRESHOLD=10     # IP sharing ban threshold
 ```
 
 </details>
+
+## 🔌 Plugins
+
+AI Proxy supports a plugin system that extends its functionality. Currently available plugins:
+
+### Cache Plugin
+
+The Cache Plugin provides high-performance caching for AI API requests:
+
+- **Dual Storage**: Supports both Redis and in-memory caching
+- **Content-based Keys**: Uses SHA256 hash of request body
+- **Configurable TTL**: Custom time-to-live for cached items
+- **Size Limits**: Prevents memory issues with configurable limits
+
+[View Cache Plugin Documentation](./core/relay/plugin/cache/README.md)
+
+### Web Search Plugin
+
+The Web Search Plugin adds real-time web search capabilities:
+
+- **Multiple Search Engines**: Supports Google, Bing, and Arxiv
+- **Smart Query Rewriting**: AI-powered query optimization
+- **Reference Management**: Automatic citation formatting
+- **Dynamic Control**: User-controllable search depth
+
+[View Web Search Plugin Documentation](./core/relay/plugin/web-search/README.md)
 
 ## 📚 API Documentation
 
