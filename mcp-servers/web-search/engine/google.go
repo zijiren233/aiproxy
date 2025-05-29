@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/bytedance/sonic"
@@ -48,7 +49,7 @@ func (g *GoogleEngine) Search(ctx context.Context, query SearchQuery) ([]SearchR
 
 	querys := url.Values{}
 	querys.Set("cx", g.cx)
-	querys.Set("q", query.Query)
+	querys.Set("q", strings.Join(query.Queries, " "))
 	querys.Set("num", strconv.Itoa(query.MaxResults))
 	querys.Set("key", g.apiKey)
 

@@ -50,6 +50,6 @@ func (a *Adaptor) GetRequestURL(meta *meta.Meta) (string, error) {
 	}
 }
 
-func (a *Adaptor) GetModelList() []*model.ModelConfig {
+func (a *Adaptor) GetModelList() []model.ModelConfig {
 	return ModelList
 }

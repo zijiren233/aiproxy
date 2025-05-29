@@ -7,7 +7,7 @@ import (
 
 // https://docs.siliconflow.cn/docs/getting-started
 
-var ModelList = []*model.ModelConfig{
+var ModelList = []model.ModelConfig{
 	{
 		Model: "BAAI/bge-reranker-v2-m3",
 		Type:  mode.Rerank,

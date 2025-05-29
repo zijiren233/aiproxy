@@ -29,7 +29,7 @@ func (a *Adaptor) ConvertRequest(meta *meta.Meta, req *http.Request) (*adaptor.C
 	return a.Adaptor.ConvertRequest(meta, req)
 }
 
-func (a *Adaptor) GetModelList() []*model.ModelConfig {
+func (a *Adaptor) GetModelList() []model.ModelConfig {
 	return ModelList
 }
 

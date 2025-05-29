@@ -8,11 +8,11 @@ import (
 	"github.com/labring/aiproxy/core/relay/utils"
 )
 
-func GetTTSRequestPrice(_ *gin.Context, mc *model.ModelConfig) (model.Price, error) {
+func GetTTSRequestPrice(_ *gin.Context, mc model.ModelConfig) (model.Price, error) {
 	return mc.Price, nil
 }
 
-func GetTTSRequestUsage(c *gin.Context, _ *model.ModelConfig) (model.Usage, error) {
+func GetTTSRequestUsage(c *gin.Context, _ model.ModelConfig) (model.Usage, error) {
 	ttsRequest, err := utils.UnmarshalTTSRequest(c.Request)
 	if err != nil {
 		return model.Usage{}, err

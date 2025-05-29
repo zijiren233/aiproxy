@@ -7,7 +7,7 @@ import (
 
 // https://cloud.baidu.com/doc/WENXINWORKSHOP/s/Fm2vrveyu
 
-var ModelList = []*model.ModelConfig{
+var ModelList = []model.ModelConfig{
 	{
 		Model: "ERNIE-4.0-8K-Latest",
 		Type:  mode.ChatCompletions,

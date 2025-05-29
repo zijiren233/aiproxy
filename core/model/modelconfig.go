@@ -1,6 +1,7 @@
 package model
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -18,29 +19,41 @@ const (
 
 //nolint:revive
 type ModelConfig struct {
-	CreatedAt        time.Time              `gorm:"index;autoCreateTime"          json:"created_at"`
-	UpdatedAt        time.Time              `gorm:"index;autoUpdateTime"          json:"updated_at"`
-	Config           map[ModelConfigKey]any `gorm:"serializer:fastjson;type:text" json:"config,omitempty"`
-	Model            string                 `gorm:"primaryKey"                    json:"model"`
-	Owner            ModelOwner             `gorm:"type:varchar(255);index"       json:"owner"`
-	Type             mode.Mode              `json:"type"`
-	ExcludeFromTests bool                   `json:"exclude_from_tests,omitempty"`
-	RPM              int64                  `json:"rpm,omitempty"`
-	TPM              int64                  `json:"tpm,omitempty"`
+	CreatedAt        time.Time                  `gorm:"index;autoCreateTime"          json:"created_at"`
+	UpdatedAt        time.Time                  `gorm:"index;autoUpdateTime"          json:"updated_at"`
+	Config           map[ModelConfigKey]any     `gorm:"serializer:fastjson;type:text" json:"config,omitempty"`
+	Plugin           map[string]json.RawMessage `gorm:"serializer:fastjson;type:text" json:"plugin,omitempty"`
+	Model            string                     `gorm:"primaryKey"                    json:"model"`
+	Owner            ModelOwner                 `gorm:"type:varchar(255);index"       json:"owner"`
+	Type             mode.Mode                  `json:"type"`
+	ExcludeFromTests bool                       `json:"exclude_from_tests,omitempty"`
+	RPM              int64                      `json:"rpm,omitempty"`
+	TPM              int64                      `json:"tpm,omitempty"`
 	// map[size]map[quality]price_per_image
 	ImageQualityPrices map[string]map[string]float64 `gorm:"serializer:fastjson;type:text" json:"image_quality_prices,omitempty"`
 	// map[size]price_per_image
 	ImagePrices  map[string]float64 `gorm:"serializer:fastjson;type:text" json:"image_prices,omitempty"`
 	Price        Price              `gorm:"embedded"                      json:"price,omitempty"`
-	RetryTimes   int64              `json:"retry_times"`
-	Timeout      int64              `json:"timeout"`
-	MaxErrorRate float64            `json:"max_error_rate"`
+	RetryTimes   int64              `json:"retry_times,omitempty"`
+	Timeout      int64              `json:"timeout,omitempty"`
+	MaxErrorRate float64            `json:"max_error_rate,omitempty"`
 }
 
-func NewDefaultModelConfig(model string) *ModelConfig {
-	return &ModelConfig{
+func NewDefaultModelConfig(model string) ModelConfig {
+	return ModelConfig{
 		Model: model,
 	}
+}
+
+func (c *ModelConfig) LoadPluginConfig(pluginName string, config any) error {
+	if len(c.Plugin) == 0 {
+		return nil
+	}
+	pluginConfig, ok := c.Plugin[pluginName]
+	if !ok || len(pluginConfig) == 0 {
+		return nil
+	}
+	return sonic.Unmarshal(pluginConfig, config)
 }
 
 func (c *ModelConfig) LoadFromGroupModelConfig(groupModelConfig GroupModelConfig) ModelConfig {
@@ -128,7 +141,7 @@ func GetModelConfigs(page int, perPage int, model string) (configs []*ModelConfi
 	return configs, total, err
 }
 
-func GetAllModelConfigs() (configs []*ModelConfig, err error) {
+func GetAllModelConfigs() (configs []ModelConfig, err error) {
 	tx := DB.Model(&ModelConfig{})
 	err = tx.Order("created_at desc").
 		Omit("created_at", "updated_at").
@@ -137,7 +150,7 @@ func GetAllModelConfigs() (configs []*ModelConfig, err error) {
 	return configs, err
 }
 
-func GetModelConfigsByModels(models []string) (configs []*ModelConfig, err error) {
+func GetModelConfigsByModels(models []string) (configs []ModelConfig, err error) {
 	tx := DB.Model(&ModelConfig{}).Where("model IN (?)", models)
 	err = tx.Order("created_at desc").
 		Omit("created_at", "updated_at").
@@ -146,8 +159,8 @@ func GetModelConfigsByModels(models []string) (configs []*ModelConfig, err error
 	return configs, err
 }
 
-func GetModelConfig(model string) (*ModelConfig, error) {
-	config := &ModelConfig{}
+func GetModelConfig(model string) (ModelConfig, error) {
+	config := ModelConfig{}
 	err := DB.Model(&ModelConfig{}).
 		Where("model = ?", model).
 		Omit("created_at", "updated_at").
@@ -156,7 +169,7 @@ func GetModelConfig(model string) (*ModelConfig, error) {
 	return config, HandleNotFound(err, ErrModelConfigNotFound)
 }
 
-func SearchModelConfigs(keyword string, page int, perPage int, model string, owner ModelOwner) (configs []*ModelConfig, total int64, err error) {
+func SearchModelConfigs(keyword string, page int, perPage int, model string, owner ModelOwner) (configs []ModelConfig, total int64, err error) {
 	tx := DB.Model(&ModelConfig{}).Where("model LIKE ?", "%"+keyword+"%")
 	if model != "" {
 		tx = tx.Where("model = ?", model)
@@ -207,16 +220,16 @@ func SearchModelConfigs(keyword string, page int, perPage int, model string, own
 	return configs, total, err
 }
 
-func SaveModelConfig(config *ModelConfig) (err error) {
+func SaveModelConfig(config ModelConfig) (err error) {
 	defer func() {
 		if err == nil {
 			_ = InitModelConfigAndChannelCache()
 		}
 	}()
-	return DB.Save(config).Error
+	return DB.Save(&config).Error
 }
 
-func SaveModelConfigs(configs []*ModelConfig) (err error) {
+func SaveModelConfigs(configs []ModelConfig) (err error) {
 	defer func() {
 		if err == nil {
 			_ = InitModelConfigAndChannelCache()
@@ -224,7 +237,7 @@ func SaveModelConfigs(configs []*ModelConfig) (err error) {
 	}()
 	return DB.Transaction(func(tx *gorm.DB) error {
 		for _, config := range configs {
-			if err := tx.Save(config).Error; err != nil {
+			if err := tx.Save(&config).Error; err != nil {
 				return err
 			}
 		}

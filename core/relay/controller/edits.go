@@ -9,7 +9,7 @@ import (
 	"github.com/labring/aiproxy/core/relay/adaptor/openai"
 )
 
-func GetImagesEditsRequestPrice(c *gin.Context, mc *model.ModelConfig) (model.Price, error) {
+func GetImagesEditsRequestPrice(c *gin.Context, mc model.ModelConfig) (model.Price, error) {
 	size := c.PostForm("size")
 	quality := c.PostForm("quality")
 
@@ -29,7 +29,7 @@ func GetImagesEditsRequestPrice(c *gin.Context, mc *model.ModelConfig) (model.Pr
 	}, nil
 }
 
-func GetImagesEditsRequestUsage(c *gin.Context, mc *model.ModelConfig) (model.Usage, error) {
+func GetImagesEditsRequestUsage(c *gin.Context, mc model.ModelConfig) (model.Usage, error) {
 	mutliForms, err := c.MultipartForm()
 	if err != nil {
 		return model.Usage{}, err

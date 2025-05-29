@@ -5,7 +5,7 @@ import (
 	"github.com/labring/aiproxy/core/relay/mode"
 )
 
-var ModelList = []*model.ModelConfig{
+var ModelList = []model.ModelConfig{
 	{
 		Model: "open-mistral-7b",
 		Type:  mode.ChatCompletions,

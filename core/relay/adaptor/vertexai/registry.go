@@ -20,7 +20,7 @@ const (
 	VerterAIGemini
 )
 
-var modelList = []*model.ModelConfig{}
+var modelList = []model.ModelConfig{}
 
 func init() {
 	modelList = append(modelList, vertexclaude.ModelList...)

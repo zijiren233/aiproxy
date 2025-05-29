@@ -132,10 +132,10 @@ func UpdateGroupModelTokennameTokensRequest(c *gin.Context, tpm, tps int64) {
 	// log.Data["tps"] = strconv.FormatInt(tps, 10)
 }
 
-func checkGroupModelRPMAndTPM(c *gin.Context, group *model.GroupCache, mc *model.ModelConfig, tokenName string) error {
+func checkGroupModelRPMAndTPM(c *gin.Context, group *model.GroupCache, mc model.ModelConfig, tokenName string) error {
 	log := GetLogger(c)
 
-	adjustedModelConfig := GetGroupAdjustedModelConfig(group, *mc)
+	adjustedModelConfig := GetGroupAdjustedModelConfig(group, mc)
 
 	groupModelCount, groupModelOverLimitCount, groupModelSecondCount := reqlimit.PushGroupModelRequest(c.Request.Context(), group.ID, mc.Model, adjustedModelConfig.RPM)
 	UpdateGroupModelRequest(c, group, groupModelCount+groupModelOverLimitCount, groupModelSecondCount)
@@ -461,8 +461,8 @@ func GetRequestMetadata(c *gin.Context) map[string]string {
 	return c.GetStringMapString(RequestMetadata)
 }
 
-func GetModelConfig(c *gin.Context) *model.ModelConfig {
-	return c.MustGet(ModelConfig).(*model.ModelConfig)
+func GetModelConfig(c *gin.Context) model.ModelConfig {
+	return c.MustGet(ModelConfig).(model.ModelConfig)
 }
 
 func NewMetaByContext(c *gin.Context,

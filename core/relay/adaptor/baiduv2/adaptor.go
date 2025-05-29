@@ -91,6 +91,6 @@ func (a *Adaptor) DoResponse(meta *meta.Meta, c *gin.Context, resp *http.Respons
 	}
 }
 
-func (a *Adaptor) GetModelList() []*model.ModelConfig {
+func (a *Adaptor) GetModelList() []model.ModelConfig {
 	return ModelList
 }

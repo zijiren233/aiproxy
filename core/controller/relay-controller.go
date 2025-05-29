@@ -31,6 +31,8 @@ import (
 	"github.com/labring/aiproxy/core/relay/meta"
 	"github.com/labring/aiproxy/core/relay/mode"
 	relaymodel "github.com/labring/aiproxy/core/relay/model"
+	"github.com/labring/aiproxy/core/relay/plugin"
+	websearch "github.com/labring/aiproxy/core/relay/plugin/web-search"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -38,8 +40,8 @@ import (
 
 type (
 	RelayHandler    func(*gin.Context, *meta.Meta) *controller.HandleResult
-	GetRequestUsage func(*gin.Context, *model.ModelConfig) (model.Usage, error)
-	GetRequestPrice func(*gin.Context, *model.ModelConfig) (model.Price, error)
+	GetRequestUsage func(*gin.Context, model.ModelConfig) (model.Usage, error)
+	GetRequestPrice func(*gin.Context, model.ModelConfig) (model.Price, error)
 )
 
 type RelayController struct {
@@ -48,6 +50,7 @@ type RelayController struct {
 	Handler         RelayHandler
 }
 
+// TODO: convert to plugin
 type wrapAdaptor struct {
 	adaptor.Adaptor
 }
@@ -163,7 +166,13 @@ func relayHandler(c *gin.Context, meta *meta.Meta) *controller.HandleResult {
 		}
 	}
 
-	return controller.Handle(&wrapAdaptor{adaptor}, c, meta)
+	a := plugin.WrapperAdaptor(&wrapAdaptor{adaptor},
+		websearch.NewWebSearchPlugin(func(modelName string) (*model.Channel, error) {
+			return getWebSearchChannel(c, modelName)
+		}),
+	)
+
+	return controller.Handle(a, c, meta)
 }
 
 func relayController(m mode.Mode) RelayController {
@@ -318,9 +327,17 @@ var (
 
 func GetRandomChannel(mc *model.ModelCaches, availableSet []string, modelName string, errorRates map[int64]float64, ignoreChannel ...int64) (*model.Channel, []*model.Channel, error) {
 	channelMap := make(map[int]*model.Channel)
-	for _, set := range availableSet {
-		for _, channel := range mc.EnabledModel2ChannelsBySet[set][modelName] {
-			channelMap[channel.ID] = channel
+	if len(availableSet) != 0 {
+		for _, set := range availableSet {
+			for _, channel := range mc.EnabledModel2ChannelsBySet[set][modelName] {
+				channelMap[channel.ID] = channel
+			}
+		}
+	} else {
+		for _, sets := range mc.EnabledModel2ChannelsBySet {
+			for _, channel := range sets[modelName] {
+				channelMap[channel.ID] = channel
+			}
 		}
 	}
 	migratedChannels := make([]*model.Channel, 0, len(channelMap))
@@ -403,12 +420,11 @@ func NewMetaByContext(c *gin.Context, channel *model.Channel, mode mode.Mode, op
 }
 
 func relay(c *gin.Context, mode mode.Mode, relayController RelayController) {
-	log := middleware.GetLogger(c)
 	requestModel := middleware.GetRequestModel(c)
 	mc := middleware.GetModelConfig(c)
 
 	// Get initial channel
-	initialChannel, err := getInitialChannel(c, requestModel, log)
+	initialChannel, err := getInitialChannel(c, requestModel)
 	if err != nil || initialChannel == nil || initialChannel.channel == nil {
 		middleware.AbortLogWithMessageWithMode(mode, c,
 			http.StatusServiceUnavailable,
@@ -486,7 +502,7 @@ func relay(c *gin.Context, mode mode.Mode, relayController RelayController) {
 	)
 
 	// Retry loop
-	retryLoop(c, mode, retryState, relayController.Handler, log)
+	retryLoop(c, mode, retryState, relayController.Handler)
 }
 
 // recordResult records the consumption for the final result
@@ -572,7 +588,8 @@ type initialChannel struct {
 	migratedChannels  []*model.Channel
 }
 
-func getInitialChannel(c *gin.Context, modelName string, log *log.Entry) (*initialChannel, error) {
+func getInitialChannel(c *gin.Context, modelName string) (*initialChannel, error) {
+	log := middleware.GetLogger(c)
 	if channel := middleware.GetChannel(c); channel != nil {
 		log.Data["designated_channel"] = "true"
 		return &initialChannel{channel: channel, designatedChannel: true}, nil
@@ -605,6 +622,29 @@ func getInitialChannel(c *gin.Context, modelName string, log *log.Entry) (*initi
 		errorRates:       errorRates,
 		migratedChannels: migratedChannels,
 	}, nil
+}
+
+func getWebSearchChannel(c *gin.Context, modelName string) (*model.Channel, error) {
+	log := middleware.GetLogger(c)
+	mc := middleware.GetModelCaches(c)
+
+	ids, err := monitor.GetBannedChannelsWithModel(c.Request.Context(), modelName)
+	if err != nil {
+		log.Errorf("get %s auto banned channels failed: %+v", modelName, err)
+	}
+	log.Debugf("%s model banned channels: %+v", modelName, ids)
+
+	errorRates, err := monitor.GetModelChannelErrorRate(c.Request.Context(), modelName)
+	if err != nil {
+		log.Errorf("get channel model error rates failed: %+v", err)
+	}
+
+	channel, _, err := getChannelWithFallback(mc, nil, modelName, errorRates, ids...)
+	if err != nil {
+		return nil, err
+	}
+
+	return channel, nil
 }
 
 func handleRelayResult(c *gin.Context, bizErr adaptor.Error, retry bool, retryTimes int) (done bool) {
@@ -645,7 +685,9 @@ func initRetryState(retryTimes int, channel *initialChannel, meta *meta.Meta, re
 	return state
 }
 
-func retryLoop(c *gin.Context, mode mode.Mode, state *retryState, relayController RelayHandler, log *log.Entry) {
+func retryLoop(c *gin.Context, mode mode.Mode, state *retryState, relayController RelayHandler) {
+	log := middleware.GetLogger(c)
+
 	// do not use for i := range state.retryTimes, because the retryTimes is constant
 	i := 0
 

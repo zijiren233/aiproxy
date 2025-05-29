@@ -73,7 +73,11 @@ func DoRequest(req *http.Request) (*http.Response, error) {
 }
 
 func IsStreamResponse(resp *http.Response) bool {
-	contentType := resp.Header.Get("Content-Type")
+	return IsStreamResponseWithHeader(resp.Header)
+}
+
+func IsStreamResponseWithHeader(header http.Header) bool {
+	contentType := header.Get("Content-Type")
 	if contentType == "" {
 		return false
 	}

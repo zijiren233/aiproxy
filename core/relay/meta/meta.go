@@ -9,11 +9,12 @@ import (
 )
 
 type ChannelMeta struct {
-	Name    string
-	BaseURL string
-	Key     string
-	ID      int
-	Type    model.ChannelType
+	Name         string
+	BaseURL      string
+	Key          string
+	ID           int
+	Type         model.ChannelType
+	ModelMapping map[string]string
 }
 
 type Meta struct {
@@ -22,7 +23,7 @@ type Meta struct {
 	ChannelConfig model.ChannelConfig
 	Group         *model.GroupCache
 	Token         *model.TokenCache
-	ModelConfig   *model.ModelConfig
+	ModelConfig   model.ModelConfig
 
 	Endpoint    string
 	RequestAt   time.Time
@@ -83,7 +84,7 @@ func NewMeta(
 	channel *model.Channel,
 	mode mode.Mode,
 	modelName string,
-	modelConfig *model.ModelConfig,
+	modelConfig model.ModelConfig,
 	opts ...Option,
 ) *Meta {
 	meta := Meta{
@@ -103,18 +104,29 @@ func NewMeta(
 	}
 
 	if channel != nil {
-		meta.Channel.Name = channel.Name
-		meta.Channel.BaseURL = channel.BaseURL
-		meta.Channel.Key = channel.Key
-		meta.Channel.ID = channel.ID
-		meta.Channel.Type = channel.Type
-		if channel.Config != nil {
-			meta.ChannelConfig = *channel.Config
-		}
-		meta.ActualModel, _ = GetMappedModelName(modelName, channel.ModelMapping)
+		meta.SetChannel(channel)
 	}
 
 	return &meta
+}
+
+func (m *Meta) SetChannel(channel *model.Channel) {
+	m.Channel.Name = channel.Name
+	m.Channel.BaseURL = channel.BaseURL
+	m.Channel.Key = channel.Key
+	m.Channel.ID = channel.ID
+	m.Channel.Type = channel.Type
+	m.Channel.ModelMapping = channel.ModelMapping
+	if channel.Config != nil {
+		m.ChannelConfig = *channel.Config
+	}
+	m.ActualModel, _ = GetMappedModelName(m.OriginModel, channel.ModelMapping)
+}
+
+func (m *Meta) CopyChannelFromMeta(meta *Meta) {
+	m.Channel = meta.Channel
+	m.ChannelConfig = meta.ChannelConfig
+	m.ActualModel, _ = GetMappedModelName(meta.OriginModel, meta.Channel.ModelMapping)
 }
 
 func (m *Meta) ClearValues() {

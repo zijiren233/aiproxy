@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/bytedance/sonic"
@@ -42,7 +43,7 @@ type bingResponseWebPagesValue struct {
 
 func (b *BingEngine) Search(ctx context.Context, query SearchQuery) ([]SearchResult, error) {
 	querys := url.Values{}
-	querys.Set("q", query.Query)
+	querys.Set("q", strings.Join(query.Queries, " "))
 	querys.Set("count", strconv.Itoa(query.MaxResults))
 	if query.Language != "" {
 		querys.Set("mkt", query.Language)

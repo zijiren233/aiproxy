@@ -7,7 +7,7 @@ import (
 
 // https://cloud.tencent.com/document/product/1729/104753
 
-var ModelList = []*model.ModelConfig{
+var ModelList = []model.ModelConfig{
 	{
 		Model: "hunyuan-lite",
 		Type:  mode.ChatCompletions,

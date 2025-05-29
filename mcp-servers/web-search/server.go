@@ -218,7 +218,7 @@ func addWebSearchTool(mcpServer *server.MCPServer, engines map[string]engine.Eng
 
 			// Perform search
 			results, err := searchEngine.Search(ctx, engine.SearchQuery{
-				Query:         query,
+				Queries:       []string{query},
 				MaxResults:    maxRes,
 				Language:      language,
 				ArxivCategory: arxivCategory,
@@ -319,7 +319,7 @@ func addMultiSearchTool(mcpServer *server.MCPServer, engines map[string]engine.E
 				}
 
 				results, err := searchEngine.Search(ctx, engine.SearchQuery{
-					Query:      query,
+					Queries:    []string{query},
 					MaxResults: maxResults,
 				})
 				if err != nil {
@@ -424,7 +424,7 @@ func addSmartSearchTool(mcpServer *server.MCPServer, engines map[string]engine.E
 
 				searchEngine := engines[engineName]
 				results, err := searchEngine.Search(ctx, engine.SearchQuery{
-					Query:      q.Query,
+					Queries:    []string{q.Query},
 					MaxResults: q.MaxResults,
 				})
 				if err == nil {
