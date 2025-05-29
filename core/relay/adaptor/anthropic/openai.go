@@ -125,6 +125,9 @@ func OpenAIConvertRequest(meta *meta.Meta, req *http.Request) (*Request, error) 
 
 	if onlyThinking.Thinking != nil {
 		claudeRequest.Thinking = onlyThinking.Thinking
+		if claudeRequest.Thinking.Type == "disabled" {
+			claudeRequest.Thinking = nil
+		}
 	} else if strings.Contains(meta.OriginModel, "think") {
 		claudeRequest.Thinking = &Thinking{
 			Type: "enabled",

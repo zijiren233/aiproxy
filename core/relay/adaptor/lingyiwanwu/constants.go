@@ -7,7 +7,7 @@ import (
 
 // https://platform.lingyiwanwu.com/docs
 
-var ModelList = []*model.ModelConfig{
+var ModelList = []model.ModelConfig{
 	{
 		Model: "yi-lightning",
 		Type:  mode.ChatCompletions,

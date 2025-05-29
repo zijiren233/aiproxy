@@ -7,11 +7,11 @@ import (
 	"github.com/labring/aiproxy/core/relay/utils"
 )
 
-func GetChatRequestPrice(_ *gin.Context, mc *model.ModelConfig) (model.Price, error) {
+func GetChatRequestPrice(_ *gin.Context, mc model.ModelConfig) (model.Price, error) {
 	return mc.Price, nil
 }
 
-func GetChatRequestUsage(c *gin.Context, _ *model.ModelConfig) (model.Usage, error) {
+func GetChatRequestUsage(c *gin.Context, _ model.ModelConfig) (model.Usage, error) {
 	textRequest, err := utils.UnmarshalGeneralOpenAIRequest(c.Request)
 	if err != nil {
 		return model.Usage{}, err

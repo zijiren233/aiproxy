@@ -13,11 +13,11 @@ import (
 	"github.com/labring/aiproxy/core/model"
 )
 
-func GetSTTRequestPrice(_ *gin.Context, mc *model.ModelConfig) (model.Price, error) {
+func GetSTTRequestPrice(_ *gin.Context, mc model.ModelConfig) (model.Price, error) {
 	return mc.Price, nil
 }
 
-func GetSTTRequestUsage(c *gin.Context, _ *model.ModelConfig) (model.Usage, error) {
+func GetSTTRequestUsage(c *gin.Context, _ model.ModelConfig) (model.Usage, error) {
 	audioFile, err := c.FormFile("file")
 	if err != nil {
 		return model.Usage{}, fmt.Errorf("failed to get audio file: %w", err)

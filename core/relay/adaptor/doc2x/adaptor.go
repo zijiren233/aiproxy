@@ -59,6 +59,6 @@ func (a *Adaptor) SetupRequestHeader(meta *meta.Meta, _ *gin.Context, req *http.
 	return nil
 }
 
-func (a *Adaptor) GetModelList() []*model.ModelConfig {
+func (a *Adaptor) GetModelList() []model.ModelConfig {
 	return ModelList
 }

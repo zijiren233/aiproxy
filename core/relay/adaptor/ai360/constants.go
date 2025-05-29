@@ -5,7 +5,7 @@ import (
 	"github.com/labring/aiproxy/core/relay/mode"
 )
 
-var ModelList = []*model.ModelConfig{
+var ModelList = []model.ModelConfig{
 	{
 		Model: "360GPT_S2_V9",
 		Type:  mode.ChatCompletions,

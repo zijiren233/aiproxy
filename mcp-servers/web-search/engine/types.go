@@ -13,7 +13,7 @@ type SearchResult struct {
 
 // SearchQuery represents search parameters
 type SearchQuery struct {
-	Query         string
+	Queries       []string
 	MaxResults    int
 	Language      string
 	ArxivCategory string

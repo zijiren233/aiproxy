@@ -40,6 +40,12 @@ func (l *LimitedReader) Read(p []byte) (n int, err error) {
 	return
 }
 
+func SetRequestBody(req *http.Request, body []byte) {
+	ctx := req.Context()
+	bufCtx := context.WithValue(ctx, RequestBodyKey{}, body)
+	*req = *req.WithContext(bufCtx)
+}
+
 func GetRequestBody(req *http.Request) ([]byte, error) {
 	contentType := req.Header.Get("Content-Type")
 	if contentType == "application/x-www-form-urlencoded" ||
@@ -78,9 +84,7 @@ func GetRequestBody(req *http.Request) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("request body read failed: %w", err)
 	}
-	ctx := req.Context()
-	bufCtx := context.WithValue(ctx, RequestBodyKey{}, buf)
-	*req = *req.WithContext(bufCtx)
+	SetRequestBody(req, buf)
 	return buf, nil
 }
 

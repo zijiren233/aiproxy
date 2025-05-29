@@ -23,7 +23,7 @@ func NewErrUnsupportedModelType(modelType string) *UnsupportedModelTypeError {
 	return &UnsupportedModelTypeError{ModelType: modelType}
 }
 
-func BuildRequest(modelConfig *model.ModelConfig) (io.Reader, mode.Mode, error) {
+func BuildRequest(modelConfig model.ModelConfig) (io.Reader, mode.Mode, error) {
 	switch modelConfig.Type {
 	case mode.ChatCompletions:
 		body, err := BuildChatCompletionRequest(modelConfig.Model)
@@ -118,7 +118,7 @@ func BuildModerationsRequest(model string) (io.Reader, error) {
 	return bytes.NewReader(jsonBytes), nil
 }
 
-func BuildImagesGenerationsRequest(modelConfig *model.ModelConfig) (io.Reader, error) {
+func BuildImagesGenerationsRequest(modelConfig model.ModelConfig) (io.Reader, error) {
 	imagesGenerationsRequest := &relaymodel.GeneralOpenAIRequest{
 		Model:  modelConfig.Model,
 		Prompt: "hi",

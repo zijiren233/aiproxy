@@ -112,7 +112,7 @@ func SearchModelConfigs(c *gin.Context) {
 type SaveModelConfigsRequest struct {
 	CreatedAt int64 `json:"created_at"`
 	UpdatedAt int64 `json:"updated_at"`
-	*model.ModelConfig
+	model.ModelConfig
 }
 
 // SaveModelConfigs godoc
@@ -126,12 +126,12 @@ type SaveModelConfigsRequest struct {
 //	@Success		200		{object}	middleware.APIResponse
 //	@Router			/api/model_configs/ [post]
 func SaveModelConfigs(c *gin.Context) {
-	var configs []*SaveModelConfigsRequest
+	var configs []SaveModelConfigsRequest
 	if err := c.ShouldBindJSON(&configs); err != nil {
 		middleware.ErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
 	}
-	modelConfigs := make([]*model.ModelConfig, len(configs))
+	modelConfigs := make([]model.ModelConfig, len(configs))
 	for i, config := range configs {
 		modelConfigs[i] = config.ModelConfig
 	}

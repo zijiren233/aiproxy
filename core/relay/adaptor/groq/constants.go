@@ -7,7 +7,7 @@ import (
 
 // https://console.groq.com/docs/models
 
-var ModelList = []*model.ModelConfig{
+var ModelList = []model.ModelConfig{
 	{
 		Model: "gemma-7b-it",
 		Type:  mode.ChatCompletions,

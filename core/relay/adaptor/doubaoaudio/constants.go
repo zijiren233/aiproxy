@@ -7,7 +7,7 @@ import (
 
 // https://www.volcengine.com/docs/6561/1257543
 
-var ModelList = []*model.ModelConfig{
+var ModelList = []model.ModelConfig{
 	{
 		Model: "Doubao-tts",
 		Type:  mode.AudioSpeech,

@@ -7,7 +7,7 @@ import (
 
 // https://console.volcengine.com/ark/region:ark+cn-beijing/model
 
-var ModelList = []*model.ModelConfig{
+var ModelList = []model.ModelConfig{
 	{
 		Model: "Doubao-1.5-vision-pro-32k",
 		Type:  mode.ChatCompletions,

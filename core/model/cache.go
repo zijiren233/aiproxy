@@ -672,7 +672,7 @@ func CacheGetPublicMCPReusingParam(mcpID, groupID string) (*PublicMCPReusingPara
 
 //nolint:revive
 type ModelConfigCache interface {
-	GetModelConfig(model string) (*ModelConfig, bool)
+	GetModelConfig(model string) (ModelConfig, bool)
 }
 
 // read-only cache
@@ -684,9 +684,9 @@ type ModelCaches struct {
 	// map[set][]model
 	EnabledModelsBySet map[string][]string
 	// map[set][]modelconfig
-	EnabledModelConfigsBySet map[string][]*ModelConfig
+	EnabledModelConfigsBySet map[string][]ModelConfig
 	// map[model]modelconfig
-	EnabledModelConfigsMap map[string]*ModelConfig
+	EnabledModelConfigsMap map[string]ModelConfig
 
 	// map[set]map[model][]channel
 	EnabledModel2ChannelsBySet map[string]map[string][]*Channel
@@ -811,10 +811,10 @@ func LoadChannelByID(id int) (*Channel, error) {
 var _ ModelConfigCache = (*modelConfigMapCache)(nil)
 
 type modelConfigMapCache struct {
-	modelConfigMap map[string]*ModelConfig
+	modelConfigMap map[string]ModelConfig
 }
 
-func (m *modelConfigMapCache) GetModelConfig(model string) (*ModelConfig, bool) {
+func (m *modelConfigMapCache) GetModelConfig(model string) (ModelConfig, bool) {
 	config, ok := m.modelConfigMap[model]
 	return config, ok
 }
@@ -825,7 +825,7 @@ type disabledModelConfigCache struct {
 	modelConfigs ModelConfigCache
 }
 
-func (d *disabledModelConfigCache) GetModelConfig(model string) (*ModelConfig, bool) {
+func (d *disabledModelConfigCache) GetModelConfig(model string) (ModelConfig, bool) {
 	if config, ok := d.modelConfigs.GetModelConfig(model); ok {
 		return config, true
 	}
@@ -837,7 +837,7 @@ func initializeModelConfigCache() (ModelConfigCache, error) {
 	if err != nil {
 		return nil, err
 	}
-	newModelConfigMap := make(map[string]*ModelConfig)
+	newModelConfigMap := make(map[string]ModelConfig)
 	for _, modelConfig := range modelConfigs {
 		newModelConfigMap[modelConfig.Model] = modelConfig
 	}
@@ -905,16 +905,16 @@ func sortChannelsByPriorityBySet(modelMapBySet map[string]map[string][]*Channel)
 
 func buildEnabledModelsBySet(modelMapBySet map[string]map[string][]*Channel, modelConfigCache ModelConfigCache) (
 	map[string][]string,
-	map[string][]*ModelConfig,
-	map[string]*ModelConfig,
+	map[string][]ModelConfig,
+	map[string]ModelConfig,
 ) {
 	modelsBySet := make(map[string][]string)
-	modelConfigsBySet := make(map[string][]*ModelConfig)
-	modelConfigsMap := make(map[string]*ModelConfig)
+	modelConfigsBySet := make(map[string][]ModelConfig)
+	modelConfigsMap := make(map[string]ModelConfig)
 
 	for set, modelMap := range modelMapBySet {
 		models := make([]string, 0)
-		configs := make([]*ModelConfig, 0)
+		configs := make([]ModelConfig, 0)
 		appended := make(map[string]struct{})
 
 		for model := range modelMap {
@@ -940,7 +940,7 @@ func buildEnabledModelsBySet(modelMapBySet map[string]map[string][]*Channel, mod
 	return modelsBySet, modelConfigsBySet, modelConfigsMap
 }
 
-func SortModelConfigsFunc(i, j *ModelConfig) int {
+func SortModelConfigsFunc(i, j ModelConfig) int {
 	if i.Owner != j.Owner {
 		if natural.Less(string(i.Owner), string(j.Owner)) {
 			return -1

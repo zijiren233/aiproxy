@@ -33,11 +33,11 @@ import (
 const channelTestRequestID = "channel-test"
 
 var (
-	modelConfigCache     map[string]*model.ModelConfig = make(map[string]*model.ModelConfig)
+	modelConfigCache     map[string]model.ModelConfig = make(map[string]model.ModelConfig)
 	modelConfigCacheOnce sync.Once
 )
 
-func guessModelConfig(model string) *model.ModelConfig {
+func guessModelConfig(modelName string) model.ModelConfig {
 	modelConfigCacheOnce.Do(func() {
 		for _, c := range adaptors.ChannelAdaptor {
 			for _, m := range c.GetModelList() {
@@ -48,10 +48,10 @@ func guessModelConfig(model string) *model.ModelConfig {
 		}
 	})
 
-	if cachedConfig, ok := modelConfigCache[model]; ok {
+	if cachedConfig, ok := modelConfigCache[modelName]; ok {
 		return cachedConfig
 	}
-	return nil
+	return model.ModelConfig{}
 }
 
 // testSingleModel tests a single model in the channel
@@ -62,7 +62,7 @@ func testSingleModel(mc *model.ModelCaches, channel *model.Channel, modelName st
 	}
 	if modelConfig.Type == mode.Unknown {
 		newModelConfig := guessModelConfig(modelName)
-		if newModelConfig != nil {
+		if newModelConfig.Type != mode.Unknown {
 			modelConfig = newModelConfig
 		}
 	}

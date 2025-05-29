@@ -270,7 +270,7 @@ func GetGroupDashboardModels(c *gin.Context) {
 			}) {
 				continue
 			}
-			newEnabledModelConfigs = append(newEnabledModelConfigs, middleware.GetGroupAdjustedModelConfig(groupCache, *mc))
+			newEnabledModelConfigs = append(newEnabledModelConfigs, middleware.GetGroupAdjustedModelConfig(groupCache, mc))
 		}
 	}
 	middleware.SuccessResponse(c, newEnabledModelConfigs)

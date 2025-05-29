@@ -55,14 +55,14 @@ func (c *BuiltinModelConfig) MarshalJSON() ([]byte, error) {
 	})
 }
 
-func SortBuiltinModelConfigsFunc(i, j *BuiltinModelConfig) int {
-	return model.SortModelConfigsFunc((*model.ModelConfig)(i), (*model.ModelConfig)(j))
+func SortBuiltinModelConfigsFunc(i, j BuiltinModelConfig) int {
+	return model.SortModelConfigsFunc((model.ModelConfig)(i), (model.ModelConfig)(j))
 }
 
 var (
-	builtinModels             []*BuiltinModelConfig
+	builtinModels             []BuiltinModelConfig
 	builtinModelsMap          map[string]*OpenAIModels
-	builtinChannelType2Models map[model.ChannelType][]*BuiltinModelConfig
+	builtinChannelType2Models map[model.ChannelType][]BuiltinModelConfig
 )
 
 var permission = []OpenAIModelPermission{
@@ -83,12 +83,12 @@ var permission = []OpenAIModelPermission{
 }
 
 func init() {
-	builtinChannelType2Models = make(map[model.ChannelType][]*BuiltinModelConfig)
+	builtinChannelType2Models = make(map[model.ChannelType][]BuiltinModelConfig)
 	builtinModelsMap = make(map[string]*OpenAIModels)
 	// https://platform.openai.com/docs/models/model-endpoint-compatibility
 	for i, adaptor := range adaptors.ChannelAdaptor {
 		modelNames := adaptor.GetModelList()
-		builtinChannelType2Models[i] = make([]*BuiltinModelConfig, len(modelNames))
+		builtinChannelType2Models[i] = make([]BuiltinModelConfig, len(modelNames))
 		for idx, _model := range modelNames {
 			if _model.Owner == "" {
 				_model.Owner = model.ModelOwner(i.String())
@@ -103,11 +103,11 @@ func init() {
 					Root:       _model.Model,
 					Parent:     nil,
 				}
-				builtinModels = append(builtinModels, (*BuiltinModelConfig)(_model))
+				builtinModels = append(builtinModels, (BuiltinModelConfig)(_model))
 			} else if v.OwnedBy != string(_model.Owner) {
 				log.Fatalf("model %s owner mismatch, expect %s, actual %s", _model.Model, string(_model.Owner), v.OwnedBy)
 			}
-			builtinChannelType2Models[i][idx] = (*BuiltinModelConfig)(_model)
+			builtinChannelType2Models[i][idx] = (BuiltinModelConfig)(_model)
 		}
 	}
 	for _, models := range builtinChannelType2Models {

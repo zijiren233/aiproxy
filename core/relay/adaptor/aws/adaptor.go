@@ -35,8 +35,8 @@ func (a *Adaptor) DoResponse(meta *meta.Meta, c *gin.Context, _ *http.Response) 
 	return adaptor.(utils.AwsAdapter).DoResponse(meta, c)
 }
 
-func (a *Adaptor) GetModelList() (models []*model.ModelConfig) {
-	models = make([]*model.ModelConfig, 0, len(adaptors))
+func (a *Adaptor) GetModelList() (models []model.ModelConfig) {
+	models = make([]model.ModelConfig, 0, len(adaptors))
 	for _, model := range adaptors {
 		models = append(models, model.config)
 	}

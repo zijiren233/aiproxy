@@ -15,6 +15,6 @@ func (a *Adaptor) GetBaseURL() string {
 	return baseURL
 }
 
-func (a *Adaptor) GetModelList() []*model.ModelConfig {
+func (a *Adaptor) GetModelList() []model.ModelConfig {
 	return ModelList
 }

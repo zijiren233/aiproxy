@@ -7,7 +7,7 @@ import (
 
 // https://www.minimaxi.com/document/guides/chat-model/V2?id=65e0736ab2845de20908e2dd
 
-var ModelList = []*model.ModelConfig{
+var ModelList = []model.ModelConfig{
 	{
 		Model: "abab7-chat-preview",
 		Type:  mode.ChatCompletions,
