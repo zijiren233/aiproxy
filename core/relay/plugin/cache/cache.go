@@ -223,6 +223,10 @@ func (c *Cache) ConvertRequest(meta *meta.Meta, req *http.Request, do adaptor.Co
 		return nil, err
 	}
 
+	if len(body) == 0 {
+		return do.ConvertRequest(meta, req)
+	}
+
 	// Generate hash as cache key
 	hash := sha256.Sum256(body)
 	cacheKey := fmt.Sprintf("%d:%s", meta.Mode, hex.EncodeToString(hash[:]))
@@ -341,7 +345,9 @@ func (c *Cache) DoResponse(meta *meta.Meta, ctx *gin.Context, resp *http.Respons
 	ctx.Writer = rw
 	defer func() {
 		ctx.Writer = rw.ResponseWriter
-		if adapterErr != nil || rw.overflow {
+		if adapterErr != nil ||
+			rw.overflow ||
+			rw.cacheBody.Len() == 0 {
 			return
 		}
 
