@@ -168,7 +168,7 @@ func relayHandler(c *gin.Context, meta *meta.Meta) *controller.HandleResult {
 	}
 
 	a := plugin.WrapperAdaptor(&wrapAdaptor{adaptor},
-		cache.NewCachePlugin(),
+		cache.NewCachePlugin(common.RDB),
 		websearch.NewWebSearchPlugin(func(modelName string) (*model.Channel, error) {
 			return getWebSearchChannel(c, modelName)
 		}),
