@@ -22,6 +22,7 @@ Web Search Plugin 是一个为 AI 模型提供实时网络搜索能力的插件�
                 "rewrite_usage_field": "rewrite_usage"
             },
             "need_reference": true,
+            "reference_location": "content",
             "search_from": [
                 {
                     "type": "google",
@@ -56,7 +57,7 @@ Web Search Plugin 是一个为 AI 模型提供实时网络搜索能力的插件�
 | `default_enable` | bool | 否 | false | 是否默认为所有请求启用网络搜索，默认情况下，如果用户请求中没有 `web_search_options` 字段，则不启用网络搜索 |
 | `max_results` | int | 否 | 10 | 每次搜索返回的最大结果数量 |
 | `need_reference` | bool | 否 | false | 是否在回答中包含引用信息 |
-| `reference_location` | string | 否 | "head" | 引用位置，可选值：`head`、`tail` |
+| `reference_location` | string | 否 | "content" | 引用位置，可选值：`content`、`references` ... 等 |
 | `reference_format` | string | 否 | "**References:**\n%s" | 引用格式模板，必须包含 `%s` 占位符 |
 | `default_language` | string | 否 | - | 默认搜索语言 |
 | `prompt_template` | string | 否 | - | 自定义提示词模板 |
@@ -78,7 +79,7 @@ Web Search Plugin 是一个为 AI 模型提供实时网络搜索能力的插件�
 
 | 字段 | 类型 | 必填 | 说明 |
 |------|------|------|------|
-| `type` | string | 是 | 搜索引擎类型：`google`、`bing`、`arxiv` |
+| `type` | string | 是 | 搜索引擎类型：`google`、`bing`、`arxiv`、`searchxng` |
 | `max_results` | int | 否 | 该引擎的最大结果数量 |
 | `spec` | object | 视类型而定 | 引擎特定的配置参数 |
 
@@ -124,6 +125,17 @@ Web Search Plugin 是一个为 AI 模型提供实时网络搜索能力的插件�
 ```
 
 Arxiv 搜索引擎无需额外配置参数。
+
+##### SearchXNG 搜索引擎配置 (`spec`)
+
+```json
+{
+    "type": "searchxng",
+    "spec": {
+        "base_url": "https://searchxng.com"
+    }
+}
+```
 
 ## 用户请求配置
 

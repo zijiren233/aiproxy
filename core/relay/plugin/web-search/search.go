@@ -12,6 +12,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/bytedance/sonic"
@@ -30,6 +31,7 @@ import (
 	"github.com/labring/aiproxy/core/relay/plugin/noop"
 	"github.com/labring/aiproxy/core/relay/utils"
 	"github.com/labring/aiproxy/mcp-servers/web-search/engine"
+	"golang.org/x/sync/errgroup"
 )
 
 var _ plugin.Plugin = (*WebSearch)(nil)
@@ -166,13 +168,13 @@ func (p *WebSearch) ConvertRequest(meta *meta.Meta, req *http.Request, do adapto
 
 	// Execute searches
 	searchResult := p.executeSearches(context.Background(), engines, searchContexts)
-	if searchResult.Count == 0 {
+	if searchResult.Count == 0 || len(searchResult.Results) == 0 {
 		return do.ConvertRequest(meta, req)
 	}
 	setSearchCount(meta, searchResult.Count)
 
 	// Format search results and modify request
-	references := p.formatSearchResults(messages, queryIndex, query, searchResult.Results, pluginConfig)
+	p.formatSearchResults(messages, queryIndex, query, searchResult.Results, pluginConfig)
 
 	delete(chatRequest, "web_search_options")
 
@@ -187,8 +189,8 @@ func (p *WebSearch) ConvertRequest(meta *meta.Meta, req *http.Request, do adapto
 	defer common.SetRequestBody(req, body)
 
 	// Store references in context if needed
-	if pluginConfig.NeedReference && references != "" {
-		meta.Set("references", references)
+	if pluginConfig.NeedReference {
+		meta.Set("references", searchResult.Results)
 	}
 
 	return do.ConvertRequest(meta, req)
@@ -203,15 +205,7 @@ func (p *WebSearch) validateAndApplyDefaults(config *Config) error {
 
 	// Configure reference settings
 	if config.NeedReference {
-		if config.ReferenceLocation == "" {
-			config.ReferenceLocation = "head"
-		} else if config.ReferenceLocation != "head" && config.ReferenceLocation != "tail" {
-			return errors.New("invalid reference location")
-		}
-
-		if config.ReferenceFormat == "" {
-			config.ReferenceFormat = "**References:**\n%s"
-		} else if !strings.Contains(config.ReferenceFormat, "%s") {
+		if config.ReferenceFormat != "" && !strings.Contains(config.ReferenceFormat, "%s") {
 			return errors.New("invalid reference format")
 		}
 	}
@@ -290,6 +284,12 @@ func (p *WebSearch) initializeSearchEngines(configs []EngineConfig) ([]engine.En
 		case "arxiv":
 			engines = append(engines, engine.NewArxivEngine())
 			arxivExists = true
+		case "searchxng":
+			var spec SearchXNGSpec
+			if err := e.LoadSpec(&spec); err != nil {
+				return nil, false, err
+			}
+			engines = append(engines, engine.NewSearchXNGEngine(spec.BaseURL))
 		default:
 			return nil, false, fmt.Errorf("unsupported engine type: %s", e.Type)
 		}
@@ -495,47 +495,37 @@ type searchResult struct {
 // executeSearches performs searches using all configured engines
 func (p *WebSearch) executeSearches(ctx context.Context, engines []engine.Engine, searchContexts []engine.SearchQuery) *searchResult {
 	var allResults []engine.SearchResult
-	resultsChan := make(chan []engine.SearchResult, len(engines)*len(searchContexts))
-	errorsChan := make(chan error, len(engines)*len(searchContexts))
+	var mu sync.Mutex
 
-	searchCount := 0
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+
+	g, ctx := errgroup.WithContext(ctx)
+
 	for _, eng := range engines {
 		for _, searchCtx := range searchContexts {
-			searchCount++
-			go func(e engine.Engine, sc engine.SearchQuery) {
-				results, err := e.Search(ctx, engine.SearchQuery{
-					Queries:       sc.Queries,
+			g.Go(func() error {
+				results, err := eng.Search(ctx, engine.SearchQuery{
+					Queries:       searchCtx.Queries,
 					MaxResults:    10,
-					Language:      sc.Language,
-					ArxivCategory: sc.ArxivCategory,
+					Language:      searchCtx.Language,
+					ArxivCategory: searchCtx.ArxivCategory,
 				})
 				if err != nil {
-					errorsChan <- err
-					return
+					return err
 				}
-				resultsChan <- results
-			}(eng, searchCtx)
+
+				mu.Lock()
+				allResults = append(allResults, results...)
+				mu.Unlock()
+
+				return nil
+			})
 		}
 	}
 
-	// Collect results with timeout
-	timeout := time.After(10 * time.Second)
-	received := 0
+	_ = g.Wait()
 
-RECEIVE:
-	for received < searchCount {
-		select {
-		case results := <-resultsChan:
-			allResults = append(allResults, results...)
-			received++
-		case <-errorsChan:
-			received++
-		case <-timeout:
-			break RECEIVE
-		}
-	}
-
-	// Deduplicate results by link
 	seen := make(map[string]bool)
 	var uniqueResults []engine.SearchResult
 	for _, result := range allResults {
@@ -547,21 +537,18 @@ RECEIVE:
 
 	return &searchResult{
 		Results: uniqueResults,
-		Count:   searchCount,
+		Count:   len(engines) * len(searchContexts),
 	}
 }
 
 // formatSearchResults formats search results for the prompt
-func (p *WebSearch) formatSearchResults(messages []any, queryIndex int, query string, searchResults []engine.SearchResult, config Config) string {
+func (p *WebSearch) formatSearchResults(messages []any, queryIndex int, query string, searchResults []engine.SearchResult, config Config) {
 	var formattedResults []string
-	var formattedReferences []string
 
 	for i, result := range searchResults {
 		if config.NeedReference {
 			formattedResults = append(formattedResults,
 				fmt.Sprintf("[webpage %d begin]\n%s\n[webpage %d end]", i+1, result.Content, i+1))
-			formattedReferences = append(formattedReferences,
-				fmt.Sprintf("[%d] [%s](%s)", i+1, result.Title, result.Link))
 		} else {
 			formattedResults = append(formattedResults,
 				fmt.Sprintf("[webpage begin]\n%s\n[webpage end]", result.Content))
@@ -578,20 +565,15 @@ func (p *WebSearch) formatSearchResults(messages []any, queryIndex int, query st
 
 	// Update message
 	messages[queryIndex].(map[string]any)["content"] = prompt
-
-	references := ""
-	if config.NeedReference {
-		references = strings.Join(formattedReferences, "\n\n")
-	}
-
-	return references
 }
 
 // Custom response writer to handle metadata and references
 type responseWriter struct {
 	gin.ResponseWriter
 	refWritten          bool
-	references          string
+	referenceFormat     string
+	references          []engine.SearchResult
+	referencesLocation  string
 	webSearchCount      int
 	rewriteUsage        *model.Usage
 	rewriteUsageWritten bool
@@ -654,28 +636,53 @@ func (rw *responseWriter) processWebSearchCount(node *ast.Node) {
 	}
 }
 
+func buildReferenceContent(searchResults []engine.SearchResult) string {
+	var formattedReferences []string
+	for i, result := range searchResults {
+		formattedReferences = append(formattedReferences,
+			fmt.Sprintf("[%d] [%s](%s)", i+1, result.Title, result.Link))
+	}
+	return strings.Join(formattedReferences, "\n\n")
+}
+
 // processReferences adds reference information to the content
 func (rw *responseWriter) processReferences(node *ast.Node) {
-	if rw.refWritten || rw.references == "" {
+	if rw.refWritten || len(rw.references) == 0 {
 		return
 	}
+	rw.refWritten = true
 
-	var contentNode *ast.Node
-	if utils.IsStreamResponseWithHeader(rw.ResponseWriter.Header()) {
-		contentNode = node.GetByPath("choices", 0, "delta", "content")
+	if rw.referencesLocation == "" || rw.referencesLocation == "content" {
+		var contentNode *ast.Node
+		if utils.IsStreamResponseWithHeader(rw.ResponseWriter.Header()) {
+			contentNode = node.GetByPath("choices", 0, "delta", "content")
+		} else {
+			contentNode = node.GetByPath("choices", 0, "message", "content")
+		}
+
+		if contentNode != nil && contentNode.Valid() {
+			content, err := contentNode.String()
+			if err == nil {
+				format := rw.referenceFormat
+				if format == "" {
+					format = "**References:**\n%s"
+				}
+				ref := fmt.Sprintf(format, buildReferenceContent(rw.references))
+				refContent := fmt.Sprintf("%s\n\n%s", ref, content)
+				*contentNode = ast.NewString(refContent)
+			}
+		}
 	} else {
-		contentNode = node.GetByPath("choices", 0, "message", "content")
-	}
-
-	if contentNode != nil && contentNode.Valid() {
-		content, err := contentNode.String()
-		if err == nil {
-			refContent := fmt.Sprintf("%s\n\n%s", rw.references, content)
-			*contentNode = ast.NewString(refContent)
+		var outterLocation *ast.Node
+		if utils.IsStreamResponseWithHeader(rw.ResponseWriter.Header()) {
+			outterLocation = node.GetByPath("choices", 0, "delta")
+		} else {
+			outterLocation = node.GetByPath("choices", 0, "message")
+		}
+		if outterLocation != nil && outterLocation.Valid() {
+			outterLocation.SetAny(rw.referencesLocation, rw.references)
 		}
 	}
-
-	rw.refWritten = true
 }
 
 // WriteString implements the WriteString method for the custom response writer
@@ -685,7 +692,14 @@ func (rw *responseWriter) WriteString(s string) (int, error) {
 
 // DoResponse handles response modification for references
 func (p *WebSearch) DoResponse(meta *meta.Meta, c *gin.Context, resp *http.Response, do adaptor.DoResponse) (*model.Usage, adaptor.Error) {
-	references := meta.GetString("references")
+	var references []engine.SearchResult
+	referencesI, ok := meta.Get("references")
+	if ok {
+		references, ok = referencesI.([]engine.SearchResult)
+		if !ok {
+			panic(fmt.Sprintf("references type %T is not a []engine.SearchResult", referencesI))
+		}
+	}
 	count := getSearchCount(meta)
 	var rewriteUsage *model.Usage
 	rewriteUsageField := ""
@@ -697,14 +711,16 @@ func (p *WebSearch) DoResponse(meta *meta.Meta, c *gin.Context, resp *http.Respo
 	}
 
 	// Check if we need to wrap the response writer
-	if references != "" || rewriteUsage != nil || count > 0 {
+	if len(references) > 0 || rewriteUsage != nil || count > 0 {
 		rw := &responseWriter{
 			ResponseWriter:      c.Writer,
-			references:          references,
 			webSearchCount:      count,
 			rewriteUsageWritten: false,
 			rewriteUsage:        rewriteUsage,
 			rewriteUsageField:   rewriteUsageField,
+			references:          references,
+			referencesLocation:  pluginConfig.ReferenceLocation,
+			referenceFormat:     pluginConfig.ReferenceFormat,
 		}
 		c.Writer = rw
 		defer func() {

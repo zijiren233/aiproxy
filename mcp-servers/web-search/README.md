@@ -31,6 +31,10 @@ At least one search engine must be configured with valid API credentials:
 
 No configuration required - Arxiv is free to use.
 
+#### SearchXNG Search
+
+- `searchxng_base_url`: Base URL for SearchXNG
+
 ### Optional Configuration
 
 - `default_engine`: Default search engine to use (google, bing, arxiv)
