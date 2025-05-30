@@ -404,7 +404,7 @@ func updateGroupSummaryData(group string, tokenName string, modelName string, cr
 		groupSummary.MaxTPS = groupModelTokenRate.TPS
 	}
 
-	groupSummary.Usage.Add(&usage)
+	groupSummary.Usage.Add(usage)
 	if code != http.StatusOK {
 		groupSummary.ExceptionCount++
 	}
@@ -444,7 +444,7 @@ func updateSummaryData(channelID int, modelName string, createAt time.Time, code
 		summary.MaxTPS = channelModelRate.TPS
 	}
 
-	summary.Usage.Add(&usage)
+	summary.Usage.Add(usage)
 	if code != http.StatusOK {
 		summary.ExceptionCount++
 	}

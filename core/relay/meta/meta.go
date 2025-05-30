@@ -181,6 +181,15 @@ func (m *Meta) GetInt64(key string) int64 {
 	return i
 }
 
+func (m *Meta) GetInt(key string) int {
+	v, ok := m.Get(key)
+	if !ok {
+		return 0
+	}
+	i, _ := v.(int)
+	return i
+}
+
 func GetMappedModelName(modelName string, mapping map[string]string) (string, bool) {
 	if len(modelName) == 0 {
 		return modelName, false

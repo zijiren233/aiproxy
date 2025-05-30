@@ -46,15 +46,7 @@ func (rw *responseWriter) Write(b []byte) (int, error) {
 }
 
 func (rw *responseWriter) WriteString(s string) (int, error) {
-	if rw.firstByteAt.IsZero() {
-		rw.firstByteAt = time.Now()
-	}
-	if rw.body.Len()+len(s) <= maxBufferSize {
-		rw.body.WriteString(s)
-	} else {
-		rw.body.WriteString(s[:maxBufferSize-rw.body.Len()])
-	}
-	return rw.ResponseWriter.WriteString(s)
+	return rw.Write(conv.StringToBytes(s))
 }
 
 var bufferPool = sync.Pool{

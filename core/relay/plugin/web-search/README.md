@@ -17,7 +17,9 @@ The Web Search Plugin is a plugin that provides real-time web search capabilitie
             "enable_plugin": true,
             "default_enable": true,
             "search_rewrite": {
-                "enable": true
+                "enable": true,
+                "add_rewrite_usage": true,
+                "rewrite_usage_field": "rewrite_usage"
             },
             "need_reference": true,
             "search_from": [
@@ -67,6 +69,8 @@ The Web Search Plugin is a plugin that provides real-time web search capabilitie
 | `model_name` | string | No | - | Model name for query rewriting, uses current request model if empty |
 | `timeout_millisecond` | uint32 | No | 10000 | Rewrite request timeout (milliseconds) |
 | `max_count` | int | No | 3 | Maximum number of rewritten queries |
+| `add_rewrite_usage` | bool | No | false | Whether to add rewrite usage statistics to the response |
+| `rewrite_usage_field` | string | No | "rewrite_usage" | Rewrite usage statistics field name |
 
 #### Search Engine Configuration (`search_from`)
 

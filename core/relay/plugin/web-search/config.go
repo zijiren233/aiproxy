@@ -25,6 +25,8 @@ type SearchRewrite struct {
 	ModelName          string `json:"model_name"`
 	TimeoutMillisecond uint32 `json:"timeout_millisecond"`
 	MaxCount           int    `json:"max_count"`
+	AddRewriteUsage    bool   `json:"add_rewrite_usage"`
+	RewriteUsageField  string `json:"rewrite_usage_field"`
 }
 
 type EngineConfig struct {

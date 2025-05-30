@@ -17,7 +17,9 @@ Web Search Plugin 是一个为 AI 模型提供实时网络搜索能力的插件�
             "enable_plugin": true,
             "default_enable": true,
             "search_rewrite": {
-                "enable": true
+                "enable": true,
+                "add_rewrite_usage": true,
+                "rewrite_usage_field": "rewrite_usage"
             },
             "need_reference": true,
             "search_from": [
@@ -67,6 +69,8 @@ Web Search Plugin 是一个为 AI 模型提供实时网络搜索能力的插件�
 | `model_name` | string | 否 | - | 用于重写查询的模型名称，为空时使用当前请求的模型 |
 | `timeout_millisecond` | uint32 | 否 | 10000 | 重写请求超时时间（毫秒） |
 | `max_count` | int | 否 | 3 | 最大重写查询数量 |
+| `add_rewrite_usage` | bool | 否 | false | 是否在响应中添加重写使用统计信息 |
+| `rewrite_usage_field` | string | 否 | "rewrite_usage" | 重写使用统计信息字段名称 |
 
 #### 搜索引擎配置 (`search_from`)
 

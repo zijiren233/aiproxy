@@ -3,6 +3,7 @@ package adaptor
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 
@@ -50,6 +51,7 @@ type ConvertRequestResult struct {
 
 type Error interface {
 	json.Marshaler
+	error
 	StatusCode() int
 }
 
@@ -64,6 +66,10 @@ func (e ErrorImpl[T]) MarshalJSON() ([]byte, error) {
 
 func (e ErrorImpl[T]) StatusCode() int {
 	return e.statusCode
+}
+
+func (e ErrorImpl[T]) Error() string {
+	return fmt.Sprintf("status code: %d, error: %v", e.statusCode, e.error)
 }
 
 var ErrGetBalanceNotImplemented = errors.New("get balance not implemented")

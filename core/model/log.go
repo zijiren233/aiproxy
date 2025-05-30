@@ -117,10 +117,7 @@ type Usage struct {
 	WebSearchCount      ZeroNullInt64 `json:"web_search_count,omitempty"`
 }
 
-func (u *Usage) Add(other *Usage) {
-	if other == nil {
-		return
-	}
+func (u *Usage) Add(other Usage) {
 	u.InputTokens += other.InputTokens
 	u.ImageInputTokens += other.ImageInputTokens
 	u.OutputTokens += other.OutputTokens
