@@ -691,6 +691,10 @@ func (rw *responseWriter) WriteString(s string) (int, error) {
 
 // DoResponse handles response modification for references
 func (p *WebSearch) DoResponse(meta *meta.Meta, c *gin.Context, resp *http.Response, do adaptor.DoResponse) (*model.Usage, adaptor.Error) {
+	if meta.Mode != mode.ChatCompletions {
+		return do.DoResponse(meta, c, resp)
+	}
+
 	var references []engine.SearchResult
 	referencesI, ok := meta.Get("references")
 	if ok {
