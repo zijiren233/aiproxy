@@ -55,20 +55,20 @@ type Error interface {
 	StatusCode() int
 }
 
-type ErrorImpl[T any] struct {
+type BasicError[T any] struct {
 	error      T
 	statusCode int
 }
 
-func (e ErrorImpl[T]) MarshalJSON() ([]byte, error) {
+func (e BasicError[T]) MarshalJSON() ([]byte, error) {
 	return sonic.Marshal(e.error)
 }
 
-func (e ErrorImpl[T]) StatusCode() int {
+func (e BasicError[T]) StatusCode() int {
 	return e.statusCode
 }
 
-func (e ErrorImpl[T]) Error() string {
+func (e BasicError[T]) Error() string {
 	return fmt.Sprintf("status code: %d, error: %v", e.statusCode, e.error)
 }
 

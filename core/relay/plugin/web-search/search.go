@@ -165,8 +165,8 @@ func (p *WebSearch) ConvertRequest(meta *meta.Meta, req *http.Request, do adapto
 	}
 
 	// Execute searches
-	searchResult, err := p.executeSearches(context.Background(), engines, searchContexts)
-	if err != nil || searchResult.Count == 0 {
+	searchResult := p.executeSearches(context.Background(), engines, searchContexts)
+	if searchResult.Count == 0 {
 		return do.ConvertRequest(meta, req)
 	}
 	setSearchCount(meta, searchResult.Count)
@@ -249,8 +249,8 @@ func (p *WebSearch) getDefaultPromptTemplate(needReference bool) string {
 
 # 用户消息为：
 {question}`
-	} else {
-		return `# 以下内容是基于用户发送的消息的搜索结果:
+	}
+	return `# 以下内容是基于用户发送的消息的搜索结果:
 {search_results}
 在我给你的搜索结果中，每个结果都是[webpage begin]...[webpage end]格式的。
 在回答时，请注意以下几点：
@@ -266,7 +266,6 @@ func (p *WebSearch) getDefaultPromptTemplate(needReference bool) string {
 
 # 用户消息为：
 {question}`
-	}
 }
 
 // initializeSearchEngines creates search engine instances based on configuration
@@ -494,7 +493,7 @@ type searchResult struct {
 }
 
 // executeSearches performs searches using all configured engines
-func (p *WebSearch) executeSearches(ctx context.Context, engines []engine.Engine, searchContexts []engine.SearchQuery) (*searchResult, error) {
+func (p *WebSearch) executeSearches(ctx context.Context, engines []engine.Engine, searchContexts []engine.SearchQuery) *searchResult {
 	var allResults []engine.SearchResult
 	resultsChan := make(chan []engine.SearchResult, len(engines)*len(searchContexts))
 	errorsChan := make(chan error, len(engines)*len(searchContexts))
@@ -549,7 +548,7 @@ RECEIVE:
 	return &searchResult{
 		Results: uniqueResults,
 		Count:   searchCount,
-	}, nil
+	}
 }
 
 // formatSearchResults formats search results for the prompt
