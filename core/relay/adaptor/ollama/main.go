@@ -166,7 +166,10 @@ func response2OpenAI(meta *meta.Meta, response *ChatResponse) *relaymodel.TextRe
 	return &fullTextResponse
 }
 
-func streamResponse2OpenAI(meta *meta.Meta, ollamaResponse *ChatResponse) *relaymodel.ChatCompletionsStreamResponse {
+func streamResponse2OpenAI(
+	meta *meta.Meta,
+	ollamaResponse *ChatResponse,
+) *relaymodel.ChatCompletionsStreamResponse {
 	choice := relaymodel.ChatCompletionsStreamResponseChoice{
 		Text: ollamaResponse.Response,
 	}
@@ -199,7 +202,11 @@ func streamResponse2OpenAI(meta *meta.Meta, ollamaResponse *ChatResponse) *relay
 	return &response
 }
 
-func StreamHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, adaptor.Error) {
+func StreamHandler(
+	meta *meta.Meta,
+	c *gin.Context,
+	resp *http.Response,
+) (*model.Usage, adaptor.Error) {
 	if resp.StatusCode != http.StatusOK {
 		return nil, ErrorHandler(resp)
 	}
@@ -241,7 +248,10 @@ func StreamHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model
 	return usage.ToModelUsage(), nil
 }
 
-func ConvertEmbeddingRequest(meta *meta.Meta, req *http.Request) (*adaptor.ConvertRequestResult, error) {
+func ConvertEmbeddingRequest(
+	meta *meta.Meta,
+	req *http.Request,
+) (*adaptor.ConvertRequestResult, error) {
 	request, err := utils.UnmarshalGeneralOpenAIRequest(req)
 	if err != nil {
 		return nil, err
@@ -268,7 +278,11 @@ func ConvertEmbeddingRequest(meta *meta.Meta, req *http.Request) (*adaptor.Conve
 	}, nil
 }
 
-func EmbeddingHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, adaptor.Error) {
+func EmbeddingHandler(
+	meta *meta.Meta,
+	c *gin.Context,
+	resp *http.Response,
+) (*model.Usage, adaptor.Error) {
 	if resp.StatusCode != http.StatusOK {
 		return nil, ErrorHandler(resp)
 	}
@@ -278,25 +292,40 @@ func EmbeddingHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*mo
 	var ollamaResponse EmbeddingResponse
 	err := sonic.ConfigDefault.NewDecoder(resp.Body).Decode(&ollamaResponse)
 	if err != nil {
-		return nil, relaymodel.WrapperOpenAIError(err, "unmarshal_response_body_failed", http.StatusInternalServerError)
+		return nil, relaymodel.WrapperOpenAIError(
+			err,
+			"unmarshal_response_body_failed",
+			http.StatusInternalServerError,
+		)
 	}
 
 	if ollamaResponse.Error != "" {
-		return nil, relaymodel.WrapperOpenAIErrorWithMessage(ollamaResponse.Error, relaymodel.ErrorTypeUpstream, resp.StatusCode)
+		return nil, relaymodel.WrapperOpenAIErrorWithMessage(
+			ollamaResponse.Error,
+			relaymodel.ErrorTypeUpstream,
+			resp.StatusCode,
+		)
 	}
 
 	fullTextResponse := embeddingResponseOllama2OpenAI(meta, &ollamaResponse)
 	jsonResponse, err := sonic.Marshal(fullTextResponse)
 	if err != nil {
-		return nil, relaymodel.WrapperOpenAIError(err, "marshal_response_body_failed", http.StatusInternalServerError)
+		return nil, relaymodel.WrapperOpenAIError(
+			err,
+			"marshal_response_body_failed",
+			http.StatusInternalServerError,
+		)
 	}
 	c.Writer.Header().Set("Content-Type", "application/json")
 	c.Writer.WriteHeader(resp.StatusCode)
 	_, _ = c.Writer.Write(jsonResponse)
-	return fullTextResponse.Usage.ToModelUsage(), nil
+	return fullTextResponse.ToModelUsage(), nil
 }
 
-func embeddingResponseOllama2OpenAI(meta *meta.Meta, response *EmbeddingResponse) *relaymodel.EmbeddingResponse {
+func embeddingResponseOllama2OpenAI(
+	meta *meta.Meta,
+	response *EmbeddingResponse,
+) *relaymodel.EmbeddingResponse {
 	openAIEmbeddingResponse := relaymodel.EmbeddingResponse{
 		Object: "list",
 		Data:   make([]*relaymodel.EmbeddingResponseItem, 0, len(response.Embeddings)),
@@ -307,11 +336,14 @@ func embeddingResponseOllama2OpenAI(meta *meta.Meta, response *EmbeddingResponse
 		},
 	}
 	for i, embedding := range response.Embeddings {
-		openAIEmbeddingResponse.Data = append(openAIEmbeddingResponse.Data, &relaymodel.EmbeddingResponseItem{
-			Object:    "embedding",
-			Index:     i,
-			Embedding: embedding,
-		})
+		openAIEmbeddingResponse.Data = append(
+			openAIEmbeddingResponse.Data,
+			&relaymodel.EmbeddingResponseItem{
+				Object:    "embedding",
+				Index:     i,
+				Embedding: embedding,
+			},
+		)
 	}
 	return &openAIEmbeddingResponse
 }
@@ -326,19 +358,31 @@ func Handler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage
 	var ollamaResponse ChatResponse
 	err := sonic.ConfigDefault.NewDecoder(resp.Body).Decode(&ollamaResponse)
 	if err != nil {
-		return nil, relaymodel.WrapperOpenAIError(err, "unmarshal_response_body_failed", http.StatusInternalServerError)
+		return nil, relaymodel.WrapperOpenAIError(
+			err,
+			"unmarshal_response_body_failed",
+			http.StatusInternalServerError,
+		)
 	}
 	if ollamaResponse.Error != "" {
-		return nil, relaymodel.WrapperOpenAIErrorWithMessage(ollamaResponse.Error, relaymodel.ErrorTypeUpstream, resp.StatusCode)
+		return nil, relaymodel.WrapperOpenAIErrorWithMessage(
+			ollamaResponse.Error,
+			relaymodel.ErrorTypeUpstream,
+			resp.StatusCode,
+		)
 	}
 	fullTextResponse := response2OpenAI(meta, &ollamaResponse)
 
 	jsonResponse, err := sonic.Marshal(fullTextResponse)
 	if err != nil {
-		return nil, relaymodel.WrapperOpenAIError(err, "marshal_response_body_failed", http.StatusInternalServerError)
+		return nil, relaymodel.WrapperOpenAIError(
+			err,
+			"marshal_response_body_failed",
+			http.StatusInternalServerError,
+		)
 	}
 	c.Writer.Header().Set("Content-Type", "application/json")
 	c.Writer.WriteHeader(resp.StatusCode)
 	_, _ = c.Writer.Write(jsonResponse)
-	return fullTextResponse.Usage.ToModelUsage(), nil
+	return fullTextResponse.ToModelUsage(), nil
 }

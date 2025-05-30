@@ -58,7 +58,10 @@ func (a *Adaptor) SetupRequestHeader(meta *meta.Meta, _ *gin.Context, req *http.
 	return nil
 }
 
-func (a *Adaptor) ConvertRequest(meta *meta.Meta, req *http.Request) (*adaptor.ConvertRequestResult, error) {
+func (a *Adaptor) ConvertRequest(
+	meta *meta.Meta,
+	req *http.Request,
+) (*adaptor.ConvertRequestResult, error) {
 	switch meta.Mode {
 	case mode.ImagesGenerations:
 		return ConvertImageRequest(meta, req)
@@ -75,7 +78,11 @@ func (a *Adaptor) ConvertRequest(meta *meta.Meta, req *http.Request) (*adaptor.C
 	}
 }
 
-func (a *Adaptor) DoRequest(meta *meta.Meta, _ *gin.Context, req *http.Request) (*http.Response, error) {
+func (a *Adaptor) DoRequest(
+	meta *meta.Meta,
+	_ *gin.Context,
+	req *http.Request,
+) (*http.Response, error) {
 	switch meta.Mode {
 	case mode.AudioSpeech:
 		return TTSDoRequest(meta, req)
@@ -88,7 +95,11 @@ func (a *Adaptor) DoRequest(meta *meta.Meta, _ *gin.Context, req *http.Request) 
 	}
 }
 
-func (a *Adaptor) DoResponse(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, adaptor.Error) {
+func (a *Adaptor) DoResponse(
+	meta *meta.Meta,
+	c *gin.Context,
+	resp *http.Response,
+) (*model.Usage, adaptor.Error) {
 	switch meta.Mode {
 	case mode.ImagesGenerations:
 		return ImageHandler(meta, c, resp)
@@ -97,11 +108,19 @@ func (a *Adaptor) DoResponse(meta *meta.Meta, c *gin.Context, resp *http.Respons
 	case mode.ChatCompletions:
 		reqBody, err := common.GetRequestBody(c.Request)
 		if err != nil {
-			return nil, relaymodel.WrapperOpenAIErrorWithMessage(fmt.Sprintf("get request body failed: %s", err), "get_request_body_failed", http.StatusInternalServerError)
+			return nil, relaymodel.WrapperOpenAIErrorWithMessage(
+				fmt.Sprintf("get request body failed: %s", err),
+				"get_request_body_failed",
+				http.StatusInternalServerError,
+			)
 		}
 		enableSearch, err := getEnableSearch(reqBody)
 		if err != nil {
-			return nil, relaymodel.WrapperOpenAIErrorWithMessage(fmt.Sprintf("get enable_search failed: %s", err), "get_enable_search_failed", http.StatusInternalServerError)
+			return nil, relaymodel.WrapperOpenAIErrorWithMessage(
+				fmt.Sprintf("get enable_search failed: %s", err),
+				"get_enable_search_failed",
+				http.StatusInternalServerError,
+			)
 		}
 		u, e := openai.DoResponse(meta, c, resp)
 		if e != nil {
@@ -118,7 +137,11 @@ func (a *Adaptor) DoResponse(meta *meta.Meta, c *gin.Context, resp *http.Respons
 	case mode.AudioTranscription:
 		return STTDoResponse(meta, c, resp)
 	default:
-		return nil, relaymodel.WrapperOpenAIErrorWithMessage(fmt.Sprintf("unsupported mode: %s", meta.Mode), "unsupported_mode", http.StatusBadRequest)
+		return nil, relaymodel.WrapperOpenAIErrorWithMessage(
+			fmt.Sprintf("unsupported mode: %s", meta.Mode),
+			"unsupported_mode",
+			http.StatusBadRequest,
+		)
 	}
 }
 

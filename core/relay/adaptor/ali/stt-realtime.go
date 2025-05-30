@@ -65,7 +65,10 @@ type STTUsage struct {
 	Characters int64 `json:"characters"`
 }
 
-func ConvertSTTRequest(meta *meta.Meta, request *http.Request) (*adaptor.ConvertRequestResult, error) {
+func ConvertSTTRequest(
+	meta *meta.Meta,
+	request *http.Request,
+) (*adaptor.ConvertRequestResult, error) {
 	err := request.ParseMultipartForm(1024 * 1024 * 4)
 	if err != nil {
 		return nil, err
@@ -150,7 +153,11 @@ func STTDoRequest(meta *meta.Meta, req *http.Request) (*http.Response, error) {
 	}, nil
 }
 
-func STTDoResponse(meta *meta.Meta, c *gin.Context, _ *http.Response) (usage *model.Usage, err adaptor.Error) {
+func STTDoResponse(
+	meta *meta.Meta,
+	c *gin.Context,
+	_ *http.Response,
+) (usage *model.Usage, err adaptor.Error) {
 	audioData := meta.MustGet("audio_data").([]byte)
 	taskID := meta.MustGet("task_id").(string)
 
@@ -164,17 +171,29 @@ func STTDoResponse(meta *meta.Meta, c *gin.Context, _ *http.Response) (usage *mo
 	for {
 		messageType, data, err := conn.ReadMessage()
 		if err != nil {
-			return usage, relaymodel.WrapperOpenAIErrorWithMessage("ali_wss_read_msg_failed", nil, http.StatusInternalServerError)
+			return usage, relaymodel.WrapperOpenAIErrorWithMessage(
+				"ali_wss_read_msg_failed",
+				nil,
+				http.StatusInternalServerError,
+			)
 		}
 
 		if messageType != websocket.TextMessage {
-			return usage, relaymodel.WrapperOpenAIErrorWithMessage("expect text message, but got binary message", nil, http.StatusInternalServerError)
+			return usage, relaymodel.WrapperOpenAIErrorWithMessage(
+				"expect text message, but got binary message",
+				nil,
+				http.StatusInternalServerError,
+			)
 		}
 
 		var msg STTMessage
 		err = sonic.Unmarshal(data, &msg)
 		if err != nil {
-			return usage, relaymodel.WrapperOpenAIErrorWithMessage("ali_wss_read_msg_failed", nil, http.StatusInternalServerError)
+			return usage, relaymodel.WrapperOpenAIErrorWithMessage(
+				"ali_wss_read_msg_failed",
+				nil,
+				http.StatusInternalServerError,
+			)
 		}
 		switch msg.Header.Event {
 		case "task-started":
@@ -187,7 +206,11 @@ func STTDoResponse(meta *meta.Meta, c *gin.Context, _ *http.Response) (usage *mo
 				chunk := audioData[i:end]
 				err = conn.WriteMessage(websocket.BinaryMessage, chunk)
 				if err != nil {
-					return usage, relaymodel.WrapperOpenAIErrorWithMessage("ali_wss_write_msg_failed", nil, http.StatusInternalServerError)
+					return usage, relaymodel.WrapperOpenAIErrorWithMessage(
+						"ali_wss_write_msg_failed",
+						nil,
+						http.StatusInternalServerError,
+					)
 				}
 			}
 			finishMsg := STTMessage{
@@ -202,11 +225,19 @@ func STTDoResponse(meta *meta.Meta, c *gin.Context, _ *http.Response) (usage *mo
 			}
 			finishData, err := sonic.Marshal(finishMsg)
 			if err != nil {
-				return usage, relaymodel.WrapperOpenAIErrorWithMessage("ali_wss_write_msg_failed", nil, http.StatusInternalServerError)
+				return usage, relaymodel.WrapperOpenAIErrorWithMessage(
+					"ali_wss_write_msg_failed",
+					nil,
+					http.StatusInternalServerError,
+				)
 			}
 			err = conn.WriteMessage(websocket.TextMessage, finishData)
 			if err != nil {
-				return usage, relaymodel.WrapperOpenAIErrorWithMessage("ali_wss_write_msg_failed", nil, http.StatusInternalServerError)
+				return usage, relaymodel.WrapperOpenAIErrorWithMessage(
+					"ali_wss_write_msg_failed",
+					nil,
+					http.StatusInternalServerError,
+				)
 			}
 		case "result-generated":
 			if msg.Payload.Output.STTSentence.EndTime != nil &&
@@ -226,7 +257,11 @@ func STTDoResponse(meta *meta.Meta, c *gin.Context, _ *http.Response) (usage *mo
 			})
 			return usage, nil
 		case "task-failed":
-			return usage, relaymodel.WrapperOpenAIErrorWithMessage(msg.Header.ErrorMessage, msg.Header.ErrorCode, http.StatusInternalServerError)
+			return usage, relaymodel.WrapperOpenAIErrorWithMessage(
+				msg.Header.ErrorMessage,
+				msg.Header.ErrorCode,
+				http.StatusInternalServerError,
+			)
 		}
 	}
 }

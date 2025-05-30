@@ -103,7 +103,7 @@ func setLog(l *log.Logger) {
 		FullTimestamp:    true,
 		TimestampFormat:  time.DateTime,
 		QuoteEmptyFields: true,
-		CallerPrettyfier: func(f *runtime.Frame) (function string, file string) {
+		CallerPrettyfier: func(f *runtime.Frame) (function, file string) {
 			if _, ok := logCallerIgnoreFuncs[f.Function]; ok {
 				return "", ""
 			}
@@ -206,18 +206,33 @@ func DetectIPGroups() {
 		slices.Sort(groups)
 		groupsJSON, err := sonic.MarshalString(groups)
 		if err != nil {
-			notify.ErrorThrottle("detectIPGroupsMarshal", time.Minute, "marshal IP groups failed", err.Error())
+			notify.ErrorThrottle(
+				"detectIPGroupsMarshal",
+				time.Minute,
+				"marshal IP groups failed",
+				err.Error(),
+			)
 			continue
 		}
 
 		if banThreshold >= threshold && len(groups) >= int(banThreshold) {
 			rowsAffected, err := model.UpdateGroupsStatus(groups, model.GroupStatusDisabled)
 			if err != nil {
-				notify.ErrorThrottle("detectIPGroupsBan", time.Minute, "update groups status failed", err.Error())
+				notify.ErrorThrottle(
+					"detectIPGroupsBan",
+					time.Minute,
+					"update groups status failed",
+					err.Error(),
+				)
 			}
 			if rowsAffected > 0 {
 				notify.Warn(
-					fmt.Sprintf("Suspicious activity: IP %s is using %d groups (exceeds ban threshold of %d). IP and all groups have been disabled.", ip, len(groups), banThreshold),
+					fmt.Sprintf(
+						"Suspicious activity: IP %s is using %d groups (exceeds ban threshold of %d). IP and all groups have been disabled.",
+						ip,
+						len(groups),
+						banThreshold,
+					),
 					groupsJSON,
 				)
 				ipblack.SetIPBlackAnyWay(ip, time.Hour*48)
@@ -233,7 +248,12 @@ func DetectIPGroups() {
 		notify.WarnThrottle(
 			hashKey,
 			time.Hour*3,
-			fmt.Sprintf("Potential abuse: IP %s is using %d groups (exceeds threshold of %d)", ip, len(groups), threshold),
+			fmt.Sprintf(
+				"Potential abuse: IP %s is using %d groups (exceeds threshold of %d)",
+				ip,
+				len(groups),
+				threshold,
+			),
 			groupsJSON,
 		)
 	}

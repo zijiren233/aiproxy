@@ -30,7 +30,13 @@ func GetPublicMCPs(c *gin.Context) {
 	keyword := c.Query("keyword")
 	status, _ := strconv.Atoi(c.Query("status"))
 
-	mcps, total, err := model.GetPublicMCPs(page, perPage, mcpType, keyword, model.PublicMCPStatus(status))
+	mcps, total, err := model.GetPublicMCPs(
+		page,
+		perPage,
+		mcpType,
+		keyword,
+		model.PublicMCPStatus(status),
+	)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return

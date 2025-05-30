@@ -97,7 +97,12 @@ func DoHelper(
 
 	// 3. Handle error response
 	if resp == nil {
-		relayErr := relaymodel.WrapperErrorWithMessage(meta.Mode, http.StatusInternalServerError, "response is nil", relaymodel.ErrorCodeBadResponse)
+		relayErr := relaymodel.WrapperErrorWithMessage(
+			meta.Mode,
+			http.StatusInternalServerError,
+			"response is nil",
+			relaymodel.ErrorCodeBadResponse,
+		)
 		respBody, _ := relayErr.MarshalJSON()
 		detail.ResponseBody = conv.BytesToString(respBody)
 		return model.Usage{}, &detail, relayErr
@@ -130,19 +135,33 @@ func getRequestBody(meta *meta.Meta, c *gin.Context, detail *RequestDetail) adap
 	default:
 		reqBody, err := common.GetRequestBody(c.Request)
 		if err != nil {
-			return relaymodel.WrapperErrorWithMessage(meta.Mode, http.StatusBadRequest, "get request body failed: "+err.Error(), "get_request_body_failed")
+			return relaymodel.WrapperErrorWithMessage(
+				meta.Mode,
+				http.StatusBadRequest,
+				"get request body failed: "+err.Error(),
+				"get_request_body_failed",
+			)
 		}
 		detail.RequestBody = conv.BytesToString(reqBody)
 		return nil
 	}
 }
 
-func prepareAndDoRequest(a adaptor.Adaptor, c *gin.Context, meta *meta.Meta) (*http.Response, adaptor.Error) {
+func prepareAndDoRequest(
+	a adaptor.Adaptor,
+	c *gin.Context,
+	meta *meta.Meta,
+) (*http.Response, adaptor.Error) {
 	log := middleware.GetLogger(c)
 
 	convertResult, err := a.ConvertRequest(meta, c.Request)
 	if err != nil {
-		return nil, relaymodel.WrapperErrorWithMessage(meta.Mode, http.StatusBadRequest, "convert request failed: "+err.Error(), "convert_request_failed")
+		return nil, relaymodel.WrapperErrorWithMessage(
+			meta.Mode,
+			http.StatusBadRequest,
+			"convert request failed: "+err.Error(),
+			"convert_request_failed",
+		)
 	}
 	if closer, ok := convertResult.Body.(io.Closer); ok {
 		defer closer.Close()
@@ -154,7 +173,12 @@ func prepareAndDoRequest(a adaptor.Adaptor, c *gin.Context, meta *meta.Meta) (*h
 
 	fullRequestURL, err := a.GetRequestURL(meta)
 	if err != nil {
-		return nil, relaymodel.WrapperErrorWithMessage(meta.Mode, http.StatusBadRequest, "get request url failed: "+err.Error(), "get_request_url_failed")
+		return nil, relaymodel.WrapperErrorWithMessage(
+			meta.Mode,
+			http.StatusBadRequest,
+			"get request url failed: "+err.Error(),
+			"get_request_url_failed",
+		)
 	}
 
 	log.Debugf("request url: %s %s", convertResult.Method, fullRequestURL)
@@ -168,9 +192,19 @@ func prepareAndDoRequest(a adaptor.Adaptor, c *gin.Context, meta *meta.Meta) (*h
 		defer cancel()
 	}
 
-	req, err := http.NewRequestWithContext(ctx, convertResult.Method, fullRequestURL, convertResult.Body)
+	req, err := http.NewRequestWithContext(
+		ctx,
+		convertResult.Method,
+		fullRequestURL,
+		convertResult.Body,
+	)
 	if err != nil {
-		return nil, relaymodel.WrapperErrorWithMessage(meta.Mode, http.StatusBadRequest, "new request failed: "+err.Error(), "new_request_failed")
+		return nil, relaymodel.WrapperErrorWithMessage(
+			meta.Mode,
+			http.StatusBadRequest,
+			"new request failed: "+err.Error(),
+			"new_request_failed",
+		)
 	}
 
 	if err := setupRequestHeader(a, c, meta, req, convertResult.Header); err != nil {
@@ -180,7 +214,13 @@ func prepareAndDoRequest(a adaptor.Adaptor, c *gin.Context, meta *meta.Meta) (*h
 	return doRequest(a, c, meta, req)
 }
 
-func setupRequestHeader(a adaptor.Adaptor, c *gin.Context, meta *meta.Meta, req *http.Request, header http.Header) adaptor.Error {
+func setupRequestHeader(
+	a adaptor.Adaptor,
+	c *gin.Context,
+	meta *meta.Meta,
+	req *http.Request,
+	header http.Header,
+) adaptor.Error {
 	contentType := req.Header.Get("Content-Type")
 	if contentType == "" {
 		contentType = "application/json; charset=utf-8"
@@ -190,32 +230,73 @@ func setupRequestHeader(a adaptor.Adaptor, c *gin.Context, meta *meta.Meta, req 
 		req.Header[key] = value
 	}
 	if err := a.SetupRequestHeader(meta, c, req); err != nil {
-		return relaymodel.WrapperErrorWithMessage(meta.Mode, http.StatusInternalServerError, "setup request header failed: "+err.Error(), "setup_request_header_failed")
+		return relaymodel.WrapperErrorWithMessage(
+			meta.Mode,
+			http.StatusInternalServerError,
+			"setup request header failed: "+err.Error(),
+			"setup_request_header_failed",
+		)
 	}
 	return nil
 }
 
-func doRequest(a adaptor.Adaptor, c *gin.Context, meta *meta.Meta, req *http.Request) (*http.Response, adaptor.Error) {
+func doRequest(
+	a adaptor.Adaptor,
+	c *gin.Context,
+	meta *meta.Meta,
+	req *http.Request,
+) (*http.Response, adaptor.Error) {
 	resp, err := a.DoRequest(meta, c, req)
 	if err != nil {
 		if errors.Is(err, context.Canceled) {
-			return nil, relaymodel.WrapperErrorWithMessage(meta.Mode, http.StatusBadRequest, "do request failed: request canceled by client", "request_canceled")
+			return nil, relaymodel.WrapperErrorWithMessage(
+				meta.Mode,
+				http.StatusBadRequest,
+				"do request failed: request canceled by client",
+				"request_canceled",
+			)
 		}
 		if errors.Is(err, context.DeadlineExceeded) {
-			return nil, relaymodel.WrapperErrorWithMessage(meta.Mode, http.StatusGatewayTimeout, "do request failed: request timeout", "request_timeout")
+			return nil, relaymodel.WrapperErrorWithMessage(
+				meta.Mode,
+				http.StatusGatewayTimeout,
+				"do request failed: request timeout",
+				"request_timeout",
+			)
 		}
 		if errors.Is(err, io.EOF) {
-			return nil, relaymodel.WrapperErrorWithMessage(meta.Mode, http.StatusServiceUnavailable, "do request failed: "+err.Error(), "request_failed")
+			return nil, relaymodel.WrapperErrorWithMessage(
+				meta.Mode,
+				http.StatusServiceUnavailable,
+				"do request failed: "+err.Error(),
+				"request_failed",
+			)
 		}
 		if errors.Is(err, io.ErrUnexpectedEOF) {
-			return nil, relaymodel.WrapperErrorWithMessage(meta.Mode, http.StatusInternalServerError, "do request failed: "+err.Error(), "request_failed")
+			return nil, relaymodel.WrapperErrorWithMessage(
+				meta.Mode,
+				http.StatusInternalServerError,
+				"do request failed: "+err.Error(),
+				"request_failed",
+			)
 		}
-		return nil, relaymodel.WrapperErrorWithMessage(meta.Mode, http.StatusBadRequest, "do request failed: "+err.Error(), "request_failed")
+		return nil, relaymodel.WrapperErrorWithMessage(
+			meta.Mode,
+			http.StatusBadRequest,
+			"do request failed: "+err.Error(),
+			"request_failed",
+		)
 	}
 	return resp, nil
 }
 
-func handleResponse(a adaptor.Adaptor, c *gin.Context, meta *meta.Meta, resp *http.Response, detail *RequestDetail) (model.Usage, adaptor.Error) {
+func handleResponse(
+	a adaptor.Adaptor,
+	c *gin.Context,
+	meta *meta.Meta,
+	resp *http.Response,
+	detail *RequestDetail,
+) (model.Usage, adaptor.Error) {
 	buf := getBuffer()
 	defer putBuffer(buf)
 

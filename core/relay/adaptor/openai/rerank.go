@@ -16,7 +16,10 @@ import (
 	relaymodel "github.com/labring/aiproxy/core/relay/model"
 )
 
-func ConvertRerankRequest(meta *meta.Meta, req *http.Request) (*adaptor.ConvertRequestResult, error) {
+func ConvertRerankRequest(
+	meta *meta.Meta,
+	req *http.Request,
+) (*adaptor.ConvertRequestResult, error) {
 	node, err := common.UnmarshalBody2Node(req)
 	if err != nil {
 		return nil, err
@@ -38,7 +41,11 @@ func ConvertRerankRequest(meta *meta.Meta, req *http.Request) (*adaptor.ConvertR
 	}, nil
 }
 
-func RerankHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, adaptor.Error) {
+func RerankHandler(
+	meta *meta.Meta,
+	c *gin.Context,
+	resp *http.Response,
+) (*model.Usage, adaptor.Error) {
 	if resp.StatusCode != http.StatusOK {
 		return nil, ErrorHanlder(resp)
 	}
@@ -49,12 +56,20 @@ func RerankHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model
 
 	responseBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, relaymodel.WrapperOpenAIError(err, "read_response_body_failed", http.StatusInternalServerError)
+		return nil, relaymodel.WrapperOpenAIError(
+			err,
+			"read_response_body_failed",
+			http.StatusInternalServerError,
+		)
 	}
 	var rerankResponse relaymodel.SlimRerankResponse
 	err = sonic.Unmarshal(responseBody, &rerankResponse)
 	if err != nil {
-		return nil, relaymodel.WrapperOpenAIError(err, "unmarshal_response_body_failed", http.StatusInternalServerError)
+		return nil, relaymodel.WrapperOpenAIError(
+			err,
+			"unmarshal_response_body_failed",
+			http.StatusInternalServerError,
+		)
 	}
 
 	c.Writer.WriteHeader(resp.StatusCode)
@@ -76,6 +91,8 @@ func RerankHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model
 	return &model.Usage{
 		InputTokens:  model.ZeroNullInt64(rerankResponse.Meta.Tokens.InputTokens),
 		OutputTokens: model.ZeroNullInt64(rerankResponse.Meta.Tokens.OutputTokens),
-		TotalTokens:  model.ZeroNullInt64(rerankResponse.Meta.Tokens.InputTokens + rerankResponse.Meta.Tokens.OutputTokens),
+		TotalTokens: model.ZeroNullInt64(
+			rerankResponse.Meta.Tokens.InputTokens + rerankResponse.Meta.Tokens.OutputTokens,
+		),
 	}, nil
 }

@@ -115,7 +115,11 @@ func ConvertTTSRequest(meta *meta.Meta, req *http.Request) (*adaptor.ConvertRequ
 		if voice == "" {
 			voice = "zhinan"
 		}
-		request.Model = fmt.Sprintf("sambert-%s-v%s", voice, strings.TrimPrefix(request.Model, "sambert-v"))
+		request.Model = fmt.Sprintf(
+			"sambert-%s-v%s",
+			voice,
+			strings.TrimPrefix(request.Model, "sambert-v"),
+		)
 	}
 
 	ttsRequest := TTSMessage{
@@ -195,7 +199,11 @@ func TTSDoRequest(meta *meta.Meta, req *http.Request) (*http.Response, error) {
 	}, nil
 }
 
-func TTSDoResponse(meta *meta.Meta, c *gin.Context, _ *http.Response) (usage *model.Usage, err adaptor.Error) {
+func TTSDoResponse(
+	meta *meta.Meta,
+	c *gin.Context,
+	_ *http.Response,
+) (usage *model.Usage, err adaptor.Error) {
 	log := middleware.GetLogger(c)
 
 	conn := meta.MustGet("ws_conn").(*websocket.Conn)
@@ -206,7 +214,11 @@ func TTSDoResponse(meta *meta.Meta, c *gin.Context, _ *http.Response) (usage *mo
 	for {
 		messageType, data, err := conn.ReadMessage()
 		if err != nil {
-			return usage, relaymodel.WrapperOpenAIErrorWithMessage("ali_wss_read_msg_failed", nil, http.StatusInternalServerError)
+			return usage, relaymodel.WrapperOpenAIErrorWithMessage(
+				"ali_wss_read_msg_failed",
+				nil,
+				http.StatusInternalServerError,
+			)
 		}
 
 		var msg TTSMessage
@@ -214,7 +226,11 @@ func TTSDoResponse(meta *meta.Meta, c *gin.Context, _ *http.Response) (usage *mo
 		case websocket.TextMessage:
 			err = sonic.Unmarshal(data, &msg)
 			if err != nil {
-				return usage, relaymodel.WrapperOpenAIErrorWithMessage("ali_wss_read_msg_failed", nil, http.StatusInternalServerError)
+				return usage, relaymodel.WrapperOpenAIErrorWithMessage(
+					"ali_wss_read_msg_failed",
+					nil,
+					http.StatusInternalServerError,
+				)
 			}
 			switch msg.Header.Event {
 			case "task-started":
@@ -226,7 +242,11 @@ func TTSDoResponse(meta *meta.Meta, c *gin.Context, _ *http.Response) (usage *mo
 				usage.TotalTokens = model.ZeroNullInt64(msg.Payload.Usage.Characters)
 				return usage, nil
 			case "task-failed":
-				return usage, relaymodel.WrapperOpenAIErrorWithMessage(msg.Header.ErrorMessage, msg.Header.ErrorCode, http.StatusInternalServerError)
+				return usage, relaymodel.WrapperOpenAIErrorWithMessage(
+					msg.Header.ErrorMessage,
+					msg.Header.ErrorCode,
+					http.StatusInternalServerError,
+				)
 			}
 		case websocket.BinaryMessage:
 			_, writeErr := c.Writer.Write(data)

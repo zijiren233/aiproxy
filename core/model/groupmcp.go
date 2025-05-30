@@ -42,7 +42,7 @@ type GroupMCP struct {
 	Status        GroupMCPStatus       `gorm:"index;default:1"               json:"status"`
 	CreatedAt     time.Time            `gorm:"index,autoCreateTime"          json:"created_at"`
 	UpdateAt      time.Time            `gorm:"index,autoUpdateTime"          json:"update_at"`
-	Name          string               `json:"name"`
+	Name          string               `                                     json:"name"`
 	Type          GroupMCPType         `gorm:"index"                         json:"type"`
 	ProxyConfig   *GroupMCPProxyConfig `gorm:"serializer:fastjson;type:text" json:"proxy_config,omitempty"`
 	OpenAPIConfig *MCPOpenAPIConfig    `gorm:"serializer:fastjson;type:text" json:"openapi_config,omitempty"`
@@ -130,7 +130,7 @@ func UpdateGroupMCP(mcp *GroupMCP) (err error) {
 	return HandleUpdateResult(result, ErrGroupMCPNotFound)
 }
 
-func UpdateGroupMCPStatus(id string, groupID string, status GroupMCPStatus) (err error) {
+func UpdateGroupMCPStatus(id, groupID string, status GroupMCPStatus) (err error) {
 	defer func() {
 		if err == nil {
 			if err := CacheDeleteGroupMCP(groupID, id); err != nil {
@@ -139,12 +139,14 @@ func UpdateGroupMCPStatus(id string, groupID string, status GroupMCPStatus) (err
 		}
 	}()
 
-	result := DB.Model(&GroupMCP{}).Where("id = ? AND group_id = ?", id, groupID).Update("status", status)
+	result := DB.Model(&GroupMCP{}).
+		Where("id = ? AND group_id = ?", id, groupID).
+		Update("status", status)
 	return HandleUpdateResult(result, ErrGroupMCPNotFound)
 }
 
 // DeleteGroupMCP deletes a GroupMCP by ID and GroupID
-func DeleteGroupMCP(id string, groupID string) (err error) {
+func DeleteGroupMCP(id, groupID string) (err error) {
 	defer func() {
 		if err == nil {
 			if err := CacheDeleteGroupMCP(groupID, id); err != nil {
@@ -161,7 +163,7 @@ func DeleteGroupMCP(id string, groupID string) (err error) {
 }
 
 // GetGroupMCPByID retrieves a GroupMCP by ID and GroupID
-func GetGroupMCPByID(id string, groupID string) (*GroupMCP, error) {
+func GetGroupMCPByID(id, groupID string) (*GroupMCP, error) {
 	if id == "" || groupID == "" {
 		return nil, errors.New("group mcp id or group id is empty")
 	}
@@ -171,7 +173,13 @@ func GetGroupMCPByID(id string, groupID string) (*GroupMCP, error) {
 }
 
 // GetGroupMCPs retrieves GroupMCPs with pagination and filtering
-func GetGroupMCPs(groupID string, page int, perPage int, mcpType PublicMCPType, keyword string, status GroupMCPStatus) (mcps []*GroupMCP, total int64, err error) {
+func GetGroupMCPs(
+	groupID string,
+	page, perPage int,
+	mcpType PublicMCPType,
+	keyword string,
+	status GroupMCPStatus,
+) (mcps []*GroupMCP, total int64, err error) {
 	if groupID == "" {
 		return nil, 0, errors.New("group id is empty")
 	}

@@ -18,7 +18,10 @@ func (a *Adaptor) GetBaseURL() string {
 	return ""
 }
 
-func (a *Adaptor) ConvertRequest(meta *meta.Meta, req *http.Request) (*adaptor.ConvertRequestResult, error) {
+func (a *Adaptor) ConvertRequest(
+	meta *meta.Meta,
+	req *http.Request,
+) (*adaptor.ConvertRequestResult, error) {
 	adaptor := GetAdaptor(meta.ActualModel)
 	if adaptor == nil {
 		return nil, errors.New("adaptor not found")
@@ -27,10 +30,18 @@ func (a *Adaptor) ConvertRequest(meta *meta.Meta, req *http.Request) (*adaptor.C
 	return adaptor.ConvertRequest(meta, req)
 }
 
-func (a *Adaptor) DoResponse(meta *meta.Meta, c *gin.Context, _ *http.Response) (usage *model.Usage, err adaptor.Error) {
+func (a *Adaptor) DoResponse(
+	meta *meta.Meta,
+	c *gin.Context,
+	_ *http.Response,
+) (usage *model.Usage, err adaptor.Error) {
 	adaptor, ok := meta.Get("awsAdapter")
 	if !ok {
-		return nil, relaymodel.WrapperOpenAIErrorWithMessage("awsAdapter not found", nil, http.StatusInternalServerError)
+		return nil, relaymodel.WrapperOpenAIErrorWithMessage(
+			"awsAdapter not found",
+			nil,
+			http.StatusInternalServerError,
+		)
 	}
 	return adaptor.(utils.AwsAdapter).DoResponse(meta, c)
 }

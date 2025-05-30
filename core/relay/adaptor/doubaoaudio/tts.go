@@ -179,7 +179,11 @@ func TTSDoRequest(meta *meta.Meta, req *http.Request) (*http.Response, error) {
 	}, nil
 }
 
-func TTSDoResponse(meta *meta.Meta, c *gin.Context, _ *http.Response) (*model.Usage, adaptor.Error) {
+func TTSDoResponse(
+	meta *meta.Meta,
+	c *gin.Context,
+	_ *http.Response,
+) (*model.Usage, adaptor.Error) {
 	log := middleware.GetLogger(c)
 
 	conn := meta.MustGet("ws_conn").(*websocket.Conn)
@@ -193,12 +197,20 @@ func TTSDoResponse(meta *meta.Meta, c *gin.Context, _ *http.Response) (*model.Us
 	for {
 		_, message, err := conn.ReadMessage()
 		if err != nil {
-			return usage, relaymodel.WrapperOpenAIError(err, "doubao_wss_read_msg_failed", http.StatusInternalServerError)
+			return usage, relaymodel.WrapperOpenAIError(
+				err,
+				"doubao_wss_read_msg_failed",
+				http.StatusInternalServerError,
+			)
 		}
 
 		resp, err := parseResponse(message)
 		if err != nil {
-			return usage, relaymodel.WrapperOpenAIError(err, "doubao_tts_parse_response_failed", http.StatusInternalServerError)
+			return usage, relaymodel.WrapperOpenAIError(
+				err,
+				"doubao_tts_parse_response_failed",
+				http.StatusInternalServerError,
+			)
 		}
 
 		_, err = c.Writer.Write(resp.Audio)

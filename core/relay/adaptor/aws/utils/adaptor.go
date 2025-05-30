@@ -39,8 +39,10 @@ func GetAwsConfigFromKey(key string) (*AwsConfig, error) {
 
 func AwsClient(config *AwsConfig) *bedrockruntime.Client {
 	return bedrockruntime.New(bedrockruntime.Options{
-		Region:      config.Region,
-		Credentials: aws.NewCredentialsCache(credentials.NewStaticCredentialsProvider(config.AK, config.SK, "")),
+		Region: config.Region,
+		Credentials: aws.NewCredentialsCache(
+			credentials.NewStaticCredentialsProvider(config.AK, config.SK, ""),
+		),
 	})
 }
 

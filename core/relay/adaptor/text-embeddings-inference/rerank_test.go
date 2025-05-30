@@ -30,7 +30,12 @@ func TestConvertRerankRequestSuccess(t *testing.T) {
 	require.NoError(t, err)
 
 	// Create mock HTTP request with context
-	req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, "/rerank", bytes.NewReader(jsonBody))
+	req, err := http.NewRequestWithContext(
+		t.Context(),
+		http.MethodPost,
+		"/rerank",
+		bytes.NewReader(jsonBody),
+	)
 	require.NoError(t, err)
 	req.Header.Set("Content-Type", "application/json")
 
@@ -87,7 +92,12 @@ func TestConvertRerankRequestMissingDocuments(t *testing.T) {
 	require.NoError(t, err)
 
 	// Create mock HTTP request with context
-	req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, "/rerank", bytes.NewReader(jsonBody))
+	req, err := http.NewRequestWithContext(
+		t.Context(),
+		http.MethodPost,
+		"/rerank",
+		bytes.NewReader(jsonBody),
+	)
 	require.NoError(t, err)
 	req.Header.Set("Content-Type", "application/json")
 
@@ -104,14 +114,20 @@ func TestConvertRerankRequestMissingDocuments(t *testing.T) {
 	assert.Contains(t, err.Error(), "documents field not found")
 }
 
-// TestConvertRerankRequestInvalidJSON tests the error case when the request body contains invalid JSON
+// TestConvertRerankRequestInvalidJSON tests the error case when the request body contains invalid
+// JSON
 func TestConvertRerankRequestInvalidJSON(t *testing.T) {
 	t.Parallel()
 	// Create invalid JSON body
 	invalidJSON := []byte(`{"model": "test", "documents": [`)
 
 	// Create mock HTTP request with context
-	req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, "/rerank", bytes.NewReader(invalidJSON))
+	req, err := http.NewRequestWithContext(
+		t.Context(),
+		http.MethodPost,
+		"/rerank",
+		bytes.NewReader(invalidJSON),
+	)
 	require.NoError(t, err)
 	req.Header.Set("Content-Type", "application/json")
 

@@ -10,8 +10,13 @@ import (
 	"github.com/labring/aiproxy/core/relay/meta"
 )
 
+//
 //nolint:gocritic
-func ConvertEmbeddingsRequest(meta *meta.Meta, req *http.Request, inputToSlices bool) (*adaptor.ConvertRequestResult, error) {
+func ConvertEmbeddingsRequest(
+	meta *meta.Meta,
+	req *http.Request,
+	inputToSlices bool,
+) (*adaptor.ConvertRequestResult, error) {
 	reqMap := make(map[string]any)
 	err := common.UnmarshalBodyReusable(req, &reqMap)
 	if err != nil {

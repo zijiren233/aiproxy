@@ -2,6 +2,8 @@ package websearch
 
 import (
 	"context"
+	// embed static files
+	_ "embed"
 	"errors"
 	"fmt"
 	"slices"
@@ -14,9 +16,6 @@ import (
 	"github.com/labring/aiproxy/mcp-servers/web-search/engine"
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
-
-	// embed static files
-	_ "embed"
 )
 
 // Configuration templates for the web search server
@@ -56,7 +55,11 @@ var configTemplates = map[string]mcpservers.ConfigTemplate{
 					return nil
 				}
 			}
-			return fmt.Errorf("invalid engine: %s, must be one of: %s", value, strings.Join(validEngines, ", "))
+			return fmt.Errorf(
+				"invalid engine: %s, must be one of: %s",
+				value,
+				strings.Join(validEngines, ", "),
+			)
 		},
 	},
 	"max_results": {
@@ -92,7 +95,7 @@ type searchQuery struct {
 }
 
 // NewServer creates a new MCP server for web search
-func NewServer(config map[string]string, _ map[string]string) (*server.MCPServer, error) {
+func NewServer(config, _ map[string]string) (*server.MCPServer, error) {
 	// Create MCP server
 	mcpServer := server.NewMCPServer(
 		"web-search",
@@ -157,7 +160,12 @@ func initializeEngines(config map[string]string) (map[string]engine.Engine, stri
 }
 
 // addWebSearchTool adds the basic web search tool to the server
-func addWebSearchTool(mcpServer *server.MCPServer, engines map[string]engine.Engine, defaultEngine string, maxResults int) {
+func addWebSearchTool(
+	mcpServer *server.MCPServer,
+	engines map[string]engine.Engine,
+	defaultEngine string,
+	maxResults int,
+) {
 	mcpServer.AddTool(
 		mcp.Tool{
 			Name:        "web_search",
@@ -267,7 +275,11 @@ func addWebSearchTool(mcpServer *server.MCPServer, engines map[string]engine.Eng
 }
 
 // addMultiSearchTool adds the multi-engine search tool to the server
-func addMultiSearchTool(mcpServer *server.MCPServer, engines map[string]engine.Engine, maxResults int) {
+func addMultiSearchTool(
+	mcpServer *server.MCPServer,
+	engines map[string]engine.Engine,
+	maxResults int,
+) {
 	mcpServer.AddTool(
 		mcp.Tool{
 			Name:        "multi_search",
@@ -441,7 +453,10 @@ func addSmartSearchTool(mcpServer *server.MCPServer, engines map[string]engine.E
 				if err == nil {
 					allResults = append(allResults, results...)
 					if !slices.Contains(searchSummary["engines_used"].([]string), engineName) {
-						searchSummary["engines_used"] = append(searchSummary["engines_used"].([]string), engineName)
+						searchSummary["engines_used"] = append(
+							searchSummary["engines_used"].([]string),
+							engineName,
+						)
 					}
 				}
 			}
@@ -487,7 +502,7 @@ func getAvailableEngines(engines map[string]engine.Engine) []string {
 }
 
 // generateSearchQueries creates search queries based on the user's question and depth
-func generateSearchQueries(question string, depth string) []searchQuery {
+func generateSearchQueries(question, depth string) []searchQuery {
 	// Simple query generation logic - in production, this could use AI
 	queries := []searchQuery{}
 

@@ -156,7 +156,11 @@ func convertImageURLToBase64(ctx context.Context, contentItem *ast.Node) error {
 	return nil
 }
 
-func StreamHandler(m *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, adaptor.Error) {
+func StreamHandler(
+	m *meta.Meta,
+	c *gin.Context,
+	resp *http.Response,
+) (*model.Usage, adaptor.Error) {
 	if resp.StatusCode != http.StatusOK {
 		return nil, ErrorHandler(resp)
 	}
@@ -224,7 +228,12 @@ func StreamHandler(m *meta.Meta, c *gin.Context, resp *http.Response) (*model.Us
 		usage = &relaymodel.Usage{
 			PromptTokens:     int64(m.RequestUsage.InputTokens),
 			CompletionTokens: openai.CountTokenText(responseText.String(), m.OriginModel),
-			TotalTokens:      int64(m.RequestUsage.InputTokens) + openai.CountTokenText(responseText.String(), m.OriginModel),
+			TotalTokens: int64(
+				m.RequestUsage.InputTokens,
+			) + openai.CountTokenText(
+				responseText.String(),
+				m.OriginModel,
+			),
 		}
 	}
 
@@ -240,17 +249,25 @@ func Handler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage
 
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, relaymodel.WrapperAnthropicError(err, "read_response_failed", http.StatusInternalServerError)
+		return nil, relaymodel.WrapperAnthropicError(
+			err,
+			"read_response_failed",
+			http.StatusInternalServerError,
+		)
 	}
 
 	var claudeResponse Response
 	err = sonic.Unmarshal(respBody, &claudeResponse)
 	if err != nil {
-		return nil, relaymodel.WrapperAnthropicError(err, "unmarshal_response_body_failed", http.StatusInternalServerError)
+		return nil, relaymodel.WrapperAnthropicError(
+			err,
+			"unmarshal_response_body_failed",
+			http.StatusInternalServerError,
+		)
 	}
 	fullTextResponse := Response2OpenAI(meta, &claudeResponse)
 	c.Writer.Header().Set("Content-Type", "application/json")
 	c.Writer.WriteHeader(resp.StatusCode)
 	_, _ = c.Writer.Write(respBody)
-	return fullTextResponse.Usage.ToModelUsage(), nil
+	return fullTextResponse.ToModelUsage(), nil
 }

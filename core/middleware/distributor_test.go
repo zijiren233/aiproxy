@@ -45,19 +45,31 @@ func BenchmarkCompareGetModelFromJSON(b *testing.B) {
 		},
 		{
 			name: "LargeJSON",
-			json: `{"model": "gpt-4","messages": [{"role": "user", "content": "` + strings.Repeat("x", 1000) + `"}]}`,
+			json: `{"model": "gpt-4","messages": [{"role": "user", "content": "` + strings.Repeat(
+				"x",
+				1000,
+			) + `"}]}`,
 		},
 		{
 			name: "LargeJSON2",
-			json: `{"messages": [{"role": "user", "content": "` + strings.Repeat("x", 1000) + `"}],"model": "gpt-4"}`,
+			json: `{"messages": [{"role": "user", "content": "` + strings.Repeat(
+				"x",
+				1000,
+			) + `"}],"model": "gpt-4"}`,
 		},
 		{
 			name: "VeryLargeJSON",
-			json: `{"model": "gpt-4","messages": [{"role": "user", "content": "` + strings.Repeat("x", 10000) + `"}]}`,
+			json: `{"model": "gpt-4","messages": [{"role": "user", "content": "` + strings.Repeat(
+				"x",
+				10000,
+			) + `"}]}`,
 		},
 		{
 			name: "VeryLargeJSON2",
-			json: `{"messages": [{"role": "user", "content": "` + strings.Repeat("x", 10000) + `"}],"model": "gpt-4"}`,
+			json: `{"messages": [{"role": "user", "content": "` + strings.Repeat(
+				"x",
+				10000,
+			) + `"}],"model": "gpt-4"}`,
 		},
 	}
 

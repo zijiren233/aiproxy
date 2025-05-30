@@ -16,7 +16,11 @@ import (
 )
 
 func SetStaticFileRouter(router *gin.Engine) {
-	router.SetHTMLTemplate(template.Must(template.New("").Funcs(router.FuncMap).ParseFS(public.Templates, "templates/*")))
+	router.SetHTMLTemplate(
+		template.Must(
+			template.New("").Funcs(router.FuncMap).ParseFS(public.Templates, "templates/*"),
+		),
+	)
 
 	if config.DisableWeb {
 		router.GET("/", func(ctx *gin.Context) {
@@ -88,7 +92,7 @@ func newDynamicNoRouteHandler(fs http.FileSystem) func(ctx *gin.Context) {
 }
 
 type staticFileFS interface {
-	StaticFileFS(relativePath string, filepath string, fs http.FileSystem) gin.IRoutes
+	StaticFileFS(relativePath, filepath string, fs http.FileSystem) gin.IRoutes
 }
 
 func initFSRouter(e staticFileFS, f fs.ReadDirFS, path string) error {

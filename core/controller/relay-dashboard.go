@@ -30,7 +30,11 @@ func GetSubscription(c *gin.Context) {
 			return
 		}
 		log.Errorf("get group (%s) balance failed: %s", group.ID, err)
-		middleware.ErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("get group (%s) balance failed", group.ID))
+		middleware.ErrorResponse(
+			c,
+			http.StatusInternalServerError,
+			fmt.Sprintf("get group (%s) balance failed", group.ID),
+		)
 		return
 	}
 	token := middleware.GetToken(c)

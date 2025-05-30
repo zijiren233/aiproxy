@@ -198,7 +198,16 @@ func SearchTokens(c *gin.Context) {
 	status, _ := strconv.Atoi(c.Query("status"))
 	group := c.Query("group")
 
-	tokens, total, err := model.SearchTokens(group, keyword, page, perPage, order, status, name, key)
+	tokens, total, err := model.SearchTokens(
+		group,
+		keyword,
+		page,
+		perPage,
+		order,
+		status,
+		name,
+		key,
+	)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
@@ -241,7 +250,16 @@ func SearchGroupTokens(c *gin.Context) {
 	key := c.Query("key")
 	status, _ := strconv.Atoi(c.Query("status"))
 
-	tokens, total, err := model.SearchGroupTokens(group, keyword, page, perPage, order, status, name, key)
+	tokens, total, err := model.SearchGroupTokens(
+		group,
+		keyword,
+		page,
+		perPage,
+		order,
+		status,
+		name,
+		key,
+	)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return

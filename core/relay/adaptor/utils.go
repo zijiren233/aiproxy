@@ -57,7 +57,12 @@ func ValidateConfigTemplateValue(template ConfigTemplate, value any) error {
 		}
 	}
 	if err := template.Validator(value); err != nil {
-		return fmt.Errorf("config template %s(%s) is invalid: %w", template.Name, template.Name, err)
+		return fmt.Errorf(
+			"config template %s(%s) is invalid: %w",
+			template.Name,
+			template.Name,
+			err,
+		)
 	}
 	return nil
 }

@@ -6,12 +6,24 @@ import (
 	relaymodel "github.com/labring/aiproxy/core/relay/model"
 )
 
-func AbortLogWithMessageWithMode(m mode.Mode, c *gin.Context, statusCode int, message string, typ ...string) {
+func AbortLogWithMessageWithMode(
+	m mode.Mode,
+	c *gin.Context,
+	statusCode int,
+	message string,
+	typ ...string,
+) {
 	GetLogger(c).Error(message)
 	AbortWithMessageWithMode(m, c, statusCode, message, typ...)
 }
 
-func AbortWithMessageWithMode(m mode.Mode, c *gin.Context, statusCode int, message string, typ ...string) {
+func AbortWithMessageWithMode(
+	m mode.Mode,
+	c *gin.Context,
+	statusCode int,
+	message string,
+	typ ...string,
+) {
 	c.JSON(statusCode,
 		relaymodel.WrapperErrorWithMessage(m, statusCode, message, typ...),
 	)

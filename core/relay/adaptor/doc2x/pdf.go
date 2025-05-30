@@ -23,7 +23,10 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func ConvertParsePdfRequest(meta *meta.Meta, req *http.Request) (*adaptor.ConvertRequestResult, error) {
+func ConvertParsePdfRequest(
+	meta *meta.Meta,
+	req *http.Request,
+) (*adaptor.ConvertRequestResult, error) {
 	err := req.ParseMultipartForm(1024 * 1024 * 4)
 	if err != nil {
 		return nil, err
@@ -54,21 +57,37 @@ type ParsePdfResponseData struct {
 	UID string `json:"uid"`
 }
 
-func HandleParsePdfResponse(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, adaptor.Error) {
+func HandleParsePdfResponse(
+	meta *meta.Meta,
+	c *gin.Context,
+	resp *http.Response,
+) (*model.Usage, adaptor.Error) {
 	var response ParsePdfResponse
 	err := sonic.ConfigDefault.NewDecoder(resp.Body).Decode(&response)
 	if err != nil {
-		return nil, relaymodel.WrapperOpenAIErrorWithMessage("decode response failed: "+err.Error(), "decode_response_failed", http.StatusBadRequest)
+		return nil, relaymodel.WrapperOpenAIErrorWithMessage(
+			"decode response failed: "+err.Error(),
+			"decode_response_failed",
+			http.StatusBadRequest,
+		)
 	}
 
 	if response.Code != "success" {
-		return nil, relaymodel.WrapperOpenAIErrorWithMessage("parse pdf failed: "+response.Msg, "parse_pdf_failed", http.StatusBadRequest)
+		return nil, relaymodel.WrapperOpenAIErrorWithMessage(
+			"parse pdf failed: "+response.Msg,
+			"parse_pdf_failed",
+			http.StatusBadRequest,
+		)
 	}
 
 	for {
 		status, err := GetStatus(context.Background(), meta, response.Data.UID)
 		if err != nil {
-			return nil, relaymodel.WrapperOpenAIErrorWithMessage("get status failed: "+err.Error(), "get_status_failed", http.StatusInternalServerError)
+			return nil, relaymodel.WrapperOpenAIErrorWithMessage(
+				"get status failed: "+err.Error(),
+				"get_status_failed",
+				http.StatusInternalServerError,
+			)
 		}
 
 		switch status.Status {
@@ -77,7 +96,11 @@ func HandleParsePdfResponse(meta *meta.Meta, c *gin.Context, resp *http.Response
 		case StatusResponseDataStatusProcessing:
 			time.Sleep(1 * time.Second)
 		case StatusResponseDataStatusFailed:
-			return nil, relaymodel.WrapperOpenAIErrorWithMessage("parse pdf failed: "+status.Detail, "parse_pdf_failed", http.StatusBadRequest)
+			return nil, relaymodel.WrapperOpenAIErrorWithMessage(
+				"parse pdf failed: "+status.Detail,
+				"parse_pdf_failed",
+				http.StatusBadRequest,
+			)
 		}
 	}
 }
@@ -245,7 +268,7 @@ func InlineMdImage(ctx context.Context, text string) string {
 	return resultText.String()
 }
 
-func imageURL2MdBase64(ctx context.Context, url string, altText string) (string, error) {
+func imageURL2MdBase64(ctx context.Context, url, altText string) (string, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return "", fmt.Errorf("failed to create request: %w", err)
@@ -264,7 +287,11 @@ func imageURL2MdBase64(ctx context.Context, url string, altText string) (string,
 		if resp.StatusCode == http.StatusNotFound {
 			resp.Body.Close()
 			if retries == maxRetries {
-				return "", fmt.Errorf("failed to download image, status code: %d after %d retries", resp.StatusCode, retries)
+				return "", fmt.Errorf(
+					"failed to download image, status code: %d after %d retries",
+					resp.StatusCode,
+					retries,
+				)
 			}
 			retries++
 			time.Sleep(1 * time.Second)
@@ -321,7 +348,11 @@ func handleConvertPdfToMd(ctx context.Context, str string) string {
 	return result
 }
 
-func handleParsePdfResponse(meta *meta.Meta, c *gin.Context, response *StatusResponseDataResult) (*model.Usage, adaptor.Error) {
+func handleParsePdfResponse(
+	meta *meta.Meta,
+	c *gin.Context,
+	response *StatusResponseDataResult,
+) (*model.Usage, adaptor.Error) {
 	mds := make([]string, 0, len(response.Pages))
 	totalLength := 0
 	for _, page := range response.Pages {

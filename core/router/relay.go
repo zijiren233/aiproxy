@@ -104,13 +104,19 @@ func SetRelayRouter(router *gin.Engine) {
 		relayRouter.POST("/threads/:id/messages", controller.RelayNotImplemented)
 		relayRouter.GET("/threads/:id/messages/:messageId", controller.RelayNotImplemented)
 		relayRouter.POST("/threads/:id/messages/:messageId", controller.RelayNotImplemented)
-		relayRouter.GET("/threads/:id/messages/:messageId/files/:filesId", controller.RelayNotImplemented)
+		relayRouter.GET(
+			"/threads/:id/messages/:messageId/files/:filesId",
+			controller.RelayNotImplemented,
+		)
 		relayRouter.GET("/threads/:id/messages/:messageId/files", controller.RelayNotImplemented)
 		relayRouter.POST("/threads/:id/runs", controller.RelayNotImplemented)
 		relayRouter.GET("/threads/:id/runs/:runsId", controller.RelayNotImplemented)
 		relayRouter.POST("/threads/:id/runs/:runsId", controller.RelayNotImplemented)
 		relayRouter.GET("/threads/:id/runs", controller.RelayNotImplemented)
-		relayRouter.POST("/threads/:id/runs/:runsId/submit_tool_outputs", controller.RelayNotImplemented)
+		relayRouter.POST(
+			"/threads/:id/runs/:runsId/submit_tool_outputs",
+			controller.RelayNotImplemented,
+		)
 		relayRouter.POST("/threads/:id/runs/:runsId/cancel", controller.RelayNotImplemented)
 		relayRouter.GET("/threads/:id/runs/:runsId/steps/:stepId", controller.RelayNotImplemented)
 		relayRouter.GET("/threads/:id/runs/:runsId/steps", controller.RelayNotImplemented)

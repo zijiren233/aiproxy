@@ -73,7 +73,7 @@ func Register(mcp EmbedMcp) {
 	servers[mcp.ID] = mcp
 }
 
-func GetMCPServer(id string, config map[string]string, reusingConfig map[string]string) (*server.MCPServer, error) {
+func GetMCPServer(id string, config, reusingConfig map[string]string) (*server.MCPServer, error) {
 	embedServer, ok := servers[id]
 	if !ok {
 		return nil, fmt.Errorf("mcp %s not found", id)
@@ -88,7 +88,9 @@ func GetMCPServer(id string, config map[string]string, reusingConfig map[string]
 
 	for _, template := range embedServer.ConfigTemplates {
 		switch template.Required {
-		case ConfigRequiredTypeReusingOptional, ConfigRequiredTypeReusingOnly, ConfigRequiredTypeInitOrReusingOnly:
+		case ConfigRequiredTypeReusingOptional,
+			ConfigRequiredTypeReusingOnly,
+			ConfigRequiredTypeInitOrReusingOnly:
 			return embedServer.NewServer(config, reusingConfig)
 		}
 	}

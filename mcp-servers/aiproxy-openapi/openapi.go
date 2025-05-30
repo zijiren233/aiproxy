@@ -53,7 +53,7 @@ func getParser() *convert.Parser {
 	return parser
 }
 
-func NewServer(config map[string]string, reusingConfig map[string]string) (*server.MCPServer, error) {
+func NewServer(config, reusingConfig map[string]string) (*server.MCPServer, error) {
 	converter := convert.NewConverter(getParser(), convert.Options{
 		OpenAPIFrom:   config["host"],
 		Authorization: reusingConfig["authorization"],

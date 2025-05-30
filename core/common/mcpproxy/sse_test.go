@@ -20,7 +20,7 @@ func (t *TestSessionManager) New() string {
 }
 
 // Set stores a sessionID and its corresponding backend endpoint
-func (t *TestSessionManager) Set(sessionID string, endpoint string) {
+func (t *TestSessionManager) Set(sessionID, endpoint string) {
 	t.m[sessionID] = endpoint
 }
 
@@ -50,23 +50,25 @@ func (h *TestEndpointHandler) LoadEndpoint(endpoint string) string {
 func TestProxySSEEndpoint(t *testing.T) {
 	reqDone := make(chan struct{})
 	// Setup a mock backend server
-	backendServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		w.Header().Set("Content-Type", "text/event-stream")
-		w.Header().Set("Cache-Control", "no-cache")
-		w.Header().Set("Connection", "keep-alive")
+	backendServer := httptest.NewServer(
+		http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			w.Header().Set("Content-Type", "text/event-stream")
+			w.Header().Set("Cache-Control", "no-cache")
+			w.Header().Set("Connection", "keep-alive")
 
-		flusher, ok := w.(http.Flusher)
-		if !ok {
-			t.Fatal("Expected ResponseWriter to be a Flusher")
-		}
+			flusher, ok := w.(http.Flusher)
+			if !ok {
+				t.Fatal("Expected ResponseWriter to be a Flusher")
+			}
 
-		// Send an endpoint event
-		fmt.Fprintf(w, "event: endpoint\n")
-		fmt.Fprintf(w, "data: /message?sessionId=original-session-id\n\n")
-		flusher.Flush()
+			// Send an endpoint event
+			fmt.Fprintf(w, "event: endpoint\n")
+			fmt.Fprintf(w, "data: /message?sessionId=original-session-id\n\n")
+			flusher.Flush()
 
-		close(reqDone)
-	}))
+			close(reqDone)
+		}),
+	)
 	defer backendServer.Close()
 
 	// Create the proxy

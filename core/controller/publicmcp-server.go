@@ -97,7 +97,8 @@ func (r *redisStoreManager) New() string {
 func (r *redisStoreManager) Get(sessionID string) (string, bool) {
 	ctx := context.Background()
 
-	result, err := redisStoreManagerScript.Run(ctx, r.rdb, []string{"mcp:session:" + sessionID}).Result()
+	result, err := redisStoreManagerScript.Run(ctx, r.rdb, []string{"mcp:session:" + sessionID}).
+		Result()
 	if err != nil || result == nil {
 		return "", false
 	}
@@ -333,7 +334,11 @@ func parseOpenAPIFromContent(config *model.MCPOpenAPIConfig, parser *convert.Par
 }
 
 // processMCPSseMpscMessages handles message processing for OpenAPI
-func processMCPSseMpscMessages(ctx context.Context, sessionID string, server *statelessmcp.SSEServer) {
+func processMCPSseMpscMessages(
+	ctx context.Context,
+	sessionID string,
+	server *statelessmcp.SSEServer,
+) {
 	mpscInstance := getMCPMpsc()
 	for {
 		select {
@@ -352,7 +357,12 @@ func processMCPSseMpscMessages(ctx context.Context, sessionID string, server *st
 }
 
 // processReusingParams handles the reusing parameters for MCP proxy
-func processReusingParams(reusingParams map[string]model.ReusingParam, mcpID string, groupID string, headers map[string]string, backendQuery *url.Values) error {
+func processReusingParams(
+	reusingParams map[string]model.ReusingParam,
+	mcpID, groupID string,
+	headers map[string]string,
+	backendQuery *url.Values,
+) error {
 	if len(reusingParams) == 0 {
 		return nil
 	}
@@ -668,7 +678,8 @@ func newChannelMCPMpsc() *channelMCPMpsc {
 	return c
 }
 
-// cleanupExpiredChannels periodically checks for and removes channels that haven't been accessed in 5 minutes
+// cleanupExpiredChannels periodically checks for and removes channels that haven't been accessed in
+// 5 minutes
 func (c *channelMCPMpsc) cleanupExpiredChannels() {
 	ticker := time.NewTicker(1 * time.Minute)
 	defer ticker.Stop()

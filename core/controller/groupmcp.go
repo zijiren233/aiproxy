@@ -36,7 +36,14 @@ func GetGroupMCPs(c *gin.Context) {
 	keyword := c.Query("keyword")
 	status, _ := strconv.Atoi(c.Query("status"))
 
-	mcps, total, err := model.GetGroupMCPs(groupID, page, perPage, mcpType, keyword, model.GroupMCPStatus(status))
+	mcps, total, err := model.GetGroupMCPs(
+		groupID,
+		page,
+		perPage,
+		mcpType,
+		keyword,
+		model.GroupMCPStatus(status),
+	)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return

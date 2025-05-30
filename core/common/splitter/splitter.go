@@ -30,12 +30,15 @@ func NewSplitter(heads, tails [][]byte) *Splitter {
 	}
 
 	return &Splitter{
-		heads:           heads,
-		tails:           tails,
-		kmpNexts:        kmpNexts,
-		partialTailPos:  make([]int, len(tails)),
-		impossibleHeads: make([]bool, len(heads)), // Defaults to false (all heads initially possible)
-		longestHeadLen:  longestHeadLen,
+		heads:          heads,
+		tails:          tails,
+		kmpNexts:       kmpNexts,
+		partialTailPos: make([]int, len(tails)),
+		impossibleHeads: make(
+			[]bool,
+			len(heads),
+		), // Defaults to false (all heads initially possible)
+		longestHeadLen: longestHeadLen,
 	}
 }
 

@@ -17,7 +17,10 @@ import (
 	relaymodel "github.com/labring/aiproxy/core/relay/model"
 )
 
-func ConvertRerankRequest(meta *meta.Meta, req *http.Request) (*adaptor.ConvertRequestResult, error) {
+func ConvertRerankRequest(
+	meta *meta.Meta,
+	req *http.Request,
+) (*adaptor.ConvertRequestResult, error) {
 	node, err := common.UnmarshalBody2Node(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse request body: %w", err)
@@ -98,7 +101,11 @@ func (rri *RerankResponseItem) ToRerankModel() *relaymodel.RerankResult {
 	}
 }
 
-func RerankHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, adaptor.Error) {
+func RerankHandler(
+	meta *meta.Meta,
+	c *gin.Context,
+	resp *http.Response,
+) (*model.Usage, adaptor.Error) {
 	if resp.StatusCode != http.StatusOK {
 		return nil, RerankErrorHanlder(resp)
 	}
@@ -110,7 +117,11 @@ func RerankHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model
 	respSlice := RerankResponse{}
 	err := sonic.ConfigDefault.NewDecoder(resp.Body).Decode(&respSlice)
 	if err != nil {
-		return nil, relaymodel.WrapperOpenAIError(err, "read_response_body_failed", http.StatusInternalServerError)
+		return nil, relaymodel.WrapperOpenAIError(
+			err,
+			"read_response_body_failed",
+			http.StatusInternalServerError,
+		)
 	}
 
 	usage := &model.Usage{
@@ -135,7 +146,11 @@ func RerankHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model
 
 	jsonResponse, err := sonic.Marshal(rerankResp)
 	if err != nil {
-		return usage, relaymodel.WrapperOpenAIError(err, "marshal_response_body_failed", http.StatusInternalServerError)
+		return usage, relaymodel.WrapperOpenAIError(
+			err,
+			"marshal_response_body_failed",
+			http.StatusInternalServerError,
+		)
 	}
 
 	_, err = c.Writer.Write(jsonResponse)

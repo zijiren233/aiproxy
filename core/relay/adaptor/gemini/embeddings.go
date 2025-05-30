@@ -14,7 +14,10 @@ import (
 	"github.com/labring/aiproxy/core/relay/utils"
 )
 
-func ConvertEmbeddingRequest(meta *meta.Meta, req *http.Request) (*adaptor.ConvertRequestResult, error) {
+func ConvertEmbeddingRequest(
+	meta *meta.Meta,
+	req *http.Request,
+) (*adaptor.ConvertRequestResult, error) {
 	request, err := utils.UnmarshalGeneralOpenAIRequest(req)
 	if err != nil {
 		return nil, err
@@ -51,7 +54,11 @@ func ConvertEmbeddingRequest(meta *meta.Meta, req *http.Request) (*adaptor.Conve
 	}, nil
 }
 
-func EmbeddingHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, adaptor.Error) {
+func EmbeddingHandler(
+	meta *meta.Meta,
+	c *gin.Context,
+	resp *http.Response,
+) (*model.Usage, adaptor.Error) {
 	if resp.StatusCode != http.StatusOK {
 		return nil, openai.ErrorHanlder(resp)
 	}
@@ -61,15 +68,27 @@ func EmbeddingHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*mo
 	var geminiEmbeddingResponse EmbeddingResponse
 	err := sonic.ConfigDefault.NewDecoder(resp.Body).Decode(&geminiEmbeddingResponse)
 	if err != nil {
-		return nil, relaymodel.WrapperOpenAIError(err, "unmarshal_response_body_failed", http.StatusInternalServerError)
+		return nil, relaymodel.WrapperOpenAIError(
+			err,
+			"unmarshal_response_body_failed",
+			http.StatusInternalServerError,
+		)
 	}
 	if geminiEmbeddingResponse.Error != nil {
-		return nil, relaymodel.WrapperOpenAIErrorWithMessage(geminiEmbeddingResponse.Error.Message, geminiEmbeddingResponse.Error.Code, resp.StatusCode)
+		return nil, relaymodel.WrapperOpenAIErrorWithMessage(
+			geminiEmbeddingResponse.Error.Message,
+			geminiEmbeddingResponse.Error.Code,
+			resp.StatusCode,
+		)
 	}
 	fullTextResponse := embeddingResponse2OpenAI(meta, &geminiEmbeddingResponse)
 	jsonResponse, err := sonic.Marshal(fullTextResponse)
 	if err != nil {
-		return nil, relaymodel.WrapperOpenAIError(err, "marshal_response_body_failed", http.StatusInternalServerError)
+		return nil, relaymodel.WrapperOpenAIError(
+			err,
+			"marshal_response_body_failed",
+			http.StatusInternalServerError,
+		)
 	}
 	c.Writer.Header().Set("Content-Type", "application/json")
 	c.Writer.WriteHeader(resp.StatusCode)
@@ -77,7 +96,10 @@ func EmbeddingHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*mo
 	return fullTextResponse.ToModelUsage(), nil
 }
 
-func embeddingResponse2OpenAI(meta *meta.Meta, response *EmbeddingResponse) *relaymodel.EmbeddingResponse {
+func embeddingResponse2OpenAI(
+	meta *meta.Meta,
+	response *EmbeddingResponse,
+) *relaymodel.EmbeddingResponse {
 	openAIEmbeddingResponse := relaymodel.EmbeddingResponse{
 		Object: "list",
 		Data:   make([]*relaymodel.EmbeddingResponseItem, 0, len(response.Embeddings)),
@@ -88,11 +110,14 @@ func embeddingResponse2OpenAI(meta *meta.Meta, response *EmbeddingResponse) *rel
 		},
 	}
 	for _, item := range response.Embeddings {
-		openAIEmbeddingResponse.Data = append(openAIEmbeddingResponse.Data, &relaymodel.EmbeddingResponseItem{
-			Object:    `embedding`,
-			Index:     0,
-			Embedding: item.Values,
-		})
+		openAIEmbeddingResponse.Data = append(
+			openAIEmbeddingResponse.Data,
+			&relaymodel.EmbeddingResponseItem{
+				Object:    `embedding`,
+				Index:     0,
+				Embedding: item.Values,
+			},
+		)
 	}
 	return &openAIEmbeddingResponse
 }
