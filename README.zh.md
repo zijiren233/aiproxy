@@ -71,6 +71,7 @@ graph TB
     
     Plugins --> CachePlugin[缓存插件]
     Plugins --> SearchPlugin[网络搜索插件]
+    Plugins --> ThinkSplitPlugin[思考模式插件]
     
     Router --> Provider1[OpenAI]
     Router --> Provider2[Anthropic]
@@ -196,6 +197,16 @@ AI Proxy 支持插件系统来扩展其功能。当前可用的插件：
 - **动态控制**：用户可控的搜索深度
 
 [查看网络搜索插件文档](./core/relay/plugin/web-search/README.zh.md)
+
+### 思考模式插件
+
+思考模式插件支持思考模式的内容分割：
+
+- **自动识别**：自动检测响应中的 `<think>...</think>` 标签
+- **内容分离**：将思考内容提取到 `reasoning_content` 字段
+- **流式支持**：支持流式和非流式响应处理
+
+[查看思考模式插件文档](./core/relay/plugin/thinksplit/README.zh.md)
 
 ## 📚 API 文档
 
