@@ -22,7 +22,7 @@ Cache Plugin 是一个高性能的 AI API 请求缓存解决方案，通过存�
     "type": 1,
     "plugin": {
         "cache": {
-            "enable_plugin": true,
+            "enable": true,
             "ttl": 300,
             "item_max_size": 1048576,
             "add_cache_hit_header": true,
@@ -38,7 +38,7 @@ Cache Plugin 是一个高性能的 AI API 请求缓存解决方案，通过存�
 
 | 字段 | 类型 | 必填 | 默认值 | 说明 |
 |------|------|------|--------|------|
-| `enable_plugin` | bool | 是 | false | 是否启用 Cache 插件 |
+| `enable` | bool | 是 | false | 是否启用 Cache 插件 |
 | `ttl` | int | 否 | 300 | 缓存项的生存时间（秒） |
 | `item_max_size` | int | 否 | 1048576 (1MB) | 单个缓存项的最大大小（字节） |
 | `add_cache_hit_header` | bool | 否 | false | 是否添加指示缓存命中的头部 |
@@ -82,7 +82,7 @@ Cache Plugin 是一个高性能的 AI API 请求缓存解决方案，通过存�
 {
     "plugin": {
         "cache": {
-            "enable_plugin": true,
+            "enable": true,
             "ttl": 60,
             "item_max_size": 524288,
             "add_cache_hit_header": true

@@ -214,7 +214,7 @@ func (c *Cache) ConvertRequest(meta *meta.Meta, req *http.Request, do adaptor.Co
 	if err != nil {
 		return do.ConvertRequest(meta, req)
 	}
-	if !pluginConfig.EnablePlugin {
+	if !pluginConfig.Enable {
 		return do.ConvertRequest(meta, req)
 	}
 
@@ -327,7 +327,7 @@ func (c *Cache) DoResponse(meta *meta.Meta, ctx *gin.Context, resp *http.Respons
 		return item.Usage, nil
 	}
 
-	if !pluginConfig.EnablePlugin {
+	if !pluginConfig.Enable {
 		return do.DoResponse(meta, ctx, resp)
 	}
 

@@ -33,6 +33,7 @@ import (
 	relaymodel "github.com/labring/aiproxy/core/relay/model"
 	"github.com/labring/aiproxy/core/relay/plugin"
 	"github.com/labring/aiproxy/core/relay/plugin/cache"
+	"github.com/labring/aiproxy/core/relay/plugin/thinksplit"
 	websearch "github.com/labring/aiproxy/core/relay/plugin/web-search"
 	log "github.com/sirupsen/logrus"
 )
@@ -172,6 +173,7 @@ func relayHandler(c *gin.Context, meta *meta.Meta) *controller.HandleResult {
 		websearch.NewWebSearchPlugin(func(modelName string) (*model.Channel, error) {
 			return getWebSearchChannel(c, modelName)
 		}),
+		thinksplit.NewThinkPlugin(),
 	)
 
 	return controller.Handle(a, c, meta)

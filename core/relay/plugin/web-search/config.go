@@ -8,8 +8,8 @@ import (
 
 // Configuration structures
 type Config struct {
-	EnablePlugin      bool           `json:"enable_plugin"`
-	DefaultEnable     bool           `json:"default_enable"`
+	Enable            bool           `json:"enable"`
+	ForceSearch       bool           `json:"force_search"`
 	MaxResults        int            `json:"max_results"`
 	SearchRewrite     SearchRewrite  `json:"search_rewrite"`
 	NeedReference     bool           `json:"need_reference"`

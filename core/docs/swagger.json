@@ -7952,6 +7952,15 @@
                 "owner": {
                     "$ref": "#/definitions/model.ModelOwner"
                 },
+                "plugin": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                            "type": "integer"
+                        }
+                    }
+                },
                 "price": {
                     "$ref": "#/definitions/model.Price"
                 },
@@ -8275,6 +8284,15 @@
                 },
                 "owner": {
                     "$ref": "#/definitions/model.ModelOwner"
+                },
+                "plugin": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                            "type": "integer"
+                        }
+                    }
                 },
                 "price": {
                     "$ref": "#/definitions/model.Price"
@@ -8656,9 +8674,6 @@
                     "items": {
                         "type": "integer"
                     }
-                },
-                "split_think": {
-                    "type": "boolean"
                 }
             }
         },
@@ -9781,6 +9796,15 @@
                 },
                 "owner": {
                     "$ref": "#/definitions/model.ModelOwner"
+                },
+                "plugin": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                            "type": "integer"
+                        }
+                    }
                 },
                 "price": {
                     "$ref": "#/definitions/model.Price"

@@ -7961,6 +7961,15 @@ const docTemplate = `{
                 "owner": {
                     "$ref": "#/definitions/model.ModelOwner"
                 },
+                "plugin": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                            "type": "integer"
+                        }
+                    }
+                },
                 "price": {
                     "$ref": "#/definitions/model.Price"
                 },
@@ -8284,6 +8293,15 @@ const docTemplate = `{
                 },
                 "owner": {
                     "$ref": "#/definitions/model.ModelOwner"
+                },
+                "plugin": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                            "type": "integer"
+                        }
+                    }
                 },
                 "price": {
                     "$ref": "#/definitions/model.Price"
@@ -8665,9 +8683,6 @@ const docTemplate = `{
                     "items": {
                         "type": "integer"
                     }
-                },
-                "split_think": {
-                    "type": "boolean"
                 }
             }
         },
@@ -9790,6 +9805,15 @@ const docTemplate = `{
                 },
                 "owner": {
                     "$ref": "#/definitions/model.ModelOwner"
+                },
+                "plugin": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                            "type": "integer"
+                        }
+                    }
                 },
                 "price": {
                     "$ref": "#/definitions/model.Price"

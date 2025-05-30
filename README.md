@@ -71,7 +71,8 @@ graph TB
     
     Plugins --> CachePlugin[Cache Plugin]
     Plugins --> SearchPlugin[Web Search Plugin]
-    
+    Plugins --> ThinkSplitPlugin[Think Split Plugin]
+
     Router --> Provider1[OpenAI]
     Router --> Provider2[Anthropic]
     Router --> Provider3[Azure OpenAI]
@@ -196,6 +197,16 @@ The Web Search Plugin adds real-time web search capabilities:
 - **Dynamic Control**: User-controllable search depth
 
 [View Web Search Plugin Documentation](./core/relay/plugin/web-search/README.md)
+
+### Think Split Plugin
+
+The Think Split Plugin supports content splitting for reasoning models:
+
+- **Automatic Recognition**: Automatically detects `<think>...</think>` tags in responses
+- **Content Separation**: Extracts thinking content to `reasoning_content` field
+- **Streaming Support**: Supports both streaming and non-streaming responses
+
+[View Think Split Plugin Documentation](./core/relay/plugin/thinksplit/README.md)
 
 ## 📚 API Documentation
 

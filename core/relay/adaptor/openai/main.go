@@ -16,7 +16,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/core/common/conv"
 	"github.com/labring/aiproxy/core/common/render"
-	"github.com/labring/aiproxy/core/common/splitter"
 	"github.com/labring/aiproxy/core/middleware"
 	"github.com/labring/aiproxy/core/model"
 	"github.com/labring/aiproxy/core/relay/adaptor"
@@ -109,12 +108,6 @@ func StreamHandler(meta *meta.Meta, c *gin.Context, resp *http.Response, preHand
 
 	var usage *relaymodel.Usage
 
-	hasReasoningContent := false
-	var thinkSplitter *splitter.Splitter
-	if meta.ChannelConfig.SplitThink {
-		thinkSplitter = splitter.NewThinkSplitter()
-	}
-
 	for scanner.Scan() {
 		data := scanner.Bytes()
 		if len(data) < DataPrefixLength { // ignore blank line or wrong format
@@ -157,26 +150,11 @@ func StreamHandler(meta *meta.Meta, c *gin.Context, resp *http.Response, preHand
 					responseText.WriteString(choice.Delta.StringContent())
 				}
 			}
-			if choice.Delta.ReasoningContent != "" {
-				hasReasoningContent = true
-			}
 		}
 
 		_, err = node.Set("model", ast.NewString(meta.OriginModel))
 		if err != nil {
 			log.Error("error set model: " + err.Error())
-		}
-
-		if meta.ChannelConfig.SplitThink && !hasReasoningContent {
-			respMap, err := node.Map()
-			if err != nil {
-				log.Error("error get node map: " + err.Error())
-				continue
-			}
-			StreamSplitThink(respMap, thinkSplitter, func(data map[string]any) {
-				_ = render.ObjectData(c, data)
-			})
-			continue
 		}
 
 		_ = render.ObjectData(c, &node)
@@ -208,118 +186,6 @@ func StreamHandler(meta *meta.Meta, c *gin.Context, resp *http.Response, preHand
 	render.Done(c)
 
 	return usage.ToModelUsage(), nil
-}
-
-// renderCallback maybe reuse data, so don't modify data
-func StreamSplitThink(data map[string]any, thinkSplitter *splitter.Splitter, renderCallback func(data map[string]any)) {
-	choices, ok := data["choices"].([]any)
-	// only support one choice
-	if !ok || len(choices) != 1 {
-		renderCallback(data)
-		return
-	}
-	choice := choices[0]
-	choiceMap, ok := choice.(map[string]any)
-	if !ok {
-		renderCallback(data)
-		return
-	}
-	delta, ok := choiceMap["delta"].(map[string]any)
-	if !ok {
-		renderCallback(data)
-		return
-	}
-	content, ok := delta["content"].(string)
-	if !ok {
-		renderCallback(data)
-		return
-	}
-	think, remaining := thinkSplitter.Process(conv.StringToBytes(content))
-	if len(think) == 0 && len(remaining) == 0 {
-		delta["content"] = ""
-		delete(delta, "reasoning_content")
-		renderCallback(data)
-		return
-	}
-	if len(think) > 0 {
-		delta["content"] = ""
-		delta["reasoning_content"] = conv.BytesToString(think)
-		renderCallback(data)
-	}
-	if len(remaining) > 0 {
-		delta["content"] = conv.BytesToString(remaining)
-		delete(delta, "reasoning_content")
-		renderCallback(data)
-	}
-}
-
-func StreamSplitThinkModeld(data *relaymodel.ChatCompletionsStreamResponse, thinkSplitter *splitter.Splitter, renderCallback func(data *relaymodel.ChatCompletionsStreamResponse)) {
-	choices := data.Choices
-	// only support one choice
-	if len(data.Choices) != 1 {
-		renderCallback(data)
-		return
-	}
-	choice := choices[0]
-	content, ok := choice.Delta.Content.(string)
-	if !ok {
-		renderCallback(data)
-		return
-	}
-	think, remaining := thinkSplitter.Process(conv.StringToBytes(content))
-	if len(think) == 0 && len(remaining) == 0 {
-		choice.Delta.Content = ""
-		choice.Delta.ReasoningContent = ""
-		renderCallback(data)
-		return
-	}
-	if len(think) > 0 {
-		choice.Delta.Content = ""
-		choice.Delta.ReasoningContent = conv.BytesToString(think)
-		renderCallback(data)
-	}
-	if len(remaining) > 0 {
-		choice.Delta.Content = conv.BytesToString(remaining)
-		choice.Delta.ReasoningContent = ""
-		renderCallback(data)
-	}
-}
-
-func SplitThink(data map[string]any) {
-	choices, ok := data["choices"].([]any)
-	if !ok {
-		return
-	}
-	for _, choice := range choices {
-		choiceMap, ok := choice.(map[string]any)
-		if !ok {
-			continue
-		}
-		message, ok := choiceMap["message"].(map[string]any)
-		if !ok {
-			continue
-		}
-		content, ok := message["content"].(string)
-		if !ok {
-			continue
-		}
-		think, remaining := splitter.NewThinkSplitter().Process(conv.StringToBytes(content))
-		message["reasoning_content"] = conv.BytesToString(think)
-		message["content"] = conv.BytesToString(remaining)
-	}
-}
-
-func SplitThinkModeld(data *relaymodel.TextResponse) {
-	choices := data.Choices
-	for _, choice := range choices {
-		content, ok := choice.Message.Content.(string)
-		if !ok {
-			continue
-		}
-		think, remaining := splitter.NewThinkSplitter().Process(conv.StringToBytes(content))
-		choice.Message.ReasoningContent = conv.BytesToString(think)
-		choice.Message.Content = conv.BytesToString(remaining)
-	}
 }
 
 func GetUsageOrChoicesResponseFromNode(node *ast.Node) (*relaymodel.Usage, []*relaymodel.TextResponseChoice, error) {
@@ -414,16 +280,6 @@ func Handler(meta *meta.Meta, c *gin.Context, resp *http.Response, preHandler Pr
 	_, err = node.Set("model", ast.NewString(meta.OriginModel))
 	if err != nil {
 		return usage.ToModelUsage(), relaymodel.WrapperOpenAIError(err, "set_model_failed", http.StatusInternalServerError)
-	}
-
-	if meta.ChannelConfig.SplitThink {
-		respMap, err := node.Map()
-		if err != nil {
-			return usage.ToModelUsage(), relaymodel.WrapperOpenAIError(err, "unmarshal_response_body_failed", http.StatusInternalServerError)
-		}
-		SplitThink(respMap)
-		c.JSON(http.StatusOK, respMap)
-		return usage.ToModelUsage(), nil
 	}
 
 	newData, err := sonic.Marshal(&node)

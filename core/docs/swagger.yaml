@@ -115,6 +115,12 @@ definitions:
         type: string
       owner:
         $ref: '#/definitions/model.ModelOwner'
+      plugin:
+        additionalProperties:
+          items:
+            type: integer
+          type: array
+        type: object
       price:
         $ref: '#/definitions/model.Price'
       retry_times:
@@ -328,6 +334,12 @@ definitions:
         type: string
       owner:
         $ref: '#/definitions/model.ModelOwner'
+      plugin:
+        additionalProperties:
+          items:
+            type: integer
+          type: array
+        type: object
       price:
         $ref: '#/definitions/model.Price'
       retry_times:
@@ -584,8 +596,6 @@ definitions:
         items:
           type: integer
         type: array
-      split_think:
-        type: boolean
     type: object
   model.ChannelTest:
     properties:
@@ -1360,6 +1370,12 @@ definitions:
         type: string
       owner:
         $ref: '#/definitions/model.ModelOwner'
+      plugin:
+        additionalProperties:
+          items:
+            type: integer
+          type: array
+        type: object
       price:
         $ref: '#/definitions/model.Price'
       retry_times:
