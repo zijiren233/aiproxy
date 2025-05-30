@@ -22,7 +22,7 @@ The Cache Plugin is a high-performance caching solution for AI API requests that
     "type": 1,
     "plugin": {
         "cache": {
-            "enable_plugin": true,
+            "enable": true,
             "ttl": 300,
             "item_max_size": 1048576,
             "add_cache_hit_header": true,
@@ -38,7 +38,7 @@ The Cache Plugin is a high-performance caching solution for AI API requests that
 
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
-| `enable_plugin` | bool | Yes | false | Whether to enable the Cache plugin |
+| `enable` | bool | Yes | false | Whether to enable the Cache plugin |
 | `ttl` | int | No | 300 | Time-to-live for cached items (in seconds) |
 | `item_max_size` | int | No | 1048576 (1MB) | Maximum size of a single cached item (in bytes) |
 | `add_cache_hit_header` | bool | No | false | Whether to add a header indicating cache hit |
@@ -82,7 +82,7 @@ The plugin uses a two-tier caching strategy:
 {
     "plugin": {
         "cache": {
-            "enable_plugin": true,
+            "enable": true,
             "ttl": 60,
             "item_max_size": 524288,
             "add_cache_hit_header": true

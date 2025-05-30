@@ -11,7 +11,6 @@ import (
 	"github.com/labring/aiproxy/core/common"
 	"github.com/labring/aiproxy/core/common/image"
 	"github.com/labring/aiproxy/core/common/render"
-	"github.com/labring/aiproxy/core/common/splitter"
 	"github.com/labring/aiproxy/core/middleware"
 	"github.com/labring/aiproxy/core/model"
 	"github.com/labring/aiproxy/core/relay/adaptor"
@@ -215,11 +214,6 @@ func StreamHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model
 	defer openai.PutScannerBuffer(buf)
 	scanner.Buffer(*buf, cap(*buf))
 
-	var thinkSplitter *splitter.Splitter
-	if meta.ChannelConfig.SplitThink {
-		thinkSplitter = splitter.NewThinkSplitter()
-	}
-
 	for scanner.Scan() {
 		data := scanner.Bytes()
 
@@ -233,13 +227,6 @@ func StreamHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model
 		response := streamResponse2OpenAI(meta, &ollamaResponse)
 		if response.Usage != nil {
 			usage = response.Usage
-		}
-
-		if meta.ChannelConfig.SplitThink {
-			openai.StreamSplitThinkModeld(response, thinkSplitter, func(data *relaymodel.ChatCompletionsStreamResponse) {
-				_ = render.ObjectData(c, data)
-			})
-			continue
 		}
 
 		_ = render.ObjectData(c, response)
@@ -345,10 +332,6 @@ func Handler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage
 		return nil, relaymodel.WrapperOpenAIErrorWithMessage(ollamaResponse.Error, relaymodel.ErrorTypeUpstream, resp.StatusCode)
 	}
 	fullTextResponse := response2OpenAI(meta, &ollamaResponse)
-
-	if meta.ChannelConfig.SplitThink {
-		openai.SplitThinkModeld(fullTextResponse)
-	}
 
 	jsonResponse, err := sonic.Marshal(fullTextResponse)
 	if err != nil {

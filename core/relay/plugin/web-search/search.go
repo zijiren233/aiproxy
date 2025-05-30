@@ -110,7 +110,7 @@ func (p *WebSearch) ConvertRequest(meta *meta.Meta, req *http.Request, do adapto
 	}
 
 	// Skip if plugin is disabled
-	if !pluginConfig.EnablePlugin {
+	if !pluginConfig.Enable {
 		return do.ConvertRequest(meta, req)
 	}
 
@@ -138,7 +138,7 @@ func (p *WebSearch) ConvertRequest(meta *meta.Meta, req *http.Request, do adapto
 
 	// Check if web search should be enabled for this request
 	webSearchOptions, hasWebSearchOptions := chatRequest["web_search_options"].(map[string]any)
-	if !pluginConfig.DefaultEnable && !hasWebSearchOptions {
+	if !pluginConfig.ForceSearch && !hasWebSearchOptions {
 		return do.ConvertRequest(meta, req)
 	}
 
@@ -578,6 +578,7 @@ type responseWriter struct {
 	rewriteUsage        *model.Usage
 	rewriteUsageWritten bool
 	rewriteUsageField   string
+	isStream            bool
 }
 
 // Write overrides the standard Write method to inject metadata
@@ -653,7 +654,8 @@ func (rw *responseWriter) processReferences(node *ast.Node) {
 
 	if rw.referencesLocation == "" || rw.referencesLocation == "content" {
 		var contentNode *ast.Node
-		if utils.IsStreamResponseWithHeader(rw.ResponseWriter.Header()) {
+		if rw.isStream || utils.IsStreamResponseWithHeader(rw.ResponseWriter.Header()) {
+			rw.isStream = true
 			contentNode = node.GetByPath("choices", 0, "delta", "content")
 		} else {
 			contentNode = node.GetByPath("choices", 0, "message", "content")
@@ -673,7 +675,8 @@ func (rw *responseWriter) processReferences(node *ast.Node) {
 		}
 	} else {
 		var outterLocation *ast.Node
-		if utils.IsStreamResponseWithHeader(rw.ResponseWriter.Header()) {
+		if rw.isStream || utils.IsStreamResponseWithHeader(rw.ResponseWriter.Header()) {
+			rw.isStream = true
 			outterLocation = node.GetByPath("choices", 0, "delta")
 		} else {
 			outterLocation = node.GetByPath("choices", 0, "message")

@@ -14,8 +14,8 @@ The Web Search Plugin is a plugin that provides real-time web search capabilitie
     "type": 1,
     "plugin": {
         "web-search": {
-            "enable_plugin": true,
-            "default_enable": true,
+            "enable": true,
+            "force_search": true,
             "search_rewrite": {
                 "enable": true,
                 "add_rewrite_usage": true,
@@ -53,8 +53,8 @@ The Web Search Plugin is a plugin that provides real-time web search capabilitie
 
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
-| `enable_plugin` | bool | Yes | false | Whether to enable the Web Search plugin |
-| `default_enable` | bool | No | false | Whether to enable web search by default for all requests. By default, if there's no `web_search_options` field in the user request, web search is not enabled |
+| `enable` | bool | Yes | false | Whether to enable the Web Search plugin |
+| `force_search` | bool | No | false | Whether to enable web search by default for all requests. By default, if there's no `web_search_options` field in the user request, web search is not enabled |
 | `max_results` | int | No | 10 | Maximum number of results returned per search |
 | `need_reference` | bool | No | false | Whether to include reference information in the response |
 | `reference_location` | string | No | "content" | Reference position, options: `content`, `references` ... |
@@ -178,8 +178,8 @@ This field overrides the `search_rewrite.max_count` value in the configuration, 
 
 The Web Search plugin is enabled under the following conditions:
 
-1. **Default Enable**: When `default_enable` is `true` in the configuration, all requests will enable search
-2. **On-Demand Enable**: When `default_enable` is `false`, only requests containing the `web_search_options` field will enable search
+1. **Default Enable**: When `force_search` is `true` in the configuration, all requests will enable search
+2. **On-Demand Enable**: When `force_search` is `false`, only requests containing the `web_search_options` field will enable search
 
 ### Usage Examples
 
@@ -219,9 +219,9 @@ The Web Search plugin is enabled under the following conditions:
 
 ### Basic Usage
 
-1. **Enable Plugin**: Set `enable_plugin` to `true`
+1. **Enable Plugin**: Set `enable` to `true`
 2. **Configure Search Engines**: Add at least one search engine configuration in the `search_from` array
-3. **Set Default Behavior**: Control whether to enable search by default through `default_enable`
+3. **Set Default Behavior**: Control whether to enable search by default through `force_search`
 4. **User Control**: Users can control search behavior through the `web_search_options` field
 
 ### Advanced Features
@@ -256,8 +256,8 @@ Users can dynamically adjust search depth through the `search_context_size` para
 
 ## Troubleshooting
 
-- If search functionality is not working, check if `enable_plugin` is set to `true`
+- If search functionality is not working, check if `enable` is set to `true`
 - Verify that search engine API keys are correctly configured
 - Ensure the model supports Chat Completions mode
 - Check network connectivity and API service availability
-- Ensure the request contains the `web_search_options` field (when `default_enable` is `false`)
+- Ensure the request contains the `web_search_options` field (when `force_search` is `false`)

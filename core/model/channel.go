@@ -33,8 +33,7 @@ const (
 )
 
 type ChannelConfig struct {
-	SplitThink bool            `json:"split_think"`
-	Spec       json.RawMessage `json:"spec"`
+	Spec json.RawMessage `json:"spec"`
 }
 
 // validate spec json is map[string]any
