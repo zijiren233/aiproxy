@@ -104,7 +104,7 @@ func (s *SearchXNGEngine) Search(ctx context.Context, query SearchQuery) ([]Sear
 		// Clean up content - sometimes it might be empty
 		content := item.Content
 		if content == "" {
-			content = fmt.Sprintf("Result from %s", item.Engine)
+			content = "Result from " + item.Engine
 		}
 
 		results = append(results, SearchResult{

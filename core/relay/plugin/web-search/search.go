@@ -637,10 +637,9 @@ func (rw *responseWriter) processWebSearchCount(node *ast.Node) {
 }
 
 func buildReferenceContent(searchResults []engine.SearchResult) string {
-	var formattedReferences []string
+	formattedReferences := make([]string, len(searchResults))
 	for i, result := range searchResults {
-		formattedReferences = append(formattedReferences,
-			fmt.Sprintf("[%d] [%s](%s)", i+1, result.Title, result.Link))
+		formattedReferences[i] = fmt.Sprintf("[%d] [%s](%s)", i+1, result.Title, result.Link)
 	}
 	return strings.Join(formattedReferences, "\n\n")
 }
@@ -680,7 +679,7 @@ func (rw *responseWriter) processReferences(node *ast.Node) {
 			outterLocation = node.GetByPath("choices", 0, "message")
 		}
 		if outterLocation != nil && outterLocation.Valid() {
-			outterLocation.SetAny(rw.referencesLocation, rw.references)
+			_, _ = outterLocation.SetAny(rw.referencesLocation, rw.references)
 		}
 	}
 }
