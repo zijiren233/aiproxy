@@ -170,10 +170,10 @@ func relayHandler(c *gin.Context, meta *meta.Meta) *controller.HandleResult {
 
 	a := plugin.WrapperAdaptor(&wrapAdaptor{adaptor},
 		cache.NewCachePlugin(common.RDB),
-		thinksplit.NewThinkPlugin(),
 		websearch.NewWebSearchPlugin(func(modelName string) (*model.Channel, error) {
 			return getWebSearchChannel(c, modelName)
 		}),
+		thinksplit.NewThinkPlugin(),
 	)
 
 	return controller.Handle(a, c, meta)
