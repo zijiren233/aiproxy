@@ -18,7 +18,7 @@ services:
       - LOG_DETAIL_STORAGE_HOURS=1
       - TZ=Asia/Shanghai
       - SQL_DSN=postgres://postgres:aiproxy@pgsql:5432/aiproxy
-      - REDIS_CONN_STRING=redis://redis
+      - REDIS=redis://redis
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/api/status"]
       interval: 5s

@@ -133,7 +133,7 @@ ADMIN_KEY=your-admin-key        # Admin API key
 ```bash
 SQL_DSN=postgres://user:pass@host:5432/db    # Primary database
 LOG_SQL_DSN=postgres://user:pass@host:5432/log_db  # Log database (optional)
-REDIS_CONN_STRING=redis://localhost:6379     # Redis for caching
+REDIS=redis://localhost:6379     # Redis for caching
 ```
 
 #### **Feature Toggles**

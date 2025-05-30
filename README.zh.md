@@ -133,7 +133,7 @@ ADMIN_KEY=your-admin-key        # 管理员 API 密钥
 ```bash
 SQL_DSN=postgres://user:pass@host:5432/db    # 主数据库
 LOG_SQL_DSN=postgres://user:pass@host:5432/log_db  # 日志数据库（可选）
-REDIS_CONN_STRING=redis://localhost:6379     # Redis 缓存
+REDIS=redis://localhost:6379     # Redis 缓存
 ```
 
 #### **功能开关**

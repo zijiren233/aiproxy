@@ -5,6 +5,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/labring/aiproxy/core/common/env"
 	"github.com/redis/go-redis/v9"
 	log "github.com/sirupsen/logrus"
 )
@@ -16,13 +17,14 @@ var (
 
 // InitRedisClient This function is called after init()
 func InitRedisClient() (err error) {
-	if os.Getenv("REDIS_CONN_STRING") == "" {
-		log.Info("REDIS_CONN_STRING not set, redis is not enabled")
+	redisConn := env.String("REDIS", os.Getenv("REDIS_CONN_STRING"))
+	if redisConn == "" {
+		log.Info("REDIS not set, redis is not enabled")
 		return nil
 	}
 	RedisEnabled = true
 	log.Info("redis is enabled")
-	opt, err := redis.ParseURL(os.Getenv("REDIS_CONN_STRING"))
+	opt, err := redis.ParseURL(redisConn)
 	if err != nil {
 		log.Fatal("failed to parse redis connection string: " + err.Error())
 	}
