@@ -22,6 +22,7 @@ The Web Search Plugin is a plugin that provides real-time web search capabilitie
                 "rewrite_usage_field": "rewrite_usage"
             },
             "need_reference": true,
+            "reference_location": "content",
             "search_from": [
                 {
                     "type": "google",
@@ -56,7 +57,7 @@ The Web Search Plugin is a plugin that provides real-time web search capabilitie
 | `default_enable` | bool | No | false | Whether to enable web search by default for all requests. By default, if there's no `web_search_options` field in the user request, web search is not enabled |
 | `max_results` | int | No | 10 | Maximum number of results returned per search |
 | `need_reference` | bool | No | false | Whether to include reference information in the response |
-| `reference_location` | string | No | "head" | Reference position, options: `head`, `tail` |
+| `reference_location` | string | No | "content" | Reference position, options: `content`, `references` ... |
 | `reference_format` | string | No | "**References:**\n%s" | Reference format template, must include `%s` placeholder |
 | `default_language` | string | No | - | Default search language |
 | `prompt_template` | string | No | - | Custom prompt template |
@@ -78,7 +79,7 @@ Each search engine configuration contains the following fields:
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `type` | string | Yes | Search engine type: `google`, `bing`, `arxiv` |
+| `type` | string | Yes | Search engine type: `google`, `bing`, `arxiv`, `searchxng` |
 | `max_results` | int | No | Maximum results for this engine |
 | `spec` | object | Depends on type | Engine-specific configuration parameters |
 
@@ -124,6 +125,17 @@ Each search engine configuration contains the following fields:
 ```
 
 Arxiv search engine requires no additional configuration parameters.
+
+##### SearchXNG Search Engine Configuration (`spec`)
+
+```json
+{
+    "type": "searchxng",
+    "spec": {
+        "base_url": "https://searchxng.com"
+    }
+}
+```
 
 ## User Request Configuration
 

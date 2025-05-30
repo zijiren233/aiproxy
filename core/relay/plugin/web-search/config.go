@@ -13,7 +13,7 @@ type Config struct {
 	MaxResults        int            `json:"max_results"`
 	SearchRewrite     SearchRewrite  `json:"search_rewrite"`
 	NeedReference     bool           `json:"need_reference"`
-	ReferenceLocation string         `json:"reference_location"`
+	ReferenceLocation string         `json:"reference_location"` // content or other field
 	ReferenceFormat   string         `json:"reference_format"`
 	DefaultLanguage   string         `json:"default_language"`
 	PromptTemplate    string         `json:"prompt_template"`
@@ -30,7 +30,7 @@ type SearchRewrite struct {
 }
 
 type EngineConfig struct {
-	Type       string          `json:"type"` // bing, google, arxiv
+	Type       string          `json:"type"` // bing, google, arxiv, searchxng
 	MaxResults int             `json:"max_results"`
 	Spec       json.RawMessage `json:"spec"`
 }
@@ -57,3 +57,7 @@ type BingSpec struct {
 }
 
 type ArxivSpec struct{}
+
+type SearchXNGSpec struct {
+	BaseURL string `json:"base_url"`
+}

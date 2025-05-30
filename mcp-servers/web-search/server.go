@@ -50,7 +50,7 @@ var configTemplates = map[string]mcpservers.ConfigTemplate{
 		Example:     "google",
 		Description: "Default search engine to use (google, bing, arxiv)",
 		Validator: func(value string) error {
-			validEngines := []string{"google", "bing", "arxiv"}
+			validEngines := []string{"google", "bing", "arxiv", "searchxng"}
 			for _, e := range validEngines {
 				if value == e {
 					return nil
@@ -75,6 +75,12 @@ var configTemplates = map[string]mcpservers.ConfigTemplate{
 			}
 			return nil
 		},
+	},
+	"searchxng_base_url": {
+		Name:        "SearchXNG Base URL",
+		Required:    mcpservers.ConfigRequiredTypeInitOptional,
+		Example:     "https://searchxng.com",
+		Description: "Base URL for SearchXNG",
 	},
 }
 
@@ -126,6 +132,11 @@ func initializeEngines(config map[string]string) (map[string]engine.Engine, stri
 
 	// Arxiv is always available (no API key required)
 	engines["arxiv"] = engine.NewArxivEngine()
+
+	// SearchXNG
+	if baseURL := config["searchxng_base_url"]; baseURL != "" {
+		engines["searchxng"] = engine.NewSearchXNGEngine(baseURL)
+	}
 
 	// Get default settings
 	defaultEngine := config["default_engine"]
@@ -537,6 +548,11 @@ func determineEngine(q searchQuery, engines map[string]engine.Engine, includeAca
 		return "bing"
 	}
 
+	// Then SearchXNG
+	if _, ok := engines["searchxng"]; ok {
+		return "searchxng"
+	}
+
 	// Return first available engine
 	for name := range engines {
 		return name
@@ -571,7 +587,7 @@ func init() {
 			"Web Search",
 			NewServer,
 			mcpservers.WithConfigTemplates(configTemplates),
-			mcpservers.WithTags([]string{"search", "web", "google", "bing", "arxiv"}),
+			mcpservers.WithTags([]string{"search", "web", "google", "bing", "arxiv", "searchxng"}),
 			mcpservers.WithReadme(readme),
 		),
 	)

@@ -18,6 +18,8 @@ Configure the search engines you want to use by providing their API keys:
 - **Google**: Requires both API key and Custom Search Engine ID
 - **Bing**: Requires Bing Search API key
 - **Arxiv**: No API key required (free to use)
+- **SearchXNG**: No API key required (free to use)
+- **SearchXNG Base URL**: Base URL for SearchXNG
 
 ## Available Tools
 
@@ -47,5 +49,5 @@ Intelligently optimize queries and aggregate results for better answers.
 
 3. Multi-engine search:
    - Query: "climate change impacts"
-   - Engines: ["google", "bing", "arxiv"]
+   - Engines: ["google", "bing", "arxiv", "searchxng"]
    - Max results per engine: 5

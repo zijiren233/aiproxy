@@ -6,9 +6,9 @@ import (
 
 // SearchResult represents a single search result
 type SearchResult struct {
-	Title   string
-	Link    string
-	Content string
+	Title   string `json:"title"`
+	Link    string `json:"link"`
+	Content string `json:"content"`
 }
 
 // SearchQuery represents search parameters
