@@ -18,6 +18,7 @@ import (
 	"github.com/bytedance/sonic/ast"
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/core/common"
+	"github.com/labring/aiproxy/core/common/conv"
 	"github.com/labring/aiproxy/core/middleware"
 	"github.com/labring/aiproxy/core/model"
 	"github.com/labring/aiproxy/core/relay/adaptor"
@@ -54,6 +55,45 @@ var arxivSearchPrompts string
 //go:embed prompts/internet.md
 var internetSearchPrompts string
 
+// Constants for metadata keys
+const (
+	searchCount  = "web-search-count"
+	rewriteUsage = "web-search-rewrite-usage"
+)
+
+// Metadata helper functions
+func setSearchCount(m *meta.Meta, count int) {
+	m.Set(searchCount, count)
+}
+
+func getSearchCount(m *meta.Meta) int {
+	return m.GetInt(searchCount)
+}
+
+func setRewriteUsage(m *meta.Meta, usage model.Usage) {
+	m.Set(rewriteUsage, usage)
+}
+
+func getRewriteUsage(m *meta.Meta) *model.Usage {
+	usage, ok := m.Get(rewriteUsage)
+	if !ok {
+		return nil
+	}
+	u, ok := usage.(model.Usage)
+	if !ok {
+		panic(fmt.Sprintf("rewrite usage type %T is not a model.Usage", usage))
+	}
+	return &u
+}
+
+func (p *WebSearch) getConfig(meta *meta.Meta) (Config, error) {
+	pluginConfig := Config{}
+	if err := meta.ModelConfig.LoadPluginConfig("web-search", &pluginConfig); err != nil {
+		return Config{}, err
+	}
+	return pluginConfig, nil
+}
+
 // ConvertRequest intercepts and modifies requests to add web search capabilities
 func (p *WebSearch) ConvertRequest(meta *meta.Meta, req *http.Request, do adaptor.ConvertRequest) (*adaptor.ConvertRequestResult, error) {
 	// Skip if not chat completions mode
@@ -62,8 +102,8 @@ func (p *WebSearch) ConvertRequest(meta *meta.Meta, req *http.Request, do adapto
 	}
 
 	// Load plugin configuration
-	pluginConfig := Config{}
-	if err := meta.ModelConfig.LoadPluginConfig("web-search", &pluginConfig); err != nil {
+	pluginConfig, err := p.getConfig(meta)
+	if err != nil {
 		return do.ConvertRequest(meta, req)
 	}
 
@@ -115,24 +155,29 @@ func (p *WebSearch) ConvertRequest(meta *meta.Meta, req *http.Request, do adapto
 	searchRewritePrompt := p.prepareSearchRewritePrompt(pluginConfig.SearchRewrite, arxivExists, webSearchOptions)
 
 	// Generate search contexts
-	searchContexts := p.generateSearchContexts(meta, pluginConfig, query, searchRewritePrompt)
-	if len(searchContexts) == 0 {
-		return nil, errors.New("no valid search contexts found")
-	}
-
-	// Execute searches
-	searchResults, err := p.executeSearches(context.Background(), engines, searchContexts)
-	if err != nil || len(searchResults) == 0 {
+	searchContexts, err := p.generateSearchContexts(meta, pluginConfig, query, searchRewritePrompt)
+	if err != nil {
 		return do.ConvertRequest(meta, req)
 	}
 
-	// Format search results and modify request
-	modifiedRequest, references := p.formatSearchResults(chatRequest, queryIndex, query, searchResults, pluginConfig)
+	if len(searchContexts) == 0 {
+		return do.ConvertRequest(meta, req)
+	}
 
-	delete(modifiedRequest, "web_search_options")
+	// Execute searches
+	searchResult := p.executeSearches(context.Background(), engines, searchContexts)
+	if searchResult.Count == 0 {
+		return do.ConvertRequest(meta, req)
+	}
+	setSearchCount(meta, searchResult.Count)
+
+	// Format search results and modify request
+	references := p.formatSearchResults(messages, queryIndex, query, searchResult.Results, pluginConfig)
+
+	delete(chatRequest, "web_search_options")
 
 	// Create new request body
-	modifiedBody, err := sonic.Marshal(modifiedRequest)
+	modifiedBody, err := sonic.Marshal(chatRequest)
 	if err != nil {
 		return do.ConvertRequest(meta, req)
 	}
@@ -173,8 +218,22 @@ func (p *WebSearch) validateAndApplyDefaults(config *Config) error {
 
 	// Set default prompt template if not provided
 	if config.PromptTemplate == "" {
-		if config.NeedReference {
-			config.PromptTemplate = `# 以下内容是基于用户发送的消息的搜索结果:
+		config.PromptTemplate = p.getDefaultPromptTemplate(config.NeedReference)
+	}
+
+	// Validate prompt template
+	if !strings.Contains(config.PromptTemplate, "{search_results}") ||
+		!strings.Contains(config.PromptTemplate, "{question}") {
+		return errors.New("invalid prompt template")
+	}
+
+	return nil
+}
+
+// getDefaultPromptTemplate returns the appropriate default prompt template based on configuration
+func (p *WebSearch) getDefaultPromptTemplate(needReference bool) string {
+	if needReference {
+		return `# 以下内容是基于用户发送的消息的搜索结果:
 {search_results}
 在我给你的搜索结果中，每个结果都是[webpage X begin]...[webpage X end]格式的，X代表每篇文章的数字索引。请在适当的情况下在句子末尾引用上下文。请按照引用编号[X]的格式在答案中对应部分引用上下文。如果一句话源自多个上下文，请列出所有相关的引用编号，例如[3][5]，切记不要将引用集中在最后返回引用编号，而是在答案对应部分列出。
 在回答时，请注意以下几点：
@@ -190,8 +249,8 @@ func (p *WebSearch) validateAndApplyDefaults(config *Config) error {
 
 # 用户消息为：
 {question}`
-		} else {
-			config.PromptTemplate = `# 以下内容是基于用户发送的消息的搜索结果:
+	}
+	return `# 以下内容是基于用户发送的消息的搜索结果:
 {search_results}
 在我给你的搜索结果中，每个结果都是[webpage begin]...[webpage end]格式的。
 在回答时，请注意以下几点：
@@ -207,16 +266,6 @@ func (p *WebSearch) validateAndApplyDefaults(config *Config) error {
 
 # 用户消息为：
 {question}`
-		}
-	}
-
-	// Validate prompt template
-	if !strings.Contains(config.PromptTemplate, "{search_results}") ||
-		!strings.Contains(config.PromptTemplate, "{question}") {
-		return errors.New("invalid prompt template")
-	}
-
-	return nil
 }
 
 // initializeSearchEngines creates search engine instances based on configuration
@@ -301,14 +350,15 @@ func (p *WebSearch) prepareSearchRewritePrompt(searchRewrite SearchRewrite, arxi
 }
 
 // generateSearchContexts creates search contexts based on the user query
-func (p *WebSearch) generateSearchContexts(m *meta.Meta, config Config, query string, searchRewritePrompt string) []engine.SearchQuery {
+func (p *WebSearch) generateSearchContexts(m *meta.Meta, config Config, query string, searchRewritePrompt string) ([]engine.SearchQuery, error) {
 	if searchRewritePrompt == "" {
 		return []engine.SearchQuery{{
 			Queries:  []string{query},
 			Language: config.DefaultLanguage,
-		}}
+		}}, nil
 	}
 
+	// Prepare request for query rewriting
 	rewriteBody, err := sonic.Marshal(map[string]any{
 		"stream":     false,
 		"max_tokens": 4096,
@@ -321,9 +371,10 @@ func (p *WebSearch) generateSearchContexts(m *meta.Meta, config Config, query st
 		},
 	})
 	if err != nil {
-		return nil
+		return nil, err
 	}
 
+	// Set up test context for rewrite request
 	w := httptest.NewRecorder()
 	newc, _ := gin.CreateTestContext(w)
 	newc.Request = &http.Request{
@@ -333,6 +384,7 @@ func (p *WebSearch) generateSearchContexts(m *meta.Meta, config Config, query st
 	}
 	middleware.SetRequestID(newc, "web-search-rewrite")
 
+	// Set up metadata for rewrite request
 	modelName := config.SearchRewrite.ModelName
 	if modelName == "" {
 		modelName = m.OriginModel
@@ -347,36 +399,50 @@ func (p *WebSearch) generateSearchContexts(m *meta.Meta, config Config, query st
 		},
 		meta.WithRequestID("web-search-rewrite"),
 	)
+
+	// Set appropriate channel
 	if config.SearchRewrite.ModelName == "" {
 		newMeta.CopyChannelFromMeta(m)
 	} else {
 		channel, err := p.GetChannel(config.SearchRewrite.ModelName)
 		if err != nil {
-			return nil
+			return nil, err
 		}
 		newMeta.SetChannel(channel)
 	}
+
+	// Get adaptor and handle request
 	adaptor, ok := adaptors.GetAdaptor(newMeta.Channel.Type)
 	if !ok {
-		return nil
+		return nil, errors.New("adaptor not found")
 	}
-	controller.Handle(adaptor, newc, newMeta)
+	result := controller.Handle(adaptor, newc, newMeta)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	setRewriteUsage(m, result.Usage)
 
+	// Extract content from response
 	contentNode, err := sonic.Get(w.Body.Bytes(), "choices", 0, "message", "content")
 	if err != nil {
-		return nil
+		return nil, err
 	}
 
 	content, err := contentNode.String()
 	if err != nil || content == "" {
-		return nil
+		return nil, err
 	}
 
 	if strings.Contains(content, "none") {
-		return nil
+		return nil, nil
 	}
 
 	// Parse search queries from LLM response
+	return p.parseSearchContexts(config.DefaultLanguage, content), nil
+}
+
+// parseSearchContexts extracts search queries from LLM response
+func (p *WebSearch) parseSearchContexts(defaultLanguage string, content string) []engine.SearchQuery {
 	var searchContexts []engine.SearchQuery
 	for _, line := range strings.Split(content, "\n") {
 		line = strings.TrimSpace(line)
@@ -393,7 +459,7 @@ func (p *WebSearch) generateSearchContexts(m *meta.Meta, config Config, query st
 		queryStr := strings.TrimSpace(parts[1])
 
 		var ctx engine.SearchQuery
-		ctx.Language = config.DefaultLanguage
+		ctx.Language = defaultLanguage
 
 		switch {
 		case engineType == "internet":
@@ -420,8 +486,14 @@ func (p *WebSearch) generateSearchContexts(m *meta.Meta, config Config, query st
 	return searchContexts
 }
 
+// Search result structure
+type searchResult struct {
+	Results []engine.SearchResult
+	Count   int
+}
+
 // executeSearches performs searches using all configured engines
-func (p *WebSearch) executeSearches(ctx context.Context, engines []engine.Engine, searchContexts []engine.SearchQuery) ([]engine.SearchResult, error) {
+func (p *WebSearch) executeSearches(ctx context.Context, engines []engine.Engine, searchContexts []engine.SearchQuery) *searchResult {
 	var allResults []engine.SearchResult
 	resultsChan := make(chan []engine.SearchResult, len(engines)*len(searchContexts))
 	errorsChan := make(chan error, len(engines)*len(searchContexts))
@@ -449,6 +521,8 @@ func (p *WebSearch) executeSearches(ctx context.Context, engines []engine.Engine
 	// Collect results with timeout
 	timeout := time.After(10 * time.Second)
 	received := 0
+
+RECEIVE:
 	for received < searchCount {
 		select {
 		case results := <-resultsChan:
@@ -457,7 +531,7 @@ func (p *WebSearch) executeSearches(ctx context.Context, engines []engine.Engine
 		case <-errorsChan:
 			received++
 		case <-timeout:
-			return allResults, errors.New("search timeout")
+			break RECEIVE
 		}
 	}
 
@@ -471,11 +545,14 @@ func (p *WebSearch) executeSearches(ctx context.Context, engines []engine.Engine
 		}
 	}
 
-	return uniqueResults, nil
+	return &searchResult{
+		Results: uniqueResults,
+		Count:   searchCount,
+	}
 }
 
 // formatSearchResults formats search results for the prompt
-func (p *WebSearch) formatSearchResults(chatRequest map[string]any, queryIndex int, query string, searchResults []engine.SearchResult, config Config) (map[string]any, string) {
+func (p *WebSearch) formatSearchResults(messages []any, queryIndex int, query string, searchResults []engine.SearchResult, config Config) string {
 	var formattedResults []string
 	var formattedReferences []string
 
@@ -500,72 +577,150 @@ func (p *WebSearch) formatSearchResults(chatRequest map[string]any, queryIndex i
 	prompt = strings.Replace(prompt, "{cur_date}", curDate, 1)
 
 	// Update message
-	messages := chatRequest["messages"].([]any)
 	messages[queryIndex].(map[string]any)["content"] = prompt
-	chatRequest["messages"] = messages
 
 	references := ""
 	if config.NeedReference {
 		references = strings.Join(formattedReferences, "\n\n")
 	}
 
-	return chatRequest, references
+	return references
 }
 
+// Custom response writer to handle metadata and references
 type responseWriter struct {
 	gin.ResponseWriter
-	writed     bool
-	references string
+	refWritten          bool
+	references          string
+	webSearchCount      int
+	rewriteUsage        *model.Usage
+	rewriteUsageWritten bool
+	rewriteUsageField   string
 }
 
+// Write overrides the standard Write method to inject metadata
 func (rw *responseWriter) Write(b []byte) (int, error) {
-	if rw.writed {
+	node, err := sonic.Get(b)
+	if err != nil || !node.Valid() {
 		return rw.ResponseWriter.Write(b)
 	}
-	node, err := sonic.Get(b)
+
+	// Process the response node
+	rw.processRewriteUsage(&node)
+	rw.processWebSearchCount(&node)
+	rw.processReferences(&node)
+
+	// Marshal the modified node
+	nb, err := sonic.Marshal(&node)
 	if err != nil {
 		return rw.ResponseWriter.Write(b)
 	}
+
+	return rw.ResponseWriter.Write(nb)
+}
+
+// processRewriteUsage adds rewrite usage information to the response
+func (rw *responseWriter) processRewriteUsage(node *ast.Node) {
+	if rw.rewriteUsage != nil && !rw.rewriteUsageWritten {
+		field := rw.rewriteUsageField
+		if field == "" {
+			field = "rewrite_usage"
+		}
+		_, _ = node.SetAny(field, rw.rewriteUsage)
+		rw.rewriteUsageWritten = true
+	}
+}
+
+// processWebSearchCount adds or increments web search count in usage statistics
+func (rw *responseWriter) processWebSearchCount(node *ast.Node) {
+	if rw.webSearchCount <= 0 {
+		return
+	}
+
+	usageNode := node.Get("usage")
+	if usageNode == nil || !usageNode.Valid() {
+		return
+	}
+
+	// Check if web_search_count already exists
+	existingCount := usageNode.Get("web_search_count")
+	if existingCount != nil && existingCount.Valid() {
+		// If exists, add to the existing value
+		currentCount, _ := existingCount.Int64()
+		_, _ = usageNode.Set("web_search_count", ast.NewNumber(strconv.FormatInt(currentCount+int64(rw.webSearchCount), 10)))
+	} else {
+		// If not exists, set the value
+		_, _ = usageNode.Set("web_search_count", ast.NewNumber(strconv.FormatInt(int64(rw.webSearchCount), 10)))
+	}
+}
+
+// processReferences adds reference information to the content
+func (rw *responseWriter) processReferences(node *ast.Node) {
+	if rw.refWritten || rw.references == "" {
+		return
+	}
+
 	var contentNode *ast.Node
 	if utils.IsStreamResponseWithHeader(rw.ResponseWriter.Header()) {
 		contentNode = node.GetByPath("choices", 0, "delta", "content")
 	} else {
 		contentNode = node.GetByPath("choices", 0, "message", "content")
 	}
-	content, err := contentNode.String()
-	if err != nil {
-		return 0, err
+
+	if contentNode != nil && contentNode.Valid() {
+		content, err := contentNode.String()
+		if err == nil {
+			refContent := fmt.Sprintf("%s\n\n%s", rw.references, content)
+			*contentNode = ast.NewString(refContent)
+		}
 	}
-	refContent := fmt.Sprintf("%s\n\n%s", rw.references, content)
-	*contentNode = ast.NewString(refContent)
-	b, err = sonic.Marshal(&node)
-	if err != nil {
-		return 0, err
-	}
-	rw.writed = true
-	return rw.ResponseWriter.Write(b)
+
+	rw.refWritten = true
 }
 
+// WriteString implements the WriteString method for the custom response writer
 func (rw *responseWriter) WriteString(s string) (int, error) {
-	if rw.writed {
-		return rw.ResponseWriter.WriteString(s)
-	}
-	return rw.ResponseWriter.WriteString(s)
+	return rw.Write(conv.StringToBytes(s))
 }
 
 // DoResponse handles response modification for references
 func (p *WebSearch) DoResponse(meta *meta.Meta, c *gin.Context, resp *http.Response, do adaptor.DoResponse) (*model.Usage, adaptor.Error) {
 	references := meta.GetString("references")
-	if references == "" {
-		return do.DoResponse(meta, c, resp)
+	count := getSearchCount(meta)
+	var rewriteUsage *model.Usage
+	rewriteUsageField := ""
+	pluginConfig, _ := p.getConfig(meta)
+
+	if pluginConfig.SearchRewrite.AddRewriteUsage {
+		rewriteUsage = getRewriteUsage(meta)
+		rewriteUsageField = pluginConfig.SearchRewrite.RewriteUsageField
 	}
-	rw := &responseWriter{
-		ResponseWriter: c.Writer,
-		references:     references,
+
+	// Check if we need to wrap the response writer
+	if references != "" || rewriteUsage != nil || count > 0 {
+		rw := &responseWriter{
+			ResponseWriter:      c.Writer,
+			references:          references,
+			webSearchCount:      count,
+			rewriteUsageWritten: false,
+			rewriteUsage:        rewriteUsage,
+			rewriteUsageField:   rewriteUsageField,
+		}
+		c.Writer = rw
+		defer func() {
+			c.Writer = rw.ResponseWriter
+		}()
 	}
-	c.Writer = rw
-	defer func() {
-		c.Writer = rw.ResponseWriter
-	}()
-	return do.DoResponse(meta, c, resp)
+
+	return p.doResponseWithCount(meta, c, resp, do, count)
+}
+
+// doResponseWithCount adds search count to usage statistics
+func (p *WebSearch) doResponseWithCount(meta *meta.Meta, c *gin.Context, resp *http.Response, do adaptor.DoResponse, count int) (*model.Usage, adaptor.Error) {
+	u, err := do.DoResponse(meta, c, resp)
+	if err != nil {
+		return u, err
+	}
+	u.WebSearchCount += model.ZeroNullInt64(int64(count))
+	return u, nil
 }

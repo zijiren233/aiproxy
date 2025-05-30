@@ -7,7 +7,7 @@ import (
 )
 
 func NewError[T any](statusCode int, err T) Error {
-	return ErrorImpl[T]{
+	return BasicError[T]{
 		error:      err,
 		statusCode: statusCode,
 	}
