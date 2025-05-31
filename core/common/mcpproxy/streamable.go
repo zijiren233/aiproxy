@@ -10,6 +10,10 @@ import (
 	"time"
 )
 
+const (
+	headerKeySessionID = "Mcp-Session-Id"
+)
+
 // StreamableProxy represents a proxy for the MCP Streamable HTTP transport
 type StreamableProxy struct {
 	store   SessionManager
@@ -66,7 +70,7 @@ func (p *StreamableProxy) handleGetRequest(w http.ResponseWriter, r *http.Reques
 	}
 
 	// Get proxy session ID from header
-	proxySessionID := r.Header.Get("Mcp-Session-Id")
+	proxySessionID := r.Header.Get(headerKeySessionID)
 	if proxySessionID == "" {
 		// This might be an initialization request
 		p.proxyInitialOrNoSessionRequest(w, r)
@@ -87,20 +91,10 @@ func (p *StreamableProxy) handleGetRequest(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	// Copy headers from original request, but replace the session ID
-	for name, values := range r.Header {
-		if name == "Mcp-Session-Id" {
-			continue // Skip the proxy session ID
-		}
-		for _, value := range values {
-			req.Header.Add(name, value)
-		}
-	}
-
 	// Extract the real backend session ID from the stored URL
 	parts := strings.Split(backendInfo, "?sessionId=")
 	if len(parts) > 1 {
-		req.Header.Set("Mcp-Session-Id", parts[1])
+		req.Header.Set(headerKeySessionID, parts[1])
 	}
 
 	// Add any additional headers
@@ -119,17 +113,8 @@ func (p *StreamableProxy) handleGetRequest(w http.ResponseWriter, r *http.Reques
 	// Check if we got an SSE response
 	if resp.StatusCode != http.StatusOK ||
 		!strings.Contains(resp.Header.Get("Content-Type"), "text/event-stream") {
-		// Copy response headers, but not the backend session ID
-		for name, values := range resp.Header {
-			if name == "Mcp-Session-Id" {
-				continue
-			}
-			for _, value := range values {
-				w.Header().Add(name, value)
-			}
-		}
 		// Add our proxy session ID
-		w.Header().Set("Mcp-Session-Id", proxySessionID)
+		w.Header().Set(headerKeySessionID, proxySessionID)
 
 		w.WriteHeader(resp.StatusCode)
 		_, _ = io.Copy(w, resp.Body)
@@ -177,7 +162,7 @@ func (p *StreamableProxy) handleGetRequest(w http.ResponseWriter, r *http.Reques
 // handlePostRequest handles POST requests for JSON-RPC messages
 func (p *StreamableProxy) handlePostRequest(w http.ResponseWriter, r *http.Request) {
 	// Check if this is an initialization request
-	proxySessionID := r.Header.Get("Mcp-Session-Id")
+	proxySessionID := r.Header.Get(headerKeySessionID)
 	if proxySessionID == "" {
 		p.proxyInitialOrNoSessionRequest(w, r)
 		return
@@ -197,20 +182,10 @@ func (p *StreamableProxy) handlePostRequest(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	// Copy headers from original request, but replace the session ID
-	for name, values := range r.Header {
-		if name == "Mcp-Session-Id" {
-			continue // Skip the proxy session ID
-		}
-		for _, value := range values {
-			req.Header.Add(name, value)
-		}
-	}
-
 	// Extract the real backend session ID from the stored URL
 	parts := strings.Split(backendInfo, "?sessionId=")
 	if len(parts) > 1 {
-		req.Header.Set("Mcp-Session-Id", parts[1])
+		req.Header.Set(headerKeySessionID, parts[1])
 	}
 
 	// Add any additional headers
@@ -226,17 +201,8 @@ func (p *StreamableProxy) handlePostRequest(w http.ResponseWriter, r *http.Reque
 	}
 	defer resp.Body.Close()
 
-	// Copy response headers, but not the backend session ID
-	for name, values := range resp.Header {
-		if name == "Mcp-Session-Id" {
-			continue
-		}
-		for _, value := range values {
-			w.Header().Add(name, value)
-		}
-	}
 	// Add our proxy session ID
-	w.Header().Set("Mcp-Session-Id", proxySessionID)
+	w.Header().Set(headerKeySessionID, proxySessionID)
 
 	contentType := resp.Header.Get("Content-Type")
 
@@ -287,7 +253,7 @@ func (p *StreamableProxy) handlePostRequest(w http.ResponseWriter, r *http.Reque
 // handleDeleteRequest handles DELETE requests for session termination
 func (p *StreamableProxy) handleDeleteRequest(w http.ResponseWriter, r *http.Request) {
 	// Get proxy session ID from header
-	proxySessionID := r.Header.Get("Mcp-Session-Id")
+	proxySessionID := r.Header.Get(headerKeySessionID)
 	if proxySessionID == "" {
 		http.Error(w, "Missing session ID", http.StatusBadRequest)
 		return
@@ -307,20 +273,10 @@ func (p *StreamableProxy) handleDeleteRequest(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	// Copy headers from original request, but replace the session ID
-	for name, values := range r.Header {
-		if name == "Mcp-Session-Id" {
-			continue // Skip the proxy session ID
-		}
-		for _, value := range values {
-			req.Header.Add(name, value)
-		}
-	}
-
 	// Extract the real backend session ID from the stored URL
 	parts := strings.Split(backendInfo, "?sessionId=")
 	if len(parts) > 1 {
-		req.Header.Set("Mcp-Session-Id", parts[1])
+		req.Header.Set(headerKeySessionID, parts[1])
 	}
 
 	// Add any additional headers
@@ -342,16 +298,6 @@ func (p *StreamableProxy) handleDeleteRequest(w http.ResponseWriter, r *http.Req
 
 	// Remove the session from our store
 	p.store.Delete(proxySessionID)
-
-	// Copy response headers, but not the backend session ID
-	for name, values := range resp.Header {
-		if name == "Mcp-Session-Id" {
-			continue
-		}
-		for _, value := range values {
-			w.Header().Add(name, value)
-		}
-	}
 
 	contentType := resp.Header.Get("Content-Type")
 	w.Header().Set("Content-Type", contentType)
@@ -386,7 +332,7 @@ func (p *StreamableProxy) proxyInitialOrNoSessionRequest(w http.ResponseWriter, 
 	defer resp.Body.Close()
 
 	// Check if we received a session ID from the backend
-	backendSessionID := resp.Header.Get("Mcp-Session-Id")
+	backendSessionID := resp.Header.Get(headerKeySessionID)
 	if backendSessionID != "" {
 		// Generate a new proxy session ID
 		proxySessionID := p.store.New()
@@ -402,7 +348,7 @@ func (p *StreamableProxy) proxyInitialOrNoSessionRequest(w http.ResponseWriter, 
 		p.store.Set(proxySessionID, backendURL)
 
 		// Replace the backend session ID with our proxy session ID in the response
-		w.Header().Set("Mcp-Session-Id", proxySessionID)
+		w.Header().Set(headerKeySessionID, proxySessionID)
 	}
 
 	contentType := resp.Header.Get("Content-Type")

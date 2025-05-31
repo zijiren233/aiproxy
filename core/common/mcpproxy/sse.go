@@ -2,7 +2,6 @@ package mcpproxy
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -11,10 +10,6 @@ import (
 	"github.com/bytedance/sonic"
 	"github.com/mark3labs/mcp-go/mcp"
 )
-
-type MCPServer interface {
-	HandleMessage(ctx context.Context, message json.RawMessage) mcp.JSONRPCMessage
-}
 
 // SSEServer implements a Server-Sent Events (SSE) based MCP server.
 // It provides real-time communication capabilities over HTTP using the SSE protocol.
@@ -138,14 +133,8 @@ func (s *SSEServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // handleMessage processes incoming JSON-RPC messages from clients and sends responses
 // back through both the SSE connection and HTTP response.
 func (s *SSEServer) HandleMessage(ctx context.Context, req []byte) error {
-	// Parse message as raw JSON
-	var rawMessage json.RawMessage
-	if err := sonic.Unmarshal(req, &rawMessage); err != nil {
-		return err
-	}
-
 	// Process message through MCPServer
-	response := s.server.HandleMessage(ctx, rawMessage)
+	response := s.server.HandleMessage(ctx, req)
 
 	// Only send response if there is one (not for notifications)
 	if response != nil {

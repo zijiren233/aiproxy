@@ -2,7 +2,6 @@ package controller
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -12,7 +11,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/bytedance/sonic"
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/core/common"
 	"github.com/labring/aiproxy/core/common/mcpproxy"
@@ -122,92 +120,6 @@ func (r *redisStoreManager) Delete(session string) {
 	r.rdb.Del(ctx, "mcp:session:"+session)
 }
 
-type mcpClient2Server struct {
-	client transport.Interface
-}
-
-type JSONRPCNoErrorResponse struct {
-	JSONRPC string          `json:"jsonrpc"`
-	ID      mcp.RequestId   `json:"id"`
-	Result  json.RawMessage `json:"result"`
-}
-
-func handleError(err error) mcp.JSONRPCMessage {
-	return mcp.JSONRPCError{
-		JSONRPC: mcp.JSONRPC_VERSION,
-		ID:      mcp.NewRequestId(nil),
-		Error: struct {
-			Code    int    `json:"code"`
-			Message string `json:"message"`
-			Data    any    `json:"data,omitempty"`
-		}{
-			Code:    mcp.INTERNAL_ERROR,
-			Message: err.Error(),
-		},
-	}
-}
-
-func (s *mcpClient2Server) HandleMessage(
-	ctx context.Context,
-	message json.RawMessage,
-) mcp.JSONRPCMessage {
-	methodNode, err := sonic.Get(message, "method")
-	if err != nil {
-		return handleError(err)
-	}
-	method, err := methodNode.String()
-	if err != nil {
-		return handleError(err)
-	}
-
-	switch method {
-	case "notifications/initialized":
-		req := mcp.JSONRPCNotification{}
-		err := sonic.Unmarshal(message, &req)
-		if err != nil {
-			return handleError(err)
-		}
-		err = s.client.SendNotification(ctx, req)
-		if err != nil {
-			return handleError(err)
-		}
-		return nil
-	default:
-		req := transport.JSONRPCRequest{}
-		err := sonic.Unmarshal(message, &req)
-		if err != nil {
-			return handleError(err)
-		}
-		resp, err := s.client.SendRequest(ctx, req)
-		if err != nil {
-			return mcp.JSONRPCError{
-				JSONRPC: mcp.JSONRPC_VERSION,
-				ID:      mcp.NewRequestId(nil),
-				Error: struct {
-					Code    int    `json:"code"`
-					Message string `json:"message"`
-					Data    any    `json:"data,omitempty"`
-				}{
-					Code:    mcp.INTERNAL_ERROR,
-					Message: err.Error(),
-				},
-			}
-		}
-		if resp.Error != nil {
-			return resp
-		}
-		return &JSONRPCNoErrorResponse{
-			JSONRPC: resp.JSONRPC,
-			ID:      resp.ID,
-			Result:  resp.Result,
-		}
-	}
-}
-
-func wrapMCPClient2Server(client transport.Interface) mcpproxy.MCPServer {
-	return &mcpClient2Server{client: client}
-}
-
 // PublicMCPSseServer godoc
 //
 //	@Summary	Public MCP SSE Server
@@ -246,7 +158,11 @@ func PublicMCPSseServer(c *gin.Context) {
 			return
 		}
 		defer client.Close()
-		handleSSEMCPServer(c, wrapMCPClient2Server(client), model.PublicMCPTypeProxySSE)
+		handleSSEMCPServer(
+			c,
+			mcpproxy.WrapMCPClient2Server(client),
+			model.PublicMCPTypeProxySSE,
+		)
 	case model.PublicMCPTypeProxyStreamable:
 		client, err := transport.NewStreamableHTTP(
 			publicMcp.ProxyConfig.URL,
@@ -262,11 +178,15 @@ func PublicMCPSseServer(c *gin.Context) {
 			return
 		}
 		defer client.Close()
-		handleSSEMCPServer(c, wrapMCPClient2Server(client), model.PublicMCPTypeProxyStreamable)
+		handleSSEMCPServer(
+			c,
+			mcpproxy.WrapMCPClient2Server(client),
+			model.PublicMCPTypeProxyStreamable,
+		)
 	case model.PublicMCPTypeOpenAPI:
 		server, err := newOpenAPIMCPServer(publicMcp.OpenAPIConfig)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, CreateMCPErrorResponse(
+			c.JSON(http.StatusBadRequest, mcpproxy.CreateMCPErrorResponse(
 				mcp.NewRequestId(nil),
 				mcp.INVALID_REQUEST,
 				err.Error(),
@@ -277,7 +197,7 @@ func PublicMCPSseServer(c *gin.Context) {
 	case model.PublicMCPTypeEmbed:
 		handlePublicEmbedMCP(c, publicMcp.ID, publicMcp.EmbedConfig)
 	default:
-		c.JSON(http.StatusBadRequest, CreateMCPErrorResponse(
+		c.JSON(http.StatusBadRequest, mcpproxy.CreateMCPErrorResponse(
 			mcp.NewRequestId(nil),
 			mcp.INVALID_REQUEST,
 			"unknown mcp type",
@@ -292,7 +212,7 @@ func handlePublicEmbedMCP(c *gin.Context, mcpID string, config *model.MCPEmbeddi
 		group := middleware.GetGroup(c)
 		param, err := model.CacheGetPublicMCPReusingParam(mcpID, group.ID)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, CreateMCPErrorResponse(
+			c.JSON(http.StatusBadRequest, mcpproxy.CreateMCPErrorResponse(
 				mcp.NewRequestId(nil),
 				mcp.INVALID_REQUEST,
 				err.Error(),
@@ -303,7 +223,7 @@ func handlePublicEmbedMCP(c *gin.Context, mcpID string, config *model.MCPEmbeddi
 	}
 	server, err := mcpservers.GetMCPServer(mcpID, config.Init, reusingConfig)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, CreateMCPErrorResponse(
+		c.JSON(http.StatusBadRequest, mcpproxy.CreateMCPErrorResponse(
 			mcp.NewRequestId(nil),
 			mcp.INVALID_REQUEST,
 			err.Error(),
@@ -528,7 +448,7 @@ func PublicMCPStreamable(c *gin.Context) {
 	mcpID := c.Param("id")
 	publicMcp, err := model.CacheGetPublicMCP(mcpID)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, CreateMCPErrorResponse(
+		c.JSON(http.StatusBadRequest, mcpproxy.CreateMCPErrorResponse(
 			mcp.NewRequestId(nil),
 			mcp.INVALID_REQUEST,
 			err.Error(),
@@ -536,7 +456,7 @@ func PublicMCPStreamable(c *gin.Context) {
 		return
 	}
 	if publicMcp.Status != model.PublicMCPStatusEnabled {
-		c.JSON(http.StatusNotFound, CreateMCPErrorResponse(
+		c.JSON(http.StatusNotFound, mcpproxy.CreateMCPErrorResponse(
 			mcp.NewRequestId(nil),
 			mcp.INVALID_REQUEST,
 			"mcp is not enabled",
@@ -545,12 +465,38 @@ func PublicMCPStreamable(c *gin.Context) {
 	}
 
 	switch publicMcp.Type {
+	case model.PublicMCPTypeProxySSE:
+		client, err := transport.NewSSE(
+			publicMcp.ProxyConfig.URL,
+			transport.WithHeaders(publicMcp.ProxyConfig.Headers),
+		)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, mcpproxy.CreateMCPErrorResponse(
+				mcp.NewRequestId(nil),
+				mcp.INVALID_REQUEST,
+				err.Error(),
+			))
+			return
+		}
+		err = client.Start(c.Request.Context())
+		if err != nil {
+			c.JSON(http.StatusBadRequest, mcpproxy.CreateMCPErrorResponse(
+				mcp.NewRequestId(nil),
+				mcp.INVALID_REQUEST,
+				err.Error(),
+			))
+			return
+		}
+		defer client.Close()
+		mcpproxy.NewStatelessStreamableHTTPServer(
+			mcpproxy.WrapMCPClient2Server(client),
+		).ServeHTTP(c.Writer, c.Request)
 	case model.PublicMCPTypeProxyStreamable:
 		handlePublicProxyStreamable(c, mcpID, publicMcp.ProxyConfig)
 	case model.PublicMCPTypeOpenAPI:
 		server, err := newOpenAPIMCPServer(publicMcp.OpenAPIConfig)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, CreateMCPErrorResponse(
+			c.JSON(http.StatusBadRequest, mcpproxy.CreateMCPErrorResponse(
 				mcp.NewRequestId(nil),
 				mcp.INVALID_REQUEST,
 				err.Error(),
@@ -561,7 +507,7 @@ func PublicMCPStreamable(c *gin.Context) {
 	case model.PublicMCPTypeEmbed:
 		handlePublicEmbedStreamable(c, mcpID, publicMcp.EmbedConfig)
 	default:
-		c.JSON(http.StatusBadRequest, CreateMCPErrorResponse(
+		c.JSON(http.StatusBadRequest, mcpproxy.CreateMCPErrorResponse(
 			mcp.NewRequestId(nil),
 			mcp.INVALID_REQUEST,
 			"unknown mcp type",
@@ -575,7 +521,7 @@ func handlePublicEmbedStreamable(c *gin.Context, mcpID string, config *model.MCP
 		group := middleware.GetGroup(c)
 		param, err := model.CacheGetPublicMCPReusingParam(mcpID, group.ID)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, CreateMCPErrorResponse(
+			c.JSON(http.StatusBadRequest, mcpproxy.CreateMCPErrorResponse(
 				mcp.NewRequestId(nil),
 				mcp.INVALID_REQUEST,
 				err.Error(),
@@ -586,7 +532,7 @@ func handlePublicEmbedStreamable(c *gin.Context, mcpID string, config *model.MCP
 	}
 	server, err := mcpservers.GetMCPServer(mcpID, config.Init, reusingConfig)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, CreateMCPErrorResponse(
+		c.JSON(http.StatusBadRequest, mcpproxy.CreateMCPErrorResponse(
 			mcp.NewRequestId(nil),
 			mcp.INVALID_REQUEST,
 			err.Error(),
@@ -599,7 +545,7 @@ func handlePublicEmbedStreamable(c *gin.Context, mcpID string, config *model.MCP
 // handlePublicProxyStreamable processes Streamable proxy requests
 func handlePublicProxyStreamable(c *gin.Context, mcpID string, config *model.PublicMCPProxyConfig) {
 	if config == nil || config.URL == "" {
-		c.JSON(http.StatusBadRequest, CreateMCPErrorResponse(
+		c.JSON(http.StatusBadRequest, mcpproxy.CreateMCPErrorResponse(
 			mcp.NewRequestId(nil),
 			mcp.INVALID_REQUEST,
 			"invalid proxy configuration",
@@ -609,7 +555,7 @@ func handlePublicProxyStreamable(c *gin.Context, mcpID string, config *model.Pub
 
 	backendURL, err := url.Parse(config.URL)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, CreateMCPErrorResponse(
+		c.JSON(http.StatusBadRequest, mcpproxy.CreateMCPErrorResponse(
 			mcp.NewRequestId(nil),
 			mcp.INVALID_REQUEST,
 			err.Error(),
@@ -623,7 +569,7 @@ func handlePublicProxyStreamable(c *gin.Context, mcpID string, config *model.Pub
 
 	// Process reusing parameters if any
 	if err := processReusingParams(config.ReusingParams, mcpID, group.ID, headers, &backendQuery); err != nil {
-		c.JSON(http.StatusBadRequest, CreateMCPErrorResponse(
+		c.JSON(http.StatusBadRequest, mcpproxy.CreateMCPErrorResponse(
 			mcp.NewRequestId(nil),
 			mcp.INVALID_REQUEST,
 			err.Error(),
@@ -646,7 +592,7 @@ func handlePublicProxyStreamable(c *gin.Context, mcpID string, config *model.Pub
 // handleStreamableMCPServer handles the streamable connection for an MCP server
 func handleStreamableMCPServer(c *gin.Context, s *server.MCPServer) {
 	if c.Request.Method != http.MethodPost {
-		c.JSON(http.StatusMethodNotAllowed, CreateMCPErrorResponse(
+		c.JSON(http.StatusMethodNotAllowed, mcpproxy.CreateMCPErrorResponse(
 			mcp.NewRequestId(nil),
 			mcp.METHOD_NOT_FOUND,
 			"method not allowed",
@@ -655,7 +601,7 @@ func handleStreamableMCPServer(c *gin.Context, s *server.MCPServer) {
 	}
 	reqBody, err := io.ReadAll(c.Request.Body)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, CreateMCPErrorResponse(
+		c.JSON(http.StatusBadRequest, mcpproxy.CreateMCPErrorResponse(
 			mcp.NewRequestId(nil),
 			mcp.PARSE_ERROR,
 			err.Error(),
@@ -829,24 +775,5 @@ func (r *redisMCPMPSC) recv(ctx context.Context, id string) ([]byte, error) {
 			}
 			return []byte(result[1]), nil
 		}
-	}
-}
-
-func CreateMCPErrorResponse(
-	id mcp.RequestId,
-	code int,
-	message string,
-) mcp.JSONRPCMessage {
-	return mcp.JSONRPCError{
-		JSONRPC: mcp.JSONRPC_VERSION,
-		ID:      id,
-		Error: struct {
-			Code    int    `json:"code"`
-			Message string `json:"message"`
-			Data    any    `json:"data,omitempty"`
-		}{
-			Code:    code,
-			Message: message,
-		},
 	}
 }

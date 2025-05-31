@@ -361,7 +361,7 @@ func TestEmbedMCPMessage(c *gin.Context) {
 func TestEmbedMCPStreamable(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		c.JSON(http.StatusBadRequest, CreateMCPErrorResponse(
+		c.JSON(http.StatusBadRequest, mcpproxy.CreateMCPErrorResponse(
 			mcp.NewRequestId(nil),
 			mcp.INVALID_REQUEST,
 			"mcp id is required",
@@ -372,7 +372,7 @@ func TestEmbedMCPStreamable(c *gin.Context) {
 	initConfig, reusingConfig := getConfigFromQuery(c)
 	server, err := mcpservers.GetMCPServer(id, initConfig, reusingConfig)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, CreateMCPErrorResponse(
+		c.JSON(http.StatusBadRequest, mcpproxy.CreateMCPErrorResponse(
 			mcp.NewRequestId(nil),
 			mcp.INVALID_REQUEST,
 			err.Error(),

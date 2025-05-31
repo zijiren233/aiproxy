@@ -74,7 +74,7 @@ func checkNoRouteNotFound(path string) bool {
 func newIndexNoRouteHandler(fs http.FileSystem) func(ctx *gin.Context) {
 	return func(ctx *gin.Context) {
 		if checkNoRouteNotFound(ctx.Request.URL.Path) {
-			ctx.String(http.StatusNotFound, "404 page not found")
+			http.NotFound(ctx.Writer, ctx.Request)
 			return
 		}
 		ctx.FileFromFS("", fs)
@@ -85,7 +85,7 @@ func newDynamicNoRouteHandler(fs http.FileSystem) func(ctx *gin.Context) {
 	fileServer := http.StripPrefix("/", http.FileServer(fs))
 	return func(c *gin.Context) {
 		if checkNoRouteNotFound(c.Request.URL.Path) {
-			c.String(http.StatusNotFound, "404 page not found")
+			http.NotFound(c.Writer, c.Request)
 			return
 		}
 
