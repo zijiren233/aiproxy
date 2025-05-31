@@ -69,7 +69,7 @@ func ImageHandler(
 
 	log := middleware.GetLogger(c)
 
-	responseFormat := meta.MustGet(MetaResponseFormat).(string)
+	responseFormat, _ := meta.MustGet(MetaResponseFormat).(string)
 
 	var aliTaskResponse TaskResponse
 	responseBody, err := io.ReadAll(resp.Body)

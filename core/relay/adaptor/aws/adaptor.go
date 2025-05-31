@@ -2,6 +2,7 @@ package aws
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -43,7 +44,11 @@ func (a *Adaptor) DoResponse(
 			http.StatusInternalServerError,
 		)
 	}
-	return adaptor.(utils.AwsAdapter).DoResponse(meta, c)
+	v, ok := adaptor.(utils.AwsAdapter)
+	if !ok {
+		panic(fmt.Sprintf("aws adapter type error: %T, %v", v, v))
+	}
+	return v.DoResponse(meta, c)
 }
 
 func (a *Adaptor) GetModelList() (models []model.ModelConfig) {

@@ -206,7 +206,10 @@ func TTSDoResponse(
 ) (usage *model.Usage, err adaptor.Error) {
 	log := middleware.GetLogger(c)
 
-	conn := meta.MustGet("ws_conn").(*websocket.Conn)
+	conn, ok := meta.MustGet("ws_conn").(*websocket.Conn)
+	if !ok {
+		panic(fmt.Sprintf("ws conn type error: %T, %v", conn, conn))
+	}
 	defer conn.Close()
 
 	usage = &model.Usage{}

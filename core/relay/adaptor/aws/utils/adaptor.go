@@ -2,6 +2,7 @@ package utils
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -59,7 +60,11 @@ const AwsClientKey = "aws_client"
 func AwsClientFromMeta(meta *meta.Meta) (*bedrockruntime.Client, error) {
 	awsClientI, ok := meta.Get(AwsClientKey)
 	if ok {
-		return awsClientI.(*bedrockruntime.Client), nil
+		v, ok := awsClientI.(*bedrockruntime.Client)
+		if !ok {
+			panic(fmt.Sprintf("aws client type error: %T, %v", v, v))
+		}
+		return v, nil
 	}
 	awsClient, err := awsClientFromKey(meta.Channel.Key)
 	if err != nil {

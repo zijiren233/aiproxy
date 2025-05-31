@@ -2,6 +2,7 @@ package ali
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"net/http"
 	"strconv"
@@ -158,10 +159,18 @@ func STTDoResponse(
 	c *gin.Context,
 	_ *http.Response,
 ) (usage *model.Usage, err adaptor.Error) {
-	audioData := meta.MustGet("audio_data").([]byte)
-	taskID := meta.MustGet("task_id").(string)
-
-	conn := meta.MustGet("ws_conn").(*websocket.Conn)
+	audioData, ok := meta.MustGet("audio_data").([]byte)
+	if !ok {
+		panic(fmt.Sprintf("audio data type error: %T, %v", audioData, audioData))
+	}
+	taskID, ok := meta.MustGet("task_id").(string)
+	if !ok {
+		panic(fmt.Sprintf("task id type error: %T, %v", taskID, taskID))
+	}
+	conn, ok := meta.MustGet("ws_conn").(*websocket.Conn)
+	if !ok {
+		panic(fmt.Sprintf("ws conn type error: %T, %v", conn, conn))
+	}
 	defer conn.Close()
 
 	output := strings.Builder{}

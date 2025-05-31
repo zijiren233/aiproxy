@@ -617,7 +617,11 @@ var scannerBufferPool = sync.Pool{
 
 //nolint:forcetypeassert
 func GetImageScannerBuffer() *[]byte {
-	return scannerBufferPool.Get().(*[]byte)
+	v, ok := scannerBufferPool.Get().(*[]byte)
+	if !ok {
+		panic(fmt.Sprintf("scanner buffer type error: %T, %v", v, v))
+	}
+	return v
 }
 
 func PutImageScannerBuffer(buf *[]byte) {

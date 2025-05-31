@@ -145,15 +145,27 @@ func TokenAuth(c *gin.Context) {
 }
 
 func GetGroup(c *gin.Context) *model.GroupCache {
-	return c.MustGet(Group).(*model.GroupCache)
+	v, ok := c.MustGet(Group).(*model.GroupCache)
+	if !ok {
+		panic(fmt.Sprintf("group cache type error: %T, %v", v, v))
+	}
+	return v
 }
 
 func GetToken(c *gin.Context) *model.TokenCache {
-	return c.MustGet(Token).(*model.TokenCache)
+	v, ok := c.MustGet(Token).(*model.TokenCache)
+	if !ok {
+		panic(fmt.Sprintf("token cache type error: %T, %v", v, v))
+	}
+	return v
 }
 
 func GetModelCaches(c *gin.Context) *model.ModelCaches {
-	return c.MustGet(ModelCaches).(*model.ModelCaches)
+	v, ok := c.MustGet(ModelCaches).(*model.ModelCaches)
+	if !ok {
+		panic(fmt.Sprintf("model caches type error: %T, %v", v, v))
+	}
+	return v
 }
 
 func GetChannel(c *gin.Context) *model.Channel {
@@ -161,7 +173,11 @@ func GetChannel(c *gin.Context) *model.Channel {
 	if !exists {
 		return nil
 	}
-	return ch.(*model.Channel)
+	v, ok := ch.(*model.Channel)
+	if !ok {
+		panic(fmt.Sprintf("channel type error: %T, %v", v, v))
+	}
+	return v
 }
 
 func SetLogFieldsFromMeta(m *meta.Meta, fields logrus.Fields) {

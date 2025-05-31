@@ -1,6 +1,7 @@
 package router
 
 import (
+	"fmt"
 	"html/template"
 	"io/fs"
 	"net/http"
@@ -33,7 +34,11 @@ func SetStaticFileRouter(router *gin.Engine) {
 	}
 
 	if config.WebPath == "" {
-		err := initFSRouter(router, public.Public.(fs.ReadDirFS), ".")
+		routerFs, ok := public.Public.(fs.ReadDirFS)
+		if !ok {
+			panic(fmt.Sprintf("public fs type error: %T, %v", public.Public, public.Public))
+		}
+		err := initFSRouter(router, routerFs, ".")
 		if err != nil {
 			panic(err)
 		}
@@ -45,7 +50,11 @@ func SetStaticFileRouter(router *gin.Engine) {
 			panic(err)
 		}
 		logrus.Infof("frontend file path: %s", absPath)
-		err = initFSRouter(router, os.DirFS(absPath).(fs.ReadDirFS), ".")
+		routerFs, ok := os.DirFS(absPath).(fs.ReadDirFS)
+		if !ok {
+			panic(fmt.Sprintf("public fs type error: %T, %v", public.Public, public.Public))
+		}
+		err = initFSRouter(router, routerFs, ".")
 		if err != nil {
 			panic(err)
 		}

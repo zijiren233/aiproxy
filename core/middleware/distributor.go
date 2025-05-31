@@ -547,7 +547,11 @@ func GetRequestMetadata(c *gin.Context) map[string]string {
 }
 
 func GetModelConfig(c *gin.Context) model.ModelConfig {
-	return c.MustGet(ModelConfig).(model.ModelConfig)
+	v, ok := c.MustGet(ModelConfig).(model.ModelConfig)
+	if !ok {
+		panic(fmt.Sprintf("model config type error: %T, %v", v, v))
+	}
+	return v
 }
 
 func NewMetaByContext(c *gin.Context,

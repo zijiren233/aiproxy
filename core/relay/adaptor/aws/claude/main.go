@@ -2,6 +2,7 @@
 package aws
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -116,7 +117,10 @@ func Handler(meta *meta.Meta, c *gin.Context) (*model.Usage, adaptor.Error) {
 			http.StatusInternalServerError,
 		)
 	}
-	claudeReq := convReq.(*anthropic.Request)
+	claudeReq, ok := convReq.(*anthropic.Request)
+	if !ok {
+		panic(fmt.Sprintf("claude request type error: %T, %v", claudeReq, claudeReq))
+	}
 	awsClaudeReq := &Request{
 		AnthropicVersion: "bedrock-2023-05-31",
 	}
@@ -197,13 +201,8 @@ func StreamHandler(m *meta.Meta, c *gin.Context) (*model.Usage, adaptor.Error) {
 	}
 	claudeReq, ok := convReq.(*anthropic.Request)
 	if !ok {
-		return nil, relaymodel.WrapperOpenAIErrorWithMessage(
-			"request not found",
-			nil,
-			http.StatusInternalServerError,
-		)
+		panic(fmt.Sprintf("claude request type error: %T, %v", claudeReq, claudeReq))
 	}
-
 	awsClaudeReq := &Request{
 		AnthropicVersion: "bedrock-2023-05-31",
 	}

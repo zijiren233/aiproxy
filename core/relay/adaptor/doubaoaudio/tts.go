@@ -5,6 +5,7 @@ import (
 	"compress/gzip"
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"strings"
@@ -186,7 +187,10 @@ func TTSDoResponse(
 ) (*model.Usage, adaptor.Error) {
 	log := middleware.GetLogger(c)
 
-	conn := meta.MustGet("ws_conn").(*websocket.Conn)
+	conn, ok := meta.MustGet("ws_conn").(*websocket.Conn)
+	if !ok {
+		panic(fmt.Sprintf("ws conn type error: %T, %v", conn, conn))
+	}
 	defer conn.Close()
 
 	usage := &model.Usage{

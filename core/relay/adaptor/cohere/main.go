@@ -53,8 +53,9 @@ func ConvertRequest(textRequest *relaymodel.GeneralOpenAIRequest) *Request {
 		cohereRequest.Connectors = append(cohereRequest.Connectors, WebSearchConnector)
 	}
 	for _, message := range textRequest.Messages {
+		messageContent, _ := message.Content.(string)
 		if message.Role == "user" {
-			cohereRequest.Message = message.Content.(string)
+			cohereRequest.Message = messageContent
 		} else {
 			var role string
 			switch message.Role {
@@ -67,7 +68,7 @@ func ConvertRequest(textRequest *relaymodel.GeneralOpenAIRequest) *Request {
 			}
 			cohereRequest.ChatHistory = append(cohereRequest.ChatHistory, ChatMessage{
 				Role:    role,
-				Message: message.Content.(string),
+				Message: messageContent,
 			})
 		}
 	}

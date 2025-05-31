@@ -452,9 +452,13 @@ func addSmartSearchTool(mcpServer *server.MCPServer, engines map[string]engine.E
 				})
 				if err == nil {
 					allResults = append(allResults, results...)
-					if !slices.Contains(searchSummary["engines_used"].([]string), engineName) {
+					enginesUsed, ok := searchSummary["engines_used"].([]string)
+					if !ok {
+						continue
+					}
+					if !slices.Contains(enginesUsed, engineName) {
 						searchSummary["engines_used"] = append(
-							searchSummary["engines_used"].([]string),
+							enginesUsed,
 							engineName,
 						)
 					}

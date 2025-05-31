@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"strings"
@@ -56,7 +57,11 @@ var bufferPool = sync.Pool{
 }
 
 func getBuffer() *bytes.Buffer {
-	return bufferPool.Get().(*bytes.Buffer)
+	v, ok := bufferPool.Get().(*bytes.Buffer)
+	if !ok {
+		panic(fmt.Sprintf("buffer type error: %T, %v", v, v))
+	}
+	return v
 }
 
 func putBuffer(buf *bytes.Buffer) {

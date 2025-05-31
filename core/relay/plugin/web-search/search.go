@@ -569,6 +569,11 @@ func (p *WebSearch) formatSearchResults(
 	searchResults []engine.SearchResult,
 	config Config,
 ) {
+	message, ok := messages[queryIndex].(map[string]any)
+	if !ok {
+		return
+	}
+
 	var formattedResults []string
 
 	for i, result := range searchResults {
@@ -590,7 +595,7 @@ func (p *WebSearch) formatSearchResults(
 	prompt = strings.Replace(prompt, "{cur_date}", curDate, 1)
 
 	// Update message
-	messages[queryIndex].(map[string]any)["content"] = prompt
+	message["content"] = prompt
 }
 
 // Custom response writer to handle metadata and references

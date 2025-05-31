@@ -103,7 +103,8 @@ func (r *redisStoreManager) Get(sessionID string) (string, bool) {
 		return "", false
 	}
 
-	return result.(string), true
+	res, ok := result.(string)
+	return res, ok
 }
 
 func (r *redisStoreManager) Set(sessionID, endpoint string) {
