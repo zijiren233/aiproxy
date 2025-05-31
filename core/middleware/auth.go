@@ -56,6 +56,10 @@ func AdminAuth(c *gin.Context) {
 		return
 	}
 
+	c.Set(Token, &model.TokenCache{
+		Key: config.AdminKey,
+	})
+
 	group := c.Param("group")
 	if group != "" {
 		log := GetLogger(c)

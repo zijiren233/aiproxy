@@ -1506,8 +1506,9 @@ definitions:
       per_request_price:
         type: number
       thinking_mode_output_price:
-        description: when ThinkingModeOutputPrice and ReasoningTokens are not 0, OutputPrice
-          and OutputPriceUnit will be overwritten
+        description: |-
+          when ThinkingModeOutputPrice and ReasoningTokens are not 0, OutputPrice and OutputPriceUnit
+          will be overwritten
         type: number
       thinking_mode_output_price_unit:
         type: integer
@@ -5131,11 +5132,11 @@ paths:
         name: id
         required: true
         type: string
-      - description: Initial configuration parameters (e.g., config[host]=http://localhost:3000)
+      - description: Initial configuration parameters (e.g. config[host]=http://localhost:3000)
         in: query
         name: config[key]
         type: string
-      - description: Reusing configuration parameters (e.g., reusing[authorization]=apikey)
+      - description: Reusing configuration parameters (e.g. reusing[authorization]=apikey)
         in: query
         name: reusing[key]
         type: string
@@ -5160,7 +5161,7 @@ paths:
         name: id
         required: true
         type: string
-      - description: Initial configuration parameters (e.g., config[host]=http://localhost:3000)
+      - description: Initial configuration parameters (e.g. config[host]=http://localhost:3000)
         in: query
         name: config[key]
         type: string
@@ -5190,7 +5191,7 @@ paths:
         name: id
         required: true
         type: string
-      - description: Initial configuration parameters (e.g., config[host]=http://localhost:3000)
+      - description: Initial configuration parameters (e.g. config[host]=http://localhost:3000)
         in: query
         name: config[key]
         type: string
@@ -5220,7 +5221,7 @@ paths:
         name: id
         required: true
         type: string
-      - description: Initial configuration parameters (e.g., config[host]=http://localhost:3000)
+      - description: Initial configuration parameters (e.g. config[host]=http://localhost:3000)
         in: query
         name: config[key]
         type: string

@@ -51,7 +51,6 @@ const (
 	keyChars = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 )
 
-//nolint:gosec
 func generateKey() string {
 	key := make([]byte, 48)
 	for i := range key {

@@ -238,11 +238,15 @@ func (p *StreamableProxy) handlePostRequest(w http.ResponseWriter, r *http.Reque
 	// Add our proxy session ID
 	w.Header().Set("Mcp-Session-Id", proxySessionID)
 
+	contentType := resp.Header.Get("Content-Type")
+
+	w.Header().Set("Content-Type", contentType)
+
 	// Set response status code
 	w.WriteHeader(resp.StatusCode)
 
 	// Check if the response is an SSE stream
-	if strings.Contains(resp.Header.Get("Content-Type"), "text/event-stream") {
+	if strings.Contains(contentType, "text/event-stream") {
 		// Handle SSE response
 		reader := bufio.NewReader(resp.Body)
 		flusher, ok := w.(http.Flusher)
@@ -349,6 +353,9 @@ func (p *StreamableProxy) handleDeleteRequest(w http.ResponseWriter, r *http.Req
 		}
 	}
 
+	contentType := resp.Header.Get("Content-Type")
+	w.Header().Set("Content-Type", contentType)
+
 	// Set response status code
 	w.WriteHeader(resp.StatusCode)
 
@@ -363,13 +370,6 @@ func (p *StreamableProxy) proxyInitialOrNoSessionRequest(w http.ResponseWriter, 
 	if err != nil {
 		http.Error(w, "Failed to create backend request", http.StatusInternalServerError)
 		return
-	}
-
-	// Copy headers from original request
-	for name, values := range r.Header {
-		for _, value := range values {
-			req.Header.Add(name, value)
-		}
 	}
 
 	// Add any additional headers
@@ -405,20 +405,15 @@ func (p *StreamableProxy) proxyInitialOrNoSessionRequest(w http.ResponseWriter, 
 		w.Header().Set("Mcp-Session-Id", proxySessionID)
 	}
 
-	// Copy other response headers
-	for name, values := range resp.Header {
-		if name != "Mcp-Session-Id" { // Skip the original session ID
-			for _, value := range values {
-				w.Header().Add(name, value)
-			}
-		}
-	}
+	contentType := resp.Header.Get("Content-Type")
+
+	w.Header().Set("Content-Type", contentType)
 
 	// Set response status code
 	w.WriteHeader(resp.StatusCode)
 
 	// Check if the response is an SSE stream
-	if strings.Contains(resp.Header.Get("Content-Type"), "text/event-stream") {
+	if strings.Contains(contentType, "text/event-stream") {
 		// Handle SSE response
 		reader := bufio.NewReader(resp.Body)
 		flusher, ok := w.(http.Flusher)

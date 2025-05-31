@@ -148,7 +148,6 @@ func CacheDeleteToken(key string) error {
 	return common.RedisDel(fmt.Sprintf(TokenCacheKey, key))
 }
 
-//nolint:gosec
 func CacheSetToken(token *TokenCache) error {
 	if !common.RedisEnabled {
 		return nil
@@ -355,7 +354,6 @@ func CacheUpdateGroupStatus(id string, status int) error {
 		Err()
 }
 
-//nolint:gosec
 func CacheSetGroup(group *GroupCache) error {
 	if !common.RedisEnabled {
 		return nil
@@ -453,7 +451,6 @@ func CacheDeleteGroupMCP(groupID, mcpID string) error {
 	return common.RedisDel(fmt.Sprintf(GroupMCPCacheKey, groupID, mcpID))
 }
 
-//nolint:gosec
 func CacheSetGroupMCP(groupMCP *GroupMCPCache) error {
 	if !common.RedisEnabled {
 		return nil
@@ -547,7 +544,6 @@ func CacheDeletePublicMCP(mcpID string) error {
 	return common.RedisDel(fmt.Sprintf(PublicMCPCacheKey, mcpID))
 }
 
-//nolint:gosec
 func CacheSetPublicMCP(publicMCP *PublicMCPCache) error {
 	if !common.RedisEnabled {
 		return nil
@@ -633,7 +629,6 @@ func CacheDeletePublicMCPReusingParam(mcpID, groupID string) error {
 	return common.RedisDel(fmt.Sprintf(PublicMCPReusingParamCacheKey, mcpID, groupID))
 }
 
-//nolint:gosec
 func CacheSetPublicMCPReusingParam(param *PublicMCPReusingParamCache) error {
 	if !common.RedisEnabled {
 		return nil

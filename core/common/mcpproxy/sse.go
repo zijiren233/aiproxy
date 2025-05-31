@@ -1,218 +1,171 @@
 package mcpproxy
 
 import (
-	"bufio"
 	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
-	"io"
 	"net/http"
-	"net/url"
-	"strings"
 	"time"
+
+	"github.com/bytedance/sonic"
+	"github.com/mark3labs/mcp-go/mcp"
 )
 
-type EndpointProvider interface {
-	NewEndpoint(newSession string) (newEndpoint string)
-	LoadEndpoint(endpoint string) (session string)
+type MCPServer interface {
+	HandleMessage(ctx context.Context, message json.RawMessage) mcp.JSONRPCMessage
 }
 
-// SSEAProxy represents the proxy object that handles SSE and HTTP requests
-type SSEAProxy struct {
-	store    SessionManager
-	endpoint EndpointProvider
-	backend  string
-	headers  map[string]string
+// SSEServer implements a Server-Sent Events (SSE) based MCP server.
+// It provides real-time communication capabilities over HTTP using the SSE protocol.
+type SSEServer struct {
+	server          MCPServer
+	messageEndpoint string
+	eventQueue      chan string
+
+	keepAlive         bool
+	keepAliveInterval time.Duration
 }
 
-// NewSSEProxy creates a new proxy with the given backend and endpoint handler
-func NewSSEProxy(
-	backend string,
-	headers map[string]string,
-	store SessionManager,
-	endpoint EndpointProvider,
-) *SSEAProxy {
-	return &SSEAProxy{
-		store:    store,
-		endpoint: endpoint,
-		backend:  backend,
-		headers:  headers,
+// SSEOption defines a function type for configuring SSEServer
+type SSEOption func(*SSEServer)
+
+// WithMessageEndpoint sets the message endpoint path
+func WithMessageEndpoint(endpoint string) SSEOption {
+	return func(s *SSEServer) {
+		s.messageEndpoint = endpoint
 	}
 }
 
-func (p *SSEAProxy) SSEHandler(w http.ResponseWriter, r *http.Request) {
-	SSEHandler(w, r, p.store, p.endpoint, p.backend, p.headers)
+func WithKeepAliveInterval(keepAliveInterval time.Duration) SSEOption {
+	return func(s *SSEServer) {
+		s.keepAlive = true
+		s.keepAliveInterval = keepAliveInterval
+	}
 }
 
-func SSEHandler(
-	w http.ResponseWriter,
-	r *http.Request,
-	store SessionManager,
-	endpoint EndpointProvider,
-	backend string,
-	headers map[string]string,
-) {
-	// Create a request to the backend SSE endpoint
-	req, err := http.NewRequestWithContext(r.Context(), http.MethodGet, backend, nil)
-	if err != nil {
-		http.Error(w, "Failed to create backend request", http.StatusInternalServerError)
+func WithKeepAlive(keepAlive bool) SSEOption {
+	return func(s *SSEServer) {
+		s.keepAlive = keepAlive
+	}
+}
+
+// NewSSEServer creates a new SSE server instance with the given MCP server and options.
+func NewSSEServer(server MCPServer, opts ...SSEOption) *SSEServer {
+	s := &SSEServer{
+		server:            server,
+		messageEndpoint:   "/message",
+		keepAlive:         false,
+		keepAliveInterval: 30 * time.Second,
+		eventQueue:        make(chan string, 100),
+	}
+
+	// Apply all options
+	for _, opt := range opts {
+		opt(s)
+	}
+
+	return s
+}
+
+// handleSSE handles incoming SSE connection requests.
+// It sets up appropriate headers and creates a new session for the client.
+func (s *SSEServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	// Copy headers from original request
-	for name, value := range headers {
-		req.Header.Set(name, value)
-	}
-
-	// Set necessary headers for SSE
-	req.Header.Set("Accept", "text/event-stream")
-	req.Header.Set("Cache-Control", "no-cache")
-	req.Header.Set("Connection", "keep-alive")
-
-	// Make the request to the backend
-	//nolint:bodyclose
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		http.Error(w, "Failed to connect to backend", http.StatusInternalServerError)
-		return
-	}
-	defer resp.Body.Close()
-
-	// Set SSE headers for the client response
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Connection", "keep-alive")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 
-	// Create a context that cancels when the client disconnects
-	ctx, cancel := context.WithCancel(r.Context())
-	defer cancel()
-
-	// Monitor client disconnection
-	go func() {
-		<-ctx.Done()
-		resp.Body.Close()
-	}()
-
-	// Parse the SSE stream and extract sessionID
-	reader := bufio.NewReader(resp.Body)
 	flusher, ok := w.(http.Flusher)
 	if !ok {
-		http.Error(w, "Streaming not supported", http.StatusInternalServerError)
+		http.Error(w, "Streaming unsupported", http.StatusInternalServerError)
 		return
 	}
 
-	for {
-		line, err := reader.ReadString('\n')
-		if err != nil {
-			if err == io.EOF {
-				break
+	// Start keep alive : ping
+	if s.keepAlive {
+		go func() {
+			ticker := time.NewTicker(s.keepAliveInterval)
+			defer ticker.Stop()
+			id := 0
+			for {
+				id++
+				select {
+				case <-ticker.C:
+					message := mcp.JSONRPCRequest{
+						JSONRPC: "2.0",
+						ID:      mcp.NewRequestId(id),
+						Request: mcp.Request{
+							Method: "ping",
+						},
+					}
+					messageBytes, _ := sonic.Marshal(message)
+					pingMsg := fmt.Sprintf("event: message\ndata:%s\n\n", messageBytes)
+					select {
+					case s.eventQueue <- pingMsg:
+					case <-r.Context().Done():
+						return
+					}
+				case <-r.Context().Done():
+					return
+				}
 			}
+		}()
+	}
+
+	// Send the initial endpoint event
+	fmt.Fprintf(w, "event: endpoint\ndata: %s\r\n\r\n", s.messageEndpoint)
+	flusher.Flush()
+
+	// Main event loop - this runs in the HTTP handler goroutine
+	for {
+		select {
+		case event := <-s.eventQueue:
+			// Write the event to the response
+			fmt.Fprint(w, event)
+			flusher.Flush()
+		case <-r.Context().Done():
 			return
 		}
-
-		// Write the line to the client
-		fmt.Fprint(w, line)
-		flusher.Flush()
-
-		// Check if this is an endpoint event with sessionID
-		if strings.HasPrefix(line, "event: endpoint") {
-			// Next line should contain the data
-			dataLine, err := reader.ReadString('\n')
-			if err != nil {
-				return
-			}
-
-			newSession := store.New()
-			newEndpoint := endpoint.NewEndpoint(newSession)
-			defer func() {
-				store.Delete(newSession)
-			}()
-
-			// Extract sessionID from data line
-			// Example: data: /message?sessionId=3088a771-7961-44e8-9bdf-21953889f694
-			if strings.HasPrefix(dataLine, "data: ") {
-				endpoint := strings.TrimSpace(strings.TrimPrefix(dataLine, "data: "))
-				copyURL := *req.URL
-				backendHostURL := &copyURL
-				backendHostURL.Path = ""
-				backendHostURL.RawQuery = ""
-				store.Set(newSession, backendHostURL.String()+endpoint)
-			} else {
-				break
-			}
-
-			// Write the data line to the client
-			_, _ = fmt.Fprintf(w, "data: %s\n", newEndpoint)
-			flusher.Flush()
-		}
 	}
 }
 
-func (p *SSEAProxy) ProxyHandler(w http.ResponseWriter, r *http.Request) {
-	SSEProxyHandler(w, r, p.store, p.endpoint)
-}
-
-func SSEProxyHandler(
-	w http.ResponseWriter,
-	r *http.Request,
-	store SessionManager,
-	endpoint EndpointProvider,
-) {
-	// Extract sessionID from the request
-	sessionID := endpoint.LoadEndpoint(r.URL.String())
-	if sessionID == "" {
-		http.Error(w, "Missing sessionId", http.StatusBadRequest)
-		return
+// handleMessage processes incoming JSON-RPC messages from clients and sends responses
+// back through both the SSE connection and HTTP response.
+func (s *SSEServer) HandleMessage(ctx context.Context, req []byte) error {
+	// Parse message as raw JSON
+	var rawMessage json.RawMessage
+	if err := sonic.Unmarshal(req, &rawMessage); err != nil {
+		return err
 	}
 
-	// Look up the backend endpoint
-	backendEndpoint, ok := store.Get(sessionID)
-	if !ok {
-		http.Error(w, "Invalid or expired sessionId", http.StatusNotFound)
-		return
-	}
+	// Process message through MCPServer
+	response := s.server.HandleMessage(ctx, rawMessage)
 
-	u, err := url.Parse(backendEndpoint)
-	if err != nil || (u.Scheme != "http" && u.Scheme != "https") {
-		http.Error(w, "Invalid backend", http.StatusBadRequest)
-		return
-	}
+	// Only send response if there is one (not for notifications)
+	if response != nil {
+		var message string
+		eventData, err := sonic.Marshal(response)
+		if err != nil {
+			message = "event: message\ndata: {\"error\": \"internal error\",\"jsonrpc\": \"2.0\", \"id\": null}\n\n"
+		} else {
+			message = fmt.Sprintf("event: message\ndata: %s\n\n", eventData)
+		}
 
-	// Create a request to the backend
-	req, err := http.NewRequestWithContext(r.Context(), r.Method, backendEndpoint, r.Body)
-	if err != nil {
-		http.Error(w, "Failed to create backend request", http.StatusInternalServerError)
-		return
-	}
-
-	// Copy headers from original request
-	for name, values := range r.Header {
-		for _, value := range values {
-			req.Header.Add(name, value)
+		// Queue the event for sending via SSE
+		select {
+		case s.eventQueue <- message:
+			// Event queued successfully
+		default:
+			// Queue is full
+			return errors.New("event queue is full")
 		}
 	}
 
-	// Make the request to the backend
-	client := &http.Client{
-		Timeout: time.Second * 30,
-	}
-	resp, err := client.Do(req)
-	if err != nil {
-		http.Error(w, "Failed to connect to backend", http.StatusInternalServerError)
-		return
-	}
-	defer resp.Body.Close()
-
-	// Copy response headers
-	for name, values := range resp.Header {
-		for _, value := range values {
-			w.Header().Add(name, value)
-		}
-	}
-
-	// Set response status code
-	w.WriteHeader(resp.StatusCode)
-
-	// Copy response body
-	_, _ = io.Copy(w, resp.Body)
+	return nil
 }

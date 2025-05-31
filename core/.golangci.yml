@@ -104,6 +104,9 @@ linters:
       constant-kind: true
     usetesting:
       os-temp-dir: true
+    gosec:
+      excludes:
+        - G404
 
 formatters:
   enable:
@@ -126,5 +129,3 @@ formatters:
           replacement: "a[b:]"
     gofumpt:
       extra-rules: true
-    golines:
-      shorten-comments: true

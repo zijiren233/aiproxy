@@ -398,7 +398,7 @@ func getPriority(channel *model.Channel, errorRate float64) int32 {
 }
 
 //
-//nolint:gosec
+
 func getRandomChannel(
 	channels []*model.Channel,
 	errorRates map[int64]float64,
@@ -957,7 +957,6 @@ func shouldDelay(statusCode, lastChannelID, newChannelID int) bool {
 }
 
 func relayDelay() {
-	//nolint:gosec
 	time.Sleep(time.Duration(rand.Float64()*float64(time.Second)) + time.Second)
 }
 
