@@ -37,7 +37,10 @@ func stopReasonCoze2OpenAI(reason *string) relaymodel.FinishReason {
 	}
 }
 
-func StreamResponse2OpenAI(meta *meta.Meta, cozeResponse *StreamResponse) *relaymodel.ChatCompletionsStreamResponse {
+func StreamResponse2OpenAI(
+	meta *meta.Meta,
+	cozeResponse *StreamResponse,
+) *relaymodel.ChatCompletionsStreamResponse {
 	var stopReason string
 	var choice relaymodel.ChatCompletionsStreamResponseChoice
 
@@ -89,7 +92,11 @@ func Response2OpenAI(meta *meta.Meta, cozeResponse *Response) *relaymodel.TextRe
 	return &fullTextResponse
 }
 
-func StreamHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, adaptor.Error) {
+func StreamHandler(
+	meta *meta.Meta,
+	c *gin.Context,
+	resp *http.Response,
+) (*model.Usage, adaptor.Error) {
 	if resp.StatusCode != http.StatusOK {
 		return nil, openai.ErrorHanlder(resp)
 	}
@@ -144,7 +151,9 @@ func StreamHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model
 
 	render.Done(c)
 
-	return openai.ResponseText2Usage(responseText.String(), meta.ActualModel, int64(meta.RequestUsage.InputTokens)).ToModelUsage(), nil
+	return openai.ResponseText2Usage(responseText.String(), meta.ActualModel, int64(meta.RequestUsage.InputTokens)).
+			ToModelUsage(),
+		nil
 }
 
 func Handler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, adaptor.Error) {
@@ -159,15 +168,27 @@ func Handler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage
 	var cozeResponse Response
 	err := sonic.ConfigDefault.NewDecoder(resp.Body).Decode(&cozeResponse)
 	if err != nil {
-		return nil, relaymodel.WrapperOpenAIError(err, "unmarshal_response_body_failed", http.StatusInternalServerError)
+		return nil, relaymodel.WrapperOpenAIError(
+			err,
+			"unmarshal_response_body_failed",
+			http.StatusInternalServerError,
+		)
 	}
 	if cozeResponse.Code != 0 {
-		return nil, relaymodel.WrapperOpenAIErrorWithMessage(cozeResponse.Msg, cozeResponse.Code, resp.StatusCode)
+		return nil, relaymodel.WrapperOpenAIErrorWithMessage(
+			cozeResponse.Msg,
+			cozeResponse.Code,
+			resp.StatusCode,
+		)
 	}
 	fullTextResponse := Response2OpenAI(meta, &cozeResponse)
 	jsonResponse, err := sonic.Marshal(fullTextResponse)
 	if err != nil {
-		return nil, relaymodel.WrapperOpenAIError(err, "marshal_response_body_failed", http.StatusInternalServerError)
+		return nil, relaymodel.WrapperOpenAIError(
+			err,
+			"marshal_response_body_failed",
+			http.StatusInternalServerError,
+		)
 	}
 	c.Writer.Header().Set("Content-Type", "application/json")
 	c.Writer.WriteHeader(resp.StatusCode)
@@ -179,5 +200,7 @@ func Handler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage
 	if len(fullTextResponse.Choices) > 0 {
 		responseText = fullTextResponse.Choices[0].Message.StringContent()
 	}
-	return openai.ResponseText2Usage(responseText, meta.ActualModel, int64(meta.RequestUsage.InputTokens)).ToModelUsage(), nil
+	return openai.ResponseText2Usage(responseText, meta.ActualModel, int64(meta.RequestUsage.InputTokens)).
+			ToModelUsage(),
+		nil
 }

@@ -24,7 +24,8 @@ func (a *Adaptor) GetBaseURL() string {
 // https://developers.cloudflare.com/ai-gateway/providers/workersai/#openai-compatible-endpoints
 // https://gateway.ai.cloudflare.com/v1/{account_id}/{gateway_id}/workers-ai
 func isAIGateWay(baseURL string) bool {
-	return strings.HasPrefix(baseURL, "https://gateway.ai.cloudflare.com") && strings.HasSuffix(baseURL, "/workers-ai")
+	return strings.HasPrefix(baseURL, "https://gateway.ai.cloudflare.com") &&
+		strings.HasSuffix(baseURL, "/workers-ai")
 }
 
 func (a *Adaptor) GetRequestURL(meta *meta.Meta) (string, error) {

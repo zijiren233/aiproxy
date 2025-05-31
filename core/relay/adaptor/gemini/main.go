@@ -63,7 +63,11 @@ type thinkingConfigOnly struct {
 	ThinkingConfig *ThinkingConfig `json:"thinking_config"`
 }
 
-func buildGenerationConfig(meta *meta.Meta, req *http.Request, textRequest *relaymodel.GeneralOpenAIRequest) (*ChatGenerationConfig, error) {
+func buildGenerationConfig(
+	meta *meta.Meta,
+	req *http.Request,
+	textRequest *relaymodel.GeneralOpenAIRequest,
+) (*ChatGenerationConfig, error) {
 	config := ChatGenerationConfig{
 		Temperature:     textRequest.Temperature,
 		TopP:            textRequest.TopP,
@@ -165,7 +169,9 @@ func buildMessageParts(message relaymodel.MessageContent) *Part {
 	return part
 }
 
-func buildContents(textRequest *relaymodel.GeneralOpenAIRequest) (*ChatContent, []*ChatContent, []*Part) {
+func buildContents(
+	textRequest *relaymodel.GeneralOpenAIRequest,
+) (*ChatContent, []*ChatContent, []*Part) {
 	contents := make([]*ChatContent, 0, len(textRequest.Messages))
 	var imageTasks []*Part
 
@@ -492,7 +498,11 @@ func responseChat2OpenAI(meta *meta.Meta, response *ChatResponse) *relaymodel.Te
 					contents = append(contents, relaymodel.MessageContent{
 						Type: relaymodel.ContentTypeImageURL,
 						ImageURL: &relaymodel.ImageURL{
-							URL: fmt.Sprintf("data:%s;base64,%s", part.InlineData.MimeType, part.InlineData.Data),
+							URL: fmt.Sprintf(
+								"data:%s;base64,%s",
+								part.InlineData.MimeType,
+								part.InlineData.Data,
+							),
 						},
 					})
 				}
@@ -509,13 +519,20 @@ func responseChat2OpenAI(meta *meta.Meta, response *ChatResponse) *relaymodel.Te
 	return &fullTextResponse
 }
 
-func streamResponseChat2OpenAI(meta *meta.Meta, geminiResponse *ChatResponse) *relaymodel.ChatCompletionsStreamResponse {
+func streamResponseChat2OpenAI(
+	meta *meta.Meta,
+	geminiResponse *ChatResponse,
+) *relaymodel.ChatCompletionsStreamResponse {
 	response := &relaymodel.ChatCompletionsStreamResponse{
 		ID:      openai.ChatCompletionID(),
 		Created: time.Now().Unix(),
 		Model:   meta.OriginModel,
 		Object:  relaymodel.ChatCompletionChunk,
-		Choices: make([]*relaymodel.ChatCompletionsStreamResponseChoice, 0, len(geminiResponse.Candidates)),
+		Choices: make(
+			[]*relaymodel.ChatCompletionsStreamResponseChoice,
+			0,
+			len(geminiResponse.Candidates),
+		),
 	}
 	if geminiResponse.UsageMetadata != nil {
 		usage := geminiResponse.UsageMetadata.ToUsage()
@@ -568,7 +585,11 @@ func streamResponseChat2OpenAI(meta *meta.Meta, geminiResponse *ChatResponse) *r
 					contents = append(contents, relaymodel.MessageContent{
 						Type: relaymodel.ContentTypeImageURL,
 						ImageURL: &relaymodel.ImageURL{
-							URL: fmt.Sprintf("data:%s;base64,%s", part.InlineData.MimeType, part.InlineData.Data),
+							URL: fmt.Sprintf(
+								"data:%s;base64,%s",
+								part.InlineData.MimeType,
+								part.InlineData.Data,
+							),
 						},
 					})
 				}
@@ -596,7 +617,11 @@ var scannerBufferPool = sync.Pool{
 
 //nolint:forcetypeassert
 func GetImageScannerBuffer() *[]byte {
-	return scannerBufferPool.Get().(*[]byte)
+	v, ok := scannerBufferPool.Get().(*[]byte)
+	if !ok {
+		panic(fmt.Sprintf("scanner buffer type error: %T, %v", v, v))
+	}
+	return v
 }
 
 func PutImageScannerBuffer(buf *[]byte) {
@@ -606,7 +631,11 @@ func PutImageScannerBuffer(buf *[]byte) {
 	scannerBufferPool.Put(buf)
 }
 
-func StreamHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, adaptor.Error) {
+func StreamHandler(
+	meta *meta.Meta,
+	c *gin.Context,
+	resp *http.Response,
+) (*model.Usage, adaptor.Error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
@@ -674,15 +703,23 @@ func Handler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage
 	var geminiResponse ChatResponse
 	err := sonic.ConfigDefault.NewDecoder(resp.Body).Decode(&geminiResponse)
 	if err != nil {
-		return nil, relaymodel.WrapperOpenAIError(err, "unmarshal_response_body_failed", http.StatusInternalServerError)
+		return nil, relaymodel.WrapperOpenAIError(
+			err,
+			"unmarshal_response_body_failed",
+			http.StatusInternalServerError,
+		)
 	}
 	fullTextResponse := responseChat2OpenAI(meta, &geminiResponse)
 	jsonResponse, err := sonic.Marshal(fullTextResponse)
 	if err != nil {
-		return nil, relaymodel.WrapperOpenAIError(err, "marshal_response_body_failed", http.StatusInternalServerError)
+		return nil, relaymodel.WrapperOpenAIError(
+			err,
+			"marshal_response_body_failed",
+			http.StatusInternalServerError,
+		)
 	}
 	c.Writer.Header().Set("Content-Type", "application/json")
 	c.Writer.WriteHeader(resp.StatusCode)
 	_, _ = c.Writer.Write(jsonResponse)
-	return fullTextResponse.Usage.ToModelUsage(), nil
+	return fullTextResponse.ToModelUsage(), nil
 }

@@ -84,13 +84,13 @@ const (
 	XRateLimitResetTokens = "X-RateLimit-Reset-Tokens"
 )
 
-func setRpmHeaders(c *gin.Context, rpm int64, remainingRequests int64) {
+func setRpmHeaders(c *gin.Context, rpm, remainingRequests int64) {
 	c.Header(XRateLimitLimitRequests, strconv.FormatInt(rpm, 10))
 	c.Header(XRateLimitRemainingRequests, strconv.FormatInt(remainingRequests, 10))
 	c.Header(XRateLimitResetRequests, "1m0s")
 }
 
-func setTpmHeaders(c *gin.Context, tpm int64, remainingRequests int64) {
+func setTpmHeaders(c *gin.Context, tpm, remainingRequests int64) {
 	c.Header(XRateLimitLimitTokens, strconv.FormatInt(tpm, 10))
 	c.Header(XRateLimitRemainingTokens, strconv.FormatInt(remainingRequests, 10))
 	c.Header(XRateLimitResetTokens, "1m0s")
@@ -132,16 +132,40 @@ func UpdateGroupModelTokennameTokensRequest(c *gin.Context, tpm, tps int64) {
 	// log.Data["tps"] = strconv.FormatInt(tps, 10)
 }
 
-func checkGroupModelRPMAndTPM(c *gin.Context, group *model.GroupCache, mc model.ModelConfig, tokenName string) error {
+func checkGroupModelRPMAndTPM(
+	c *gin.Context,
+	group *model.GroupCache,
+	mc model.ModelConfig,
+	tokenName string,
+) error {
 	log := GetLogger(c)
 
 	adjustedModelConfig := GetGroupAdjustedModelConfig(group, mc)
 
-	groupModelCount, groupModelOverLimitCount, groupModelSecondCount := reqlimit.PushGroupModelRequest(c.Request.Context(), group.ID, mc.Model, adjustedModelConfig.RPM)
-	UpdateGroupModelRequest(c, group, groupModelCount+groupModelOverLimitCount, groupModelSecondCount)
+	groupModelCount, groupModelOverLimitCount, groupModelSecondCount := reqlimit.PushGroupModelRequest(
+		c.Request.Context(),
+		group.ID,
+		mc.Model,
+		adjustedModelConfig.RPM,
+	)
+	UpdateGroupModelRequest(
+		c,
+		group,
+		groupModelCount+groupModelOverLimitCount,
+		groupModelSecondCount,
+	)
 
-	groupModelTokenCount, groupModelTokenOverLimitCount, groupModelTokenSecondCount := reqlimit.PushGroupModelTokennameRequest(c.Request.Context(), group.ID, mc.Model, tokenName)
-	UpdateGroupModelTokennameRequest(c, groupModelTokenCount+groupModelTokenOverLimitCount, groupModelTokenSecondCount)
+	groupModelTokenCount, groupModelTokenOverLimitCount, groupModelTokenSecondCount := reqlimit.PushGroupModelTokennameRequest(
+		c.Request.Context(),
+		group.ID,
+		mc.Model,
+		tokenName,
+	)
+	UpdateGroupModelTokennameRequest(
+		c,
+		groupModelTokenCount+groupModelTokenOverLimitCount,
+		groupModelTokenSecondCount,
+	)
 
 	if group.Status != model.GroupStatusInternal &&
 		adjustedModelConfig.RPM > 0 {
@@ -153,10 +177,19 @@ func checkGroupModelRPMAndTPM(c *gin.Context, group *model.GroupCache, mc model.
 		setRpmHeaders(c, adjustedModelConfig.RPM, adjustedModelConfig.RPM-groupModelCount)
 	}
 
-	groupModelCountTPM, groupModelCountTPS := reqlimit.GetGroupModelTokensRequest(c.Request.Context(), group.ID, mc.Model)
+	groupModelCountTPM, groupModelCountTPS := reqlimit.GetGroupModelTokensRequest(
+		c.Request.Context(),
+		group.ID,
+		mc.Model,
+	)
 	UpdateGroupModelTokensRequest(c, group, groupModelCountTPM, groupModelCountTPS)
 
-	groupModelTokenCountTPM, groupModelTokenCountTPS := reqlimit.GetGroupModelTokennameTokensRequest(c.Request.Context(), group.ID, mc.Model, tokenName)
+	groupModelTokenCountTPM, groupModelTokenCountTPS := reqlimit.GetGroupModelTokennameTokensRequest(
+		c.Request.Context(),
+		group.ID,
+		mc.Model,
+		tokenName,
+	)
 	UpdateGroupModelTokennameTokensRequest(c, groupModelTokenCountTPM, groupModelTokenCountTPS)
 
 	if group.Status != model.GroupStatusInternal &&
@@ -191,7 +224,10 @@ func GetGroupBalanceConsumerFromContext(c *gin.Context) *GroupBalanceConsumer {
 	return nil
 }
 
-func GetGroupBalanceConsumer(c *gin.Context, group *model.GroupCache) (*GroupBalanceConsumer, error) {
+func GetGroupBalanceConsumer(
+	c *gin.Context,
+	group *model.GroupCache,
+) (*GroupBalanceConsumer, error) {
 	gbc := GetGroupBalanceConsumerFromContext(c)
 	if gbc != nil {
 		return gbc, nil
@@ -235,7 +271,12 @@ func checkGroupBalance(c *gin.Context, group *model.GroupCache) bool {
 	gbc, err := GetGroupBalanceConsumer(c, group)
 	if err != nil {
 		if errors.Is(err, balance.ErrNoRealNameUsedAmountLimit) {
-			AbortLogWithMessage(c, http.StatusForbidden, err.Error(), "no_real_name_used_amount_limit")
+			AbortLogWithMessage(
+				c,
+				http.StatusForbidden,
+				err.Error(),
+				"no_real_name_used_amount_limit",
+			)
 			return false
 		}
 		notify.ErrorThrottle(
@@ -244,7 +285,12 @@ func checkGroupBalance(c *gin.Context, group *model.GroupCache) bool {
 			fmt.Sprintf("Get group `%s` balance error", group.ID),
 			err.Error(),
 		)
-		AbortWithMessage(c, http.StatusInternalServerError, fmt.Sprintf("get group `%s` balance error", group.ID), "get_group_balance_error")
+		AbortWithMessage(
+			c,
+			http.StatusInternalServerError,
+			fmt.Sprintf("get group `%s` balance error", group.ID),
+			"get_group_balance_error",
+		)
 		return false
 	}
 
@@ -255,12 +301,21 @@ func checkGroupBalance(c *gin.Context, group *model.GroupCache) bool {
 			"groupBalanceAlert:"+group.ID,
 			time.Minute*15,
 			fmt.Sprintf("Group `%s` balance below threshold", group.ID),
-			fmt.Sprintf("Group `%s` balance has fallen below the threshold\nCurrent balance: %.2f", group.ID, gbc.balance),
+			fmt.Sprintf(
+				"Group `%s` balance has fallen below the threshold\nCurrent balance: %.2f",
+				group.ID,
+				gbc.balance,
+			),
 		)
 	}
 
 	if !gbc.CheckBalance(0) {
-		AbortLogWithMessage(c, http.StatusForbidden, fmt.Sprintf("group `%s` balance not enough", group.ID), GroupBalanceNotEnough)
+		AbortLogWithMessage(
+			c,
+			http.StatusForbidden,
+			fmt.Sprintf("group `%s` balance not enough", group.ID),
+			GroupBalanceNotEnough,
+		)
 		return false
 	}
 	return true
@@ -276,7 +331,12 @@ const (
 	AIProxyChannelHeader = "Aiproxy-Channel"
 )
 
-func getChannelFromHeader(header string, mc *model.ModelCaches, availableSet []string, model string) (*model.Channel, error) {
+func getChannelFromHeader(
+	header string,
+	mc *model.ModelCaches,
+	availableSet []string,
+	model string,
+) (*model.Channel, error) {
 	channelIDInt, err := strconv.ParseInt(header, 10, 64)
 	if err != nil {
 		return nil, err
@@ -305,7 +365,7 @@ func getChannelFromHeader(header string, mc *model.ModelCaches, availableSet []s
 	return nil, fmt.Errorf("channel %d not found for model `%s`", channelIDInt, model)
 }
 
-func CheckRelayMode(requestMode mode.Mode, modelMode mode.Mode) bool {
+func CheckRelayMode(requestMode, modelMode mode.Mode) bool {
 	if modelMode == mode.Unknown {
 		return true
 	}
@@ -340,7 +400,12 @@ func distribute(c *gin.Context, mode mode.Mode) {
 
 	requestModel, err := getRequestModel(c, mode)
 	if err != nil {
-		AbortLogWithMessage(c, http.StatusInternalServerError, err.Error(), "get_request_model_error")
+		AbortLogWithMessage(
+			c,
+			http.StatusInternalServerError,
+			err.Error(),
+			"get_request_model_error",
+		)
 		return
 	}
 	if requestModel == "" {
@@ -354,17 +419,27 @@ func distribute(c *gin.Context, mode mode.Mode) {
 
 	mc, ok := GetModelCaches(c).ModelConfig.GetModelConfig(requestModel)
 	if !ok || !CheckRelayMode(mode, mc.Type) {
-		AbortLogWithMessage(c,
+		AbortLogWithMessage(
+			c,
 			http.StatusNotFound,
-			fmt.Sprintf("The model `%s` does not exist or you do not have access to it.", requestModel),
+			fmt.Sprintf(
+				"The model `%s` does not exist or you do not have access to it.",
+				requestModel,
+			),
 			"model_not_found",
 		)
 		return
 	}
 	c.Set(ModelConfig, mc)
 
-	if channelHeader := c.Request.Header.Get(AIProxyChannelHeader); group.Status == model.GroupStatusInternal && channelHeader != "" {
-		channel, err := getChannelFromHeader(channelHeader, GetModelCaches(c), group.GetAvailableSets(), requestModel)
+	if channelHeader := c.Request.Header.Get(AIProxyChannelHeader); group.Status == model.GroupStatusInternal &&
+		channelHeader != "" {
+		channel, err := getChannelFromHeader(
+			channelHeader,
+			GetModelCaches(c),
+			group.GetAvailableSets(),
+			requestModel,
+		)
 		if err != nil {
 			AbortLogWithMessage(c, http.StatusBadRequest, err.Error())
 			return
@@ -384,14 +459,24 @@ func distribute(c *gin.Context, mode mode.Mode) {
 
 	user, err := getRequestUser(c, mode)
 	if err != nil {
-		AbortLogWithMessage(c, http.StatusInternalServerError, err.Error(), "get_request_user_error")
+		AbortLogWithMessage(
+			c,
+			http.StatusInternalServerError,
+			err.Error(),
+			"get_request_user_error",
+		)
 		return
 	}
 	c.Set(RequestUser, user)
 
 	metadata, err := getRequestMetadata(c, mode)
 	if err != nil {
-		AbortLogWithMessage(c, http.StatusInternalServerError, err.Error(), "get_request_metadata_error")
+		AbortLogWithMessage(
+			c,
+			http.StatusInternalServerError,
+			err.Error(),
+			"get_request_metadata_error",
+		)
 		return
 	}
 	c.Set(RequestMetadata, metadata)
@@ -462,7 +547,11 @@ func GetRequestMetadata(c *gin.Context) map[string]string {
 }
 
 func GetModelConfig(c *gin.Context) model.ModelConfig {
-	return c.MustGet(ModelConfig).(model.ModelConfig)
+	v, ok := c.MustGet(ModelConfig).(model.ModelConfig)
+	if !ok {
+		panic(fmt.Sprintf("model config type error: %T, %v", v, v))
+	}
+	return v
 }
 
 func NewMetaByContext(c *gin.Context,

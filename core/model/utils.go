@@ -148,7 +148,7 @@ func String2Int(keyword string) int {
 	return i
 }
 
-func toLimitOffset(page int, perPage int) (limit int, offset int) {
+func toLimitOffset(page, perPage int) (limit, offset int) {
 	page--
 	if page < 0 {
 		page = 0

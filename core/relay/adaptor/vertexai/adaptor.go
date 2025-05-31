@@ -27,7 +27,10 @@ type Config struct {
 	ADCJSON   string
 }
 
-func (a *Adaptor) ConvertRequest(meta *meta.Meta, request *http.Request) (*adaptor.ConvertRequestResult, error) {
+func (a *Adaptor) ConvertRequest(
+	meta *meta.Meta,
+	request *http.Request,
+) (*adaptor.ConvertRequestResult, error) {
 	adaptor := GetAdaptor(meta.ActualModel)
 	if adaptor == nil {
 		return nil, errors.New("adaptor not found")
@@ -36,10 +39,18 @@ func (a *Adaptor) ConvertRequest(meta *meta.Meta, request *http.Request) (*adapt
 	return adaptor.ConvertRequest(meta, request)
 }
 
-func (a *Adaptor) DoResponse(meta *meta.Meta, c *gin.Context, resp *http.Response) (usage *model.Usage, err adaptor.Error) {
+func (a *Adaptor) DoResponse(
+	meta *meta.Meta,
+	c *gin.Context,
+	resp *http.Response,
+) (usage *model.Usage, err adaptor.Error) {
 	adaptor := GetAdaptor(meta.ActualModel)
 	if adaptor == nil {
-		return nil, relaymodel.WrapperOpenAIErrorWithMessage(meta.ActualModel+" adaptor not found", "adaptor_not_found", http.StatusInternalServerError)
+		return nil, relaymodel.WrapperOpenAIErrorWithMessage(
+			meta.ActualModel+" adaptor not found",
+			"adaptor_not_found",
+			http.StatusInternalServerError,
+		)
 	}
 	return adaptor.DoResponse(meta, c, resp)
 }
@@ -102,6 +113,10 @@ func (a *Adaptor) SetupRequestHeader(meta *meta.Meta, _ *gin.Context, req *http.
 	return nil
 }
 
-func (a *Adaptor) DoRequest(_ *meta.Meta, _ *gin.Context, req *http.Request) (*http.Response, error) {
+func (a *Adaptor) DoRequest(
+	_ *meta.Meta,
+	_ *gin.Context,
+	req *http.Request,
+) (*http.Response, error) {
 	return utils.DoRequest(req)
 }

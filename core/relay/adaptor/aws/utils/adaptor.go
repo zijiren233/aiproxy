@@ -2,6 +2,7 @@ package utils
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -39,8 +40,10 @@ func GetAwsConfigFromKey(key string) (*AwsConfig, error) {
 
 func AwsClient(config *AwsConfig) *bedrockruntime.Client {
 	return bedrockruntime.New(bedrockruntime.Options{
-		Region:      config.Region,
-		Credentials: aws.NewCredentialsCache(credentials.NewStaticCredentialsProvider(config.AK, config.SK, "")),
+		Region: config.Region,
+		Credentials: aws.NewCredentialsCache(
+			credentials.NewStaticCredentialsProvider(config.AK, config.SK, ""),
+		),
 	})
 }
 
@@ -57,7 +60,11 @@ const AwsClientKey = "aws_client"
 func AwsClientFromMeta(meta *meta.Meta) (*bedrockruntime.Client, error) {
 	awsClientI, ok := meta.Get(AwsClientKey)
 	if ok {
-		return awsClientI.(*bedrockruntime.Client), nil
+		v, ok := awsClientI.(*bedrockruntime.Client)
+		if !ok {
+			panic(fmt.Sprintf("aws client type error: %T, %v", v, v))
+		}
+		return v, nil
 	}
 	awsClient, err := awsClientFromKey(meta.Channel.Key)
 	if err != nil {

@@ -14,7 +14,8 @@ import (
 	"github.com/labring/aiproxy/core/relay/utils"
 )
 
-// text-embeddings-inference adaptor supports rerank and embeddings models deployed by https://github.com/huggingface/text-embeddings-inference
+// text-embeddings-inference adaptor supports rerank and embeddings models deployed by
+// https://github.com/huggingface/text-embeddings-inference
 type Adaptor struct{}
 
 // base url for text-embeddings-inference, fake
@@ -39,14 +40,18 @@ func (a *Adaptor) GetRequestURL(meta *meta.Meta) (string, error) {
 	}
 }
 
-// text-embeddings-inference api see https://huggingface.github.io/text-embeddings-inference/#/Text%20Embeddings%20Inference/rerank
+// text-embeddings-inference api see
+// https://huggingface.github.io/text-embeddings-inference/#/Text%20Embeddings%20Inference/rerank
 
 func (a *Adaptor) SetupRequestHeader(meta *meta.Meta, _ *gin.Context, req *http.Request) error {
 	req.Header.Set("Authorization", "Bearer "+meta.Channel.Key)
 	return nil
 }
 
-func (a *Adaptor) ConvertRequest(meta *meta.Meta, req *http.Request) (*adaptor.ConvertRequestResult, error) {
+func (a *Adaptor) ConvertRequest(
+	meta *meta.Meta,
+	req *http.Request,
+) (*adaptor.ConvertRequestResult, error) {
 	switch meta.Mode {
 	case mode.Rerank:
 		return ConvertRerankRequest(meta, req)
@@ -57,17 +62,29 @@ func (a *Adaptor) ConvertRequest(meta *meta.Meta, req *http.Request) (*adaptor.C
 	}
 }
 
-func (a *Adaptor) DoRequest(_ *meta.Meta, _ *gin.Context, req *http.Request) (*http.Response, error) {
+func (a *Adaptor) DoRequest(
+	_ *meta.Meta,
+	_ *gin.Context,
+	req *http.Request,
+) (*http.Response, error) {
 	return utils.DoRequest(req)
 }
 
-func (a *Adaptor) DoResponse(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, adaptor.Error) {
+func (a *Adaptor) DoResponse(
+	meta *meta.Meta,
+	c *gin.Context,
+	resp *http.Response,
+) (*model.Usage, adaptor.Error) {
 	switch meta.Mode {
 	case mode.Rerank:
 		return RerankHandler(meta, c, resp)
 	case mode.Embeddings:
 		return EmbeddingsHandler(meta, c, resp)
 	default:
-		return nil, relaymodel.WrapperOpenAIErrorWithMessage(fmt.Sprintf("unsupported mode: %s", meta.Mode), "unsupported_mode", http.StatusBadRequest)
+		return nil, relaymodel.WrapperOpenAIErrorWithMessage(
+			fmt.Sprintf("unsupported mode: %s", meta.Mode),
+			"unsupported_mode",
+			http.StatusBadRequest,
+		)
 	}
 }

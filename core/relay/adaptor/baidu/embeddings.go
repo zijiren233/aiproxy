@@ -18,19 +18,31 @@ type EmbeddingsResponse struct {
 	Usage relaymodel.Usage `json:"usage"`
 }
 
-func EmbeddingsHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, adaptor.Error) {
+func EmbeddingsHandler(
+	meta *meta.Meta,
+	c *gin.Context,
+	resp *http.Response,
+) (*model.Usage, adaptor.Error) {
 	defer resp.Body.Close()
 
 	log := middleware.GetLogger(c)
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, relaymodel.WrapperOpenAIErrorWithMessage(err.Error(), nil, http.StatusInternalServerError)
+		return nil, relaymodel.WrapperOpenAIErrorWithMessage(
+			err.Error(),
+			nil,
+			http.StatusInternalServerError,
+		)
 	}
 	var baiduResponse EmbeddingsResponse
 	err = sonic.Unmarshal(body, &baiduResponse)
 	if err != nil {
-		return nil, relaymodel.WrapperOpenAIErrorWithMessage(err.Error(), nil, http.StatusInternalServerError)
+		return nil, relaymodel.WrapperOpenAIErrorWithMessage(
+			err.Error(),
+			nil,
+			http.StatusInternalServerError,
+		)
 	}
 	if baiduResponse.Error != nil && baiduResponse.ErrorCode != 0 {
 		return baiduResponse.Usage.ToModelUsage(), ErrorHandler(baiduResponse.Error)
@@ -39,14 +51,22 @@ func EmbeddingsHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*m
 	respMap := make(map[string]any)
 	err = sonic.Unmarshal(body, &respMap)
 	if err != nil {
-		return baiduResponse.Usage.ToModelUsage(), relaymodel.WrapperOpenAIErrorWithMessage(err.Error(), nil, http.StatusInternalServerError)
+		return baiduResponse.Usage.ToModelUsage(), relaymodel.WrapperOpenAIErrorWithMessage(
+			err.Error(),
+			nil,
+			http.StatusInternalServerError,
+		)
 	}
 	respMap["model"] = meta.OriginModel
 	respMap["object"] = "list"
 
 	data, err := sonic.Marshal(respMap)
 	if err != nil {
-		return baiduResponse.Usage.ToModelUsage(), relaymodel.WrapperOpenAIErrorWithMessage(err.Error(), nil, http.StatusInternalServerError)
+		return baiduResponse.Usage.ToModelUsage(), relaymodel.WrapperOpenAIErrorWithMessage(
+			err.Error(),
+			nil,
+			http.StatusInternalServerError,
+		)
 	}
 	_, err = c.Writer.Write(data)
 	if err != nil {

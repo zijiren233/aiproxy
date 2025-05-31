@@ -193,7 +193,10 @@ func SetAPIRouter(router *gin.Engine) {
 			publicMcpRoute.DELETE("/:id", controller.DeletePublicMCP)
 			publicMcpRoute.POST("/:id/status", controller.UpdatePublicMCPStatus)
 			publicMcpRoute.GET("/:id/group/:group/params", controller.GetGroupPublicMCPReusingParam)
-			publicMcpRoute.POST("/:id/group/:group/params", controller.SaveGroupPublicMCPReusingParam)
+			publicMcpRoute.POST(
+				"/:id/group/:group/params",
+				controller.SaveGroupPublicMCPReusingParam,
+			)
 		}
 
 		groupMcpRoute := apiRouter.Group("/mcp/group")

@@ -89,7 +89,10 @@ func (a *Adaptor) SetupRequestHeader(meta *meta.Meta, _ *gin.Context, req *http.
 	return nil
 }
 
-func (a *Adaptor) ConvertRequest(meta *meta.Meta, req *http.Request) (*adaptor.ConvertRequestResult, error) {
+func (a *Adaptor) ConvertRequest(
+	meta *meta.Meta,
+	req *http.Request,
+) (*adaptor.ConvertRequestResult, error) {
 	switch meta.Mode {
 	case mode.Embeddings:
 		return openai.ConvertEmbeddingsRequest(meta, req, true)
@@ -104,11 +107,19 @@ func (a *Adaptor) ConvertRequest(meta *meta.Meta, req *http.Request) (*adaptor.C
 	}
 }
 
-func (a *Adaptor) DoRequest(_ *meta.Meta, _ *gin.Context, req *http.Request) (*http.Response, error) {
+func (a *Adaptor) DoRequest(
+	_ *meta.Meta,
+	_ *gin.Context,
+	req *http.Request,
+) (*http.Response, error) {
 	return utils.DoRequest(req)
 }
 
-func (a *Adaptor) DoResponse(meta *meta.Meta, c *gin.Context, resp *http.Response) (usage *model.Usage, err adaptor.Error) {
+func (a *Adaptor) DoResponse(
+	meta *meta.Meta,
+	c *gin.Context,
+	resp *http.Response,
+) (usage *model.Usage, err adaptor.Error) {
 	switch meta.Mode {
 	case mode.Embeddings:
 		usage, err = EmbeddingsHandler(meta, c, resp)
@@ -123,7 +134,11 @@ func (a *Adaptor) DoResponse(meta *meta.Meta, c *gin.Context, resp *http.Respons
 			usage, err = Handler(meta, c, resp)
 		}
 	default:
-		return nil, relaymodel.WrapperOpenAIErrorWithMessage(fmt.Sprintf("unsupported mode: %s", meta.Mode), nil, http.StatusBadRequest)
+		return nil, relaymodel.WrapperOpenAIErrorWithMessage(
+			fmt.Sprintf("unsupported mode: %s", meta.Mode),
+			nil,
+			http.StatusBadRequest,
+		)
 	}
 	return
 }

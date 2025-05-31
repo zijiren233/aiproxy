@@ -194,10 +194,14 @@ func (m *Message) ParseContent() []MessageContent {
 				}
 			case ContentTypeImageURL:
 				if subObj, ok := contentMap["image_url"].(map[string]any); ok {
+					url, ok := subObj["url"].(string)
+					if !ok {
+						continue
+					}
 					contentList = append(contentList, MessageContent{
 						Type: ContentTypeImageURL,
 						ImageURL: &ImageURL{
-							URL: subObj["url"].(string),
+							URL: url,
 						},
 					})
 				}

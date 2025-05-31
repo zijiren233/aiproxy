@@ -19,7 +19,7 @@ const (
 	ConfigRequiredTypeInitOrReusingOnly
 )
 
-func (c ConfigRequiredType) Validate(config string, reusingConfig string) error {
+func (c ConfigRequiredType) Validate(config, reusingConfig string) error {
 	switch c {
 	case ConfigRequiredTypeInitOnly:
 		if config == "" {
@@ -34,7 +34,9 @@ func (c ConfigRequiredType) Validate(config string, reusingConfig string) error 
 			return errors.New("config or reusing config is required")
 		}
 		if config != "" && reusingConfig != "" {
-			return errors.New("config and reusing config are both provided, but only one is allowed")
+			return errors.New(
+				"config and reusing config are both provided, but only one is allowed",
+			)
 		}
 	}
 	return nil
@@ -50,7 +52,10 @@ type ConfigTemplate struct {
 
 type ConfigTemplates = map[string]ConfigTemplate
 
-func ValidateConfigTemplatesConfig(ct ConfigTemplates, config map[string]string, reusingConfig map[string]string) error {
+func ValidateConfigTemplatesConfig(
+	ct ConfigTemplates,
+	config, reusingConfig map[string]string,
+) error {
 	if len(ct) == 0 {
 		return nil
 	}
@@ -95,7 +100,7 @@ func CheckConfigTemplatesValidate(ct ConfigTemplates) error {
 	return nil
 }
 
-type NewServerFunc func(config map[string]string, reusingConfig map[string]string) (*server.MCPServer, error)
+type NewServerFunc func(config, reusingConfig map[string]string) (*server.MCPServer, error)
 
 type EmbedMcp struct {
 	ID              string
@@ -138,7 +143,7 @@ func NewEmbedMcp(id, name string, newServer NewServerFunc, opts ...EmbedMcpConfi
 	return e
 }
 
-func (e *EmbedMcp) NewServer(config map[string]string, reusingConfig map[string]string) (*server.MCPServer, error) {
+func (e *EmbedMcp) NewServer(config, reusingConfig map[string]string) (*server.MCPServer, error) {
 	if err := ValidateConfigTemplatesConfig(e.ConfigTemplates, config, reusingConfig); err != nil {
 		return nil, fmt.Errorf("mcp %s config is invalid: %w", e.ID, err)
 	}

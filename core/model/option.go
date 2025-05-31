@@ -19,7 +19,7 @@ import (
 
 type Option struct {
 	Key   string `gorm:"primaryKey" json:"key"`
-	Value string `json:"value"`
+	Value string `                  json:"value"`
 }
 
 func GetAllOption() ([]*Option, error) {
@@ -64,8 +64,14 @@ func initOptionMap() error {
 	optionMap["IPGroupsThreshold"] = strconv.FormatInt(config.GetIPGroupsThreshold(), 10)
 	optionMap["IPGroupsBanThreshold"] = strconv.FormatInt(config.GetIPGroupsBanThreshold(), 10)
 	optionMap["SaveAllLogDetail"] = strconv.FormatBool(config.GetSaveAllLogDetail())
-	optionMap["LogDetailRequestBodyMaxSize"] = strconv.FormatInt(config.GetLogDetailRequestBodyMaxSize(), 10)
-	optionMap["LogDetailResponseBodyMaxSize"] = strconv.FormatInt(config.GetLogDetailResponseBodyMaxSize(), 10)
+	optionMap["LogDetailRequestBodyMaxSize"] = strconv.FormatInt(
+		config.GetLogDetailRequestBodyMaxSize(),
+		10,
+	)
+	optionMap["LogDetailResponseBodyMaxSize"] = strconv.FormatInt(
+		config.GetLogDetailResponseBodyMaxSize(),
+		10,
+	)
 	optionMap["DisableServe"] = strconv.FormatBool(config.GetDisableServe())
 	optionMap["BillingEnabled"] = strconv.FormatBool(config.GetBillingEnabled())
 	optionMap["RetryTimes"] = strconv.FormatInt(config.GetRetryTimes(), 10)
@@ -113,7 +119,12 @@ func loadOptionsFromDatabase(isInit bool) error {
 		err := updateOption(option.Key, option.Value, isInit)
 		if err != nil {
 			if !errors.Is(err, ErrUnknownOptionKey) {
-				return fmt.Errorf("failed to update option: %s, value: %s, error: %w", option.Key, option.Value, err)
+				return fmt.Errorf(
+					"failed to update option: %s, value: %s, error: %w",
+					option.Key,
+					option.Value,
+					err,
+				)
 			}
 			if isInit {
 				log.Warnf("unknown option: %s, value: %s", option.Key, option.Value)
@@ -138,13 +149,18 @@ func SyncOptions(ctx context.Context, wg *sync.WaitGroup, frequency time.Duratio
 			return
 		case <-ticker.C:
 			if err := loadOptionsFromDatabase(false); err != nil {
-				notify.ErrorThrottle("syncOptions", time.Minute, "failed to sync options", err.Error())
+				notify.ErrorThrottle(
+					"syncOptions",
+					time.Minute,
+					"failed to sync options",
+					err.Error(),
+				)
 			}
 		}
 	}
 }
 
-func saveOption(key string, value string) error {
+func saveOption(key, value string) error {
 	option := Option{
 		Key:   key,
 		Value: value,
@@ -153,7 +169,7 @@ func saveOption(key string, value string) error {
 	return HandleUpdateResult(result, "option:"+key)
 }
 
-func UpdateOption(key string, value string) error {
+func UpdateOption(key, value string) error {
 	err := updateOption(key, value, false)
 	if err != nil {
 		return err
@@ -183,7 +199,7 @@ func toBool(value string) bool {
 }
 
 //nolint:gocyclo
-func updateOption(key string, value string, isInit bool) (err error) {
+func updateOption(key, value string, isInit bool) (err error) {
 	switch key {
 	case "LogStorageHours":
 		logStorageHours, err := strconv.ParseInt(value, 10, 64)

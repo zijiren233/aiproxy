@@ -53,8 +53,9 @@ func ConvertRequest(textRequest *relaymodel.GeneralOpenAIRequest) *Request {
 		cohereRequest.Connectors = append(cohereRequest.Connectors, WebSearchConnector)
 	}
 	for _, message := range textRequest.Messages {
+		messageContent, _ := message.Content.(string)
 		if message.Role == "user" {
-			cohereRequest.Message = message.Content.(string)
+			cohereRequest.Message = messageContent
 		} else {
 			var role string
 			switch message.Role {
@@ -67,14 +68,17 @@ func ConvertRequest(textRequest *relaymodel.GeneralOpenAIRequest) *Request {
 			}
 			cohereRequest.ChatHistory = append(cohereRequest.ChatHistory, ChatMessage{
 				Role:    role,
-				Message: message.Content.(string),
+				Message: messageContent,
 			})
 		}
 	}
 	return &cohereRequest
 }
 
-func StreamResponse2OpenAI(meta *meta.Meta, cohereResponse *StreamResponse) *relaymodel.ChatCompletionsStreamResponse {
+func StreamResponse2OpenAI(
+	meta *meta.Meta,
+	cohereResponse *StreamResponse,
+) *relaymodel.ChatCompletionsStreamResponse {
 	var response *Response
 	var responseText string
 	var finishReason string
@@ -147,7 +151,11 @@ func Response2OpenAI(meta *meta.Meta, cohereResponse *Response) *relaymodel.Text
 	return &fullTextResponse
 }
 
-func StreamHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, adaptor.Error) {
+func StreamHandler(
+	meta *meta.Meta,
+	c *gin.Context,
+	resp *http.Response,
+) (*model.Usage, adaptor.Error) {
 	if resp.StatusCode != http.StatusOK {
 		return nil, openai.ErrorHanlder(resp)
 	}
@@ -201,18 +209,30 @@ func Handler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage
 	var cohereResponse Response
 	err := sonic.ConfigDefault.NewDecoder(resp.Body).Decode(&cohereResponse)
 	if err != nil {
-		return nil, relaymodel.WrapperOpenAIError(err, "unmarshal_response_body_failed", http.StatusInternalServerError)
+		return nil, relaymodel.WrapperOpenAIError(
+			err,
+			"unmarshal_response_body_failed",
+			http.StatusInternalServerError,
+		)
 	}
 	if cohereResponse.ResponseID == "" {
-		return nil, relaymodel.WrapperOpenAIErrorWithMessage(cohereResponse.Message, resp.StatusCode, resp.StatusCode)
+		return nil, relaymodel.WrapperOpenAIErrorWithMessage(
+			cohereResponse.Message,
+			resp.StatusCode,
+			resp.StatusCode,
+		)
 	}
 	fullTextResponse := Response2OpenAI(meta, &cohereResponse)
 	jsonResponse, err := sonic.Marshal(fullTextResponse)
 	if err != nil {
-		return nil, relaymodel.WrapperOpenAIError(err, "marshal_response_body_failed", http.StatusInternalServerError)
+		return nil, relaymodel.WrapperOpenAIError(
+			err,
+			"marshal_response_body_failed",
+			http.StatusInternalServerError,
+		)
 	}
 	c.Writer.Header().Set("Content-Type", "application/json")
 	c.Writer.WriteHeader(resp.StatusCode)
 	_, _ = c.Writer.Write(jsonResponse)
-	return fullTextResponse.Usage.ToModelUsage(), nil
+	return fullTextResponse.ToModelUsage(), nil
 }

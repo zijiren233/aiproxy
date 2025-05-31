@@ -49,7 +49,7 @@ type ReusingParam struct {
 
 type MCPPrice struct {
 	DefaultToolsCallPrice float64            `json:"default_tools_call_price"`
-	ToolsCallPrices       map[string]float64 `gorm:"serializer:fastjson;type:text" json:"tools_call_prices"`
+	ToolsCallPrices       map[string]float64 `json:"tools_call_prices"        gorm:"serializer:fastjson;type:text"`
 }
 
 type PublicMCPProxyConfig struct {
@@ -117,13 +117,13 @@ type PublicMCP struct {
 	CreatedAt              time.Time               `gorm:"index,autoCreateTime"          json:"created_at"`
 	UpdateAt               time.Time               `gorm:"index,autoUpdateTime"          json:"update_at"`
 	PublicMCPReusingParams []PublicMCPReusingParam `gorm:"foreignKey:MCPID"              json:"-"`
-	Name                   string                  `json:"name"`
+	Name                   string                  `                                     json:"name"`
 	Type                   PublicMCPType           `gorm:"index"                         json:"type"`
-	RepoURL                string                  `json:"repo_url"`
-	ReadmeURL              string                  `json:"readme_url"`
+	RepoURL                string                  `                                     json:"repo_url"`
+	ReadmeURL              string                  `                                     json:"readme_url"`
 	Readme                 string                  `gorm:"type:text"                     json:"readme"`
 	Tags                   []string                `gorm:"serializer:fastjson;type:text" json:"tags,omitempty"`
-	LogoURL                string                  `json:"logo_url"`
+	LogoURL                string                  `                                     json:"logo_url"`
 	Price                  MCPPrice                `gorm:"embedded"                      json:"price"`
 	ProxyConfig            *PublicMCPProxyConfig   `gorm:"serializer:fastjson;type:text" json:"proxy_config,omitempty"`
 	OpenAPIConfig          *MCPOpenAPIConfig       `gorm:"serializer:fastjson;type:text" json:"openapi_config,omitempty"`
@@ -172,7 +172,10 @@ func validateHTTPURL(str string) error {
 }
 
 func (p *PublicMCP) BeforeDelete(tx *gorm.DB) (err error) {
-	return tx.Model(&PublicMCPReusingParam{}).Where("mcp_id = ?", p.ID).Delete(&PublicMCPReusingParam{}).Error
+	return tx.Model(&PublicMCPReusingParam{}).
+		Where("mcp_id = ?", p.ID).
+		Delete(&PublicMCPReusingParam{}).
+		Error
 }
 
 func (p *PublicMCP) MarshalJSON() ([]byte, error) {
@@ -292,7 +295,12 @@ func GetPublicMCPByID(id string) (*PublicMCP, error) {
 }
 
 // GetPublicMCPs retrieves MCPs with pagination and filtering
-func GetPublicMCPs(page int, perPage int, mcpType PublicMCPType, keyword string, status PublicMCPStatus) (mcps []*PublicMCP, total int64, err error) {
+func GetPublicMCPs(
+	page, perPage int,
+	mcpType PublicMCPType,
+	keyword string,
+	status PublicMCPStatus,
+) (mcps []*PublicMCP, total int64, err error) {
 	tx := DB.Model(&PublicMCP{})
 
 	if mcpType != "" {
@@ -302,7 +310,13 @@ func GetPublicMCPs(page int, perPage int, mcpType PublicMCPType, keyword string,
 	if keyword != "" {
 		keyword = "%" + keyword + "%"
 		if common.UsingPostgreSQL {
-			tx = tx.Where("name ILIKE ? OR author ILIKE ? OR tags ILIKE ? OR id ILIKE ?", keyword, keyword, keyword, keyword)
+			tx = tx.Where(
+				"name ILIKE ? OR author ILIKE ? OR tags ILIKE ? OR id ILIKE ?",
+				keyword,
+				keyword,
+				keyword,
+				keyword,
+			)
 		} else {
 			tx = tx.Where("name LIKE ? OR author LIKE ? OR tags LIKE ? OR id LIKE ?", keyword, keyword, keyword, keyword)
 		}
@@ -376,7 +390,7 @@ func UpdatePublicMCPReusingParam(param *PublicMCPReusingParam) (err error) {
 }
 
 // DeletePublicMCPReusingParam deletes a GroupMCPReusingParam
-func DeletePublicMCPReusingParam(mcpID string, groupID string) (err error) {
+func DeletePublicMCPReusingParam(mcpID, groupID string) (err error) {
 	defer func() {
 		if err == nil {
 			if err := CacheDeletePublicMCPReusingParam(mcpID, groupID); err != nil {
@@ -395,7 +409,7 @@ func DeletePublicMCPReusingParam(mcpID string, groupID string) (err error) {
 }
 
 // GetPublicMCPReusingParam retrieves a GroupMCPReusingParam by MCP ID and Group ID
-func GetPublicMCPReusingParam(mcpID string, groupID string) (*PublicMCPReusingParam, error) {
+func GetPublicMCPReusingParam(mcpID, groupID string) (*PublicMCPReusingParam, error) {
 	if mcpID == "" || groupID == "" {
 		return nil, errors.New("MCP ID or Group ID is empty")
 	}

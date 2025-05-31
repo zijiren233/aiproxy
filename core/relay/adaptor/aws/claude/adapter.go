@@ -16,7 +16,10 @@ const (
 
 type Adaptor struct{}
 
-func (a *Adaptor) ConvertRequest(meta *meta.Meta, req *http.Request) (*adaptor.ConvertRequestResult, error) {
+func (a *Adaptor) ConvertRequest(
+	meta *meta.Meta,
+	req *http.Request,
+) (*adaptor.ConvertRequestResult, error) {
 	r, err := anthropic.OpenAIConvertRequest(meta, req)
 	if err != nil {
 		return nil, err
@@ -30,7 +33,10 @@ func (a *Adaptor) ConvertRequest(meta *meta.Meta, req *http.Request) (*adaptor.C
 	}, nil
 }
 
-func (a *Adaptor) DoResponse(meta *meta.Meta, c *gin.Context) (usage *model.Usage, err adaptor.Error) {
+func (a *Adaptor) DoResponse(
+	meta *meta.Meta,
+	c *gin.Context,
+) (usage *model.Usage, err adaptor.Error) {
 	if meta.GetBool("stream") {
 		usage, err = StreamHandler(meta, c)
 	} else {

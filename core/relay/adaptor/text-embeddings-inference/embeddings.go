@@ -10,7 +10,11 @@ import (
 	"github.com/labring/aiproxy/core/relay/meta"
 )
 
-func EmbeddingsHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, adaptor.Error) {
+func EmbeddingsHandler(
+	meta *meta.Meta,
+	c *gin.Context,
+	resp *http.Response,
+) (*model.Usage, adaptor.Error) {
 	if resp.StatusCode != http.StatusOK {
 		return nil, EmbeddingsErrorHanlder(resp)
 	}

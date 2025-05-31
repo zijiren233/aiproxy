@@ -15,11 +15,10 @@ import (
 	"github.com/labring/aiproxy/core/middleware"
 	"github.com/labring/aiproxy/core/model"
 	mcpservers "github.com/labring/aiproxy/mcp-servers"
-	"github.com/mark3labs/mcp-go/mcp"
-	"github.com/mark3labs/mcp-go/server"
-
 	// init embed mcp
 	_ "github.com/labring/aiproxy/mcp-servers/mcpregister"
+	"github.com/mark3labs/mcp-go/mcp"
+	"github.com/mark3labs/mcp-go/server"
 )
 
 type EmbedMCPConfigTemplate struct {
@@ -101,7 +100,10 @@ type SaveEmbedMCPRequest struct {
 	InitConfig map[string]string `json:"init_config"`
 }
 
-func GetEmbedConfig(ct mcpservers.ConfigTemplates, initConfig map[string]string) (*model.MCPEmbeddingConfig, error) {
+func GetEmbedConfig(
+	ct mcpservers.ConfigTemplates,
+	initConfig map[string]string,
+) (*model.MCPEmbeddingConfig, error) {
 	reusingConfig := make(map[string]model.MCPEmbeddingReusingConfig)
 	embedConfig := &model.MCPEmbeddingConfig{
 		Init: initConfig,
@@ -139,7 +141,11 @@ func GetEmbedConfig(ct mcpservers.ConfigTemplates, initConfig map[string]string)
 	return embedConfig, nil
 }
 
-func ToPublicMCP(e mcpservers.EmbedMcp, initConfig map[string]string, enabled bool) (*model.PublicMCP, error) {
+func ToPublicMCP(
+	e mcpservers.EmbedMcp,
+	initConfig map[string]string,
+	enabled bool,
+) (*model.PublicMCP, error) {
 	embedConfig, err := GetEmbedConfig(e.ConfigTemplates, initConfig)
 	if err != nil {
 		return nil, err
@@ -221,7 +227,8 @@ func (m *testEmbedMcpEndpointProvider) LoadEndpoint(endpoint string) (session st
 	return parsedURL.Query().Get("sessionId")
 }
 
-// query like: /api/test-embedmcp/aiproxy-openapi/sse?key=adminkey&config[key1]=value1&config[key2]=value2&reusing[key3]=value3
+// query like:
+// /api/test-embedmcp/aiproxy-openapi/sse?key=adminkey&config[key1]=value1&config[key2]=value2&reusing[key3]=value3
 func getConfigFromQuery(c *gin.Context) (map[string]string, map[string]string) {
 	initConfig := make(map[string]string)
 	reusingConfig := make(map[string]string)
@@ -260,8 +267,11 @@ func getConfigFromQuery(c *gin.Context) (map[string]string, map[string]string) {
 //	@Tags			embedmcp
 //	@Security		ApiKeyAuth
 //	@Param			id				path		string	true	"MCP ID"
-//	@Param			config[key]		query		string	false	"Initial configuration parameters (e.g., config[host]=http://localhost:3000)"
-//	@Param			reusing[key]	query		string	false	"Reusing configuration parameters (e.g., reusing[authorization]=apikey)"
+//	@Param			config[key]		query		string	false	"Initial configuration parameters (e.g.,
+//
+// config[host]=http://localhost:3000)" 	@Param			reusing[key]	query		string	false	"Reusing
+// configuration parameters (e.g., reusing[authorization]=apikey)"
+//
 //	@Success		200				{object}	nil
 //	@Failure		400				{object}	nil
 //	@Router			/api/test-embedmcp/{id}/sse [get]
@@ -351,8 +361,11 @@ func TestEmbedMCPMessage(c *gin.Context) {
 //	@Tags			embedmcp
 //	@Security		ApiKeyAuth
 //	@Param			id				path	string	true	"MCP ID"
-//	@Param			config[key]		query	string	false	"Initial configuration parameters (e.g., config[host]=http://localhost:3000)"
-//	@Param			reusing[key]	query	string	false	"Reusing configuration parameters (e.g., reusing[authorization]=apikey)"
+//	@Param			config[key]		query	string	false	"Initial configuration parameters (e.g.,
+//
+// config[host]=http://localhost:3000)" 	@Param			reusing[key]	query	string	false	"Reusing
+// configuration parameters (e.g., reusing[authorization]=apikey)"
+//
 //	@Accept			json
 //	@Produce		json
 //	@Success		200	{object}	nil

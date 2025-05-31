@@ -18,7 +18,11 @@ type StreamableProxy struct {
 }
 
 // NewStreamableProxy creates a new proxy for the Streamable HTTP transport
-func NewStreamableProxy(backend string, headers map[string]string, store SessionManager) *StreamableProxy {
+func NewStreamableProxy(
+	backend string,
+	headers map[string]string,
+	store SessionManager,
+) *StreamableProxy {
 	return &StreamableProxy{
 		store:   store,
 		backend: backend,
@@ -113,7 +117,8 @@ func (p *StreamableProxy) handleGetRequest(w http.ResponseWriter, r *http.Reques
 	defer resp.Body.Close()
 
 	// Check if we got an SSE response
-	if resp.StatusCode != http.StatusOK || !strings.Contains(resp.Header.Get("Content-Type"), "text/event-stream") {
+	if resp.StatusCode != http.StatusOK ||
+		!strings.Contains(resp.Header.Get("Content-Type"), "text/event-stream") {
 		// Copy response headers, but not the backend session ID
 		for name, values := range resp.Header {
 			if name == "Mcp-Session-Id" {
@@ -386,7 +391,8 @@ func (p *StreamableProxy) proxyInitialOrNoSessionRequest(w http.ResponseWriter, 
 		// Generate a new proxy session ID
 		proxySessionID := p.store.New()
 
-		// Store the mapping between our proxy session ID and the backend endpoint with its session ID
+		// Store the mapping between our proxy session ID and the backend endpoint with its session
+		// ID
 		backendURL := p.backend
 		if strings.Contains(backendURL, "?") {
 			backendURL += "&sessionId=" + backendSessionID

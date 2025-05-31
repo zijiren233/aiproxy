@@ -7,7 +7,7 @@ import (
 	"github.com/labring/aiproxy/core/relay/model"
 )
 
-func ResponseText2Usage(responseText string, modeName string, promptTokens int64) *model.Usage {
+func ResponseText2Usage(responseText, modeName string, promptTokens int64) *model.Usage {
 	usage := &model.Usage{
 		PromptTokens:     promptTokens,
 		CompletionTokens: CountTokenText(responseText, modeName),
@@ -16,11 +16,15 @@ func ResponseText2Usage(responseText string, modeName string, promptTokens int64
 	return usage
 }
 
-func GetFullRequestURL(baseURL string, requestURL string) string {
+func GetFullRequestURL(baseURL, requestURL string) string {
 	fullRequestURL := fmt.Sprintf("%s%s", baseURL, requestURL)
 
 	if strings.HasPrefix(baseURL, "https://gateway.ai.cloudflare.com") {
-		fullRequestURL = fmt.Sprintf("%s%s", baseURL, strings.TrimPrefix(requestURL, "/openai/deployments"))
+		fullRequestURL = fmt.Sprintf(
+			"%s%s",
+			baseURL,
+			strings.TrimPrefix(requestURL, "/openai/deployments"),
+		)
 	}
 	return fullRequestURL
 }

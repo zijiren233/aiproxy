@@ -30,7 +30,11 @@ func init() {
 
 type innerAIAdapter interface {
 	ConvertRequest(meta *meta.Meta, request *http.Request) (*adaptor.ConvertRequestResult, error)
-	DoResponse(meta *meta.Meta, c *gin.Context, resp *http.Response) (usage *model.Usage, err adaptor.Error)
+	DoResponse(
+		meta *meta.Meta,
+		c *gin.Context,
+		resp *http.Response,
+	) (usage *model.Usage, err adaptor.Error)
 }
 
 func GetAdaptor(model string) innerAIAdapter {

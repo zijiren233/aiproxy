@@ -98,7 +98,13 @@ func SearchModelConfigs(c *gin.Context) {
 	page, perPage := parsePageParams(c)
 	_model := c.Query("model")
 	owner := c.Query("owner")
-	configs, total, err := model.SearchModelConfigs(keyword, page, perPage, _model, model.ModelOwner(owner))
+	configs, total, err := model.SearchModelConfigs(
+		keyword,
+		page,
+		perPage,
+		_model,
+		model.ModelOwner(owner),
+	)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return

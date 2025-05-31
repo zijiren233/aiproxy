@@ -52,7 +52,10 @@ func (a *Adaptor) GetRequestURL(meta *meta.Meta) (string, error) {
 	return GetRequestURL(meta)
 }
 
-func (a *Adaptor) ConvertRequest(meta *meta.Meta, req *http.Request) (*adaptor.ConvertRequestResult, error) {
+func (a *Adaptor) ConvertRequest(
+	meta *meta.Meta,
+	req *http.Request,
+) (*adaptor.ConvertRequestResult, error) {
 	result, err := a.Adaptor.ConvertRequest(meta, req)
 	if err != nil {
 		return nil, err
@@ -133,7 +136,11 @@ func handlerPreHandler(meta *meta.Meta, node *ast.Node, websearchCount *int64) e
 	})
 }
 
-func (a *Adaptor) DoResponse(meta *meta.Meta, c *gin.Context, resp *http.Response) (usage *model.Usage, err adaptor.Error) {
+func (a *Adaptor) DoResponse(
+	meta *meta.Meta,
+	c *gin.Context,
+	resp *http.Response,
+) (usage *model.Usage, err adaptor.Error) {
 	switch meta.Mode {
 	case mode.ChatCompletions:
 		websearchCount := int64(0)

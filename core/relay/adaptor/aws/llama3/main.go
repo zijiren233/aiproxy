@@ -93,7 +93,11 @@ func ConvertRequest(textRequest *relaymodel.GeneralOpenAIRequest) *Request {
 func Handler(meta *meta.Meta, c *gin.Context) (*model.Usage, adaptor.Error) {
 	awsModelID, err := awsModelID(meta.ActualModel)
 	if err != nil {
-		return nil, relaymodel.WrapperOpenAIErrorWithMessage(err.Error(), nil, http.StatusInternalServerError)
+		return nil, relaymodel.WrapperOpenAIErrorWithMessage(
+			err.Error(),
+			nil,
+			http.StatusInternalServerError,
+		)
 	}
 
 	awsReq := &bedrockruntime.InvokeModelInput{
@@ -104,28 +108,48 @@ func Handler(meta *meta.Meta, c *gin.Context) (*model.Usage, adaptor.Error) {
 
 	llamaReq, ok := meta.Get(ConvertedRequest)
 	if !ok {
-		return nil, relaymodel.WrapperOpenAIErrorWithMessage("request not found", nil, http.StatusInternalServerError)
+		return nil, relaymodel.WrapperOpenAIErrorWithMessage(
+			"request not found",
+			nil,
+			http.StatusInternalServerError,
+		)
 	}
 
 	awsReq.Body, err = sonic.Marshal(llamaReq)
 	if err != nil {
-		return nil, relaymodel.WrapperOpenAIErrorWithMessage(err.Error(), nil, http.StatusInternalServerError)
+		return nil, relaymodel.WrapperOpenAIErrorWithMessage(
+			err.Error(),
+			nil,
+			http.StatusInternalServerError,
+		)
 	}
 
 	awsClient, err := utils.AwsClientFromMeta(meta)
 	if err != nil {
-		return nil, relaymodel.WrapperOpenAIErrorWithMessage(err.Error(), nil, http.StatusInternalServerError)
+		return nil, relaymodel.WrapperOpenAIErrorWithMessage(
+			err.Error(),
+			nil,
+			http.StatusInternalServerError,
+		)
 	}
 
 	awsResp, err := awsClient.InvokeModel(c.Request.Context(), awsReq)
 	if err != nil {
-		return nil, relaymodel.WrapperOpenAIErrorWithMessage(err.Error(), nil, http.StatusInternalServerError)
+		return nil, relaymodel.WrapperOpenAIErrorWithMessage(
+			err.Error(),
+			nil,
+			http.StatusInternalServerError,
+		)
 	}
 
 	var llamaResponse Response
 	err = sonic.Unmarshal(awsResp.Body, &llamaResponse)
 	if err != nil {
-		return nil, relaymodel.WrapperOpenAIErrorWithMessage(err.Error(), nil, http.StatusInternalServerError)
+		return nil, relaymodel.WrapperOpenAIErrorWithMessage(
+			err.Error(),
+			nil,
+			http.StatusInternalServerError,
+		)
 	}
 
 	openaiResp := ResponseLlama2OpenAI(&llamaResponse)
@@ -170,7 +194,11 @@ func StreamHandler(meta *meta.Meta, c *gin.Context) (*model.Usage, adaptor.Error
 	createdTime := time.Now().Unix()
 	awsModelID, err := awsModelID(meta.ActualModel)
 	if err != nil {
-		return nil, relaymodel.WrapperOpenAIErrorWithMessage(err.Error(), nil, http.StatusInternalServerError)
+		return nil, relaymodel.WrapperOpenAIErrorWithMessage(
+			err.Error(),
+			nil,
+			http.StatusInternalServerError,
+		)
 	}
 
 	awsReq := &bedrockruntime.InvokeModelWithResponseStreamInput{
@@ -181,22 +209,38 @@ func StreamHandler(meta *meta.Meta, c *gin.Context) (*model.Usage, adaptor.Error
 
 	llamaReq, ok := meta.Get(ConvertedRequest)
 	if !ok {
-		return nil, relaymodel.WrapperOpenAIErrorWithMessage("request not found", nil, http.StatusInternalServerError)
+		return nil, relaymodel.WrapperOpenAIErrorWithMessage(
+			"request not found",
+			nil,
+			http.StatusInternalServerError,
+		)
 	}
 
 	awsReq.Body, err = sonic.Marshal(llamaReq)
 	if err != nil {
-		return nil, relaymodel.WrapperOpenAIErrorWithMessage(err.Error(), nil, http.StatusInternalServerError)
+		return nil, relaymodel.WrapperOpenAIErrorWithMessage(
+			err.Error(),
+			nil,
+			http.StatusInternalServerError,
+		)
 	}
 
 	awsClient, err := utils.AwsClientFromMeta(meta)
 	if err != nil {
-		return nil, relaymodel.WrapperOpenAIErrorWithMessage(err.Error(), nil, http.StatusInternalServerError)
+		return nil, relaymodel.WrapperOpenAIErrorWithMessage(
+			err.Error(),
+			nil,
+			http.StatusInternalServerError,
+		)
 	}
 
 	awsResp, err := awsClient.InvokeModelWithResponseStream(c.Request.Context(), awsReq)
 	if err != nil {
-		return nil, relaymodel.WrapperOpenAIErrorWithMessage(err.Error(), nil, http.StatusInternalServerError)
+		return nil, relaymodel.WrapperOpenAIErrorWithMessage(
+			err.Error(),
+			nil,
+			http.StatusInternalServerError,
+		)
 	}
 	stream := awsResp.GetStream()
 	defer stream.Close()
@@ -248,7 +292,9 @@ func StreamHandler(meta *meta.Meta, c *gin.Context) (*model.Usage, adaptor.Error
 	return usage.ToModelUsage(), nil
 }
 
-func StreamResponseLlama2OpenAI(llamaResponse *StreamResponse) *relaymodel.ChatCompletionsStreamResponse {
+func StreamResponseLlama2OpenAI(
+	llamaResponse *StreamResponse,
+) *relaymodel.ChatCompletionsStreamResponse {
 	var choice relaymodel.ChatCompletionsStreamResponseChoice
 	choice.Delta.Content = llamaResponse.Generation
 	choice.Delta.Role = "assistant"

@@ -97,7 +97,11 @@ func (p *WebSearch) getConfig(meta *meta.Meta) (Config, error) {
 }
 
 // ConvertRequest intercepts and modifies requests to add web search capabilities
-func (p *WebSearch) ConvertRequest(meta *meta.Meta, req *http.Request, do adaptor.ConvertRequest) (*adaptor.ConvertRequestResult, error) {
+func (p *WebSearch) ConvertRequest(
+	meta *meta.Meta,
+	req *http.Request,
+	do adaptor.ConvertRequest,
+) (*adaptor.ConvertRequestResult, error) {
 	// Skip if not chat completions mode
 	if meta.Mode != mode.ChatCompletions {
 		return do.ConvertRequest(meta, req)
@@ -154,7 +158,11 @@ func (p *WebSearch) ConvertRequest(meta *meta.Meta, req *http.Request, do adapto
 	}
 
 	// Prepare search rewrite prompt if configured
-	searchRewritePrompt := p.prepareSearchRewritePrompt(pluginConfig.SearchRewrite, arxivExists, webSearchOptions)
+	searchRewritePrompt := p.prepareSearchRewritePrompt(
+		pluginConfig.SearchRewrite,
+		arxivExists,
+		webSearchOptions,
+	)
 
 	// Generate search contexts
 	searchContexts, err := p.generateSearchContexts(meta, pluginConfig, query, searchRewritePrompt)
@@ -317,7 +325,11 @@ func (p *WebSearch) extractUserQuery(messages []any) (int, string) {
 }
 
 // prepareSearchRewritePrompt prepares the prompt for search query rewriting
-func (p *WebSearch) prepareSearchRewritePrompt(searchRewrite SearchRewrite, arxivExists bool, webSearchOptions map[string]any) string {
+func (p *WebSearch) prepareSearchRewritePrompt(
+	searchRewrite SearchRewrite,
+	arxivExists bool,
+	webSearchOptions map[string]any,
+) string {
 	if !searchRewrite.Enable {
 		return ""
 	}
@@ -350,7 +362,11 @@ func (p *WebSearch) prepareSearchRewritePrompt(searchRewrite SearchRewrite, arxi
 }
 
 // generateSearchContexts creates search contexts based on the user query
-func (p *WebSearch) generateSearchContexts(m *meta.Meta, config Config, query string, searchRewritePrompt string) ([]engine.SearchQuery, error) {
+func (p *WebSearch) generateSearchContexts(
+	m *meta.Meta,
+	config Config,
+	query, searchRewritePrompt string,
+) ([]engine.SearchQuery, error) {
 	if searchRewritePrompt == "" {
 		return []engine.SearchQuery{{
 			Queries:  []string{query},
@@ -442,7 +458,7 @@ func (p *WebSearch) generateSearchContexts(m *meta.Meta, config Config, query st
 }
 
 // parseSearchContexts extracts search queries from LLM response
-func (p *WebSearch) parseSearchContexts(defaultLanguage string, content string) []engine.SearchQuery {
+func (p *WebSearch) parseSearchContexts(defaultLanguage, content string) []engine.SearchQuery {
 	var searchContexts []engine.SearchQuery
 	for _, line := range strings.Split(content, "\n") {
 		line = strings.TrimSpace(line)
@@ -461,8 +477,8 @@ func (p *WebSearch) parseSearchContexts(defaultLanguage string, content string) 
 		var ctx engine.SearchQuery
 		ctx.Language = defaultLanguage
 
-		switch {
-		case engineType == "internet":
+		switch engineType {
+		case "internet":
 			ctx.Queries = []string{queryStr}
 		default:
 			// Arxiv category
@@ -493,7 +509,11 @@ type searchResult struct {
 }
 
 // executeSearches performs searches using all configured engines
-func (p *WebSearch) executeSearches(ctx context.Context, engines []engine.Engine, searchContexts []engine.SearchQuery) *searchResult {
+func (p *WebSearch) executeSearches(
+	ctx context.Context,
+	engines []engine.Engine,
+	searchContexts []engine.SearchQuery,
+) *searchResult {
 	var allResults []engine.SearchResult
 	var mu sync.Mutex
 
@@ -542,7 +562,18 @@ func (p *WebSearch) executeSearches(ctx context.Context, engines []engine.Engine
 }
 
 // formatSearchResults formats search results for the prompt
-func (p *WebSearch) formatSearchResults(messages []any, queryIndex int, query string, searchResults []engine.SearchResult, config Config) {
+func (p *WebSearch) formatSearchResults(
+	messages []any,
+	queryIndex int,
+	query string,
+	searchResults []engine.SearchResult,
+	config Config,
+) {
+	message, ok := messages[queryIndex].(map[string]any)
+	if !ok {
+		return
+	}
+
 	var formattedResults []string
 
 	for i, result := range searchResults {
@@ -564,7 +595,7 @@ func (p *WebSearch) formatSearchResults(messages []any, queryIndex int, query st
 	prompt = strings.Replace(prompt, "{cur_date}", curDate, 1)
 
 	// Update message
-	messages[queryIndex].(map[string]any)["content"] = prompt
+	message["content"] = prompt
 }
 
 // Custom response writer to handle metadata and references
@@ -630,7 +661,10 @@ func (rw *responseWriter) processWebSearchCount(node *ast.Node) {
 	if existingCount != nil && existingCount.Valid() {
 		// If exists, add to the existing value
 		currentCount, _ := existingCount.Int64()
-		_, _ = usageNode.Set("web_search_count", ast.NewNumber(strconv.FormatInt(currentCount+int64(rw.webSearchCount), 10)))
+		_, _ = usageNode.Set(
+			"web_search_count",
+			ast.NewNumber(strconv.FormatInt(currentCount+int64(rw.webSearchCount), 10)),
+		)
 	} else {
 		// If not exists, set the value
 		_, _ = usageNode.Set("web_search_count", ast.NewNumber(strconv.FormatInt(int64(rw.webSearchCount), 10)))
@@ -654,7 +688,7 @@ func (rw *responseWriter) processReferences(node *ast.Node) {
 
 	if rw.referencesLocation == "" || rw.referencesLocation == "content" {
 		var contentNode *ast.Node
-		if rw.isStream || utils.IsStreamResponseWithHeader(rw.ResponseWriter.Header()) {
+		if rw.isStream || utils.IsStreamResponseWithHeader(rw.Header()) {
 			rw.isStream = true
 			contentNode = node.GetByPath("choices", 0, "delta", "content")
 		} else {
@@ -675,7 +709,7 @@ func (rw *responseWriter) processReferences(node *ast.Node) {
 		}
 	} else {
 		var outterLocation *ast.Node
-		if rw.isStream || utils.IsStreamResponseWithHeader(rw.ResponseWriter.Header()) {
+		if rw.isStream || utils.IsStreamResponseWithHeader(rw.Header()) {
 			rw.isStream = true
 			outterLocation = node.GetByPath("choices", 0, "delta")
 		} else {
@@ -693,7 +727,12 @@ func (rw *responseWriter) WriteString(s string) (int, error) {
 }
 
 // DoResponse handles response modification for references
-func (p *WebSearch) DoResponse(meta *meta.Meta, c *gin.Context, resp *http.Response, do adaptor.DoResponse) (*model.Usage, adaptor.Error) {
+func (p *WebSearch) DoResponse(
+	meta *meta.Meta,
+	c *gin.Context,
+	resp *http.Response,
+	do adaptor.DoResponse,
+) (*model.Usage, adaptor.Error) {
 	if meta.Mode != mode.ChatCompletions {
 		return do.DoResponse(meta, c, resp)
 	}
@@ -738,7 +777,13 @@ func (p *WebSearch) DoResponse(meta *meta.Meta, c *gin.Context, resp *http.Respo
 }
 
 // doResponseWithCount adds search count to usage statistics
-func (p *WebSearch) doResponseWithCount(meta *meta.Meta, c *gin.Context, resp *http.Response, do adaptor.DoResponse, count int) (*model.Usage, adaptor.Error) {
+func (p *WebSearch) doResponseWithCount(
+	meta *meta.Meta,
+	c *gin.Context,
+	resp *http.Response,
+	do adaptor.DoResponse,
+	count int,
+) (*model.Usage, adaptor.Error) {
 	u, err := do.DoResponse(meta, c, resp)
 	if err != nil {
 		return u, err

@@ -26,17 +26,25 @@ func EmbeddingsHandler(c *gin.Context, resp *http.Response) (*model.Usage, adapt
 	var zhipuResponse EmbeddingResponse
 	err := sonic.ConfigDefault.NewDecoder(resp.Body).Decode(&zhipuResponse)
 	if err != nil {
-		return nil, relaymodel.WrapperOpenAIError(err, "unmarshal_response_body_failed", http.StatusInternalServerError)
+		return nil, relaymodel.WrapperOpenAIError(
+			err,
+			"unmarshal_response_body_failed",
+			http.StatusInternalServerError,
+		)
 	}
 	fullTextResponse := embeddingResponseZhipu2OpenAI(&zhipuResponse)
 	jsonResponse, err := sonic.Marshal(fullTextResponse)
 	if err != nil {
-		return nil, relaymodel.WrapperOpenAIError(err, "marshal_response_body_failed", http.StatusInternalServerError)
+		return nil, relaymodel.WrapperOpenAIError(
+			err,
+			"marshal_response_body_failed",
+			http.StatusInternalServerError,
+		)
 	}
 	c.Writer.Header().Set("Content-Type", "application/json")
 	c.Writer.WriteHeader(resp.StatusCode)
 	_, _ = c.Writer.Write(jsonResponse)
-	return fullTextResponse.Usage.ToModelUsage(), nil
+	return fullTextResponse.ToModelUsage(), nil
 }
 
 func embeddingResponseZhipu2OpenAI(response *EmbeddingResponse) *relaymodel.EmbeddingResponse {
@@ -47,16 +55,19 @@ func embeddingResponseZhipu2OpenAI(response *EmbeddingResponse) *relaymodel.Embe
 		Usage: relaymodel.Usage{
 			PromptTokens:     response.PromptTokens,
 			CompletionTokens: response.CompletionTokens,
-			TotalTokens:      response.Usage.TotalTokens,
+			TotalTokens:      response.TotalTokens,
 		},
 	}
 
 	for _, item := range response.Embeddings {
-		openAIEmbeddingResponse.Data = append(openAIEmbeddingResponse.Data, &relaymodel.EmbeddingResponseItem{
-			Object:    `embedding`,
-			Index:     item.Index,
-			Embedding: item.Embedding,
-		})
+		openAIEmbeddingResponse.Data = append(
+			openAIEmbeddingResponse.Data,
+			&relaymodel.EmbeddingResponseItem{
+				Object:    `embedding`,
+				Index:     item.Index,
+				Embedding: item.Embedding,
+			},
+		)
 	}
 	return &openAIEmbeddingResponse
 }

@@ -211,7 +211,8 @@ func CacheUpdateTokenUsedAmountOnlyIncrease(key string, amount float64) error {
 	if !common.RedisEnabled {
 		return nil
 	}
-	return updateTokenUsedAmountOnlyIncreaseScript.Run(context.Background(), common.RDB, []string{fmt.Sprintf(TokenCacheKey, key)}, amount).Err()
+	return updateTokenUsedAmountOnlyIncreaseScript.Run(context.Background(), common.RDB, []string{fmt.Sprintf(TokenCacheKey, key)}, amount).
+		Err()
 }
 
 var updateTokenNameScript = redis.NewScript(`
@@ -221,11 +222,12 @@ var updateTokenNameScript = redis.NewScript(`
 	return redis.status_reply("ok")
 `)
 
-func CacheUpdateTokenName(key string, name string) error {
+func CacheUpdateTokenName(key, name string) error {
 	if !common.RedisEnabled {
 		return nil
 	}
-	return updateTokenNameScript.Run(context.Background(), common.RDB, []string{fmt.Sprintf(TokenCacheKey, key)}, name).Err()
+	return updateTokenNameScript.Run(context.Background(), common.RDB, []string{fmt.Sprintf(TokenCacheKey, key)}, name).
+		Err()
 }
 
 var updateTokenStatusScript = redis.NewScript(`
@@ -239,7 +241,8 @@ func CacheUpdateTokenStatus(key string, status int) error {
 	if !common.RedisEnabled {
 		return nil
 	}
-	return updateTokenStatusScript.Run(context.Background(), common.RDB, []string{fmt.Sprintf(TokenCacheKey, key)}, status).Err()
+	return updateTokenStatusScript.Run(context.Background(), common.RDB, []string{fmt.Sprintf(TokenCacheKey, key)}, status).
+		Err()
 }
 
 type redisMap[K comparable, V any] map[K]V
@@ -318,7 +321,8 @@ func CacheUpdateGroupRPMRatio(id string, rpmRatio float64) error {
 	if !common.RedisEnabled {
 		return nil
 	}
-	return updateGroupRPMRatioScript.Run(context.Background(), common.RDB, []string{fmt.Sprintf(GroupCacheKey, id)}, rpmRatio).Err()
+	return updateGroupRPMRatioScript.Run(context.Background(), common.RDB, []string{fmt.Sprintf(GroupCacheKey, id)}, rpmRatio).
+		Err()
 }
 
 var updateGroupTPMRatioScript = redis.NewScript(`
@@ -332,7 +336,8 @@ func CacheUpdateGroupTPMRatio(id string, tpmRatio float64) error {
 	if !common.RedisEnabled {
 		return nil
 	}
-	return updateGroupTPMRatioScript.Run(context.Background(), common.RDB, []string{fmt.Sprintf(GroupCacheKey, id)}, tpmRatio).Err()
+	return updateGroupTPMRatioScript.Run(context.Background(), common.RDB, []string{fmt.Sprintf(GroupCacheKey, id)}, tpmRatio).
+		Err()
 }
 
 var updateGroupStatusScript = redis.NewScript(`
@@ -346,7 +351,8 @@ func CacheUpdateGroupStatus(id string, status int) error {
 	if !common.RedisEnabled {
 		return nil
 	}
-	return updateGroupStatusScript.Run(context.Background(), common.RDB, []string{fmt.Sprintf(GroupCacheKey, id)}, status).Err()
+	return updateGroupStatusScript.Run(context.Background(), common.RDB, []string{fmt.Sprintf(GroupCacheKey, id)}, status).
+		Err()
 }
 
 //nolint:gosec
@@ -412,7 +418,8 @@ func CacheUpdateGroupUsedAmountOnlyIncrease(id string, amount float64) error {
 	if !common.RedisEnabled {
 		return nil
 	}
-	return updateGroupUsedAmountOnlyIncreaseScript.Run(context.Background(), common.RDB, []string{fmt.Sprintf(GroupCacheKey, id)}, amount).Err()
+	return updateGroupUsedAmountOnlyIncreaseScript.Run(context.Background(), common.RDB, []string{fmt.Sprintf(GroupCacheKey, id)}, amount).
+		Err()
 }
 
 type GroupMCPCache struct {
@@ -503,7 +510,8 @@ func CacheUpdateGroupMCPStatus(groupID, mcpID string, status GroupMCPStatus) err
 	if !common.RedisEnabled {
 		return nil
 	}
-	return updateGroupMCPStatusScript.Run(context.Background(), common.RDB, []string{fmt.Sprintf(GroupMCPCacheKey, groupID, mcpID)}, status).Err()
+	return updateGroupMCPStatusScript.Run(context.Background(), common.RDB, []string{fmt.Sprintf(GroupMCPCacheKey, groupID, mcpID)}, status).
+		Err()
 }
 
 type PublicMCPCache struct {
@@ -596,7 +604,8 @@ func CacheUpdatePublicMCPStatus(mcpID string, status PublicMCPStatus) error {
 	if !common.RedisEnabled {
 		return nil
 	}
-	return updatePublicMCPStatusScript.Run(context.Background(), common.RDB, []string{fmt.Sprintf(PublicMCPCacheKey, mcpID)}, status).Err()
+	return updatePublicMCPStatusScript.Run(context.Background(), common.RDB, []string{fmt.Sprintf(PublicMCPCacheKey, mcpID)}, status).
+		Err()
 }
 
 const (
@@ -724,7 +733,10 @@ func InitModelConfigAndChannelCache() error {
 	sortChannelsByPriorityBySet(enabledModel2ChannelsBySet)
 
 	// Build enabled models and configs by set
-	enabledModelsBySet, enabledModelConfigsBySet, enabledModelConfigsMap := buildEnabledModelsBySet(enabledModel2ChannelsBySet, modelConfig)
+	enabledModelsBySet, enabledModelConfigsBySet, enabledModelConfigsMap := buildEnabledModelsBySet(
+		enabledModel2ChannelsBySet,
+		modelConfig,
+	)
 
 	// Load disabled channels
 	disabledChannels, err := LoadDisabledChannels()
@@ -903,7 +915,10 @@ func sortChannelsByPriorityBySet(modelMapBySet map[string]map[string][]*Channel)
 	}
 }
 
-func buildEnabledModelsBySet(modelMapBySet map[string]map[string][]*Channel, modelConfigCache ModelConfigCache) (
+func buildEnabledModelsBySet(
+	modelMapBySet map[string]map[string][]*Channel,
+	modelConfigCache ModelConfigCache,
+) (
 	map[string][]string,
 	map[string][]ModelConfig,
 	map[string]ModelConfig,
@@ -962,7 +977,11 @@ func SortModelConfigsFunc(i, j ModelConfig) int {
 	return 1
 }
 
-func SyncModelConfigAndChannelCache(ctx context.Context, wg *sync.WaitGroup, frequency time.Duration) {
+func SyncModelConfigAndChannelCache(
+	ctx context.Context,
+	wg *sync.WaitGroup,
+	frequency time.Duration,
+) {
 	defer wg.Done()
 
 	ticker := time.NewTicker(frequency)
@@ -974,7 +993,12 @@ func SyncModelConfigAndChannelCache(ctx context.Context, wg *sync.WaitGroup, fre
 		case <-ticker.C:
 			err := InitModelConfigAndChannelCache()
 			if err != nil {
-				notify.ErrorThrottle("syncModelChannel", time.Minute, "failed to sync channels", err.Error())
+				notify.ErrorThrottle(
+					"syncModelChannel",
+					time.Minute,
+					"failed to sync channels",
+					err.Error(),
+				)
 			}
 		}
 	}

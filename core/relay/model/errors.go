@@ -15,7 +15,12 @@ func WrapperError(m mode.Mode, statusCode int, err error, typ ...string) adaptor
 	return WrapperErrorWithMessage(m, statusCode, err.Error(), typ...)
 }
 
-func WrapperErrorWithMessage(m mode.Mode, statusCode int, message string, typ ...string) adaptor.Error {
+func WrapperErrorWithMessage(
+	m mode.Mode,
+	statusCode int,
+	message string,
+	typ ...string,
+) adaptor.Error {
 	respType := ErrorTypeAIPROXY
 	if len(typ) > 0 {
 		respType = typ[0]

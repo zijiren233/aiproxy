@@ -25,7 +25,12 @@ type SSEAProxy struct {
 }
 
 // NewSSEProxy creates a new proxy with the given backend and endpoint handler
-func NewSSEProxy(backend string, headers map[string]string, store SessionManager, endpoint EndpointProvider) *SSEAProxy {
+func NewSSEProxy(
+	backend string,
+	headers map[string]string,
+	store SessionManager,
+	endpoint EndpointProvider,
+) *SSEAProxy {
 	return &SSEAProxy{
 		store:    store,
 		endpoint: endpoint,

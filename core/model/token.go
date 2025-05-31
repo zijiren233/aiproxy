@@ -27,17 +27,17 @@ const (
 type Token struct {
 	CreatedAt    time.Time       `json:"created_at"`
 	ExpiredAt    time.Time       `json:"expired_at"`
-	Group        *Group          `gorm:"foreignKey:GroupID"                        json:"-"`
-	Key          string          `gorm:"type:char(48);uniqueIndex"                 json:"key"`
-	Name         EmptyNullString `gorm:"index;uniqueIndex:idx_group_name;not null" json:"name"`
-	GroupID      string          `gorm:"index;uniqueIndex:idx_group_name"          json:"group"`
-	Subnets      []string        `gorm:"serializer:fastjson;type:text"             json:"subnets"`
-	Models       []string        `gorm:"serializer:fastjson;type:text"             json:"models"`
-	Status       int             `gorm:"default:1;index"                           json:"status"`
-	ID           int             `gorm:"primaryKey"                                json:"id"`
+	Group        *Group          `json:"-"             gorm:"foreignKey:GroupID"`
+	Key          string          `json:"key"           gorm:"type:char(48);uniqueIndex"`
+	Name         EmptyNullString `json:"name"          gorm:"index;uniqueIndex:idx_group_name;not null"`
+	GroupID      string          `json:"group"         gorm:"index;uniqueIndex:idx_group_name"`
+	Subnets      []string        `json:"subnets"       gorm:"serializer:fastjson;type:text"`
+	Models       []string        `json:"models"        gorm:"serializer:fastjson;type:text"`
+	Status       int             `json:"status"        gorm:"default:1;index"`
+	ID           int             `json:"id"            gorm:"primaryKey"`
 	Quota        float64         `json:"quota"`
-	UsedAmount   float64         `gorm:"index"                                     json:"used_amount"`
-	RequestCount int             `gorm:"index"                                     json:"request_count"`
+	UsedAmount   float64         `json:"used_amount"   gorm:"index"`
+	RequestCount int             `json:"request_count" gorm:"index"`
 }
 
 func (t *Token) BeforeCreate(_ *gorm.DB) (err error) {
@@ -75,7 +75,7 @@ func getTokenOrder(order string) string {
 	}
 }
 
-func InsertToken(token *Token, autoCreateGroup bool, ignoreExist bool) error {
+func InsertToken(token *Token, autoCreateGroup, ignoreExist bool) error {
 	if autoCreateGroup {
 		group := &Group{
 			ID: token.GroupID,
@@ -115,7 +115,12 @@ func InsertToken(token *Token, autoCreateGroup bool, ignoreExist bool) error {
 	return nil
 }
 
-func GetTokens(group string, page int, perPage int, order string, status int) (tokens []*Token, total int64, err error) {
+func GetTokens(
+	group string,
+	page, perPage int,
+	order string,
+	status int,
+) (tokens []*Token, total int64, err error) {
 	tx := DB.Model(&Token{})
 	if group != "" {
 		tx = tx.Where("group_id = ?", group)
@@ -138,7 +143,13 @@ func GetTokens(group string, page int, perPage int, order string, status int) (t
 	return tokens, total, err
 }
 
-func SearchTokens(group string, keyword string, page int, perPage int, order string, status int, name string, key string) (tokens []*Token, total int64, err error) {
+func SearchTokens(
+	group, keyword string,
+	page, perPage int,
+	order string,
+	status int,
+	name, key string,
+) (tokens []*Token, total int64, err error) {
 	tx := DB.Model(&Token{})
 	if group != "" {
 		tx = tx.Where("group_id = ?", group)
@@ -211,7 +222,13 @@ func SearchTokens(group string, keyword string, page int, perPage int, order str
 	return tokens, total, err
 }
 
-func SearchGroupTokens(group string, keyword string, page int, perPage int, order string, status int, name string, key string) (tokens []*Token, total int64, err error) {
+func SearchGroupTokens(
+	group, keyword string,
+	page, perPage int,
+	order string,
+	status int,
+	name, key string,
+) (tokens []*Token, total int64, err error) {
 	if group == "" {
 		return nil, 0, errors.New("group is empty")
 	}
@@ -331,7 +348,7 @@ func GetTokenByID(id int) (*Token, error) {
 	return &token, HandleNotFound(err, ErrTokenNotFound)
 }
 
-func UpdateTokenStatus(id int, status int) (err error) {
+func UpdateTokenStatus(id, status int) (err error) {
 	token := Token{ID: id}
 	defer func() {
 		if err == nil {
@@ -356,7 +373,7 @@ func UpdateTokenStatus(id int, status int) (err error) {
 	return HandleUpdateResult(result, ErrTokenNotFound)
 }
 
-func UpdateGroupTokenStatus(group string, id int, status int) (err error) {
+func UpdateGroupTokenStatus(group string, id, status int) (err error) {
 	if id == 0 || group == "" {
 		return errors.New("id or group is empty")
 	}

@@ -19,7 +19,10 @@ import (
 	relaymodel "github.com/labring/aiproxy/core/relay/model"
 )
 
-func ConvertImagesRequest(meta *meta.Meta, req *http.Request) (*adaptor.ConvertRequestResult, error) {
+func ConvertImagesRequest(
+	meta *meta.Meta,
+	req *http.Request,
+) (*adaptor.ConvertRequestResult, error) {
 	node, err := common.UnmarshalBody2Node(req)
 	if err != nil {
 		return nil, err
@@ -47,7 +50,10 @@ func ConvertImagesRequest(meta *meta.Meta, req *http.Request) (*adaptor.ConvertR
 	}, nil
 }
 
-func ConvertImagesEditsRequest(meta *meta.Meta, request *http.Request) (*adaptor.ConvertRequestResult, error) {
+func ConvertImagesEditsRequest(
+	meta *meta.Meta,
+	request *http.Request,
+) (*adaptor.ConvertRequestResult, error) {
 	err := request.ParseMultipartForm(1024 * 1024 * 4)
 	if err != nil {
 		return nil, err
@@ -110,7 +116,11 @@ func ConvertImagesEditsRequest(meta *meta.Meta, request *http.Request) (*adaptor
 	}, nil
 }
 
-func ImagesHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, adaptor.Error) {
+func ImagesHandler(
+	meta *meta.Meta,
+	c *gin.Context,
+	resp *http.Response,
+) (*model.Usage, adaptor.Error) {
 	if resp.StatusCode != http.StatusOK {
 		return nil, ErrorHanlder(resp)
 	}
@@ -121,12 +131,20 @@ func ImagesHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model
 
 	responseBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, relaymodel.WrapperOpenAIError(err, "read_response_body_failed", http.StatusInternalServerError)
+		return nil, relaymodel.WrapperOpenAIError(
+			err,
+			"read_response_body_failed",
+			http.StatusInternalServerError,
+		)
 	}
 	var imageResponse relaymodel.ImageResponse
 	err = sonic.Unmarshal(responseBody, &imageResponse)
 	if err != nil {
-		return nil, relaymodel.WrapperOpenAIError(err, "unmarshal_response_body_failed", http.StatusInternalServerError)
+		return nil, relaymodel.WrapperOpenAIError(
+			err,
+			"unmarshal_response_body_failed",
+			http.StatusInternalServerError,
+		)
 	}
 
 	usage := &model.Usage{
@@ -146,14 +164,22 @@ func ImagesHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model
 			}
 			_, data.B64Json, err = image.GetImageFromURL(c.Request.Context(), data.URL)
 			if err != nil {
-				return usage, relaymodel.WrapperOpenAIError(err, "get_image_from_url_failed", http.StatusInternalServerError)
+				return usage, relaymodel.WrapperOpenAIError(
+					err,
+					"get_image_from_url_failed",
+					http.StatusInternalServerError,
+				)
 			}
 		}
 	}
 
 	data, err := sonic.Marshal(imageResponse)
 	if err != nil {
-		return usage, relaymodel.WrapperOpenAIError(err, "marshal_response_body_failed", http.StatusInternalServerError)
+		return usage, relaymodel.WrapperOpenAIError(
+			err,
+			"marshal_response_body_failed",
+			http.StatusInternalServerError,
+		)
 	}
 
 	_, err = c.Writer.Write(data)

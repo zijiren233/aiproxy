@@ -27,8 +27,13 @@ func (a *Adaptor) GetModelList() []model.ModelConfig {
 	return ModelList
 }
 
+//
 //nolint:gocritic
-func (a *Adaptor) DoResponse(meta *meta.Meta, c *gin.Context, resp *http.Response) (usage *model.Usage, err adaptor.Error) {
+func (a *Adaptor) DoResponse(
+	meta *meta.Meta,
+	c *gin.Context,
+	resp *http.Response,
+) (usage *model.Usage, err adaptor.Error) {
 	usage, err = a.Adaptor.DoResponse(meta, c, resp)
 	if err != nil {
 		return nil, err

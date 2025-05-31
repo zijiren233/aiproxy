@@ -38,7 +38,12 @@ func (p *ThinkPlugin) getConfig(meta *meta.Meta) (*Config, error) {
 }
 
 // DoResponse handles the response processing to split think content
-func (p *ThinkPlugin) DoResponse(meta *meta.Meta, c *gin.Context, resp *http.Response, do adaptor.DoResponse) (*model.Usage, adaptor.Error) {
+func (p *ThinkPlugin) DoResponse(
+	meta *meta.Meta,
+	c *gin.Context,
+	resp *http.Response,
+	do adaptor.DoResponse,
+) (*model.Usage, adaptor.Error) {
 	// Only process chat completions
 	if meta.Mode != mode.ChatCompletions {
 		return do.DoResponse(meta, c, resp)
@@ -54,7 +59,12 @@ func (p *ThinkPlugin) DoResponse(meta *meta.Meta, c *gin.Context, resp *http.Res
 }
 
 // handleResponse processes streaming responses
-func (p *ThinkPlugin) handleResponse(meta *meta.Meta, c *gin.Context, resp *http.Response, do adaptor.DoResponse) (*model.Usage, adaptor.Error) {
+func (p *ThinkPlugin) handleResponse(
+	meta *meta.Meta,
+	c *gin.Context,
+	resp *http.Response,
+	do adaptor.DoResponse,
+) (*model.Usage, adaptor.Error) {
 	// Create a custom response writer
 	rw := &thinkResponseWriter{
 		ResponseWriter: c.Writer,
@@ -99,7 +109,7 @@ func (rw *thinkResponseWriter) Write(b []byte) (int, error) {
 	}
 
 	// Check if this is a streaming response chunk
-	if rw.isStream || utils.IsStreamResponseWithHeader(rw.ResponseWriter.Header()) {
+	if rw.isStream || utils.IsStreamResponseWithHeader(rw.Header()) {
 		rw.isStream = true
 
 		rw.done = StreamSplitThink(respMap, rw.getThinkSplitter())

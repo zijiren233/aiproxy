@@ -14,7 +14,11 @@ import (
 	relaymodel "github.com/labring/aiproxy/core/relay/model"
 )
 
-func ModerationsHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, adaptor.Error) {
+func ModerationsHandler(
+	meta *meta.Meta,
+	c *gin.Context,
+	resp *http.Response,
+) (*model.Usage, adaptor.Error) {
 	if resp.StatusCode != http.StatusOK {
 		return nil, ErrorHanlder(resp)
 	}
@@ -25,21 +29,37 @@ func ModerationsHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, relaymodel.WrapperOpenAIError(err, "read_response_body_failed", http.StatusInternalServerError)
+		return nil, relaymodel.WrapperOpenAIError(
+			err,
+			"read_response_body_failed",
+			http.StatusInternalServerError,
+		)
 	}
 
 	node, err := sonic.Get(body)
 	if err != nil {
-		return nil, relaymodel.WrapperOpenAIError(err, "unmarshal_response_body_failed", http.StatusInternalServerError)
+		return nil, relaymodel.WrapperOpenAIError(
+			err,
+			"unmarshal_response_body_failed",
+			http.StatusInternalServerError,
+		)
 	}
 
 	if _, err := node.Set("model", ast.NewString(meta.OriginModel)); err != nil {
-		return nil, relaymodel.WrapperOpenAIError(err, "set_model_failed", http.StatusInternalServerError)
+		return nil, relaymodel.WrapperOpenAIError(
+			err,
+			"set_model_failed",
+			http.StatusInternalServerError,
+		)
 	}
 
 	newData, err := node.MarshalJSON()
 	if err != nil {
-		return nil, relaymodel.WrapperOpenAIError(err, "marshal_response_body_failed", http.StatusInternalServerError)
+		return nil, relaymodel.WrapperOpenAIError(
+			err,
+			"marshal_response_body_failed",
+			http.StatusInternalServerError,
+		)
 	}
 
 	usage := &model.Usage{

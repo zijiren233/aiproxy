@@ -106,7 +106,11 @@ func updateChannelModelTokensRequestRate(c *gin.Context, meta *meta.Meta, tpm, t
 	log.Data["ch_tps"] = tps
 }
 
-func (w *wrapAdaptor) DoRequest(meta *meta.Meta, c *gin.Context, req *http.Request) (*http.Response, error) {
+func (w *wrapAdaptor) DoRequest(
+	meta *meta.Meta,
+	c *gin.Context,
+	req *http.Request,
+) (*http.Response, error) {
 	count, overLimitCount, secondCount := reqlimit.PushChannelModelRequest(
 		context.Background(),
 		strconv.Itoa(meta.Channel.ID),
@@ -116,7 +120,11 @@ func (w *wrapAdaptor) DoRequest(meta *meta.Meta, c *gin.Context, req *http.Reque
 	return w.Adaptor.DoRequest(meta, c, req)
 }
 
-func (w *wrapAdaptor) DoResponse(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, adaptor.Error) {
+func (w *wrapAdaptor) DoResponse(
+	meta *meta.Meta,
+	c *gin.Context,
+	resp *http.Response,
+) (*model.Usage, adaptor.Error) {
 	usage, relayErr := w.Adaptor.DoResponse(meta, c, resp)
 	if usage == nil {
 		return nil, relayErr
@@ -218,7 +226,11 @@ func relayController(m mode.Mode) RelayController {
 	return c
 }
 
-func RelayHelper(c *gin.Context, meta *meta.Meta, handel RelayHandler) (*controller.HandleResult, bool) {
+func RelayHelper(
+	c *gin.Context,
+	meta *meta.Meta,
+	handel RelayHandler,
+) (*controller.HandleResult, bool) {
 	result := handel(c, meta)
 	if result.Error == nil {
 		if _, _, err := monitor.AddRequest(
@@ -251,7 +263,13 @@ func RelayHelper(c *gin.Context, meta *meta.Meta, handel RelayHandler) (*control
 		case banExecution:
 			notifyChannelIssue(c, meta, "autoBanned", "Auto Banned", result.Error)
 		case beyondThreshold:
-			notifyChannelIssue(c, meta, "beyondThreshold", "Error Rate Beyond Threshold", result.Error)
+			notifyChannelIssue(
+				c,
+				meta,
+				"beyondThreshold",
+				"Error Rate Beyond Threshold",
+				result.Error,
+			)
 		case !hasPermission:
 			notifyChannelIssue(c, meta, "channelHasPermission", "No Permission", result.Error)
 		}
@@ -259,17 +277,22 @@ func RelayHelper(c *gin.Context, meta *meta.Meta, handel RelayHandler) (*control
 	return result, shouldRetry
 }
 
-func notifyChannelIssue(c *gin.Context, meta *meta.Meta, issueType string, titleSuffix string, err adaptor.Error) {
-	var notifyFunc func(title string, message string)
+func notifyChannelIssue(
+	c *gin.Context,
+	meta *meta.Meta,
+	issueType, titleSuffix string,
+	err adaptor.Error,
+) {
+	var notifyFunc func(title, message string)
 
 	lockKey := fmt.Sprintf("%s:%d:%s", issueType, meta.Channel.ID, meta.OriginModel)
 	switch issueType {
 	case "beyondThreshold":
-		notifyFunc = func(title string, message string) {
+		notifyFunc = func(title, message string) {
 			notify.WarnThrottle(lockKey, time.Minute, title, message)
 		}
 	default:
-		notifyFunc = func(title string, message string) {
+		notifyFunc = func(title, message string) {
 			notify.ErrorThrottle(lockKey, time.Minute, title, message)
 		}
 	}
@@ -301,7 +324,13 @@ func notifyChannelIssue(c *gin.Context, meta *meta.Meta, issueType string, title
 		}
 
 		rate := getChannelModelRequestRate(c, meta)
-		message += fmt.Sprintf("\nrpm: %d\nrps: %d\ntpm: %d\ntps: %d", rate.RPM, rate.RPS, rate.TPM, rate.TPS)
+		message += fmt.Sprintf(
+			"\nrpm: %d\nrps: %d\ntpm: %d\ntps: %d",
+			rate.RPM,
+			rate.RPS,
+			rate.TPM,
+			rate.TPS,
+		)
 	}
 
 	notifyFunc(
@@ -329,7 +358,13 @@ var (
 	ErrChannelsExhausted = errors.New("channels exhausted")
 )
 
-func GetRandomChannel(mc *model.ModelCaches, availableSet []string, modelName string, errorRates map[int64]float64, ignoreChannel ...int64) (*model.Channel, []*model.Channel, error) {
+func GetRandomChannel(
+	mc *model.ModelCaches,
+	availableSet []string,
+	modelName string,
+	errorRates map[int64]float64,
+	ignoreChannel ...int64,
+) (*model.Channel, []*model.Channel, error) {
 	channelMap := make(map[int]*model.Channel)
 	if len(availableSet) != 0 {
 		for _, set := range availableSet {
@@ -362,8 +397,13 @@ func getPriority(channel *model.Channel, errorRate float64) int32 {
 	return int32(float64(priority) / errorRate)
 }
 
+//
 //nolint:gosec
-func getRandomChannel(channels []*model.Channel, errorRates map[int64]float64, ignoreChannel ...int64) (*model.Channel, error) {
+func getRandomChannel(
+	channels []*model.Channel,
+	errorRates map[int64]float64,
+	ignoreChannel ...int64,
+) (*model.Channel, error) {
 	if len(channels) == 0 {
 		return nil, ErrChannelsNotFound
 	}
@@ -400,8 +440,19 @@ func getRandomChannel(channels []*model.Channel, errorRates map[int64]float64, i
 	return channels[rand.IntN(len(channels))], nil
 }
 
-func getChannelWithFallback(cache *model.ModelCaches, availableSet []string, modelName string, errorRates map[int64]float64, ignoreChannelIDs ...int64) (*model.Channel, []*model.Channel, error) {
-	channel, migratedChannels, err := GetRandomChannel(cache, availableSet, modelName, errorRates, ignoreChannelIDs...)
+func getChannelWithFallback(
+	cache *model.ModelCaches,
+	availableSet []string,
+	modelName string,
+	errorRates map[int64]float64,
+	ignoreChannelIDs ...int64,
+) (*model.Channel, []*model.Channel, error) {
+	channel, migratedChannels, err := GetRandomChannel(
+		cache,
+		availableSet,
+		modelName,
+		errorRates,
+		ignoreChannelIDs...)
 	if err == nil {
 		return channel, migratedChannels, nil
 	}
@@ -419,7 +470,12 @@ func NewRelay(mode mode.Mode) func(c *gin.Context) {
 	}
 }
 
-func NewMetaByContext(c *gin.Context, channel *model.Channel, mode mode.Mode, opts ...meta.Option) *meta.Meta {
+func NewMetaByContext(
+	c *gin.Context,
+	channel *model.Channel,
+	mode mode.Mode,
+	opts ...meta.Option,
+) *meta.Meta {
 	return middleware.NewMetaByContext(c, channel, mode, opts...)
 }
 
@@ -615,7 +671,12 @@ func getInitialChannel(c *gin.Context, modelName string) (*initialChannel, error
 	group := middleware.GetGroup(c)
 	availableSet := group.GetAvailableSets()
 
-	channel, migratedChannels, err := getChannelWithFallback(mc, availableSet, modelName, errorRates, ids...)
+	channel, migratedChannels, err := getChannelWithFallback(
+		mc,
+		availableSet,
+		modelName,
+		errorRates,
+		ids...)
 	if err != nil {
 		return nil, err
 	}
@@ -651,7 +712,12 @@ func getWebSearchChannel(c *gin.Context, modelName string) (*model.Channel, erro
 	return channel, nil
 }
 
-func handleRelayResult(c *gin.Context, bizErr adaptor.Error, retry bool, retryTimes int) (done bool) {
+func handleRelayResult(
+	c *gin.Context,
+	bizErr adaptor.Error,
+	retry bool,
+	retryTimes int,
+) (done bool) {
 	if bizErr == nil {
 		return true
 	}
@@ -664,7 +730,13 @@ func handleRelayResult(c *gin.Context, bizErr adaptor.Error, retry bool, retryTi
 	return false
 }
 
-func initRetryState(retryTimes int, channel *initialChannel, meta *meta.Meta, result *controller.HandleResult, price model.Price) *retryState {
+func initRetryState(
+	retryTimes int,
+	channel *initialChannel,
+	meta *meta.Meta,
+	result *controller.HandleResult,
+	price model.Price,
+) *retryState {
 	state := &retryState{
 		retryTimes:       retryTimes,
 		ignoreChannelIDs: channel.ignoreChannelIDs,
@@ -792,7 +864,10 @@ func getRetryChannel(state *retryState) (*model.Channel, error) {
 		return state.lastHasPermissionChannel, nil
 	}
 
-	newChannel, err := getRandomChannel(state.migratedChannels, state.errorRates, state.ignoreChannelIDs...)
+	newChannel, err := getRandomChannel(
+		state.migratedChannels,
+		state.errorRates,
+		state.ignoreChannelIDs...)
 	if err != nil {
 		if !errors.Is(err, ErrChannelsExhausted) || state.lastHasPermissionChannel == nil {
 			return nil, err
@@ -813,7 +888,12 @@ func prepareRetry(c *gin.Context) error {
 	return nil
 }
 
-func handleRetryResult(ctx *gin.Context, retry bool, newChannel *model.Channel, state *retryState) (done bool) {
+func handleRetryResult(
+	ctx *gin.Context,
+	retry bool,
+	newChannel *model.Channel,
+	state *retryState,
+) (done bool) {
 	if ctx.Request.Context().Err() != nil {
 		return true
 	}
@@ -866,7 +946,7 @@ func channelHasPermission(relayErr adaptor.Error) bool {
 
 // shouldDelay checks if we need to add a delay before retrying
 // Only adds delay when retrying with the same channel for rate limiting issues
-func shouldDelay(statusCode int, lastChannelID, newChannelID int) bool {
+func shouldDelay(statusCode, lastChannelID, newChannelID int) bool {
 	if lastChannelID != newChannelID {
 		return false
 	}

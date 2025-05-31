@@ -15,7 +15,11 @@ import (
 	"github.com/labring/aiproxy/core/relay/meta"
 )
 
-func ConvertTTSRequest(meta *meta.Meta, req *http.Request, defaultVoice string) (*adaptor.ConvertRequestResult, error) {
+func ConvertTTSRequest(
+	meta *meta.Meta,
+	req *http.Request,
+	defaultVoice string,
+) (*adaptor.ConvertRequestResult, error) {
 	node, err := common.UnmarshalBody2Node(req)
 	if err != nil {
 		return nil, err
@@ -59,7 +63,11 @@ func ConvertTTSRequest(meta *meta.Meta, req *http.Request, defaultVoice string) 
 	}, nil
 }
 
-func TTSHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, adaptor.Error) {
+func TTSHandler(
+	meta *meta.Meta,
+	c *gin.Context,
+	resp *http.Response,
+) (*model.Usage, adaptor.Error) {
 	if resp.StatusCode != http.StatusOK {
 		return nil, ErrorHanlder(resp)
 	}

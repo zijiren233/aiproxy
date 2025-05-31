@@ -106,7 +106,11 @@ func setCacheHit(meta *meta.Meta, item *Item) {
 
 // Buffer pool helpers
 func getBuffer() *bytes.Buffer {
-	return bufferPool.Get().(*bytes.Buffer)
+	v, ok := bufferPool.Get().(*bytes.Buffer)
+	if !ok {
+		panic(fmt.Sprintf("buffer type error: %T, %v", v, v))
+	}
+	return v
 }
 
 func putBuffer(buf *bytes.Buffer) {
@@ -209,7 +213,11 @@ func (c *Cache) setToCache(ctx context.Context, key string, item Item, ttl time.
 }
 
 // ConvertRequest handles the request conversion phase
-func (c *Cache) ConvertRequest(meta *meta.Meta, req *http.Request, do adaptor.ConvertRequest) (*adaptor.ConvertRequestResult, error) {
+func (c *Cache) ConvertRequest(
+	meta *meta.Meta,
+	req *http.Request,
+	do adaptor.ConvertRequest,
+) (*adaptor.ConvertRequestResult, error) {
 	pluginConfig, err := getPluginConfig(meta)
 	if err != nil {
 		return do.ConvertRequest(meta, req)
@@ -243,7 +251,12 @@ func (c *Cache) ConvertRequest(meta *meta.Meta, req *http.Request, do adaptor.Co
 }
 
 // DoRequest handles the request execution phase
-func (c *Cache) DoRequest(meta *meta.Meta, ctx *gin.Context, req *http.Request, do adaptor.DoRequest) (*http.Response, error) {
+func (c *Cache) DoRequest(
+	meta *meta.Meta,
+	ctx *gin.Context,
+	req *http.Request,
+	do adaptor.DoRequest,
+) (*http.Response, error) {
 	if isCacheHit(meta) {
 		return &http.Response{}, nil
 	}
@@ -296,7 +309,12 @@ func (c *Cache) writeCacheHeader(ctx *gin.Context, pluginConfig *Config, value s
 }
 
 // DoResponse handles the response processing phase
-func (c *Cache) DoResponse(meta *meta.Meta, ctx *gin.Context, resp *http.Response, do adaptor.DoResponse) (usage *model.Usage, adapterErr adaptor.Error) {
+func (c *Cache) DoResponse(
+	meta *meta.Meta,
+	ctx *gin.Context,
+	resp *http.Response,
+	do adaptor.DoResponse,
+) (usage *model.Usage, adapterErr adaptor.Error) {
 	pluginConfig, err := getPluginConfig(meta)
 	if err != nil {
 		return do.DoResponse(meta, ctx, resp)

@@ -64,7 +64,10 @@ func (a *Adaptor) SetupRequestHeader(meta *meta.Meta, _ *gin.Context, req *http.
 	return nil
 }
 
-func (a *Adaptor) ConvertRequest(meta *meta.Meta, req *http.Request) (*adaptor.ConvertRequestResult, error) {
+func (a *Adaptor) ConvertRequest(
+	meta *meta.Meta,
+	req *http.Request,
+) (*adaptor.ConvertRequestResult, error) {
 	return ConvertRequest(meta, req)
 }
 
@@ -94,7 +97,11 @@ func ConvertRequest(meta *meta.Meta, req *http.Request) (*adaptor.ConvertRequest
 	}
 }
 
-func DoResponse(meta *meta.Meta, c *gin.Context, resp *http.Response) (usage *model.Usage, err adaptor.Error) {
+func DoResponse(
+	meta *meta.Meta,
+	c *gin.Context,
+	resp *http.Response,
+) (usage *model.Usage, err adaptor.Error) {
 	switch meta.Mode {
 	case mode.ImagesGenerations, mode.ImagesEdits:
 		usage, err = ImagesHandler(meta, c, resp)
@@ -115,12 +122,20 @@ func DoResponse(meta *meta.Meta, c *gin.Context, resp *http.Response) (usage *mo
 			usage, err = Handler(meta, c, resp, nil)
 		}
 	default:
-		return nil, relaymodel.WrapperOpenAIErrorWithMessage(fmt.Sprintf("unsupported mode: %s", meta.Mode), "unsupported_mode", http.StatusBadRequest)
+		return nil, relaymodel.WrapperOpenAIErrorWithMessage(
+			fmt.Sprintf("unsupported mode: %s", meta.Mode),
+			"unsupported_mode",
+			http.StatusBadRequest,
+		)
 	}
 	return usage, err
 }
 
-func ConvertTextRequest(meta *meta.Meta, req *http.Request, doNotPatchStreamOptionsIncludeUsage bool) (*adaptor.ConvertRequestResult, error) {
+func ConvertTextRequest(
+	meta *meta.Meta,
+	req *http.Request,
+	doNotPatchStreamOptionsIncludeUsage bool,
+) (*adaptor.ConvertRequestResult, error) {
 	reqMap := make(map[string]any)
 	err := common.UnmarshalBodyReusable(req, &reqMap)
 	if err != nil {
@@ -177,11 +192,19 @@ func patchStreamOptions(reqMap map[string]any) error {
 
 const MetaResponseFormat = "response_format"
 
-func (a *Adaptor) DoRequest(_ *meta.Meta, _ *gin.Context, req *http.Request) (*http.Response, error) {
+func (a *Adaptor) DoRequest(
+	_ *meta.Meta,
+	_ *gin.Context,
+	req *http.Request,
+) (*http.Response, error) {
 	return utils.DoRequest(req)
 }
 
-func (a *Adaptor) DoResponse(meta *meta.Meta, c *gin.Context, resp *http.Response) (usage *model.Usage, err adaptor.Error) {
+func (a *Adaptor) DoResponse(
+	meta *meta.Meta,
+	c *gin.Context,
+	resp *http.Response,
+) (usage *model.Usage, err adaptor.Error) {
 	return DoResponse(meta, c, resp)
 }
 

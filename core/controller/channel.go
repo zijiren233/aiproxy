@@ -57,7 +57,16 @@ func GetChannels(c *gin.Context) {
 	channelType, _ := strconv.Atoi(c.Query("channel_type"))
 	baseURL := c.Query("base_url")
 	order := c.Query("order")
-	channels, total, err := model.GetChannels(page, perPage, id, name, key, channelType, baseURL, order)
+	channels, total, err := model.GetChannels(
+		page,
+		perPage,
+		id,
+		name,
+		key,
+		channelType,
+		baseURL,
+		order,
+	)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
@@ -148,7 +157,17 @@ func SearchChannels(c *gin.Context) {
 	channelType, _ := strconv.Atoi(c.Query("channel_type"))
 	baseURL := c.Query("base_url")
 	order := c.Query("order")
-	channels, total, err := model.SearchChannels(keyword, page, perPage, id, name, key, channelType, baseURL, order)
+	channels, total, err := model.SearchChannels(
+		keyword,
+		page,
+		perPage,
+		id,
+		name,
+		key,
+		channelType,
+		baseURL,
+		order,
+	)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
@@ -207,9 +226,22 @@ func (r *AddChannelRequest) ToChannel() (*model.Channel, error) {
 		if err != nil {
 			keyHelp := validator.KeyHelp()
 			if keyHelp == "" {
-				return nil, fmt.Errorf("%s [%s(%d)] invalid key: %w", r.Name, r.Type.String(), r.Type, err)
+				return nil, fmt.Errorf(
+					"%s [%s(%d)] invalid key: %w",
+					r.Name,
+					r.Type.String(),
+					r.Type,
+					err,
+				)
 			}
-			return nil, fmt.Errorf("%s [%s(%d)] invalid key: %w, %s", r.Name, r.Type.String(), r.Type, err, keyHelp)
+			return nil, fmt.Errorf(
+				"%s [%s(%d)] invalid key: %w, %s",
+				r.Name,
+				r.Type.String(),
+				r.Type,
+				err,
+				keyHelp,
+			)
 		}
 	}
 	if r.Config != nil {

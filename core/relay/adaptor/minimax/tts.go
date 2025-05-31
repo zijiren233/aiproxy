@@ -111,12 +111,17 @@ type TTSResponse struct {
 	Data      TTSData      `json:"data"`
 }
 
-func TTSHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, adaptor.Error) {
+func TTSHandler(
+	meta *meta.Meta,
+	c *gin.Context,
+	resp *http.Response,
+) (*model.Usage, adaptor.Error) {
 	if resp.StatusCode != http.StatusOK {
 		return nil, openai.ErrorHanlder(resp)
 	}
 
-	if !strings.Contains(resp.Header.Get("Content-Type"), "application/json") && meta.GetBool("stream") {
+	if !strings.Contains(resp.Header.Get("Content-Type"), "application/json") &&
+		meta.GetBool("stream") {
 		return ttsStreamHandler(meta, c, resp)
 	}
 
@@ -134,7 +139,11 @@ func TTSHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Us
 		return nil, relaymodel.WrapperOpenAIError(err, "TTS_ERROR", http.StatusInternalServerError)
 	}
 	if result.BaseResp != nil && result.BaseResp.StatusCode != 0 {
-		return nil, relaymodel.WrapperOpenAIErrorWithMessage(result.BaseResp.StatusMsg, "TTS_ERROR_"+strconv.Itoa(result.BaseResp.StatusCode), http.StatusInternalServerError)
+		return nil, relaymodel.WrapperOpenAIErrorWithMessage(
+			result.BaseResp.StatusMsg,
+			"TTS_ERROR_"+strconv.Itoa(result.BaseResp.StatusCode),
+			http.StatusInternalServerError,
+		)
 	}
 
 	resp.Header.Set("Content-Type", "audio/"+result.ExtraInfo.AudioFormat)
@@ -160,7 +169,11 @@ func TTSHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Us
 	}, nil
 }
 
-func ttsStreamHandler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, adaptor.Error) {
+func ttsStreamHandler(
+	meta *meta.Meta,
+	c *gin.Context,
+	resp *http.Response,
+) (*model.Usage, adaptor.Error) {
 	defer resp.Body.Close()
 
 	resp.Header.Set("Content-Type", "application/octet-stream")
