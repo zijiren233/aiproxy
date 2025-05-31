@@ -10,7 +10,7 @@ import (
 )
 
 type ModelRequest struct {
-	Model string `form:"model" json:"model"`
+	Model string `json:"model" form:"model"`
 }
 
 func StdGetModelFromJSON(body []byte) (string, error) {
