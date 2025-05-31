@@ -11,7 +11,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/core/common/mcpproxy"
-	statelessmcp "github.com/labring/aiproxy/core/common/stateless-mcp"
 	"github.com/labring/aiproxy/core/middleware"
 	"github.com/labring/aiproxy/core/model"
 	mcpservers "github.com/labring/aiproxy/mcp-servers"
@@ -208,7 +207,7 @@ type testEmbedMcpEndpointProvider struct {
 	key string
 }
 
-func newTestEmbedMcpEndpoint(key string) mcpproxy.EndpointProvider {
+func newTestEmbedMcpEndpoint(key string) EndpointProvider {
 	return &testEmbedMcpEndpointProvider{
 		key: key,
 	}
@@ -267,29 +266,22 @@ func getConfigFromQuery(c *gin.Context) (map[string]string, map[string]string) {
 //	@Tags			embedmcp
 //	@Security		ApiKeyAuth
 //	@Param			id				path		string	true	"MCP ID"
-//	@Param			config[key]		query		string	false	"Initial configuration parameters (e.g.,
-//
-// config[host]=http://localhost:3000)" 	@Param			reusing[key]	query		string	false	"Reusing
-// configuration parameters (e.g., reusing[authorization]=apikey)"
-//
+//	@Param			config[key]		query		string	false	"Initial configuration parameters (e.g. config[host]=http://localhost:3000)"
+//	@Param			reusing[key]	query		string	false	"Reusing configuration parameters (e.g. reusing[authorization]=apikey)"
 //	@Success		200				{object}	nil
 //	@Failure		400				{object}	nil
 //	@Router			/api/test-embedmcp/{id}/sse [get]
 func TestEmbedMCPSseServer(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		c.JSON(http.StatusBadRequest, CreateMCPErrorResponse(
-			mcp.NewRequestId(nil),
-			mcp.INVALID_REQUEST,
-			"mcp id is required",
-		))
+		http.Error(c.Writer, "mcp id is required", http.StatusBadRequest)
 		return
 	}
 
 	initConfig, reusingConfig := getConfigFromQuery(c)
 	emcp, err := mcpservers.GetMCPServer(id, initConfig, reusingConfig)
 	if err != nil {
-		middleware.ErrorResponse(c, http.StatusBadRequest, err.Error())
+		http.Error(c.Writer, err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -308,9 +300,9 @@ func handleTestEmbedMCPServer(c *gin.Context, s *server.MCPServer) {
 	newSession := store.New()
 
 	newEndpoint := newTestEmbedMcpEndpoint(token.Key).NewEndpoint(newSession)
-	server := statelessmcp.NewSSEServer(
+	server := mcpproxy.NewSSEServer(
 		s,
-		statelessmcp.WithMessageEndpoint(newEndpoint),
+		mcpproxy.WithMessageEndpoint(newEndpoint),
 	)
 
 	store.Set(newSession, testEmbedMcpType)
@@ -325,7 +317,7 @@ func handleTestEmbedMCPServer(c *gin.Context, s *server.MCPServer) {
 	go processMCPSseMpscMessages(ctx, newSession, server)
 
 	// Handle SSE connection
-	server.HandleSSE(c.Writer, c.Request)
+	server.ServeHTTP(c.Writer, c.Request)
 }
 
 // TestEmbedMCPMessage godoc
@@ -343,11 +335,7 @@ func handleTestEmbedMCPServer(c *gin.Context, s *server.MCPServer) {
 func TestEmbedMCPMessage(c *gin.Context) {
 	sessionID, _ := c.GetQuery("sessionId")
 	if sessionID == "" {
-		c.JSON(http.StatusBadRequest, CreateMCPErrorResponse(
-			mcp.NewRequestId(nil),
-			mcp.INVALID_REQUEST,
-			"missing sessionId",
-		))
+		http.Error(c.Writer, "missing sessionId", http.StatusBadRequest)
 		return
 	}
 
@@ -361,11 +349,8 @@ func TestEmbedMCPMessage(c *gin.Context) {
 //	@Tags			embedmcp
 //	@Security		ApiKeyAuth
 //	@Param			id				path	string	true	"MCP ID"
-//	@Param			config[key]		query	string	false	"Initial configuration parameters (e.g.,
-//
-// config[host]=http://localhost:3000)" 	@Param			reusing[key]	query	string	false	"Reusing
-// configuration parameters (e.g., reusing[authorization]=apikey)"
-//
+//	@Param			config[key]		query	string	false	"Initial configuration parameters (e.g. config[host]=http://localhost:3000)"
+//	@Param			reusing[key]	query	string	false	"Reusing configuration parameters (e.g., reusing[authorization]=apikey)"
 //	@Accept			json
 //	@Produce		json
 //	@Success		200	{object}	nil
@@ -394,5 +379,5 @@ func TestEmbedMCPStreamable(c *gin.Context) {
 		))
 		return
 	}
-	handleGroupStreamableMCPServer(c, server)
+	handleStreamableMCPServer(c, server)
 }

@@ -5601,13 +5601,13 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "Initial configuration parameters (e.g., config[host]=http://localhost:3000)",
+                        "description": "Initial configuration parameters (e.g. config[host]=http://localhost:3000)",
                         "name": "config[key]",
                         "in": "query"
                     },
                     {
                         "type": "string",
-                        "description": "Reusing configuration parameters (e.g., reusing[authorization]=apikey)",
+                        "description": "Reusing configuration parameters (e.g. reusing[authorization]=apikey)",
                         "name": "reusing[key]",
                         "in": "query"
                     }
@@ -5650,7 +5650,7 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "Initial configuration parameters (e.g., config[host]=http://localhost:3000)",
+                        "description": "Initial configuration parameters (e.g. config[host]=http://localhost:3000)",
                         "name": "config[key]",
                         "in": "query"
                     },
@@ -5697,7 +5697,7 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "Initial configuration parameters (e.g., config[host]=http://localhost:3000)",
+                        "description": "Initial configuration parameters (e.g. config[host]=http://localhost:3000)",
                         "name": "config[key]",
                         "in": "query"
                     },
@@ -5744,7 +5744,7 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "Initial configuration parameters (e.g., config[host]=http://localhost:3000)",
+                        "description": "Initial configuration parameters (e.g. config[host]=http://localhost:3000)",
                         "name": "config[key]",
                         "in": "query"
                     },
@@ -9979,7 +9979,7 @@ const docTemplate = `{
                     "type": "number"
                 },
                 "thinking_mode_output_price": {
-                    "description": "when ThinkingModeOutputPrice and ReasoningTokens are not 0, OutputPrice and OutputPriceUnit will be overwritten",
+                    "description": "when ThinkingModeOutputPrice and ReasoningTokens are not 0, OutputPrice and OutputPriceUnit\nwill be overwritten",
                     "type": "number"
                 },
                 "thinking_mode_output_price_unit": {
