@@ -68,7 +68,8 @@ for dir in "${directories[@]}"; do
         exit 1
     fi
 
-    if (cd "$dir" && golangci-lint-v2 run --fix); then
+    # --fix will ignore some issues, so we run it twice
+    if (cd "$dir" && golangci-lint-v2 run --fix && golangci-lint-v2 run); then
         echo "Successfully fixed lint issues in '$dir'"
     else
         echo "Failed to fix lint issues in '$dir'"
