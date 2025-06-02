@@ -493,10 +493,8 @@ func relay(c *gin.Context, mode mode.Mode, relayController RelayController) {
 		return
 	}
 
-	billingEnabled := config.GetBillingEnabled()
-
 	price := model.Price{}
-	if billingEnabled && relayController.GetRequestPrice != nil {
+	if relayController.GetRequestPrice != nil {
 		price, err = relayController.GetRequestPrice(c, mc)
 		if err != nil {
 			middleware.AbortLogWithMessageWithMode(mode, c,
@@ -509,7 +507,7 @@ func relay(c *gin.Context, mode mode.Mode, relayController RelayController) {
 
 	meta := NewMetaByContext(c, initialChannel.channel, mode)
 
-	if billingEnabled && relayController.GetRequestUsage != nil {
+	if relayController.GetRequestUsage != nil {
 		requestUsage, err := relayController.GetRequestUsage(c, mc)
 		if err != nil {
 			middleware.AbortLogWithMessageWithMode(mode, c,

@@ -22,7 +22,6 @@ func HandleNotFound(err error, errMsg ...string) error {
 	return err
 }
 
-// Helper function to handle update results
 func HandleUpdateResult(result *gorm.DB, entityName string) error {
 	if result.Error != nil {
 		return HandleNotFound(result.Error, entityName)

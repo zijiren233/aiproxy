@@ -73,7 +73,6 @@ func initOptionMap() error {
 		10,
 	)
 	optionMap["DisableServe"] = strconv.FormatBool(config.GetDisableServe())
-	optionMap["BillingEnabled"] = strconv.FormatBool(config.GetBillingEnabled())
 	optionMap["RetryTimes"] = strconv.FormatInt(config.GetRetryTimes(), 10)
 	defaultChannelModelsJSON, err := sonic.Marshal(config.GetDefaultChannelModels())
 	if err != nil {
@@ -253,8 +252,6 @@ func updateOption(key, value string, isInit bool) (err error) {
 		config.SetCleanLogBatchSize(cleanLogBatchSize)
 	case "DisableServe":
 		config.SetDisableServe(toBool(value))
-	case "BillingEnabled":
-		config.SetBillingEnabled(toBool(value))
 	case "GroupMaxTokenNum":
 		groupMaxTokenNum, err := strconv.ParseInt(value, 10, 32)
 		if err != nil {

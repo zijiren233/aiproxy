@@ -5,7 +5,6 @@ import (
 	"math"
 	"strings"
 
-	"github.com/labring/aiproxy/core/common/config"
 	"github.com/labring/aiproxy/core/common/image"
 	intertiktoken "github.com/labring/aiproxy/core/common/tiktoken"
 	"github.com/labring/aiproxy/core/relay/model"
@@ -18,9 +17,6 @@ func getTokenNum(tokenEncoder *tiktoken.Tiktoken, text string) int64 {
 }
 
 func CountTokenMessages(messages []*model.Message, model string) int64 {
-	if !config.GetBillingEnabled() {
-		return 0
-	}
 	tokenEncoder := intertiktoken.GetTokenEncoder(model)
 	// Reference:
 	// https://github.com/openai/openai-cookbook/blob/main/examples/How_to_count_tokens_with_tiktoken.ipynb
@@ -171,9 +167,6 @@ func countImageTokens(url, detail, model string) (_ int64, err error) {
 }
 
 func CountTokenInput(input any, model string) int64 {
-	if !config.GetBillingEnabled() {
-		return 0
-	}
 	switch v := input.(type) {
 	case string:
 		return CountTokenText(v, model)
@@ -194,8 +187,5 @@ func CountTokenInput(input any, model string) int64 {
 }
 
 func CountTokenText(text, model string) int64 {
-	if !config.GetBillingEnabled() {
-		return 0
-	}
 	return getTokenNum(intertiktoken.GetTokenEncoder(model), text)
 }

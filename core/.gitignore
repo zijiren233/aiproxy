@@ -3,3 +3,4 @@ aiproxy
 common/tiktoken/assets/*
 /public/dist/*
 !*.gitkeep
+.env.local

@@ -1,26 +1,11 @@
 package config
 
 import (
-	"os"
 	"slices"
 	"strconv"
 	"sync/atomic"
 
 	"github.com/labring/aiproxy/core/common/env"
-)
-
-var (
-	DebugEnabled    = env.Bool("DEBUG", false)
-	DebugSQLEnabled = env.Bool("DEBUG_SQL", false)
-)
-
-var (
-	DisableAutoMigrateDB = env.Bool("DISABLE_AUTO_MIGRATE_DB", false)
-	AdminKey             = os.Getenv("ADMIN_KEY")
-	WebPath              = os.Getenv("WEB_PATH")
-	DisableWeb           = env.Bool("DISABLE_WEB", false)
-	FfmpegEnabled        = env.Bool("FFMPEG_ENABLED", false)
-	InternalToken        = os.Getenv("INTERNAL_TOKEN")
 )
 
 var (
@@ -35,32 +20,18 @@ var (
 	notifyNote                   atomic.Value
 	ipGroupsThreshold            int64
 	ipGroupsBanThreshold         int64
+	retryTimes                   atomic.Int64
+	defaultChannelModels         atomic.Value
+	defaultChannelModelMapping   atomic.Value
+	groupMaxTokenNum             atomic.Int64
+	groupConsumeLevelRatio       atomic.Value
 )
-
-var (
-	retryTimes         atomic.Int64
-	disableModelConfig = env.Bool("DISABLE_MODEL_CONFIG", false)
-)
-
-var (
-	defaultChannelModels       atomic.Value
-	defaultChannelModelMapping atomic.Value
-	groupMaxTokenNum           atomic.Int64
-	groupConsumeLevelRatio     atomic.Value
-)
-
-var billingEnabled atomic.Bool
 
 func init() {
 	defaultChannelModels.Store(make(map[int][]string))
 	defaultChannelModelMapping.Store(make(map[int]map[string]string))
 	groupConsumeLevelRatio.Store(make(map[float64]float64))
-	billingEnabled.Store(true)
-	notifyNote.Store(os.Getenv("NOTIFY_NOTE"))
-}
-
-func GetDisableModelConfig() bool {
-	return disableModelConfig
+	notifyNote.Store("")
 }
 
 func GetRetryTimes() int64 {
@@ -213,15 +184,6 @@ func GetGroupMaxTokenNum() int64 {
 func SetGroupMaxTokenNum(num int64) {
 	num = env.Int64("GROUP_MAX_TOKEN_NUM", num)
 	groupMaxTokenNum.Store(num)
-}
-
-func GetBillingEnabled() bool {
-	return billingEnabled.Load()
-}
-
-func SetBillingEnabled(enabled bool) {
-	enabled = env.Bool("BILLING_ENABLED", enabled)
-	billingEnabled.Store(enabled)
 }
 
 func GetNotifyNote() string {

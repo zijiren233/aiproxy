@@ -48,7 +48,7 @@ func GetPublicMCPs(c *gin.Context) {
 	})
 }
 
-// GetMCPByID godoc
+// GetPublicMCPByIDHandler godoc
 //
 //	@Summary		Get MCP by ID
 //	@Description	Get a specific MCP by its ID

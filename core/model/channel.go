@@ -120,7 +120,7 @@ func (c *Channel) GetPriority() int32 {
 }
 
 func GetModelConfigWithModels(models []string) ([]string, []string, error) {
-	if len(models) == 0 || config.GetDisableModelConfig() {
+	if len(models) == 0 || config.DisableModelConfig {
 		return models, nil, nil
 	}
 
