@@ -850,7 +850,7 @@ func initializeModelConfigCache() (ModelConfigCache, error) {
 	}
 
 	configs := &modelConfigMapCache{modelConfigMap: newModelConfigMap}
-	if config.GetDisableModelConfig() {
+	if config.DisableModelConfig {
 		return &disabledModelConfigCache{modelConfigs: configs}, nil
 	}
 	return configs, nil
