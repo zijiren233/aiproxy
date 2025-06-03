@@ -52,7 +52,6 @@ func ConvertRequest(meta *meta.Meta, req *http.Request) (*adaptor.ConvertRequest
 	}
 
 	return &adaptor.ConvertRequestResult{
-		Method: http.MethodPost,
 		Header: nil,
 		Body:   bytes.NewReader(newBody),
 	}, nil

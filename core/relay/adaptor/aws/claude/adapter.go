@@ -28,7 +28,6 @@ func (a *Adaptor) ConvertRequest(
 	meta.Set("stream", r.Stream)
 	meta.Set(ConvertedRequest, r)
 	return &adaptor.ConvertRequestResult{
-		Method: http.MethodPost,
 		Header: nil,
 		Body:   nil,
 	}, nil

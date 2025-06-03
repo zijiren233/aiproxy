@@ -31,7 +31,9 @@ func WrapperErrorWithMessage(
 			Message: message,
 			Type:    respType,
 		})
-	case mode.VideoGenerationsJobs, mode.VideoGenerationsGetJobs, mode.VideoGenerationsContent:
+	case mode.VideoGenerationsJobs,
+		mode.VideoGenerationsGetJobs,
+		mode.VideoGenerationsContent:
 		return NewOpenAIVideoError(statusCode, OpenAIVideoError{
 			Detail: message,
 		})

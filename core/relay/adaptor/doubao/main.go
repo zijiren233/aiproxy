@@ -19,18 +19,27 @@ import (
 	"github.com/labring/aiproxy/core/relay/utils"
 )
 
-func GetRequestURL(meta *meta.Meta) (string, error) {
+func GetRequestURL(meta *meta.Meta) (*adaptor.RequestURL, error) {
 	u := meta.Channel.BaseURL
 	switch meta.Mode {
 	case mode.ChatCompletions:
 		if strings.HasPrefix(meta.ActualModel, "bot-") {
-			return u + "/api/v3/bots/chat/completions", nil
+			return &adaptor.RequestURL{
+				Method: http.MethodPost,
+				URL:    u + "/api/v3/bots/chat/completions",
+			}, nil
 		}
-		return u + "/api/v3/chat/completions", nil
+		return &adaptor.RequestURL{
+			Method: http.MethodPost,
+			URL:    u + "/api/v3/chat/completions",
+		}, nil
 	case mode.Embeddings:
-		return u + "/api/v3/embeddings", nil
+		return &adaptor.RequestURL{
+			Method: http.MethodPost,
+			URL:    u + "/api/v3/embeddings",
+		}, nil
 	default:
-		return "", fmt.Errorf("unsupported relay mode %d for doubao", meta.Mode)
+		return nil, fmt.Errorf("unsupported relay mode %d for doubao", meta.Mode)
 	}
 }
 
@@ -40,15 +49,21 @@ type Adaptor struct {
 
 const baseURL = "https://ark.cn-beijing.volces.com"
 
-func (a *Adaptor) GetBaseURL() string {
+func (a *Adaptor) DefaultBaseURL() string {
 	return baseURL
 }
 
-func (a *Adaptor) GetModelList() []model.ModelConfig {
-	return ModelList
+func (a *Adaptor) Metadata() adaptor.Metadata {
+	return adaptor.Metadata{
+		Features: []string{
+			"Bot support",
+			"Network search metering support",
+		},
+		Models: ModelList,
+	}
 }
 
-func (a *Adaptor) GetRequestURL(meta *meta.Meta, _ adaptor.Store) (string, error) {
+func (a *Adaptor) GetRequestURL(meta *meta.Meta, _ adaptor.Store) (*adaptor.RequestURL, error) {
 	return GetRequestURL(meta)
 }
 
@@ -86,7 +101,6 @@ func (a *Adaptor) ConvertRequest(
 	}
 
 	return &adaptor.ConvertRequestResult{
-		Method: result.Method,
 		Header: result.Header,
 		Body:   bytes.NewReader(newBody),
 	}, nil

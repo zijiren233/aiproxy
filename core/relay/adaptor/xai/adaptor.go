@@ -16,7 +16,7 @@ type Adaptor struct {
 
 const baseURL = "https://api.x.ai/v1"
 
-func (a *Adaptor) GetBaseURL() string {
+func (a *Adaptor) DefaultBaseURL() string {
 	return baseURL
 }
 
@@ -33,6 +33,8 @@ func (a *Adaptor) DoResponse(
 	return a.Adaptor.DoResponse(meta, store, c, resp)
 }
 
-func (a *Adaptor) GetModelList() []model.ModelConfig {
-	return ModelList
+func (a *Adaptor) Metadata() adaptor.Metadata {
+	return adaptor.Metadata{
+		Models: ModelList,
+	}
 }

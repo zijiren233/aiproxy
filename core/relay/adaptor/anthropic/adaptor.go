@@ -20,12 +20,15 @@ type Adaptor struct{}
 
 const baseURL = "https://api.anthropic.com/v1"
 
-func (a *Adaptor) GetBaseURL() string {
+func (a *Adaptor) DefaultBaseURL() string {
 	return baseURL
 }
 
-func (a *Adaptor) GetRequestURL(meta *meta.Meta, _ adaptor.Store) (string, error) {
-	return meta.Channel.BaseURL + "/messages", nil
+func (a *Adaptor) GetRequestURL(meta *meta.Meta, _ adaptor.Store) (*adaptor.RequestURL, error) {
+	return &adaptor.RequestURL{
+		Method: http.MethodPost,
+		URL:    meta.Channel.BaseURL + "/messages",
+	}, nil
 }
 
 const AnthropicVersion = "2023-06-01"
@@ -79,7 +82,6 @@ func (a *Adaptor) ConvertRequest(
 			return nil, err
 		}
 		return &adaptor.ConvertRequestResult{
-			Method: http.MethodPost,
 			Header: nil,
 			Body:   bytes.NewReader(data2),
 		}, nil
@@ -128,6 +130,11 @@ func (a *Adaptor) DoResponse(
 	return
 }
 
-func (a *Adaptor) GetModelList() []model.ModelConfig {
-	return ModelList
+func (a *Adaptor) Metadata() adaptor.Metadata {
+	return adaptor.Metadata{
+		Features: []string{
+			"Support native Endpoint: /v1/messages",
+		},
+		Models: ModelList,
+	}
 }

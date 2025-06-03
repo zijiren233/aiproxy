@@ -120,7 +120,6 @@ func ConvertSTTRequest(
 	meta.Set("audio_data", audioData)
 	meta.Set("task_id", sttRequest.Header.TaskID)
 	return &adaptor.ConvertRequestResult{
-		Method: http.MethodPost,
 		Header: http.Header{
 			"X-DashScope-DataInspection": {"enable"},
 		},

@@ -12,13 +12,16 @@ import (
 	relaymodel "github.com/labring/aiproxy/core/relay/model"
 )
 
-func GetRequestURL(meta *meta.Meta) (string, error) {
+func GetRequestURL(meta *meta.Meta) (*adaptor.RequestURL, error) {
 	u := meta.Channel.BaseURL
 	switch meta.Mode {
 	case mode.AudioSpeech:
-		return u + "/api/v1/tts/ws_binary", nil
+		return &adaptor.RequestURL{
+			Method: http.MethodPost,
+			URL:    u + "/api/v1/tts/ws_binary",
+		}, nil
 	default:
-		return "", fmt.Errorf("unsupported mode: %s", meta.Mode)
+		return nil, fmt.Errorf("unsupported mode: %s", meta.Mode)
 	}
 }
 
@@ -26,15 +29,22 @@ type Adaptor struct{}
 
 const baseURL = "https://openspeech.bytedance.com"
 
-func (a *Adaptor) GetBaseURL() string {
+func (a *Adaptor) DefaultBaseURL() string {
 	return baseURL
 }
 
-func (a *Adaptor) GetModelList() []model.ModelConfig {
-	return ModelList
+func (a *Adaptor) Metadata() adaptor.Metadata {
+	return adaptor.Metadata{
+		Features: []string{
+			"https://www.volcengine.com/docs/6561/1257543",
+			"TTS support",
+		},
+		KeyHelp: "app_id|app_token",
+		Models:  ModelList,
+	}
 }
 
-func (a *Adaptor) GetRequestURL(meta *meta.Meta, _ adaptor.Store) (string, error) {
+func (a *Adaptor) GetRequestURL(meta *meta.Meta, _ adaptor.Store) (*adaptor.RequestURL, error) {
 	return GetRequestURL(meta)
 }
 

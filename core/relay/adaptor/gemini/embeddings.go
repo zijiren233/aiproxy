@@ -49,7 +49,6 @@ func ConvertEmbeddingRequest(
 		return nil, err
 	}
 	return &adaptor.ConvertRequestResult{
-		Method: http.MethodPost,
 		Header: nil,
 		Body:   bytes.NewReader(data),
 	}, nil

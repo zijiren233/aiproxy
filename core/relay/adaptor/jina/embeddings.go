@@ -10,7 +10,6 @@ import (
 	"github.com/labring/aiproxy/core/relay/meta"
 )
 
-//
 //nolint:gocritic
 func ConvertEmbeddingsRequest(
 	meta *meta.Meta,
@@ -36,7 +35,6 @@ func ConvertEmbeddingsRequest(
 		return nil, err
 	}
 	return &adaptor.ConvertRequestResult{
-		Method: http.MethodPost,
 		Header: nil,
 		Body:   bytes.NewReader(jsonData),
 	}, nil

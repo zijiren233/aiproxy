@@ -110,7 +110,6 @@ func ConvertRequest(meta *meta.Meta, req *http.Request) (*adaptor.ConvertRequest
 	}
 
 	return &adaptor.ConvertRequestResult{
-		Method: http.MethodPost,
 		Header: nil,
 		Body:   bytes.NewReader(data),
 	}, nil
@@ -273,7 +272,6 @@ func ConvertEmbeddingRequest(
 		return nil, err
 	}
 	return &adaptor.ConvertRequestResult{
-		Method: http.MethodPost,
 		Header: nil,
 		Body:   bytes.NewReader(data),
 	}, nil

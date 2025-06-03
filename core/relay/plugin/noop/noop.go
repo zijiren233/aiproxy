@@ -18,7 +18,7 @@ func (n *Noop) GetRequestURL(
 	meta *meta.Meta,
 	store adaptor.Store,
 	do adaptor.GetRequestURL,
-) (string, error) {
+) (*adaptor.RequestURL, error) {
 	return do.GetRequestURL(meta, store)
 }
 

@@ -17,7 +17,7 @@ type Adaptor struct {
 
 const baseURL = "https://api.jina.ai/v1"
 
-func (a *Adaptor) GetBaseURL() string {
+func (a *Adaptor) DefaultBaseURL() string {
 	return baseURL
 }
 
@@ -48,6 +48,12 @@ func (a *Adaptor) DoResponse(
 	}
 }
 
-func (a *Adaptor) GetModelList() []model.ModelConfig {
-	return ModelList
+func (a *Adaptor) Metadata() adaptor.Metadata {
+	return adaptor.Metadata{
+		Features: []string{
+			"https://jina.ai",
+			"Embeddings、Rerank Support",
+		},
+		Models: ModelList,
+	}
 }

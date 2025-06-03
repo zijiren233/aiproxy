@@ -153,6 +153,8 @@ func getRequestBody(meta *meta.Meta, c *gin.Context, detail *RequestDetail) adap
 	}
 }
 
+const defaultTimeout = 60 * 30 // 30 minutes
+
 func prepareAndDoRequest(
 	a adaptor.Adaptor,
 	c *gin.Context,
@@ -175,7 +177,7 @@ func prepareAndDoRequest(
 	}
 
 	if meta.Channel.BaseURL == "" {
-		meta.Channel.BaseURL = a.GetBaseURL()
+		meta.Channel.BaseURL = a.DefaultBaseURL()
 	}
 
 	fullRequestURL, err := a.GetRequestURL(meta, store)
@@ -188,21 +190,24 @@ func prepareAndDoRequest(
 		)
 	}
 
-	log.Debugf("request url: %s %s", convertResult.Method, fullRequestURL)
+	log.Debugf("request url: %s %s", fullRequestURL.Method, fullRequestURL.URL)
 
+	// donot use c.Request.Context() because it will be canceled by the client
 	ctx := context.Background()
-	if timeout := meta.ModelConfig.Timeout; timeout > 0 {
-		// donot use c.Request.Context() because it will be canceled by the client
-		// which will cause the usage of non-streaming requests to be unable to be recorded
-		var cancel context.CancelFunc
-		ctx, cancel = context.WithTimeout(ctx, time.Duration(timeout)*time.Second)
-		defer cancel()
+
+	timeout := meta.ModelConfig.Timeout
+	if timeout <= 0 {
+		timeout = defaultTimeout
 	}
+
+	var cancel context.CancelFunc
+	ctx, cancel = context.WithTimeout(ctx, time.Duration(timeout)*time.Second)
+	defer cancel()
 
 	req, err := http.NewRequestWithContext(
 		ctx,
-		convertResult.Method,
-		fullRequestURL,
+		fullRequestURL.Method,
+		fullRequestURL.URL,
 		convertResult.Body,
 	)
 	if err != nil {

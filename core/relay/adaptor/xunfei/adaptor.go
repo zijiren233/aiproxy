@@ -13,7 +13,7 @@ type Adaptor struct {
 	openai.Adaptor
 }
 
-func (a *Adaptor) GetBaseURL() string {
+func (a *Adaptor) DefaultBaseURL() string {
 	return baseURL
 }
 
@@ -33,10 +33,13 @@ func (a *Adaptor) ConvertRequest(
 	return a.Adaptor.ConvertRequest(meta, store, req)
 }
 
-func (a *Adaptor) GetModelList() []model.ModelConfig {
-	return ModelList
-}
-
 func (a *Adaptor) GetBalance(_ *model.Channel) (float64, error) {
 	return 0, adaptor.ErrGetBalanceNotImplemented
+}
+
+func (a *Adaptor) Metadata() adaptor.Metadata {
+	return adaptor.Metadata{
+		KeyHelp: "app_id|app_token",
+		Models:  ModelList,
+	}
 }

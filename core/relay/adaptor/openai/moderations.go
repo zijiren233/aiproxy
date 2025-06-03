@@ -1,6 +1,7 @@
 package openai
 
 import (
+	"bytes"
 	"io"
 	"net/http"
 	"strconv"
@@ -8,12 +9,37 @@ import (
 	"github.com/bytedance/sonic"
 	"github.com/bytedance/sonic/ast"
 	"github.com/gin-gonic/gin"
+	"github.com/labring/aiproxy/core/common"
 	"github.com/labring/aiproxy/core/middleware"
 	"github.com/labring/aiproxy/core/model"
 	"github.com/labring/aiproxy/core/relay/adaptor"
 	"github.com/labring/aiproxy/core/relay/meta"
 	relaymodel "github.com/labring/aiproxy/core/relay/model"
 )
+
+func ConvertModerationsRequest(
+	meta *meta.Meta,
+	req *http.Request,
+) (*adaptor.ConvertRequestResult, error) {
+	node, err := common.UnmarshalBody2Node(req)
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = node.Set("model", ast.NewString(meta.ActualModel))
+	if err != nil {
+		return nil, err
+	}
+
+	jsonData, err := node.MarshalJSON()
+	if err != nil {
+		return nil, err
+	}
+	return &adaptor.ConvertRequestResult{
+		Header: nil,
+		Body:   bytes.NewReader(jsonData),
+	}, nil
+}
 
 func ModerationsHandler(
 	meta *meta.Meta,

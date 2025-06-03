@@ -8037,7 +8037,7 @@ const docTemplate = `{
         "adaptors.AdaptorMeta": {
             "type": "object",
             "properties": {
-                "configTemplates": {
+                "config": {
                     "$ref": "#/definitions/adaptor.ConfigTemplates"
                 },
                 "defaultBaseUrl": {
@@ -8798,17 +8798,6 @@ const docTemplate = `{
                 }
             }
         },
-        "model.Audio": {
-            "type": "object",
-            "properties": {
-                "format": {
-                    "type": "string"
-                },
-                "voice": {
-                    "type": "string"
-                }
-            }
-        },
         "model.Channel": {
             "type": "object",
             "properties": {
@@ -9287,24 +9276,12 @@ const docTemplate = `{
         "model.GeneralOpenAIRequest": {
             "type": "object",
             "properties": {
-                "audio": {
-                    "$ref": "#/definitions/model.Audio"
-                },
-                "dimensions": {
-                    "type": "integer"
-                },
-                "encoding_format": {
-                    "type": "string"
-                },
                 "frequency_penalty": {
                     "type": "number"
                 },
                 "function_call": {},
                 "functions": {},
                 "input": {},
-                "instruction": {
-                    "type": "string"
-                },
                 "logit_bias": {},
                 "logprobs": {
                     "type": "boolean"
@@ -9322,56 +9299,31 @@ const docTemplate = `{
                     }
                 },
                 "metadata": {},
-                "modalities": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
                 "model": {
                     "type": "string"
-                },
-                "n": {
-                    "type": "integer"
                 },
                 "num_ctx": {
                     "type": "integer"
                 },
-                "parallel_tool_calls": {
-                    "type": "boolean"
-                },
-                "prediction": {},
                 "presence_penalty": {
                     "type": "number"
                 },
                 "prompt": {},
-                "quality": {
-                    "type": "string"
-                },
                 "response_format": {
                     "$ref": "#/definitions/model.ResponseFormat"
                 },
                 "seed": {
                     "type": "number"
                 },
-                "service_tier": {
-                    "type": "string"
-                },
                 "size": {
                     "type": "string"
                 },
                 "stop": {},
-                "store": {
-                    "type": "boolean"
-                },
                 "stream": {
                     "type": "boolean"
                 },
                 "stream_options": {
                     "$ref": "#/definitions/model.StreamOptions"
-                },
-                "style": {
-                    "type": "string"
                 },
                 "temperature": {
                     "type": "number"
@@ -10661,10 +10613,14 @@ const docTemplate = `{
             "type": "string",
             "enum": [
                 "queued",
+                "processing",
+                "running",
                 "succeeded"
             ],
             "x-enum-varnames": [
                 "VideoGenerationJobStatusQueued",
+                "VideoGenerationJobStatusProcessing",
+                "VideoGenerationJobStatusRunning",
                 "VideoGenerationJobStatusSucceeded"
             ]
         },

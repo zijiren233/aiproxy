@@ -15,7 +15,7 @@ import (
 
 type Adaptor struct{}
 
-func (a *Adaptor) GetBaseURL() string {
+func (a *Adaptor) DefaultBaseURL() string {
 	return ""
 }
 
@@ -53,16 +53,22 @@ func (a *Adaptor) DoResponse(
 	return v.DoResponse(meta, store, c)
 }
 
-func (a *Adaptor) GetModelList() (models []model.ModelConfig) {
-	models = make([]model.ModelConfig, 0, len(adaptors))
+func (a *Adaptor) Metadata() adaptor.Metadata {
+	models := make([]model.ModelConfig, 0, len(adaptors))
 	for _, model := range adaptors {
 		models = append(models, model.config)
 	}
-	return
+	return adaptor.Metadata{
+		Models:  models,
+		KeyHelp: "region|ak|sk",
+	}
 }
 
-func (a *Adaptor) GetRequestURL(_ *meta.Meta, _ adaptor.Store) (string, error) {
-	return "", nil
+func (a *Adaptor) GetRequestURL(_ *meta.Meta, _ adaptor.Store) (*adaptor.RequestURL, error) {
+	return &adaptor.RequestURL{
+		Method: http.MethodPost,
+		URL:    "",
+	}, nil
 }
 
 func (a *Adaptor) SetupRequestHeader(

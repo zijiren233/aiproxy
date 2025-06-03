@@ -11,7 +11,11 @@ import (
 
 // adaptor hook
 type Plugin interface {
-	GetRequestURL(meta *meta.Meta, store adaptor.Store, do adaptor.GetRequestURL) (string, error)
+	GetRequestURL(
+		meta *meta.Meta,
+		store adaptor.Store,
+		do adaptor.GetRequestURL,
+	) (*adaptor.RequestURL, error)
 
 	SetupRequestHeader(
 		meta *meta.Meta,
@@ -68,7 +72,10 @@ type wrappedAdaptor struct {
 	plugin Plugin
 }
 
-func (w *wrappedAdaptor) GetRequestURL(meta *meta.Meta, store adaptor.Store) (string, error) {
+func (w *wrappedAdaptor) GetRequestURL(
+	meta *meta.Meta,
+	store adaptor.Store,
+) (*adaptor.RequestURL, error) {
 	return w.plugin.GetRequestURL(meta, store, w.Adaptor)
 }
 

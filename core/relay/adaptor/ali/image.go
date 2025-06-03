@@ -49,7 +49,6 @@ func ConvertImageRequest(
 		return nil, err
 	}
 	return &adaptor.ConvertRequestResult{
-		Method: http.MethodPost,
 		Header: http.Header{
 			"X-Dashscope-Async": {"enable"},
 		},

@@ -74,7 +74,6 @@ func ConvertRerankRequest(
 	}
 
 	return &adaptor.ConvertRequestResult{
-		Method: http.MethodPost,
 		Header: nil,
 		Body:   bytes.NewReader(jsonData),
 	}, nil

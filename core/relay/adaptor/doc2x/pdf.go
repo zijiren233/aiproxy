@@ -41,7 +41,6 @@ func ConvertParsePdfRequest(
 	meta.Set("response_format", responseFormat)
 
 	return &adaptor.ConvertRequestResult{
-		Method: http.MethodPost,
 		Header: nil,
 		Body:   file,
 	}, nil

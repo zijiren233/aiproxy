@@ -18,22 +18,31 @@ type Adaptor struct{}
 
 const baseURL = "http://localhost:11434"
 
-func (a *Adaptor) GetBaseURL() string {
+func (a *Adaptor) DefaultBaseURL() string {
 	return baseURL
 }
 
-func (a *Adaptor) GetRequestURL(meta *meta.Meta, _ adaptor.Store) (string, error) {
+func (a *Adaptor) GetRequestURL(meta *meta.Meta, _ adaptor.Store) (*adaptor.RequestURL, error) {
 	// https://github.com/ollama/ollama/blob/main/docs/api.md
 	u := meta.Channel.BaseURL
 	switch meta.Mode {
 	case mode.Embeddings:
-		return u + "/api/embed", nil
+		return &adaptor.RequestURL{
+			Method: http.MethodPost,
+			URL:    u + "/api/embed",
+		}, nil
 	case mode.ChatCompletions:
-		return u + "/api/chat", nil
+		return &adaptor.RequestURL{
+			Method: http.MethodPost,
+			URL:    u + "/api/chat",
+		}, nil
 	case mode.Completions:
-		return u + "/api/generate", nil
+		return &adaptor.RequestURL{
+			Method: http.MethodPost,
+			URL:    u + "/api/generate",
+		}, nil
 	default:
-		return "", fmt.Errorf("unsupported mode: %s", meta.Mode)
+		return nil, fmt.Errorf("unsupported mode: %s", meta.Mode)
 	}
 }
 
@@ -99,6 +108,11 @@ func (a *Adaptor) DoResponse(
 	return
 }
 
-func (a *Adaptor) GetModelList() []model.ModelConfig {
-	return ModelList
+func (a *Adaptor) Metadata() adaptor.Metadata {
+	return adaptor.Metadata{
+		Features: []string{
+			"Chat、Embeddings Support",
+		},
+		Models: ModelList,
+	}
 }

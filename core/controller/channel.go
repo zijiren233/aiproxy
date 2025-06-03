@@ -221,10 +221,11 @@ func (r *AddChannelRequest) ToChannel() (*model.Channel, error) {
 	if !ok {
 		return nil, fmt.Errorf("invalid channel type: %d", r.Type)
 	}
+	metadata := a.Metadata()
 	if validator := adaptors.GetKeyValidator(a); validator != nil {
 		err := validator.ValidateKey(r.Key)
 		if err != nil {
-			keyHelp := validator.KeyHelp()
+			keyHelp := metadata.KeyHelp
 			if keyHelp == "" {
 				return nil, fmt.Errorf(
 					"%s [%s(%d)] invalid key: %w",
@@ -245,7 +246,7 @@ func (r *AddChannelRequest) ToChannel() (*model.Channel, error) {
 		}
 	}
 	if r.Config != nil {
-		for key, template := range adaptors.GetConfigTemplates(a) {
+		for key, template := range metadata.Config {
 			v, err := r.Config.Get(key)
 			if err != nil {
 				if errors.Is(err, ast.ErrNotExist) {

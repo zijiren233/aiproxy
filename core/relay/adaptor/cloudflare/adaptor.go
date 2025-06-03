@@ -2,9 +2,9 @@ package cloudflare
 
 import (
 	"fmt"
+	"net/http"
 	"strings"
 
-	"github.com/labring/aiproxy/core/model"
 	"github.com/labring/aiproxy/core/relay/adaptor"
 	"github.com/labring/aiproxy/core/relay/adaptor/openai"
 	"github.com/labring/aiproxy/core/relay/meta"
@@ -17,7 +17,7 @@ type Adaptor struct {
 
 const baseURL = "https://api.cloudflare.com"
 
-func (a *Adaptor) GetBaseURL() string {
+func (a *Adaptor) DefaultBaseURL() string {
 	return baseURL
 }
 
@@ -29,7 +29,7 @@ func isAIGateWay(baseURL string) bool {
 		strings.HasSuffix(baseURL, "/workers-ai")
 }
 
-func (a *Adaptor) GetRequestURL(meta *meta.Meta, _ adaptor.Store) (string, error) {
+func (a *Adaptor) GetRequestURL(meta *meta.Meta, _ adaptor.Store) (*adaptor.RequestURL, error) {
 	u := meta.Channel.BaseURL
 	isAIGateWay := isAIGateWay(u)
 	var urlPrefix string
@@ -41,17 +41,31 @@ func (a *Adaptor) GetRequestURL(meta *meta.Meta, _ adaptor.Store) (string, error
 
 	switch meta.Mode {
 	case mode.ChatCompletions:
-		return urlPrefix + "/v1/chat/completions", nil
+		return &adaptor.RequestURL{
+			Method: http.MethodPost,
+			URL:    urlPrefix + "/v1/chat/completions",
+		}, nil
 	case mode.Embeddings:
-		return urlPrefix + "/v1/embeddings", nil
+		return &adaptor.RequestURL{
+			Method: http.MethodPost,
+			URL:    urlPrefix + "/v1/embeddings",
+		}, nil
 	default:
 		if isAIGateWay {
-			return fmt.Sprintf("%s/%s", urlPrefix, meta.ActualModel), nil
+			return &adaptor.RequestURL{
+				Method: http.MethodPost,
+				URL:    fmt.Sprintf("%s/%s", urlPrefix, meta.ActualModel),
+			}, nil
 		}
-		return fmt.Sprintf("%s/run/%s", urlPrefix, meta.ActualModel), nil
+		return &adaptor.RequestURL{
+			Method: http.MethodPost,
+			URL:    fmt.Sprintf("%s/run/%s", urlPrefix, meta.ActualModel),
+		}, nil
 	}
 }
 
-func (a *Adaptor) GetModelList() []model.ModelConfig {
-	return ModelList
+func (a *Adaptor) Metadata() adaptor.Metadata {
+	return adaptor.Metadata{
+		Models: ModelList,
+	}
 }

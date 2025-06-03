@@ -340,7 +340,6 @@ func ConvertRequest(meta *meta.Meta, req *http.Request) (*adaptor.ConvertRequest
 	}
 
 	return &adaptor.ConvertRequestResult{
-		Method: http.MethodPost,
 		Header: nil,
 		Body:   bytes.NewReader(data),
 	}, nil
@@ -637,11 +636,11 @@ func StreamHandler(
 	c *gin.Context,
 	resp *http.Response,
 ) (*model.Usage, adaptor.Error) {
-	defer resp.Body.Close()
-
 	if resp.StatusCode != http.StatusOK {
 		return nil, openai.ErrorHanlder(resp)
 	}
+
+	defer resp.Body.Close()
 
 	log := middleware.GetLogger(c)
 

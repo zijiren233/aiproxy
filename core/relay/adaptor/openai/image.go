@@ -45,7 +45,6 @@ func ConvertImagesRequest(
 	}
 
 	return &adaptor.ConvertRequestResult{
-		Method: http.MethodPost,
 		Header: nil,
 		Body:   bytes.NewReader(jsonData),
 	}, nil
@@ -109,7 +108,6 @@ func ConvertImagesEditsRequest(
 	multipartWriter.Close()
 	ContentType := multipartWriter.FormDataContentType()
 	return &adaptor.ConvertRequestResult{
-		Method: http.MethodPost,
 		Header: http.Header{
 			"Content-Type": {ContentType},
 		},

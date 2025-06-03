@@ -30,7 +30,6 @@ func (a *Adaptor) ConvertRequest(
 	llamaReq := ConvertRequest(request)
 	meta.Set(ConvertedRequest, llamaReq)
 	return &adaptor.ConvertRequestResult{
-		Method: http.MethodPost,
 		Header: nil,
 		Body:   nil,
 	}, nil

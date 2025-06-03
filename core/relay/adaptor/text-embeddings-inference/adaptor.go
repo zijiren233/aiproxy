@@ -21,22 +21,34 @@ type Adaptor struct{}
 // base url for text-embeddings-inference, fake
 const baseURL = "https://api.text-embeddings.net"
 
-func (a *Adaptor) GetBaseURL() string {
+func (a *Adaptor) DefaultBaseURL() string {
 	return baseURL
 }
 
-func (a *Adaptor) GetModelList() []model.ModelConfig {
-	return ModelList
+func (a *Adaptor) Metadata() adaptor.Metadata {
+	return adaptor.Metadata{
+		Features: []string{
+			"https://github.com/huggingface/text-embeddings-inference",
+			"Embeddings、Rerank Support",
+		},
+		Models: ModelList,
+	}
 }
 
-func (a *Adaptor) GetRequestURL(meta *meta.Meta, _ adaptor.Store) (string, error) {
+func (a *Adaptor) GetRequestURL(meta *meta.Meta, _ adaptor.Store) (*adaptor.RequestURL, error) {
 	switch meta.Mode {
 	case mode.Rerank:
-		return meta.Channel.BaseURL + "/rerank", nil
+		return &adaptor.RequestURL{
+			Method: http.MethodPost,
+			URL:    meta.Channel.BaseURL + "/rerank",
+		}, nil
 	case mode.Embeddings:
-		return meta.Channel.BaseURL + "/v1/embeddings", nil
+		return &adaptor.RequestURL{
+			Method: http.MethodPost,
+			URL:    meta.Channel.BaseURL + "/v1/embeddings",
+		}, nil
 	default:
-		return "", fmt.Errorf("unsupported mode: %s", meta.Mode)
+		return nil, fmt.Errorf("unsupported mode: %s", meta.Mode)
 	}
 }
 

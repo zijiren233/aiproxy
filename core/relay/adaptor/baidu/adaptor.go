@@ -22,7 +22,7 @@ const (
 	baseURL = "https://aip.baidubce.com"
 )
 
-func (a *Adaptor) GetBaseURL() string {
+func (a *Adaptor) DefaultBaseURL() string {
 	return baseURL
 }
 
@@ -48,12 +48,7 @@ var modelEndpointMap = map[string]string{
 	"Fuyu-8B":              "fuyu_8b",
 }
 
-func (a *Adaptor) GetRequestURL(meta *meta.Meta, _ adaptor.Store) (string, error) {
-	// Build base URL
-	if meta.Channel.BaseURL == "" {
-		meta.Channel.BaseURL = baseURL
-	}
-
+func (a *Adaptor) GetRequestURL(meta *meta.Meta, _ adaptor.Store) (*adaptor.RequestURL, error) {
 	// Get API path suffix based on mode
 	var pathSuffix string
 	switch meta.Mode {
@@ -76,7 +71,10 @@ func (a *Adaptor) GetRequestURL(meta *meta.Meta, _ adaptor.Store) (string, error
 	fullURL := fmt.Sprintf("%s/rpc/2.0/ai_custom/v1/wenxinworkshop/%s/%s",
 		meta.Channel.BaseURL, pathSuffix, modelEndpoint)
 
-	return fullURL, nil
+	return &adaptor.RequestURL{
+		Method: http.MethodPost,
+		URL:    fullURL,
+	}, nil
 }
 
 func (a *Adaptor) SetupRequestHeader(
@@ -151,6 +149,9 @@ func (a *Adaptor) DoResponse(
 	return
 }
 
-func (a *Adaptor) GetModelList() []model.ModelConfig {
-	return ModelList
+func (a *Adaptor) Metadata() adaptor.Metadata {
+	return adaptor.Metadata{
+		KeyHelp: "client_id|client_secret",
+		Models:  ModelList,
+	}
 }

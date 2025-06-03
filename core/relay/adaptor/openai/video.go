@@ -37,8 +37,7 @@ func ConvertVideoRequest(
 		return nil, err
 	}
 	return &adaptor.ConvertRequestResult{
-		Method: http.MethodPost,
-		Body:   bytes.NewReader(jsonData),
+		Body: bytes.NewReader(jsonData),
 	}, nil
 }
 
@@ -46,18 +45,14 @@ func ConvertVideoGetJobsRequest(
 	_ *meta.Meta,
 	_ *http.Request,
 ) (*adaptor.ConvertRequestResult, error) {
-	return &adaptor.ConvertRequestResult{
-		Method: http.MethodGet,
-	}, nil
+	return &adaptor.ConvertRequestResult{}, nil
 }
 
 func ConvertVideoGetJobsContentRequest(
 	_ *meta.Meta,
 	_ *http.Request,
 ) (*adaptor.ConvertRequestResult, error) {
-	return &adaptor.ConvertRequestResult{
-		Method: http.MethodGet,
-	}, nil
+	return &adaptor.ConvertRequestResult{}, nil
 }
 
 func VideoHandler(

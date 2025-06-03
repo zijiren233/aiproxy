@@ -2,42 +2,52 @@ package openai
 
 import (
 	"bytes"
+	"errors"
 	"net/http"
 
-	"github.com/bytedance/sonic"
+	"github.com/bytedance/sonic/ast"
 	"github.com/labring/aiproxy/core/common"
 	"github.com/labring/aiproxy/core/relay/adaptor"
 	"github.com/labring/aiproxy/core/relay/meta"
 )
 
-//
-//nolint:gocritic
 func ConvertEmbeddingsRequest(
 	meta *meta.Meta,
 	req *http.Request,
 	inputToSlices bool,
 ) (*adaptor.ConvertRequestResult, error) {
-	reqMap := make(map[string]any)
-	err := common.UnmarshalBodyReusable(req, &reqMap)
+	node, err := common.UnmarshalBody2Node(req)
 	if err != nil {
 		return nil, err
 	}
 
-	reqMap["model"] = meta.ActualModel
+	_, err = node.Set("model", ast.NewString(meta.ActualModel))
+	if err != nil {
+		return nil, err
+	}
 
 	if inputToSlices {
-		switch v := reqMap["input"].(type) {
-		case string:
-			reqMap["input"] = []string{v}
+		inputNode := node.Get("input")
+		if inputNode.Exists() {
+			inputString, err := inputNode.String()
+			if err != nil {
+				if !errors.Is(err, ast.ErrUnsupportType) {
+					return nil, err
+				}
+			} else {
+				_, err = node.SetAny("input", []string{inputString})
+				if err != nil {
+					return nil, err
+				}
+			}
 		}
 	}
 
-	jsonData, err := sonic.Marshal(reqMap)
+	jsonData, err := node.MarshalJSON()
 	if err != nil {
 		return nil, err
 	}
 	return &adaptor.ConvertRequestResult{
-		Method: http.MethodPost,
 		Header: nil,
 		Body:   bytes.NewReader(jsonData),
 	}, nil

@@ -19,12 +19,15 @@ type Adaptor struct{}
 
 const baseURL = "https://api.cohere.ai"
 
-func (a *Adaptor) GetBaseURL() string {
+func (a *Adaptor) DefaultBaseURL() string {
 	return baseURL
 }
 
-func (a *Adaptor) GetRequestURL(meta *meta.Meta, _ adaptor.Store) (string, error) {
-	return meta.Channel.BaseURL + "/v1/chat", nil
+func (a *Adaptor) GetRequestURL(meta *meta.Meta, _ adaptor.Store) (*adaptor.RequestURL, error) {
+	return &adaptor.RequestURL{
+		Method: http.MethodPost,
+		URL:    meta.Channel.BaseURL + "/v1/chat",
+	}, nil
 }
 
 func (a *Adaptor) SetupRequestHeader(
@@ -56,7 +59,6 @@ func (a *Adaptor) ConvertRequest(
 		return nil, err
 	}
 	return &adaptor.ConvertRequestResult{
-		Method: http.MethodPost,
 		Header: nil,
 		Body:   bytes.NewReader(data),
 	}, nil
@@ -90,6 +92,8 @@ func (a *Adaptor) DoResponse(
 	return
 }
 
-func (a *Adaptor) GetModelList() []model.ModelConfig {
-	return ModelList
+func (a *Adaptor) Metadata() adaptor.Metadata {
+	return adaptor.Metadata{
+		Models: ModelList,
+	}
 }

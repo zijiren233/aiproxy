@@ -29,7 +29,7 @@ definitions:
     - ConfigTypeObject
   adaptors.AdaptorMeta:
     properties:
-      configTemplates:
+      config:
         $ref: '#/definitions/adaptor.ConfigTemplates'
       defaultBaseUrl:
         type: string
@@ -538,13 +538,6 @@ definitions:
       model:
         type: string
     type: object
-  model.Audio:
-    properties:
-      format:
-        type: string
-      voice:
-        type: string
-    type: object
   model.Channel:
     properties:
       balance:
@@ -886,19 +879,11 @@ definitions:
     type: object
   model.GeneralOpenAIRequest:
     properties:
-      audio:
-        $ref: '#/definitions/model.Audio'
-      dimensions:
-        type: integer
-      encoding_format:
-        type: string
       frequency_penalty:
         type: number
       function_call: {}
       functions: {}
       input: {}
-      instruction:
-        type: string
       logit_bias: {}
       logprobs:
         type: boolean
@@ -911,41 +896,24 @@ definitions:
           $ref: '#/definitions/model.Message'
         type: array
       metadata: {}
-      modalities:
-        items:
-          type: string
-        type: array
       model:
         type: string
-      "n":
-        type: integer
       num_ctx:
         type: integer
-      parallel_tool_calls:
-        type: boolean
-      prediction: {}
       presence_penalty:
         type: number
       prompt: {}
-      quality:
-        type: string
       response_format:
         $ref: '#/definitions/model.ResponseFormat'
       seed:
         type: number
-      service_tier:
-        type: string
       size:
         type: string
       stop: {}
-      store:
-        type: boolean
       stream:
         type: boolean
       stream_options:
         $ref: '#/definitions/model.StreamOptions'
-      style:
-        type: string
       temperature:
         type: number
       tool_choice: {}
@@ -1826,10 +1794,14 @@ definitions:
   model.VideoGenerationJobStatus:
     enum:
     - queued
+    - processing
+    - running
     - succeeded
     type: string
     x-enum-varnames:
     - VideoGenerationJobStatusQueued
+    - VideoGenerationJobStatusProcessing
+    - VideoGenerationJobStatusRunning
     - VideoGenerationJobStatusSucceeded
   model.VideoGenerations:
     properties:

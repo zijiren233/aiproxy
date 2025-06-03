@@ -20,7 +20,7 @@ type Adaptor struct {
 
 const baseURL = "https://openrouter.ai/api/v1"
 
-func (a *Adaptor) GetBaseURL() string {
+func (a *Adaptor) DefaultBaseURL() string {
 	return baseURL
 }
 
@@ -105,6 +105,11 @@ func (a *Adaptor) DoResponse(
 	}
 }
 
-func (a *Adaptor) GetModelList() []model.ModelConfig {
-	return openai.ModelList
+func (a *Adaptor) Metadata() adaptor.Metadata {
+	return adaptor.Metadata{
+		Features: []string{
+			"The `reasoning` field is converted to `reasoning_content`",
+		},
+		Models: openai.ModelList,
+	}
 }

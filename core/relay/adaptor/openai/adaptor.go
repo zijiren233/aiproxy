@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/core/model"
@@ -21,67 +20,82 @@ type Adaptor struct{}
 
 const baseURL = "https://api.openai.com/v1"
 
-func (a *Adaptor) GetBaseURL() string {
+func (a *Adaptor) DefaultBaseURL() string {
 	return baseURL
 }
 
-// /v1/video/generations/jobs/{job_id}
-func (a *Adaptor) getJobID(path string) string {
-	parts := strings.Split(path, "/")
-	if len(parts) == 0 {
-		return ""
-	}
-	return parts[len(parts)-1]
-}
-
-// /v1/video/generations/{generation_id}/content/video
-func (a *Adaptor) getGenerationID(path string) string {
-	if strings.HasSuffix(path, "/content/video") {
-		parts := strings.Split(path, "/")
-		if len(parts) == 0 {
-			return ""
-		}
-		return parts[len(parts)-2]
-	}
-	return ""
-}
-
-func (a *Adaptor) GetRequestURL(meta *meta.Meta, _ adaptor.Store) (string, error) {
+func (a *Adaptor) GetRequestURL(meta *meta.Meta, _ adaptor.Store) (*adaptor.RequestURL, error) {
 	u := meta.Channel.BaseURL
 
-	var path string
 	switch meta.Mode {
 	case mode.ChatCompletions:
-		path = "/chat/completions"
+		return &adaptor.RequestURL{
+			Method: http.MethodPost,
+			URL:    u + "/chat/completions",
+		}, nil
 	case mode.Completions:
-		path = "/completions"
+		return &adaptor.RequestURL{
+			Method: http.MethodPost,
+			URL:    u + "/completions",
+		}, nil
 	case mode.Embeddings:
-		path = "/embeddings"
+		return &adaptor.RequestURL{
+			Method: http.MethodPost,
+			URL:    u + "/embeddings",
+		}, nil
 	case mode.Moderations:
-		path = "/moderations"
+		return &adaptor.RequestURL{
+			Method: http.MethodPost,
+			URL:    u + "/moderations",
+		}, nil
 	case mode.ImagesGenerations:
-		path = "/images/generations"
+		return &adaptor.RequestURL{
+			Method: http.MethodPost,
+			URL:    u + "/images/generations",
+		}, nil
 	case mode.ImagesEdits:
-		path = "/images/edits"
+		return &adaptor.RequestURL{
+			Method: http.MethodPost,
+			URL:    u + "/images/edits",
+		}, nil
 	case mode.AudioSpeech:
-		path = "/audio/speech"
+		return &adaptor.RequestURL{
+			Method: http.MethodPost,
+			URL:    u + "/audio/speech",
+		}, nil
 	case mode.AudioTranscription:
-		path = "/audio/transcriptions"
+		return &adaptor.RequestURL{
+			Method: http.MethodPost,
+			URL:    u + "/audio/transcriptions",
+		}, nil
 	case mode.AudioTranslation:
-		path = "/audio/translations"
+		return &adaptor.RequestURL{
+			Method: http.MethodPost,
+			URL:    u + "/audio/translations",
+		}, nil
 	case mode.Rerank:
-		path = "/rerank"
+		return &adaptor.RequestURL{
+			Method: http.MethodPost,
+			URL:    u + "/rerank",
+		}, nil
 	case mode.VideoGenerationsJobs:
-		path = "/video/generations/jobs"
+		return &adaptor.RequestURL{
+			Method: http.MethodPost,
+			URL:    u + "/video/generations/jobs",
+		}, nil
 	case mode.VideoGenerationsGetJobs:
-		path = "/video/generations/jobs/" + a.getJobID(meta.Endpoint)
+		return &adaptor.RequestURL{
+			Method: http.MethodGet,
+			URL:    fmt.Sprintf("%s/video/generations/jobs/%s", u, meta.JobID),
+		}, nil
 	case mode.VideoGenerationsContent:
-		path = fmt.Sprintf("/video/generations/%s/content/video", a.getGenerationID(meta.Endpoint))
+		return &adaptor.RequestURL{
+			Method: http.MethodGet,
+			URL:    fmt.Sprintf("%s/video/generations/%s/content/video", u, meta.GenerationID),
+		}, nil
 	default:
-		return "", fmt.Errorf("unsupported mode: %s", meta.Mode)
+		return nil, fmt.Errorf("unsupported mode: %s", meta.Mode)
 	}
-
-	return u + path, nil
 }
 
 func (a *Adaptor) SetupRequestHeader(
@@ -112,11 +126,13 @@ func ConvertRequest(
 	}
 	switch meta.Mode {
 	case mode.Moderations:
-		return ConvertEmbeddingsRequest(meta, req, true)
-	case mode.Embeddings, mode.Completions:
+		return ConvertModerationsRequest(meta, req)
+	case mode.Embeddings:
 		return ConvertEmbeddingsRequest(meta, req, false)
+	case mode.Completions:
+		return ConvertCompletionsRequest(meta, req, nil)
 	case mode.ChatCompletions:
-		return ConvertTextRequest(meta, req, false)
+		return ConvertChatCompletionsRequest(meta, req, nil, false)
 	case mode.ImagesGenerations:
 		return ConvertImagesRequest(meta, req)
 	case mode.ImagesEdits:
@@ -199,6 +215,11 @@ func (a *Adaptor) DoResponse(
 	return DoResponse(meta, store, c, resp)
 }
 
-func (a *Adaptor) GetModelList() []model.ModelConfig {
-	return ModelList
+func (a *Adaptor) Metadata() adaptor.Metadata {
+	return adaptor.Metadata{
+		Features: []string{
+			"OpenAI compatibility",
+		},
+		Models: ModelList,
+	}
 }

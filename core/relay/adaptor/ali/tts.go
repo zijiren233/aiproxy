@@ -164,7 +164,6 @@ func ConvertTTSRequest(meta *meta.Meta, req *http.Request) (*adaptor.ConvertRequ
 		return nil, err
 	}
 	return &adaptor.ConvertRequestResult{
-		Method: http.MethodPost,
 		Header: http.Header{
 			"X-DashScope-DataInspection": {"enable"},
 		},

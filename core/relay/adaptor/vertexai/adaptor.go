@@ -17,7 +17,7 @@ import (
 
 type Adaptor struct{}
 
-func (a *Adaptor) GetBaseURL() string {
+func (a *Adaptor) DefaultBaseURL() string {
 	return ""
 }
 
@@ -57,11 +57,17 @@ func (a *Adaptor) DoResponse(
 	return adaptor.DoResponse(meta, store, c, resp)
 }
 
-func (a *Adaptor) GetModelList() []model.ModelConfig {
-	return modelList
+func (a *Adaptor) Metadata() adaptor.Metadata {
+	return adaptor.Metadata{
+		Features: []string{
+			"Claude support native Endpoint: /v1/messages",
+		},
+		KeyHelp: "region|adcJSON",
+		Models:  modelList,
+	}
 }
 
-func (a *Adaptor) GetRequestURL(meta *meta.Meta, _ adaptor.Store) (string, error) {
+func (a *Adaptor) GetRequestURL(meta *meta.Meta, _ adaptor.Store) (*adaptor.RequestURL, error) {
 	var suffix string
 	if strings.HasPrefix(meta.ActualModel, "gemini") {
 		if meta.GetBool("stream") {
@@ -79,27 +85,33 @@ func (a *Adaptor) GetRequestURL(meta *meta.Meta, _ adaptor.Store) (string, error
 
 	config, err := getConfigFromKey(meta.Channel.Key)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	if meta.Channel.BaseURL != "" {
-		return fmt.Sprintf(
-			"%s/v1/projects/%s/locations/%s/publishers/google/models/%s:%s",
-			meta.Channel.BaseURL,
+		return &adaptor.RequestURL{
+			Method: http.MethodPost,
+			URL: fmt.Sprintf(
+				"%s/v1/projects/%s/locations/%s/publishers/google/models/%s:%s",
+				meta.Channel.BaseURL,
+				config.ProjectID,
+				config.Region,
+				meta.ActualModel,
+				suffix,
+			),
+		}, nil
+	}
+	return &adaptor.RequestURL{
+		Method: http.MethodPost,
+		URL: fmt.Sprintf(
+			"https://%s-aiplatform.googleapis.com/v1/projects/%s/locations/%s/publishers/google/models/%s:%s",
+			config.Region,
 			config.ProjectID,
 			config.Region,
 			meta.ActualModel,
 			suffix,
-		), nil
-	}
-	return fmt.Sprintf(
-		"https://%s-aiplatform.googleapis.com/v1/projects/%s/locations/%s/publishers/google/models/%s:%s",
-		config.Region,
-		config.ProjectID,
-		config.Region,
-		meta.ActualModel,
-		suffix,
-	), nil
+		),
+	}, nil
 }
 
 func (a *Adaptor) SetupRequestHeader(

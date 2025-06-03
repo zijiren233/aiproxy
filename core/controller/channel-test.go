@@ -40,7 +40,7 @@ var (
 func guessModelConfig(modelName string) model.ModelConfig {
 	modelConfigCacheOnce.Do(func() {
 		for _, c := range adaptors.ChannelAdaptor {
-			for _, m := range c.GetModelList() {
+			for _, m := range c.Metadata().Models {
 				if _, ok := modelConfigCache[m.Model]; !ok {
 					modelConfigCache[m.Model] = m
 				}

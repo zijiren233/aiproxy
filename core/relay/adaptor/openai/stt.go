@@ -78,7 +78,6 @@ func ConvertSTTRequest(
 	multipartWriter.Close()
 	ContentType := multipartWriter.FormDataContentType()
 	return &adaptor.ConvertRequestResult{
-		Method: http.MethodPost,
 		Header: http.Header{
 			"Content-Type": {ContentType},
 		},

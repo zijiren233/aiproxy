@@ -62,63 +62,102 @@ func PutScannerBuffer(buf *[]byte) {
 	scannerBufferPool.Put(buf)
 }
 
-func ConvertTextRequest(
+func ConvertCompletionsRequest(
 	meta *meta.Meta,
 	req *http.Request,
-	doNotPatchStreamOptionsIncludeUsage bool,
+	callback func(node *ast.Node) error,
 ) (*adaptor.ConvertRequestResult, error) {
-	reqMap := make(map[string]any)
-	err := common.UnmarshalBodyReusable(req, &reqMap)
+	node, err := common.UnmarshalBody2Node(req)
 	if err != nil {
 		return nil, err
 	}
 
-	if !doNotPatchStreamOptionsIncludeUsage {
-		if err := patchStreamOptions(reqMap); err != nil {
+	if callback != nil {
+		if err := callback(&node); err != nil {
 			return nil, err
 		}
 	}
 
-	reqMap["model"] = meta.ActualModel
-	jsonData, err := sonic.Marshal(reqMap)
+	_, err = node.Set("model", ast.NewString(meta.ActualModel))
+	if err != nil {
+		return nil, err
+	}
+
+	jsonData, err := node.MarshalJSON()
 	if err != nil {
 		return nil, err
 	}
 	return &adaptor.ConvertRequestResult{
-		Method: http.MethodPost,
 		Header: nil,
 		Body:   bytes.NewReader(jsonData),
 	}, nil
 }
 
-func patchStreamOptions(reqMap map[string]any) error {
-	stream, ok := reqMap["stream"]
-	if !ok {
+func ConvertChatCompletionsRequest(
+	meta *meta.Meta,
+	req *http.Request,
+	callback func(node *ast.Node) error,
+	doNotPatchStreamOptionsIncludeUsage bool,
+) (*adaptor.ConvertRequestResult, error) {
+	node, err := common.UnmarshalBody2Node(req)
+	if err != nil {
+		return nil, err
+	}
+
+	if callback != nil {
+		if err := callback(&node); err != nil {
+			return nil, err
+		}
+	}
+
+	if !doNotPatchStreamOptionsIncludeUsage {
+		if err := patchStreamOptions(&node); err != nil {
+			return nil, err
+		}
+	}
+
+	_, err = node.Set("model", ast.NewString(meta.ActualModel))
+	if err != nil {
+		return nil, err
+	}
+
+	jsonData, err := node.MarshalJSON()
+	if err != nil {
+		return nil, err
+	}
+	return &adaptor.ConvertRequestResult{
+		Header: nil,
+		Body:   bytes.NewReader(jsonData),
+	}, nil
+}
+
+func patchStreamOptions(node *ast.Node) error {
+	streamNode := node.Get("stream")
+	if !streamNode.Exists() {
 		return nil
 	}
-
-	streamBool, ok := stream.(bool)
-	if !ok {
+	streamBool, err := streamNode.Bool()
+	if err != nil {
 		return errors.New("stream is not a boolean")
 	}
-
 	if !streamBool {
 		return nil
 	}
 
-	streamOptions, ok := reqMap["stream_options"].(map[string]any)
-	if !ok {
-		if reqMap["stream_options"] != nil {
-			return errors.New("stream_options is not a map")
-		}
-		reqMap["stream_options"] = map[string]any{
+	streamOptionsNode := node.Get("stream_options")
+	if !streamOptionsNode.Exists() {
+		_, err = node.SetAny("stream_options", map[string]any{
 			"include_usage": true,
-		}
-		return nil
+		})
+		return err
 	}
 
-	streamOptions["include_usage"] = true
-	return nil
+	if streamOptionsNode.TypeSafe() != ast.V_OBJECT {
+		return errors.New("stream_options is not an object")
+	}
+
+	_, err = streamOptionsNode.Set("include_usage", ast.NewBool(true))
+	return err
 }
 
 func GetUsageOrChatChoicesResponseFromNode(

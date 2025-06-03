@@ -22,7 +22,7 @@ const (
 	baseURL = "https://qianfan.baidubce.com/v2"
 )
 
-func (a *Adaptor) GetBaseURL() string {
+func (a *Adaptor) DefaultBaseURL() string {
 	return baseURL
 }
 
@@ -39,14 +39,20 @@ func toV2ModelName(modelName string) string {
 	return strings.ToLower(modelName)
 }
 
-func (a *Adaptor) GetRequestURL(meta *meta.Meta, _ adaptor.Store) (string, error) {
+func (a *Adaptor) GetRequestURL(meta *meta.Meta, _ adaptor.Store) (*adaptor.RequestURL, error) {
 	switch meta.Mode {
 	case mode.ChatCompletions:
-		return meta.Channel.BaseURL + "/chat/completions", nil
+		return &adaptor.RequestURL{
+			Method: http.MethodPost,
+			URL:    meta.Channel.BaseURL + "/chat/completions",
+		}, nil
 	case mode.Rerank:
-		return meta.Channel.BaseURL + "/rerankers", nil
+		return &adaptor.RequestURL{
+			Method: http.MethodPost,
+			URL:    meta.Channel.BaseURL + "/rerankers",
+		}, nil
 	default:
-		return "", fmt.Errorf("unsupported mode: %s", meta.Mode)
+		return nil, fmt.Errorf("unsupported mode: %s", meta.Mode)
 	}
 }
 
@@ -110,6 +116,9 @@ func (a *Adaptor) DoResponse(
 	}
 }
 
-func (a *Adaptor) GetModelList() []model.ModelConfig {
-	return ModelList
+func (a *Adaptor) Metadata() adaptor.Metadata {
+	return adaptor.Metadata{
+		KeyHelp: "ak|sk",
+		Models:  ModelList,
+	}
 }

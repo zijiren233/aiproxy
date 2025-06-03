@@ -19,16 +19,19 @@ type Adaptor struct{}
 
 const baseURL = "https://v2.doc2x.noedgeai.com"
 
-func (a *Adaptor) GetBaseURL() string {
+func (a *Adaptor) DefaultBaseURL() string {
 	return baseURL
 }
 
-func (a *Adaptor) GetRequestURL(meta *meta.Meta, _ adaptor.Store) (string, error) {
+func (a *Adaptor) GetRequestURL(meta *meta.Meta, _ adaptor.Store) (*adaptor.RequestURL, error) {
 	switch meta.Mode {
 	case mode.ParsePdf:
-		return meta.Channel.BaseURL + "/api/v2/parse/pdf", nil
+		return &adaptor.RequestURL{
+			Method: http.MethodPost,
+			URL:    meta.Channel.BaseURL + "/api/v2/parse/pdf",
+		}, nil
 	default:
-		return "", fmt.Errorf("unsupported mode: %s", meta.Mode)
+		return nil, fmt.Errorf("unsupported mode: %s", meta.Mode)
 	}
 }
 
@@ -82,6 +85,8 @@ func (a *Adaptor) SetupRequestHeader(
 	return nil
 }
 
-func (a *Adaptor) GetModelList() []model.ModelConfig {
-	return ModelList
+func (a *Adaptor) Metadata() adaptor.Metadata {
+	return adaptor.Metadata{
+		Models: ModelList,
+	}
 }
