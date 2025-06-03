@@ -29,7 +29,7 @@ func (a *Adaptor) GetModelList() []model.ModelConfig {
 	return ModelList
 }
 
-func (a *Adaptor) GetRequestURL(meta *meta.Meta) (string, error) {
+func (a *Adaptor) GetRequestURL(meta *meta.Meta, _ adaptor.Store) (string, error) {
 	switch meta.Mode {
 	case mode.Rerank:
 		return meta.Channel.BaseURL + "/rerank", nil
@@ -43,20 +43,26 @@ func (a *Adaptor) GetRequestURL(meta *meta.Meta) (string, error) {
 // text-embeddings-inference api see
 // https://huggingface.github.io/text-embeddings-inference/#/Text%20Embeddings%20Inference/rerank
 
-func (a *Adaptor) SetupRequestHeader(meta *meta.Meta, _ *gin.Context, req *http.Request) error {
+func (a *Adaptor) SetupRequestHeader(
+	meta *meta.Meta,
+	_ adaptor.Store,
+	_ *gin.Context,
+	req *http.Request,
+) error {
 	req.Header.Set("Authorization", "Bearer "+meta.Channel.Key)
 	return nil
 }
 
 func (a *Adaptor) ConvertRequest(
 	meta *meta.Meta,
+	store adaptor.Store,
 	req *http.Request,
 ) (*adaptor.ConvertRequestResult, error) {
 	switch meta.Mode {
 	case mode.Rerank:
 		return ConvertRerankRequest(meta, req)
 	case mode.Embeddings:
-		return openai.ConvertRequest(meta, req)
+		return openai.ConvertRequest(meta, store, req)
 	default:
 		return nil, fmt.Errorf("unsupported mode: %s", meta.Mode)
 	}
@@ -64,6 +70,7 @@ func (a *Adaptor) ConvertRequest(
 
 func (a *Adaptor) DoRequest(
 	_ *meta.Meta,
+	_ adaptor.Store,
 	_ *gin.Context,
 	req *http.Request,
 ) (*http.Response, error) {
@@ -72,6 +79,7 @@ func (a *Adaptor) DoRequest(
 
 func (a *Adaptor) DoResponse(
 	meta *meta.Meta,
+	store adaptor.Store,
 	c *gin.Context,
 	resp *http.Response,
 ) (*model.Usage, adaptor.Error) {
@@ -79,7 +87,7 @@ func (a *Adaptor) DoResponse(
 	case mode.Rerank:
 		return RerankHandler(meta, c, resp)
 	case mode.Embeddings:
-		return EmbeddingsHandler(meta, c, resp)
+		return EmbeddingsHandler(meta, store, c, resp)
 	default:
 		return nil, relaymodel.WrapperOpenAIErrorWithMessage(
 			fmt.Sprintf("unsupported mode: %s", meta.Mode),

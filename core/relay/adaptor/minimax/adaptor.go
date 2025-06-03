@@ -26,7 +26,12 @@ func (a *Adaptor) GetModelList() []model.ModelConfig {
 	return ModelList
 }
 
-func (a *Adaptor) SetupRequestHeader(meta *meta.Meta, _ *gin.Context, req *http.Request) error {
+func (a *Adaptor) SetupRequestHeader(
+	meta *meta.Meta,
+	_ adaptor.Store,
+	_ *gin.Context,
+	req *http.Request,
+) error {
 	apiKey, _, err := GetAPIKeyAndGroupID(meta.Channel.Key)
 	if err != nil {
 		return err
@@ -35,7 +40,7 @@ func (a *Adaptor) SetupRequestHeader(meta *meta.Meta, _ *gin.Context, req *http.
 	return nil
 }
 
-func (a *Adaptor) GetRequestURL(meta *meta.Meta) (string, error) {
+func (a *Adaptor) GetRequestURL(meta *meta.Meta, store adaptor.Store) (string, error) {
 	_, groupID, err := GetAPIKeyAndGroupID(meta.Channel.Key)
 	if err != nil {
 		return "", err
@@ -48,12 +53,13 @@ func (a *Adaptor) GetRequestURL(meta *meta.Meta) (string, error) {
 	case mode.AudioSpeech:
 		return fmt.Sprintf("%s/t2a_v2?GroupId=%s", meta.Channel.BaseURL, groupID), nil
 	default:
-		return a.Adaptor.GetRequestURL(meta)
+		return a.Adaptor.GetRequestURL(meta, store)
 	}
 }
 
 func (a *Adaptor) ConvertRequest(
 	meta *meta.Meta,
+	store adaptor.Store,
 	req *http.Request,
 ) (*adaptor.ConvertRequestResult, error) {
 	switch meta.Mode {
@@ -62,12 +68,13 @@ func (a *Adaptor) ConvertRequest(
 	case mode.AudioSpeech:
 		return ConvertTTSRequest(meta, req)
 	default:
-		return a.Adaptor.ConvertRequest(meta, req)
+		return a.Adaptor.ConvertRequest(meta, store, req)
 	}
 }
 
 func (a *Adaptor) DoResponse(
 	meta *meta.Meta,
+	store adaptor.Store,
 	c *gin.Context,
 	resp *http.Response,
 ) (usage *model.Usage, err adaptor.Error) {
@@ -75,7 +82,7 @@ func (a *Adaptor) DoResponse(
 	case mode.AudioSpeech:
 		return TTSHandler(meta, c, resp)
 	default:
-		return a.Adaptor.DoResponse(meta, c, resp)
+		return a.Adaptor.DoResponse(meta, store, c, resp)
 	}
 }
 

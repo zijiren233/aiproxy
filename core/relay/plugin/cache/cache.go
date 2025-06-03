@@ -215,15 +215,16 @@ func (c *Cache) setToCache(ctx context.Context, key string, item Item, ttl time.
 // ConvertRequest handles the request conversion phase
 func (c *Cache) ConvertRequest(
 	meta *meta.Meta,
+	store adaptor.Store,
 	req *http.Request,
 	do adaptor.ConvertRequest,
 ) (*adaptor.ConvertRequestResult, error) {
 	pluginConfig, err := getPluginConfig(meta)
 	if err != nil {
-		return do.ConvertRequest(meta, req)
+		return do.ConvertRequest(meta, store, req)
 	}
 	if !pluginConfig.Enable {
-		return do.ConvertRequest(meta, req)
+		return do.ConvertRequest(meta, store, req)
 	}
 
 	body, err := common.GetRequestBody(req)
@@ -232,7 +233,7 @@ func (c *Cache) ConvertRequest(
 	}
 
 	if len(body) == 0 {
-		return do.ConvertRequest(meta, req)
+		return do.ConvertRequest(meta, store, req)
 	}
 
 	// Generate hash as cache key
@@ -247,12 +248,13 @@ func (c *Cache) ConvertRequest(
 		return &adaptor.ConvertRequestResult{}, nil
 	}
 
-	return do.ConvertRequest(meta, req)
+	return do.ConvertRequest(meta, store, req)
 }
 
 // DoRequest handles the request execution phase
 func (c *Cache) DoRequest(
 	meta *meta.Meta,
+	store adaptor.Store,
 	ctx *gin.Context,
 	req *http.Request,
 	do adaptor.DoRequest,
@@ -261,7 +263,7 @@ func (c *Cache) DoRequest(
 		return &http.Response{}, nil
 	}
 
-	return do.DoRequest(meta, ctx, req)
+	return do.DoRequest(meta, store, ctx, req)
 }
 
 // Custom response writer to capture response for caching
@@ -311,20 +313,21 @@ func (c *Cache) writeCacheHeader(ctx *gin.Context, pluginConfig *Config, value s
 // DoResponse handles the response processing phase
 func (c *Cache) DoResponse(
 	meta *meta.Meta,
+	store adaptor.Store,
 	ctx *gin.Context,
 	resp *http.Response,
 	do adaptor.DoResponse,
 ) (usage *model.Usage, adapterErr adaptor.Error) {
 	pluginConfig, err := getPluginConfig(meta)
 	if err != nil {
-		return do.DoResponse(meta, ctx, resp)
+		return do.DoResponse(meta, store, ctx, resp)
 	}
 
 	// Handle cache hit
 	if isCacheHit(meta) {
 		item := getCacheItem(meta)
 		if item == nil {
-			return do.DoResponse(meta, ctx, resp)
+			return do.DoResponse(meta, store, ctx, resp)
 		}
 
 		// Restore headers from cache
@@ -337,16 +340,13 @@ func (c *Cache) DoResponse(
 		// Override specific headers
 		ctx.Header("Content-Type", item.Header["Content-Type"][0])
 		ctx.Header("Content-Length", strconv.Itoa(len(item.Body)))
-
 		c.writeCacheHeader(ctx, pluginConfig, "hit")
-
-		ctx.Status(http.StatusOK)
 		_, _ = ctx.Writer.Write(item.Body)
 		return item.Usage, nil
 	}
 
 	if !pluginConfig.Enable {
-		return do.DoResponse(meta, ctx, resp)
+		return do.DoResponse(meta, store, ctx, resp)
 	}
 
 	c.writeCacheHeader(ctx, pluginConfig, "miss")
@@ -386,5 +386,5 @@ func (c *Cache) DoResponse(
 		c.setToCache(ctx.Request.Context(), getCacheKey(meta), item, ttl)
 	}()
 
-	return do.DoResponse(meta, ctx, resp)
+	return do.DoResponse(meta, store, ctx, resp)
 }

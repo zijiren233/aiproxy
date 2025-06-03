@@ -18,6 +18,7 @@ type Adaptor struct{}
 
 func (a *Adaptor) ConvertRequest(
 	meta *meta.Meta,
+	_ adaptor.Store,
 	req *http.Request,
 ) (*adaptor.ConvertRequestResult, error) {
 	r, err := anthropic.OpenAIConvertRequest(meta, req)
@@ -35,6 +36,7 @@ func (a *Adaptor) ConvertRequest(
 
 func (a *Adaptor) DoResponse(
 	meta *meta.Meta,
+	_ adaptor.Store,
 	c *gin.Context,
 ) (usage *model.Usage, err adaptor.Error) {
 	if meta.GetBool("stream") {

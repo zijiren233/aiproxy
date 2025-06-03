@@ -153,6 +153,8 @@ func TTSHandler(
 		return nil, relaymodel.WrapperOpenAIError(err, "TTS_ERROR", http.StatusInternalServerError)
 	}
 
+	c.Writer.Header().Set("Content-Type", "audio/"+result.ExtraInfo.AudioFormat)
+	c.Writer.Header().Set("Content-Length", strconv.Itoa(len(audioBytes)))
 	_, err = c.Writer.Write(audioBytes)
 	if err != nil {
 		log.Warnf("write response body failed: %v", err)

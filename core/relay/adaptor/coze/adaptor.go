@@ -23,11 +23,16 @@ func (a *Adaptor) GetBaseURL() string {
 	return baseURL
 }
 
-func (a *Adaptor) GetRequestURL(meta *meta.Meta) (string, error) {
+func (a *Adaptor) GetRequestURL(meta *meta.Meta, _ adaptor.Store) (string, error) {
 	return meta.Channel.BaseURL + "/open_api/v2/chat", nil
 }
 
-func (a *Adaptor) SetupRequestHeader(meta *meta.Meta, _ *gin.Context, req *http.Request) error {
+func (a *Adaptor) SetupRequestHeader(
+	meta *meta.Meta,
+	_ adaptor.Store,
+	_ *gin.Context,
+	req *http.Request,
+) error {
 	token, _, err := getTokenAndUserID(meta.Channel.Key)
 	if err != nil {
 		return err
@@ -38,6 +43,7 @@ func (a *Adaptor) SetupRequestHeader(meta *meta.Meta, _ *gin.Context, req *http.
 
 func (a *Adaptor) ConvertRequest(
 	meta *meta.Meta,
+	_ adaptor.Store,
 	req *http.Request,
 ) (*adaptor.ConvertRequestResult, error) {
 	if meta.Mode != mode.ChatCompletions {
@@ -82,6 +88,7 @@ func (a *Adaptor) ConvertRequest(
 
 func (a *Adaptor) DoRequest(
 	_ *meta.Meta,
+	_ adaptor.Store,
 	_ *gin.Context,
 	req *http.Request,
 ) (*http.Response, error) {
@@ -90,6 +97,7 @@ func (a *Adaptor) DoRequest(
 
 func (a *Adaptor) DoResponse(
 	meta *meta.Meta,
+	_ adaptor.Store,
 	c *gin.Context,
 	resp *http.Response,
 ) (usage *model.Usage, err adaptor.Error) {

@@ -31,10 +31,11 @@ func (a *Adaptor) GetModelList() []model.ModelConfig {
 //nolint:gocritic
 func (a *Adaptor) DoResponse(
 	meta *meta.Meta,
+	store adaptor.Store,
 	c *gin.Context,
 	resp *http.Response,
 ) (usage *model.Usage, err adaptor.Error) {
-	usage, err = a.Adaptor.DoResponse(meta, c, resp)
+	usage, err = a.Adaptor.DoResponse(meta, store, c, resp)
 	if err != nil {
 		return nil, err
 	}

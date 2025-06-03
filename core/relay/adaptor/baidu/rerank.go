@@ -3,6 +3,7 @@ package baidu
 import (
 	"io"
 	"net/http"
+	"strconv"
 
 	"github.com/bytedance/sonic"
 	"github.com/gin-gonic/gin"
@@ -74,6 +75,8 @@ func RerankHandler(
 			http.StatusInternalServerError,
 		)
 	}
+	c.Writer.Header().Set("Content-Type", "application/json")
+	c.Writer.Header().Set("Content-Length", strconv.Itoa(len(jsonData)))
 	_, err = c.Writer.Write(jsonData)
 	if err != nil {
 		log.Warnf("write response body failed: %v", err)

@@ -3,6 +3,7 @@ package jina
 import (
 	"io"
 	"net/http"
+	"strconv"
 
 	"github.com/bytedance/sonic"
 	"github.com/bytedance/sonic/ast"
@@ -94,7 +95,6 @@ func RerankHandler(
 			http.StatusInternalServerError,
 		)
 	}
-	c.Writer.WriteHeader(resp.StatusCode)
 	respData, err := node.MarshalJSON()
 	if err != nil {
 		return nil, relaymodel.WrapperOpenAIError(
@@ -103,6 +103,8 @@ func RerankHandler(
 			http.StatusInternalServerError,
 		)
 	}
+	c.Writer.Header().Set("Content-Type", "application/json")
+	c.Writer.Header().Set("Content-Length", strconv.Itoa(len(respData)))
 	_, err = c.Writer.Write(respData)
 	if err != nil {
 		log.Warnf("write response body failed: %v", err)

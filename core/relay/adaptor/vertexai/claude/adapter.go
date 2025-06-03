@@ -26,6 +26,7 @@ type Adaptor struct{}
 
 func (a *Adaptor) ConvertRequest(
 	meta *meta.Meta,
+	_ adaptor.Store,
 	request *http.Request,
 ) (*adaptor.ConvertRequestResult, error) {
 	if request == nil {
@@ -105,6 +106,7 @@ func handleAnthropicRequest(meta *meta.Meta, request *http.Request) ([]byte, err
 
 func (a *Adaptor) DoResponse(
 	meta *meta.Meta,
+	_ adaptor.Store,
 	c *gin.Context,
 	resp *http.Response,
 ) (usage *model.Usage, err adaptor.Error) {

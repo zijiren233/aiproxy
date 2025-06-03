@@ -16,6 +16,7 @@ type Adaptor struct{}
 
 func (a *Adaptor) ConvertRequest(
 	meta *meta.Meta,
+	_ adaptor.Store,
 	request *http.Request,
 ) (*adaptor.ConvertRequestResult, error) {
 	return gemini.ConvertRequest(meta, request)
@@ -23,6 +24,7 @@ func (a *Adaptor) ConvertRequest(
 
 func (a *Adaptor) DoResponse(
 	meta *meta.Meta,
+	_ adaptor.Store,
 	c *gin.Context,
 	resp *http.Response,
 ) (usage *model.Usage, err adaptor.Error) {

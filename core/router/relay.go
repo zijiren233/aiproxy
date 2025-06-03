@@ -75,6 +75,18 @@ func SetRelayRouter(router *gin.Engine) {
 			"/parse/pdf",
 			controller.ParsePdf()...,
 		)
+		relayRouter.POST(
+			"/video/generations/jobs",
+			controller.VideoGenerationsJobs()...,
+		)
+		relayRouter.GET(
+			"/video/generations/jobs/:id",
+			controller.VideoGenerationsGetJobs()...,
+		)
+		relayRouter.GET(
+			"/video/generations/:id/content/video",
+			controller.VideoGenerationsContent()...,
+		)
 
 		relayRouter.POST("/images/variations", controller.RelayNotImplemented)
 		relayRouter.GET("/files", controller.RelayNotImplemented)

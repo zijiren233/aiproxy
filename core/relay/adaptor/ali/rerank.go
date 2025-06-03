@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"io"
 	"net/http"
+	"strconv"
 
 	"github.com/bytedance/sonic"
 	"github.com/gin-gonic/gin"
@@ -95,8 +96,6 @@ func RerankHandler(
 		)
 	}
 
-	c.Writer.WriteHeader(resp.StatusCode)
-
 	rerankResp := relaymodel.RerankResponse{
 		Meta: relaymodel.RerankMeta{
 			Tokens: &relaymodel.RerankMetaTokens{
@@ -129,6 +128,8 @@ func RerankHandler(
 			http.StatusInternalServerError,
 		)
 	}
+	c.Writer.Header().Set("Content-Type", "application/json")
+	c.Writer.Header().Set("Content-Length", strconv.Itoa(len(jsonResponse)))
 	_, err = c.Writer.Write(jsonResponse)
 	if err != nil {
 		log.Warnf("write response body failed: %v", err)

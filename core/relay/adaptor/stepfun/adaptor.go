@@ -22,13 +22,14 @@ func (a *Adaptor) GetBaseURL() string {
 
 func (a *Adaptor) ConvertRequest(
 	meta *meta.Meta,
+	store adaptor.Store,
 	req *http.Request,
 ) (*adaptor.ConvertRequestResult, error) {
 	switch meta.Mode {
 	case mode.AudioSpeech:
 		return openai.ConvertTTSRequest(meta, req, "cixingnansheng")
 	default:
-		return a.Adaptor.ConvertRequest(meta, req)
+		return a.Adaptor.ConvertRequest(meta, store, req)
 	}
 }
 

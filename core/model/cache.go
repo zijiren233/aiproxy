@@ -674,6 +674,73 @@ func CacheGetPublicMCPReusingParam(mcpID, groupID string) (*PublicMCPReusingPara
 	return prc, nil
 }
 
+const (
+	StoreCacheKey = "store:%s" // store_id
+)
+
+type StoreCache struct {
+	ID        string    `json:"id"         redis:"i"`
+	GroupID   string    `json:"group_id"   redis:"g"`
+	TokenID   int       `json:"token_id"   redis:"t"`
+	ChannelID int       `json:"channel_id" redis:"c"`
+	Model     string    `json:"model"      redis:"m"`
+	ExpiresAt time.Time `json:"expires_at" redis:"e"`
+}
+
+func (s *Store) ToStoreCache() *StoreCache {
+	return &StoreCache{
+		ID:        s.ID,
+		GroupID:   s.GroupID,
+		TokenID:   s.TokenID,
+		ChannelID: s.ChannelID,
+		Model:     s.Model,
+		ExpiresAt: s.ExpiresAt,
+	}
+}
+
+func CacheSetStore(store *StoreCache) error {
+	if !common.RedisEnabled {
+		return nil
+	}
+	key := fmt.Sprintf(StoreCacheKey, store.ID)
+	pipe := common.RDB.Pipeline()
+	pipe.HSet(context.Background(), key, store)
+	expireTime := SyncFrequency + time.Duration(rand.Int64N(60)-30)*time.Second
+	pipe.Expire(context.Background(), key, expireTime)
+	_, err := pipe.Exec(context.Background())
+	return err
+}
+
+func CacheGetStore(id string) (*StoreCache, error) {
+	if !common.RedisEnabled {
+		store, err := GetStore(id)
+		if err != nil {
+			return nil, err
+		}
+		return store.ToStoreCache(), nil
+	}
+
+	cacheKey := fmt.Sprintf(StoreCacheKey, id)
+	storeCache := &StoreCache{}
+	err := common.RDB.HGetAll(context.Background(), cacheKey).Scan(storeCache)
+	if err == nil && storeCache.ID != "" {
+		return storeCache, nil
+	}
+
+	store, err := GetStore(id)
+	if err != nil {
+		return nil, err
+	}
+
+	sc := store.ToStoreCache()
+
+	if err := CacheSetStore(sc); err != nil {
+		log.Error("redis set store error: " + err.Error())
+	}
+
+	return sc, nil
+}
+
 //nolint:revive
 type ModelConfigCache interface {
 	GetModelConfig(model string) (ModelConfig, bool)

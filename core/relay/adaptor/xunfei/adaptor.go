@@ -21,6 +21,7 @@ const baseURL = "https://spark-api-open.xf-yun.com/v1"
 
 func (a *Adaptor) ConvertRequest(
 	meta *meta.Meta,
+	store adaptor.Store,
 	req *http.Request,
 ) (*adaptor.ConvertRequestResult, error) {
 	domain := getXunfeiDomain(meta.ActualModel)
@@ -29,7 +30,7 @@ func (a *Adaptor) ConvertRequest(
 	defer func() {
 		meta.ActualModel = model
 	}()
-	return a.Adaptor.ConvertRequest(meta, req)
+	return a.Adaptor.ConvertRequest(meta, store, req)
 }
 
 func (a *Adaptor) GetModelList() []model.ModelConfig {

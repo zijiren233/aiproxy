@@ -34,12 +34,13 @@ func (a *Adaptor) GetModelList() []model.ModelConfig {
 	return ModelList
 }
 
-func (a *Adaptor) GetRequestURL(meta *meta.Meta) (string, error) {
+func (a *Adaptor) GetRequestURL(meta *meta.Meta, _ adaptor.Store) (string, error) {
 	return GetRequestURL(meta)
 }
 
 func (a *Adaptor) ConvertRequest(
 	meta *meta.Meta,
+	_ adaptor.Store,
 	req *http.Request,
 ) (*adaptor.ConvertRequestResult, error) {
 	switch meta.Mode {
@@ -50,7 +51,12 @@ func (a *Adaptor) ConvertRequest(
 	}
 }
 
-func (a *Adaptor) SetupRequestHeader(meta *meta.Meta, _ *gin.Context, req *http.Request) error {
+func (a *Adaptor) SetupRequestHeader(
+	meta *meta.Meta,
+	_ adaptor.Store,
+	_ *gin.Context,
+	req *http.Request,
+) error {
 	switch meta.Mode {
 	case mode.AudioSpeech:
 		_, token, err := getAppIDAndToken(meta.Channel.Key)
@@ -66,6 +72,7 @@ func (a *Adaptor) SetupRequestHeader(meta *meta.Meta, _ *gin.Context, req *http.
 
 func (a *Adaptor) DoRequest(
 	meta *meta.Meta,
+	_ adaptor.Store,
 	_ *gin.Context,
 	req *http.Request,
 ) (*http.Response, error) {
@@ -79,6 +86,7 @@ func (a *Adaptor) DoRequest(
 
 func (a *Adaptor) DoResponse(
 	meta *meta.Meta,
+	_ adaptor.Store,
 	c *gin.Context,
 	resp *http.Response,
 ) (*model.Usage, adaptor.Error) {

@@ -82,6 +82,7 @@ func DoHelper(
 	a adaptor.Adaptor,
 	c *gin.Context,
 	meta *meta.Meta,
+	store adaptor.Store,
 ) (
 	model.Usage,
 	*RequestDetail,
@@ -95,7 +96,7 @@ func DoHelper(
 	}
 
 	// 2. Convert and prepare request
-	resp, err := prepareAndDoRequest(a, c, meta)
+	resp, err := prepareAndDoRequest(a, c, meta, store)
 	if err != nil {
 		return model.Usage{}, &detail, err
 	}
@@ -118,7 +119,7 @@ func DoHelper(
 	}
 
 	// 4. Handle success response
-	usage, relayErr := handleResponse(a, c, meta, resp, &detail)
+	usage, relayErr := handleResponse(a, c, meta, store, resp, &detail)
 	if relayErr != nil {
 		return model.Usage{}, &detail, relayErr
 	}
@@ -156,10 +157,11 @@ func prepareAndDoRequest(
 	a adaptor.Adaptor,
 	c *gin.Context,
 	meta *meta.Meta,
+	store adaptor.Store,
 ) (*http.Response, adaptor.Error) {
 	log := middleware.GetLogger(c)
 
-	convertResult, err := a.ConvertRequest(meta, c.Request)
+	convertResult, err := a.ConvertRequest(meta, store, c.Request)
 	if err != nil {
 		return nil, relaymodel.WrapperErrorWithMessage(
 			meta.Mode,
@@ -176,7 +178,7 @@ func prepareAndDoRequest(
 		meta.Channel.BaseURL = a.GetBaseURL()
 	}
 
-	fullRequestURL, err := a.GetRequestURL(meta)
+	fullRequestURL, err := a.GetRequestURL(meta, store)
 	if err != nil {
 		return nil, relaymodel.WrapperErrorWithMessage(
 			meta.Mode,
@@ -212,17 +214,18 @@ func prepareAndDoRequest(
 		)
 	}
 
-	if err := setupRequestHeader(a, c, meta, req, convertResult.Header); err != nil {
+	if err := setupRequestHeader(a, c, meta, store, req, convertResult.Header); err != nil {
 		return nil, err
 	}
 
-	return doRequest(a, c, meta, req)
+	return doRequest(a, c, meta, store, req)
 }
 
 func setupRequestHeader(
 	a adaptor.Adaptor,
 	c *gin.Context,
 	meta *meta.Meta,
+	store adaptor.Store,
 	req *http.Request,
 	header http.Header,
 ) adaptor.Error {
@@ -234,7 +237,7 @@ func setupRequestHeader(
 	for key, value := range header {
 		req.Header[key] = value
 	}
-	if err := a.SetupRequestHeader(meta, c, req); err != nil {
+	if err := a.SetupRequestHeader(meta, store, c, req); err != nil {
 		return relaymodel.WrapperErrorWithMessage(
 			meta.Mode,
 			http.StatusInternalServerError,
@@ -249,9 +252,10 @@ func doRequest(
 	a adaptor.Adaptor,
 	c *gin.Context,
 	meta *meta.Meta,
+	store adaptor.Store,
 	req *http.Request,
 ) (*http.Response, adaptor.Error) {
-	resp, err := a.DoRequest(meta, c, req)
+	resp, err := a.DoRequest(meta, store, c, req)
 	if err != nil {
 		if errors.Is(err, context.Canceled) {
 			return nil, relaymodel.WrapperErrorWithMessage(
@@ -299,6 +303,7 @@ func handleResponse(
 	a adaptor.Adaptor,
 	c *gin.Context,
 	meta *meta.Meta,
+	store adaptor.Store,
 	resp *http.Response,
 	detail *RequestDetail,
 ) (model.Usage, adaptor.Error) {
@@ -316,7 +321,7 @@ func handleResponse(
 	}()
 	c.Writer = rw
 
-	usage, relayErr := a.DoResponse(meta, c, resp)
+	usage, relayErr := a.DoResponse(meta, store, c, resp)
 	if relayErr != nil {
 		respBody, _ := relayErr.MarshalJSON()
 		detail.ResponseBody = conv.BytesToString(respBody)
@@ -350,7 +355,9 @@ func updateUsageMetrics(usage model.Usage, log *log.Entry) {
 	if usage.OutputTokens > 0 {
 		log.Data["t_output"] = usage.OutputTokens
 	}
-	log.Data["t_total"] = usage.TotalTokens
+	if usage.TotalTokens > 0 {
+		log.Data["t_total"] = usage.TotalTokens
+	}
 	if usage.CachedTokens > 0 {
 		log.Data["t_cached"] = usage.CachedTokens
 	}

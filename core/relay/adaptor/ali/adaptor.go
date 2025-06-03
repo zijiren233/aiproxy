@@ -28,7 +28,7 @@ func (a *Adaptor) GetBaseURL() string {
 	return baseURL
 }
 
-func (a *Adaptor) GetRequestURL(meta *meta.Meta) (string, error) {
+func (a *Adaptor) GetRequestURL(meta *meta.Meta, _ adaptor.Store) (string, error) {
 	u := meta.Channel.BaseURL
 	if u == "" {
 		u = baseURL
@@ -51,7 +51,12 @@ func (a *Adaptor) GetRequestURL(meta *meta.Meta) (string, error) {
 	}
 }
 
-func (a *Adaptor) SetupRequestHeader(meta *meta.Meta, _ *gin.Context, req *http.Request) error {
+func (a *Adaptor) SetupRequestHeader(
+	meta *meta.Meta,
+	_ adaptor.Store,
+	_ *gin.Context,
+	req *http.Request,
+) error {
 	req.Header.Set("Authorization", "Bearer "+meta.Channel.Key)
 
 	// req.Header.Set("X-Dashscope-Plugin", meta.Channel.Config.Plugin)
@@ -60,6 +65,7 @@ func (a *Adaptor) SetupRequestHeader(meta *meta.Meta, _ *gin.Context, req *http.
 
 func (a *Adaptor) ConvertRequest(
 	meta *meta.Meta,
+	store adaptor.Store,
 	req *http.Request,
 ) (*adaptor.ConvertRequestResult, error) {
 	switch meta.Mode {
@@ -68,7 +74,7 @@ func (a *Adaptor) ConvertRequest(
 	case mode.Rerank:
 		return ConvertRerankRequest(meta, req)
 	case mode.ChatCompletions, mode.Completions, mode.Embeddings:
-		return openai.ConvertRequest(meta, req)
+		return openai.ConvertRequest(meta, store, req)
 	case mode.AudioSpeech:
 		return ConvertTTSRequest(meta, req)
 	case mode.AudioTranscription:
@@ -80,6 +86,7 @@ func (a *Adaptor) ConvertRequest(
 
 func (a *Adaptor) DoRequest(
 	meta *meta.Meta,
+	_ adaptor.Store,
 	_ *gin.Context,
 	req *http.Request,
 ) (*http.Response, error) {
@@ -97,6 +104,7 @@ func (a *Adaptor) DoRequest(
 
 func (a *Adaptor) DoResponse(
 	meta *meta.Meta,
+	store adaptor.Store,
 	c *gin.Context,
 	resp *http.Response,
 ) (*model.Usage, adaptor.Error) {
@@ -104,7 +112,7 @@ func (a *Adaptor) DoResponse(
 	case mode.ImagesGenerations:
 		return ImageHandler(meta, c, resp)
 	case mode.Embeddings, mode.Completions:
-		return openai.DoResponse(meta, c, resp)
+		return openai.DoResponse(meta, store, c, resp)
 	case mode.ChatCompletions:
 		reqBody, err := common.GetRequestBody(c.Request)
 		if err != nil {
@@ -122,7 +130,7 @@ func (a *Adaptor) DoResponse(
 				http.StatusInternalServerError,
 			)
 		}
-		u, e := openai.DoResponse(meta, c, resp)
+		u, e := openai.DoResponse(meta, store, c, resp)
 		if e != nil {
 			return nil, e
 		}

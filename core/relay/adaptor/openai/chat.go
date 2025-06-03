@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"slices"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -15,6 +16,7 @@ import (
 	"github.com/bytedance/sonic"
 	"github.com/bytedance/sonic/ast"
 	"github.com/gin-gonic/gin"
+	"github.com/labring/aiproxy/core/common"
 	"github.com/labring/aiproxy/core/common/conv"
 	"github.com/labring/aiproxy/core/common/render"
 	"github.com/labring/aiproxy/core/middleware"
@@ -58,6 +60,65 @@ func PutScannerBuffer(buf *[]byte) {
 		return
 	}
 	scannerBufferPool.Put(buf)
+}
+
+func ConvertTextRequest(
+	meta *meta.Meta,
+	req *http.Request,
+	doNotPatchStreamOptionsIncludeUsage bool,
+) (*adaptor.ConvertRequestResult, error) {
+	reqMap := make(map[string]any)
+	err := common.UnmarshalBodyReusable(req, &reqMap)
+	if err != nil {
+		return nil, err
+	}
+
+	if !doNotPatchStreamOptionsIncludeUsage {
+		if err := patchStreamOptions(reqMap); err != nil {
+			return nil, err
+		}
+	}
+
+	reqMap["model"] = meta.ActualModel
+	jsonData, err := sonic.Marshal(reqMap)
+	if err != nil {
+		return nil, err
+	}
+	return &adaptor.ConvertRequestResult{
+		Method: http.MethodPost,
+		Header: nil,
+		Body:   bytes.NewReader(jsonData),
+	}, nil
+}
+
+func patchStreamOptions(reqMap map[string]any) error {
+	stream, ok := reqMap["stream"]
+	if !ok {
+		return nil
+	}
+
+	streamBool, ok := stream.(bool)
+	if !ok {
+		return errors.New("stream is not a boolean")
+	}
+
+	if !streamBool {
+		return nil
+	}
+
+	streamOptions, ok := reqMap["stream_options"].(map[string]any)
+	if !ok {
+		if reqMap["stream_options"] != nil {
+			return errors.New("stream_options is not a map")
+		}
+		reqMap["stream_options"] = map[string]any{
+			"include_usage": true,
+		}
+		return nil
+	}
+
+	streamOptions["include_usage"] = true
+	return nil
 }
 
 func GetUsageOrChatChoicesResponseFromNode(
@@ -185,7 +246,7 @@ func StreamHandler(
 		_ = render.ObjectData(c, &relaymodel.ChatCompletionsStreamResponse{
 			ID:      ChatCompletionID(),
 			Model:   meta.OriginModel,
-			Object:  relaymodel.ChatCompletionChunk,
+			Object:  relaymodel.ChatCompletionChunkObject,
 			Created: time.Now().Unix(),
 			Choices: []*relaymodel.ChatCompletionsStreamResponseChoice{},
 			Usage:   usage,
@@ -335,6 +396,8 @@ func Handler(
 		)
 	}
 
+	c.Writer.Header().Set("Content-Type", "application/json")
+	c.Writer.Header().Set("Content-Length", strconv.Itoa(len(newData)))
 	_, err = c.Writer.Write(newData)
 	if err != nil {
 		log.Warnf("write response body failed: %v", err)

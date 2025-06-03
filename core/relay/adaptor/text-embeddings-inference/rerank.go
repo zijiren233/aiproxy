@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/bytedance/sonic"
 	"github.com/bytedance/sonic/ast"
@@ -153,6 +154,8 @@ func RerankHandler(
 		)
 	}
 
+	c.Writer.Header().Set("Content-Type", "application/json")
+	c.Writer.Header().Set("Content-Length", strconv.Itoa(len(jsonResponse)))
 	_, err = c.Writer.Write(jsonResponse)
 	if err != nil {
 		log.Warnf("write response body failed: %v", err)

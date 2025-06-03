@@ -29,6 +29,7 @@ type Config struct {
 
 func (a *Adaptor) ConvertRequest(
 	meta *meta.Meta,
+	store adaptor.Store,
 	request *http.Request,
 ) (*adaptor.ConvertRequestResult, error) {
 	adaptor := GetAdaptor(meta.ActualModel)
@@ -36,11 +37,12 @@ func (a *Adaptor) ConvertRequest(
 		return nil, errors.New("adaptor not found")
 	}
 
-	return adaptor.ConvertRequest(meta, request)
+	return adaptor.ConvertRequest(meta, store, request)
 }
 
 func (a *Adaptor) DoResponse(
 	meta *meta.Meta,
+	store adaptor.Store,
 	c *gin.Context,
 	resp *http.Response,
 ) (usage *model.Usage, err adaptor.Error) {
@@ -52,14 +54,14 @@ func (a *Adaptor) DoResponse(
 			http.StatusInternalServerError,
 		)
 	}
-	return adaptor.DoResponse(meta, c, resp)
+	return adaptor.DoResponse(meta, store, c, resp)
 }
 
 func (a *Adaptor) GetModelList() []model.ModelConfig {
 	return modelList
 }
 
-func (a *Adaptor) GetRequestURL(meta *meta.Meta) (string, error) {
+func (a *Adaptor) GetRequestURL(meta *meta.Meta, _ adaptor.Store) (string, error) {
 	var suffix string
 	if strings.HasPrefix(meta.ActualModel, "gemini") {
 		if meta.GetBool("stream") {
@@ -100,7 +102,12 @@ func (a *Adaptor) GetRequestURL(meta *meta.Meta) (string, error) {
 	), nil
 }
 
-func (a *Adaptor) SetupRequestHeader(meta *meta.Meta, _ *gin.Context, req *http.Request) error {
+func (a *Adaptor) SetupRequestHeader(
+	meta *meta.Meta,
+	_ adaptor.Store,
+	_ *gin.Context,
+	req *http.Request,
+) error {
 	config, err := getConfigFromKey(meta.Channel.Key)
 	if err != nil {
 		return err
@@ -115,6 +122,7 @@ func (a *Adaptor) SetupRequestHeader(meta *meta.Meta, _ *gin.Context, req *http.
 
 func (a *Adaptor) DoRequest(
 	_ *meta.Meta,
+	_ adaptor.Store,
 	_ *gin.Context,
 	req *http.Request,
 ) (*http.Response, error) {

@@ -21,6 +21,7 @@ func (a *Adaptor) GetBaseURL() string {
 
 func (a *Adaptor) ConvertRequest(
 	meta *meta.Meta,
+	store adaptor.Store,
 	req *http.Request,
 ) (*adaptor.ConvertRequestResult, error) {
 	adaptor := GetAdaptor(meta.ActualModel)
@@ -28,11 +29,12 @@ func (a *Adaptor) ConvertRequest(
 		return nil, errors.New("adaptor not found")
 	}
 	meta.Set("awsAdapter", adaptor)
-	return adaptor.ConvertRequest(meta, req)
+	return adaptor.ConvertRequest(meta, store, req)
 }
 
 func (a *Adaptor) DoResponse(
 	meta *meta.Meta,
+	store adaptor.Store,
 	c *gin.Context,
 	_ *http.Response,
 ) (usage *model.Usage, err adaptor.Error) {
@@ -48,7 +50,7 @@ func (a *Adaptor) DoResponse(
 	if !ok {
 		panic(fmt.Sprintf("aws adapter type error: %T, %v", v, v))
 	}
-	return v.DoResponse(meta, c)
+	return v.DoResponse(meta, store, c)
 }
 
 func (a *Adaptor) GetModelList() (models []model.ModelConfig) {
@@ -59,14 +61,24 @@ func (a *Adaptor) GetModelList() (models []model.ModelConfig) {
 	return
 }
 
-func (a *Adaptor) GetRequestURL(_ *meta.Meta) (string, error) {
+func (a *Adaptor) GetRequestURL(_ *meta.Meta, _ adaptor.Store) (string, error) {
 	return "", nil
 }
 
-func (a *Adaptor) SetupRequestHeader(_ *meta.Meta, _ *gin.Context, _ *http.Request) error {
+func (a *Adaptor) SetupRequestHeader(
+	_ *meta.Meta,
+	_ adaptor.Store,
+	_ *gin.Context,
+	_ *http.Request,
+) error {
 	return nil
 }
 
-func (a *Adaptor) DoRequest(_ *meta.Meta, _ *gin.Context, _ *http.Request) (*http.Response, error) {
+func (a *Adaptor) DoRequest(
+	_ *meta.Meta,
+	_ adaptor.Store,
+	_ *gin.Context,
+	_ *http.Request,
+) (*http.Response, error) {
 	return nil, nil
 }

@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"net/http"
+	"strconv"
 
 	"github.com/bytedance/sonic"
 	"github.com/gin-gonic/gin"
@@ -98,7 +99,7 @@ func response2OpenAI(meta *meta.Meta, response *ChatResponse) *relaymodel.TextRe
 	}
 	fullTextResponse := relaymodel.TextResponse{
 		ID:      response.ID,
-		Object:  relaymodel.ChatCompletion,
+		Object:  relaymodel.ChatCompletionObject,
 		Created: response.Created,
 		Model:   meta.OriginModel,
 		Choices: []*relaymodel.TextResponseChoice{&choice},
@@ -120,7 +121,7 @@ func streamResponse2OpenAI(
 	}
 	response := relaymodel.ChatCompletionsStreamResponse{
 		ID:      baiduResponse.ID,
-		Object:  relaymodel.ChatCompletionChunk,
+		Object:  relaymodel.ChatCompletionChunkObject,
 		Created: baiduResponse.Created,
 		Model:   meta.OriginModel,
 		Choices: []*relaymodel.ChatCompletionsStreamResponseChoice{&choice},
@@ -202,7 +203,7 @@ func Handler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage
 		)
 	}
 	c.Writer.Header().Set("Content-Type", "application/json")
-	c.Writer.WriteHeader(resp.StatusCode)
+	c.Writer.Header().Set("Content-Length", strconv.Itoa(len(jsonResponse)))
 	_, _ = c.Writer.Write(jsonResponse)
 	return fullTextResponse.ToModelUsage(), nil
 }

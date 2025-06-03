@@ -23,6 +23,7 @@ func (a *Adaptor) GetBaseURL() string {
 
 func (a *Adaptor) DoResponse(
 	meta *meta.Meta,
+	store adaptor.Store,
 	c *gin.Context,
 	resp *http.Response,
 ) (usage *model.Usage, err adaptor.Error) {
@@ -30,7 +31,7 @@ func (a *Adaptor) DoResponse(
 	case mode.Embeddings:
 		usage, err = EmbeddingsHandler(c, resp)
 	default:
-		usage, err = openai.DoResponse(meta, c, resp)
+		usage, err = openai.DoResponse(meta, store, c, resp)
 	}
 	return
 }

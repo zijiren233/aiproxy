@@ -90,6 +90,7 @@ func handlerPreHandler(_ *meta.Meta, node *ast.Node) error {
 
 func (a *Adaptor) DoResponse(
 	meta *meta.Meta,
+	store adaptor.Store,
 	c *gin.Context,
 	resp *http.Response,
 ) (usage *model.Usage, err adaptor.Error) {
@@ -100,7 +101,7 @@ func (a *Adaptor) DoResponse(
 		}
 		return openai.Handler(meta, c, resp, handlerPreHandler)
 	default:
-		return openai.DoResponse(meta, c, resp)
+		return openai.DoResponse(meta, store, c, resp)
 	}
 }
 

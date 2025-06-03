@@ -1,14 +1,12 @@
 package openai
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 
-	"github.com/bytedance/sonic"
 	"github.com/gin-gonic/gin"
-	"github.com/labring/aiproxy/core/common"
 	"github.com/labring/aiproxy/core/model"
 	"github.com/labring/aiproxy/core/relay/adaptor"
 	"github.com/labring/aiproxy/core/relay/meta"
@@ -27,7 +25,28 @@ func (a *Adaptor) GetBaseURL() string {
 	return baseURL
 }
 
-func (a *Adaptor) GetRequestURL(meta *meta.Meta) (string, error) {
+// /v1/video/generations/jobs/{job_id}
+func (a *Adaptor) getJobID(path string) string {
+	parts := strings.Split(path, "/")
+	if len(parts) == 0 {
+		return ""
+	}
+	return parts[len(parts)-1]
+}
+
+// /v1/video/generations/{generation_id}/content/video
+func (a *Adaptor) getGenerationID(path string) string {
+	if strings.HasSuffix(path, "/content/video") {
+		parts := strings.Split(path, "/")
+		if len(parts) == 0 {
+			return ""
+		}
+		return parts[len(parts)-2]
+	}
+	return ""
+}
+
+func (a *Adaptor) GetRequestURL(meta *meta.Meta, _ adaptor.Store) (string, error) {
 	u := meta.Channel.BaseURL
 
 	var path string
@@ -52,6 +71,12 @@ func (a *Adaptor) GetRequestURL(meta *meta.Meta) (string, error) {
 		path = "/audio/translations"
 	case mode.Rerank:
 		path = "/rerank"
+	case mode.VideoGenerationsJobs:
+		path = "/video/generations/jobs"
+	case mode.VideoGenerationsGetJobs:
+		path = "/video/generations/jobs/" + a.getJobID(meta.Endpoint)
+	case mode.VideoGenerationsContent:
+		path = fmt.Sprintf("/video/generations/%s/content/video", a.getGenerationID(meta.Endpoint))
 	default:
 		return "", fmt.Errorf("unsupported mode: %s", meta.Mode)
 	}
@@ -59,19 +84,29 @@ func (a *Adaptor) GetRequestURL(meta *meta.Meta) (string, error) {
 	return u + path, nil
 }
 
-func (a *Adaptor) SetupRequestHeader(meta *meta.Meta, _ *gin.Context, req *http.Request) error {
+func (a *Adaptor) SetupRequestHeader(
+	meta *meta.Meta,
+	_ adaptor.Store,
+	_ *gin.Context,
+	req *http.Request,
+) error {
 	req.Header.Set("Authorization", "Bearer "+meta.Channel.Key)
 	return nil
 }
 
 func (a *Adaptor) ConvertRequest(
 	meta *meta.Meta,
+	store adaptor.Store,
 	req *http.Request,
 ) (*adaptor.ConvertRequestResult, error) {
-	return ConvertRequest(meta, req)
+	return ConvertRequest(meta, store, req)
 }
 
-func ConvertRequest(meta *meta.Meta, req *http.Request) (*adaptor.ConvertRequestResult, error) {
+func ConvertRequest(
+	meta *meta.Meta,
+	_ adaptor.Store,
+	req *http.Request,
+) (*adaptor.ConvertRequestResult, error) {
 	if req == nil {
 		return nil, errors.New("request is nil")
 	}
@@ -92,6 +127,12 @@ func ConvertRequest(meta *meta.Meta, req *http.Request) (*adaptor.ConvertRequest
 		return ConvertTTSRequest(meta, req, "")
 	case mode.Rerank:
 		return ConvertRerankRequest(meta, req)
+	case mode.VideoGenerationsJobs:
+		return ConvertVideoRequest(meta, req)
+	case mode.VideoGenerationsGetJobs:
+		return ConvertVideoGetJobsRequest(meta, req)
+	case mode.VideoGenerationsContent:
+		return ConvertVideoGetJobsContentRequest(meta, req)
 	default:
 		return nil, fmt.Errorf("unsupported mode: %s", meta.Mode)
 	}
@@ -99,6 +140,7 @@ func ConvertRequest(meta *meta.Meta, req *http.Request) (*adaptor.ConvertRequest
 
 func DoResponse(
 	meta *meta.Meta,
+	store adaptor.Store,
 	c *gin.Context,
 	resp *http.Response,
 ) (usage *model.Usage, err adaptor.Error) {
@@ -121,6 +163,12 @@ func DoResponse(
 		} else {
 			usage, err = Handler(meta, c, resp, nil)
 		}
+	case mode.VideoGenerationsJobs:
+		usage, err = VideoHandler(meta, store, c, resp)
+	case mode.VideoGenerationsGetJobs:
+		usage, err = VideoGetJobsHandler(meta, store, c, resp)
+	case mode.VideoGenerationsContent:
+		usage, err = VideoGetJobsContentHandler(meta, store, c, resp)
 	default:
 		return nil, relaymodel.WrapperOpenAIErrorWithMessage(
 			fmt.Sprintf("unsupported mode: %s", meta.Mode),
@@ -131,69 +179,11 @@ func DoResponse(
 	return usage, err
 }
 
-func ConvertTextRequest(
-	meta *meta.Meta,
-	req *http.Request,
-	doNotPatchStreamOptionsIncludeUsage bool,
-) (*adaptor.ConvertRequestResult, error) {
-	reqMap := make(map[string]any)
-	err := common.UnmarshalBodyReusable(req, &reqMap)
-	if err != nil {
-		return nil, err
-	}
-
-	if !doNotPatchStreamOptionsIncludeUsage {
-		if err := patchStreamOptions(reqMap); err != nil {
-			return nil, err
-		}
-	}
-
-	reqMap["model"] = meta.ActualModel
-	jsonData, err := sonic.Marshal(reqMap)
-	if err != nil {
-		return nil, err
-	}
-	return &adaptor.ConvertRequestResult{
-		Method: http.MethodPost,
-		Header: nil,
-		Body:   bytes.NewReader(jsonData),
-	}, nil
-}
-
-func patchStreamOptions(reqMap map[string]any) error {
-	stream, ok := reqMap["stream"]
-	if !ok {
-		return nil
-	}
-
-	streamBool, ok := stream.(bool)
-	if !ok {
-		return errors.New("stream is not a boolean")
-	}
-
-	if !streamBool {
-		return nil
-	}
-
-	streamOptions, ok := reqMap["stream_options"].(map[string]any)
-	if !ok {
-		if reqMap["stream_options"] != nil {
-			return errors.New("stream_options is not a map")
-		}
-		reqMap["stream_options"] = map[string]any{
-			"include_usage": true,
-		}
-		return nil
-	}
-
-	streamOptions["include_usage"] = true
-	return nil
-}
-
 const MetaResponseFormat = "response_format"
 
 func (a *Adaptor) DoRequest(
 	_ *meta.Meta,
+	_ adaptor.Store,
 	_ *gin.Context,
 	req *http.Request,
 ) (*http.Response, error) {
@@ -202,10 +192,11 @@ func (a *Adaptor) DoRequest(
 
 func (a *Adaptor) DoResponse(
 	meta *meta.Meta,
+	store adaptor.Store,
 	c *gin.Context,
 	resp *http.Response,
 ) (usage *model.Usage, err adaptor.Error) {
-	return DoResponse(meta, c, resp)
+	return DoResponse(meta, store, c, resp)
 }
 
 func (a *Adaptor) GetModelList() []model.ModelConfig {

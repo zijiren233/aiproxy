@@ -3,6 +3,7 @@ package openai
 import (
 	"io"
 	"net/http"
+	"strconv"
 
 	"github.com/bytedance/sonic"
 	"github.com/bytedance/sonic/ast"
@@ -67,6 +68,8 @@ func ModerationsHandler(
 		TotalTokens: meta.RequestUsage.InputTokens,
 	}
 
+	c.Writer.Header().Set("Content-Type", "application/json")
+	c.Writer.Header().Set("Content-Length", strconv.Itoa(len(newData)))
 	_, err = c.Writer.Write(newData)
 	if err != nil {
 		log.Warnf("write response body failed: %v", err)

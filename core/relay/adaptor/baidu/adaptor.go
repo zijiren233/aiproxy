@@ -48,7 +48,7 @@ var modelEndpointMap = map[string]string{
 	"Fuyu-8B":              "fuyu_8b",
 }
 
-func (a *Adaptor) GetRequestURL(meta *meta.Meta) (string, error) {
+func (a *Adaptor) GetRequestURL(meta *meta.Meta, _ adaptor.Store) (string, error) {
 	// Build base URL
 	if meta.Channel.BaseURL == "" {
 		meta.Channel.BaseURL = baseURL
@@ -79,7 +79,12 @@ func (a *Adaptor) GetRequestURL(meta *meta.Meta) (string, error) {
 	return fullURL, nil
 }
 
-func (a *Adaptor) SetupRequestHeader(meta *meta.Meta, _ *gin.Context, req *http.Request) error {
+func (a *Adaptor) SetupRequestHeader(
+	meta *meta.Meta,
+	_ adaptor.Store,
+	_ *gin.Context,
+	req *http.Request,
+) error {
 	req.Header.Set("Authorization", "Bearer "+meta.Channel.Key)
 	accessToken, err := GetAccessToken(context.Background(), meta.Channel.Key)
 	if err != nil {
@@ -91,15 +96,16 @@ func (a *Adaptor) SetupRequestHeader(meta *meta.Meta, _ *gin.Context, req *http.
 
 func (a *Adaptor) ConvertRequest(
 	meta *meta.Meta,
+	store adaptor.Store,
 	req *http.Request,
 ) (*adaptor.ConvertRequestResult, error) {
 	switch meta.Mode {
 	case mode.Embeddings:
 		return openai.ConvertEmbeddingsRequest(meta, req, true)
 	case mode.Rerank:
-		return openai.ConvertRequest(meta, req)
+		return openai.ConvertRequest(meta, store, req)
 	case mode.ImagesGenerations:
-		return openai.ConvertRequest(meta, req)
+		return openai.ConvertRequest(meta, store, req)
 	case mode.ChatCompletions:
 		return ConvertRequest(meta, req)
 	default:
@@ -109,6 +115,7 @@ func (a *Adaptor) ConvertRequest(
 
 func (a *Adaptor) DoRequest(
 	_ *meta.Meta,
+	_ adaptor.Store,
 	_ *gin.Context,
 	req *http.Request,
 ) (*http.Response, error) {
@@ -117,6 +124,7 @@ func (a *Adaptor) DoRequest(
 
 func (a *Adaptor) DoResponse(
 	meta *meta.Meta,
+	_ adaptor.Store,
 	c *gin.Context,
 	resp *http.Response,
 ) (usage *model.Usage, err adaptor.Error) {

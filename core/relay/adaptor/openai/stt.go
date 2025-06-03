@@ -7,6 +7,7 @@ import (
 	"io"
 	"mime/multipart"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/bytedance/sonic"
@@ -201,6 +202,8 @@ func STTHandler(
 		}
 	}
 
+	c.Writer.Header().Set("Content-Type", "application/json")
+	c.Writer.Header().Set("Content-Length", strconv.Itoa(len(responseBody)))
 	_, err = c.Writer.Write(responseBody)
 	if err != nil {
 		log.Warnf("write response body failed: %v", err)

@@ -23,7 +23,7 @@ import (
 //	@Router			/v1/dashboard/billing/subscription [get]
 func GetSubscription(c *gin.Context) {
 	group := middleware.GetGroup(c)
-	b, _, err := balance.GetGroupRemainBalance(c, *group)
+	b, _, err := balance.GetGroupRemainBalance(c.Request.Context(), group)
 	if err != nil {
 		if errors.Is(err, balance.ErrNoRealNameUsedAmountLimit) {
 			middleware.ErrorResponse(c, http.StatusForbidden, err.Error())

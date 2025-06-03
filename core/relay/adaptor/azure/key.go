@@ -10,7 +10,7 @@ import (
 var _ adaptor.KeyValidator = (*Adaptor)(nil)
 
 func (a *Adaptor) ValidateKey(key string) error {
-	_, _, err := getTokenAndAPIVersion(key)
+	_, _, err := GetTokenAndAPIVersion(key)
 	if err != nil {
 		return err
 	}
@@ -23,7 +23,7 @@ func (a *Adaptor) KeyHelp() string {
 
 const defaultAPIVersion = "2024-12-01-preview"
 
-func getTokenAndAPIVersion(key string) (string, string, error) {
+func GetTokenAndAPIVersion(key string) (string, string, error) {
 	split := strings.Split(key, "|")
 	if len(split) == 1 {
 		return key, defaultAPIVersion, nil

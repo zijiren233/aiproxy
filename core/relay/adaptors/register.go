@@ -8,6 +8,7 @@ import (
 	"github.com/labring/aiproxy/core/relay/adaptor/anthropic"
 	"github.com/labring/aiproxy/core/relay/adaptor/aws"
 	"github.com/labring/aiproxy/core/relay/adaptor/azure"
+	"github.com/labring/aiproxy/core/relay/adaptor/azure2"
 	"github.com/labring/aiproxy/core/relay/adaptor/baichuan"
 	"github.com/labring/aiproxy/core/relay/adaptor/baidu"
 	"github.com/labring/aiproxy/core/relay/adaptor/baiduv2"
@@ -44,6 +45,7 @@ import (
 var ChannelAdaptor = map[model.ChannelType]adaptor.Adaptor{
 	model.ChannelTypeOpenAI:                  &openai.Adaptor{},
 	model.ChannelTypeAzure:                   &azure.Adaptor{},
+	model.ChannelTypeAzure2:                  &azure2.Adaptor{},
 	model.ChannelTypeGoogleGeminiOpenAI:      &geminiopenai.Adaptor{},
 	model.ChannelTypeBaiduV2:                 &baiduv2.Adaptor{},
 	model.ChannelTypeAnthropic:               &anthropic.Adaptor{},

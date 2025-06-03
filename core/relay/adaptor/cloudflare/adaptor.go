@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/labring/aiproxy/core/model"
+	"github.com/labring/aiproxy/core/relay/adaptor"
 	"github.com/labring/aiproxy/core/relay/adaptor/openai"
 	"github.com/labring/aiproxy/core/relay/meta"
 	"github.com/labring/aiproxy/core/relay/mode"
@@ -28,7 +29,7 @@ func isAIGateWay(baseURL string) bool {
 		strings.HasSuffix(baseURL, "/workers-ai")
 }
 
-func (a *Adaptor) GetRequestURL(meta *meta.Meta) (string, error) {
+func (a *Adaptor) GetRequestURL(meta *meta.Meta, _ adaptor.Store) (string, error) {
 	u := meta.Channel.BaseURL
 	isAIGateWay := isAIGateWay(u)
 	var urlPrefix string

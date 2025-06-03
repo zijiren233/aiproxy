@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"time"
 
 	"github.com/bytedance/sonic"
 	"github.com/gin-gonic/gin"
@@ -13,24 +14,48 @@ import (
 	"github.com/labring/aiproxy/core/relay/meta"
 )
 
+type StoreCache struct {
+	ID        string
+	GroupID   string
+	TokenID   int
+	ChannelID int
+	Model     string
+	ExpiresAt time.Time
+}
+
+type Store interface {
+	GetStore(id string) (StoreCache, error)
+	SaveStore(store StoreCache) error
+}
+
 type GetRequestURL interface {
-	GetRequestURL(meta *meta.Meta) (string, error)
+	GetRequestURL(meta *meta.Meta, store Store) (string, error)
 }
 
 type SetupRequestHeader interface {
-	SetupRequestHeader(meta *meta.Meta, c *gin.Context, req *http.Request) error
+	SetupRequestHeader(meta *meta.Meta, store Store, c *gin.Context, req *http.Request) error
 }
 
 type ConvertRequest interface {
-	ConvertRequest(meta *meta.Meta, req *http.Request) (*ConvertRequestResult, error)
+	ConvertRequest(meta *meta.Meta, store Store, req *http.Request) (*ConvertRequestResult, error)
 }
 
 type DoRequest interface {
-	DoRequest(meta *meta.Meta, c *gin.Context, req *http.Request) (*http.Response, error)
+	DoRequest(
+		meta *meta.Meta,
+		store Store,
+		c *gin.Context,
+		req *http.Request,
+	) (*http.Response, error)
 }
 
 type DoResponse interface {
-	DoResponse(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, Error)
+	DoResponse(
+		meta *meta.Meta,
+		store Store,
+		c *gin.Context,
+		resp *http.Response,
+	) (*model.Usage, Error)
 }
 
 type Adaptor interface {

@@ -7,6 +7,7 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -267,7 +268,7 @@ func Handler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage
 	}
 	fullTextResponse := Response2OpenAI(meta, &claudeResponse)
 	c.Writer.Header().Set("Content-Type", "application/json")
-	c.Writer.WriteHeader(resp.StatusCode)
+	c.Writer.Header().Set("Content-Length", strconv.Itoa(len(respBody)))
 	_, _ = c.Writer.Write(respBody)
 	return fullTextResponse.ToModelUsage(), nil
 }

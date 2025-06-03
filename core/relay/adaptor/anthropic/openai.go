@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -361,7 +362,7 @@ func StreamResponse2OpenAI(
 
 	openaiResponse := relaymodel.ChatCompletionsStreamResponse{
 		ID:      openai.ChatCompletionID(),
-		Object:  relaymodel.ChatCompletionChunk,
+		Object:  relaymodel.ChatCompletionChunkObject,
 		Created: time.Now().Unix(),
 		Model:   meta.OriginModel,
 		Usage:   usage,
@@ -412,7 +413,7 @@ func Response2OpenAI(meta *meta.Meta, claudeResponse *Response) *relaymodel.Text
 	fullTextResponse := relaymodel.TextResponse{
 		ID:      openai.ChatCompletionID(),
 		Model:   meta.OriginModel,
-		Object:  relaymodel.ChatCompletion,
+		Object:  relaymodel.ChatCompletionObject,
 		Created: time.Now().Unix(),
 		Choices: []*relaymodel.TextResponseChoice{&choice},
 		Usage: relaymodel.Usage{
@@ -519,7 +520,7 @@ func OpenAIStreamHandler(
 		_ = render.ObjectData(c, &relaymodel.ChatCompletionsStreamResponse{
 			ID:      openai.ChatCompletionID(),
 			Model:   m.OriginModel,
-			Object:  relaymodel.ChatCompletionChunk,
+			Object:  relaymodel.ChatCompletionChunkObject,
 			Created: time.Now().Unix(),
 			Choices: []*relaymodel.ChatCompletionsStreamResponseChoice{},
 			Usage:   usage,
@@ -561,7 +562,7 @@ func OpenAIHandler(
 		)
 	}
 	c.Writer.Header().Set("Content-Type", "application/json")
-	c.Writer.WriteHeader(resp.StatusCode)
+	c.Writer.Header().Set("Content-Length", strconv.Itoa(len(jsonResponse)))
 	_, _ = c.Writer.Write(jsonResponse)
 	return fullTextResponse.ToModelUsage(), nil
 }

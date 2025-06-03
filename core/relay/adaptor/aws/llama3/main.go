@@ -181,7 +181,7 @@ func ResponseLlama2OpenAI(llamaResponse *Response) *relaymodel.TextResponse {
 	}
 	fullTextResponse := relaymodel.TextResponse{
 		ID:      openai.ChatCompletionID(),
-		Object:  relaymodel.ChatCompletion,
+		Object:  relaymodel.ChatCompletionObject,
 		Created: time.Now().Unix(),
 		Choices: []*relaymodel.TextResponseChoice{&choice},
 	}
@@ -303,7 +303,7 @@ func StreamResponseLlama2OpenAI(
 		choice.FinishReason = finishReason
 	}
 	var openaiResponse relaymodel.ChatCompletionsStreamResponse
-	openaiResponse.Object = relaymodel.ChatCompletionChunk
+	openaiResponse.Object = relaymodel.ChatCompletionChunkObject
 	openaiResponse.Choices = []*relaymodel.ChatCompletionsStreamResponseChoice{&choice}
 	return &openaiResponse
 }

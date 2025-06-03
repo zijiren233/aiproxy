@@ -3,6 +3,7 @@ package cohere
 import (
 	"bufio"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -113,7 +114,7 @@ func StreamResponse2OpenAI(
 		ID:      "chatcmpl-" + cohereResponse.GenerationID,
 		Model:   meta.OriginModel,
 		Created: time.Now().Unix(),
-		Object:  relaymodel.ChatCompletionChunk,
+		Object:  relaymodel.ChatCompletionChunkObject,
 		Choices: []*relaymodel.ChatCompletionsStreamResponseChoice{&choice},
 	}
 	if response != nil {
@@ -139,7 +140,7 @@ func Response2OpenAI(meta *meta.Meta, cohereResponse *Response) *relaymodel.Text
 	fullTextResponse := relaymodel.TextResponse{
 		ID:      openai.ChatCompletionID(),
 		Model:   meta.OriginModel,
-		Object:  relaymodel.ChatCompletion,
+		Object:  relaymodel.ChatCompletionObject,
 		Created: time.Now().Unix(),
 		Choices: []*relaymodel.TextResponseChoice{&choice},
 		Usage: relaymodel.Usage{
@@ -232,7 +233,7 @@ func Handler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage
 		)
 	}
 	c.Writer.Header().Set("Content-Type", "application/json")
-	c.Writer.WriteHeader(resp.StatusCode)
+	c.Writer.Header().Set("Content-Length", strconv.Itoa(len(jsonResponse)))
 	_, _ = c.Writer.Write(jsonResponse)
 	return fullTextResponse.ToModelUsage(), nil
 }

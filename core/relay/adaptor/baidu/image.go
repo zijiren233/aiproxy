@@ -3,6 +3,7 @@ package baidu
 import (
 	"io"
 	"net/http"
+	"strconv"
 
 	"github.com/bytedance/sonic"
 	"github.com/gin-gonic/gin"
@@ -65,6 +66,8 @@ func ImageHandler(_ *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usa
 			http.StatusInternalServerError,
 		)
 	}
+	c.Writer.Header().Set("Content-Type", "application/json")
+	c.Writer.Header().Set("Content-Length", strconv.Itoa(len(data)))
 	_, err = c.Writer.Write(data)
 	if err != nil {
 		log.Warnf("write response body failed: %v", err)

@@ -307,7 +307,7 @@ func StreamHandler(m *meta.Meta, c *gin.Context) (*model.Usage, adaptor.Error) {
 		_ = render.ObjectData(c, &relaymodel.ChatCompletionsStreamResponse{
 			ID:      openai.ChatCompletionID(),
 			Model:   m.OriginModel,
-			Object:  relaymodel.ChatCompletionChunk,
+			Object:  relaymodel.ChatCompletionChunkObject,
 			Created: time.Now().Unix(),
 			Choices: []*relaymodel.ChatCompletionsStreamResponseChoice{},
 			Usage:   usage,

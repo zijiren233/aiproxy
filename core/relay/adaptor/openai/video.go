@@ -1,0 +1,203 @@
+package openai
+
+import (
+	"bytes"
+	"io"
+	"net/http"
+	"strconv"
+	"time"
+
+	"github.com/bytedance/sonic"
+	"github.com/bytedance/sonic/ast"
+	"github.com/gin-gonic/gin"
+	"github.com/labring/aiproxy/core/common"
+	"github.com/labring/aiproxy/core/middleware"
+	"github.com/labring/aiproxy/core/model"
+	"github.com/labring/aiproxy/core/relay/adaptor"
+	"github.com/labring/aiproxy/core/relay/meta"
+	relaymodel "github.com/labring/aiproxy/core/relay/model"
+)
+
+func ConvertVideoRequest(
+	meta *meta.Meta,
+	req *http.Request,
+) (*adaptor.ConvertRequestResult, error) {
+	node, err := common.UnmarshalBody2Node(req)
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = node.Set("model", ast.NewString(meta.ActualModel))
+	if err != nil {
+		return nil, err
+	}
+
+	jsonData, err := sonic.Marshal(&node)
+	if err != nil {
+		return nil, err
+	}
+	return &adaptor.ConvertRequestResult{
+		Method: http.MethodPost,
+		Body:   bytes.NewReader(jsonData),
+	}, nil
+}
+
+func ConvertVideoGetJobsRequest(
+	_ *meta.Meta,
+	_ *http.Request,
+) (*adaptor.ConvertRequestResult, error) {
+	return &adaptor.ConvertRequestResult{
+		Method: http.MethodGet,
+	}, nil
+}
+
+func ConvertVideoGetJobsContentRequest(
+	_ *meta.Meta,
+	_ *http.Request,
+) (*adaptor.ConvertRequestResult, error) {
+	return &adaptor.ConvertRequestResult{
+		Method: http.MethodGet,
+	}, nil
+}
+
+func VideoHandler(
+	meta *meta.Meta,
+	store adaptor.Store,
+	c *gin.Context,
+	resp *http.Response,
+) (*model.Usage, adaptor.Error) {
+	if resp.StatusCode != http.StatusOK &&
+		resp.StatusCode != http.StatusCreated {
+		return nil, VideoErrorHanlder(resp)
+	}
+
+	responseBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, relaymodel.WrapperOpenAIVideoError(
+			err,
+			http.StatusInternalServerError,
+		)
+	}
+
+	node, err := sonic.Get(responseBody)
+	if err != nil {
+		return nil, relaymodel.WrapperOpenAIVideoError(
+			err,
+			http.StatusInternalServerError,
+		)
+	}
+	idNode := node.Get("id")
+	id, err := idNode.String()
+	if err != nil {
+		return nil, relaymodel.WrapperOpenAIVideoError(
+			err,
+			http.StatusInternalServerError,
+		)
+	}
+
+	err = store.SaveStore(adaptor.StoreCache{
+		ID:        id,
+		GroupID:   meta.Group.ID,
+		TokenID:   meta.Token.ID,
+		ChannelID: meta.Channel.ID,
+		Model:     meta.ActualModel,
+		ExpiresAt: time.Now().Add(time.Hour * 24),
+	})
+	if err != nil {
+		log := middleware.GetLogger(c)
+		log.Errorf("save store failed: %v", err)
+	}
+
+	c.Writer.Header().Set("Content-Type", "application/json")
+	c.Writer.Header().Set("Content-Length", strconv.Itoa(len(responseBody)))
+	_, _ = c.Writer.Write(responseBody)
+	return nil, nil
+}
+
+func VideoGetJobsHandler(
+	meta *meta.Meta,
+	store adaptor.Store,
+	c *gin.Context,
+	resp *http.Response,
+) (*model.Usage, adaptor.Error) {
+	if resp.StatusCode != http.StatusOK {
+		return nil, VideoErrorHanlder(resp)
+	}
+
+	responseBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, relaymodel.WrapperOpenAIVideoError(
+			err,
+			http.StatusInternalServerError,
+		)
+	}
+
+	node, err := sonic.Get(responseBody)
+	if err != nil {
+		return nil, relaymodel.WrapperOpenAIVideoError(
+			err,
+			http.StatusInternalServerError,
+		)
+	}
+
+	expiresAt, err := node.Get("expires_at").Int64()
+	if err != nil {
+		return nil, relaymodel.WrapperOpenAIVideoError(
+			err,
+			http.StatusInternalServerError,
+		)
+	}
+
+	generationsNode := node.Get("generations")
+	var patchErr error
+	err = generationsNode.ForEach(func(_ ast.Sequence, node *ast.Node) bool {
+		idNode := node.Get("id")
+		id, err := idNode.String()
+		if err != nil {
+			patchErr = err
+			return false
+		}
+		err = store.SaveStore(adaptor.StoreCache{
+			ID:        id,
+			GroupID:   meta.Group.ID,
+			TokenID:   meta.Token.ID,
+			ChannelID: meta.Channel.ID,
+			Model:     meta.ActualModel,
+			ExpiresAt: time.Unix(expiresAt, 0),
+		})
+		if err != nil {
+			log := middleware.GetLogger(c)
+			log.Errorf("save store failed: %v", err)
+		}
+		return true
+	})
+	if err == nil {
+		err = patchErr
+	}
+	if err != nil {
+		return nil, relaymodel.WrapperOpenAIVideoError(
+			err,
+			http.StatusInternalServerError,
+		)
+	}
+
+	c.Writer.Header().Set("Content-Type", "application/json")
+	c.Writer.Header().Set("Content-Length", strconv.Itoa(len(responseBody)))
+	_, _ = c.Writer.Write(responseBody)
+	return nil, nil
+}
+
+func VideoGetJobsContentHandler(
+	_ *meta.Meta,
+	_ adaptor.Store,
+	c *gin.Context,
+	resp *http.Response,
+) (*model.Usage, adaptor.Error) {
+	if resp.StatusCode != http.StatusOK {
+		return nil, VideoErrorHanlder(resp)
+	}
+
+	c.Writer.Header().Set("Content-Type", resp.Header.Get("Content-Type"))
+	_, _ = io.Copy(c.Writer, resp.Body)
+	return nil, nil
+}

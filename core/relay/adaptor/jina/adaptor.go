@@ -23,18 +23,20 @@ func (a *Adaptor) GetBaseURL() string {
 
 func (a *Adaptor) ConvertRequest(
 	meta *meta.Meta,
+	store adaptor.Store,
 	req *http.Request,
 ) (*adaptor.ConvertRequestResult, error) {
 	switch meta.Mode {
 	case mode.Embeddings:
 		return ConvertEmbeddingsRequest(meta, req)
 	default:
-		return a.Adaptor.ConvertRequest(meta, req)
+		return a.Adaptor.ConvertRequest(meta, store, req)
 	}
 }
 
 func (a *Adaptor) DoResponse(
 	meta *meta.Meta,
+	store adaptor.Store,
 	c *gin.Context,
 	resp *http.Response,
 ) (usage *model.Usage, err adaptor.Error) {
@@ -42,7 +44,7 @@ func (a *Adaptor) DoResponse(
 	case mode.Rerank:
 		return RerankHandler(meta, c, resp)
 	default:
-		return a.Adaptor.DoResponse(meta, c, resp)
+		return a.Adaptor.DoResponse(meta, store, c, resp)
 	}
 }
 

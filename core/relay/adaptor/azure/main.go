@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/labring/aiproxy/core/relay/adaptor"
 	"github.com/labring/aiproxy/core/relay/adaptor/openai"
 	"github.com/labring/aiproxy/core/relay/meta"
 	"github.com/labring/aiproxy/core/relay/mode"
@@ -19,12 +20,19 @@ func (a *Adaptor) GetBaseURL() string {
 	return "https://{resource_name}.openai.azure.com"
 }
 
-func (a *Adaptor) GetRequestURL(meta *meta.Meta) (string, error) {
-	_, apiVersion, err := getTokenAndAPIVersion(meta.Channel.Key)
+func (a *Adaptor) GetRequestURL(meta *meta.Meta, _ adaptor.Store) (string, error) {
+	return GetRequestURL(meta, true)
+}
+
+func GetRequestURL(meta *meta.Meta, replaceDot bool) (string, error) {
+	_, apiVersion, err := GetTokenAndAPIVersion(meta.Channel.Key)
 	if err != nil {
 		return "", err
 	}
-	model := strings.ReplaceAll(meta.ActualModel, ".", "")
+	model := meta.ActualModel
+	if replaceDot {
+		model = strings.ReplaceAll(model, ".", "")
+	}
 	switch meta.Mode {
 	case mode.ImagesGenerations:
 		// https://learn.microsoft.com/en-us/azure/ai-services/openai/dall-e-quickstart?tabs=dalle3%2Ccommand-line&pivots=rest-api
@@ -73,13 +81,38 @@ func (a *Adaptor) GetRequestURL(meta *meta.Meta) (string, error) {
 			model,
 			apiVersion,
 		), nil
+	case mode.VideoGenerationsJobs:
+		return fmt.Sprintf(
+			"%s/openai/v1/video/generations/jobs?api-version=%s",
+			meta.Channel.BaseURL,
+			apiVersion,
+		), nil
+	case mode.VideoGenerationsGetJobs:
+		return fmt.Sprintf(
+			"%s/openai/v1/video/generations/jobs/%s?api-version=%s",
+			meta.Channel.BaseURL,
+			meta.JobID,
+			apiVersion,
+		), nil
+	case mode.VideoGenerationsContent:
+		return fmt.Sprintf(
+			"%s/openai/v1/video/generations/%s/content/video?api-version=%s",
+			meta.Channel.BaseURL,
+			meta.GenerationID,
+			apiVersion,
+		), nil
 	default:
 		return "", fmt.Errorf("unsupported mode: %s", meta.Mode)
 	}
 }
 
-func (a *Adaptor) SetupRequestHeader(meta *meta.Meta, _ *gin.Context, req *http.Request) error {
-	token, _, err := getTokenAndAPIVersion(meta.Channel.Key)
+func (a *Adaptor) SetupRequestHeader(
+	meta *meta.Meta,
+	_ adaptor.Store,
+	_ *gin.Context,
+	req *http.Request,
+) error {
+	token, _, err := GetTokenAndAPIVersion(meta.Channel.Key)
 	if err != nil {
 		return err
 	}
