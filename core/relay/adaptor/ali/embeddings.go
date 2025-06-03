@@ -88,19 +88,23 @@ func EmbeddingsHandler(
 	meta *meta.Meta,
 	c *gin.Context,
 	resp *http.Response,
-) (*model.Usage, adaptor.Error) {
+) (model.Usage, adaptor.Error) {
 	defer resp.Body.Close()
 
 	log := middleware.GetLogger(c)
 
 	responseBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, relaymodel.WrapperOpenAIError(err, "read_response_body_failed", resp.StatusCode)
+		return model.Usage{}, relaymodel.WrapperOpenAIError(
+			err,
+			"read_response_body_failed",
+			resp.StatusCode,
+		)
 	}
 	var respBody EmbeddingResponse
 	err = sonic.Unmarshal(responseBody, &respBody)
 	if err != nil {
-		return nil, relaymodel.WrapperOpenAIError(
+		return model.Usage{}, relaymodel.WrapperOpenAIError(
 			err,
 			"unmarshal_response_body_failed",
 			resp.StatusCode,

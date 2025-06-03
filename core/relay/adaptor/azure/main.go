@@ -20,14 +20,14 @@ func (a *Adaptor) DefaultBaseURL() string {
 	return "https://{resource_name}.openai.azure.com"
 }
 
-func (a *Adaptor) GetRequestURL(meta *meta.Meta, _ adaptor.Store) (*adaptor.RequestURL, error) {
+func (a *Adaptor) GetRequestURL(meta *meta.Meta, _ adaptor.Store) (adaptor.RequestURL, error) {
 	return GetRequestURL(meta, true)
 }
 
-func GetRequestURL(meta *meta.Meta, replaceDot bool) (*adaptor.RequestURL, error) {
+func GetRequestURL(meta *meta.Meta, replaceDot bool) (adaptor.RequestURL, error) {
 	_, apiVersion, err := GetTokenAndAPIVersion(meta.Channel.Key)
 	if err != nil {
-		return nil, err
+		return adaptor.RequestURL{}, err
 	}
 	model := meta.ActualModel
 	if replaceDot {
@@ -37,7 +37,7 @@ func GetRequestURL(meta *meta.Meta, replaceDot bool) (*adaptor.RequestURL, error
 	case mode.ImagesGenerations:
 		// https://learn.microsoft.com/en-us/azure/ai-services/openai/dall-e-quickstart?tabs=dalle3%2Ccommand-line&pivots=rest-api
 		// https://{resource_name}.openai.azure.com/openai/deployments/dall-e-3/images/generations?api-version=2024-03-01-preview
-		return &adaptor.RequestURL{
+		return adaptor.RequestURL{
 			Method: http.MethodPost,
 			URL: fmt.Sprintf(
 				"%s/openai/deployments/%s/images/generations?api-version=%s",
@@ -48,7 +48,7 @@ func GetRequestURL(meta *meta.Meta, replaceDot bool) (*adaptor.RequestURL, error
 		}, nil
 	case mode.AudioTranscription:
 		// https://learn.microsoft.com/en-us/azure/ai-services/openai/whisper-quickstart?tabs=command-line#rest-api
-		return &adaptor.RequestURL{
+		return adaptor.RequestURL{
 			Method: http.MethodPost,
 			URL: fmt.Sprintf(
 				"%s/openai/deployments/%s/audio/transcriptions?api-version=%s",
@@ -59,7 +59,7 @@ func GetRequestURL(meta *meta.Meta, replaceDot bool) (*adaptor.RequestURL, error
 		}, nil
 	case mode.AudioSpeech:
 		// https://learn.microsoft.com/en-us/azure/ai-services/openai/text-to-speech-quickstart?tabs=command-line#rest-api
-		return &adaptor.RequestURL{
+		return adaptor.RequestURL{
 			Method: http.MethodPost,
 			URL: fmt.Sprintf(
 				"%s/openai/deployments/%s/audio/speech?api-version=%s",
@@ -70,7 +70,7 @@ func GetRequestURL(meta *meta.Meta, replaceDot bool) (*adaptor.RequestURL, error
 		}, nil
 	case mode.ChatCompletions:
 		// https://learn.microsoft.com/en-us/azure/cognitive-services/openai/chatgpt-quickstart?pivots=rest-api&tabs=command-line#rest-api
-		return &adaptor.RequestURL{
+		return adaptor.RequestURL{
 			Method: http.MethodPost,
 			URL: fmt.Sprintf(
 				"%s/openai/deployments/%s/chat/completions?api-version=%s",
@@ -80,7 +80,7 @@ func GetRequestURL(meta *meta.Meta, replaceDot bool) (*adaptor.RequestURL, error
 			),
 		}, nil
 	case mode.Completions:
-		return &adaptor.RequestURL{
+		return adaptor.RequestURL{
 			Method: http.MethodPost,
 			URL: fmt.Sprintf(
 				"%s/openai/deployments/%s/completions?api-version=%s",
@@ -90,7 +90,7 @@ func GetRequestURL(meta *meta.Meta, replaceDot bool) (*adaptor.RequestURL, error
 			),
 		}, nil
 	case mode.Embeddings:
-		return &adaptor.RequestURL{
+		return adaptor.RequestURL{
 			Method: http.MethodPost,
 			URL: fmt.Sprintf(
 				"%s/openai/deployments/%s/embeddings?api-version=%s",
@@ -100,7 +100,7 @@ func GetRequestURL(meta *meta.Meta, replaceDot bool) (*adaptor.RequestURL, error
 			),
 		}, nil
 	case mode.VideoGenerationsJobs:
-		return &adaptor.RequestURL{
+		return adaptor.RequestURL{
 			Method: http.MethodPost,
 			URL: fmt.Sprintf(
 				"%s/openai/v1/video/generations/jobs?api-version=%s",
@@ -109,7 +109,7 @@ func GetRequestURL(meta *meta.Meta, replaceDot bool) (*adaptor.RequestURL, error
 			),
 		}, nil
 	case mode.VideoGenerationsGetJobs:
-		return &adaptor.RequestURL{
+		return adaptor.RequestURL{
 			Method: http.MethodPost,
 			URL: fmt.Sprintf(
 				"%s/openai/v1/video/generations/jobs/%s?api-version=%s",
@@ -119,7 +119,7 @@ func GetRequestURL(meta *meta.Meta, replaceDot bool) (*adaptor.RequestURL, error
 			),
 		}, nil
 	case mode.VideoGenerationsContent:
-		return &adaptor.RequestURL{
+		return adaptor.RequestURL{
 			Method: http.MethodPost,
 			URL: fmt.Sprintf(
 				"%s/openai/v1/video/generations/%s/content/video?api-version=%s",
@@ -129,7 +129,7 @@ func GetRequestURL(meta *meta.Meta, replaceDot bool) (*adaptor.RequestURL, error
 			),
 		}, nil
 	default:
-		return nil, fmt.Errorf("unsupported mode: %s", meta.Mode)
+		return adaptor.RequestURL{}, fmt.Errorf("unsupported mode: %s", meta.Mode)
 	}
 }
 

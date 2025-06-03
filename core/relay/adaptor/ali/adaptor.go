@@ -29,44 +29,44 @@ func (a *Adaptor) DefaultBaseURL() string {
 	return baseURL
 }
 
-func (a *Adaptor) GetRequestURL(meta *meta.Meta, _ adaptor.Store) (*adaptor.RequestURL, error) {
+func (a *Adaptor) GetRequestURL(meta *meta.Meta, _ adaptor.Store) (adaptor.RequestURL, error) {
 	u := meta.Channel.BaseURL
 	if u == "" {
 		u = baseURL
 	}
 	switch meta.Mode {
 	case mode.ImagesGenerations:
-		return &adaptor.RequestURL{
+		return adaptor.RequestURL{
 			Method: http.MethodPost,
 			URL:    u + "/api/v1/services/aigc/text2image/image-synthesis",
 		}, nil
 	case mode.ChatCompletions:
-		return &adaptor.RequestURL{
+		return adaptor.RequestURL{
 			Method: http.MethodPost,
 			URL:    u + "/compatible-mode/v1/chat/completions",
 		}, nil
 	case mode.Completions:
-		return &adaptor.RequestURL{
+		return adaptor.RequestURL{
 			Method: http.MethodPost,
 			URL:    u + "/compatible-mode/v1/completions",
 		}, nil
 	case mode.Embeddings:
-		return &adaptor.RequestURL{
+		return adaptor.RequestURL{
 			Method: http.MethodPost,
 			URL:    u + "/compatible-mode/v1/embeddings",
 		}, nil
 	case mode.AudioSpeech, mode.AudioTranscription:
-		return &adaptor.RequestURL{
+		return adaptor.RequestURL{
 			Method: http.MethodPost,
 			URL:    u + "/api-ws/v1/inference",
 		}, nil
 	case mode.Rerank:
-		return &adaptor.RequestURL{
+		return adaptor.RequestURL{
 			Method: http.MethodPost,
 			URL:    u + "/api/v1/services/rerank/text-rerank/text-rerank",
 		}, nil
 	default:
-		return nil, fmt.Errorf("unsupported mode: %s", meta.Mode)
+		return adaptor.RequestURL{}, fmt.Errorf("unsupported mode: %s", meta.Mode)
 	}
 }
 
@@ -114,7 +114,7 @@ func (a *Adaptor) ConvertRequest(
 	meta *meta.Meta,
 	store adaptor.Store,
 	req *http.Request,
-) (*adaptor.ConvertRequestResult, error) {
+) (adaptor.ConvertResult, error) {
 	switch meta.Mode {
 	case mode.ImagesGenerations:
 		return ConvertImageRequest(meta, req)
@@ -143,7 +143,7 @@ func (a *Adaptor) ConvertRequest(
 	case mode.AudioTranscription:
 		return ConvertSTTRequest(meta, req)
 	default:
-		return nil, fmt.Errorf("unsupported mode: %s", meta.Mode)
+		return adaptor.ConvertResult{}, fmt.Errorf("unsupported mode: %s", meta.Mode)
 	}
 }
 
@@ -170,7 +170,7 @@ func (a *Adaptor) DoResponse(
 	store adaptor.Store,
 	c *gin.Context,
 	resp *http.Response,
-) (*model.Usage, adaptor.Error) {
+) (model.Usage, adaptor.Error) {
 	switch meta.Mode {
 	case mode.ImagesGenerations:
 		return ImageHandler(meta, c, resp)
@@ -179,7 +179,7 @@ func (a *Adaptor) DoResponse(
 	case mode.ChatCompletions:
 		reqBody, err := common.GetRequestBody(c.Request)
 		if err != nil {
-			return nil, relaymodel.WrapperOpenAIErrorWithMessage(
+			return model.Usage{}, relaymodel.WrapperOpenAIErrorWithMessage(
 				fmt.Sprintf("get request body failed: %s", err),
 				"get_request_body_failed",
 				http.StatusInternalServerError,
@@ -187,7 +187,7 @@ func (a *Adaptor) DoResponse(
 		}
 		enableSearch, err := getEnableSearch(reqBody)
 		if err != nil {
-			return nil, relaymodel.WrapperOpenAIErrorWithMessage(
+			return model.Usage{}, relaymodel.WrapperOpenAIErrorWithMessage(
 				fmt.Sprintf("get enable_search failed: %s", err),
 				"get_enable_search_failed",
 				http.StatusInternalServerError,
@@ -195,7 +195,7 @@ func (a *Adaptor) DoResponse(
 		}
 		u, e := openai.DoResponse(meta, store, c, resp)
 		if e != nil {
-			return nil, e
+			return model.Usage{}, e
 		}
 		if enableSearch {
 			u.WebSearchCount++
@@ -208,7 +208,7 @@ func (a *Adaptor) DoResponse(
 	case mode.AudioTranscription:
 		return STTDoResponse(meta, c, resp)
 	default:
-		return nil, relaymodel.WrapperOpenAIErrorWithMessage(
+		return model.Usage{}, relaymodel.WrapperOpenAIErrorWithMessage(
 			fmt.Sprintf("unsupported mode: %s", meta.Mode),
 			"unsupported_mode",
 			http.StatusBadRequest,

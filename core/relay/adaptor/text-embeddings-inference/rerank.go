@@ -21,61 +21,75 @@ import (
 func ConvertRerankRequest(
 	meta *meta.Meta,
 	req *http.Request,
-) (*adaptor.ConvertRequestResult, error) {
+) (adaptor.ConvertResult, error) {
 	node, err := common.UnmarshalBody2Node(req)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse request body: %w", err)
+		return adaptor.ConvertResult{}, fmt.Errorf("failed to parse request body: %w", err)
 	}
 
 	// Set the actual model in the request
 	_, err = node.Set("model", ast.NewString(meta.ActualModel))
 	if err != nil {
-		return nil, err
+		return adaptor.ConvertResult{}, err
 	}
 
 	// Get the documents array and rename it to texts
 	documentsNode := node.Get("documents")
 	if !documentsNode.Exists() {
-		return nil, errors.New("documents field not found")
+		return adaptor.ConvertResult{}, errors.New("documents field not found")
 	}
 
 	// Set the texts field with the documents value
 	_, err = node.Set("texts", *documentsNode)
 	if err != nil {
-		return nil, fmt.Errorf("failed to set texts field: %w", err)
+		return adaptor.ConvertResult{}, fmt.Errorf("failed to set texts field: %w", err)
 	}
 
 	// Remove the documents field
 	_, err = node.Unset("documents")
 	if err != nil {
-		return nil, fmt.Errorf("failed to remove documents field: %w", err)
+		return adaptor.ConvertResult{}, fmt.Errorf(
+			"failed to remove documents field: %w",
+			err,
+		)
 	}
 
 	returnDocumentsNode := node.Get("return_documents")
 	if returnDocumentsNode.Exists() {
 		returnDocuments, err := returnDocumentsNode.Bool()
 		if err != nil {
-			return nil, fmt.Errorf("failed to unmarshal return_documents field: %w", err)
+			return adaptor.ConvertResult{}, fmt.Errorf(
+				"failed to unmarshal return_documents field: %w",
+				err,
+			)
 		}
 		_, err = node.Unset("return_documents")
 		if err != nil {
-			return nil, fmt.Errorf("failed to remove return_documents field: %w", err)
+			return adaptor.ConvertResult{}, fmt.Errorf(
+				"failed to remove return_documents field: %w",
+				err,
+			)
 		}
 		_, err = node.Set("return_text", ast.NewBool(returnDocuments))
 		if err != nil {
-			return nil, fmt.Errorf("failed to set return_text field: %w", err)
+			return adaptor.ConvertResult{}, fmt.Errorf(
+				"failed to set return_text field: %w",
+				err,
+			)
 		}
 	}
 
 	// Convert back to JSON
 	jsonData, err := node.MarshalJSON()
 	if err != nil {
-		return nil, fmt.Errorf("failed to marshal request: %w", err)
+		return adaptor.ConvertResult{}, fmt.Errorf("failed to marshal request: %w", err)
 	}
 
-	return &adaptor.ConvertRequestResult{
-		Header: nil,
-		Body:   bytes.NewReader(jsonData),
+	return adaptor.ConvertResult{
+		Header: http.Header{
+			"Content-Type": {"application/json"},
+		},
+		Body: bytes.NewReader(jsonData),
 	}, nil
 }
 
@@ -105,9 +119,9 @@ func RerankHandler(
 	meta *meta.Meta,
 	c *gin.Context,
 	resp *http.Response,
-) (*model.Usage, adaptor.Error) {
+) (model.Usage, adaptor.Error) {
 	if resp.StatusCode != http.StatusOK {
-		return nil, RerankErrorHanlder(resp)
+		return model.Usage{}, RerankErrorHanlder(resp)
 	}
 
 	defer resp.Body.Close()
@@ -117,14 +131,14 @@ func RerankHandler(
 	respSlice := RerankResponse{}
 	err := sonic.ConfigDefault.NewDecoder(resp.Body).Decode(&respSlice)
 	if err != nil {
-		return nil, relaymodel.WrapperOpenAIError(
+		return model.Usage{}, relaymodel.WrapperOpenAIError(
 			err,
 			"read_response_body_failed",
 			http.StatusInternalServerError,
 		)
 	}
 
-	usage := &model.Usage{
+	usage := model.Usage{
 		InputTokens: meta.RequestUsage.InputTokens,
 		TotalTokens: meta.RequestUsage.InputTokens,
 	}

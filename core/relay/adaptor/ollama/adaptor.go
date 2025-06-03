@@ -22,27 +22,27 @@ func (a *Adaptor) DefaultBaseURL() string {
 	return baseURL
 }
 
-func (a *Adaptor) GetRequestURL(meta *meta.Meta, _ adaptor.Store) (*adaptor.RequestURL, error) {
+func (a *Adaptor) GetRequestURL(meta *meta.Meta, _ adaptor.Store) (adaptor.RequestURL, error) {
 	// https://github.com/ollama/ollama/blob/main/docs/api.md
 	u := meta.Channel.BaseURL
 	switch meta.Mode {
 	case mode.Embeddings:
-		return &adaptor.RequestURL{
+		return adaptor.RequestURL{
 			Method: http.MethodPost,
 			URL:    u + "/api/embed",
 		}, nil
 	case mode.ChatCompletions:
-		return &adaptor.RequestURL{
+		return adaptor.RequestURL{
 			Method: http.MethodPost,
 			URL:    u + "/api/chat",
 		}, nil
 	case mode.Completions:
-		return &adaptor.RequestURL{
+		return adaptor.RequestURL{
 			Method: http.MethodPost,
 			URL:    u + "/api/generate",
 		}, nil
 	default:
-		return nil, fmt.Errorf("unsupported mode: %s", meta.Mode)
+		return adaptor.RequestURL{}, fmt.Errorf("unsupported mode: %s", meta.Mode)
 	}
 }
 
@@ -60,9 +60,9 @@ func (a *Adaptor) ConvertRequest(
 	meta *meta.Meta,
 	_ adaptor.Store,
 	request *http.Request,
-) (*adaptor.ConvertRequestResult, error) {
+) (adaptor.ConvertResult, error) {
 	if request == nil {
-		return nil, errors.New("request is nil")
+		return adaptor.ConvertResult{}, errors.New("request is nil")
 	}
 	switch meta.Mode {
 	case mode.Embeddings:
@@ -70,7 +70,7 @@ func (a *Adaptor) ConvertRequest(
 	case mode.ChatCompletions, mode.Completions:
 		return ConvertRequest(meta, request)
 	default:
-		return nil, fmt.Errorf("unsupported mode: %s", meta.Mode)
+		return adaptor.ConvertResult{}, fmt.Errorf("unsupported mode: %s", meta.Mode)
 	}
 }
 
@@ -88,7 +88,7 @@ func (a *Adaptor) DoResponse(
 	_ adaptor.Store,
 	c *gin.Context,
 	resp *http.Response,
-) (usage *model.Usage, err adaptor.Error) {
+) (usage model.Usage, err adaptor.Error) {
 	switch meta.Mode {
 	case mode.Embeddings:
 		usage, err = EmbeddingHandler(meta, c, resp)
@@ -99,7 +99,7 @@ func (a *Adaptor) DoResponse(
 			usage, err = Handler(meta, c, resp)
 		}
 	default:
-		return nil, relaymodel.WrapperOpenAIErrorWithMessage(
+		return model.Usage{}, relaymodel.WrapperOpenAIErrorWithMessage(
 			fmt.Sprintf("unsupported mode: %s", meta.Mode),
 			"unsupported_mode",
 			http.StatusBadRequest,

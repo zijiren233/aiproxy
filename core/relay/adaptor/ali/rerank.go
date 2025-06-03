@@ -32,11 +32,11 @@ type RerankUsage struct {
 func ConvertRerankRequest(
 	meta *meta.Meta,
 	req *http.Request,
-) (*adaptor.ConvertRequestResult, error) {
+) (adaptor.ConvertResult, error) {
 	reqMap := make(map[string]any)
 	err := common.UnmarshalBodyReusable(req, &reqMap)
 	if err != nil {
-		return nil, err
+		return adaptor.ConvertResult{}, err
 	}
 	reqMap["model"] = meta.ActualModel
 	reqMap["input"] = map[string]any{
@@ -56,11 +56,13 @@ func ConvertRerankRequest(
 	reqMap["parameters"] = parameters
 	jsonData, err := sonic.Marshal(reqMap)
 	if err != nil {
-		return nil, err
+		return adaptor.ConvertResult{}, err
 	}
-	return &adaptor.ConvertRequestResult{
-		Header: nil,
-		Body:   bytes.NewReader(jsonData),
+	return adaptor.ConvertResult{
+		Header: http.Header{
+			"Content-Type": {"application/json"},
+		},
+		Body: bytes.NewReader(jsonData),
 	}, nil
 }
 
@@ -68,9 +70,9 @@ func RerankHandler(
 	meta *meta.Meta,
 	c *gin.Context,
 	resp *http.Response,
-) (*model.Usage, adaptor.Error) {
+) (model.Usage, adaptor.Error) {
 	if resp.StatusCode != http.StatusOK {
-		return nil, openai.ErrorHanlder(resp)
+		return model.Usage{}, openai.ErrorHanlder(resp)
 	}
 
 	defer resp.Body.Close()
@@ -79,7 +81,7 @@ func RerankHandler(
 
 	responseBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, relaymodel.WrapperOpenAIError(
+		return model.Usage{}, relaymodel.WrapperOpenAIError(
 			err,
 			"read_response_body_failed",
 			http.StatusInternalServerError,
@@ -88,7 +90,7 @@ func RerankHandler(
 	var rerankResponse RerankResponse
 	err = sonic.Unmarshal(responseBody, &rerankResponse)
 	if err != nil {
-		return nil, relaymodel.WrapperOpenAIError(
+		return model.Usage{}, relaymodel.WrapperOpenAIError(
 			err,
 			"unmarshal_response_body_failed",
 			http.StatusInternalServerError,
@@ -106,14 +108,14 @@ func RerankHandler(
 		ID:      rerankResponse.RequestID,
 	}
 
-	var usage *model.Usage
+	var usage model.Usage
 	if rerankResponse.Usage == nil {
-		usage = &model.Usage{
+		usage = model.Usage{
 			InputTokens: meta.RequestUsage.InputTokens,
 			TotalTokens: meta.RequestUsage.InputTokens,
 		}
 	} else {
-		usage = &model.Usage{
+		usage = model.Usage{
 			InputTokens: model.ZeroNullInt64(rerankResponse.Usage.TotalTokens),
 			TotalTokens: model.ZeroNullInt64(rerankResponse.Usage.TotalTokens),
 		}

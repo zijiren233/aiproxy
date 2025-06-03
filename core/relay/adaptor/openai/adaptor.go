@@ -24,77 +24,77 @@ func (a *Adaptor) DefaultBaseURL() string {
 	return baseURL
 }
 
-func (a *Adaptor) GetRequestURL(meta *meta.Meta, _ adaptor.Store) (*adaptor.RequestURL, error) {
+func (a *Adaptor) GetRequestURL(meta *meta.Meta, _ adaptor.Store) (adaptor.RequestURL, error) {
 	u := meta.Channel.BaseURL
 
 	switch meta.Mode {
 	case mode.ChatCompletions:
-		return &adaptor.RequestURL{
+		return adaptor.RequestURL{
 			Method: http.MethodPost,
 			URL:    u + "/chat/completions",
 		}, nil
 	case mode.Completions:
-		return &adaptor.RequestURL{
+		return adaptor.RequestURL{
 			Method: http.MethodPost,
 			URL:    u + "/completions",
 		}, nil
 	case mode.Embeddings:
-		return &adaptor.RequestURL{
+		return adaptor.RequestURL{
 			Method: http.MethodPost,
 			URL:    u + "/embeddings",
 		}, nil
 	case mode.Moderations:
-		return &adaptor.RequestURL{
+		return adaptor.RequestURL{
 			Method: http.MethodPost,
 			URL:    u + "/moderations",
 		}, nil
 	case mode.ImagesGenerations:
-		return &adaptor.RequestURL{
+		return adaptor.RequestURL{
 			Method: http.MethodPost,
 			URL:    u + "/images/generations",
 		}, nil
 	case mode.ImagesEdits:
-		return &adaptor.RequestURL{
+		return adaptor.RequestURL{
 			Method: http.MethodPost,
 			URL:    u + "/images/edits",
 		}, nil
 	case mode.AudioSpeech:
-		return &adaptor.RequestURL{
+		return adaptor.RequestURL{
 			Method: http.MethodPost,
 			URL:    u + "/audio/speech",
 		}, nil
 	case mode.AudioTranscription:
-		return &adaptor.RequestURL{
+		return adaptor.RequestURL{
 			Method: http.MethodPost,
 			URL:    u + "/audio/transcriptions",
 		}, nil
 	case mode.AudioTranslation:
-		return &adaptor.RequestURL{
+		return adaptor.RequestURL{
 			Method: http.MethodPost,
 			URL:    u + "/audio/translations",
 		}, nil
 	case mode.Rerank:
-		return &adaptor.RequestURL{
+		return adaptor.RequestURL{
 			Method: http.MethodPost,
 			URL:    u + "/rerank",
 		}, nil
 	case mode.VideoGenerationsJobs:
-		return &adaptor.RequestURL{
+		return adaptor.RequestURL{
 			Method: http.MethodPost,
 			URL:    u + "/video/generations/jobs",
 		}, nil
 	case mode.VideoGenerationsGetJobs:
-		return &adaptor.RequestURL{
+		return adaptor.RequestURL{
 			Method: http.MethodGet,
 			URL:    fmt.Sprintf("%s/video/generations/jobs/%s", u, meta.JobID),
 		}, nil
 	case mode.VideoGenerationsContent:
-		return &adaptor.RequestURL{
+		return adaptor.RequestURL{
 			Method: http.MethodGet,
 			URL:    fmt.Sprintf("%s/video/generations/%s/content/video", u, meta.GenerationID),
 		}, nil
 	default:
-		return nil, fmt.Errorf("unsupported mode: %s", meta.Mode)
+		return adaptor.RequestURL{}, fmt.Errorf("unsupported mode: %s", meta.Mode)
 	}
 }
 
@@ -112,7 +112,7 @@ func (a *Adaptor) ConvertRequest(
 	meta *meta.Meta,
 	store adaptor.Store,
 	req *http.Request,
-) (*adaptor.ConvertRequestResult, error) {
+) (adaptor.ConvertResult, error) {
 	return ConvertRequest(meta, store, req)
 }
 
@@ -120,9 +120,9 @@ func ConvertRequest(
 	meta *meta.Meta,
 	_ adaptor.Store,
 	req *http.Request,
-) (*adaptor.ConvertRequestResult, error) {
+) (adaptor.ConvertResult, error) {
 	if req == nil {
-		return nil, errors.New("request is nil")
+		return adaptor.ConvertResult{}, errors.New("request is nil")
 	}
 	switch meta.Mode {
 	case mode.Moderations:
@@ -150,7 +150,7 @@ func ConvertRequest(
 	case mode.VideoGenerationsContent:
 		return ConvertVideoGetJobsContentRequest(meta, req)
 	default:
-		return nil, fmt.Errorf("unsupported mode: %s", meta.Mode)
+		return adaptor.ConvertResult{}, fmt.Errorf("unsupported mode: %s", meta.Mode)
 	}
 }
 
@@ -159,7 +159,7 @@ func DoResponse(
 	store adaptor.Store,
 	c *gin.Context,
 	resp *http.Response,
-) (usage *model.Usage, err adaptor.Error) {
+) (usage model.Usage, err adaptor.Error) {
 	switch meta.Mode {
 	case mode.ImagesGenerations, mode.ImagesEdits:
 		usage, err = ImagesHandler(meta, c, resp)
@@ -186,7 +186,7 @@ func DoResponse(
 	case mode.VideoGenerationsContent:
 		usage, err = VideoGetJobsContentHandler(meta, store, c, resp)
 	default:
-		return nil, relaymodel.WrapperOpenAIErrorWithMessage(
+		return model.Usage{}, relaymodel.WrapperOpenAIErrorWithMessage(
 			fmt.Sprintf("unsupported mode: %s", meta.Mode),
 			"unsupported_mode",
 			http.StatusBadRequest,
@@ -211,7 +211,7 @@ func (a *Adaptor) DoResponse(
 	store adaptor.Store,
 	c *gin.Context,
 	resp *http.Response,
-) (usage *model.Usage, err adaptor.Error) {
+) (usage model.Usage, err adaptor.Error) {
 	return DoResponse(meta, store, c, resp)
 }
 

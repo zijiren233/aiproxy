@@ -14,11 +14,11 @@ import (
 func ConvertEmbeddingsRequest(
 	meta *meta.Meta,
 	req *http.Request,
-) (*adaptor.ConvertRequestResult, error) {
+) (adaptor.ConvertResult, error) {
 	reqMap := make(map[string]any)
 	err := common.UnmarshalBodyReusable(req, &reqMap)
 	if err != nil {
-		return nil, err
+		return adaptor.ConvertResult{}, err
 	}
 
 	reqMap["model"] = meta.ActualModel
@@ -32,10 +32,12 @@ func ConvertEmbeddingsRequest(
 
 	jsonData, err := sonic.Marshal(reqMap)
 	if err != nil {
-		return nil, err
+		return adaptor.ConvertResult{}, err
 	}
-	return &adaptor.ConvertRequestResult{
-		Header: nil,
-		Body:   bytes.NewReader(jsonData),
+	return adaptor.ConvertResult{
+		Header: http.Header{
+			"Content-Type": {"application/json"},
+		},
+		Body: bytes.NewReader(jsonData),
 	}, nil
 }

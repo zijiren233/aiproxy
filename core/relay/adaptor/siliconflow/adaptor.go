@@ -36,15 +36,15 @@ func (a *Adaptor) DoResponse(
 	store adaptor.Store,
 	c *gin.Context,
 	resp *http.Response,
-) (usage *model.Usage, err adaptor.Error) {
+) (usage model.Usage, err adaptor.Error) {
 	usage, err = a.Adaptor.DoResponse(meta, store, c, resp)
 	if err != nil {
-		return nil, err
+		return model.Usage{}, err
 	}
 	switch meta.Mode {
 	case mode.AudioSpeech:
 		size := c.Writer.Size()
-		usage = &model.Usage{
+		usage = model.Usage{
 			OutputTokens: model.ZeroNullInt64(size),
 			TotalTokens:  model.ZeroNullInt64(size),
 		}

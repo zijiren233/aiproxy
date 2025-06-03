@@ -97,9 +97,9 @@ func StreamHandler(
 	meta *meta.Meta,
 	c *gin.Context,
 	resp *http.Response,
-) (*model.Usage, adaptor.Error) {
+) (model.Usage, adaptor.Error) {
 	if resp.StatusCode != http.StatusOK {
-		return nil, openai.ErrorHanlder(resp)
+		return model.Usage{}, openai.ErrorHanlder(resp)
 	}
 
 	defer resp.Body.Close()
@@ -152,14 +152,16 @@ func StreamHandler(
 
 	render.Done(c)
 
-	return openai.ResponseText2Usage(responseText.String(), meta.ActualModel, int64(meta.RequestUsage.InputTokens)).
-			ToModelUsage(),
-		nil
+	return openai.ResponseText2Usage(
+		responseText.String(),
+		meta.ActualModel,
+		int64(meta.RequestUsage.InputTokens),
+	).ToModelUsage(), nil
 }
 
-func Handler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, adaptor.Error) {
+func Handler(meta *meta.Meta, c *gin.Context, resp *http.Response) (model.Usage, adaptor.Error) {
 	if resp.StatusCode != http.StatusOK {
-		return nil, openai.ErrorHanlder(resp)
+		return model.Usage{}, openai.ErrorHanlder(resp)
 	}
 
 	defer resp.Body.Close()
@@ -169,14 +171,14 @@ func Handler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage
 	var cozeResponse Response
 	err := sonic.ConfigDefault.NewDecoder(resp.Body).Decode(&cozeResponse)
 	if err != nil {
-		return nil, relaymodel.WrapperOpenAIError(
+		return model.Usage{}, relaymodel.WrapperOpenAIError(
 			err,
 			"unmarshal_response_body_failed",
 			http.StatusInternalServerError,
 		)
 	}
 	if cozeResponse.Code != 0 {
-		return nil, relaymodel.WrapperOpenAIErrorWithMessage(
+		return model.Usage{}, relaymodel.WrapperOpenAIErrorWithMessage(
 			cozeResponse.Msg,
 			cozeResponse.Code,
 			resp.StatusCode,
@@ -185,7 +187,7 @@ func Handler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage
 	fullTextResponse := Response2OpenAI(meta, &cozeResponse)
 	jsonResponse, err := sonic.Marshal(fullTextResponse)
 	if err != nil {
-		return nil, relaymodel.WrapperOpenAIError(
+		return model.Usage{}, relaymodel.WrapperOpenAIError(
 			err,
 			"marshal_response_body_failed",
 			http.StatusInternalServerError,

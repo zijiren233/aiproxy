@@ -28,9 +28,9 @@ func (a *Adaptor) ConvertRequest(
 	meta *meta.Meta,
 	_ adaptor.Store,
 	request *http.Request,
-) (*adaptor.ConvertRequestResult, error) {
+) (adaptor.ConvertResult, error) {
 	if request == nil {
-		return nil, errors.New("request is nil")
+		return adaptor.ConvertResult{}, errors.New("request is nil")
 	}
 
 	var (
@@ -44,16 +44,18 @@ func (a *Adaptor) ConvertRequest(
 	case mode.Anthropic:
 		data, err = handleAnthropicRequest(meta, request)
 	default:
-		return nil, fmt.Errorf("unsupported mode: %s", meta.Mode)
+		return adaptor.ConvertResult{}, fmt.Errorf("unsupported mode: %s", meta.Mode)
 	}
 
 	if err != nil {
-		return nil, err
+		return adaptor.ConvertResult{}, err
 	}
 
-	return &adaptor.ConvertRequestResult{
-		Header: nil,
-		Body:   bytes.NewReader(data),
+	return adaptor.ConvertResult{
+		Header: http.Header{
+			"Content-Type": {"application/json"},
+		},
+		Body: bytes.NewReader(data),
 	}, nil
 }
 
@@ -108,7 +110,7 @@ func (a *Adaptor) DoResponse(
 	_ adaptor.Store,
 	c *gin.Context,
 	resp *http.Response,
-) (usage *model.Usage, err adaptor.Error) {
+) (usage model.Usage, err adaptor.Error) {
 	switch meta.Mode {
 	case mode.ChatCompletions:
 		if utils.IsStreamResponse(resp) {
@@ -123,7 +125,7 @@ func (a *Adaptor) DoResponse(
 			usage, err = anthropic.Handler(meta, c, resp)
 		}
 	default:
-		return nil, relaymodel.WrapperOpenAIErrorWithMessage(
+		return model.Usage{}, relaymodel.WrapperOpenAIErrorWithMessage(
 			fmt.Sprintf("unsupported mode: %s", meta.Mode),
 			"unsupported_mode",
 			http.StatusBadRequest,

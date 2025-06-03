@@ -23,7 +23,7 @@ func (a *Adaptor) DefaultBaseURL() string {
 
 var v1ModelMap = map[string]struct{}{}
 
-func getRequestURL(meta *meta.Meta, action string) *adaptor.RequestURL {
+func getRequestURL(meta *meta.Meta, action string) adaptor.RequestURL {
 	u := meta.Channel.BaseURL
 	if u == "" {
 		u = baseURL
@@ -32,13 +32,13 @@ func getRequestURL(meta *meta.Meta, action string) *adaptor.RequestURL {
 	if _, ok := v1ModelMap[meta.ActualModel]; ok {
 		version = "v1"
 	}
-	return &adaptor.RequestURL{
+	return adaptor.RequestURL{
 		Method: http.MethodPost,
 		URL:    fmt.Sprintf("%s/%s/models/%s:%s", u, version, meta.ActualModel, action),
 	}
 }
 
-func (a *Adaptor) GetRequestURL(meta *meta.Meta, _ adaptor.Store) (*adaptor.RequestURL, error) {
+func (a *Adaptor) GetRequestURL(meta *meta.Meta, _ adaptor.Store) (adaptor.RequestURL, error) {
 	var action string
 	switch meta.Mode {
 	case mode.Embeddings:
@@ -67,14 +67,14 @@ func (a *Adaptor) ConvertRequest(
 	meta *meta.Meta,
 	_ adaptor.Store,
 	req *http.Request,
-) (*adaptor.ConvertRequestResult, error) {
+) (adaptor.ConvertResult, error) {
 	switch meta.Mode {
 	case mode.Embeddings:
 		return ConvertEmbeddingRequest(meta, req)
 	case mode.ChatCompletions:
 		return ConvertRequest(meta, req)
 	default:
-		return nil, fmt.Errorf("unsupported mode: %s", meta.Mode)
+		return adaptor.ConvertResult{}, fmt.Errorf("unsupported mode: %s", meta.Mode)
 	}
 }
 
@@ -92,7 +92,7 @@ func (a *Adaptor) DoResponse(
 	_ adaptor.Store,
 	c *gin.Context,
 	resp *http.Response,
-) (usage *model.Usage, err adaptor.Error) {
+) (usage model.Usage, err adaptor.Error) {
 	switch meta.Mode {
 	case mode.Embeddings:
 		usage, err = EmbeddingHandler(meta, c, resp)
@@ -103,7 +103,7 @@ func (a *Adaptor) DoResponse(
 			usage, err = Handler(meta, c, resp)
 		}
 	default:
-		return nil, relaymodel.WrapperOpenAIErrorWithMessage(
+		return model.Usage{}, relaymodel.WrapperOpenAIErrorWithMessage(
 			fmt.Sprintf("unsupported mode: %s", meta.Mode),
 			"unsupported_mode",
 			http.StatusBadRequest,

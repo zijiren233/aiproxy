@@ -28,10 +28,10 @@ const MetaResponseFormat = "response_format"
 func ConvertImageRequest(
 	meta *meta.Meta,
 	req *http.Request,
-) (*adaptor.ConvertRequestResult, error) {
+) (adaptor.ConvertResult, error) {
 	request, err := utils.UnmarshalImageRequest(req)
 	if err != nil {
-		return nil, err
+		return adaptor.ConvertResult{}, err
 	}
 	request.Model = meta.ActualModel
 
@@ -46,11 +46,12 @@ func ConvertImageRequest(
 
 	data, err := sonic.Marshal(&imageRequest)
 	if err != nil {
-		return nil, err
+		return adaptor.ConvertResult{}, err
 	}
-	return &adaptor.ConvertRequestResult{
+	return adaptor.ConvertResult{
 		Header: http.Header{
 			"X-Dashscope-Async": {"enable"},
+			"Content-Type":      {"application/json"},
 		},
 		Body: bytes.NewReader(data),
 	}, nil
@@ -60,9 +61,9 @@ func ImageHandler(
 	meta *meta.Meta,
 	c *gin.Context,
 	resp *http.Response,
-) (*model.Usage, adaptor.Error) {
+) (model.Usage, adaptor.Error) {
 	if resp.StatusCode != http.StatusOK {
-		return nil, openai.ErrorHanlder(resp)
+		return model.Usage{}, openai.ErrorHanlder(resp)
 	}
 
 	defer resp.Body.Close()
@@ -74,7 +75,7 @@ func ImageHandler(
 	var aliTaskResponse TaskResponse
 	responseBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, relaymodel.WrapperOpenAIError(
+		return model.Usage{}, relaymodel.WrapperOpenAIError(
 			err,
 			"read_response_body_failed",
 			http.StatusInternalServerError,
@@ -82,7 +83,7 @@ func ImageHandler(
 	}
 	err = sonic.Unmarshal(responseBody, &aliTaskResponse)
 	if err != nil {
-		return nil, relaymodel.WrapperOpenAIError(
+		return model.Usage{}, relaymodel.WrapperOpenAIError(
 			err,
 			"unmarshal_response_body_failed",
 			http.StatusInternalServerError,
@@ -91,7 +92,7 @@ func ImageHandler(
 
 	if aliTaskResponse.Message != "" {
 		log.Error("aliAsyncTask err: " + aliTaskResponse.Message)
-		return nil, relaymodel.WrapperOpenAIError(
+		return model.Usage{}, relaymodel.WrapperOpenAIError(
 			errors.New(aliTaskResponse.Message),
 			"ali_async_task_failed",
 			http.StatusInternalServerError,
@@ -100,7 +101,7 @@ func ImageHandler(
 
 	aliResponse, err := asyncTaskWait(c, aliTaskResponse.Output.TaskID, meta.Channel.Key)
 	if err != nil {
-		return nil, relaymodel.WrapperOpenAIError(
+		return model.Usage{}, relaymodel.WrapperOpenAIError(
 			err,
 			"ali_async_task_wait_failed",
 			http.StatusInternalServerError,
@@ -108,7 +109,7 @@ func ImageHandler(
 	}
 
 	if aliResponse.Output.TaskStatus != "SUCCEEDED" {
-		return nil, relaymodel.WrapperOpenAIErrorWithMessage(
+		return model.Usage{}, relaymodel.WrapperOpenAIErrorWithMessage(
 			aliResponse.Output.Message,
 			"ali_error",
 			resp.StatusCode,
@@ -118,7 +119,7 @@ func ImageHandler(
 	fullTextResponse := responseAli2OpenAIImage(c.Request.Context(), aliResponse, responseFormat)
 	jsonResponse, err := sonic.Marshal(fullTextResponse)
 	if err != nil {
-		return nil, relaymodel.WrapperOpenAIError(
+		return fullTextResponse.Usage.ToModelUsage(), relaymodel.WrapperOpenAIError(
 			err,
 			"marshal_response_body_failed",
 			http.StatusInternalServerError,
@@ -127,10 +128,7 @@ func ImageHandler(
 	c.Writer.Header().Set("Content-Type", "application/json")
 	c.Writer.Header().Set("Content-Length", strconv.Itoa(len(jsonResponse)))
 	_, _ = c.Writer.Write(jsonResponse)
-	return &model.Usage{
-		OutputTokens: model.ZeroNullInt64(len(jsonResponse)),
-		TotalTokens:  model.ZeroNullInt64(len(jsonResponse)),
-	}, nil
+	return fullTextResponse.Usage.ToModelUsage(), nil
 }
 
 func asyncTask(ctx context.Context, taskID, key string) (*TaskResponse, error) {
@@ -228,6 +226,10 @@ func responseAli2OpenAIImage(
 			B64Json:       b64Json,
 			RevisedPrompt: "",
 		})
+	}
+	imageResponse.Usage = &relaymodel.ImageUsage{
+		OutputTokens: int64(len(imageResponse.Data)),
+		TotalTokens:  int64(len(imageResponse.Data)),
 	}
 	return &imageResponse
 }

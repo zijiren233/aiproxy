@@ -15,15 +15,15 @@ func ConvertEmbeddingsRequest(
 	meta *meta.Meta,
 	req *http.Request,
 	inputToSlices bool,
-) (*adaptor.ConvertRequestResult, error) {
+) (adaptor.ConvertResult, error) {
 	node, err := common.UnmarshalBody2Node(req)
 	if err != nil {
-		return nil, err
+		return adaptor.ConvertResult{}, err
 	}
 
 	_, err = node.Set("model", ast.NewString(meta.ActualModel))
 	if err != nil {
-		return nil, err
+		return adaptor.ConvertResult{}, err
 	}
 
 	if inputToSlices {
@@ -32,12 +32,12 @@ func ConvertEmbeddingsRequest(
 			inputString, err := inputNode.String()
 			if err != nil {
 				if !errors.Is(err, ast.ErrUnsupportType) {
-					return nil, err
+					return adaptor.ConvertResult{}, err
 				}
 			} else {
 				_, err = node.SetAny("input", []string{inputString})
 				if err != nil {
-					return nil, err
+					return adaptor.ConvertResult{}, err
 				}
 			}
 		}
@@ -45,10 +45,12 @@ func ConvertEmbeddingsRequest(
 
 	jsonData, err := node.MarshalJSON()
 	if err != nil {
-		return nil, err
+		return adaptor.ConvertResult{}, err
 	}
-	return &adaptor.ConvertRequestResult{
-		Header: nil,
-		Body:   bytes.NewReader(jsonData),
+	return adaptor.ConvertResult{
+		Header: http.Header{
+			"Content-Type": {"application/json"},
+		},
+		Body: bytes.NewReader(jsonData),
 	}, nil
 }

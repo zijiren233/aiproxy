@@ -23,15 +23,15 @@ func (a *Adaptor) DefaultBaseURL() string {
 	return baseURL
 }
 
-func (a *Adaptor) GetRequestURL(meta *meta.Meta, _ adaptor.Store) (*adaptor.RequestURL, error) {
+func (a *Adaptor) GetRequestURL(meta *meta.Meta, _ adaptor.Store) (adaptor.RequestURL, error) {
 	switch meta.Mode {
 	case mode.ParsePdf:
-		return &adaptor.RequestURL{
+		return adaptor.RequestURL{
 			Method: http.MethodPost,
 			URL:    meta.Channel.BaseURL + "/api/v2/parse/pdf",
 		}, nil
 	default:
-		return nil, fmt.Errorf("unsupported mode: %s", meta.Mode)
+		return adaptor.RequestURL{}, fmt.Errorf("unsupported mode: %s", meta.Mode)
 	}
 }
 
@@ -39,12 +39,12 @@ func (a *Adaptor) ConvertRequest(
 	meta *meta.Meta,
 	_ adaptor.Store,
 	req *http.Request,
-) (*adaptor.ConvertRequestResult, error) {
+) (adaptor.ConvertResult, error) {
 	switch meta.Mode {
 	case mode.ParsePdf:
 		return ConvertParsePdfRequest(meta, req)
 	default:
-		return nil, fmt.Errorf("unsupported mode: %s", meta.Mode)
+		return adaptor.ConvertResult{}, fmt.Errorf("unsupported mode: %s", meta.Mode)
 	}
 }
 
@@ -62,12 +62,12 @@ func (a *Adaptor) DoResponse(
 	_ adaptor.Store,
 	c *gin.Context,
 	resp *http.Response,
-) (*model.Usage, adaptor.Error) {
+) (model.Usage, adaptor.Error) {
 	switch meta.Mode {
 	case mode.ParsePdf:
 		return HandleParsePdfResponse(meta, c, resp)
 	default:
-		return nil, relaymodel.WrapperOpenAIErrorWithMessage(
+		return model.Usage{}, relaymodel.WrapperOpenAIErrorWithMessage(
 			fmt.Sprintf("unsupported mode: %s", meta.Mode),
 			"unsupported_mode",
 			http.StatusBadRequest,

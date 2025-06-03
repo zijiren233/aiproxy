@@ -15,7 +15,7 @@ type Plugin interface {
 		meta *meta.Meta,
 		store adaptor.Store,
 		do adaptor.GetRequestURL,
-	) (*adaptor.RequestURL, error)
+	) (adaptor.RequestURL, error)
 
 	SetupRequestHeader(
 		meta *meta.Meta,
@@ -30,7 +30,7 @@ type Plugin interface {
 		store adaptor.Store,
 		req *http.Request,
 		do adaptor.ConvertRequest,
-	) (*adaptor.ConvertRequestResult, error)
+	) (adaptor.ConvertResult, error)
 
 	DoRequest(
 		meta *meta.Meta,
@@ -46,7 +46,7 @@ type Plugin interface {
 		c *gin.Context,
 		resp *http.Response,
 		do adaptor.DoResponse,
-	) (*model.Usage, adaptor.Error)
+	) (model.Usage, adaptor.Error)
 }
 
 func WrapperAdaptor(adaptor adaptor.Adaptor, plugins ...Plugin) adaptor.Adaptor {
@@ -75,7 +75,7 @@ type wrappedAdaptor struct {
 func (w *wrappedAdaptor) GetRequestURL(
 	meta *meta.Meta,
 	store adaptor.Store,
-) (*adaptor.RequestURL, error) {
+) (adaptor.RequestURL, error) {
 	return w.plugin.GetRequestURL(meta, store, w.Adaptor)
 }
 
@@ -92,7 +92,7 @@ func (w *wrappedAdaptor) ConvertRequest(
 	meta *meta.Meta,
 	store adaptor.Store,
 	req *http.Request,
-) (*adaptor.ConvertRequestResult, error) {
+) (adaptor.ConvertResult, error) {
 	return w.plugin.ConvertRequest(meta, store, req, w.Adaptor)
 }
 
@@ -110,6 +110,6 @@ func (w *wrappedAdaptor) DoResponse(
 	store adaptor.Store,
 	c *gin.Context,
 	resp *http.Response,
-) (*model.Usage, adaptor.Error) {
+) (model.Usage, adaptor.Error) {
 	return w.plugin.DoResponse(meta, store, c, resp, w.Adaptor)
 }

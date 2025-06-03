@@ -20,24 +20,26 @@ import (
 func ConvertRerankRequest(
 	meta *meta.Meta,
 	req *http.Request,
-) (*adaptor.ConvertRequestResult, error) {
+) (adaptor.ConvertResult, error) {
 	node, err := common.UnmarshalBody2Node(req)
 	if err != nil {
-		return nil, err
+		return adaptor.ConvertResult{}, err
 	}
 
 	_, err = node.Set("model", ast.NewString(meta.ActualModel))
 	if err != nil {
-		return nil, err
+		return adaptor.ConvertResult{}, err
 	}
 
 	jsonData, err := node.MarshalJSON()
 	if err != nil {
-		return nil, err
+		return adaptor.ConvertResult{}, err
 	}
-	return &adaptor.ConvertRequestResult{
-		Header: nil,
-		Body:   bytes.NewReader(jsonData),
+	return adaptor.ConvertResult{
+		Header: http.Header{
+			"Content-Type": {"application/json"},
+		},
+		Body: bytes.NewReader(jsonData),
 	}, nil
 }
 
@@ -45,9 +47,9 @@ func RerankHandler(
 	meta *meta.Meta,
 	c *gin.Context,
 	resp *http.Response,
-) (*model.Usage, adaptor.Error) {
+) (model.Usage, adaptor.Error) {
 	if resp.StatusCode != http.StatusOK {
-		return nil, ErrorHanlder(resp)
+		return model.Usage{}, ErrorHanlder(resp)
 	}
 
 	defer resp.Body.Close()
@@ -56,7 +58,7 @@ func RerankHandler(
 
 	responseBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, relaymodel.WrapperOpenAIError(
+		return model.Usage{}, relaymodel.WrapperOpenAIError(
 			err,
 			"read_response_body_failed",
 			http.StatusInternalServerError,
@@ -65,7 +67,7 @@ func RerankHandler(
 	var rerankResponse relaymodel.SlimRerankResponse
 	err = sonic.Unmarshal(responseBody, &rerankResponse)
 	if err != nil {
-		return nil, relaymodel.WrapperOpenAIError(
+		return model.Usage{}, relaymodel.WrapperOpenAIError(
 			err,
 			"unmarshal_response_body_failed",
 			http.StatusInternalServerError,
@@ -80,7 +82,7 @@ func RerankHandler(
 	}
 
 	if rerankResponse.Meta.Tokens == nil {
-		return &model.Usage{
+		return model.Usage{
 			InputTokens: meta.RequestUsage.InputTokens,
 			TotalTokens: meta.RequestUsage.InputTokens,
 		}, nil
@@ -88,7 +90,7 @@ func RerankHandler(
 	if rerankResponse.Meta.Tokens.InputTokens <= 0 {
 		rerankResponse.Meta.Tokens.InputTokens = int64(meta.RequestUsage.InputTokens)
 	}
-	return &model.Usage{
+	return model.Usage{
 		InputTokens:  model.ZeroNullInt64(rerankResponse.Meta.Tokens.InputTokens),
 		OutputTokens: model.ZeroNullInt64(rerankResponse.Meta.Tokens.OutputTokens),
 		TotalTokens: model.ZeroNullInt64(

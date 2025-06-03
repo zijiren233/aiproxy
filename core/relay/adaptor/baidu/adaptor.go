@@ -48,7 +48,7 @@ var modelEndpointMap = map[string]string{
 	"Fuyu-8B":              "fuyu_8b",
 }
 
-func (a *Adaptor) GetRequestURL(meta *meta.Meta, _ adaptor.Store) (*adaptor.RequestURL, error) {
+func (a *Adaptor) GetRequestURL(meta *meta.Meta, _ adaptor.Store) (adaptor.RequestURL, error) {
 	// Get API path suffix based on mode
 	var pathSuffix string
 	switch meta.Mode {
@@ -71,7 +71,7 @@ func (a *Adaptor) GetRequestURL(meta *meta.Meta, _ adaptor.Store) (*adaptor.Requ
 	fullURL := fmt.Sprintf("%s/rpc/2.0/ai_custom/v1/wenxinworkshop/%s/%s",
 		meta.Channel.BaseURL, pathSuffix, modelEndpoint)
 
-	return &adaptor.RequestURL{
+	return adaptor.RequestURL{
 		Method: http.MethodPost,
 		URL:    fullURL,
 	}, nil
@@ -96,7 +96,7 @@ func (a *Adaptor) ConvertRequest(
 	meta *meta.Meta,
 	store adaptor.Store,
 	req *http.Request,
-) (*adaptor.ConvertRequestResult, error) {
+) (adaptor.ConvertResult, error) {
 	switch meta.Mode {
 	case mode.Embeddings:
 		return openai.ConvertEmbeddingsRequest(meta, req, true)
@@ -107,7 +107,7 @@ func (a *Adaptor) ConvertRequest(
 	case mode.ChatCompletions:
 		return ConvertRequest(meta, req)
 	default:
-		return nil, fmt.Errorf("unsupported mode: %s", meta.Mode)
+		return adaptor.ConvertResult{}, fmt.Errorf("unsupported mode: %s", meta.Mode)
 	}
 }
 
@@ -125,7 +125,7 @@ func (a *Adaptor) DoResponse(
 	_ adaptor.Store,
 	c *gin.Context,
 	resp *http.Response,
-) (usage *model.Usage, err adaptor.Error) {
+) (usage model.Usage, err adaptor.Error) {
 	switch meta.Mode {
 	case mode.Embeddings:
 		usage, err = EmbeddingsHandler(meta, c, resp)
@@ -140,7 +140,7 @@ func (a *Adaptor) DoResponse(
 			usage, err = Handler(meta, c, resp)
 		}
 	default:
-		return nil, relaymodel.WrapperOpenAIErrorWithMessage(
+		return model.Usage{}, relaymodel.WrapperOpenAIErrorWithMessage(
 			fmt.Sprintf("unsupported mode: %s", meta.Mode),
 			nil,
 			http.StatusBadRequest,

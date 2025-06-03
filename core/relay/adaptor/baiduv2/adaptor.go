@@ -39,20 +39,20 @@ func toV2ModelName(modelName string) string {
 	return strings.ToLower(modelName)
 }
 
-func (a *Adaptor) GetRequestURL(meta *meta.Meta, _ adaptor.Store) (*adaptor.RequestURL, error) {
+func (a *Adaptor) GetRequestURL(meta *meta.Meta, _ adaptor.Store) (adaptor.RequestURL, error) {
 	switch meta.Mode {
 	case mode.ChatCompletions:
-		return &adaptor.RequestURL{
+		return adaptor.RequestURL{
 			Method: http.MethodPost,
 			URL:    meta.Channel.BaseURL + "/chat/completions",
 		}, nil
 	case mode.Rerank:
-		return &adaptor.RequestURL{
+		return adaptor.RequestURL{
 			Method: http.MethodPost,
 			URL:    meta.Channel.BaseURL + "/rerankers",
 		}, nil
 	default:
-		return nil, fmt.Errorf("unsupported mode: %s", meta.Mode)
+		return adaptor.RequestURL{}, fmt.Errorf("unsupported mode: %s", meta.Mode)
 	}
 }
 
@@ -74,7 +74,7 @@ func (a *Adaptor) ConvertRequest(
 	meta *meta.Meta,
 	store adaptor.Store,
 	req *http.Request,
-) (*adaptor.ConvertRequestResult, error) {
+) (adaptor.ConvertResult, error) {
 	switch meta.Mode {
 	case mode.ChatCompletions, mode.Rerank:
 		actModel := meta.ActualModel
@@ -85,7 +85,7 @@ func (a *Adaptor) ConvertRequest(
 		}
 		return openai.ConvertRequest(meta, store, req)
 	default:
-		return nil, fmt.Errorf("unsupported mode: %s", meta.Mode)
+		return adaptor.ConvertResult{}, fmt.Errorf("unsupported mode: %s", meta.Mode)
 	}
 }
 
@@ -103,12 +103,12 @@ func (a *Adaptor) DoResponse(
 	store adaptor.Store,
 	c *gin.Context,
 	resp *http.Response,
-) (usage *model.Usage, err adaptor.Error) {
+) (usage model.Usage, err adaptor.Error) {
 	switch meta.Mode {
 	case mode.ChatCompletions, mode.Rerank:
 		return openai.DoResponse(meta, store, c, resp)
 	default:
-		return nil, relaymodel.WrapperOpenAIErrorWithMessage(
+		return model.Usage{}, relaymodel.WrapperOpenAIErrorWithMessage(
 			fmt.Sprintf("unsupported mode: %s", meta.Mode),
 			nil,
 			http.StatusBadRequest,

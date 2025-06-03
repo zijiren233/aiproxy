@@ -23,10 +23,10 @@ import (
 func ConvertSTTRequest(
 	meta *meta.Meta,
 	request *http.Request,
-) (*adaptor.ConvertRequestResult, error) {
+) (adaptor.ConvertResult, error) {
 	err := request.ParseMultipartForm(1024 * 1024 * 4)
 	if err != nil {
-		return nil, err
+		return adaptor.ConvertResult{}, err
 	}
 
 	multipartBody := &bytes.Buffer{}
@@ -40,7 +40,7 @@ func ConvertSTTRequest(
 		if key == "model" {
 			err = multipartWriter.WriteField(key, meta.ActualModel)
 			if err != nil {
-				return nil, err
+				return adaptor.ConvertResult{}, err
 			}
 			continue
 		}
@@ -50,7 +50,7 @@ func ConvertSTTRequest(
 		}
 		err = multipartWriter.WriteField(key, value)
 		if err != nil {
-			return nil, err
+			return adaptor.ConvertResult{}, err
 		}
 	}
 
@@ -61,23 +61,23 @@ func ConvertSTTRequest(
 		fileHeader := files[0]
 		file, err := fileHeader.Open()
 		if err != nil {
-			return nil, err
+			return adaptor.ConvertResult{}, err
 		}
 		w, err := multipartWriter.CreateFormFile(key, fileHeader.Filename)
 		if err != nil {
 			file.Close()
-			return nil, err
+			return adaptor.ConvertResult{}, err
 		}
 		_, err = io.Copy(w, file)
 		file.Close()
 		if err != nil {
-			return nil, err
+			return adaptor.ConvertResult{}, err
 		}
 	}
 
 	multipartWriter.Close()
 	ContentType := multipartWriter.FormDataContentType()
-	return &adaptor.ConvertRequestResult{
+	return adaptor.ConvertResult{
 		Header: http.Header{
 			"Content-Type": {ContentType},
 		},
@@ -89,9 +89,9 @@ func STTHandler(
 	meta *meta.Meta,
 	c *gin.Context,
 	resp *http.Response,
-) (*model.Usage, adaptor.Error) {
+) (model.Usage, adaptor.Error) {
 	if resp.StatusCode != http.StatusOK {
-		return nil, ErrorHanlder(resp)
+		return model.Usage{}, ErrorHanlder(resp)
 	}
 
 	defer resp.Body.Close()
@@ -102,7 +102,7 @@ func STTHandler(
 
 	responseBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, relaymodel.WrapperOpenAIError(
+		return model.Usage{}, relaymodel.WrapperOpenAIError(
 			err,
 			"read_response_body_failed",
 			http.StatusInternalServerError,
@@ -125,7 +125,7 @@ func STTHandler(
 		text, err = getTextFromJSON(responseBody)
 	}
 	if err != nil {
-		return nil, relaymodel.WrapperOpenAIError(
+		return model.Usage{}, relaymodel.WrapperOpenAIError(
 			err,
 			"get_text_from_body_err",
 			http.StatusInternalServerError,
@@ -138,7 +138,7 @@ func STTHandler(
 		promptTokens = CountTokenText(text, meta.ActualModel)
 	}
 
-	usage := &relaymodel.Usage{
+	usage := relaymodel.Usage{
 		PromptTokens: promptTokens,
 		TotalTokens:  promptTokens,
 	}

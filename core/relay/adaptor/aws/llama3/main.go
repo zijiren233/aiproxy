@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"io"
 	"net/http"
+	"strconv"
 	"text/template"
 	"time"
 
@@ -90,10 +91,10 @@ func ConvertRequest(textRequest *relaymodel.GeneralOpenAIRequest) *Request {
 	return &llamaRequest
 }
 
-func Handler(meta *meta.Meta, c *gin.Context) (*model.Usage, adaptor.Error) {
+func Handler(meta *meta.Meta, c *gin.Context) (model.Usage, adaptor.Error) {
 	awsModelID, err := awsModelID(meta.ActualModel)
 	if err != nil {
-		return nil, relaymodel.WrapperOpenAIErrorWithMessage(
+		return model.Usage{}, relaymodel.WrapperOpenAIErrorWithMessage(
 			err.Error(),
 			nil,
 			http.StatusInternalServerError,
@@ -108,7 +109,7 @@ func Handler(meta *meta.Meta, c *gin.Context) (*model.Usage, adaptor.Error) {
 
 	llamaReq, ok := meta.Get(ConvertedRequest)
 	if !ok {
-		return nil, relaymodel.WrapperOpenAIErrorWithMessage(
+		return model.Usage{}, relaymodel.WrapperOpenAIErrorWithMessage(
 			"request not found",
 			nil,
 			http.StatusInternalServerError,
@@ -117,7 +118,7 @@ func Handler(meta *meta.Meta, c *gin.Context) (*model.Usage, adaptor.Error) {
 
 	awsReq.Body, err = sonic.Marshal(llamaReq)
 	if err != nil {
-		return nil, relaymodel.WrapperOpenAIErrorWithMessage(
+		return model.Usage{}, relaymodel.WrapperOpenAIErrorWithMessage(
 			err.Error(),
 			nil,
 			http.StatusInternalServerError,
@@ -126,7 +127,7 @@ func Handler(meta *meta.Meta, c *gin.Context) (*model.Usage, adaptor.Error) {
 
 	awsClient, err := utils.AwsClientFromMeta(meta)
 	if err != nil {
-		return nil, relaymodel.WrapperOpenAIErrorWithMessage(
+		return model.Usage{}, relaymodel.WrapperOpenAIErrorWithMessage(
 			err.Error(),
 			nil,
 			http.StatusInternalServerError,
@@ -135,7 +136,7 @@ func Handler(meta *meta.Meta, c *gin.Context) (*model.Usage, adaptor.Error) {
 
 	awsResp, err := awsClient.InvokeModel(c.Request.Context(), awsReq)
 	if err != nil {
-		return nil, relaymodel.WrapperOpenAIErrorWithMessage(
+		return model.Usage{}, relaymodel.WrapperOpenAIErrorWithMessage(
 			err.Error(),
 			nil,
 			http.StatusInternalServerError,
@@ -145,27 +146,32 @@ func Handler(meta *meta.Meta, c *gin.Context) (*model.Usage, adaptor.Error) {
 	var llamaResponse Response
 	err = sonic.Unmarshal(awsResp.Body, &llamaResponse)
 	if err != nil {
-		return nil, relaymodel.WrapperOpenAIErrorWithMessage(
+		return model.Usage{}, relaymodel.WrapperOpenAIErrorWithMessage(
 			err.Error(),
 			nil,
 			http.StatusInternalServerError,
 		)
 	}
 
-	openaiResp := ResponseLlama2OpenAI(&llamaResponse)
-	openaiResp.Model = meta.OriginModel
-	usage := relaymodel.Usage{
-		PromptTokens:     llamaResponse.PromptTokenCount,
-		CompletionTokens: llamaResponse.GenerationTokenCount,
-		TotalTokens:      llamaResponse.PromptTokenCount + llamaResponse.GenerationTokenCount,
-	}
-	openaiResp.Usage = usage
+	openaiResp := ResponseLlama2OpenAI(meta, llamaResponse)
 
-	c.JSON(http.StatusOK, openaiResp)
-	return usage.ToModelUsage(), nil
+	jsonData, err := sonic.Marshal(llamaResponse)
+	if err != nil {
+		return openaiResp.ToModelUsage(), relaymodel.WrapperOpenAIErrorWithMessage(
+			err.Error(),
+			nil,
+			http.StatusInternalServerError,
+		)
+	}
+
+	c.Writer.Header().Set("Content-Type", "application/json")
+	c.Writer.Header().Set("Content-Length", strconv.Itoa(len(jsonData)))
+	c.Writer.Write(jsonData)
+
+	return openaiResp.ToModelUsage(), nil
 }
 
-func ResponseLlama2OpenAI(llamaResponse *Response) *relaymodel.TextResponse {
+func ResponseLlama2OpenAI(meta *meta.Meta, llamaResponse Response) relaymodel.TextResponse {
 	var responseText string
 	if len(llamaResponse.Generation) > 0 {
 		responseText = llamaResponse.Generation
@@ -184,17 +190,23 @@ func ResponseLlama2OpenAI(llamaResponse *Response) *relaymodel.TextResponse {
 		Object:  relaymodel.ChatCompletionObject,
 		Created: time.Now().Unix(),
 		Choices: []*relaymodel.TextResponseChoice{&choice},
+		Model:   meta.OriginModel,
+		Usage: relaymodel.Usage{
+			PromptTokens:     llamaResponse.PromptTokenCount,
+			CompletionTokens: llamaResponse.GenerationTokenCount,
+			TotalTokens:      llamaResponse.PromptTokenCount + llamaResponse.GenerationTokenCount,
+		},
 	}
-	return &fullTextResponse
+	return fullTextResponse
 }
 
-func StreamHandler(meta *meta.Meta, c *gin.Context) (*model.Usage, adaptor.Error) {
+func StreamHandler(meta *meta.Meta, c *gin.Context) (model.Usage, adaptor.Error) {
 	log := middleware.GetLogger(c)
 
 	createdTime := time.Now().Unix()
 	awsModelID, err := awsModelID(meta.ActualModel)
 	if err != nil {
-		return nil, relaymodel.WrapperOpenAIErrorWithMessage(
+		return model.Usage{}, relaymodel.WrapperOpenAIErrorWithMessage(
 			err.Error(),
 			nil,
 			http.StatusInternalServerError,
@@ -209,7 +221,7 @@ func StreamHandler(meta *meta.Meta, c *gin.Context) (*model.Usage, adaptor.Error
 
 	llamaReq, ok := meta.Get(ConvertedRequest)
 	if !ok {
-		return nil, relaymodel.WrapperOpenAIErrorWithMessage(
+		return model.Usage{}, relaymodel.WrapperOpenAIErrorWithMessage(
 			"request not found",
 			nil,
 			http.StatusInternalServerError,
@@ -218,7 +230,7 @@ func StreamHandler(meta *meta.Meta, c *gin.Context) (*model.Usage, adaptor.Error
 
 	awsReq.Body, err = sonic.Marshal(llamaReq)
 	if err != nil {
-		return nil, relaymodel.WrapperOpenAIErrorWithMessage(
+		return model.Usage{}, relaymodel.WrapperOpenAIErrorWithMessage(
 			err.Error(),
 			nil,
 			http.StatusInternalServerError,
@@ -227,7 +239,7 @@ func StreamHandler(meta *meta.Meta, c *gin.Context) (*model.Usage, adaptor.Error
 
 	awsClient, err := utils.AwsClientFromMeta(meta)
 	if err != nil {
-		return nil, relaymodel.WrapperOpenAIErrorWithMessage(
+		return model.Usage{}, relaymodel.WrapperOpenAIErrorWithMessage(
 			err.Error(),
 			nil,
 			http.StatusInternalServerError,
@@ -236,7 +248,7 @@ func StreamHandler(meta *meta.Meta, c *gin.Context) (*model.Usage, adaptor.Error
 
 	awsResp, err := awsClient.InvokeModelWithResponseStream(c.Request.Context(), awsReq)
 	if err != nil {
-		return nil, relaymodel.WrapperOpenAIErrorWithMessage(
+		return model.Usage{}, relaymodel.WrapperOpenAIErrorWithMessage(
 			err.Error(),
 			nil,
 			http.StatusInternalServerError,

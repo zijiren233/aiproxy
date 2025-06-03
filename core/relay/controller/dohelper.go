@@ -95,8 +95,20 @@ func DoHelper(
 		return model.Usage{}, nil, err
 	}
 
+	// donot use c.Request.Context() because it will be canceled by the client
+	ctx := context.Background()
+
+	timeout := meta.ModelConfig.Timeout
+	if timeout <= 0 {
+		timeout = defaultTimeout
+	}
+
+	var cancel context.CancelFunc
+	ctx, cancel = context.WithTimeout(ctx, time.Duration(timeout)*time.Second)
+	defer cancel()
+
 	// 2. Convert and prepare request
-	resp, err := prepareAndDoRequest(a, c, meta, store)
+	resp, err := prepareAndDoRequest(ctx, a, c, meta, store)
 	if err != nil {
 		return model.Usage{}, &detail, err
 	}
@@ -156,6 +168,7 @@ func getRequestBody(meta *meta.Meta, c *gin.Context, detail *RequestDetail) adap
 const defaultTimeout = 60 * 30 // 30 minutes
 
 func prepareAndDoRequest(
+	ctx context.Context,
 	a adaptor.Adaptor,
 	c *gin.Context,
 	meta *meta.Meta,
@@ -192,18 +205,6 @@ func prepareAndDoRequest(
 
 	log.Debugf("request url: %s %s", fullRequestURL.Method, fullRequestURL.URL)
 
-	// donot use c.Request.Context() because it will be canceled by the client
-	ctx := context.Background()
-
-	timeout := meta.ModelConfig.Timeout
-	if timeout <= 0 {
-		timeout = defaultTimeout
-	}
-
-	var cancel context.CancelFunc
-	ctx, cancel = context.WithTimeout(ctx, time.Duration(timeout)*time.Second)
-	defer cancel()
-
 	req, err := http.NewRequestWithContext(
 		ctx,
 		fullRequestURL.Method,
@@ -234,11 +235,6 @@ func setupRequestHeader(
 	req *http.Request,
 	header http.Header,
 ) adaptor.Error {
-	contentType := req.Header.Get("Content-Type")
-	if contentType == "" {
-		contentType = "application/json; charset=utf-8"
-	}
-	req.Header.Set("Content-Type", contentType)
 	for key, value := range header {
 		req.Header[key] = value
 	}
@@ -336,15 +332,7 @@ func handleResponse(
 		detail.ResponseBody = rw.body.String()
 	}
 
-	if usage != nil {
-		return *usage, relayErr
-	}
-
-	if relayErr != nil {
-		return model.Usage{}, relayErr
-	}
-
-	return meta.RequestUsage, nil
+	return usage, relayErr
 }
 
 func updateUsageMetrics(usage model.Usage, log *log.Entry) {

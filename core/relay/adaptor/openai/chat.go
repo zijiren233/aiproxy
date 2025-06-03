@@ -66,30 +66,32 @@ func ConvertCompletionsRequest(
 	meta *meta.Meta,
 	req *http.Request,
 	callback func(node *ast.Node) error,
-) (*adaptor.ConvertRequestResult, error) {
+) (adaptor.ConvertResult, error) {
 	node, err := common.UnmarshalBody2Node(req)
 	if err != nil {
-		return nil, err
+		return adaptor.ConvertResult{}, err
 	}
 
 	if callback != nil {
 		if err := callback(&node); err != nil {
-			return nil, err
+			return adaptor.ConvertResult{}, err
 		}
 	}
 
 	_, err = node.Set("model", ast.NewString(meta.ActualModel))
 	if err != nil {
-		return nil, err
+		return adaptor.ConvertResult{}, err
 	}
 
 	jsonData, err := node.MarshalJSON()
 	if err != nil {
-		return nil, err
+		return adaptor.ConvertResult{}, err
 	}
-	return &adaptor.ConvertRequestResult{
-		Header: nil,
-		Body:   bytes.NewReader(jsonData),
+	return adaptor.ConvertResult{
+		Header: http.Header{
+			"Content-Type": {"application/json"},
+		},
+		Body: bytes.NewReader(jsonData),
 	}, nil
 }
 
@@ -98,36 +100,38 @@ func ConvertChatCompletionsRequest(
 	req *http.Request,
 	callback func(node *ast.Node) error,
 	doNotPatchStreamOptionsIncludeUsage bool,
-) (*adaptor.ConvertRequestResult, error) {
+) (adaptor.ConvertResult, error) {
 	node, err := common.UnmarshalBody2Node(req)
 	if err != nil {
-		return nil, err
+		return adaptor.ConvertResult{}, err
 	}
 
 	if callback != nil {
 		if err := callback(&node); err != nil {
-			return nil, err
+			return adaptor.ConvertResult{}, err
 		}
 	}
 
 	if !doNotPatchStreamOptionsIncludeUsage {
 		if err := patchStreamOptions(&node); err != nil {
-			return nil, err
+			return adaptor.ConvertResult{}, err
 		}
 	}
 
 	_, err = node.Set("model", ast.NewString(meta.ActualModel))
 	if err != nil {
-		return nil, err
+		return adaptor.ConvertResult{}, err
 	}
 
 	jsonData, err := node.MarshalJSON()
 	if err != nil {
-		return nil, err
+		return adaptor.ConvertResult{}, err
 	}
-	return &adaptor.ConvertRequestResult{
-		Header: nil,
-		Body:   bytes.NewReader(jsonData),
+	return adaptor.ConvertResult{
+		Header: http.Header{
+			"Content-Type": {"application/json"},
+		},
+		Body: bytes.NewReader(jsonData),
 	}, nil
 }
 
@@ -163,21 +167,18 @@ func patchStreamOptions(node *ast.Node) error {
 func GetUsageOrChatChoicesResponseFromNode(
 	node *ast.Node,
 ) (*relaymodel.Usage, []*relaymodel.ChatCompletionsStreamResponseChoice, error) {
-	var usage *relaymodel.Usage
 	usageNode, err := node.Get("usage").Raw()
 	if err != nil {
 		if !errors.Is(err, ast.ErrNotExist) {
 			return nil, nil, err
 		}
 	} else {
+		var usage relaymodel.Usage
 		err = sonic.UnmarshalString(usageNode, &usage)
 		if err != nil {
 			return nil, nil, err
 		}
-	}
-
-	if usage != nil {
-		return usage, nil, nil
+		return &usage, nil, nil
 	}
 
 	var choices []*relaymodel.ChatCompletionsStreamResponseChoice
@@ -202,9 +203,9 @@ func StreamHandler(
 	c *gin.Context,
 	resp *http.Response,
 	preHandler PreHandler,
-) (*model.Usage, adaptor.Error) {
+) (model.Usage, adaptor.Error) {
 	if resp.StatusCode != http.StatusOK {
-		return nil, ErrorHanlder(resp)
+		return model.Usage{}, ErrorHanlder(resp)
 	}
 
 	defer resp.Body.Close()
@@ -218,7 +219,7 @@ func StreamHandler(
 	defer PutScannerBuffer(buf)
 	scanner.Buffer(*buf, cap(*buf))
 
-	var usage *relaymodel.Usage
+	var usage relaymodel.Usage
 
 	for scanner.Scan() {
 		data := scanner.Bytes()
@@ -251,11 +252,11 @@ func StreamHandler(
 			continue
 		}
 		if u != nil {
-			usage = u
+			usage = *u
 			responseText.Reset()
 		}
 		for _, choice := range ch {
-			if usage == nil {
+			if usage.TotalTokens == 0 {
 				if choice.Text != "" {
 					responseText.WriteString(choice.Text)
 				} else {
@@ -276,7 +277,7 @@ func StreamHandler(
 		log.Error("error reading stream: " + err.Error())
 	}
 
-	if usage == nil || (usage.TotalTokens == 0 && responseText.Len() > 0) {
+	if usage.TotalTokens == 0 && responseText.Len() > 0 {
 		usage = ResponseText2Usage(
 			responseText.String(),
 			meta.ActualModel,
@@ -288,7 +289,7 @@ func StreamHandler(
 			Object:  relaymodel.ChatCompletionChunkObject,
 			Created: time.Now().Unix(),
 			Choices: []*relaymodel.ChatCompletionsStreamResponseChoice{},
-			Usage:   usage,
+			Usage:   &usage,
 		})
 	} else if usage.TotalTokens != 0 && usage.PromptTokens == 0 { // some channels don't return prompt tokens & completion tokens
 		usage.PromptTokens = int64(meta.RequestUsage.InputTokens)
@@ -303,21 +304,18 @@ func StreamHandler(
 func GetUsageOrChoicesResponseFromNode(
 	node *ast.Node,
 ) (*relaymodel.Usage, []*relaymodel.TextResponseChoice, error) {
-	var usage *relaymodel.Usage
 	usageNode, err := node.Get("usage").Raw()
 	if err != nil {
 		if !errors.Is(err, ast.ErrNotExist) {
 			return nil, nil, err
 		}
 	} else {
+		var usage relaymodel.Usage
 		err = sonic.UnmarshalString(usageNode, &usage)
 		if err != nil {
 			return nil, nil, err
 		}
-	}
-
-	if usage != nil {
-		return usage, nil, nil
+		return &usage, nil, nil
 	}
 
 	var choices []*relaymodel.TextResponseChoice
@@ -340,9 +338,9 @@ func Handler(
 	c *gin.Context,
 	resp *http.Response,
 	preHandler PreHandler,
-) (*model.Usage, adaptor.Error) {
+) (model.Usage, adaptor.Error) {
 	if resp.StatusCode != http.StatusOK {
-		return nil, ErrorHanlder(resp)
+		return model.Usage{}, ErrorHanlder(resp)
 	}
 
 	defer resp.Body.Close()
@@ -351,7 +349,7 @@ func Handler(
 
 	responseBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, relaymodel.WrapperOpenAIError(
+		return model.Usage{}, relaymodel.WrapperOpenAIError(
 			err,
 			"read_response_body_failed",
 			http.StatusInternalServerError,
@@ -360,7 +358,7 @@ func Handler(
 
 	node, err := sonic.Get(responseBody)
 	if err != nil {
-		return nil, relaymodel.WrapperOpenAIError(
+		return model.Usage{}, relaymodel.WrapperOpenAIError(
 			err,
 			"unmarshal_response_body_failed",
 			http.StatusInternalServerError,
@@ -369,7 +367,7 @@ func Handler(
 	if preHandler != nil {
 		err := preHandler(meta, &node)
 		if err != nil {
-			return nil, relaymodel.WrapperOpenAIError(
+			return model.Usage{}, relaymodel.WrapperOpenAIError(
 				err,
 				"pre_handler_failed",
 				http.StatusInternalServerError,
@@ -378,14 +376,15 @@ func Handler(
 	}
 	usage, choices, err := GetUsageOrChoicesResponseFromNode(&node)
 	if err != nil {
-		return nil, relaymodel.WrapperOpenAIError(
+		return model.Usage{}, relaymodel.WrapperOpenAIError(
 			err,
 			"unmarshal_response_body_failed",
 			http.StatusInternalServerError,
 		)
 	}
 
-	if usage == nil || usage.TotalTokens == 0 ||
+	if usage == nil ||
+		usage.TotalTokens == 0 ||
 		(usage.PromptTokens == 0 && usage.CompletionTokens == 0) {
 		var completionTokens int64
 		for _, choice := range choices {

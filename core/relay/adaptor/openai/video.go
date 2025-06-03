@@ -21,22 +21,25 @@ import (
 func ConvertVideoRequest(
 	meta *meta.Meta,
 	req *http.Request,
-) (*adaptor.ConvertRequestResult, error) {
+) (adaptor.ConvertResult, error) {
 	node, err := common.UnmarshalBody2Node(req)
 	if err != nil {
-		return nil, err
+		return adaptor.ConvertResult{}, err
 	}
 
 	_, err = node.Set("model", ast.NewString(meta.ActualModel))
 	if err != nil {
-		return nil, err
+		return adaptor.ConvertResult{}, err
 	}
 
 	jsonData, err := sonic.Marshal(&node)
 	if err != nil {
-		return nil, err
+		return adaptor.ConvertResult{}, err
 	}
-	return &adaptor.ConvertRequestResult{
+	return adaptor.ConvertResult{
+		Header: http.Header{
+			"Content-Type": {"application/json"},
+		},
 		Body: bytes.NewReader(jsonData),
 	}, nil
 }
@@ -44,15 +47,15 @@ func ConvertVideoRequest(
 func ConvertVideoGetJobsRequest(
 	_ *meta.Meta,
 	_ *http.Request,
-) (*adaptor.ConvertRequestResult, error) {
-	return &adaptor.ConvertRequestResult{}, nil
+) (adaptor.ConvertResult, error) {
+	return adaptor.ConvertResult{}, nil
 }
 
 func ConvertVideoGetJobsContentRequest(
 	_ *meta.Meta,
 	_ *http.Request,
-) (*adaptor.ConvertRequestResult, error) {
-	return &adaptor.ConvertRequestResult{}, nil
+) (adaptor.ConvertResult, error) {
+	return adaptor.ConvertResult{}, nil
 }
 
 func VideoHandler(
@@ -60,15 +63,15 @@ func VideoHandler(
 	store adaptor.Store,
 	c *gin.Context,
 	resp *http.Response,
-) (*model.Usage, adaptor.Error) {
+) (model.Usage, adaptor.Error) {
 	if resp.StatusCode != http.StatusOK &&
 		resp.StatusCode != http.StatusCreated {
-		return nil, VideoErrorHanlder(resp)
+		return model.Usage{}, VideoErrorHanlder(resp)
 	}
 
 	responseBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, relaymodel.WrapperOpenAIVideoError(
+		return model.Usage{}, relaymodel.WrapperOpenAIVideoError(
 			err,
 			http.StatusInternalServerError,
 		)
@@ -76,7 +79,7 @@ func VideoHandler(
 
 	node, err := sonic.Get(responseBody)
 	if err != nil {
-		return nil, relaymodel.WrapperOpenAIVideoError(
+		return model.Usage{}, relaymodel.WrapperOpenAIVideoError(
 			err,
 			http.StatusInternalServerError,
 		)
@@ -84,7 +87,7 @@ func VideoHandler(
 	idNode := node.Get("id")
 	id, err := idNode.String()
 	if err != nil {
-		return nil, relaymodel.WrapperOpenAIVideoError(
+		return model.Usage{}, relaymodel.WrapperOpenAIVideoError(
 			err,
 			http.StatusInternalServerError,
 		)
@@ -106,7 +109,7 @@ func VideoHandler(
 	c.Writer.Header().Set("Content-Type", "application/json")
 	c.Writer.Header().Set("Content-Length", strconv.Itoa(len(responseBody)))
 	_, _ = c.Writer.Write(responseBody)
-	return nil, nil
+	return model.Usage{}, nil
 }
 
 func VideoGetJobsHandler(
@@ -114,14 +117,14 @@ func VideoGetJobsHandler(
 	store adaptor.Store,
 	c *gin.Context,
 	resp *http.Response,
-) (*model.Usage, adaptor.Error) {
+) (model.Usage, adaptor.Error) {
 	if resp.StatusCode != http.StatusOK {
-		return nil, VideoErrorHanlder(resp)
+		return model.Usage{}, VideoErrorHanlder(resp)
 	}
 
 	responseBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, relaymodel.WrapperOpenAIVideoError(
+		return model.Usage{}, relaymodel.WrapperOpenAIVideoError(
 			err,
 			http.StatusInternalServerError,
 		)
@@ -129,7 +132,7 @@ func VideoGetJobsHandler(
 
 	node, err := sonic.Get(responseBody)
 	if err != nil {
-		return nil, relaymodel.WrapperOpenAIVideoError(
+		return model.Usage{}, relaymodel.WrapperOpenAIVideoError(
 			err,
 			http.StatusInternalServerError,
 		)
@@ -137,7 +140,7 @@ func VideoGetJobsHandler(
 
 	expiresAt, err := node.Get("expires_at").Int64()
 	if err != nil {
-		return nil, relaymodel.WrapperOpenAIVideoError(
+		return model.Usage{}, relaymodel.WrapperOpenAIVideoError(
 			err,
 			http.StatusInternalServerError,
 		)
@@ -170,7 +173,7 @@ func VideoGetJobsHandler(
 		err = patchErr
 	}
 	if err != nil {
-		return nil, relaymodel.WrapperOpenAIVideoError(
+		return model.Usage{}, relaymodel.WrapperOpenAIVideoError(
 			err,
 			http.StatusInternalServerError,
 		)
@@ -179,7 +182,7 @@ func VideoGetJobsHandler(
 	c.Writer.Header().Set("Content-Type", "application/json")
 	c.Writer.Header().Set("Content-Length", strconv.Itoa(len(responseBody)))
 	_, _ = c.Writer.Write(responseBody)
-	return nil, nil
+	return model.Usage{}, nil
 }
 
 func VideoGetJobsContentHandler(
@@ -187,12 +190,12 @@ func VideoGetJobsContentHandler(
 	_ adaptor.Store,
 	c *gin.Context,
 	resp *http.Response,
-) (*model.Usage, adaptor.Error) {
+) (model.Usage, adaptor.Error) {
 	if resp.StatusCode != http.StatusOK {
-		return nil, VideoErrorHanlder(resp)
+		return model.Usage{}, VideoErrorHanlder(resp)
 	}
 
 	c.Writer.Header().Set("Content-Type", resp.Header.Get("Content-Type"))
 	_, _ = io.Copy(c.Writer, resp.Body)
-	return nil, nil
+	return model.Usage{}, nil
 }

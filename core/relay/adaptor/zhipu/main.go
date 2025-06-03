@@ -17,9 +17,9 @@ import (
 // https://open.bigmodel.cn/api/paas/v3/model-api/chatglm_std/invoke
 // https://open.bigmodel.cn/api/paas/v3/model-api/chatglm_std/sse-invoke
 
-func EmbeddingsHandler(c *gin.Context, resp *http.Response) (*model.Usage, adaptor.Error) {
+func EmbeddingsHandler(c *gin.Context, resp *http.Response) (model.Usage, adaptor.Error) {
 	if resp.StatusCode != http.StatusOK {
-		return nil, openai.ErrorHanlder(resp)
+		return model.Usage{}, openai.ErrorHanlder(resp)
 	}
 
 	defer resp.Body.Close()
@@ -27,7 +27,7 @@ func EmbeddingsHandler(c *gin.Context, resp *http.Response) (*model.Usage, adapt
 	var zhipuResponse EmbeddingResponse
 	err := sonic.ConfigDefault.NewDecoder(resp.Body).Decode(&zhipuResponse)
 	if err != nil {
-		return nil, relaymodel.WrapperOpenAIError(
+		return model.Usage{}, relaymodel.WrapperOpenAIError(
 			err,
 			"unmarshal_response_body_failed",
 			http.StatusInternalServerError,
@@ -36,7 +36,7 @@ func EmbeddingsHandler(c *gin.Context, resp *http.Response) (*model.Usage, adapt
 	fullTextResponse := embeddingResponseZhipu2OpenAI(&zhipuResponse)
 	jsonResponse, err := sonic.Marshal(fullTextResponse)
 	if err != nil {
-		return nil, relaymodel.WrapperOpenAIError(
+		return fullTextResponse.ToModelUsage(), relaymodel.WrapperOpenAIError(
 			err,
 			"marshal_response_body_failed",
 			http.StatusInternalServerError,

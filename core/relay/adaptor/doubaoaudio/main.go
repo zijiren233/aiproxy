@@ -12,16 +12,16 @@ import (
 	relaymodel "github.com/labring/aiproxy/core/relay/model"
 )
 
-func GetRequestURL(meta *meta.Meta) (*adaptor.RequestURL, error) {
+func GetRequestURL(meta *meta.Meta) (adaptor.RequestURL, error) {
 	u := meta.Channel.BaseURL
 	switch meta.Mode {
 	case mode.AudioSpeech:
-		return &adaptor.RequestURL{
+		return adaptor.RequestURL{
 			Method: http.MethodPost,
 			URL:    u + "/api/v1/tts/ws_binary",
 		}, nil
 	default:
-		return nil, fmt.Errorf("unsupported mode: %s", meta.Mode)
+		return adaptor.RequestURL{}, fmt.Errorf("unsupported mode: %s", meta.Mode)
 	}
 }
 
@@ -44,7 +44,7 @@ func (a *Adaptor) Metadata() adaptor.Metadata {
 	}
 }
 
-func (a *Adaptor) GetRequestURL(meta *meta.Meta, _ adaptor.Store) (*adaptor.RequestURL, error) {
+func (a *Adaptor) GetRequestURL(meta *meta.Meta, _ adaptor.Store) (adaptor.RequestURL, error) {
 	return GetRequestURL(meta)
 }
 
@@ -52,12 +52,12 @@ func (a *Adaptor) ConvertRequest(
 	meta *meta.Meta,
 	_ adaptor.Store,
 	req *http.Request,
-) (*adaptor.ConvertRequestResult, error) {
+) (adaptor.ConvertResult, error) {
 	switch meta.Mode {
 	case mode.AudioSpeech:
 		return ConvertTTSRequest(meta, req)
 	default:
-		return nil, fmt.Errorf("unsupported mode: %s", meta.Mode)
+		return adaptor.ConvertResult{}, fmt.Errorf("unsupported mode: %s", meta.Mode)
 	}
 }
 
@@ -99,12 +99,12 @@ func (a *Adaptor) DoResponse(
 	_ adaptor.Store,
 	c *gin.Context,
 	resp *http.Response,
-) (*model.Usage, adaptor.Error) {
+) (model.Usage, adaptor.Error) {
 	switch meta.Mode {
 	case mode.AudioSpeech:
 		return TTSDoResponse(meta, c, resp)
 	default:
-		return nil, relaymodel.WrapperOpenAIErrorWithMessage(
+		return model.Usage{}, relaymodel.WrapperOpenAIErrorWithMessage(
 			fmt.Sprintf("unsupported mode: %s", meta.Mode),
 			nil,
 			http.StatusBadRequest,

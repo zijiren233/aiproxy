@@ -25,9 +25,9 @@ func (a *Adaptor) DoResponse(
 	store adaptor.Store,
 	c *gin.Context,
 	resp *http.Response,
-) (usage *model.Usage, err adaptor.Error) {
+) (usage model.Usage, err adaptor.Error) {
 	if resp.StatusCode != http.StatusOK {
-		return nil, ErrorHandler(resp)
+		return model.Usage{}, ErrorHandler(resp)
 	}
 
 	return a.Adaptor.DoResponse(meta, store, c, resp)

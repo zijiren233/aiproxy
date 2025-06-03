@@ -102,7 +102,7 @@ func (p *WebSearch) ConvertRequest(
 	store adaptor.Store,
 	req *http.Request,
 	do adaptor.ConvertRequest,
-) (*adaptor.ConvertRequestResult, error) {
+) (adaptor.ConvertResult, error) {
 	// Skip if not chat completions mode
 	if meta.Mode != mode.ChatCompletions {
 		return do.ConvertRequest(meta, store, req)
@@ -133,7 +133,7 @@ func (p *WebSearch) ConvertRequest(
 	// Read and parse request body
 	body, err := common.GetRequestBody(req)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read request body: %w", err)
+		return adaptor.ConvertResult{}, fmt.Errorf("failed to read request body: %w", err)
 	}
 
 	var chatRequest map[string]any
@@ -749,7 +749,7 @@ func (p *WebSearch) DoResponse(
 	c *gin.Context,
 	resp *http.Response,
 	do adaptor.DoResponse,
-) (*model.Usage, adaptor.Error) {
+) (model.Usage, adaptor.Error) {
 	if meta.Mode != mode.ChatCompletions {
 		return do.DoResponse(meta, store, c, resp)
 	}
@@ -801,10 +801,10 @@ func (p *WebSearch) doResponseWithCount(
 	resp *http.Response,
 	do adaptor.DoResponse,
 	count int,
-) (*model.Usage, adaptor.Error) {
+) (model.Usage, adaptor.Error) {
 	u, err := do.DoResponse(meta, store, c, resp)
 	if err != nil {
-		return u, err
+		return model.Usage{}, err
 	}
 	u.WebSearchCount += model.ZeroNullInt64(int64(count))
 	return u, nil

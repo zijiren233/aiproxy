@@ -24,8 +24,8 @@ func (a *Adaptor) DefaultBaseURL() string {
 	return baseURL
 }
 
-func (a *Adaptor) GetRequestURL(meta *meta.Meta, _ adaptor.Store) (*adaptor.RequestURL, error) {
-	return &adaptor.RequestURL{
+func (a *Adaptor) GetRequestURL(meta *meta.Meta, _ adaptor.Store) (adaptor.RequestURL, error) {
+	return adaptor.RequestURL{
 		Method: http.MethodPost,
 		URL:    meta.Channel.BaseURL + "/messages",
 	}, nil
@@ -69,26 +69,28 @@ func (a *Adaptor) ConvertRequest(
 	meta *meta.Meta,
 	_ adaptor.Store,
 	req *http.Request,
-) (*adaptor.ConvertRequestResult, error) {
+) (adaptor.ConvertResult, error) {
 	switch meta.Mode {
 	case mode.ChatCompletions:
 		data, err := OpenAIConvertRequest(meta, req)
 		if err != nil {
-			return nil, err
+			return adaptor.ConvertResult{}, err
 		}
 
 		data2, err := sonic.Marshal(data)
 		if err != nil {
-			return nil, err
+			return adaptor.ConvertResult{}, err
 		}
-		return &adaptor.ConvertRequestResult{
-			Header: nil,
-			Body:   bytes.NewReader(data2),
+		return adaptor.ConvertResult{
+			Header: http.Header{
+				"Content-Type": {"application/json"},
+			},
+			Body: bytes.NewReader(data2),
 		}, nil
 	case mode.Anthropic:
 		return ConvertRequest(meta, req)
 	default:
-		return nil, fmt.Errorf("unsupported mode: %s", meta.Mode)
+		return adaptor.ConvertResult{}, fmt.Errorf("unsupported mode: %s", meta.Mode)
 	}
 }
 
@@ -106,7 +108,7 @@ func (a *Adaptor) DoResponse(
 	_ adaptor.Store,
 	c *gin.Context,
 	resp *http.Response,
-) (usage *model.Usage, err adaptor.Error) {
+) (usage model.Usage, err adaptor.Error) {
 	switch meta.Mode {
 	case mode.ChatCompletions:
 		if utils.IsStreamResponse(resp) {
@@ -121,7 +123,7 @@ func (a *Adaptor) DoResponse(
 			usage, err = Handler(meta, c, resp)
 		}
 	default:
-		return nil, relaymodel.WrapperOpenAIErrorWithMessage(
+		return model.Usage{}, relaymodel.WrapperOpenAIErrorWithMessage(
 			fmt.Sprintf("unsupported mode: %s", meta.Mode),
 			"unsupported_mode",
 			http.StatusBadRequest,

@@ -20,12 +20,12 @@ type AwsAdapter interface {
 		meta *meta.Meta,
 		store adaptor.Store,
 		req *http.Request,
-	) (*adaptor.ConvertRequestResult, error)
+	) (adaptor.ConvertResult, error)
 	DoResponse(
 		meta *meta.Meta,
 		store adaptor.Store,
 		c *gin.Context,
-	) (usage *model.Usage, err adaptor.Error)
+	) (usage model.Usage, err adaptor.Error)
 }
 
 type AwsConfig struct {

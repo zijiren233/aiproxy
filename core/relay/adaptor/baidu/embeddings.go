@@ -23,14 +23,14 @@ func EmbeddingsHandler(
 	meta *meta.Meta,
 	c *gin.Context,
 	resp *http.Response,
-) (*model.Usage, adaptor.Error) {
+) (model.Usage, adaptor.Error) {
 	defer resp.Body.Close()
 
 	log := middleware.GetLogger(c)
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, relaymodel.WrapperOpenAIErrorWithMessage(
+		return model.Usage{}, relaymodel.WrapperOpenAIErrorWithMessage(
 			err.Error(),
 			nil,
 			http.StatusInternalServerError,
@@ -39,7 +39,7 @@ func EmbeddingsHandler(
 	var baiduResponse EmbeddingsResponse
 	err = sonic.Unmarshal(body, &baiduResponse)
 	if err != nil {
-		return nil, relaymodel.WrapperOpenAIErrorWithMessage(
+		return model.Usage{}, relaymodel.WrapperOpenAIErrorWithMessage(
 			err.Error(),
 			nil,
 			http.StatusInternalServerError,

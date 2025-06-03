@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"errors"
+	"io"
 	"net/http"
 	"strconv"
 	"strings"
@@ -340,10 +341,12 @@ func StreamResponse2OpenAI(
 		if claudeResponse.Message == nil {
 			return nil, nil
 		}
-		usage = claudeResponse.Message.Usage.ToOpenAIUsage()
+		openAIUsage := claudeResponse.Message.Usage.ToOpenAIUsage()
+		usage = &openAIUsage
 	case "message_delta":
 		if claudeResponse.Usage != nil {
-			usage = claudeResponse.Usage.ToOpenAIUsage()
+			openAIUsage := claudeResponse.Usage.ToOpenAIUsage()
+			usage = &openAIUsage
 		}
 		if claudeResponse.Delta != nil && claudeResponse.Delta.StopReason != nil {
 			stopReason = *claudeResponse.Delta.StopReason
@@ -372,7 +375,27 @@ func StreamResponse2OpenAI(
 	return &openaiResponse, nil
 }
 
-func Response2OpenAI(meta *meta.Meta, claudeResponse *Response) *relaymodel.TextResponse {
+func Response2OpenAI(
+	meta *meta.Meta,
+	respData []byte,
+) (*relaymodel.TextResponse, adaptor.Error) {
+	var claudeResponse Response
+	err := sonic.Unmarshal(respData, &claudeResponse)
+	if err != nil {
+		return nil, relaymodel.WrapperOpenAIError(
+			err,
+			"unmarshal_response_body_failed",
+			http.StatusInternalServerError,
+		)
+	}
+
+	if claudeResponse.Type == "error" {
+		return nil, OpenAIErrorHandlerWithBody(
+			http.StatusBadRequest,
+			respData,
+		)
+	}
+
 	var content string
 	var thinking string
 	tools := make([]*relaymodel.Tool, 0)
@@ -416,29 +439,22 @@ func Response2OpenAI(meta *meta.Meta, claudeResponse *Response) *relaymodel.Text
 		Object:  relaymodel.ChatCompletionObject,
 		Created: time.Now().Unix(),
 		Choices: []*relaymodel.TextResponseChoice{&choice},
-		Usage: relaymodel.Usage{
-			PromptTokens:     claudeResponse.Usage.InputTokens + claudeResponse.Usage.CacheReadInputTokens + claudeResponse.Usage.CacheCreationInputTokens,
-			CompletionTokens: claudeResponse.Usage.OutputTokens,
-			PromptTokensDetails: &relaymodel.PromptTokensDetails{
-				CachedTokens:        claudeResponse.Usage.CacheReadInputTokens,
-				CacheCreationTokens: claudeResponse.Usage.CacheCreationInputTokens,
-			},
-		},
+		Usage:   claudeResponse.Usage.ToOpenAIUsage(),
 	}
 	if fullTextResponse.PromptTokens == 0 {
 		fullTextResponse.PromptTokens = int64(meta.RequestUsage.InputTokens)
 	}
 	fullTextResponse.TotalTokens = fullTextResponse.PromptTokens + fullTextResponse.CompletionTokens
-	return &fullTextResponse
+	return &fullTextResponse, nil
 }
 
 func OpenAIStreamHandler(
 	m *meta.Meta,
 	c *gin.Context,
 	resp *http.Response,
-) (*model.Usage, adaptor.Error) {
+) (model.Usage, adaptor.Error) {
 	if resp.StatusCode != http.StatusOK {
-		return nil, OpenAIErrorHandler(resp)
+		return model.Usage{}, OpenAIErrorHandler(resp)
 	}
 
 	defer resp.Body.Close()
@@ -536,26 +552,29 @@ func OpenAIHandler(
 	meta *meta.Meta,
 	c *gin.Context,
 	resp *http.Response,
-) (*model.Usage, adaptor.Error) {
+) (model.Usage, adaptor.Error) {
 	if resp.StatusCode != http.StatusOK {
-		return nil, OpenAIErrorHandler(resp)
+		return model.Usage{}, OpenAIErrorHandler(resp)
 	}
 
 	defer resp.Body.Close()
 
-	var claudeResponse Response
-	err := sonic.ConfigDefault.NewDecoder(resp.Body).Decode(&claudeResponse)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, relaymodel.WrapperOpenAIError(
+		return model.Usage{}, relaymodel.WrapperOpenAIError(
 			err,
-			"unmarshal_response_body_failed",
+			"read_response_body_failed",
 			http.StatusInternalServerError,
 		)
 	}
-	fullTextResponse := Response2OpenAI(meta, &claudeResponse)
+	fullTextResponse, adaptorErr := Response2OpenAI(meta, body)
+	if adaptorErr != nil {
+		return model.Usage{}, adaptorErr
+	}
+
 	jsonResponse, err := sonic.Marshal(fullTextResponse)
 	if err != nil {
-		return nil, relaymodel.WrapperOpenAIError(
+		return model.Usage{}, relaymodel.WrapperOpenAIError(
 			err,
 			"marshal_response_body_failed",
 			http.StatusInternalServerError,

@@ -126,11 +126,8 @@ func (w *wrapAdaptor) DoResponse(
 	store adaptor.Store,
 	c *gin.Context,
 	resp *http.Response,
-) (*model.Usage, adaptor.Error) {
+) (model.Usage, adaptor.Error) {
 	usage, relayErr := w.Adaptor.DoResponse(meta, store, c, resp)
-	if usage == nil {
-		return nil, relayErr
-	}
 
 	if usage.TotalTokens > 0 {
 		count, overLimitCount, secondCount := reqlimit.PushChannelModelTokensRequest(

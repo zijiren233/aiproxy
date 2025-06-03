@@ -23,8 +23,8 @@ func (a *Adaptor) DefaultBaseURL() string {
 	return baseURL
 }
 
-func (a *Adaptor) GetRequestURL(meta *meta.Meta, _ adaptor.Store) (*adaptor.RequestURL, error) {
-	return &adaptor.RequestURL{
+func (a *Adaptor) GetRequestURL(meta *meta.Meta, _ adaptor.Store) (adaptor.RequestURL, error) {
+	return adaptor.RequestURL{
 		Method: http.MethodPost,
 		URL:    meta.Channel.BaseURL + "/v1/chat",
 	}, nil
@@ -44,23 +44,25 @@ func (a *Adaptor) ConvertRequest(
 	meta *meta.Meta,
 	_ adaptor.Store,
 	req *http.Request,
-) (*adaptor.ConvertRequestResult, error) {
+) (adaptor.ConvertResult, error) {
 	request, err := utils.UnmarshalGeneralOpenAIRequest(req)
 	if err != nil {
-		return nil, err
+		return adaptor.ConvertResult{}, err
 	}
 	request.Model = meta.ActualModel
 	requestBody := ConvertRequest(request)
 	if requestBody == nil {
-		return nil, errors.New("request body is nil")
+		return adaptor.ConvertResult{}, errors.New("request body is nil")
 	}
 	data, err := sonic.Marshal(requestBody)
 	if err != nil {
-		return nil, err
+		return adaptor.ConvertResult{}, err
 	}
-	return &adaptor.ConvertRequestResult{
-		Header: nil,
-		Body:   bytes.NewReader(data),
+	return adaptor.ConvertResult{
+		Header: http.Header{
+			"Content-Type": {"application/json"},
+		},
+		Body: bytes.NewReader(data),
 	}, nil
 }
 
@@ -78,7 +80,7 @@ func (a *Adaptor) DoResponse(
 	_ adaptor.Store,
 	c *gin.Context,
 	resp *http.Response,
-) (usage *model.Usage, err adaptor.Error) {
+) (usage model.Usage, err adaptor.Error) {
 	switch meta.Mode {
 	case mode.Rerank:
 		usage, err = openai.RerankHandler(meta, c, resp)

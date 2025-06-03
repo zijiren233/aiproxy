@@ -31,13 +31,13 @@ func (a *Adaptor) ConvertRequest(
 	meta *meta.Meta,
 	store adaptor.Store,
 	request *http.Request,
-) (*adaptor.ConvertRequestResult, error) {
-	adaptor := GetAdaptor(meta.ActualModel)
-	if adaptor == nil {
-		return nil, errors.New("adaptor not found")
+) (adaptor.ConvertResult, error) {
+	aa := GetAdaptor(meta.ActualModel)
+	if aa == nil {
+		return adaptor.ConvertResult{}, errors.New("adaptor not found")
 	}
 
-	return adaptor.ConvertRequest(meta, store, request)
+	return aa.ConvertRequest(meta, store, request)
 }
 
 func (a *Adaptor) DoResponse(
@@ -45,10 +45,10 @@ func (a *Adaptor) DoResponse(
 	store adaptor.Store,
 	c *gin.Context,
 	resp *http.Response,
-) (usage *model.Usage, err adaptor.Error) {
+) (usage model.Usage, err adaptor.Error) {
 	adaptor := GetAdaptor(meta.ActualModel)
 	if adaptor == nil {
-		return nil, relaymodel.WrapperOpenAIErrorWithMessage(
+		return model.Usage{}, relaymodel.WrapperOpenAIErrorWithMessage(
 			meta.ActualModel+" adaptor not found",
 			"adaptor_not_found",
 			http.StatusInternalServerError,
@@ -67,7 +67,7 @@ func (a *Adaptor) Metadata() adaptor.Metadata {
 	}
 }
 
-func (a *Adaptor) GetRequestURL(meta *meta.Meta, _ adaptor.Store) (*adaptor.RequestURL, error) {
+func (a *Adaptor) GetRequestURL(meta *meta.Meta, _ adaptor.Store) (adaptor.RequestURL, error) {
 	var suffix string
 	if strings.HasPrefix(meta.ActualModel, "gemini") {
 		if meta.GetBool("stream") {
@@ -85,11 +85,11 @@ func (a *Adaptor) GetRequestURL(meta *meta.Meta, _ adaptor.Store) (*adaptor.Requ
 
 	config, err := getConfigFromKey(meta.Channel.Key)
 	if err != nil {
-		return nil, err
+		return adaptor.RequestURL{}, err
 	}
 
 	if meta.Channel.BaseURL != "" {
-		return &adaptor.RequestURL{
+		return adaptor.RequestURL{
 			Method: http.MethodPost,
 			URL: fmt.Sprintf(
 				"%s/v1/projects/%s/locations/%s/publishers/google/models/%s:%s",
@@ -101,7 +101,7 @@ func (a *Adaptor) GetRequestURL(meta *meta.Meta, _ adaptor.Store) (*adaptor.Requ
 			),
 		}, nil
 	}
-	return &adaptor.RequestURL{
+	return adaptor.RequestURL{
 		Method: http.MethodPost,
 		URL: fmt.Sprintf(
 			"https://%s-aiplatform.googleapis.com/v1/projects/%s/locations/%s/publishers/google/models/%s:%s",

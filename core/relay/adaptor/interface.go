@@ -39,7 +39,7 @@ type RequestURL struct {
 }
 
 type GetRequestURL interface {
-	GetRequestURL(meta *meta.Meta, store Store) (*RequestURL, error)
+	GetRequestURL(meta *meta.Meta, store Store) (RequestURL, error)
 }
 
 type SetupRequestHeader interface {
@@ -47,7 +47,7 @@ type SetupRequestHeader interface {
 }
 
 type ConvertRequest interface {
-	ConvertRequest(meta *meta.Meta, store Store, req *http.Request) (*ConvertRequestResult, error)
+	ConvertRequest(meta *meta.Meta, store Store, req *http.Request) (ConvertResult, error)
 }
 
 type DoRequest interface {
@@ -65,7 +65,7 @@ type DoResponse interface {
 		store Store,
 		c *gin.Context,
 		resp *http.Response,
-	) (*model.Usage, Error)
+	) (model.Usage, Error)
 }
 
 type Adaptor interface {
@@ -78,7 +78,7 @@ type Adaptor interface {
 	DoResponse
 }
 
-type ConvertRequestResult struct {
+type ConvertResult struct {
 	Header http.Header
 	Body   io.Reader
 }

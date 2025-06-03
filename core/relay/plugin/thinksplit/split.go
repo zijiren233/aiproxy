@@ -45,7 +45,7 @@ func (p *ThinkPlugin) DoResponse(
 	c *gin.Context,
 	resp *http.Response,
 	do adaptor.DoResponse,
-) (*model.Usage, adaptor.Error) {
+) (model.Usage, adaptor.Error) {
 	// Only process chat completions
 	if meta.Mode != mode.ChatCompletions {
 		return do.DoResponse(meta, store, c, resp)
@@ -67,7 +67,7 @@ func (p *ThinkPlugin) handleResponse(
 	c *gin.Context,
 	resp *http.Response,
 	do adaptor.DoResponse,
-) (*model.Usage, adaptor.Error) {
+) (model.Usage, adaptor.Error) {
 	// Create a custom response writer
 	rw := &thinkResponseWriter{
 		ResponseWriter: c.Writer,

@@ -19,9 +19,9 @@ func RerankHandler(
 	meta *meta.Meta,
 	c *gin.Context,
 	resp *http.Response,
-) (*model.Usage, adaptor.Error) {
+) (model.Usage, adaptor.Error) {
 	if resp.StatusCode != http.StatusOK {
-		return nil, ErrorHanlder(resp)
+		return model.Usage{}, ErrorHanlder(resp)
 	}
 
 	defer resp.Body.Close()
@@ -30,7 +30,7 @@ func RerankHandler(
 
 	responseBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, relaymodel.WrapperOpenAIError(
+		return model.Usage{}, relaymodel.WrapperOpenAIError(
 			err,
 			"read_response_body_failed",
 			http.StatusInternalServerError,
@@ -38,7 +38,7 @@ func RerankHandler(
 	}
 	node, err := sonic.Get(responseBody)
 	if err != nil {
-		return nil, relaymodel.WrapperOpenAIError(
+		return model.Usage{}, relaymodel.WrapperOpenAIError(
 			err,
 			"unmarshal_response_body_failed",
 			http.StatusInternalServerError,
@@ -48,7 +48,7 @@ func RerankHandler(
 	usageNode := node.Get("usage")
 	usageStr, err := usageNode.Raw()
 	if err != nil {
-		return nil, relaymodel.WrapperOpenAIError(
+		return model.Usage{}, relaymodel.WrapperOpenAIError(
 			err,
 			"unmarshal_usage_failed",
 			http.StatusInternalServerError,
@@ -56,7 +56,7 @@ func RerankHandler(
 	}
 	err = sonic.UnmarshalString(usageStr, &usage)
 	if err != nil {
-		return nil, relaymodel.WrapperOpenAIError(
+		return model.Usage{}, relaymodel.WrapperOpenAIError(
 			err,
 			"unmarshal_usage_failed",
 			http.StatusInternalServerError,
@@ -73,7 +73,7 @@ func RerankHandler(
 		"tokens": modelUsage,
 	})
 	if err != nil {
-		return nil, relaymodel.WrapperOpenAIError(
+		return modelUsage, relaymodel.WrapperOpenAIError(
 			err,
 			"unmarshal_usage_failed",
 			http.StatusInternalServerError,
@@ -81,7 +81,7 @@ func RerankHandler(
 	}
 	_, err = node.Unset("usage")
 	if err != nil {
-		return nil, relaymodel.WrapperOpenAIError(
+		return modelUsage, relaymodel.WrapperOpenAIError(
 			err,
 			"unmarshal_usage_failed",
 			http.StatusInternalServerError,
@@ -89,7 +89,7 @@ func RerankHandler(
 	}
 	_, err = node.Set("model", ast.NewString(meta.OriginModel))
 	if err != nil {
-		return nil, relaymodel.WrapperOpenAIError(
+		return modelUsage, relaymodel.WrapperOpenAIError(
 			err,
 			"unmarshal_usage_failed",
 			http.StatusInternalServerError,
@@ -97,7 +97,7 @@ func RerankHandler(
 	}
 	respData, err := node.MarshalJSON()
 	if err != nil {
-		return nil, relaymodel.WrapperOpenAIError(
+		return modelUsage, relaymodel.WrapperOpenAIError(
 			err,
 			"marshal_response_failed",
 			http.StatusInternalServerError,

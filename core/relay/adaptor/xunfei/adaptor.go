@@ -23,7 +23,7 @@ func (a *Adaptor) ConvertRequest(
 	meta *meta.Meta,
 	store adaptor.Store,
 	req *http.Request,
-) (*adaptor.ConvertRequestResult, error) {
+) (adaptor.ConvertResult, error) {
 	domain := getXunfeiDomain(meta.ActualModel)
 	model := meta.ActualModel
 	meta.ActualModel = domain

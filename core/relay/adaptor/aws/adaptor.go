@@ -23,13 +23,13 @@ func (a *Adaptor) ConvertRequest(
 	meta *meta.Meta,
 	store adaptor.Store,
 	req *http.Request,
-) (*adaptor.ConvertRequestResult, error) {
-	adaptor := GetAdaptor(meta.ActualModel)
-	if adaptor == nil {
-		return nil, errors.New("adaptor not found")
+) (adaptor.ConvertResult, error) {
+	aa := GetAdaptor(meta.ActualModel)
+	if aa == nil {
+		return adaptor.ConvertResult{}, errors.New("adaptor not found")
 	}
-	meta.Set("awsAdapter", adaptor)
-	return adaptor.ConvertRequest(meta, store, req)
+	meta.Set("awsAdapter", aa)
+	return aa.ConvertRequest(meta, store, req)
 }
 
 func (a *Adaptor) DoResponse(
@@ -37,10 +37,10 @@ func (a *Adaptor) DoResponse(
 	store adaptor.Store,
 	c *gin.Context,
 	_ *http.Response,
-) (usage *model.Usage, err adaptor.Error) {
+) (usage model.Usage, err adaptor.Error) {
 	adaptor, ok := meta.Get("awsAdapter")
 	if !ok {
-		return nil, relaymodel.WrapperOpenAIErrorWithMessage(
+		return model.Usage{}, relaymodel.WrapperOpenAIErrorWithMessage(
 			"awsAdapter not found",
 			nil,
 			http.StatusInternalServerError,
@@ -64,8 +64,8 @@ func (a *Adaptor) Metadata() adaptor.Metadata {
 	}
 }
 
-func (a *Adaptor) GetRequestURL(_ *meta.Meta, _ adaptor.Store) (*adaptor.RequestURL, error) {
-	return &adaptor.RequestURL{
+func (a *Adaptor) GetRequestURL(_ *meta.Meta, _ adaptor.Store) (adaptor.RequestURL, error) {
+	return adaptor.RequestURL{
 		Method: http.MethodPost,
 		URL:    "",
 	}, nil

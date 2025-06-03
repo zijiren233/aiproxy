@@ -19,46 +19,37 @@ func ConvertTTSRequest(
 	meta *meta.Meta,
 	req *http.Request,
 	defaultVoice string,
-) (*adaptor.ConvertRequestResult, error) {
+) (adaptor.ConvertResult, error) {
 	node, err := common.UnmarshalBody2Node(req)
 	if err != nil {
-		return nil, err
-	}
-
-	input, err := node.Get("input").String()
-	if err != nil {
-		if errors.Is(err, ast.ErrNotExist) {
-			return nil, errors.New("input is required")
-		}
-		return nil, err
-	}
-	if len(input) > 4096 {
-		return nil, errors.New("input is too long (over 4096 characters)")
+		return adaptor.ConvertResult{}, err
 	}
 
 	voice, err := node.Get("voice").String()
 	if err != nil && !errors.Is(err, ast.ErrNotExist) {
-		return nil, err
+		return adaptor.ConvertResult{}, err
 	}
 	if voice == "" && defaultVoice != "" {
 		_, err = node.Set("voice", ast.NewString(defaultVoice))
 		if err != nil {
-			return nil, err
+			return adaptor.ConvertResult{}, err
 		}
 	}
 
 	_, err = node.Set("model", ast.NewString(meta.ActualModel))
 	if err != nil {
-		return nil, err
+		return adaptor.ConvertResult{}, err
 	}
 
 	jsonData, err := node.MarshalJSON()
 	if err != nil {
-		return nil, err
+		return adaptor.ConvertResult{}, err
 	}
-	return &adaptor.ConvertRequestResult{
-		Header: nil,
-		Body:   bytes.NewReader(jsonData),
+	return adaptor.ConvertResult{
+		Header: http.Header{
+			"Content-Type": {"application/json"},
+		},
+		Body: bytes.NewReader(jsonData),
 	}, nil
 }
 
@@ -66,9 +57,9 @@ func TTSHandler(
 	meta *meta.Meta,
 	c *gin.Context,
 	resp *http.Response,
-) (*model.Usage, adaptor.Error) {
+) (model.Usage, adaptor.Error) {
 	if resp.StatusCode != http.StatusOK {
-		return nil, ErrorHanlder(resp)
+		return model.Usage{}, ErrorHanlder(resp)
 	}
 
 	defer resp.Body.Close()
@@ -83,7 +74,7 @@ func TTSHandler(
 	if err != nil {
 		log.Warnf("write response body failed: %v", err)
 	}
-	return &model.Usage{
+	return model.Usage{
 		InputTokens: meta.RequestUsage.InputTokens,
 		TotalTokens: meta.RequestUsage.InputTokens,
 	}, nil

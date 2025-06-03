@@ -25,14 +25,14 @@ type ImageResponse struct {
 	Created int64        `json:"created"`
 }
 
-func ImageHandler(_ *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, adaptor.Error) {
+func ImageHandler(_ *meta.Meta, c *gin.Context, resp *http.Response) (model.Usage, adaptor.Error) {
 	defer resp.Body.Close()
 
 	log := middleware.GetLogger(c)
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, relaymodel.WrapperOpenAIErrorWithMessage(
+		return model.Usage{}, relaymodel.WrapperOpenAIErrorWithMessage(
 			err.Error(),
 			nil,
 			http.StatusInternalServerError,
@@ -41,14 +41,14 @@ func ImageHandler(_ *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usa
 	var imageResponse ImageResponse
 	err = sonic.Unmarshal(body, &imageResponse)
 	if err != nil {
-		return nil, relaymodel.WrapperOpenAIErrorWithMessage(
+		return model.Usage{}, relaymodel.WrapperOpenAIErrorWithMessage(
 			err.Error(),
 			nil,
 			http.StatusInternalServerError,
 		)
 	}
 
-	usage := &model.Usage{
+	usage := model.Usage{
 		InputTokens: model.ZeroNullInt64(len(imageResponse.Data)),
 		TotalTokens: model.ZeroNullInt64(len(imageResponse.Data)),
 	}

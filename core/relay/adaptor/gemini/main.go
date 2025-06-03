@@ -295,16 +295,16 @@ func processImageTasks(ctx context.Context, imageTasks []*Part) error {
 }
 
 // Setting safety to the lowest possible values since Gemini is already powerless enough
-func ConvertRequest(meta *meta.Meta, req *http.Request) (*adaptor.ConvertRequestResult, error) {
+func ConvertRequest(meta *meta.Meta, req *http.Request) (adaptor.ConvertResult, error) {
 	adaptorConfig := Config{}
 	err := meta.ChannelConfig.SpecConfig(&adaptorConfig)
 	if err != nil {
-		return nil, err
+		return adaptor.ConvertResult{}, err
 	}
 
 	textRequest, err := utils.UnmarshalGeneralOpenAIRequest(req)
 	if err != nil {
-		return nil, err
+		return adaptor.ConvertResult{}, err
 	}
 
 	textRequest.Model = meta.ActualModel
@@ -315,13 +315,13 @@ func ConvertRequest(meta *meta.Meta, req *http.Request) (*adaptor.ConvertRequest
 	// Process image tasks concurrently
 	if len(imageTasks) > 0 {
 		if err := processImageTasks(req.Context(), imageTasks); err != nil {
-			return nil, err
+			return adaptor.ConvertResult{}, err
 		}
 	}
 
 	config, err := buildGenerationConfig(meta, req, textRequest)
 	if err != nil {
-		return nil, err
+		return adaptor.ConvertResult{}, err
 	}
 
 	// Build actual request
@@ -336,12 +336,14 @@ func ConvertRequest(meta *meta.Meta, req *http.Request) (*adaptor.ConvertRequest
 
 	data, err := sonic.Marshal(geminiRequest)
 	if err != nil {
-		return nil, err
+		return adaptor.ConvertResult{}, err
 	}
 
-	return &adaptor.ConvertRequestResult{
-		Header: nil,
-		Body:   bytes.NewReader(data),
+	return adaptor.ConvertResult{
+		Header: http.Header{
+			"Content-Type": {"application/json"},
+		},
+		Body: bytes.NewReader(data),
 	}, nil
 }
 
@@ -635,9 +637,9 @@ func StreamHandler(
 	meta *meta.Meta,
 	c *gin.Context,
 	resp *http.Response,
-) (*model.Usage, adaptor.Error) {
+) (model.Usage, adaptor.Error) {
 	if resp.StatusCode != http.StatusOK {
-		return nil, openai.ErrorHanlder(resp)
+		return model.Usage{}, openai.ErrorHanlder(resp)
 	}
 
 	defer resp.Body.Close()
@@ -693,9 +695,9 @@ func StreamHandler(
 	return usage.ToModelUsage(), nil
 }
 
-func Handler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, adaptor.Error) {
+func Handler(meta *meta.Meta, c *gin.Context, resp *http.Response) (model.Usage, adaptor.Error) {
 	if resp.StatusCode != http.StatusOK {
-		return nil, openai.ErrorHanlder(resp)
+		return model.Usage{}, openai.ErrorHanlder(resp)
 	}
 
 	defer resp.Body.Close()
@@ -703,7 +705,7 @@ func Handler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage
 	var geminiResponse ChatResponse
 	err := sonic.ConfigDefault.NewDecoder(resp.Body).Decode(&geminiResponse)
 	if err != nil {
-		return nil, relaymodel.WrapperOpenAIError(
+		return model.Usage{}, relaymodel.WrapperOpenAIError(
 			err,
 			"unmarshal_response_body_failed",
 			http.StatusInternalServerError,
@@ -712,7 +714,7 @@ func Handler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage
 	fullTextResponse := responseChat2OpenAI(meta, &geminiResponse)
 	jsonResponse, err := sonic.Marshal(fullTextResponse)
 	if err != nil {
-		return nil, relaymodel.WrapperOpenAIError(
+		return fullTextResponse.ToModelUsage(), relaymodel.WrapperOpenAIError(
 			err,
 			"marshal_response_body_failed",
 			http.StatusInternalServerError,

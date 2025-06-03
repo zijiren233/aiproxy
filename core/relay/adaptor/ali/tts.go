@@ -94,14 +94,14 @@ var ttsSupportedFormat = map[string]struct{}{
 	"mp3": {},
 }
 
-func ConvertTTSRequest(meta *meta.Meta, req *http.Request) (*adaptor.ConvertRequestResult, error) {
+func ConvertTTSRequest(meta *meta.Meta, req *http.Request) (adaptor.ConvertResult, error) {
 	request, err := utils.UnmarshalTTSRequest(req)
 	if err != nil {
-		return nil, err
+		return adaptor.ConvertResult{}, err
 	}
 	reqMap, err := utils.UnmarshalMap(req)
 	if err != nil {
-		return nil, err
+		return adaptor.ConvertResult{}, err
 	}
 	var sampleRate int
 	sampleRateI, ok := reqMap["sample_rate"].(float64)
@@ -161,9 +161,9 @@ func ConvertTTSRequest(meta *meta.Meta, req *http.Request) (*adaptor.ConvertRequ
 
 	data, err := sonic.Marshal(ttsRequest)
 	if err != nil {
-		return nil, err
+		return adaptor.ConvertResult{}, err
 	}
-	return &adaptor.ConvertRequestResult{
+	return adaptor.ConvertResult{
 		Header: http.Header{
 			"X-DashScope-DataInspection": {"enable"},
 		},
@@ -202,7 +202,7 @@ func TTSDoResponse(
 	meta *meta.Meta,
 	c *gin.Context,
 	_ *http.Response,
-) (usage *model.Usage, err adaptor.Error) {
+) (usage model.Usage, err adaptor.Error) {
 	log := middleware.GetLogger(c)
 
 	conn, ok := meta.MustGet("ws_conn").(*websocket.Conn)
@@ -211,7 +211,7 @@ func TTSDoResponse(
 	}
 	defer conn.Close()
 
-	usage = &model.Usage{}
+	usage = model.Usage{}
 
 	for {
 		messageType, data, err := conn.ReadMessage()

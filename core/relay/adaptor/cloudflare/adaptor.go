@@ -29,7 +29,7 @@ func isAIGateWay(baseURL string) bool {
 		strings.HasSuffix(baseURL, "/workers-ai")
 }
 
-func (a *Adaptor) GetRequestURL(meta *meta.Meta, _ adaptor.Store) (*adaptor.RequestURL, error) {
+func (a *Adaptor) GetRequestURL(meta *meta.Meta, _ adaptor.Store) (adaptor.RequestURL, error) {
 	u := meta.Channel.BaseURL
 	isAIGateWay := isAIGateWay(u)
 	var urlPrefix string
@@ -41,23 +41,23 @@ func (a *Adaptor) GetRequestURL(meta *meta.Meta, _ adaptor.Store) (*adaptor.Requ
 
 	switch meta.Mode {
 	case mode.ChatCompletions:
-		return &adaptor.RequestURL{
+		return adaptor.RequestURL{
 			Method: http.MethodPost,
 			URL:    urlPrefix + "/v1/chat/completions",
 		}, nil
 	case mode.Embeddings:
-		return &adaptor.RequestURL{
+		return adaptor.RequestURL{
 			Method: http.MethodPost,
 			URL:    urlPrefix + "/v1/embeddings",
 		}, nil
 	default:
 		if isAIGateWay {
-			return &adaptor.RequestURL{
+			return adaptor.RequestURL{
 				Method: http.MethodPost,
 				URL:    fmt.Sprintf("%s/%s", urlPrefix, meta.ActualModel),
 			}, nil
 		}
-		return &adaptor.RequestURL{
+		return adaptor.RequestURL{
 			Method: http.MethodPost,
 			URL:    fmt.Sprintf("%s/run/%s", urlPrefix, meta.ActualModel),
 		}, nil

@@ -18,7 +18,7 @@ func (n *Noop) GetRequestURL(
 	meta *meta.Meta,
 	store adaptor.Store,
 	do adaptor.GetRequestURL,
-) (*adaptor.RequestURL, error) {
+) (adaptor.RequestURL, error) {
 	return do.GetRequestURL(meta, store)
 }
 
@@ -37,7 +37,7 @@ func (n *Noop) ConvertRequest(
 	store adaptor.Store,
 	req *http.Request,
 	do adaptor.ConvertRequest,
-) (*adaptor.ConvertRequestResult, error) {
+) (adaptor.ConvertResult, error) {
 	return do.ConvertRequest(meta, store, req)
 }
 
@@ -57,6 +57,6 @@ func (n *Noop) DoResponse(
 	c *gin.Context,
 	resp *http.Response,
 	do adaptor.DoResponse,
-) (*model.Usage, adaptor.Error) {
+) (model.Usage, adaptor.Error) {
 	return do.DoResponse(meta, store, c, resp)
 }

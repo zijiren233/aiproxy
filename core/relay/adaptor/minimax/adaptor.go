@@ -46,24 +46,24 @@ func (a *Adaptor) SetupRequestHeader(
 	return nil
 }
 
-func (a *Adaptor) GetRequestURL(meta *meta.Meta, store adaptor.Store) (*adaptor.RequestURL, error) {
+func (a *Adaptor) GetRequestURL(meta *meta.Meta, store adaptor.Store) (adaptor.RequestURL, error) {
 	_, groupID, err := GetAPIKeyAndGroupID(meta.Channel.Key)
 	if err != nil {
-		return nil, err
+		return adaptor.RequestURL{}, err
 	}
 	switch meta.Mode {
 	case mode.ChatCompletions:
-		return &adaptor.RequestURL{
+		return adaptor.RequestURL{
 			Method: http.MethodPost,
 			URL:    meta.Channel.BaseURL + "/text/chatcompletion_v2",
 		}, nil
 	case mode.Embeddings:
-		return &adaptor.RequestURL{
+		return adaptor.RequestURL{
 			Method: http.MethodPost,
 			URL:    fmt.Sprintf("%s/embeddings?GroupId=%s", meta.Channel.BaseURL, groupID),
 		}, nil
 	case mode.AudioSpeech:
-		return &adaptor.RequestURL{
+		return adaptor.RequestURL{
 			Method: http.MethodPost,
 			URL:    fmt.Sprintf("%s/t2a_v2?GroupId=%s", meta.Channel.BaseURL, groupID),
 		}, nil
@@ -76,7 +76,7 @@ func (a *Adaptor) ConvertRequest(
 	meta *meta.Meta,
 	store adaptor.Store,
 	req *http.Request,
-) (*adaptor.ConvertRequestResult, error) {
+) (adaptor.ConvertResult, error) {
 	switch meta.Mode {
 	case mode.ChatCompletions:
 		return openai.ConvertChatCompletionsRequest(meta, req, nil, true)
@@ -92,7 +92,7 @@ func (a *Adaptor) DoResponse(
 	store adaptor.Store,
 	c *gin.Context,
 	resp *http.Response,
-) (usage *model.Usage, err adaptor.Error) {
+) (usage model.Usage, err adaptor.Error) {
 	switch meta.Mode {
 	case mode.AudioSpeech:
 		return TTSHandler(meta, c, resp)

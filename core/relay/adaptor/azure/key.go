@@ -17,7 +17,7 @@ func (a *Adaptor) ValidateKey(key string) error {
 	return nil
 }
 
-const DefaultAPIVersion = "preview"
+const DefaultAPIVersion = "2025-04-01-preview"
 
 func GetTokenAndAPIVersion(key string) (string, string, error) {
 	split := strings.Split(key, "|")

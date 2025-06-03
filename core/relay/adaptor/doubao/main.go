@@ -19,27 +19,27 @@ import (
 	"github.com/labring/aiproxy/core/relay/utils"
 )
 
-func GetRequestURL(meta *meta.Meta) (*adaptor.RequestURL, error) {
+func GetRequestURL(meta *meta.Meta) (adaptor.RequestURL, error) {
 	u := meta.Channel.BaseURL
 	switch meta.Mode {
 	case mode.ChatCompletions:
 		if strings.HasPrefix(meta.ActualModel, "bot-") {
-			return &adaptor.RequestURL{
+			return adaptor.RequestURL{
 				Method: http.MethodPost,
 				URL:    u + "/api/v3/bots/chat/completions",
 			}, nil
 		}
-		return &adaptor.RequestURL{
+		return adaptor.RequestURL{
 			Method: http.MethodPost,
 			URL:    u + "/api/v3/chat/completions",
 		}, nil
 	case mode.Embeddings:
-		return &adaptor.RequestURL{
+		return adaptor.RequestURL{
 			Method: http.MethodPost,
 			URL:    u + "/api/v3/embeddings",
 		}, nil
 	default:
-		return nil, fmt.Errorf("unsupported relay mode %d for doubao", meta.Mode)
+		return adaptor.RequestURL{}, fmt.Errorf("unsupported relay mode %d for doubao", meta.Mode)
 	}
 }
 
@@ -63,7 +63,7 @@ func (a *Adaptor) Metadata() adaptor.Metadata {
 	}
 }
 
-func (a *Adaptor) GetRequestURL(meta *meta.Meta, _ adaptor.Store) (*adaptor.RequestURL, error) {
+func (a *Adaptor) GetRequestURL(meta *meta.Meta, _ adaptor.Store) (adaptor.RequestURL, error) {
 	return GetRequestURL(meta)
 }
 
@@ -71,10 +71,10 @@ func (a *Adaptor) ConvertRequest(
 	meta *meta.Meta,
 	store adaptor.Store,
 	req *http.Request,
-) (*adaptor.ConvertRequestResult, error) {
+) (adaptor.ConvertResult, error) {
 	result, err := a.Adaptor.ConvertRequest(meta, store, req)
 	if err != nil {
-		return nil, err
+		return adaptor.ConvertResult{}, err
 	}
 	if meta.Mode != mode.ChatCompletions || meta.OriginModel != "deepseek-reasoner" {
 		return result, nil
@@ -83,11 +83,11 @@ func (a *Adaptor) ConvertRequest(
 	m := make(map[string]any)
 	err = sonic.ConfigDefault.NewDecoder(result.Body).Decode(&m)
 	if err != nil {
-		return nil, err
+		return adaptor.ConvertResult{}, err
 	}
 	messages, _ := m["messages"].([]any)
 	if len(messages) == 0 {
-		return nil, errors.New("messages is empty")
+		return adaptor.ConvertResult{}, errors.New("messages is empty")
 	}
 	sysMessage := relaymodel.Message{
 		Role:    "system",
@@ -97,10 +97,10 @@ func (a *Adaptor) ConvertRequest(
 	m["messages"] = messages
 	newBody, err := sonic.Marshal(m)
 	if err != nil {
-		return nil, err
+		return adaptor.ConvertResult{}, err
 	}
 
-	return &adaptor.ConvertRequestResult{
+	return adaptor.ConvertResult{
 		Header: result.Header,
 		Body:   bytes.NewReader(newBody),
 	}, nil
@@ -156,7 +156,7 @@ func (a *Adaptor) DoResponse(
 	store adaptor.Store,
 	c *gin.Context,
 	resp *http.Response,
-) (usage *model.Usage, err adaptor.Error) {
+) (usage model.Usage, err adaptor.Error) {
 	switch meta.Mode {
 	case mode.ChatCompletions:
 		websearchCount := int64(0)
@@ -165,9 +165,7 @@ func (a *Adaptor) DoResponse(
 		} else {
 			usage, err = openai.Handler(meta, c, resp, newHandlerPreHandler(&websearchCount))
 		}
-		if usage != nil {
-			usage.WebSearchCount += model.ZeroNullInt64(websearchCount)
-		}
+		usage.WebSearchCount += model.ZeroNullInt64(websearchCount)
 	default:
 		return openai.DoResponse(meta, store, c, resp)
 	}

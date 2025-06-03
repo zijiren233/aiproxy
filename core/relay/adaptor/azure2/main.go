@@ -13,7 +13,7 @@ type Adaptor struct {
 	azure.Adaptor
 }
 
-func (a *Adaptor) GetRequestURL(meta *meta.Meta, _ adaptor.Store) (*adaptor.RequestURL, error) {
+func (a *Adaptor) GetRequestURL(meta *meta.Meta, _ adaptor.Store) (adaptor.RequestURL, error) {
 	return azure.GetRequestURL(meta, false)
 }
 

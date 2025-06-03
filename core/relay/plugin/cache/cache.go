@@ -48,7 +48,7 @@ const (
 type Item struct {
 	Body   []byte              `json:"body"`
 	Header map[string][]string `json:"header"`
-	Usage  *model.Usage        `json:"usage"`
+	Usage  model.Usage         `json:"usage"`
 }
 
 // Cache implements caching functionality for AI requests
@@ -218,7 +218,7 @@ func (c *Cache) ConvertRequest(
 	store adaptor.Store,
 	req *http.Request,
 	do adaptor.ConvertRequest,
-) (*adaptor.ConvertRequestResult, error) {
+) (adaptor.ConvertResult, error) {
 	pluginConfig, err := getPluginConfig(meta)
 	if err != nil {
 		return do.ConvertRequest(meta, store, req)
@@ -229,7 +229,7 @@ func (c *Cache) ConvertRequest(
 
 	body, err := common.GetRequestBody(req)
 	if err != nil {
-		return nil, err
+		return adaptor.ConvertResult{}, err
 	}
 
 	if len(body) == 0 {
@@ -245,7 +245,7 @@ func (c *Cache) ConvertRequest(
 	ctx := req.Context()
 	if item, ok := c.getFromCache(ctx, cacheKey); ok {
 		setCacheHit(meta, item)
-		return &adaptor.ConvertRequestResult{}, nil
+		return adaptor.ConvertResult{}, nil
 	}
 
 	return do.ConvertRequest(meta, store, req)
@@ -317,7 +317,7 @@ func (c *Cache) DoResponse(
 	ctx *gin.Context,
 	resp *http.Response,
 	do adaptor.DoResponse,
-) (usage *model.Usage, adapterErr adaptor.Error) {
+) (usage model.Usage, adapterErr adaptor.Error) {
 	pluginConfig, err := getPluginConfig(meta)
 	if err != nil {
 		return do.DoResponse(meta, store, ctx, resp)

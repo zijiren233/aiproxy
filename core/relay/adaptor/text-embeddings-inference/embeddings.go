@@ -15,9 +15,9 @@ func EmbeddingsHandler(
 	store adaptor.Store,
 	c *gin.Context,
 	resp *http.Response,
-) (*model.Usage, adaptor.Error) {
+) (model.Usage, adaptor.Error) {
 	if resp.StatusCode != http.StatusOK {
-		return nil, EmbeddingsErrorHanlder(resp)
+		return model.Usage{}, EmbeddingsErrorHanlder(resp)
 	}
 	return openai.DoResponse(meta, store, c, resp)
 }

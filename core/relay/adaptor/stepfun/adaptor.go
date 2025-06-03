@@ -24,7 +24,7 @@ func (a *Adaptor) ConvertRequest(
 	meta *meta.Meta,
 	store adaptor.Store,
 	req *http.Request,
-) (*adaptor.ConvertRequestResult, error) {
+) (adaptor.ConvertResult, error) {
 	switch meta.Mode {
 	case mode.AudioSpeech:
 		return openai.ConvertTTSRequest(meta, req, "cixingnansheng")
