@@ -17,12 +17,12 @@ func (a *Adaptor) ValidateKey(key string) error {
 	return nil
 }
 
-const defaultAPIVersion = "2024-12-01-preview"
+const DefaultAPIVersion = "preview"
 
 func GetTokenAndAPIVersion(key string) (string, string, error) {
 	split := strings.Split(key, "|")
 	if len(split) == 1 {
-		return key, defaultAPIVersion, nil
+		return key, DefaultAPIVersion, nil
 	}
 	if len(split) != 2 {
 		return "", "", errors.New("invalid key format")
