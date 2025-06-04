@@ -54,7 +54,7 @@ type EmbedMCP struct {
 	ConfigTemplates EmbedMCPConfigTemplates `json:"config_templates"`
 }
 
-func newEmbedMCP(mcp *mcpservers.EmbedMcp, enabled bool) *EmbedMCP {
+func newEmbedMCP(mcp *mcpservers.McpServer, enabled bool) *EmbedMCP {
 	emcp := &EmbedMCP{
 		ID:              mcp.ID,
 		Enabled:         enabled,
@@ -140,7 +140,7 @@ func GetEmbedConfig(
 }
 
 func ToPublicMCP(
-	e mcpservers.EmbedMcp,
+	e mcpservers.McpServer,
 	initConfig map[string]string,
 	enabled bool,
 ) (*model.PublicMCP, error) {
@@ -150,8 +150,8 @@ func ToPublicMCP(
 	}
 	pmcp := &model.PublicMCP{
 		ID:          e.ID,
-		Type:        model.PublicMCPTypeEmbed,
 		Name:        e.Name,
+		LogoURL:     e.LogoURL,
 		Readme:      e.Readme,
 		Tags:        e.Tags,
 		EmbedConfig: embedConfig,
@@ -160,6 +160,12 @@ func ToPublicMCP(
 		pmcp.Status = model.PublicMCPStatusEnabled
 	} else {
 		pmcp.Status = model.PublicMCPStatusDisabled
+	}
+	switch e.Type {
+	case mcpservers.McpTypeEmbed:
+		pmcp.Type = model.PublicMCPTypeEmbed
+	case mcpservers.McpTypeDocs:
+		pmcp.Type = model.PublicMCPTypeDocs
 	}
 	return pmcp, nil
 }

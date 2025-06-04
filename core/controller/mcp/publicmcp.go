@@ -55,7 +55,7 @@ func NewPublicMCPResponse(host string, mcp model.PublicMCP) PublicMCPResponse {
 			ep.SSE = "/sse"
 			ep.StreamableHTTP = "/mcp"
 		}
-	case model.PublicMCPTypeGitRepo:
+	case model.PublicMCPTypeDocs:
 	}
 	return PublicMCPResponse{
 		PublicMCP: mcp,
