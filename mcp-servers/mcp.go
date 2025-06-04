@@ -100,40 +100,67 @@ func CheckConfigTemplatesValidate(ct ConfigTemplates) error {
 
 type NewServerFunc func(config, reusingConfig map[string]string) (Server, error)
 
-type EmbedMcp struct {
+type McpType string
+
+const (
+	McpTypeEmbed McpType = "embed"
+	McpTypeDocs  McpType = "docs"
+)
+
+type McpServer struct {
 	ID              string
 	Name            string
+	Type            McpType
 	Readme          string
+	LogoURL         string
 	Tags            []string
 	ConfigTemplates ConfigTemplates
 	newServer       NewServerFunc
 }
 
-type EmbedMcpConfig func(*EmbedMcp)
+type McpConfig func(*McpServer)
 
-func WithReadme(readme string) EmbedMcpConfig {
-	return func(e *EmbedMcp) {
+func WithReadme(readme string) McpConfig {
+	return func(e *McpServer) {
 		e.Readme = readme
 	}
 }
 
-func WithTags(tags []string) EmbedMcpConfig {
-	return func(e *EmbedMcp) {
+func WithType(t McpType) McpConfig {
+	return func(e *McpServer) {
+		e.Type = t
+	}
+}
+
+func WithLogoURL(logoURL string) McpConfig {
+	return func(e *McpServer) {
+		e.LogoURL = logoURL
+	}
+}
+
+func WithTags(tags []string) McpConfig {
+	return func(e *McpServer) {
 		e.Tags = tags
 	}
 }
 
-func WithConfigTemplates(configTemplates ConfigTemplates) EmbedMcpConfig {
-	return func(e *EmbedMcp) {
+func WithConfigTemplates(configTemplates ConfigTemplates) McpConfig {
+	return func(e *McpServer) {
 		e.ConfigTemplates = configTemplates
 	}
 }
 
-func NewEmbedMcp(id, name string, newServer NewServerFunc, opts ...EmbedMcpConfig) EmbedMcp {
-	e := EmbedMcp{
-		ID:        id,
-		Name:      name,
-		newServer: newServer,
+func WithNewServerFunc(newServer NewServerFunc) McpConfig {
+	return func(e *McpServer) {
+		e.newServer = newServer
+	}
+}
+
+func NewMcp(id, name string, mcpType McpType, opts ...McpConfig) McpServer {
+	e := McpServer{
+		ID:   id,
+		Name: name,
+		Type: mcpType,
 	}
 	for _, opt := range opts {
 		opt(&e)
@@ -141,7 +168,7 @@ func NewEmbedMcp(id, name string, newServer NewServerFunc, opts ...EmbedMcpConfi
 	return e
 }
 
-func (e *EmbedMcp) NewServer(config, reusingConfig map[string]string) (Server, error) {
+func (e *McpServer) NewServer(config, reusingConfig map[string]string) (Server, error) {
 	if err := ValidateConfigTemplatesConfig(e.ConfigTemplates, config, reusingConfig); err != nil {
 		return nil, fmt.Errorf("mcp %s config is invalid: %w", e.ID, err)
 	}

@@ -6921,6 +6921,35 @@ const docTemplate = `{
                 }
             }
         },
+        "/mcp": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "summary": "Host MCP Streamable Server",
+                "responses": {}
+            },
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "summary": "Host MCP Streamable Server",
+                "responses": {}
+            },
+            "delete": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "summary": "Host MCP Streamable Server",
+                "responses": {}
+            }
+        },
         "/mcp/group/message": {
             "post": {
                 "security": [
@@ -7013,6 +7042,28 @@ const docTemplate = `{
             }
         },
         "/mcp/public/{id}/sse": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "summary": "Public MCP SSE Server",
+                "responses": {}
+            }
+        },
+        "/message": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "summary": "Public MCP SSE Server",
+                "responses": {}
+            }
+        },
+        "/sse": {
             "get": {
                 "security": [
                     {
@@ -8502,6 +8553,9 @@ const docTemplate = `{
         "controller.MCPEndpoint": {
             "type": "object",
             "properties": {
+                "host": {
+                    "type": "string"
+                },
                 "sse": {
                     "type": "string"
                 },
@@ -10512,17 +10566,17 @@ const docTemplate = `{
             "enum": [
                 "mcp_proxy_sse",
                 "mcp_proxy_streamable",
-                "mcp_git_repo",
+                "mcp_docs",
                 "mcp_openapi",
                 "mcp_embed"
             ],
             "x-enum-comments": {
-                "PublicMCPTypeGitRepo": "read only"
+                "PublicMCPTypeDocs": "read only"
             },
             "x-enum-varnames": [
                 "PublicMCPTypeProxySSE",
                 "PublicMCPTypeProxyStreamable",
-                "PublicMCPTypeGitRepo",
+                "PublicMCPTypeDocs",
                 "PublicMCPTypeOpenAPI",
                 "PublicMCPTypeEmbed"
             ]

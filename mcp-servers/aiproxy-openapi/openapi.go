@@ -59,15 +59,3 @@ func NewServer(config, reusingConfig map[string]string) (mcpservers.Server, erro
 	})
 	return converter.Convert()
 }
-
-// need import in mcpregister/init.go
-func init() {
-	mcpservers.Register(
-		mcpservers.NewEmbedMcp(
-			"aiproxy-openapi",
-			"AI Proxy OpenAPI",
-			NewServer,
-			mcpservers.WithConfigTemplates(configTemplates),
-		),
-	)
-}

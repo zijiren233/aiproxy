@@ -29,7 +29,7 @@ type PublicMCPType string
 const (
 	PublicMCPTypeProxySSE        PublicMCPType = "mcp_proxy_sse"
 	PublicMCPTypeProxyStreamable PublicMCPType = "mcp_proxy_streamable"
-	PublicMCPTypeGitRepo         PublicMCPType = "mcp_git_repo" // read only
+	PublicMCPTypeDocs            PublicMCPType = "mcp_docs" // read only
 	PublicMCPTypeOpenAPI         PublicMCPType = "mcp_openapi"
 	PublicMCPTypeEmbed           PublicMCPType = "mcp_embed"
 )

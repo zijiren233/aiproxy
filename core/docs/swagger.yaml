@@ -256,6 +256,8 @@ definitions:
     type: object
   controller.MCPEndpoint:
     properties:
+      host:
+        type: string
       sse:
         type: string
       streamable_http:
@@ -1648,16 +1650,16 @@ definitions:
     enum:
     - mcp_proxy_sse
     - mcp_proxy_streamable
-    - mcp_git_repo
+    - mcp_docs
     - mcp_openapi
     - mcp_embed
     type: string
     x-enum-comments:
-      PublicMCPTypeGitRepo: read only
+      PublicMCPTypeDocs: read only
     x-enum-varnames:
     - PublicMCPTypeProxySSE
     - PublicMCPTypeProxyStreamable
-    - PublicMCPTypeGitRepo
+    - PublicMCPTypeDocs
     - PublicMCPTypeOpenAPI
     - PublicMCPTypeEmbed
   model.RequestDetail:
@@ -6083,6 +6085,22 @@ paths:
       summary: Search tokens
       tags:
       - tokens
+  /mcp:
+    delete:
+      responses: {}
+      security:
+      - ApiKeyAuth: []
+      summary: Host MCP Streamable Server
+    get:
+      responses: {}
+      security:
+      - ApiKeyAuth: []
+      summary: Host MCP Streamable Server
+    post:
+      responses: {}
+      security:
+      - ApiKeyAuth: []
+      summary: Host MCP Streamable Server
   /mcp/group/{id}:
     delete:
       responses: {}
@@ -6135,6 +6153,18 @@ paths:
       summary: Public MCP SSE Server
   /mcp/public/message:
     post:
+      responses: {}
+      security:
+      - ApiKeyAuth: []
+      summary: Public MCP SSE Server
+  /message:
+    post:
+      responses: {}
+      security:
+      - ApiKeyAuth: []
+      summary: Public MCP SSE Server
+  /sse:
+    get:
       responses: {}
       security:
       - ApiKeyAuth: []

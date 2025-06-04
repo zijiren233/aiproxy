@@ -594,20 +594,3 @@ func removeDuplicates(results []engine.SearchResult) []engine.SearchResult {
 
 	return unique
 }
-
-//go:embed features.md
-var readme string
-
-// Register the server
-func init() {
-	mcpservers.Register(
-		mcpservers.NewEmbedMcp(
-			"web-search",
-			"Web Search",
-			NewServer,
-			mcpservers.WithConfigTemplates(configTemplates),
-			mcpservers.WithTags([]string{"search", "web", "google", "bing", "arxiv", "searchxng"}),
-			mcpservers.WithReadme(readme),
-		),
-	)
-}

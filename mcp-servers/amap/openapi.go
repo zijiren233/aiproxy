@@ -56,21 +56,3 @@ func NewServer(config, _ map[string]string) (mcpservers.Server, error) {
 
 	return mcpservers.WrapMCPClient2ServerWithCleanup(client), nil
 }
-
-// need import in mcpregister/init.go
-func init() {
-	mcpservers.Register(
-		mcpservers.NewEmbedMcp(
-			"amap",
-			"AMAP",
-			NewServer,
-			mcpservers.WithConfigTemplates(configTemplates),
-			mcpservers.WithTags([]string{"map"}),
-			mcpservers.WithReadme(
-				`# AMAP MCP Server
-
-https://lbs.amap.com/api/mcp-server/gettingstarted
-`),
-		),
-	)
-}

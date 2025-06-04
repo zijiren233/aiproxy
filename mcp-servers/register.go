@@ -15,7 +15,7 @@ type mcpServerCacheItem struct {
 }
 
 var (
-	servers             = make(map[string]EmbedMcp)
+	servers             = make(map[string]McpServer)
 	mcpServerCache      = make(map[string]*mcpServerCacheItem)
 	mcpServerCacheLock  = sync.RWMutex{}
 	cacheExpirationTime = 3 * time.Minute
@@ -50,16 +50,26 @@ func init() {
 	startCacheCleaner(time.Minute)
 }
 
-func Register(mcp EmbedMcp) {
+func Register(mcp McpServer) {
 	if mcp.ID == "" {
 		panic("mcp id is required")
 	}
 	if mcp.Name == "" {
 		panic("mcp name is required")
 	}
-	if mcp.newServer == nil {
-		panic(fmt.Sprintf("mcp %s new server is required", mcp.ID))
+	switch mcp.Type {
+	case McpTypeEmbed:
+		if mcp.newServer == nil {
+			panic(fmt.Sprintf("mcp %s new server is required", mcp.ID))
+		}
+	case McpTypeDocs:
+		if mcp.Readme == "" {
+			panic(fmt.Sprintf("mcp %s readme is required", mcp.ID))
+		}
+	default:
+		panic(fmt.Sprintf("mcp %s type is invalid", mcp.ID))
 	}
+
 	if mcp.ConfigTemplates != nil {
 		if err := CheckConfigTemplatesValidate(mcp.ConfigTemplates); err != nil {
 			panic(fmt.Sprintf("mcp %s config templates example is invalid: %v", mcp.ID, err))
@@ -105,7 +115,7 @@ func buildNoReusingConfigCacheKey(config map[string]string) string {
 	return strings.Join(keys, ":")
 }
 
-func loadCacheServer(embedServer EmbedMcp, config map[string]string) (Server, error) {
+func loadCacheServer(embedServer McpServer, config map[string]string) (Server, error) {
 	cacheKey := embedServer.ID
 	if len(config) > 0 {
 		cacheKey = fmt.Sprintf("%s:%s", embedServer.ID, buildNoReusingConfigCacheKey(config))
@@ -139,11 +149,11 @@ func loadCacheServer(embedServer EmbedMcp, config map[string]string) (Server, er
 	return mcpServer, nil
 }
 
-func Servers() map[string]EmbedMcp {
+func Servers() map[string]McpServer {
 	return servers
 }
 
-func GetEmbedMCP(id string) (EmbedMcp, bool) {
+func GetEmbedMCP(id string) (McpServer, bool) {
 	mcp, ok := servers[id]
 	return mcp, ok
 }
