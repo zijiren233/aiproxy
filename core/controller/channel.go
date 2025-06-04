@@ -11,6 +11,7 @@ import (
 
 	"github.com/bytedance/sonic/ast"
 	"github.com/gin-gonic/gin"
+	"github.com/labring/aiproxy/core/controller/utils"
 	"github.com/labring/aiproxy/core/middleware"
 	"github.com/labring/aiproxy/core/model"
 	"github.com/labring/aiproxy/core/monitor"
@@ -50,7 +51,7 @@ func ChannelTypeMetas(c *gin.Context) {
 //	@Success		200				{object}	middleware.APIResponse{data=map[string]any{channels=[]model.Channel,total=int}}
 //	@Router			/api/channels/ [get]
 func GetChannels(c *gin.Context) {
-	page, perPage := parsePageParams(c)
+	page, perPage := utils.ParsePageParams(c)
 	id, _ := strconv.Atoi(c.Query("id"))
 	name := c.Query("name")
 	key := c.Query("key")
@@ -150,7 +151,7 @@ func AddChannels(c *gin.Context) {
 //	@Router			/api/channels/search [get]
 func SearchChannels(c *gin.Context) {
 	keyword := c.Query("keyword")
-	page, perPage := parsePageParams(c)
+	page, perPage := utils.ParsePageParams(c)
 	id, _ := strconv.Atoi(c.Query("id"))
 	name := c.Query("name")
 	key := c.Query("key")

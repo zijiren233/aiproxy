@@ -1,8 +1,7 @@
 aiproxy.db*
-aiproxy
+core
+core.exe
 common/tiktoken/assets/*
 /public/dist/*
 !*.gitkeep
 .env.local
-__debug_bin*
-.vscode/*

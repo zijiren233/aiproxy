@@ -1,4 +1,4 @@
-package controller
+package utils
 
 import (
 	"strconv"
@@ -6,7 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func parsePageParams(c *gin.Context) (page, perPage int) {
+func ParsePageParams(c *gin.Context) (page, perPage int) {
 	pageStr := c.Query("page")
 	if pageStr == "" {
 		pageStr = c.Query("p")

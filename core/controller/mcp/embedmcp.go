@@ -314,7 +314,7 @@ func handleTestEmbedMCPServer(c *gin.Context, s *server.MCPServer) {
 	defer cancel()
 
 	// Start message processing goroutine
-	go processMCPSseMpscMessages(ctx, newSession, server)
+	go processMCPSSEMpscMessages(ctx, newSession, server)
 
 	// Handle SSE connection
 	server.ServeHTTP(c.Writer, c.Request)
@@ -355,9 +355,9 @@ func TestEmbedMCPMessage(c *gin.Context) {
 //	@Produce		json
 //	@Success		200	{object}	nil
 //	@Failure		400	{object}	nil
-//	@Router			/api/test-embedmcp/{id}/streamable [get]
-//	@Router			/api/test-embedmcp/{id}/streamable [post]
-//	@Router			/api/test-embedmcp/{id}/streamable [delete]
+//	@Router			/api/test-embedmcp/{id} [get]
+//	@Router			/api/test-embedmcp/{id} [post]
+//	@Router			/api/test-embedmcp/{id} [delete]
 func TestEmbedMCPStreamable(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {

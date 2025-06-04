@@ -1,13 +1,67 @@
 package controller
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 
+	"github.com/bytedance/sonic"
 	"github.com/gin-gonic/gin"
+	"github.com/labring/aiproxy/core/common/config"
+	"github.com/labring/aiproxy/core/controller/utils"
 	"github.com/labring/aiproxy/core/middleware"
 	"github.com/labring/aiproxy/core/model"
 )
+
+type GroupMCPResponse struct {
+	model.GroupMCP
+	Endpoints MCPEndpoint `json:"endpoints"`
+}
+
+func (mcp *GroupMCPResponse) MarshalJSON() ([]byte, error) {
+	type Alias GroupMCPResponse
+	a := &struct {
+		*Alias
+		CreatedAt int64 `json:"created_at"`
+		UpdateAt  int64 `json:"update_at"`
+	}{
+		Alias:     (*Alias)(mcp),
+		CreatedAt: mcp.CreatedAt.UnixMilli(),
+		UpdateAt:  mcp.UpdateAt.UnixMilli(),
+	}
+	return sonic.Marshal(a)
+}
+
+func NewGroupMCPResponse(host string, mcp model.GroupMCP) GroupMCPResponse {
+	ep := MCPEndpoint{}
+	switch mcp.Type {
+	case model.GroupMCPTypeProxySSE,
+		model.GroupMCPTypeProxyStreamable,
+		model.GroupMCPTypeOpenAPI:
+		groupMCPHost := config.GetGroupMCPHost()
+		if groupMCPHost == "" {
+			ep.Host = host
+			ep.SSE = fmt.Sprintf("/mcp/group/%s/sse", mcp.ID)
+			ep.StreamableHTTP = "/mcp/group/" + mcp.ID
+		} else {
+			ep.Host = fmt.Sprintf("%s.%s", mcp.ID, groupMCPHost)
+			ep.SSE = "/sse"
+			ep.StreamableHTTP = "/mcp"
+		}
+	}
+	return GroupMCPResponse{
+		GroupMCP:  mcp,
+		Endpoints: ep,
+	}
+}
+
+func NewGroupMCPResponses(host string, mcps []model.GroupMCP) []GroupMCPResponse {
+	responses := make([]GroupMCPResponse, len(mcps))
+	for i, mcp := range mcps {
+		responses[i] = NewGroupMCPResponse(host, mcp)
+	}
+	return responses
+}
 
 // GetGroupMCPs godoc
 //
@@ -22,7 +76,7 @@ import (
 //	@Param			type		query		string	false	"MCP type"
 //	@Param			keyword		query		string	false	"Search keyword"
 //	@Param			status		query		int		false	"MCP status"
-//	@Success		200			{object}	middleware.APIResponse{data=[]model.GroupMCP}
+//	@Success		200			{object}	middleware.APIResponse{data=[]GroupMCPResponse}
 //	@Router			/api/mcp/group/{group} [get]
 func GetGroupMCPs(c *gin.Context) {
 	groupID := c.Param("group")
@@ -31,10 +85,14 @@ func GetGroupMCPs(c *gin.Context) {
 		return
 	}
 
-	page, perPage := parsePageParams(c)
+	page, perPage := utils.ParsePageParams(c)
 	mcpType := model.PublicMCPType(c.Query("type"))
 	keyword := c.Query("keyword")
 	status, _ := strconv.Atoi(c.Query("status"))
+
+	if status == 0 {
+		status = int(model.GroupMCPStatusEnabled)
+	}
 
 	mcps, total, err := model.GetGroupMCPs(
 		groupID,
@@ -50,9 +108,33 @@ func GetGroupMCPs(c *gin.Context) {
 	}
 
 	middleware.SuccessResponse(c, gin.H{
-		"mcps":  mcps,
+		"mcps":  NewGroupMCPResponses(c.Request.Host, mcps),
 		"total": total,
 	})
+}
+
+// GetAllGroupMCPs godoc
+//
+//	@Summary		Get all Group MCPs
+//	@Description	Get all Group MCPs with filtering
+//	@Tags			mcp
+//	@Produce		json
+//	@Security		ApiKeyAuth
+//	@Param			status	query		int	false	"MCP status"
+//	@Success		200		{object}	middleware.APIResponse{data=[]GroupMCPResponse}
+//	@Router			/api/mcp/group/all [get]
+func GetAllGroupMCPs(c *gin.Context) {
+	status, _ := strconv.Atoi(c.Query("status"))
+
+	if status == 0 {
+		status = int(model.GroupMCPStatusEnabled)
+	}
+	mcps, err := model.GetAllGroupMCPs(model.GroupMCPStatus(status))
+	if err != nil {
+		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+	middleware.SuccessResponse(c, NewGroupMCPResponses(c.Request.Host, mcps))
 }
 
 // GetGroupMCPByID godoc
@@ -64,7 +146,7 @@ func GetGroupMCPs(c *gin.Context) {
 //	@Security		ApiKeyAuth
 //	@Param			id		path		string	true	"MCP ID"
 //	@Param			group	path		string	true	"Group ID"
-//	@Success		200		{object}	middleware.APIResponse{data=model.GroupMCP}
+//	@Success		200		{object}	middleware.APIResponse{data=GroupMCPResponse}
 //	@Router			/api/mcp/group/{group}/{id} [get]
 func GetGroupMCPByID(c *gin.Context) {
 	id := c.Param("id")
@@ -81,7 +163,7 @@ func GetGroupMCPByID(c *gin.Context) {
 		return
 	}
 
-	middleware.SuccessResponse(c, mcp)
+	middleware.SuccessResponse(c, NewGroupMCPResponse(c.Request.Host, mcp))
 }
 
 // CreateGroupMCP godoc
@@ -94,7 +176,7 @@ func GetGroupMCPByID(c *gin.Context) {
 //	@Security		ApiKeyAuth
 //	@Param			group	path		string			true	"Group ID"
 //	@Param			mcp		body		model.GroupMCP	true	"Group MCP object"
-//	@Success		200		{object}	middleware.APIResponse{data=model.GroupMCP}
+//	@Success		200		{object}	middleware.APIResponse{data=GroupMCPResponse}
 //	@Router			/api/mcp/group/{group} [post]
 func CreateGroupMCP(c *gin.Context) {
 	groupID := c.Param("group")
@@ -116,7 +198,7 @@ func CreateGroupMCP(c *gin.Context) {
 		return
 	}
 
-	middleware.SuccessResponse(c, mcp)
+	middleware.SuccessResponse(c, NewGroupMCPResponse(c.Request.Host, mcp))
 }
 
 // UpdateGroupMCP godoc
@@ -130,7 +212,7 @@ func CreateGroupMCP(c *gin.Context) {
 //	@Param			id		path		string			true	"MCP ID"
 //	@Param			group	path		string			true	"Group ID"
 //	@Param			mcp		body		model.GroupMCP	true	"Group MCP object"
-//	@Success		200		{object}	middleware.APIResponse{data=model.GroupMCP}
+//	@Success		200		{object}	middleware.APIResponse{data=GroupMCPResponse}
 //	@Router			/api/mcp/group/{group}/{id} [put]
 func UpdateGroupMCP(c *gin.Context) {
 	id := c.Param("id")
@@ -155,7 +237,7 @@ func UpdateGroupMCP(c *gin.Context) {
 		return
 	}
 
-	middleware.SuccessResponse(c, mcp)
+	middleware.SuccessResponse(c, NewGroupMCPResponse(c.Request.Host, mcp))
 }
 
 type UpdateGroupMCPStatusRequest struct {

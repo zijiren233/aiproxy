@@ -25,6 +25,9 @@ var (
 	defaultChannelModelMapping   atomic.Value
 	groupMaxTokenNum             atomic.Int64
 	groupConsumeLevelRatio       atomic.Value
+
+	publicMCPHost atomic.Value
+	groupMCPHost  atomic.Value
 )
 
 func init() {
@@ -32,6 +35,8 @@ func init() {
 	defaultChannelModelMapping.Store(make(map[int]map[string]string))
 	groupConsumeLevelRatio.Store(make(map[float64]float64))
 	notifyNote.Store("")
+	publicMCPHost.Store("")
+	groupMCPHost.Store("")
 }
 
 func GetRetryTimes() int64 {
@@ -194,4 +199,22 @@ func GetNotifyNote() string {
 func SetNotifyNote(note string) {
 	note = env.String("NOTIFY_NOTE", note)
 	notifyNote.Store(note)
+}
+
+func GetPublicMCPHost() string {
+	return publicMCPHost.Load().(string)
+}
+
+func SetPublicMCPHost(host string) {
+	host = env.String("PUBLIC_MCP_HOST", host)
+	publicMCPHost.Store(host)
+}
+
+func GetGroupMCPHost() string {
+	return groupMCPHost.Load().(string)
+}
+
+func SetGroupMCPHost(host string) {
+	host = env.String("GROUP_MCP_HOST", host)
+	groupMCPHost.Store(host)
 }
