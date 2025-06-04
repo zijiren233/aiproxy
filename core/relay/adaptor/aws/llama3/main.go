@@ -166,8 +166,7 @@ func Handler(meta *meta.Meta, c *gin.Context) (model.Usage, adaptor.Error) {
 
 	c.Writer.Header().Set("Content-Type", "application/json")
 	c.Writer.Header().Set("Content-Length", strconv.Itoa(len(jsonData)))
-	c.Writer.Write(jsonData)
-
+	_, _ = c.Writer.Write(jsonData)
 	return openaiResp.ToModelUsage(), nil
 }
 
