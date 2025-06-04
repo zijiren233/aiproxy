@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/labring/aiproxy/core/common"
-	"github.com/labring/aiproxy/core/common/mcpproxy"
+	"github.com/labring/aiproxy/core/mcpproxy"
 	"github.com/redis/go-redis/v9"
 )
 

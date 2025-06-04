@@ -8,13 +8,12 @@ import (
 	"net/url"
 
 	"github.com/gin-gonic/gin"
-	"github.com/labring/aiproxy/core/common/mcpproxy"
+	"github.com/labring/aiproxy/core/mcpproxy"
 	"github.com/labring/aiproxy/core/middleware"
 	"github.com/labring/aiproxy/core/model"
 	mcpservers "github.com/labring/aiproxy/mcp-servers"
 	"github.com/labring/aiproxy/openapi-mcp/convert"
 	"github.com/mark3labs/mcp-go/mcp"
-	"github.com/mark3labs/mcp-go/server"
 )
 
 type EndpointProvider interface {
@@ -25,7 +24,7 @@ type EndpointProvider interface {
 // handleSSEMCPServer handles the SSE connection for an MCP server
 func handleSSEMCPServer(
 	c *gin.Context,
-	s mcpproxy.MCPServer,
+	s mcpservers.Server,
 	mcpType string,
 	endpoint EndpointProvider,
 ) {
@@ -88,7 +87,7 @@ func handleEmbedSSEMCP(
 		group := middleware.GetGroup(c)
 		param, err := model.CacheGetPublicMCPReusingParam(mcpID, group.ID)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, mcpproxy.CreateMCPErrorResponse(
+			c.JSON(http.StatusBadRequest, mcpservers.CreateMCPErrorResponse(
 				mcp.NewRequestId(nil),
 				mcp.INVALID_REQUEST,
 				err.Error(),
@@ -99,7 +98,7 @@ func handleEmbedSSEMCP(
 	}
 	server, err := mcpservers.GetMCPServer(mcpID, config.Init, reusingConfig)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, mcpproxy.CreateMCPErrorResponse(
+		c.JSON(http.StatusBadRequest, mcpservers.CreateMCPErrorResponse(
 			mcp.NewRequestId(nil),
 			mcp.INVALID_REQUEST,
 			err.Error(),
@@ -130,9 +129,9 @@ func sendMCPSSEMessage(c *gin.Context, mcpType, sessionID string) {
 }
 
 // handleStreamableMCPServer handles the streamable connection for an MCP server
-func handleStreamableMCPServer(c *gin.Context, s *server.MCPServer) {
+func handleStreamableMCPServer(c *gin.Context, s mcpservers.Server) {
 	if c.Request.Method != http.MethodPost {
-		c.JSON(http.StatusMethodNotAllowed, mcpproxy.CreateMCPErrorResponse(
+		c.JSON(http.StatusMethodNotAllowed, mcpservers.CreateMCPErrorResponse(
 			mcp.NewRequestId(nil),
 			mcp.METHOD_NOT_FOUND,
 			"method not allowed",
@@ -141,7 +140,7 @@ func handleStreamableMCPServer(c *gin.Context, s *server.MCPServer) {
 	}
 	reqBody, err := io.ReadAll(c.Request.Body)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, mcpproxy.CreateMCPErrorResponse(
+		c.JSON(http.StatusBadRequest, mcpservers.CreateMCPErrorResponse(
 			mcp.NewRequestId(nil),
 			mcp.PARSE_ERROR,
 			err.Error(),
@@ -177,7 +176,7 @@ func handleGroupSSEStreamable(c *gin.Context, groupMcp *model.GroupMCPCache) {
 	case model.GroupMCPTypeOpenAPI:
 		server, err := newOpenAPIMCPServer(groupMcp.OpenAPIConfig)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, mcpproxy.CreateMCPErrorResponse(
+			c.JSON(http.StatusBadRequest, mcpservers.CreateMCPErrorResponse(
 				mcp.NewRequestId(nil),
 				mcp.INVALID_REQUEST,
 				err.Error(),
@@ -186,7 +185,7 @@ func handleGroupSSEStreamable(c *gin.Context, groupMcp *model.GroupMCPCache) {
 		}
 		handleStreamableMCPServer(c, server)
 	default:
-		c.JSON(http.StatusBadRequest, mcpproxy.CreateMCPErrorResponse(
+		c.JSON(http.StatusBadRequest, mcpservers.CreateMCPErrorResponse(
 			mcp.NewRequestId(nil),
 			mcp.INVALID_REQUEST,
 			"unsupported mcp type",
@@ -195,7 +194,7 @@ func handleGroupSSEStreamable(c *gin.Context, groupMcp *model.GroupMCPCache) {
 }
 
 // newOpenAPIMCPServer creates a new MCP server from OpenAPI configuration
-func newOpenAPIMCPServer(config *model.MCPOpenAPIConfig) (*server.MCPServer, error) {
+func newOpenAPIMCPServer(config *model.MCPOpenAPIConfig) (mcpservers.Server, error) {
 	if config == nil || (config.OpenAPISpec == "" && config.OpenAPIContent == "") {
 		return nil, errors.New("invalid OpenAPI configuration")
 	}

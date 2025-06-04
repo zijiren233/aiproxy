@@ -7,12 +7,10 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
-
-	"github.com/mark3labs/mcp-go/server"
 )
 
 type mcpServerCacheItem struct {
-	MCPServer         *server.MCPServer
+	MCPServer         Server
 	LastUsedTimestamp atomic.Int64
 }
 
@@ -73,7 +71,7 @@ func Register(mcp EmbedMcp) {
 	servers[mcp.ID] = mcp
 }
 
-func GetMCPServer(id string, config, reusingConfig map[string]string) (*server.MCPServer, error) {
+func GetMCPServer(id string, config, reusingConfig map[string]string) (Server, error) {
 	embedServer, ok := servers[id]
 	if !ok {
 		return nil, fmt.Errorf("mcp %s not found", id)
@@ -107,7 +105,7 @@ func buildNoReusingConfigCacheKey(config map[string]string) string {
 	return strings.Join(keys, ":")
 }
 
-func loadCacheServer(embedServer EmbedMcp, config map[string]string) (*server.MCPServer, error) {
+func loadCacheServer(embedServer EmbedMcp, config map[string]string) (Server, error) {
 	cacheKey := embedServer.ID
 	if len(config) > 0 {
 		cacheKey = fmt.Sprintf("%s:%s", embedServer.ID, buildNoReusingConfigCacheKey(config))

@@ -7,7 +7,7 @@ import (
 	"net/url"
 
 	"github.com/gin-gonic/gin"
-	"github.com/labring/aiproxy/core/common/mcpproxy"
+	"github.com/labring/aiproxy/core/mcpproxy"
 	"github.com/labring/aiproxy/core/middleware"
 	"github.com/labring/aiproxy/core/model"
 	mcpservers "github.com/labring/aiproxy/mcp-servers"
@@ -92,7 +92,7 @@ func handlePublicSSEMCP(
 		defer client.Close()
 		handleSSEMCPServer(
 			c,
-			mcpproxy.WrapMCPClient2Server(client),
+			mcpservers.WrapMCPClient2Server(client),
 			string(model.PublicMCPTypeProxySSE),
 			endpoint,
 		)
@@ -113,14 +113,14 @@ func handlePublicSSEMCP(
 		defer client.Close()
 		handleSSEMCPServer(
 			c,
-			mcpproxy.WrapMCPClient2Server(client),
+			mcpservers.WrapMCPClient2Server(client),
 			string(model.PublicMCPTypeProxyStreamable),
 			endpoint,
 		)
 	case model.PublicMCPTypeOpenAPI:
 		server, err := newOpenAPIMCPServer(publicMcp.OpenAPIConfig)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, mcpproxy.CreateMCPErrorResponse(
+			c.JSON(http.StatusBadRequest, mcpservers.CreateMCPErrorResponse(
 				mcp.NewRequestId(nil),
 				mcp.INVALID_REQUEST,
 				err.Error(),
@@ -131,7 +131,7 @@ func handlePublicSSEMCP(
 	case model.PublicMCPTypeEmbed:
 		handleEmbedSSEMCP(c, publicMcp.ID, publicMcp.EmbedConfig, endpoint)
 	default:
-		c.JSON(http.StatusBadRequest, mcpproxy.CreateMCPErrorResponse(
+		c.JSON(http.StatusBadRequest, mcpservers.CreateMCPErrorResponse(
 			mcp.NewRequestId(nil),
 			mcp.INVALID_REQUEST,
 			"unknown mcp type",
@@ -225,7 +225,7 @@ func PublicMCPStreamable(c *gin.Context) {
 	mcpID := c.Param("id")
 	publicMcp, err := model.CacheGetPublicMCP(mcpID)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, mcpproxy.CreateMCPErrorResponse(
+		c.JSON(http.StatusBadRequest, mcpservers.CreateMCPErrorResponse(
 			mcp.NewRequestId(nil),
 			mcp.INVALID_REQUEST,
 			err.Error(),
@@ -233,7 +233,7 @@ func PublicMCPStreamable(c *gin.Context) {
 		return
 	}
 	if publicMcp.Status != model.PublicMCPStatusEnabled {
-		c.JSON(http.StatusNotFound, mcpproxy.CreateMCPErrorResponse(
+		c.JSON(http.StatusNotFound, mcpservers.CreateMCPErrorResponse(
 			mcp.NewRequestId(nil),
 			mcp.INVALID_REQUEST,
 			"mcp is not enabled",
@@ -252,7 +252,7 @@ func handlePublicSSEStreamable(c *gin.Context, publicMcp *model.PublicMCPCache) 
 			transport.WithHeaders(publicMcp.ProxyConfig.Headers),
 		)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, mcpproxy.CreateMCPErrorResponse(
+			c.JSON(http.StatusBadRequest, mcpservers.CreateMCPErrorResponse(
 				mcp.NewRequestId(nil),
 				mcp.INVALID_REQUEST,
 				err.Error(),
@@ -261,7 +261,7 @@ func handlePublicSSEStreamable(c *gin.Context, publicMcp *model.PublicMCPCache) 
 		}
 		err = client.Start(c.Request.Context())
 		if err != nil {
-			c.JSON(http.StatusBadRequest, mcpproxy.CreateMCPErrorResponse(
+			c.JSON(http.StatusBadRequest, mcpservers.CreateMCPErrorResponse(
 				mcp.NewRequestId(nil),
 				mcp.INVALID_REQUEST,
 				err.Error(),
@@ -270,14 +270,14 @@ func handlePublicSSEStreamable(c *gin.Context, publicMcp *model.PublicMCPCache) 
 		}
 		defer client.Close()
 		mcpproxy.NewStatelessStreamableHTTPServer(
-			mcpproxy.WrapMCPClient2Server(client),
+			mcpservers.WrapMCPClient2Server(client),
 		).ServeHTTP(c.Writer, c.Request)
 	case model.PublicMCPTypeProxyStreamable:
 		handlePublicProxyStreamable(c, publicMcp.ID, publicMcp.ProxyConfig)
 	case model.PublicMCPTypeOpenAPI:
 		server, err := newOpenAPIMCPServer(publicMcp.OpenAPIConfig)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, mcpproxy.CreateMCPErrorResponse(
+			c.JSON(http.StatusBadRequest, mcpservers.CreateMCPErrorResponse(
 				mcp.NewRequestId(nil),
 				mcp.INVALID_REQUEST,
 				err.Error(),
@@ -288,7 +288,7 @@ func handlePublicSSEStreamable(c *gin.Context, publicMcp *model.PublicMCPCache) 
 	case model.PublicMCPTypeEmbed:
 		handlePublicEmbedStreamable(c, publicMcp.ID, publicMcp.EmbedConfig)
 	default:
-		c.JSON(http.StatusBadRequest, mcpproxy.CreateMCPErrorResponse(
+		c.JSON(http.StatusBadRequest, mcpservers.CreateMCPErrorResponse(
 			mcp.NewRequestId(nil),
 			mcp.INVALID_REQUEST,
 			"unknown mcp type",
@@ -302,7 +302,7 @@ func handlePublicEmbedStreamable(c *gin.Context, mcpID string, config *model.MCP
 		group := middleware.GetGroup(c)
 		param, err := model.CacheGetPublicMCPReusingParam(mcpID, group.ID)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, mcpproxy.CreateMCPErrorResponse(
+			c.JSON(http.StatusBadRequest, mcpservers.CreateMCPErrorResponse(
 				mcp.NewRequestId(nil),
 				mcp.INVALID_REQUEST,
 				err.Error(),
@@ -313,7 +313,7 @@ func handlePublicEmbedStreamable(c *gin.Context, mcpID string, config *model.MCP
 	}
 	server, err := mcpservers.GetMCPServer(mcpID, config.Init, reusingConfig)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, mcpproxy.CreateMCPErrorResponse(
+		c.JSON(http.StatusBadRequest, mcpservers.CreateMCPErrorResponse(
 			mcp.NewRequestId(nil),
 			mcp.INVALID_REQUEST,
 			err.Error(),
@@ -326,7 +326,7 @@ func handlePublicEmbedStreamable(c *gin.Context, mcpID string, config *model.MCP
 // handlePublicProxyStreamable processes Streamable proxy requests
 func handlePublicProxyStreamable(c *gin.Context, mcpID string, config *model.PublicMCPProxyConfig) {
 	if config == nil || config.URL == "" {
-		c.JSON(http.StatusBadRequest, mcpproxy.CreateMCPErrorResponse(
+		c.JSON(http.StatusBadRequest, mcpservers.CreateMCPErrorResponse(
 			mcp.NewRequestId(nil),
 			mcp.INVALID_REQUEST,
 			"invalid proxy configuration",
@@ -336,7 +336,7 @@ func handlePublicProxyStreamable(c *gin.Context, mcpID string, config *model.Pub
 
 	backendURL, err := url.Parse(config.URL)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, mcpproxy.CreateMCPErrorResponse(
+		c.JSON(http.StatusBadRequest, mcpservers.CreateMCPErrorResponse(
 			mcp.NewRequestId(nil),
 			mcp.INVALID_REQUEST,
 			err.Error(),
@@ -350,7 +350,7 @@ func handlePublicProxyStreamable(c *gin.Context, mcpID string, config *model.Pub
 
 	// Process reusing parameters if any
 	if err := processReusingParams(config.ReusingParams, mcpID, group.ID, headers, &backendQuery); err != nil {
-		c.JSON(http.StatusBadRequest, mcpproxy.CreateMCPErrorResponse(
+		c.JSON(http.StatusBadRequest, mcpservers.CreateMCPErrorResponse(
 			mcp.NewRequestId(nil),
 			mcp.INVALID_REQUEST,
 			err.Error(),

@@ -10,14 +10,13 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	"github.com/labring/aiproxy/core/common/mcpproxy"
+	"github.com/labring/aiproxy/core/mcpproxy"
 	"github.com/labring/aiproxy/core/middleware"
 	"github.com/labring/aiproxy/core/model"
 	mcpservers "github.com/labring/aiproxy/mcp-servers"
 	// init embed mcp
 	_ "github.com/labring/aiproxy/mcp-servers/mcpregister"
 	"github.com/mark3labs/mcp-go/mcp"
-	"github.com/mark3labs/mcp-go/server"
 )
 
 type EmbedMCPConfigTemplate struct {
@@ -292,7 +291,7 @@ const (
 	testEmbedMcpType = "test-embedmcp"
 )
 
-func handleTestEmbedMCPServer(c *gin.Context, s *server.MCPServer) {
+func handleTestEmbedMCPServer(c *gin.Context, s mcpservers.Server) {
 	token := middleware.GetToken(c)
 
 	// Store the session
@@ -361,7 +360,7 @@ func TestEmbedMCPMessage(c *gin.Context) {
 func TestEmbedMCPStreamable(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		c.JSON(http.StatusBadRequest, mcpproxy.CreateMCPErrorResponse(
+		c.JSON(http.StatusBadRequest, mcpservers.CreateMCPErrorResponse(
 			mcp.NewRequestId(nil),
 			mcp.INVALID_REQUEST,
 			"mcp id is required",
@@ -372,7 +371,7 @@ func TestEmbedMCPStreamable(c *gin.Context) {
 	initConfig, reusingConfig := getConfigFromQuery(c)
 	server, err := mcpservers.GetMCPServer(id, initConfig, reusingConfig)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, mcpproxy.CreateMCPErrorResponse(
+		c.JSON(http.StatusBadRequest, mcpservers.CreateMCPErrorResponse(
 			mcp.NewRequestId(nil),
 			mcp.INVALID_REQUEST,
 			err.Error(),

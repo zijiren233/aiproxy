@@ -8,9 +8,9 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/core/common/config"
-	"github.com/labring/aiproxy/core/common/mcpproxy"
 	"github.com/labring/aiproxy/core/middleware"
 	"github.com/labring/aiproxy/core/model"
+	mcpservers "github.com/labring/aiproxy/mcp-servers"
 	"github.com/mark3labs/mcp-go/mcp"
 )
 
@@ -154,7 +154,7 @@ func HostMCPStreamable(c *gin.Context) {
 	routeHostMCP(c, func(c *gin.Context, mcpID string) {
 		publicMcp, err := model.CacheGetPublicMCP(mcpID)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, mcpproxy.CreateMCPErrorResponse(
+			c.JSON(http.StatusBadRequest, mcpservers.CreateMCPErrorResponse(
 				mcp.NewRequestId(nil),
 				mcp.INVALID_REQUEST,
 				err.Error(),
@@ -162,7 +162,7 @@ func HostMCPStreamable(c *gin.Context) {
 			return
 		}
 		if publicMcp.Status != model.PublicMCPStatusEnabled {
-			c.JSON(http.StatusNotFound, mcpproxy.CreateMCPErrorResponse(
+			c.JSON(http.StatusNotFound, mcpservers.CreateMCPErrorResponse(
 				mcp.NewRequestId(nil),
 				mcp.INVALID_REQUEST,
 				"mcp is not enabled",
@@ -175,7 +175,7 @@ func HostMCPStreamable(c *gin.Context) {
 
 		groupMcp, err := model.CacheGetGroupMCP(group.ID, mcpID)
 		if err != nil {
-			c.JSON(http.StatusNotFound, mcpproxy.CreateMCPErrorResponse(
+			c.JSON(http.StatusNotFound, mcpservers.CreateMCPErrorResponse(
 				mcp.NewRequestId(nil),
 				mcp.INVALID_REQUEST,
 				err.Error(),
@@ -183,7 +183,7 @@ func HostMCPStreamable(c *gin.Context) {
 			return
 		}
 		if groupMcp.Status != model.GroupMCPStatusEnabled {
-			c.JSON(http.StatusNotFound, mcpproxy.CreateMCPErrorResponse(
+			c.JSON(http.StatusNotFound, mcpservers.CreateMCPErrorResponse(
 				mcp.NewRequestId(nil),
 				mcp.INVALID_REQUEST,
 				"mcp is not enabled",

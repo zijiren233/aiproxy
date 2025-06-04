@@ -6,9 +6,10 @@ import (
 	"net/url"
 
 	"github.com/gin-gonic/gin"
-	"github.com/labring/aiproxy/core/common/mcpproxy"
+	"github.com/labring/aiproxy/core/mcpproxy"
 	"github.com/labring/aiproxy/core/middleware"
 	"github.com/labring/aiproxy/core/model"
+	mcpservers "github.com/labring/aiproxy/mcp-servers"
 	"github.com/mark3labs/mcp-go/client/transport"
 	"github.com/mark3labs/mcp-go/mcp"
 )
@@ -90,7 +91,7 @@ func handleGroupSSEMCPServer(
 		}
 		defer client.Close()
 		handleSSEMCPServer(c,
-			mcpproxy.WrapMCPClient2Server(client),
+			mcpservers.WrapMCPClient2Server(client),
 			string(model.GroupMCPTypeProxySSE),
 			endpoint,
 		)
@@ -111,7 +112,7 @@ func handleGroupSSEMCPServer(
 		defer client.Close()
 		handleSSEMCPServer(
 			c,
-			mcpproxy.WrapMCPClient2Server(client),
+			mcpservers.WrapMCPClient2Server(client),
 			string(model.GroupMCPTypeProxyStreamable),
 			endpoint,
 		)
@@ -159,7 +160,7 @@ func GroupMCPMessage(c *gin.Context) {
 func GroupMCPStreamable(c *gin.Context) {
 	mcpID := c.Param("id")
 	if mcpID == "" {
-		c.JSON(http.StatusBadRequest, mcpproxy.CreateMCPErrorResponse(
+		c.JSON(http.StatusBadRequest, mcpservers.CreateMCPErrorResponse(
 			mcp.NewRequestId(nil),
 			mcp.INVALID_REQUEST,
 			"mcp id is required",
@@ -171,7 +172,7 @@ func GroupMCPStreamable(c *gin.Context) {
 
 	groupMcp, err := model.CacheGetGroupMCP(group.ID, mcpID)
 	if err != nil {
-		c.JSON(http.StatusNotFound, mcpproxy.CreateMCPErrorResponse(
+		c.JSON(http.StatusNotFound, mcpservers.CreateMCPErrorResponse(
 			mcp.NewRequestId(nil),
 			mcp.INVALID_REQUEST,
 			err.Error(),
@@ -179,7 +180,7 @@ func GroupMCPStreamable(c *gin.Context) {
 		return
 	}
 	if groupMcp.Status != model.GroupMCPStatusEnabled {
-		c.JSON(http.StatusNotFound, mcpproxy.CreateMCPErrorResponse(
+		c.JSON(http.StatusNotFound, mcpservers.CreateMCPErrorResponse(
 			mcp.NewRequestId(nil),
 			mcp.INVALID_REQUEST,
 			"mcp is not enabled",
@@ -198,7 +199,7 @@ func handleGroupProxyStreamable(c *gin.Context, config *model.GroupMCPProxyConfi
 
 	backendURL, err := url.Parse(config.URL)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, mcpproxy.CreateMCPErrorResponse(
+		c.JSON(http.StatusBadRequest, mcpservers.CreateMCPErrorResponse(
 			mcp.NewRequestId(nil),
 			mcp.INVALID_REQUEST,
 			err.Error(),
