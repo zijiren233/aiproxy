@@ -108,6 +108,7 @@ func updateChannelModelTokensRequestRate(c *gin.Context, meta *meta.Meta, tpm, t
 
 func (w *wrapAdaptor) DoRequest(
 	meta *meta.Meta,
+	store adaptor.Store,
 	c *gin.Context,
 	req *http.Request,
 ) (*http.Response, error) {
@@ -117,18 +118,16 @@ func (w *wrapAdaptor) DoRequest(
 		meta.OriginModel,
 	)
 	updateChannelModelRequestRate(c, meta, count+overLimitCount, secondCount)
-	return w.Adaptor.DoRequest(meta, c, req)
+	return w.Adaptor.DoRequest(meta, store, c, req)
 }
 
 func (w *wrapAdaptor) DoResponse(
 	meta *meta.Meta,
+	store adaptor.Store,
 	c *gin.Context,
 	resp *http.Response,
-) (*model.Usage, adaptor.Error) {
-	usage, relayErr := w.Adaptor.DoResponse(meta, c, resp)
-	if usage == nil {
-		return nil, relayErr
-	}
+) (model.Usage, adaptor.Error) {
+	usage, relayErr := w.Adaptor.DoResponse(meta, store, c, resp)
 
 	if usage.TotalTokens > 0 {
 		count, overLimitCount, secondCount := reqlimit.PushChannelModelTokensRequest(
@@ -161,6 +160,37 @@ func (w *wrapAdaptor) DoResponse(
 	return usage, relayErr
 }
 
+var adaptorStore adaptor.Store = &storeImpl{}
+
+type storeImpl struct{}
+
+func (s *storeImpl) GetStore(id string) (adaptor.StoreCache, error) {
+	store, err := model.CacheGetStore(id)
+	if err != nil {
+		return adaptor.StoreCache{}, err
+	}
+	return adaptor.StoreCache{
+		ID:        store.ID,
+		GroupID:   store.GroupID,
+		TokenID:   store.TokenID,
+		ChannelID: store.ChannelID,
+		Model:     store.Model,
+		ExpiresAt: store.ExpiresAt,
+	}, nil
+}
+
+func (s *storeImpl) SaveStore(store adaptor.StoreCache) error {
+	_, err := model.SaveStore(&model.Store{
+		ID:        store.ID,
+		GroupID:   store.GroupID,
+		TokenID:   store.TokenID,
+		ChannelID: store.ChannelID,
+		Model:     store.Model,
+		ExpiresAt: store.ExpiresAt,
+	})
+	return err
+}
+
 func relayHandler(c *gin.Context, meta *meta.Meta) *controller.HandleResult {
 	log := middleware.GetLogger(c)
 	middleware.SetLogFieldsFromMeta(meta, log.Data)
@@ -184,7 +214,7 @@ func relayHandler(c *gin.Context, meta *meta.Meta) *controller.HandleResult {
 		thinksplit.NewThinkPlugin(),
 	)
 
-	return controller.Handle(a, c, meta)
+	return controller.Handle(a, c, meta, adaptorStore)
 }
 
 func relayController(m mode.Mode) RelayController {
@@ -222,8 +252,93 @@ func relayController(m mode.Mode) RelayController {
 	case mode.Completions:
 		c.GetRequestPrice = controller.GetCompletionsRequestPrice
 		c.GetRequestUsage = controller.GetCompletionsRequestUsage
+	case mode.VideoGenerationsJobs:
+		c.GetRequestPrice = controller.GetVideoGenerationJobRequestPrice
+		c.GetRequestUsage = controller.GetVideoGenerationJobRequestUsage
 	}
 	return c
+}
+
+const (
+	AIProxyChannelHeader = "Aiproxy-Channel"
+)
+
+func GetChannelFromHeader(
+	header string,
+	mc *model.ModelCaches,
+	availableSet []string,
+	model string,
+) (*model.Channel, error) {
+	channelIDInt, err := strconv.ParseInt(header, 10, 64)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, set := range availableSet {
+		enabledChannels := mc.EnabledModel2ChannelsBySet[set][model]
+		if len(enabledChannels) > 0 {
+			for _, channel := range enabledChannels {
+				if int64(channel.ID) == channelIDInt {
+					return channel, nil
+				}
+			}
+		}
+
+		disabledChannels := mc.DisabledModel2ChannelsBySet[set][model]
+		if len(disabledChannels) > 0 {
+			for _, channel := range disabledChannels {
+				if int64(channel.ID) == channelIDInt {
+					return channel, nil
+				}
+			}
+		}
+	}
+
+	return nil, fmt.Errorf("channel %d not found for model `%s`", channelIDInt, model)
+}
+
+func GetChannelFromRequest(
+	c *gin.Context,
+	mc *model.ModelCaches,
+	availableSet []string,
+	modelName string,
+	m mode.Mode,
+) (*model.Channel, error) {
+	switch m {
+	case mode.VideoGenerationsGetJobs,
+		mode.VideoGenerationsContent:
+		channelID := middleware.GetChannelID(c)
+		if channelID == 0 {
+			return nil, errors.New("channel id is required")
+		}
+		for _, set := range availableSet {
+			enabledChannels := mc.EnabledModel2ChannelsBySet[set][modelName]
+			if len(enabledChannels) > 0 {
+				for _, channel := range enabledChannels {
+					if channel.ID == channelID {
+						return channel, nil
+					}
+				}
+			}
+		}
+		return nil, fmt.Errorf("channel %d not found for model `%s`", channelID, modelName)
+	default:
+		channelID := middleware.GetChannelID(c)
+		if channelID == 0 {
+			return nil, nil
+		}
+		for _, set := range availableSet {
+			enabledChannels := mc.EnabledModel2ChannelsBySet[set][modelName]
+			if len(enabledChannels) > 0 {
+				for _, channel := range enabledChannels {
+					if channel.ID == channelID {
+						return channel, nil
+					}
+				}
+			}
+		}
+	}
+	return nil, nil
 }
 
 func RelayHelper(
@@ -484,7 +599,7 @@ func relay(c *gin.Context, mode mode.Mode, relayController RelayController) {
 	mc := middleware.GetModelConfig(c)
 
 	// Get initial channel
-	initialChannel, err := getInitialChannel(c, requestModel)
+	initialChannel, err := getInitialChannel(c, requestModel, mode)
 	if err != nil || initialChannel == nil || initialChannel.channel == nil {
 		middleware.AbortLogWithMessageWithMode(mode, c,
 			http.StatusServiceUnavailable,
@@ -646,10 +761,40 @@ type initialChannel struct {
 	migratedChannels  []*model.Channel
 }
 
-func getInitialChannel(c *gin.Context, modelName string) (*initialChannel, error) {
+func getInitialChannel(c *gin.Context, modelName string, m mode.Mode) (*initialChannel, error) {
 	log := middleware.GetLogger(c)
-	if channel := middleware.GetChannel(c); channel != nil {
+
+	group := middleware.GetGroup(c)
+	availableSet := group.GetAvailableSets()
+
+	if channelHeader := c.Request.Header.Get(AIProxyChannelHeader); channelHeader != "" {
+		if group.Status != model.GroupStatusInternal {
+			return nil, errors.New("channel header is not allowed in non-internal group")
+		}
+		channel, err := GetChannelFromHeader(
+			channelHeader,
+			middleware.GetModelCaches(c),
+			availableSet,
+			modelName,
+		)
+		if err != nil {
+			return nil, err
+		}
 		log.Data["designated_channel"] = "true"
+		return &initialChannel{channel: channel, designatedChannel: true}, nil
+	}
+
+	channel, err := GetChannelFromRequest(
+		c,
+		middleware.GetModelCaches(c),
+		availableSet,
+		modelName,
+		m,
+	)
+	if err != nil {
+		return nil, err
+	}
+	if channel != nil {
 		return &initialChannel{channel: channel, designatedChannel: true}, nil
 	}
 
@@ -665,9 +810,6 @@ func getInitialChannel(c *gin.Context, modelName string) (*initialChannel, error
 	if err != nil {
 		log.Errorf("get channel model error rates failed: %+v", err)
 	}
-
-	group := middleware.GetGroup(c)
-	availableSet := group.GetAvailableSets()
 
 	channel, migratedChannels, err := getChannelWithFallback(
 		mc,

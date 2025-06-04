@@ -6,6 +6,7 @@ import (
 	"io"
 	"mime/multipart"
 	"net/http"
+	"strconv"
 
 	"github.com/bytedance/sonic"
 	"github.com/bytedance/sonic/ast"
@@ -22,41 +23,43 @@ import (
 func ConvertImagesRequest(
 	meta *meta.Meta,
 	req *http.Request,
-) (*adaptor.ConvertRequestResult, error) {
+) (adaptor.ConvertResult, error) {
 	node, err := common.UnmarshalBody2Node(req)
 	if err != nil {
-		return nil, err
+		return adaptor.ConvertResult{}, err
 	}
 	responseFormat, err := node.Get("response_format").String()
 	if err != nil && !errors.Is(err, ast.ErrNotExist) {
-		return nil, err
+		return adaptor.ConvertResult{}, err
 	}
 	meta.Set(MetaResponseFormat, responseFormat)
 
 	_, err = node.Set("model", ast.NewString(meta.ActualModel))
 	if err != nil {
-		return nil, err
+		return adaptor.ConvertResult{}, err
 	}
 
 	jsonData, err := node.MarshalJSON()
 	if err != nil {
-		return nil, err
+		return adaptor.ConvertResult{}, err
 	}
 
-	return &adaptor.ConvertRequestResult{
-		Method: http.MethodPost,
-		Header: nil,
-		Body:   bytes.NewReader(jsonData),
+	return adaptor.ConvertResult{
+		Header: http.Header{
+			"Content-Type":   {"application/json"},
+			"Content-Length": {strconv.Itoa(len(jsonData))},
+		},
+		Body: bytes.NewReader(jsonData),
 	}, nil
 }
 
 func ConvertImagesEditsRequest(
 	meta *meta.Meta,
 	request *http.Request,
-) (*adaptor.ConvertRequestResult, error) {
+) (adaptor.ConvertResult, error) {
 	err := request.ParseMultipartForm(1024 * 1024 * 4)
 	if err != nil {
-		return nil, err
+		return adaptor.ConvertResult{}, err
 	}
 
 	multipartBody := &bytes.Buffer{}
@@ -70,7 +73,7 @@ func ConvertImagesEditsRequest(
 		if key == "model" {
 			err = multipartWriter.WriteField(key, meta.ActualModel)
 			if err != nil {
-				return nil, err
+				return adaptor.ConvertResult{}, err
 			}
 			continue
 		}
@@ -80,7 +83,7 @@ func ConvertImagesEditsRequest(
 		}
 		err = multipartWriter.WriteField(key, value)
 		if err != nil {
-			return nil, err
+			return adaptor.ConvertResult{}, err
 		}
 	}
 
@@ -91,24 +94,23 @@ func ConvertImagesEditsRequest(
 		fileHeader := files[0]
 		file, err := fileHeader.Open()
 		if err != nil {
-			return nil, err
+			return adaptor.ConvertResult{}, err
 		}
 		w, err := multipartWriter.CreateFormFile(key, fileHeader.Filename)
 		if err != nil {
 			file.Close()
-			return nil, err
+			return adaptor.ConvertResult{}, err
 		}
 		_, err = io.Copy(w, file)
 		file.Close()
 		if err != nil {
-			return nil, err
+			return adaptor.ConvertResult{}, err
 		}
 	}
 
 	multipartWriter.Close()
 	ContentType := multipartWriter.FormDataContentType()
-	return &adaptor.ConvertRequestResult{
-		Method: http.MethodPost,
+	return adaptor.ConvertResult{
 		Header: http.Header{
 			"Content-Type": {ContentType},
 		},
@@ -120,9 +122,9 @@ func ImagesHandler(
 	meta *meta.Meta,
 	c *gin.Context,
 	resp *http.Response,
-) (*model.Usage, adaptor.Error) {
+) (model.Usage, adaptor.Error) {
 	if resp.StatusCode != http.StatusOK {
-		return nil, ErrorHanlder(resp)
+		return model.Usage{}, ErrorHanlder(resp)
 	}
 
 	defer resp.Body.Close()
@@ -131,7 +133,7 @@ func ImagesHandler(
 
 	responseBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, relaymodel.WrapperOpenAIError(
+		return model.Usage{}, relaymodel.WrapperOpenAIError(
 			err,
 			"read_response_body_failed",
 			http.StatusInternalServerError,
@@ -140,14 +142,14 @@ func ImagesHandler(
 	var imageResponse relaymodel.ImageResponse
 	err = sonic.Unmarshal(responseBody, &imageResponse)
 	if err != nil {
-		return nil, relaymodel.WrapperOpenAIError(
+		return model.Usage{}, relaymodel.WrapperOpenAIError(
 			err,
 			"unmarshal_response_body_failed",
 			http.StatusInternalServerError,
 		)
 	}
 
-	usage := &model.Usage{
+	usage := model.Usage{
 		InputTokens:  meta.RequestUsage.InputTokens,
 		OutputTokens: meta.RequestUsage.OutputTokens,
 		TotalTokens:  meta.RequestUsage.InputTokens + meta.RequestUsage.OutputTokens,
@@ -182,6 +184,8 @@ func ImagesHandler(
 		)
 	}
 
+	c.Writer.Header().Set("Content-Type", "application/json")
+	c.Writer.Header().Set("Content-Length", strconv.Itoa(len(data)))
 	_, err = c.Writer.Write(data)
 	if err != nil {
 		log.Warnf("write response body failed: %v", err)

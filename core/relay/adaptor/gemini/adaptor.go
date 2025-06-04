@@ -17,13 +17,13 @@ type Adaptor struct{}
 
 const baseURL = "https://generativelanguage.googleapis.com"
 
-func (a *Adaptor) GetBaseURL() string {
+func (a *Adaptor) DefaultBaseURL() string {
 	return baseURL
 }
 
 var v1ModelMap = map[string]struct{}{}
 
-func getRequestURL(meta *meta.Meta, action string) string {
+func getRequestURL(meta *meta.Meta, action string) adaptor.RequestURL {
 	u := meta.Channel.BaseURL
 	if u == "" {
 		u = baseURL
@@ -32,10 +32,13 @@ func getRequestURL(meta *meta.Meta, action string) string {
 	if _, ok := v1ModelMap[meta.ActualModel]; ok {
 		version = "v1"
 	}
-	return fmt.Sprintf("%s/%s/models/%s:%s", u, version, meta.ActualModel, action)
+	return adaptor.RequestURL{
+		Method: http.MethodPost,
+		URL:    fmt.Sprintf("%s/%s/models/%s:%s", u, version, meta.ActualModel, action),
+	}
 }
 
-func (a *Adaptor) GetRequestURL(meta *meta.Meta) (string, error) {
+func (a *Adaptor) GetRequestURL(meta *meta.Meta, _ adaptor.Store) (adaptor.RequestURL, error) {
 	var action string
 	switch meta.Mode {
 	case mode.Embeddings:
@@ -50,27 +53,34 @@ func (a *Adaptor) GetRequestURL(meta *meta.Meta) (string, error) {
 	return getRequestURL(meta, action), nil
 }
 
-func (a *Adaptor) SetupRequestHeader(meta *meta.Meta, _ *gin.Context, req *http.Request) error {
+func (a *Adaptor) SetupRequestHeader(
+	meta *meta.Meta,
+	_ adaptor.Store,
+	_ *gin.Context,
+	req *http.Request,
+) error {
 	req.Header.Set("X-Goog-Api-Key", meta.Channel.Key)
 	return nil
 }
 
 func (a *Adaptor) ConvertRequest(
 	meta *meta.Meta,
+	_ adaptor.Store,
 	req *http.Request,
-) (*adaptor.ConvertRequestResult, error) {
+) (adaptor.ConvertResult, error) {
 	switch meta.Mode {
 	case mode.Embeddings:
 		return ConvertEmbeddingRequest(meta, req)
 	case mode.ChatCompletions:
 		return ConvertRequest(meta, req)
 	default:
-		return nil, fmt.Errorf("unsupported mode: %s", meta.Mode)
+		return adaptor.ConvertResult{}, fmt.Errorf("unsupported mode: %s", meta.Mode)
 	}
 }
 
 func (a *Adaptor) DoRequest(
 	_ *meta.Meta,
+	_ adaptor.Store,
 	_ *gin.Context,
 	req *http.Request,
 ) (*http.Response, error) {
@@ -79,9 +89,10 @@ func (a *Adaptor) DoRequest(
 
 func (a *Adaptor) DoResponse(
 	meta *meta.Meta,
+	_ adaptor.Store,
 	c *gin.Context,
 	resp *http.Response,
-) (usage *model.Usage, err adaptor.Error) {
+) (usage model.Usage, err adaptor.Error) {
 	switch meta.Mode {
 	case mode.Embeddings:
 		usage, err = EmbeddingHandler(meta, c, resp)
@@ -92,7 +103,7 @@ func (a *Adaptor) DoResponse(
 			usage, err = Handler(meta, c, resp)
 		}
 	default:
-		return nil, relaymodel.WrapperOpenAIErrorWithMessage(
+		return model.Usage{}, relaymodel.WrapperOpenAIErrorWithMessage(
 			fmt.Sprintf("unsupported mode: %s", meta.Mode),
 			"unsupported_mode",
 			http.StatusBadRequest,
@@ -101,6 +112,13 @@ func (a *Adaptor) DoResponse(
 	return
 }
 
-func (a *Adaptor) GetModelList() []model.ModelConfig {
-	return ModelList
+func (a *Adaptor) Metadata() adaptor.Metadata {
+	return adaptor.Metadata{
+		Features: []string{
+			"https://ai.google.dev",
+			"Chat、Embeddings、Image generation Support",
+		},
+		Models: ModelList,
+		Config: ConfigTemplates,
+	}
 }

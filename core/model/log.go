@@ -334,7 +334,11 @@ func cleanLog(batchSize int) error {
 		}
 	}
 
-	return nil
+	return LogDB.
+		Model(&Store{}).
+		Where("expires_at < ?", time.Now()).
+		Delete(&Store{}).
+		Error
 }
 
 func optimizeLog() error {

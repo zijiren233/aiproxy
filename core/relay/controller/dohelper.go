@@ -82,6 +82,7 @@ func DoHelper(
 	a adaptor.Adaptor,
 	c *gin.Context,
 	meta *meta.Meta,
+	store adaptor.Store,
 ) (
 	model.Usage,
 	*RequestDetail,
@@ -94,8 +95,20 @@ func DoHelper(
 		return model.Usage{}, nil, err
 	}
 
+	// donot use c.Request.Context() because it will be canceled by the client
+	ctx := context.Background()
+
+	timeout := meta.ModelConfig.Timeout
+	if timeout <= 0 {
+		timeout = defaultTimeout
+	}
+
+	var cancel context.CancelFunc
+	ctx, cancel = context.WithTimeout(ctx, time.Duration(timeout)*time.Second)
+	defer cancel()
+
 	// 2. Convert and prepare request
-	resp, err := prepareAndDoRequest(a, c, meta)
+	resp, err := prepareAndDoRequest(ctx, a, c, meta, store)
 	if err != nil {
 		return model.Usage{}, &detail, err
 	}
@@ -118,7 +131,7 @@ func DoHelper(
 	}
 
 	// 4. Handle success response
-	usage, relayErr := handleResponse(a, c, meta, resp, &detail)
+	usage, relayErr := handleResponse(a, c, meta, store, resp, &detail)
 	if relayErr != nil {
 		return model.Usage{}, &detail, relayErr
 	}
@@ -152,14 +165,18 @@ func getRequestBody(meta *meta.Meta, c *gin.Context, detail *RequestDetail) adap
 	}
 }
 
+const defaultTimeout = 60 * 30 // 30 minutes
+
 func prepareAndDoRequest(
+	ctx context.Context,
 	a adaptor.Adaptor,
 	c *gin.Context,
 	meta *meta.Meta,
+	store adaptor.Store,
 ) (*http.Response, adaptor.Error) {
 	log := middleware.GetLogger(c)
 
-	convertResult, err := a.ConvertRequest(meta, c.Request)
+	convertResult, err := a.ConvertRequest(meta, store, c.Request)
 	if err != nil {
 		return nil, relaymodel.WrapperErrorWithMessage(
 			meta.Mode,
@@ -173,10 +190,10 @@ func prepareAndDoRequest(
 	}
 
 	if meta.Channel.BaseURL == "" {
-		meta.Channel.BaseURL = a.GetBaseURL()
+		meta.Channel.BaseURL = a.DefaultBaseURL()
 	}
 
-	fullRequestURL, err := a.GetRequestURL(meta)
+	fullRequestURL, err := a.GetRequestURL(meta, store)
 	if err != nil {
 		return nil, relaymodel.WrapperErrorWithMessage(
 			meta.Mode,
@@ -186,21 +203,12 @@ func prepareAndDoRequest(
 		)
 	}
 
-	log.Debugf("request url: %s %s", convertResult.Method, fullRequestURL)
-
-	ctx := context.Background()
-	if timeout := meta.ModelConfig.Timeout; timeout > 0 {
-		// donot use c.Request.Context() because it will be canceled by the client
-		// which will cause the usage of non-streaming requests to be unable to be recorded
-		var cancel context.CancelFunc
-		ctx, cancel = context.WithTimeout(ctx, time.Duration(timeout)*time.Second)
-		defer cancel()
-	}
+	log.Debugf("request url: %s %s", fullRequestURL.Method, fullRequestURL.URL)
 
 	req, err := http.NewRequestWithContext(
 		ctx,
-		convertResult.Method,
-		fullRequestURL,
+		fullRequestURL.Method,
+		fullRequestURL.URL,
 		convertResult.Body,
 	)
 	if err != nil {
@@ -212,29 +220,25 @@ func prepareAndDoRequest(
 		)
 	}
 
-	if err := setupRequestHeader(a, c, meta, req, convertResult.Header); err != nil {
+	if err := setupRequestHeader(a, c, meta, store, req, convertResult.Header); err != nil {
 		return nil, err
 	}
 
-	return doRequest(a, c, meta, req)
+	return doRequest(a, c, meta, store, req)
 }
 
 func setupRequestHeader(
 	a adaptor.Adaptor,
 	c *gin.Context,
 	meta *meta.Meta,
+	store adaptor.Store,
 	req *http.Request,
 	header http.Header,
 ) adaptor.Error {
-	contentType := req.Header.Get("Content-Type")
-	if contentType == "" {
-		contentType = "application/json; charset=utf-8"
-	}
-	req.Header.Set("Content-Type", contentType)
 	for key, value := range header {
 		req.Header[key] = value
 	}
-	if err := a.SetupRequestHeader(meta, c, req); err != nil {
+	if err := a.SetupRequestHeader(meta, store, c, req); err != nil {
 		return relaymodel.WrapperErrorWithMessage(
 			meta.Mode,
 			http.StatusInternalServerError,
@@ -249,9 +253,10 @@ func doRequest(
 	a adaptor.Adaptor,
 	c *gin.Context,
 	meta *meta.Meta,
+	store adaptor.Store,
 	req *http.Request,
 ) (*http.Response, adaptor.Error) {
-	resp, err := a.DoRequest(meta, c, req)
+	resp, err := a.DoRequest(meta, store, c, req)
 	if err != nil {
 		if errors.Is(err, context.Canceled) {
 			return nil, relaymodel.WrapperErrorWithMessage(
@@ -299,6 +304,7 @@ func handleResponse(
 	a adaptor.Adaptor,
 	c *gin.Context,
 	meta *meta.Meta,
+	store adaptor.Store,
 	resp *http.Response,
 	detail *RequestDetail,
 ) (model.Usage, adaptor.Error) {
@@ -316,7 +322,7 @@ func handleResponse(
 	}()
 	c.Writer = rw
 
-	usage, relayErr := a.DoResponse(meta, c, resp)
+	usage, relayErr := a.DoResponse(meta, store, c, resp)
 	if relayErr != nil {
 		respBody, _ := relayErr.MarshalJSON()
 		detail.ResponseBody = conv.BytesToString(respBody)
@@ -326,15 +332,7 @@ func handleResponse(
 		detail.ResponseBody = rw.body.String()
 	}
 
-	if usage != nil {
-		return *usage, relayErr
-	}
-
-	if relayErr != nil {
-		return model.Usage{}, relayErr
-	}
-
-	return meta.RequestUsage, nil
+	return usage, relayErr
 }
 
 func updateUsageMetrics(usage model.Usage, log *log.Entry) {
@@ -350,7 +348,9 @@ func updateUsageMetrics(usage model.Usage, log *log.Entry) {
 	if usage.OutputTokens > 0 {
 		log.Data["t_output"] = usage.OutputTokens
 	}
-	log.Data["t_total"] = usage.TotalTokens
+	if usage.TotalTokens > 0 {
+		log.Data["t_total"] = usage.TotalTokens
+	}
 	if usage.CachedTokens > 0 {
 		log.Data["t_cached"] = usage.CachedTokens
 	}

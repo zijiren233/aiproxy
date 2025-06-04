@@ -19,33 +19,38 @@ type Adaptor struct{}
 
 const baseURL = "https://v2.doc2x.noedgeai.com"
 
-func (a *Adaptor) GetBaseURL() string {
+func (a *Adaptor) DefaultBaseURL() string {
 	return baseURL
 }
 
-func (a *Adaptor) GetRequestURL(meta *meta.Meta) (string, error) {
+func (a *Adaptor) GetRequestURL(meta *meta.Meta, _ adaptor.Store) (adaptor.RequestURL, error) {
 	switch meta.Mode {
 	case mode.ParsePdf:
-		return meta.Channel.BaseURL + "/api/v2/parse/pdf", nil
+		return adaptor.RequestURL{
+			Method: http.MethodPost,
+			URL:    meta.Channel.BaseURL + "/api/v2/parse/pdf",
+		}, nil
 	default:
-		return "", fmt.Errorf("unsupported mode: %s", meta.Mode)
+		return adaptor.RequestURL{}, fmt.Errorf("unsupported mode: %s", meta.Mode)
 	}
 }
 
 func (a *Adaptor) ConvertRequest(
 	meta *meta.Meta,
+	_ adaptor.Store,
 	req *http.Request,
-) (*adaptor.ConvertRequestResult, error) {
+) (adaptor.ConvertResult, error) {
 	switch meta.Mode {
 	case mode.ParsePdf:
 		return ConvertParsePdfRequest(meta, req)
 	default:
-		return nil, fmt.Errorf("unsupported mode: %s", meta.Mode)
+		return adaptor.ConvertResult{}, fmt.Errorf("unsupported mode: %s", meta.Mode)
 	}
 }
 
 func (a *Adaptor) DoRequest(
 	_ *meta.Meta,
+	_ adaptor.Store,
 	_ *gin.Context,
 	req *http.Request,
 ) (*http.Response, error) {
@@ -54,14 +59,15 @@ func (a *Adaptor) DoRequest(
 
 func (a *Adaptor) DoResponse(
 	meta *meta.Meta,
+	_ adaptor.Store,
 	c *gin.Context,
 	resp *http.Response,
-) (*model.Usage, adaptor.Error) {
+) (model.Usage, adaptor.Error) {
 	switch meta.Mode {
 	case mode.ParsePdf:
 		return HandleParsePdfResponse(meta, c, resp)
 	default:
-		return nil, relaymodel.WrapperOpenAIErrorWithMessage(
+		return model.Usage{}, relaymodel.WrapperOpenAIErrorWithMessage(
 			fmt.Sprintf("unsupported mode: %s", meta.Mode),
 			"unsupported_mode",
 			http.StatusBadRequest,
@@ -69,11 +75,18 @@ func (a *Adaptor) DoResponse(
 	}
 }
 
-func (a *Adaptor) SetupRequestHeader(meta *meta.Meta, _ *gin.Context, req *http.Request) error {
+func (a *Adaptor) SetupRequestHeader(
+	meta *meta.Meta,
+	_ adaptor.Store,
+	_ *gin.Context,
+	req *http.Request,
+) error {
 	req.Header.Set("Authorization", "Bearer "+meta.Channel.Key)
 	return nil
 }
 
-func (a *Adaptor) GetModelList() []model.ModelConfig {
-	return ModelList
+func (a *Adaptor) Metadata() adaptor.Metadata {
+	return adaptor.Metadata{
+		Models: ModelList,
+	}
 }

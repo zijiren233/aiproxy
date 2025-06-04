@@ -50,9 +50,6 @@ func TestConvertRerankRequestSuccess(t *testing.T) {
 	// Assert no error
 	require.NoError(t, err)
 
-	// Assert method
-	assert.Equal(t, http.MethodPost, result.Method)
-
 	// Read the transformed body
 	bodyBytes, err := io.ReadAll(result.Body)
 	require.NoError(t, err)

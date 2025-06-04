@@ -69,18 +69,18 @@ type STTUsage struct {
 func ConvertSTTRequest(
 	meta *meta.Meta,
 	request *http.Request,
-) (*adaptor.ConvertRequestResult, error) {
+) (adaptor.ConvertResult, error) {
 	err := request.ParseMultipartForm(1024 * 1024 * 4)
 	if err != nil {
-		return nil, err
+		return adaptor.ConvertResult{}, err
 	}
 	audioFile, _, err := request.FormFile("file")
 	if err != nil {
-		return nil, err
+		return adaptor.ConvertResult{}, err
 	}
 	audioData, err := io.ReadAll(audioFile)
 	if err != nil {
-		return nil, err
+		return adaptor.ConvertResult{}, err
 	}
 	format := "mp3"
 	if request.FormValue("format") != "" {
@@ -90,7 +90,7 @@ func ConvertSTTRequest(
 	if request.FormValue("sample_rate") != "" {
 		sampleRate, err = strconv.Atoi(request.FormValue("sample_rate"))
 		if err != nil {
-			return nil, err
+			return adaptor.ConvertResult{}, err
 		}
 	}
 
@@ -115,12 +115,11 @@ func ConvertSTTRequest(
 
 	data, err := sonic.Marshal(sttRequest)
 	if err != nil {
-		return nil, err
+		return adaptor.ConvertResult{}, err
 	}
 	meta.Set("audio_data", audioData)
 	meta.Set("task_id", sttRequest.Header.TaskID)
-	return &adaptor.ConvertRequestResult{
-		Method: http.MethodPost,
+	return adaptor.ConvertResult{
 		Header: http.Header{
 			"X-DashScope-DataInspection": {"enable"},
 		},
@@ -158,7 +157,7 @@ func STTDoResponse(
 	meta *meta.Meta,
 	c *gin.Context,
 	_ *http.Response,
-) (usage *model.Usage, err adaptor.Error) {
+) (usage model.Usage, err adaptor.Error) {
 	audioData, ok := meta.MustGet("audio_data").([]byte)
 	if !ok {
 		panic(fmt.Sprintf("audio data type error: %T, %v", audioData, audioData))
@@ -175,7 +174,7 @@ func STTDoResponse(
 
 	output := strings.Builder{}
 
-	usage = &model.Usage{}
+	usage = model.Usage{}
 
 	for {
 		messageType, data, err := conn.ReadMessage()

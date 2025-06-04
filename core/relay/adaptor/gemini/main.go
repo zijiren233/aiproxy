@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -294,16 +295,16 @@ func processImageTasks(ctx context.Context, imageTasks []*Part) error {
 }
 
 // Setting safety to the lowest possible values since Gemini is already powerless enough
-func ConvertRequest(meta *meta.Meta, req *http.Request) (*adaptor.ConvertRequestResult, error) {
+func ConvertRequest(meta *meta.Meta, req *http.Request) (adaptor.ConvertResult, error) {
 	adaptorConfig := Config{}
 	err := meta.ChannelConfig.SpecConfig(&adaptorConfig)
 	if err != nil {
-		return nil, err
+		return adaptor.ConvertResult{}, err
 	}
 
 	textRequest, err := utils.UnmarshalGeneralOpenAIRequest(req)
 	if err != nil {
-		return nil, err
+		return adaptor.ConvertResult{}, err
 	}
 
 	textRequest.Model = meta.ActualModel
@@ -314,13 +315,13 @@ func ConvertRequest(meta *meta.Meta, req *http.Request) (*adaptor.ConvertRequest
 	// Process image tasks concurrently
 	if len(imageTasks) > 0 {
 		if err := processImageTasks(req.Context(), imageTasks); err != nil {
-			return nil, err
+			return adaptor.ConvertResult{}, err
 		}
 	}
 
 	config, err := buildGenerationConfig(meta, req, textRequest)
 	if err != nil {
-		return nil, err
+		return adaptor.ConvertResult{}, err
 	}
 
 	// Build actual request
@@ -335,13 +336,15 @@ func ConvertRequest(meta *meta.Meta, req *http.Request) (*adaptor.ConvertRequest
 
 	data, err := sonic.Marshal(geminiRequest)
 	if err != nil {
-		return nil, err
+		return adaptor.ConvertResult{}, err
 	}
 
-	return &adaptor.ConvertRequestResult{
-		Method: http.MethodPost,
-		Header: nil,
-		Body:   bytes.NewReader(data),
+	return adaptor.ConvertResult{
+		Header: http.Header{
+			"Content-Type":   {"application/json"},
+			"Content-Length": {strconv.Itoa(len(data))},
+		},
+		Body: bytes.NewReader(data),
 	}, nil
 }
 
@@ -444,7 +447,7 @@ func responseChat2OpenAI(meta *meta.Meta, response *ChatResponse) *relaymodel.Te
 	fullTextResponse := relaymodel.TextResponse{
 		ID:      openai.ChatCompletionID(),
 		Model:   meta.OriginModel,
-		Object:  relaymodel.ChatCompletion,
+		Object:  relaymodel.ChatCompletionObject,
 		Created: time.Now().Unix(),
 		Choices: make([]*relaymodel.TextResponseChoice, 0, len(response.Candidates)),
 	}
@@ -527,7 +530,7 @@ func streamResponseChat2OpenAI(
 		ID:      openai.ChatCompletionID(),
 		Created: time.Now().Unix(),
 		Model:   meta.OriginModel,
-		Object:  relaymodel.ChatCompletionChunk,
+		Object:  relaymodel.ChatCompletionChunkObject,
 		Choices: make(
 			[]*relaymodel.ChatCompletionsStreamResponseChoice,
 			0,
@@ -635,12 +638,12 @@ func StreamHandler(
 	meta *meta.Meta,
 	c *gin.Context,
 	resp *http.Response,
-) (*model.Usage, adaptor.Error) {
-	defer resp.Body.Close()
-
+) (model.Usage, adaptor.Error) {
 	if resp.StatusCode != http.StatusOK {
-		return nil, openai.ErrorHanlder(resp)
+		return model.Usage{}, openai.ErrorHanlder(resp)
 	}
+
+	defer resp.Body.Close()
 
 	log := middleware.GetLogger(c)
 
@@ -693,9 +696,9 @@ func StreamHandler(
 	return usage.ToModelUsage(), nil
 }
 
-func Handler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, adaptor.Error) {
+func Handler(meta *meta.Meta, c *gin.Context, resp *http.Response) (model.Usage, adaptor.Error) {
 	if resp.StatusCode != http.StatusOK {
-		return nil, openai.ErrorHanlder(resp)
+		return model.Usage{}, openai.ErrorHanlder(resp)
 	}
 
 	defer resp.Body.Close()
@@ -703,7 +706,7 @@ func Handler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage
 	var geminiResponse ChatResponse
 	err := sonic.ConfigDefault.NewDecoder(resp.Body).Decode(&geminiResponse)
 	if err != nil {
-		return nil, relaymodel.WrapperOpenAIError(
+		return model.Usage{}, relaymodel.WrapperOpenAIError(
 			err,
 			"unmarshal_response_body_failed",
 			http.StatusInternalServerError,
@@ -712,14 +715,14 @@ func Handler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage
 	fullTextResponse := responseChat2OpenAI(meta, &geminiResponse)
 	jsonResponse, err := sonic.Marshal(fullTextResponse)
 	if err != nil {
-		return nil, relaymodel.WrapperOpenAIError(
+		return fullTextResponse.ToModelUsage(), relaymodel.WrapperOpenAIError(
 			err,
 			"marshal_response_body_failed",
 			http.StatusInternalServerError,
 		)
 	}
 	c.Writer.Header().Set("Content-Type", "application/json")
-	c.Writer.WriteHeader(resp.StatusCode)
+	c.Writer.Header().Set("Content-Length", strconv.Itoa(len(jsonResponse)))
 	_, _ = c.Writer.Write(jsonResponse)
 	return fullTextResponse.ToModelUsage(), nil
 }

@@ -4619,6 +4619,7 @@ const docTemplate = `{
                         "enum": [
                             1,
                             3,
+                            4,
                             12,
                             13,
                             14,
@@ -7787,6 +7788,210 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/v1/video/generations/jobs": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "VideoGenerationsJobs",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "relay"
+                ],
+                "summary": "VideoGenerationsJobs",
+                "parameters": [
+                    {
+                        "description": "Request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.VideoGenerationJobRequest"
+                        }
+                    },
+                    {
+                        "type": "string",
+                        "description": "Optional Aiproxy-Channel header",
+                        "name": "Aiproxy-Channel",
+                        "in": "header"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.VideoGenerationJob"
+                        },
+                        "headers": {
+                            "X-RateLimit-Limit-Requests": {
+                                "type": "integer",
+                                "description": "X-RateLimit-Limit-Requests"
+                            },
+                            "X-RateLimit-Limit-Tokens": {
+                                "type": "integer",
+                                "description": "X-RateLimit-Limit-Tokens"
+                            },
+                            "X-RateLimit-Remaining-Requests": {
+                                "type": "integer",
+                                "description": "X-RateLimit-Remaining-Requests"
+                            },
+                            "X-RateLimit-Remaining-Tokens": {
+                                "type": "integer",
+                                "description": "X-RateLimit-Remaining-Tokens"
+                            },
+                            "X-RateLimit-Reset-Requests": {
+                                "type": "string",
+                                "description": "X-RateLimit-Reset-Requests"
+                            },
+                            "X-RateLimit-Reset-Tokens": {
+                                "type": "string",
+                                "description": "X-RateLimit-Reset-Tokens"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/video/generations/jobs/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "VideoGenerationsGetJobs",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "relay"
+                ],
+                "summary": "VideoGenerationsGetJobs",
+                "parameters": [
+                    {
+                        "description": "Request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.VideoGenerationJobRequest"
+                        }
+                    },
+                    {
+                        "type": "string",
+                        "description": "Optional Aiproxy-Channel header",
+                        "name": "Aiproxy-Channel",
+                        "in": "header"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.VideoGenerationJob"
+                        },
+                        "headers": {
+                            "X-RateLimit-Limit-Requests": {
+                                "type": "integer",
+                                "description": "X-RateLimit-Limit-Requests"
+                            },
+                            "X-RateLimit-Limit-Tokens": {
+                                "type": "integer",
+                                "description": "X-RateLimit-Limit-Tokens"
+                            },
+                            "X-RateLimit-Remaining-Requests": {
+                                "type": "integer",
+                                "description": "X-RateLimit-Remaining-Requests"
+                            },
+                            "X-RateLimit-Remaining-Tokens": {
+                                "type": "integer",
+                                "description": "X-RateLimit-Remaining-Tokens"
+                            },
+                            "X-RateLimit-Reset-Requests": {
+                                "type": "string",
+                                "description": "X-RateLimit-Reset-Requests"
+                            },
+                            "X-RateLimit-Reset-Tokens": {
+                                "type": "string",
+                                "description": "X-RateLimit-Reset-Tokens"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/video/generations/{id}/content/video": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "VideoGenerationsContent",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "relay"
+                ],
+                "summary": "VideoGenerationsContent",
+                "parameters": [
+                    {
+                        "description": "Request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.VideoGenerationJobRequest"
+                        }
+                    },
+                    {
+                        "type": "string",
+                        "description": "Optional Aiproxy-Channel header",
+                        "name": "Aiproxy-Channel",
+                        "in": "header"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "video binary",
+                        "schema": {
+                            "type": "file"
+                        },
+                        "headers": {
+                            "X-RateLimit-Limit-Requests": {
+                                "type": "integer",
+                                "description": "X-RateLimit-Limit-Requests"
+                            },
+                            "X-RateLimit-Limit-Tokens": {
+                                "type": "integer",
+                                "description": "X-RateLimit-Limit-Tokens"
+                            },
+                            "X-RateLimit-Remaining-Requests": {
+                                "type": "integer",
+                                "description": "X-RateLimit-Remaining-Requests"
+                            },
+                            "X-RateLimit-Remaining-Tokens": {
+                                "type": "integer",
+                                "description": "X-RateLimit-Remaining-Tokens"
+                            },
+                            "X-RateLimit-Reset-Requests": {
+                                "type": "string",
+                                "description": "X-RateLimit-Reset-Requests"
+                            },
+                            "X-RateLimit-Reset-Tokens": {
+                                "type": "string",
+                                "description": "X-RateLimit-Reset-Tokens"
+                            }
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
@@ -7832,7 +8037,7 @@ const docTemplate = `{
         "adaptors.AdaptorMeta": {
             "type": "object",
             "properties": {
-                "configTemplates": {
+                "config": {
                     "$ref": "#/definitions/adaptor.ConfigTemplates"
                 },
                 "defaultBaseUrl": {
@@ -8555,7 +8760,10 @@ const docTemplate = `{
                 9,
                 10,
                 11,
-                12
+                12,
+                13,
+                14,
+                15
             ],
             "x-enum-varnames": [
                 "Unknown",
@@ -8570,7 +8778,10 @@ const docTemplate = `{
                 "AudioTranslation",
                 "Rerank",
                 "ParsePdf",
-                "Anthropic"
+                "Anthropic",
+                "VideoGenerationsJobs",
+                "VideoGenerationsGetJobs",
+                "VideoGenerationsContent"
             ]
         },
         "model.AnthropicMessageRequest": {
@@ -8583,17 +8794,6 @@ const docTemplate = `{
                     }
                 },
                 "model": {
-                    "type": "string"
-                }
-            }
-        },
-        "model.Audio": {
-            "type": "object",
-            "properties": {
-                "format": {
-                    "type": "string"
-                },
-                "voice": {
                     "type": "string"
                 }
             }
@@ -8729,6 +8929,7 @@ const docTemplate = `{
             "enum": [
                 1,
                 3,
+                4,
                 12,
                 13,
                 14,
@@ -8766,6 +8967,7 @@ const docTemplate = `{
             "x-enum-varnames": [
                 "ChannelTypeOpenAI",
                 "ChannelTypeAzure",
+                "ChannelTypeAzure2",
                 "ChannelTypeGoogleGeminiOpenAI",
                 "ChannelTypeBaiduV2",
                 "ChannelTypeAnthropic",
@@ -9074,24 +9276,12 @@ const docTemplate = `{
         "model.GeneralOpenAIRequest": {
             "type": "object",
             "properties": {
-                "audio": {
-                    "$ref": "#/definitions/model.Audio"
-                },
-                "dimensions": {
-                    "type": "integer"
-                },
-                "encoding_format": {
-                    "type": "string"
-                },
                 "frequency_penalty": {
                     "type": "number"
                 },
                 "function_call": {},
                 "functions": {},
                 "input": {},
-                "instruction": {
-                    "type": "string"
-                },
                 "logit_bias": {},
                 "logprobs": {
                     "type": "boolean"
@@ -9109,56 +9299,31 @@ const docTemplate = `{
                     }
                 },
                 "metadata": {},
-                "modalities": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
                 "model": {
                     "type": "string"
-                },
-                "n": {
-                    "type": "integer"
                 },
                 "num_ctx": {
                     "type": "integer"
                 },
-                "parallel_tool_calls": {
-                    "type": "boolean"
-                },
-                "prediction": {},
                 "presence_penalty": {
                     "type": "number"
                 },
                 "prompt": {},
-                "quality": {
-                    "type": "string"
-                },
                 "response_format": {
                     "$ref": "#/definitions/model.ResponseFormat"
                 },
                 "seed": {
                     "type": "number"
                 },
-                "service_tier": {
-                    "type": "string"
-                },
                 "size": {
                     "type": "string"
                 },
                 "stop": {},
-                "store": {
-                    "type": "boolean"
-                },
                 "stream": {
                     "type": "boolean"
                 },
                 "stream_options": {
                     "$ref": "#/definitions/model.StreamOptions"
-                },
-                "style": {
-                    "type": "string"
                 },
                 "temperature": {
                     "type": "number"
@@ -10368,6 +10533,123 @@ const docTemplate = `{
                 },
                 "type": {
                     "type": "string"
+                }
+            }
+        },
+        "model.VideoGenerationJob": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "integer"
+                },
+                "expires_at": {
+                    "type": "integer"
+                },
+                "finish_reason": {
+                    "type": "string"
+                },
+                "finished_at": {
+                    "type": "integer"
+                },
+                "generations": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.VideoGenerations"
+                    }
+                },
+                "height": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "model": {
+                    "type": "string"
+                },
+                "n_seconds": {
+                    "type": "integer"
+                },
+                "n_variants": {
+                    "type": "integer"
+                },
+                "object": {
+                    "type": "string"
+                },
+                "prompt": {
+                    "type": "string"
+                },
+                "status": {
+                    "$ref": "#/definitions/model.VideoGenerationJobStatus"
+                },
+                "width": {
+                    "type": "integer"
+                }
+            }
+        },
+        "model.VideoGenerationJobRequest": {
+            "type": "object",
+            "properties": {
+                "height": {
+                    "type": "integer"
+                },
+                "model": {
+                    "type": "string"
+                },
+                "n_seconds": {
+                    "type": "integer"
+                },
+                "n_variants": {
+                    "type": "integer"
+                },
+                "prompt": {
+                    "type": "string"
+                },
+                "width": {
+                    "type": "integer"
+                }
+            }
+        },
+        "model.VideoGenerationJobStatus": {
+            "type": "string",
+            "enum": [
+                "queued",
+                "processing",
+                "running",
+                "succeeded"
+            ],
+            "x-enum-varnames": [
+                "VideoGenerationJobStatusQueued",
+                "VideoGenerationJobStatusProcessing",
+                "VideoGenerationJobStatusRunning",
+                "VideoGenerationJobStatusSucceeded"
+            ]
+        },
+        "model.VideoGenerations": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "integer"
+                },
+                "height": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "job_id": {
+                    "type": "string"
+                },
+                "n_seconds": {
+                    "type": "integer"
+                },
+                "object": {
+                    "type": "string"
+                },
+                "prompt": {
+                    "type": "string"
+                },
+                "width": {
+                    "type": "integer"
                 }
             }
         },

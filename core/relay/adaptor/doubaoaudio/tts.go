@@ -65,20 +65,20 @@ type RequestConfig struct {
 var defaultHeader = []byte{0x11, 0x10, 0x11, 0x00}
 
 //nolint:gosec
-func ConvertTTSRequest(meta *meta.Meta, req *http.Request) (*adaptor.ConvertRequestResult, error) {
+func ConvertTTSRequest(meta *meta.Meta, req *http.Request) (adaptor.ConvertResult, error) {
 	request, err := utils.UnmarshalTTSRequest(req)
 	if err != nil {
-		return nil, err
+		return adaptor.ConvertResult{}, err
 	}
 
 	reqMap, err := utils.UnmarshalMap(req)
 	if err != nil {
-		return nil, err
+		return adaptor.ConvertResult{}, err
 	}
 
 	appID, token, err := getAppIDAndToken(meta.Channel.Key)
 	if err != nil {
-		return nil, err
+		return adaptor.ConvertResult{}, err
 	}
 
 	cluster := "volcano_tts"
@@ -129,27 +129,23 @@ func ConvertTTSRequest(meta *meta.Meta, req *http.Request) (*adaptor.ConvertRequ
 
 	data, err := sonic.Marshal(doubaoRequest)
 	if err != nil {
-		return nil, err
+		return adaptor.ConvertResult{}, err
 	}
 
 	compressedData, err := gzipCompress(data)
 	if err != nil {
-		return nil, err
+		return adaptor.ConvertResult{}, err
 	}
 
 	payloadArr := make([]byte, 4)
 	binary.BigEndian.PutUint32(payloadArr, uint32(len(compressedData)))
 	clientRequest := make([]byte, len(defaultHeader))
 	copy(clientRequest, defaultHeader)
-	//nolint:makezero
 	clientRequest = append(clientRequest, payloadArr...)
-	//nolint:makezero
 	clientRequest = append(clientRequest, compressedData...)
 
-	return &adaptor.ConvertRequestResult{
-		Method: http.MethodPost,
-		Header: nil,
-		Body:   bytes.NewReader(clientRequest),
+	return adaptor.ConvertResult{
+		Body: bytes.NewReader(clientRequest),
 	}, nil
 }
 
@@ -184,7 +180,7 @@ func TTSDoResponse(
 	meta *meta.Meta,
 	c *gin.Context,
 	_ *http.Response,
-) (*model.Usage, adaptor.Error) {
+) (model.Usage, adaptor.Error) {
 	log := middleware.GetLogger(c)
 
 	conn, ok := meta.MustGet("ws_conn").(*websocket.Conn)
@@ -193,7 +189,7 @@ func TTSDoResponse(
 	}
 	defer conn.Close()
 
-	usage := &model.Usage{
+	usage := model.Usage{
 		InputTokens: meta.RequestUsage.InputTokens,
 		TotalTokens: meta.RequestUsage.InputTokens,
 	}

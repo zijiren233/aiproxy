@@ -16,8 +16,16 @@ import (
 )
 
 type AwsAdapter interface {
-	ConvertRequest(meta *meta.Meta, req *http.Request) (*adaptor.ConvertRequestResult, error)
-	DoResponse(meta *meta.Meta, c *gin.Context) (usage *model.Usage, err adaptor.Error)
+	ConvertRequest(
+		meta *meta.Meta,
+		store adaptor.Store,
+		req *http.Request,
+	) (adaptor.ConvertResult, error)
+	DoResponse(
+		meta *meta.Meta,
+		store adaptor.Store,
+		c *gin.Context,
+	) (usage model.Usage, err adaptor.Error)
 }
 
 type AwsConfig struct {

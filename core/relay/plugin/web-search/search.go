@@ -99,62 +99,63 @@ func (p *WebSearch) getConfig(meta *meta.Meta) (Config, error) {
 // ConvertRequest intercepts and modifies requests to add web search capabilities
 func (p *WebSearch) ConvertRequest(
 	meta *meta.Meta,
+	store adaptor.Store,
 	req *http.Request,
 	do adaptor.ConvertRequest,
-) (*adaptor.ConvertRequestResult, error) {
+) (adaptor.ConvertResult, error) {
 	// Skip if not chat completions mode
 	if meta.Mode != mode.ChatCompletions {
-		return do.ConvertRequest(meta, req)
+		return do.ConvertRequest(meta, store, req)
 	}
 
 	// Load plugin configuration
 	pluginConfig, err := p.getConfig(meta)
 	if err != nil {
-		return do.ConvertRequest(meta, req)
+		return do.ConvertRequest(meta, store, req)
 	}
 
 	// Skip if plugin is disabled
 	if !pluginConfig.Enable {
-		return do.ConvertRequest(meta, req)
+		return do.ConvertRequest(meta, store, req)
 	}
 
 	// Apply default configuration values if needed
 	if err := p.validateAndApplyDefaults(&pluginConfig); err != nil {
-		return do.ConvertRequest(meta, req)
+		return do.ConvertRequest(meta, store, req)
 	}
 
 	// Initialize search engines
 	engines, arxivExists, err := p.initializeSearchEngines(pluginConfig.SearchFrom)
 	if err != nil || len(engines) == 0 {
-		return do.ConvertRequest(meta, req)
+		return do.ConvertRequest(meta, store, req)
 	}
 
 	// Read and parse request body
 	body, err := common.GetRequestBody(req)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read request body: %w", err)
+		return adaptor.ConvertResult{}, fmt.Errorf("failed to read request body: %w", err)
 	}
 
 	var chatRequest map[string]any
 	if err := sonic.Unmarshal(body, &chatRequest); err != nil {
-		return do.ConvertRequest(meta, req)
+		return do.ConvertRequest(meta, store, req)
 	}
 
 	// Check if web search should be enabled for this request
 	webSearchOptions, hasWebSearchOptions := chatRequest["web_search_options"].(map[string]any)
 	if !pluginConfig.ForceSearch && !hasWebSearchOptions {
-		return do.ConvertRequest(meta, req)
+		return do.ConvertRequest(meta, store, req)
 	}
 
 	// Extract user query from messages
 	messages, ok := chatRequest["messages"].([]any)
 	if !ok || len(messages) == 0 {
-		return do.ConvertRequest(meta, req)
+		return do.ConvertRequest(meta, store, req)
 	}
 
 	queryIndex, query := p.extractUserQuery(messages)
 	if query == "" {
-		return do.ConvertRequest(meta, req)
+		return do.ConvertRequest(meta, store, req)
 	}
 
 	// Prepare search rewrite prompt if configured
@@ -165,19 +166,25 @@ func (p *WebSearch) ConvertRequest(
 	)
 
 	// Generate search contexts
-	searchContexts, err := p.generateSearchContexts(meta, pluginConfig, query, searchRewritePrompt)
+	searchContexts, err := p.generateSearchContexts(
+		meta,
+		store,
+		pluginConfig,
+		query,
+		searchRewritePrompt,
+	)
 	if err != nil {
-		return do.ConvertRequest(meta, req)
+		return do.ConvertRequest(meta, store, req)
 	}
 
 	if len(searchContexts) == 0 {
-		return do.ConvertRequest(meta, req)
+		return do.ConvertRequest(meta, store, req)
 	}
 
 	// Execute searches
 	searchResult := p.executeSearches(context.Background(), engines, searchContexts)
 	if searchResult.Count == 0 || len(searchResult.Results) == 0 {
-		return do.ConvertRequest(meta, req)
+		return do.ConvertRequest(meta, store, req)
 	}
 	setSearchCount(meta, searchResult.Count)
 
@@ -189,7 +196,7 @@ func (p *WebSearch) ConvertRequest(
 	// Create new request body
 	modifiedBody, err := sonic.Marshal(chatRequest)
 	if err != nil {
-		return do.ConvertRequest(meta, req)
+		return do.ConvertRequest(meta, store, req)
 	}
 
 	// Update the request
@@ -201,7 +208,7 @@ func (p *WebSearch) ConvertRequest(
 		meta.Set("references", searchResult.Results)
 	}
 
-	return do.ConvertRequest(meta, req)
+	return do.ConvertRequest(meta, store, req)
 }
 
 // validateAndApplyDefaults validates configuration and applies default values
@@ -364,6 +371,7 @@ func (p *WebSearch) prepareSearchRewritePrompt(
 // generateSearchContexts creates search contexts based on the user query
 func (p *WebSearch) generateSearchContexts(
 	m *meta.Meta,
+	store adaptor.Store,
 	config Config,
 	query, searchRewritePrompt string,
 ) ([]engine.SearchQuery, error) {
@@ -432,7 +440,7 @@ func (p *WebSearch) generateSearchContexts(
 	if !ok {
 		return nil, errors.New("adaptor not found")
 	}
-	result := controller.Handle(adaptor, newc, newMeta)
+	result := controller.Handle(adaptor, newc, newMeta, store)
 	if result.Error != nil {
 		return nil, result.Error
 	}
@@ -614,6 +622,10 @@ type responseWriter struct {
 
 // Write overrides the standard Write method to inject metadata
 func (rw *responseWriter) Write(b []byte) (int, error) {
+	if rw.isStream || utils.IsStreamResponseWithHeader(rw.Header()) {
+		rw.isStream = true
+	}
+
 	node, err := sonic.Get(b)
 	if err != nil || !node.Valid() {
 		return rw.ResponseWriter.Write(b)
@@ -628,6 +640,12 @@ func (rw *responseWriter) Write(b []byte) (int, error) {
 	nb, err := sonic.Marshal(&node)
 	if err != nil {
 		return rw.ResponseWriter.Write(b)
+	}
+
+	if !rw.isStream {
+		if rw.ResponseWriter.Header().Get("Content-Length") != "" {
+			rw.ResponseWriter.Header().Set("Content-Length", strconv.Itoa(len(nb)))
+		}
 	}
 
 	return rw.ResponseWriter.Write(nb)
@@ -688,8 +706,7 @@ func (rw *responseWriter) processReferences(node *ast.Node) {
 
 	if rw.referencesLocation == "" || rw.referencesLocation == "content" {
 		var contentNode *ast.Node
-		if rw.isStream || utils.IsStreamResponseWithHeader(rw.Header()) {
-			rw.isStream = true
+		if rw.isStream {
 			contentNode = node.GetByPath("choices", 0, "delta", "content")
 		} else {
 			contentNode = node.GetByPath("choices", 0, "message", "content")
@@ -709,8 +726,7 @@ func (rw *responseWriter) processReferences(node *ast.Node) {
 		}
 	} else {
 		var outterLocation *ast.Node
-		if rw.isStream || utils.IsStreamResponseWithHeader(rw.Header()) {
-			rw.isStream = true
+		if rw.isStream {
 			outterLocation = node.GetByPath("choices", 0, "delta")
 		} else {
 			outterLocation = node.GetByPath("choices", 0, "message")
@@ -729,12 +745,13 @@ func (rw *responseWriter) WriteString(s string) (int, error) {
 // DoResponse handles response modification for references
 func (p *WebSearch) DoResponse(
 	meta *meta.Meta,
+	store adaptor.Store,
 	c *gin.Context,
 	resp *http.Response,
 	do adaptor.DoResponse,
-) (*model.Usage, adaptor.Error) {
+) (model.Usage, adaptor.Error) {
 	if meta.Mode != mode.ChatCompletions {
-		return do.DoResponse(meta, c, resp)
+		return do.DoResponse(meta, store, c, resp)
 	}
 
 	var references []engine.SearchResult
@@ -773,20 +790,21 @@ func (p *WebSearch) DoResponse(
 		}()
 	}
 
-	return p.doResponseWithCount(meta, c, resp, do, count)
+	return p.doResponseWithCount(meta, store, c, resp, do, count)
 }
 
 // doResponseWithCount adds search count to usage statistics
 func (p *WebSearch) doResponseWithCount(
 	meta *meta.Meta,
+	store adaptor.Store,
 	c *gin.Context,
 	resp *http.Response,
 	do adaptor.DoResponse,
 	count int,
-) (*model.Usage, adaptor.Error) {
-	u, err := do.DoResponse(meta, c, resp)
+) (model.Usage, adaptor.Error) {
+	u, err := do.DoResponse(meta, store, c, resp)
 	if err != nil {
-		return u, err
+		return model.Usage{}, err
 	}
 	u.WebSearchCount += model.ZeroNullInt64(int64(count))
 	return u, nil

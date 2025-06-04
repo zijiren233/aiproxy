@@ -3,6 +3,7 @@ package gemini
 import (
 	"bytes"
 	"net/http"
+	"strconv"
 
 	"github.com/bytedance/sonic"
 	"github.com/gin-gonic/gin"
@@ -17,10 +18,10 @@ import (
 func ConvertEmbeddingRequest(
 	meta *meta.Meta,
 	req *http.Request,
-) (*adaptor.ConvertRequestResult, error) {
+) (adaptor.ConvertResult, error) {
 	request, err := utils.UnmarshalGeneralOpenAIRequest(req)
 	if err != nil {
-		return nil, err
+		return adaptor.ConvertResult{}, err
 	}
 	request.Model = meta.ActualModel
 
@@ -45,12 +46,14 @@ func ConvertEmbeddingRequest(
 		Requests: requests,
 	})
 	if err != nil {
-		return nil, err
+		return adaptor.ConvertResult{}, err
 	}
-	return &adaptor.ConvertRequestResult{
-		Method: http.MethodPost,
-		Header: nil,
-		Body:   bytes.NewReader(data),
+	return adaptor.ConvertResult{
+		Header: http.Header{
+			"Content-Type":   {"application/json"},
+			"Content-Length": {strconv.Itoa(len(data))},
+		},
+		Body: bytes.NewReader(data),
 	}, nil
 }
 
@@ -58,9 +61,9 @@ func EmbeddingHandler(
 	meta *meta.Meta,
 	c *gin.Context,
 	resp *http.Response,
-) (*model.Usage, adaptor.Error) {
+) (model.Usage, adaptor.Error) {
 	if resp.StatusCode != http.StatusOK {
-		return nil, openai.ErrorHanlder(resp)
+		return model.Usage{}, openai.ErrorHanlder(resp)
 	}
 
 	defer resp.Body.Close()
@@ -68,30 +71,24 @@ func EmbeddingHandler(
 	var geminiEmbeddingResponse EmbeddingResponse
 	err := sonic.ConfigDefault.NewDecoder(resp.Body).Decode(&geminiEmbeddingResponse)
 	if err != nil {
-		return nil, relaymodel.WrapperOpenAIError(
+		return model.Usage{}, relaymodel.WrapperOpenAIError(
 			err,
 			"unmarshal_response_body_failed",
 			http.StatusInternalServerError,
 		)
 	}
-	if geminiEmbeddingResponse.Error != nil {
-		return nil, relaymodel.WrapperOpenAIErrorWithMessage(
-			geminiEmbeddingResponse.Error.Message,
-			geminiEmbeddingResponse.Error.Code,
-			resp.StatusCode,
-		)
-	}
+
 	fullTextResponse := embeddingResponse2OpenAI(meta, &geminiEmbeddingResponse)
 	jsonResponse, err := sonic.Marshal(fullTextResponse)
 	if err != nil {
-		return nil, relaymodel.WrapperOpenAIError(
+		return fullTextResponse.ToModelUsage(), relaymodel.WrapperOpenAIError(
 			err,
 			"marshal_response_body_failed",
 			http.StatusInternalServerError,
 		)
 	}
 	c.Writer.Header().Set("Content-Type", "application/json")
-	c.Writer.WriteHeader(resp.StatusCode)
+	c.Writer.Header().Set("Content-Length", strconv.Itoa(len(jsonResponse)))
 	_, _ = c.Writer.Write(jsonResponse)
 	return fullTextResponse.ToModelUsage(), nil
 }

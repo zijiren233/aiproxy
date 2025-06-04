@@ -18,18 +18,18 @@ type Adaptor struct{}
 
 func (a *Adaptor) ConvertRequest(
 	meta *meta.Meta,
+	_ adaptor.Store,
 	req *http.Request,
-) (*adaptor.ConvertRequestResult, error) {
+) (adaptor.ConvertResult, error) {
 	request, err := relayutils.UnmarshalGeneralOpenAIRequest(req)
 	if err != nil {
-		return nil, err
+		return adaptor.ConvertResult{}, err
 	}
 	request.Model = meta.ActualModel
 	meta.Set("stream", request.Stream)
 	llamaReq := ConvertRequest(request)
 	meta.Set(ConvertedRequest, llamaReq)
-	return &adaptor.ConvertRequestResult{
-		Method: http.MethodPost,
+	return adaptor.ConvertResult{
 		Header: nil,
 		Body:   nil,
 	}, nil
@@ -37,8 +37,9 @@ func (a *Adaptor) ConvertRequest(
 
 func (a *Adaptor) DoResponse(
 	meta *meta.Meta,
+	_ adaptor.Store,
 	c *gin.Context,
-) (usage *model.Usage, err adaptor.Error) {
+) (usage model.Usage, err adaptor.Error) {
 	if meta.GetBool("stream") {
 		usage, err = StreamHandler(meta, c)
 	} else {

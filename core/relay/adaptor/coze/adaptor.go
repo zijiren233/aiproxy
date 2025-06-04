@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/bytedance/sonic"
@@ -19,15 +20,23 @@ type Adaptor struct{}
 
 const baseURL = "https://api.coze.com"
 
-func (a *Adaptor) GetBaseURL() string {
+func (a *Adaptor) DefaultBaseURL() string {
 	return baseURL
 }
 
-func (a *Adaptor) GetRequestURL(meta *meta.Meta) (string, error) {
-	return meta.Channel.BaseURL + "/open_api/v2/chat", nil
+func (a *Adaptor) GetRequestURL(meta *meta.Meta, _ adaptor.Store) (adaptor.RequestURL, error) {
+	return adaptor.RequestURL{
+		Method: http.MethodPost,
+		URL:    meta.Channel.BaseURL + "/open_api/v2/chat",
+	}, nil
 }
 
-func (a *Adaptor) SetupRequestHeader(meta *meta.Meta, _ *gin.Context, req *http.Request) error {
+func (a *Adaptor) SetupRequestHeader(
+	meta *meta.Meta,
+	_ adaptor.Store,
+	_ *gin.Context,
+	req *http.Request,
+) error {
 	token, _, err := getTokenAndUserID(meta.Channel.Key)
 	if err != nil {
 		return err
@@ -38,18 +47,19 @@ func (a *Adaptor) SetupRequestHeader(meta *meta.Meta, _ *gin.Context, req *http.
 
 func (a *Adaptor) ConvertRequest(
 	meta *meta.Meta,
+	_ adaptor.Store,
 	req *http.Request,
-) (*adaptor.ConvertRequestResult, error) {
+) (adaptor.ConvertResult, error) {
 	if meta.Mode != mode.ChatCompletions {
-		return nil, errors.New("coze only support chat completions")
+		return adaptor.ConvertResult{}, errors.New("coze only support chat completions")
 	}
 	request, err := utils.UnmarshalGeneralOpenAIRequest(req)
 	if err != nil {
-		return nil, err
+		return adaptor.ConvertResult{}, err
 	}
 	_, userID, err := getTokenAndUserID(meta.Channel.Key)
 	if err != nil {
-		return nil, err
+		return adaptor.ConvertResult{}, err
 	}
 	request.User = userID
 	request.Model = meta.ActualModel
@@ -71,17 +81,20 @@ func (a *Adaptor) ConvertRequest(
 	}
 	data, err := sonic.Marshal(cozeRequest)
 	if err != nil {
-		return nil, err
+		return adaptor.ConvertResult{}, err
 	}
-	return &adaptor.ConvertRequestResult{
-		Method: http.MethodPost,
-		Header: nil,
-		Body:   bytes.NewReader(data),
+	return adaptor.ConvertResult{
+		Header: http.Header{
+			"Content-Type":   {"application/json"},
+			"Content-Length": {strconv.Itoa(len(data))},
+		},
+		Body: bytes.NewReader(data),
 	}, nil
 }
 
 func (a *Adaptor) DoRequest(
 	_ *meta.Meta,
+	_ adaptor.Store,
 	_ *gin.Context,
 	req *http.Request,
 ) (*http.Response, error) {
@@ -90,9 +103,10 @@ func (a *Adaptor) DoRequest(
 
 func (a *Adaptor) DoResponse(
 	meta *meta.Meta,
+	_ adaptor.Store,
 	c *gin.Context,
 	resp *http.Response,
-) (usage *model.Usage, err adaptor.Error) {
+) (usage model.Usage, err adaptor.Error) {
 	if utils.IsStreamResponse(resp) {
 		usage, err = StreamHandler(meta, c, resp)
 	} else {
@@ -101,6 +115,9 @@ func (a *Adaptor) DoResponse(
 	return
 }
 
-func (a *Adaptor) GetModelList() []model.ModelConfig {
-	return ModelList
+func (a *Adaptor) Metadata() adaptor.Metadata {
+	return adaptor.Metadata{
+		KeyHelp: "token|user_id",
+		Models:  ModelList,
+	}
 }

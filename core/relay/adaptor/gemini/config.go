@@ -6,8 +6,6 @@ import (
 	"github.com/labring/aiproxy/core/relay/adaptor"
 )
 
-var _ adaptor.Config = (*Adaptor)(nil)
-
 type Config struct {
 	Safety string `json:"safety"`
 }

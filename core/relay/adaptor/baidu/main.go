@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"net/http"
+	"strconv"
 
 	"github.com/bytedance/sonic"
 	"github.com/gin-gonic/gin"
@@ -38,10 +39,10 @@ type ChatRequest struct {
 	EnableCitation  bool                  `json:"enable_citation,omitempty"`
 }
 
-func ConvertRequest(meta *meta.Meta, req *http.Request) (*adaptor.ConvertRequestResult, error) {
+func ConvertRequest(meta *meta.Meta, req *http.Request) (adaptor.ConvertResult, error) {
 	request, err := utils.UnmarshalGeneralOpenAIRequest(req)
 	if err != nil {
-		return nil, err
+		return adaptor.ConvertResult{}, err
 	}
 	request.Model = meta.ActualModel
 	baiduRequest := ChatRequest{
@@ -78,12 +79,14 @@ func ConvertRequest(meta *meta.Meta, req *http.Request) (*adaptor.ConvertRequest
 
 	data, err := sonic.Marshal(baiduRequest)
 	if err != nil {
-		return nil, err
+		return adaptor.ConvertResult{}, err
 	}
-	return &adaptor.ConvertRequestResult{
-		Method: http.MethodPost,
-		Header: nil,
-		Body:   bytes.NewReader(data),
+	return adaptor.ConvertResult{
+		Header: http.Header{
+			"Content-Type":   {"application/json"},
+			"Content-Length": {strconv.Itoa(len(data))},
+		},
+		Body: bytes.NewReader(data),
 	}, nil
 }
 
@@ -98,7 +101,7 @@ func response2OpenAI(meta *meta.Meta, response *ChatResponse) *relaymodel.TextRe
 	}
 	fullTextResponse := relaymodel.TextResponse{
 		ID:      response.ID,
-		Object:  relaymodel.ChatCompletion,
+		Object:  relaymodel.ChatCompletionObject,
 		Created: response.Created,
 		Model:   meta.OriginModel,
 		Choices: []*relaymodel.TextResponseChoice{&choice},
@@ -120,7 +123,7 @@ func streamResponse2OpenAI(
 	}
 	response := relaymodel.ChatCompletionsStreamResponse{
 		ID:      baiduResponse.ID,
-		Object:  relaymodel.ChatCompletionChunk,
+		Object:  relaymodel.ChatCompletionChunkObject,
 		Created: baiduResponse.Created,
 		Model:   meta.OriginModel,
 		Choices: []*relaymodel.ChatCompletionsStreamResponseChoice{&choice},
@@ -133,7 +136,7 @@ func StreamHandler(
 	meta *meta.Meta,
 	c *gin.Context,
 	resp *http.Response,
-) (*model.Usage, adaptor.Error) {
+) (model.Usage, adaptor.Error) {
 	defer resp.Body.Close()
 
 	log := middleware.GetLogger(c)
@@ -177,32 +180,32 @@ func StreamHandler(
 	return usage.ToModelUsage(), nil
 }
 
-func Handler(meta *meta.Meta, c *gin.Context, resp *http.Response) (*model.Usage, adaptor.Error) {
+func Handler(meta *meta.Meta, c *gin.Context, resp *http.Response) (model.Usage, adaptor.Error) {
 	defer resp.Body.Close()
 
 	var baiduResponse ChatResponse
 	err := sonic.ConfigDefault.NewDecoder(resp.Body).Decode(&baiduResponse)
 	if err != nil {
-		return nil, relaymodel.WrapperOpenAIError(
+		return model.Usage{}, relaymodel.WrapperOpenAIError(
 			err,
 			"unmarshal_response_body_failed",
 			http.StatusInternalServerError,
 		)
 	}
 	if baiduResponse.Error != nil && baiduResponse.ErrorCode != 0 {
-		return nil, ErrorHandler(baiduResponse.Error)
+		return model.Usage{}, ErrorHandler(baiduResponse.Error)
 	}
 	fullTextResponse := response2OpenAI(meta, &baiduResponse)
 	jsonResponse, err := sonic.Marshal(fullTextResponse)
 	if err != nil {
-		return nil, relaymodel.WrapperOpenAIError(
+		return fullTextResponse.ToModelUsage(), relaymodel.WrapperOpenAIError(
 			err,
 			"marshal_response_body_failed",
 			http.StatusInternalServerError,
 		)
 	}
 	c.Writer.Header().Set("Content-Type", "application/json")
-	c.Writer.WriteHeader(resp.StatusCode)
+	c.Writer.Header().Set("Content-Length", strconv.Itoa(len(jsonResponse)))
 	_, _ = c.Writer.Write(jsonResponse)
 	return fullTextResponse.ToModelUsage(), nil
 }
