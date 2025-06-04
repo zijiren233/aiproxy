@@ -202,7 +202,8 @@ func SetNotifyNote(note string) {
 }
 
 func GetPublicMCPHost() string {
-	return publicMCPHost.Load().(string)
+	h, _ := publicMCPHost.Load().(string)
+	return h
 }
 
 func SetPublicMCPHost(host string) {
@@ -211,7 +212,8 @@ func SetPublicMCPHost(host string) {
 }
 
 func GetGroupMCPHost() string {
-	return groupMCPHost.Load().(string)
+	h, _ := groupMCPHost.Load().(string)
+	return h
 }
 
 func SetGroupMCPHost(host string) {
