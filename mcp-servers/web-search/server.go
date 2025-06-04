@@ -95,7 +95,7 @@ type searchQuery struct {
 }
 
 // NewServer creates a new MCP server for web search
-func NewServer(config, _ map[string]string) (*server.MCPServer, error) {
+func NewServer(config, _ map[string]string) (mcpservers.Server, error) {
 	// Create MCP server
 	mcpServer := server.NewMCPServer(
 		"web-search",

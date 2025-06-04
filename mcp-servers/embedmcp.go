@@ -3,8 +3,6 @@ package mcpservers
 import (
 	"errors"
 	"fmt"
-
-	"github.com/mark3labs/mcp-go/server"
 )
 
 type ConfigValueValidator func(value string) error
@@ -100,7 +98,7 @@ func CheckConfigTemplatesValidate(ct ConfigTemplates) error {
 	return nil
 }
 
-type NewServerFunc func(config, reusingConfig map[string]string) (*server.MCPServer, error)
+type NewServerFunc func(config, reusingConfig map[string]string) (Server, error)
 
 type EmbedMcp struct {
 	ID              string
@@ -143,7 +141,7 @@ func NewEmbedMcp(id, name string, newServer NewServerFunc, opts ...EmbedMcpConfi
 	return e
 }
 
-func (e *EmbedMcp) NewServer(config, reusingConfig map[string]string) (*server.MCPServer, error) {
+func (e *EmbedMcp) NewServer(config, reusingConfig map[string]string) (Server, error) {
 	if err := ValidateConfigTemplatesConfig(e.ConfigTemplates, config, reusingConfig); err != nil {
 		return nil, fmt.Errorf("mcp %s config is invalid: %w", e.ID, err)
 	}

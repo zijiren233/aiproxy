@@ -8,13 +8,14 @@ import (
 	"time"
 
 	"github.com/bytedance/sonic"
+	mcpservers "github.com/labring/aiproxy/mcp-servers"
 	"github.com/mark3labs/mcp-go/mcp"
 )
 
 // SSEServer implements a Server-Sent Events (SSE) based MCP server.
 // It provides real-time communication capabilities over HTTP using the SSE protocol.
 type SSEServer struct {
-	server          MCPServer
+	server          mcpservers.Server
 	messageEndpoint string
 	eventQueue      chan string
 
@@ -46,7 +47,7 @@ func WithKeepAlive(keepAlive bool) SSEOption {
 }
 
 // NewSSEServer creates a new SSE server instance with the given MCP server and options.
-func NewSSEServer(server MCPServer, opts ...SSEOption) *SSEServer {
+func NewSSEServer(server mcpservers.Server, opts ...SSEOption) *SSEServer {
 	s := &SSEServer{
 		server:            server,
 		messageEndpoint:   "/message",

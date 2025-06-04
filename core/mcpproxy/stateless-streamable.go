@@ -5,20 +5,22 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 
 	"github.com/bytedance/sonic"
+	mcpservers "github.com/labring/aiproxy/mcp-servers"
 	"github.com/mark3labs/mcp-go/mcp"
 )
 
 type StreamableHTTPOption func(*StreamableHTTPServer)
 
 type StreamableHTTPServer struct {
-	server MCPServer
+	server mcpservers.Server
 }
 
 // NewStatelessStreamableHTTPServer creates a new streamable-http server instance
 func NewStatelessStreamableHTTPServer(
-	server MCPServer,
+	server mcpservers.Server,
 	opts ...StreamableHTTPOption,
 ) *StreamableHTTPServer {
 	s := &StreamableHTTPServer{
@@ -101,8 +103,14 @@ func (s *StreamableHTTPServer) writeJSONRPCError(
 	code int,
 	message string,
 ) {
-	response := CreateMCPErrorResponse(id, code, message)
+	response := mcpservers.CreateMCPErrorResponse(id, code, message)
+	jsonBody, err := sonic.Marshal(response)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Content-Length", strconv.Itoa(len(jsonBody)))
 	w.WriteHeader(http.StatusBadRequest)
-	_ = sonic.ConfigDefault.NewEncoder(w).Encode(response)
+	_, _ = w.Write(jsonBody)
 }

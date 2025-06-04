@@ -1,9 +1,10 @@
 package mcpproxy
 
 import (
+	"encoding/hex"
 	"sync"
 
-	"github.com/labring/aiproxy/core/common"
+	"github.com/google/uuid"
 )
 
 // SessionManager defines the interface for managing session information
@@ -31,7 +32,10 @@ func NewMemStore() *MemStore {
 }
 
 func (s *MemStore) New() string {
-	return common.ShortUUID()
+	var buf [32]byte
+	bytes := uuid.New()
+	hex.Encode(buf[:], bytes[:])
+	return string(buf[:])
 }
 
 // Set stores a sessionID and its corresponding backend endpoint

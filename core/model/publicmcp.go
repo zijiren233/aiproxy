@@ -3,6 +3,7 @@ package model
 import (
 	"errors"
 	"net/url"
+	"regexp"
 	"time"
 
 	"github.com/bytedance/sonic"
@@ -111,6 +112,18 @@ type MCPEmbeddingConfig struct {
 	Reusing map[string]MCPEmbeddingReusingConfig `json:"reusing"`
 }
 
+var validateMCPIDRegex = regexp.MustCompile(`^[a-zA-Z0-9_-]+$`)
+
+func validateMCPID(id string) error {
+	if id == "" {
+		return errors.New("mcp id is empty")
+	}
+	if !validateMCPIDRegex.MatchString(id) {
+		return errors.New("mcp id is invalid")
+	}
+	return nil
+}
+
 type PublicMCP struct {
 	ID                     string                  `gorm:"primaryKey"                    json:"id"`
 	Status                 PublicMCPStatus         `gorm:"index;default:1"               json:"status"`
@@ -131,8 +144,8 @@ type PublicMCP struct {
 }
 
 func (p *PublicMCP) BeforeSave(_ *gorm.DB) error {
-	if p.ID == "" {
-		return errors.New("mcp id is empty")
+	if err := validateMCPID(p.ID); err != nil {
+		return err
 	}
 
 	if p.Status == 0 {
@@ -176,20 +189,6 @@ func (p *PublicMCP) BeforeDelete(tx *gorm.DB) (err error) {
 		Where("mcp_id = ?", p.ID).
 		Delete(&PublicMCPReusingParam{}).
 		Error
-}
-
-func (p *PublicMCP) MarshalJSON() ([]byte, error) {
-	type Alias PublicMCP
-	a := &struct {
-		*Alias
-		CreatedAt int64 `json:"created_at"`
-		UpdateAt  int64 `json:"update_at"`
-	}{
-		Alias:     (*Alias)(p),
-		CreatedAt: p.CreatedAt.UnixMilli(),
-		UpdateAt:  p.UpdateAt.UnixMilli(),
-	}
-	return sonic.Marshal(a)
 }
 
 // CreatePublicMCP creates a new MCP
@@ -285,13 +284,13 @@ func DeletePublicMCP(id string) (err error) {
 }
 
 // GetPublicMCPByID retrieves an MCP by ID
-func GetPublicMCPByID(id string) (*PublicMCP, error) {
-	if id == "" {
-		return nil, errors.New("MCP id is empty")
-	}
+func GetPublicMCPByID(id string) (PublicMCP, error) {
 	var mcp PublicMCP
+	if id == "" {
+		return mcp, errors.New("MCP id is empty")
+	}
 	err := DB.Where("id = ?", id).First(&mcp).Error
-	return &mcp, HandleNotFound(err, ErrPublicMCPNotFound)
+	return mcp, HandleNotFound(err, ErrPublicMCPNotFound)
 }
 
 // GetPublicMCPs retrieves MCPs with pagination and filtering
@@ -300,7 +299,7 @@ func GetPublicMCPs(
 	mcpType PublicMCPType,
 	keyword string,
 	status PublicMCPStatus,
-) (mcps []*PublicMCP, total int64, err error) {
+) (mcps []PublicMCP, total int64, err error) {
 	tx := DB.Model(&PublicMCP{})
 
 	if mcpType != "" {
@@ -343,6 +342,16 @@ func GetPublicMCPs(
 		Error
 
 	return mcps, total, err
+}
+
+func GetAllPublicMCPs(status PublicMCPStatus) ([]PublicMCP, error) {
+	var mcps []PublicMCP
+	tx := DB.Model(&PublicMCP{})
+	if status != 0 {
+		tx = tx.Where("status = ?", status)
+	}
+	err := tx.Find(&mcps).Error
+	return mcps, err
 }
 
 func GetPublicMCPsEnabled(ids []string) ([]string, error) {

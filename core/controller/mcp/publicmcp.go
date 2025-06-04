@@ -1,14 +1,75 @@
 package controller
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
-	"time"
 
+	"github.com/bytedance/sonic"
 	"github.com/gin-gonic/gin"
+	"github.com/labring/aiproxy/core/common/config"
+	"github.com/labring/aiproxy/core/controller/utils"
 	"github.com/labring/aiproxy/core/middleware"
 	"github.com/labring/aiproxy/core/model"
 )
+
+type MCPEndpoint struct {
+	Host           string `json:"host"`
+	SSE            string `json:"sse"`
+	StreamableHTTP string `json:"streamable_http"`
+}
+
+type PublicMCPResponse struct {
+	model.PublicMCP
+	Endpoints MCPEndpoint `json:"endpoints"`
+}
+
+func (mcp *PublicMCPResponse) MarshalJSON() ([]byte, error) {
+	type Alias PublicMCPResponse
+	a := &struct {
+		*Alias
+		CreatedAt int64 `json:"created_at"`
+		UpdateAt  int64 `json:"update_at"`
+	}{
+		Alias:     (*Alias)(mcp),
+		CreatedAt: mcp.CreatedAt.UnixMilli(),
+		UpdateAt:  mcp.UpdateAt.UnixMilli(),
+	}
+	return sonic.Marshal(a)
+}
+
+func NewPublicMCPResponse(host string, mcp model.PublicMCP) PublicMCPResponse {
+	ep := MCPEndpoint{}
+	switch mcp.Type {
+	case model.PublicMCPTypeProxySSE,
+		model.PublicMCPTypeProxyStreamable,
+		model.PublicMCPTypeEmbed,
+		model.PublicMCPTypeOpenAPI:
+		publicMCPHost := config.GetPublicMCPHost()
+		if publicMCPHost == "" {
+			ep.Host = host
+			ep.SSE = fmt.Sprintf("/mcp/public/%s/sse", mcp.ID)
+			ep.StreamableHTTP = "/mcp/public/" + mcp.ID
+		} else {
+			ep.Host = fmt.Sprintf("%s.%s", mcp.ID, publicMCPHost)
+			ep.SSE = "/sse"
+			ep.StreamableHTTP = "/mcp"
+		}
+	case model.PublicMCPTypeGitRepo:
+	}
+	return PublicMCPResponse{
+		PublicMCP: mcp,
+		Endpoints: ep,
+	}
+}
+
+func NewPublicMCPResponses(host string, mcps []model.PublicMCP) []PublicMCPResponse {
+	responses := make([]PublicMCPResponse, len(mcps))
+	for i, mcp := range mcps {
+		responses[i] = NewPublicMCPResponse(host, mcp)
+	}
+	return responses
+}
 
 // GetPublicMCPs godoc
 //
@@ -22,13 +83,17 @@ import (
 //	@Param			type		query		string	false	"MCP type"
 //	@Param			keyword		query		string	false	"Search keyword"
 //	@Param			status		query		int		false	"MCP status"
-//	@Success		200			{object}	middleware.APIResponse{data=[]model.PublicMCP}
+//	@Success		200			{object}	middleware.APIResponse{data=[]PublicMCPResponse}
 //	@Router			/api/mcp/public/ [get]
 func GetPublicMCPs(c *gin.Context) {
-	page, perPage := parsePageParams(c)
+	page, perPage := utils.ParsePageParams(c)
 	mcpType := model.PublicMCPType(c.Query("type"))
 	keyword := c.Query("keyword")
 	status, _ := strconv.Atoi(c.Query("status"))
+
+	if status == 0 {
+		status = int(model.PublicMCPStatusEnabled)
+	}
 
 	mcps, total, err := model.GetPublicMCPs(
 		page,
@@ -43,9 +108,34 @@ func GetPublicMCPs(c *gin.Context) {
 	}
 
 	middleware.SuccessResponse(c, gin.H{
-		"mcps":  mcps,
+		"mcps":  NewPublicMCPResponses(c.Request.Host, mcps),
 		"total": total,
 	})
+}
+
+// GetAllPublicMCPs godoc
+//
+//	@Summary		Get all MCPs
+//	@Description	Get all MCPs with filtering
+//	@Tags			mcp
+//	@Produce		json
+//	@Security		ApiKeyAuth
+//	@Param			status	query		int	false	"MCP status"
+//	@Success		200		{object}	middleware.APIResponse{data=[]PublicMCPResponse}
+//	@Router			/api/mcp/public/all [get]
+func GetAllPublicMCPs(c *gin.Context) {
+	status, _ := strconv.Atoi(c.Query("status"))
+
+	if status == 0 {
+		status = int(model.PublicMCPStatusEnabled)
+	}
+
+	mcps, err := model.GetAllPublicMCPs(model.PublicMCPStatus(status))
+	if err != nil {
+		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+	middleware.SuccessResponse(c, NewPublicMCPResponses(c.Request.Host, mcps))
 }
 
 // GetPublicMCPByIDHandler godoc
@@ -56,7 +146,7 @@ func GetPublicMCPs(c *gin.Context) {
 //	@Produce		json
 //	@Security		ApiKeyAuth
 //	@Param			id	path		string	true	"MCP ID"
-//	@Success		200	{object}	middleware.APIResponse{data=model.PublicMCP}
+//	@Success		200	{object}	middleware.APIResponse{data=PublicMCPResponse}
 //	@Router			/api/mcp/public/{id} [get]
 func GetPublicMCPByIDHandler(c *gin.Context) {
 	id := c.Param("id")
@@ -71,7 +161,7 @@ func GetPublicMCPByIDHandler(c *gin.Context) {
 		return
 	}
 
-	middleware.SuccessResponse(c, mcp)
+	middleware.SuccessResponse(c, NewPublicMCPResponse(c.Request.Host, mcp))
 }
 
 // CreatePublicMCP godoc
@@ -83,7 +173,7 @@ func GetPublicMCPByIDHandler(c *gin.Context) {
 //	@Produce		json
 //	@Security		ApiKeyAuth
 //	@Param			mcp	body		model.PublicMCP	true	"MCP object"
-//	@Success		200	{object}	middleware.APIResponse
+//	@Success		200	{object}	middleware.APIResponse{data=PublicMCPResponse}
 //	@Router			/api/mcp/public/ [post]
 func CreatePublicMCP(c *gin.Context) {
 	var mcp model.PublicMCP
@@ -92,15 +182,12 @@ func CreatePublicMCP(c *gin.Context) {
 		return
 	}
 
-	mcp.CreatedAt = time.Now()
-	mcp.UpdateAt = time.Now()
-
 	if err := model.CreatePublicMCP(&mcp); err != nil {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	middleware.SuccessResponse(c, mcp)
+	middleware.SuccessResponse(c, NewPublicMCPResponse(c.Request.Host, mcp))
 }
 
 type UpdatePublicMCPStatusRequest struct {
@@ -150,7 +237,7 @@ func UpdatePublicMCPStatus(c *gin.Context) {
 //	@Security		ApiKeyAuth
 //	@Param			id	path		string			true	"MCP ID"
 //	@Param			mcp	body		model.PublicMCP	true	"MCP object"
-//	@Success		200	{object}	middleware.APIResponse
+//	@Success		200	{object}	middleware.APIResponse{data=PublicMCPResponse}
 //	@Router			/api/mcp/public/{id} [put]
 func UpdatePublicMCP(c *gin.Context) {
 	id := c.Param("id")
@@ -166,14 +253,13 @@ func UpdatePublicMCP(c *gin.Context) {
 	}
 
 	mcp.ID = id
-	mcp.UpdateAt = time.Now()
 
 	if err := model.UpdatePublicMCP(&mcp); err != nil {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	middleware.SuccessResponse(c, mcp)
+	middleware.SuccessResponse(c, NewPublicMCPResponse(c.Request.Host, mcp))
 }
 
 // DeletePublicMCP godoc
@@ -198,7 +284,7 @@ func DeletePublicMCP(c *gin.Context) {
 		return
 	}
 
-	middleware.SuccessResponse(c, gin.H{"id": id})
+	middleware.SuccessResponse(c, nil)
 }
 
 // GetGroupPublicMCPReusingParam godoc

@@ -1,23 +1,24 @@
-package mcpproxy
+package mcpservers
 
 import (
 	"context"
 	"encoding/json"
+	"runtime"
 
 	"github.com/bytedance/sonic"
 	"github.com/mark3labs/mcp-go/client/transport"
 	"github.com/mark3labs/mcp-go/mcp"
 )
 
-type MCPServer interface {
+type Server interface {
 	HandleMessage(ctx context.Context, message json.RawMessage) mcp.JSONRPCMessage
 }
 
-type mcpClient2Server struct {
+type client2Server struct {
 	client transport.Interface
 }
 
-func (s *mcpClient2Server) HandleMessage(
+func (s *client2Server) HandleMessage(
 	ctx context.Context,
 	message json.RawMessage,
 ) mcp.JSONRPCMessage {
@@ -67,8 +68,16 @@ func (s *mcpClient2Server) HandleMessage(
 	}
 }
 
-func WrapMCPClient2Server(client transport.Interface) MCPServer {
-	return &mcpClient2Server{client: client}
+func WrapMCPClient2Server(client transport.Interface) Server {
+	return &client2Server{client: client}
+}
+
+func WrapMCPClient2ServerWithCleanup(client transport.Interface) Server {
+	server := &client2Server{client: client}
+	_ = runtime.AddCleanup(server, func(client transport.Interface) {
+		_ = client.Close()
+	}, server.client)
+	return server
 }
 
 type JSONRPCNoErrorResponse struct {

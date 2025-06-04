@@ -3232,6 +3232,54 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/mcp/group/all": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Get all Group MCPs with filtering",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "mcp"
+                ],
+                "summary": "Get all Group MCPs",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "MCP status",
+                        "name": "status",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/middleware.APIResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/controller.GroupMCPResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/api/mcp/group/{group}": {
             "get": {
                 "security": [
@@ -3300,7 +3348,7 @@ const docTemplate = `{
                                         "data": {
                                             "type": "array",
                                             "items": {
-                                                "$ref": "#/definitions/model.GroupMCP"
+                                                "$ref": "#/definitions/controller.GroupMCPResponse"
                                             }
                                         }
                                     }
@@ -3357,7 +3405,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/model.GroupMCP"
+                                            "$ref": "#/definitions/controller.GroupMCPResponse"
                                         }
                                     }
                                 }
@@ -3410,7 +3458,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/model.GroupMCP"
+                                            "$ref": "#/definitions/controller.GroupMCPResponse"
                                         }
                                     }
                                 }
@@ -3473,7 +3521,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/model.GroupMCP"
+                                            "$ref": "#/definitions/controller.GroupMCPResponse"
                                         }
                                     }
                                 }
@@ -3636,7 +3684,7 @@ const docTemplate = `{
                                         "data": {
                                             "type": "array",
                                             "items": {
-                                                "$ref": "#/definitions/model.PublicMCP"
+                                                "$ref": "#/definitions/controller.PublicMCPResponse"
                                             }
                                         }
                                     }
@@ -3678,7 +3726,67 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/middleware.APIResponse"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/middleware.APIResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/controller.PublicMCPResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/api/mcp/public/all": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Get all MCPs with filtering",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "mcp"
+                ],
+                "summary": "Get all MCPs",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "MCP status",
+                        "name": "status",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/middleware.APIResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/controller.PublicMCPResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     }
                 }
@@ -3720,7 +3828,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/model.PublicMCP"
+                                            "$ref": "#/definitions/controller.PublicMCPResponse"
                                         }
                                     }
                                 }
@@ -3768,7 +3876,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/middleware.APIResponse"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/middleware.APIResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/controller.PublicMCPResponse"
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     }
                 }
@@ -5580,50 +5700,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/test-embedmcp/{id}/sse": {
-            "get": {
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ],
-                "description": "Test Embed MCP SSE Server",
-                "tags": [
-                    "embedmcp"
-                ],
-                "summary": "Test Embed MCP SSE Server",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "MCP ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "Initial configuration parameters (e.g. config[host]=http://localhost:3000)",
-                        "name": "config[key]",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "Reusing configuration parameters (e.g. reusing[authorization]=apikey)",
-                        "name": "reusing[key]",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK"
-                    },
-                    "400": {
-                        "description": "Bad Request"
-                    }
-                }
-            }
-        },
-        "/api/test-embedmcp/{id}/streamable": {
+        "/api/test-embedmcp/{id}": {
             "get": {
                 "security": [
                     {
@@ -5752,6 +5829,49 @@ const docTemplate = `{
                     {
                         "type": "string",
                         "description": "Reusing configuration parameters (e.g., reusing[authorization]=apikey)",
+                        "name": "reusing[key]",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "400": {
+                        "description": "Bad Request"
+                    }
+                }
+            }
+        },
+        "/api/test-embedmcp/{id}/sse": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Test Embed MCP SSE Server",
+                "tags": [
+                    "embedmcp"
+                ],
+                "summary": "Test Embed MCP SSE Server",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "MCP ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Initial configuration parameters (e.g. config[host]=http://localhost:3000)",
+                        "name": "config[key]",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Reusing configuration parameters (e.g. reusing[authorization]=apikey)",
                         "name": "reusing[key]",
                         "in": "query"
                     }
@@ -6812,18 +6932,7 @@ const docTemplate = `{
                 "responses": {}
             }
         },
-        "/mcp/group/{id}/sse": {
-            "get": {
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ],
-                "summary": "Group MCP SSE Server",
-                "responses": {}
-            }
-        },
-        "/mcp/group/{id}/streamable": {
+        "/mcp/group/{id}": {
             "get": {
                 "security": [
                     {
@@ -6849,6 +6958,17 @@ const docTemplate = `{
                     }
                 ],
                 "summary": "Group MCP Streamable Server",
+                "responses": {}
+            }
+        },
+        "/mcp/group/{id}/sse": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "summary": "Group MCP SSE Server",
                 "responses": {}
             }
         },
@@ -6863,18 +6983,7 @@ const docTemplate = `{
                 "responses": {}
             }
         },
-        "/mcp/public/{id}/sse": {
-            "get": {
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ],
-                "summary": "Public MCP SSE Server",
-                "responses": {}
-            }
-        },
-        "/mcp/public/{id}/streamable": {
+        "/mcp/public/{id}": {
             "get": {
                 "security": [
                     {
@@ -6900,6 +7009,17 @@ const docTemplate = `{
                     }
                 ],
                 "summary": "Public MCP Streamable Server",
+                "responses": {}
+            }
+        },
+        "/mcp/public/{id}/sse": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "summary": "Public MCP SSE Server",
                 "responses": {}
             }
         },
@@ -8295,6 +8415,41 @@ const docTemplate = `{
                 }
             }
         },
+        "controller.GroupMCPResponse": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "endpoints": {
+                    "$ref": "#/definitions/controller.MCPEndpoint"
+                },
+                "group_id": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "openapi_config": {
+                    "$ref": "#/definitions/model.MCPOpenAPIConfig"
+                },
+                "proxy_config": {
+                    "$ref": "#/definitions/model.GroupMCPProxyConfig"
+                },
+                "status": {
+                    "$ref": "#/definitions/model.GroupMCPStatus"
+                },
+                "type": {
+                    "$ref": "#/definitions/model.GroupMCPType"
+                },
+                "update_at": {
+                    "type": "string"
+                }
+            }
+        },
         "controller.GroupResponse": {
             "type": "object",
             "properties": {
@@ -8340,6 +8495,17 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "dsn": {
+                    "type": "string"
+                }
+            }
+        },
+        "controller.MCPEndpoint": {
+            "type": "object",
+            "properties": {
+                "sse": {
+                    "type": "string"
+                },
+                "streamable_http": {
                     "type": "string"
                 }
             }
@@ -8410,6 +8576,62 @@ const docTemplate = `{
                     }
                 },
                 "root": {
+                    "type": "string"
+                }
+            }
+        },
+        "controller.PublicMCPResponse": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "embed_config": {
+                    "$ref": "#/definitions/model.MCPEmbeddingConfig"
+                },
+                "endpoints": {
+                    "$ref": "#/definitions/controller.MCPEndpoint"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "logo_url": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "openapi_config": {
+                    "$ref": "#/definitions/model.MCPOpenAPIConfig"
+                },
+                "price": {
+                    "$ref": "#/definitions/model.MCPPrice"
+                },
+                "proxy_config": {
+                    "$ref": "#/definitions/model.PublicMCPProxyConfig"
+                },
+                "readme": {
+                    "type": "string"
+                },
+                "readme_url": {
+                    "type": "string"
+                },
+                "repo_url": {
+                    "type": "string"
+                },
+                "status": {
+                    "$ref": "#/definitions/model.PublicMCPStatus"
+                },
+                "tags": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "type": {
+                    "$ref": "#/definitions/model.PublicMCPType"
+                },
+                "update_at": {
                     "type": "string"
                 }
             }

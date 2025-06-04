@@ -1,15 +1,15 @@
 package controller
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 	"net/url"
 
 	"github.com/gin-gonic/gin"
-	"github.com/labring/aiproxy/core/common/mcpproxy"
+	"github.com/labring/aiproxy/core/mcpproxy"
 	"github.com/labring/aiproxy/core/middleware"
 	"github.com/labring/aiproxy/core/model"
+	mcpservers "github.com/labring/aiproxy/mcp-servers"
 	"github.com/mark3labs/mcp-go/client/transport"
 	"github.com/mark3labs/mcp-go/mcp"
 )
@@ -39,21 +39,21 @@ func (m *groupMcpEndpointProvider) LoadEndpoint(endpoint string) (session string
 	return parsedURL.Query().Get("sessionId")
 }
 
-// GroupMCPSseServer godoc
+// GroupMCPSSEServer godoc
 //
 //	@Summary	Group MCP SSE Server
 //	@Security	ApiKeyAuth
 //	@Router		/mcp/group/{id}/sse [get]
-func GroupMCPSseServer(c *gin.Context) {
-	id := c.Param("id")
-	if id == "" {
+func GroupMCPSSEServer(c *gin.Context) {
+	mcpID := c.Param("id")
+	if mcpID == "" {
 		http.Error(c.Writer, "mcp id is required", http.StatusBadRequest)
 		return
 	}
 
 	group := middleware.GetGroup(c)
 
-	groupMcp, err := model.CacheGetGroupMCP(group.ID, id)
+	groupMcp, err := model.CacheGetGroupMCP(group.ID, mcpID)
 	if err != nil {
 		http.Error(c.Writer, err.Error(), http.StatusNotFound)
 		return
@@ -63,6 +63,17 @@ func GroupMCPSseServer(c *gin.Context) {
 		return
 	}
 
+	token := middleware.GetToken(c)
+	endpoint := newGroupMcpEndpoint(token.Key, groupMcp.Type)
+
+	handleGroupSSEMCPServer(c, groupMcp, endpoint)
+}
+
+func handleGroupSSEMCPServer(
+	c *gin.Context,
+	groupMcp *model.GroupMCPCache,
+	endpoint EndpointProvider,
+) {
 	switch groupMcp.Type {
 	case model.GroupMCPTypeProxySSE:
 		client, err := transport.NewSSE(
@@ -79,9 +90,10 @@ func GroupMCPSseServer(c *gin.Context) {
 			return
 		}
 		defer client.Close()
-		handleGroupMCPServer(c,
-			mcpproxy.WrapMCPClient2Server(client),
-			model.GroupMCPTypeProxySSE,
+		handleSSEMCPServer(c,
+			mcpservers.WrapMCPClient2Server(client),
+			string(model.GroupMCPTypeProxySSE),
+			endpoint,
 		)
 	case model.GroupMCPTypeProxyStreamable:
 		client, err := transport.NewStreamableHTTP(
@@ -98,10 +110,11 @@ func GroupMCPSseServer(c *gin.Context) {
 			return
 		}
 		defer client.Close()
-		handleGroupMCPServer(
+		handleSSEMCPServer(
 			c,
-			mcpproxy.WrapMCPClient2Server(client),
-			model.GroupMCPTypeProxyStreamable,
+			mcpservers.WrapMCPClient2Server(client),
+			string(model.GroupMCPTypeProxyStreamable),
+			endpoint,
 		)
 	case model.GroupMCPTypeOpenAPI:
 		server, err := newOpenAPIMCPServer(groupMcp.OpenAPIConfig)
@@ -109,39 +122,10 @@ func GroupMCPSseServer(c *gin.Context) {
 			http.Error(c.Writer, err.Error(), http.StatusBadRequest)
 			return
 		}
-		handleGroupMCPServer(c, server, model.GroupMCPTypeOpenAPI)
+		handleSSEMCPServer(c, server, string(model.GroupMCPTypeOpenAPI), endpoint)
 	default:
 		http.Error(c.Writer, "unsupported mcp type", http.StatusBadRequest)
 	}
-}
-
-// handleMCPServer handles the SSE connection for an MCP server
-func handleGroupMCPServer(c *gin.Context, s mcpproxy.MCPServer, mcpType model.GroupMCPType) {
-	token := middleware.GetToken(c)
-
-	// Store the session
-	store := getStore()
-	newSession := store.New()
-
-	newEndpoint := newGroupMcpEndpoint(token.Key, mcpType).NewEndpoint(newSession)
-	server := mcpproxy.NewSSEServer(
-		s,
-		mcpproxy.WithMessageEndpoint(newEndpoint),
-	)
-
-	store.Set(newSession, string(mcpType))
-	defer func() {
-		store.Delete(newSession)
-	}()
-
-	ctx, cancel := context.WithCancel(c.Request.Context())
-	defer cancel()
-
-	// Start message processing goroutine
-	go processMCPSseMpscMessages(ctx, newSession, server)
-
-	// Handle SSE connection
-	server.ServeHTTP(c.Writer, c.Request)
 }
 
 // GroupMCPMessage godoc
@@ -163,29 +147,20 @@ func GroupMCPMessage(c *gin.Context) {
 		return
 	}
 
-	switch mcpType {
-	case model.GroupMCPTypeProxySSE:
-		sendMCPSSEMessage(c, mcpTypeStr, sessionID)
-	case model.GroupMCPTypeProxyStreamable:
-		sendMCPSSEMessage(c, mcpTypeStr, sessionID)
-	case model.GroupMCPTypeOpenAPI:
-		sendMCPSSEMessage(c, mcpTypeStr, sessionID)
-	default:
-		http.Error(c.Writer, "unknown mcp type", http.StatusBadRequest)
-	}
+	handleGroupSSEMessage(c, mcpType, sessionID)
 }
 
 // GroupMCPStreamable godoc
 //
 //	@Summary	Group MCP Streamable Server
 //	@Security	ApiKeyAuth
-//	@Router		/mcp/group/{id}/streamable [get]
-//	@Router		/mcp/group/{id}/streamable [post]
-//	@Router		/mcp/group/{id}/streamable [delete]
+//	@Router		/mcp/group/{id} [get]
+//	@Router		/mcp/group/{id} [post]
+//	@Router		/mcp/group/{id} [delete]
 func GroupMCPStreamable(c *gin.Context) {
-	id := c.Param("id")
-	if id == "" {
-		c.JSON(http.StatusBadRequest, mcpproxy.CreateMCPErrorResponse(
+	mcpID := c.Param("id")
+	if mcpID == "" {
+		c.JSON(http.StatusBadRequest, mcpservers.CreateMCPErrorResponse(
 			mcp.NewRequestId(nil),
 			mcp.INVALID_REQUEST,
 			"mcp id is required",
@@ -195,9 +170,9 @@ func GroupMCPStreamable(c *gin.Context) {
 
 	group := middleware.GetGroup(c)
 
-	groupMcp, err := model.CacheGetGroupMCP(group.ID, id)
+	groupMcp, err := model.CacheGetGroupMCP(group.ID, mcpID)
 	if err != nil {
-		c.JSON(http.StatusNotFound, mcpproxy.CreateMCPErrorResponse(
+		c.JSON(http.StatusNotFound, mcpservers.CreateMCPErrorResponse(
 			mcp.NewRequestId(nil),
 			mcp.INVALID_REQUEST,
 			err.Error(),
@@ -205,7 +180,7 @@ func GroupMCPStreamable(c *gin.Context) {
 		return
 	}
 	if groupMcp.Status != model.GroupMCPStatusEnabled {
-		c.JSON(http.StatusNotFound, mcpproxy.CreateMCPErrorResponse(
+		c.JSON(http.StatusNotFound, mcpservers.CreateMCPErrorResponse(
 			mcp.NewRequestId(nil),
 			mcp.INVALID_REQUEST,
 			"mcp is not enabled",
@@ -213,27 +188,7 @@ func GroupMCPStreamable(c *gin.Context) {
 		return
 	}
 
-	switch groupMcp.Type {
-	case model.GroupMCPTypeProxyStreamable:
-		handleGroupProxyStreamable(c, groupMcp.ProxyConfig)
-	case model.GroupMCPTypeOpenAPI:
-		server, err := newOpenAPIMCPServer(groupMcp.OpenAPIConfig)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, mcpproxy.CreateMCPErrorResponse(
-				mcp.NewRequestId(nil),
-				mcp.INVALID_REQUEST,
-				err.Error(),
-			))
-			return
-		}
-		handleStreamableMCPServer(c, server)
-	default:
-		c.JSON(http.StatusBadRequest, mcpproxy.CreateMCPErrorResponse(
-			mcp.NewRequestId(nil),
-			mcp.INVALID_REQUEST,
-			"unsupported mcp type",
-		))
-	}
+	handleGroupSSEStreamable(c, groupMcp)
 }
 
 // handleGroupProxyStreamable processes Streamable proxy requests for group
@@ -244,7 +199,7 @@ func handleGroupProxyStreamable(c *gin.Context, config *model.GroupMCPProxyConfi
 
 	backendURL, err := url.Parse(config.URL)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, mcpproxy.CreateMCPErrorResponse(
+		c.JSON(http.StatusBadRequest, mcpservers.CreateMCPErrorResponse(
 			mcp.NewRequestId(nil),
 			mcp.INVALID_REQUEST,
 			err.Error(),
