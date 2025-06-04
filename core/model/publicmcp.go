@@ -3,6 +3,7 @@ package model
 import (
 	"errors"
 	"net/url"
+	"regexp"
 	"time"
 
 	"github.com/bytedance/sonic"
@@ -111,6 +112,18 @@ type MCPEmbeddingConfig struct {
 	Reusing map[string]MCPEmbeddingReusingConfig `json:"reusing"`
 }
 
+var validateMCPIDRegex = regexp.MustCompile(`^[a-zA-Z0-9_-]+$`)
+
+func validateMCPID(id string) error {
+	if id == "" {
+		return errors.New("mcp id is empty")
+	}
+	if !validateMCPIDRegex.MatchString(id) {
+		return errors.New("mcp id is invalid")
+	}
+	return nil
+}
+
 type PublicMCP struct {
 	ID                     string                  `gorm:"primaryKey"                    json:"id"`
 	Status                 PublicMCPStatus         `gorm:"index;default:1"               json:"status"`
@@ -131,8 +144,8 @@ type PublicMCP struct {
 }
 
 func (p *PublicMCP) BeforeSave(_ *gorm.DB) error {
-	if p.ID == "" {
-		return errors.New("mcp id is empty")
+	if err := validateMCPID(p.ID); err != nil {
+		return err
 	}
 
 	if p.Status == 0 {

@@ -51,8 +51,8 @@ func (g *GroupMCP) BeforeSave(_ *gorm.DB) (err error) {
 	if g.GroupID == "" {
 		return errors.New("group id is empty")
 	}
-	if g.ID == "" {
-		g.ID = common.ShortUUID()
+	if err := validateMCPID(g.ID); err != nil {
+		return err
 	}
 	if g.UpdateAt.IsZero() {
 		g.UpdateAt = time.Now()
