@@ -52,6 +52,7 @@ func ConvertImageRequest(
 		Header: http.Header{
 			"X-Dashscope-Async": {"enable"},
 			"Content-Type":      {"application/json"},
+			"Content-Length":    {strconv.Itoa(len(data))},
 		},
 		Body: bytes.NewReader(data),
 	}, nil

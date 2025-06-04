@@ -14,11 +14,19 @@ import (
 func ConvertEmbeddingsRequest(
 	meta *meta.Meta,
 	req *http.Request,
+	callback func(node *ast.Node) error,
 	inputToSlices bool,
 ) (adaptor.ConvertResult, error) {
 	node, err := common.UnmarshalBody2Node(req)
 	if err != nil {
 		return adaptor.ConvertResult{}, err
+	}
+
+	if callback != nil {
+		err = callback(&node)
+		if err != nil {
+			return adaptor.ConvertResult{}, err
+		}
 	}
 
 	_, err = node.Set("model", ast.NewString(meta.ActualModel))

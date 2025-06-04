@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"net/http"
+	"strconv"
 
 	"github.com/bytedance/sonic"
 	"github.com/gin-gonic/gin"
@@ -60,7 +61,8 @@ func (a *Adaptor) ConvertRequest(
 	}
 	return adaptor.ConvertResult{
 		Header: http.Header{
-			"Content-Type": {"application/json"},
+			"Content-Type":   {"application/json"},
+			"Content-Length": {strconv.Itoa(len(data))},
 		},
 		Body: bytes.NewReader(data),
 	}, nil

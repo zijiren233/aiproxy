@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"strconv"
 
 	"github.com/bytedance/sonic/ast"
 	"github.com/gin-gonic/gin"
@@ -47,7 +48,8 @@ func ConvertTTSRequest(
 	}
 	return adaptor.ConvertResult{
 		Header: http.Header{
-			"Content-Type": {"application/json"},
+			"Content-Type":   {"application/json"},
+			"Content-Length": {strconv.Itoa(len(jsonData))},
 		},
 		Body: bytes.NewReader(jsonData),
 	}, nil

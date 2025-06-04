@@ -85,7 +85,8 @@ func ConvertTTSRequest(meta *meta.Meta, req *http.Request) (adaptor.ConvertResul
 
 	return adaptor.ConvertResult{
 		Header: http.Header{
-			"Content-Type": {"application/json"},
+			"Content-Type":   {"application/json"},
+			"Content-Length": {strconv.Itoa(len(body))},
 		},
 		Body: bytes.NewReader(body),
 	}, nil

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/bytedance/sonic"
@@ -100,8 +101,11 @@ func (a *Adaptor) ConvertRequest(
 		return adaptor.ConvertResult{}, err
 	}
 
+	header := result.Header
+	header.Set("Content-Length", strconv.Itoa(len(newBody)))
+
 	return adaptor.ConvertResult{
-		Header: result.Header,
+		Header: header,
 		Body:   bytes.NewReader(newBody),
 	}, nil
 }

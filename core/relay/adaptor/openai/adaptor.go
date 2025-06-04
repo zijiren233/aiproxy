@@ -128,7 +128,7 @@ func ConvertRequest(
 	case mode.Moderations:
 		return ConvertModerationsRequest(meta, req)
 	case mode.Embeddings:
-		return ConvertEmbeddingsRequest(meta, req, false)
+		return ConvertEmbeddingsRequest(meta, req, nil, false)
 	case mode.Completions:
 		return ConvertCompletionsRequest(meta, req, nil)
 	case mode.ChatCompletions:

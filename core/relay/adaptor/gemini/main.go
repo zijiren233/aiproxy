@@ -341,7 +341,8 @@ func ConvertRequest(meta *meta.Meta, req *http.Request) (adaptor.ConvertResult, 
 
 	return adaptor.ConvertResult{
 		Header: http.Header{
-			"Content-Type": {"application/json"},
+			"Content-Type":   {"application/json"},
+			"Content-Length": {strconv.Itoa(len(data))},
 		},
 		Body: bytes.NewReader(data),
 	}, nil

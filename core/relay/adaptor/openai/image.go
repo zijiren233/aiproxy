@@ -46,7 +46,8 @@ func ConvertImagesRequest(
 
 	return adaptor.ConvertResult{
 		Header: http.Header{
-			"Content-Type": {"application/json"},
+			"Content-Type":   {"application/json"},
+			"Content-Length": {strconv.Itoa(len(jsonData))},
 		},
 		Body: bytes.NewReader(jsonData),
 	}, nil
