@@ -2,6 +2,7 @@ package amap
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/url"
 
@@ -28,7 +29,7 @@ var configTemplates = map[string]mcpservers.ConfigTemplate{
 func NewServer(config, _ map[string]string) (mcpservers.Server, error) {
 	key := config["key"]
 	if key == "" {
-		return nil, fmt.Errorf("key is required")
+		return nil, errors.New("key is required")
 	}
 	u := config["url"]
 	if u == "" {
@@ -53,7 +54,7 @@ func NewServer(config, _ map[string]string) (mcpservers.Server, error) {
 		return nil, fmt.Errorf("failed to start sse client: %w", err)
 	}
 
-	return mcpservers.WrapMCPClient2Server(client), nil
+	return mcpservers.WrapMCPClient2ServerWithCleanup(client), nil
 }
 
 // need import in mcpregister/init.go

@@ -112,5 +112,5 @@ func (s *StreamableHTTPServer) writeJSONRPCError(
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Content-Length", strconv.Itoa(len(jsonBody)))
 	w.WriteHeader(http.StatusBadRequest)
-	w.Write(jsonBody)
+	_, _ = w.Write(jsonBody)
 }
