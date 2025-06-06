@@ -26,6 +26,13 @@ func (a *Adaptor) DefaultBaseURL() string {
 	return baseURL
 }
 
+func (a *Adaptor) SupportMode(m mode.Mode) bool {
+	return m == mode.ChatCompletions ||
+		m == mode.Embeddings ||
+		m == mode.Rerank ||
+		m == mode.ImagesGenerations
+}
+
 // Get model-specific endpoint using map
 var modelEndpointMap = map[string]string{
 	"ERNIE-4.0-8K":         "completions_pro",

@@ -454,10 +454,21 @@ func notifyChannelIssue(
 	)
 }
 
-func filterChannels(channels []*model.Channel, ignoreChannel ...int64) []*model.Channel {
+func filterChannels(
+	channels []*model.Channel,
+	mode mode.Mode,
+	ignoreChannel ...int64,
+) []*model.Channel {
 	filtered := make([]*model.Channel, 0)
 	for _, channel := range channels {
 		if channel.Status != model.ChannelStatusEnabled {
+			continue
+		}
+		a, ok := adaptors.GetAdaptor(channel.Type)
+		if !ok {
+			continue
+		}
+		if !a.SupportMode(mode) {
 			continue
 		}
 		if slices.Contains(ignoreChannel, int64(channel.ID)) {
@@ -477,6 +488,7 @@ func GetRandomChannel(
 	mc *model.ModelCaches,
 	availableSet []string,
 	modelName string,
+	mode mode.Mode,
 	errorRates map[int64]float64,
 	ignoreChannel ...int64,
 ) (*model.Channel, []*model.Channel, error) {
@@ -484,12 +496,26 @@ func GetRandomChannel(
 	if len(availableSet) != 0 {
 		for _, set := range availableSet {
 			for _, channel := range mc.EnabledModel2ChannelsBySet[set][modelName] {
+				a, ok := adaptors.GetAdaptor(channel.Type)
+				if !ok {
+					continue
+				}
+				if !a.SupportMode(mode) {
+					continue
+				}
 				channelMap[channel.ID] = channel
 			}
 		}
 	} else {
 		for _, sets := range mc.EnabledModel2ChannelsBySet {
 			for _, channel := range sets[modelName] {
+				a, ok := adaptors.GetAdaptor(channel.Type)
+				if !ok {
+					continue
+				}
+				if !a.SupportMode(mode) {
+					continue
+				}
 				channelMap[channel.ID] = channel
 			}
 		}
@@ -498,7 +524,7 @@ func GetRandomChannel(
 	for _, channel := range channelMap {
 		migratedChannels = append(migratedChannels, channel)
 	}
-	channel, err := getRandomChannel(migratedChannels, errorRates, ignoreChannel...)
+	channel, err := getRandomChannel(migratedChannels, mode, errorRates, ignoreChannel...)
 	return channel, migratedChannels, err
 }
 
@@ -512,10 +538,9 @@ func getPriority(channel *model.Channel, errorRate float64) int32 {
 	return int32(float64(priority) / errorRate)
 }
 
-//
-
 func getRandomChannel(
 	channels []*model.Channel,
+	mode mode.Mode,
 	errorRates map[int64]float64,
 	ignoreChannel ...int64,
 ) (*model.Channel, error) {
@@ -523,7 +548,7 @@ func getRandomChannel(
 		return nil, ErrChannelsNotFound
 	}
 
-	channels = filterChannels(channels, ignoreChannel...)
+	channels = filterChannels(channels, mode, ignoreChannel...)
 	if len(channels) == 0 {
 		return nil, ErrChannelsExhausted
 	}
@@ -559,6 +584,7 @@ func getChannelWithFallback(
 	cache *model.ModelCaches,
 	availableSet []string,
 	modelName string,
+	mode mode.Mode,
 	errorRates map[int64]float64,
 	ignoreChannelIDs ...int64,
 ) (*model.Channel, []*model.Channel, error) {
@@ -566,6 +592,7 @@ func getChannelWithFallback(
 		cache,
 		availableSet,
 		modelName,
+		mode,
 		errorRates,
 		ignoreChannelIDs...)
 	if err == nil {
@@ -574,7 +601,13 @@ func getChannelWithFallback(
 	if !errors.Is(err, ErrChannelsExhausted) {
 		return nil, migratedChannels, err
 	}
-	channel, migratedChannels, err = GetRandomChannel(cache, availableSet, modelName, errorRates)
+	channel, migratedChannels, err = GetRandomChannel(
+		cache,
+		availableSet,
+		modelName,
+		mode,
+		errorRates,
+	)
 	return channel, migratedChannels, err
 }
 
@@ -815,6 +848,7 @@ func getInitialChannel(c *gin.Context, modelName string, m mode.Mode) (*initialC
 		mc,
 		availableSet,
 		modelName,
+		m,
 		errorRates,
 		ids...)
 	if err != nil {
@@ -844,7 +878,13 @@ func getWebSearchChannel(c *gin.Context, modelName string) (*model.Channel, erro
 		log.Errorf("get channel model error rates failed: %+v", err)
 	}
 
-	channel, _, err := getChannelWithFallback(mc, nil, modelName, errorRates, ids...)
+	channel, _, err := getChannelWithFallback(
+		mc,
+		nil,
+		modelName,
+		mode.ChatCompletions,
+		errorRates,
+		ids...)
 	if err != nil {
 		return nil, err
 	}
@@ -1006,6 +1046,7 @@ func getRetryChannel(state *retryState) (*model.Channel, error) {
 
 	newChannel, err := getRandomChannel(
 		state.migratedChannels,
+		state.meta.Mode,
 		state.errorRates,
 		state.ignoreChannelIDs...)
 	if err != nil {

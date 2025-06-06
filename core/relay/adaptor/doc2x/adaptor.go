@@ -23,6 +23,10 @@ func (a *Adaptor) DefaultBaseURL() string {
 	return baseURL
 }
 
+func (a *Adaptor) SupportMode(m mode.Mode) bool {
+	return m == mode.ParsePdf
+}
+
 func (a *Adaptor) GetRequestURL(meta *meta.Meta, _ adaptor.Store) (adaptor.RequestURL, error) {
 	switch meta.Mode {
 	case mode.ParsePdf:

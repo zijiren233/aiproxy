@@ -26,6 +26,10 @@ func (a *Adaptor) DefaultBaseURL() string {
 	return baseURL
 }
 
+func (a *Adaptor) SupportMode(m mode.Mode) bool {
+	return m == mode.ChatCompletions || m == mode.Rerank
+}
+
 // https://cloud.baidu.com/doc/WENXINWORKSHOP/s/Fm2vrveyu
 var v2ModelMap = map[string]string{
 	"ERNIE-Character-8K":         "ernie-char-8k",

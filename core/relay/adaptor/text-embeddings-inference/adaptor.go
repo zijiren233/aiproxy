@@ -25,6 +25,10 @@ func (a *Adaptor) DefaultBaseURL() string {
 	return baseURL
 }
 
+func (a *Adaptor) SupportMode(m mode.Mode) bool {
+	return m == mode.Rerank || m == mode.Embeddings
+}
+
 func (a *Adaptor) Metadata() adaptor.Metadata {
 	return adaptor.Metadata{
 		Features: []string{
