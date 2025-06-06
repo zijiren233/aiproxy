@@ -2509,10 +2509,6 @@ paths:
         in: query
         name: channel
         type: integer
-      - description: Type of time span (day, week, month, two_week)
-        in: query
-        name: type
-        type: string
       - description: Model name
         in: query
         name: model
@@ -2558,10 +2554,6 @@ paths:
         in: path
         name: group
         required: true
-        type: string
-      - description: Type of time span (day, week, month, two_week)
-        in: query
-        name: type
         type: string
       - description: Token name
         in: query

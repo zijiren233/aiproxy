@@ -945,12 +945,6 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "Type of time span (day, week, month, two_week)",
-                        "name": "type",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
                         "description": "Model name",
                         "name": "model",
                         "in": "query"
@@ -1024,12 +1018,6 @@ const docTemplate = `{
                         "name": "group",
                         "in": "path",
                         "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "Type of time span (day, week, month, two_week)",
-                        "name": "type",
-                        "in": "query"
                     },
                     {
                         "type": "string",
