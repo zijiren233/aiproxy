@@ -157,7 +157,6 @@ func fillGaps(
 //	@Produce		json
 //	@Security		ApiKeyAuth
 //	@Param			channel			query		int		false	"Channel ID"
-//	@Param			type			query		string	false	"Type of time span (day, week, month, two_week)"
 //	@Param			model			query		string	false	"Model name"
 //	@Param			start_timestamp	query		int64	false	"Start second timestamp"
 //	@Param			end_timestamp	query		int64	false	"End second timestamp"
@@ -215,7 +214,6 @@ func GetDashboard(c *gin.Context) {
 //	@Produce		json
 //	@Security		ApiKeyAuth
 //	@Param			group			path		string	true	"Group"
-//	@Param			type			query		string	false	"Type of time span (day, week, month, two_week)"
 //	@Param			token_name		query		string	false	"Token name"
 //	@Param			model			query		string	false	"Model or *"
 //	@Param			start_timestamp	query		int64	false	"Start second timestamp"
@@ -291,7 +289,7 @@ func GetGroupDashboard(c *gin.Context) {
 //	@Router			/api/dashboard/{group}/models [get]
 func GetGroupDashboardModels(c *gin.Context) {
 	group := c.Param("group")
-	if group == "" || group == "*" {
+	if group == "" {
 		middleware.ErrorResponse(c, http.StatusBadRequest, "invalid group parameter")
 		return
 	}
@@ -372,6 +370,77 @@ func GetGroupModelCostRank(c *gin.Context) {
 	tokenName := c.Query("token_name")
 	startTime, endTime := parseTimeRange(c)
 	models, err := model.GetModelCostRank(group, tokenName, 0, startTime, endTime)
+	if err != nil {
+		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+	middleware.SuccessResponse(c, models)
+}
+
+// GetTimeSeriesModelData godoc
+//
+//	@Summary		Get model usage data for a specific channel
+//	@Description	Returns model-specific metrics and usage data for the given channel
+//	@Tags			dashboard
+//	@Produce		json
+//	@Security		ApiKeyAuth
+//	@Param			channel			query		int		false	"Channel ID"
+//	@Param			start_timestamp	query		int64	false	"Start timestamp"
+//	@Param			end_timestamp	query		int64	false	"End timestamp"
+//	@Param			timezone		query		string	false	"Timezone, default is Local"
+//	@Param			timespan		query		string	false	"Time span type (day, hour)"
+//	@Success		200				{object}	middleware.APIResponse{data=[]model.TimeModelData}
+//	@Router			/api/dashboardv2/ [get]
+func GetTimeSeriesModelData(c *gin.Context) {
+	channelID, _ := strconv.Atoi(c.Query("channel"))
+	startTime, endTime := parseTimeRange(c)
+	timezoneLocation, _ := time.LoadLocation(c.DefaultQuery("timezone", "Local"))
+	models, err := model.GetTimeSeriesModelData(
+		channelID,
+		startTime,
+		endTime,
+		model.TimeSpanType(c.Query("timespan")),
+		timezoneLocation,
+	)
+	if err != nil {
+		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+	middleware.SuccessResponse(c, models)
+}
+
+// GetGroupTimeSeriesModelData godoc
+//
+//	@Summary		Get model usage data for a specific group
+//	@Description	Returns model-specific metrics and usage data for the given group
+//	@Tags			dashboard
+//	@Produce		json
+//	@Security		ApiKeyAuth
+//	@Param			group			path		string	true	"Group"
+//	@Param			token_name		query		string	false	"Token name"
+//	@Param			start_timestamp	query		int64	false	"Start timestamp"
+//	@Param			end_timestamp	query		int64	false	"End timestamp"
+//	@Param			timezone		query		string	false	"Timezone, default is Local"
+//	@Param			timespan		query		string	false	"Time span type (day, hour)"
+//	@Success		200				{object}	middleware.APIResponse{data=[]model.TimeModelData}
+//	@Router			/api/dashboardv2/{group} [get]
+func GetGroupTimeSeriesModelData(c *gin.Context) {
+	group := c.Param("group")
+	if group == "" {
+		middleware.ErrorResponse(c, http.StatusBadRequest, "invalid group parameter")
+		return
+	}
+	tokenName := c.Query("token_name")
+	startTime, endTime := parseTimeRange(c)
+	timezoneLocation, _ := time.LoadLocation(c.DefaultQuery("timezone", "Local"))
+	models, err := model.GetGroupTimeSeriesModelData(
+		group,
+		tokenName,
+		startTime,
+		endTime,
+		model.TimeSpanType(c.Query("timespan")),
+		timezoneLocation,
+	)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return

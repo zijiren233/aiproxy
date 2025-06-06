@@ -1436,6 +1436,39 @@ definitions:
       updated_at:
         type: string
     type: object
+  model.ModelData:
+    properties:
+      cache_creation_tokens:
+        type: integer
+      cached_tokens:
+        type: integer
+      exception_count:
+        type: integer
+      input_tokens:
+        type: integer
+      max_rpm:
+        type: integer
+      max_rps:
+        type: integer
+      max_tpm:
+        type: integer
+      max_tps:
+        type: integer
+      model:
+        type: string
+      output_tokens:
+        type: integer
+      request_count:
+        type: integer
+      timestamp:
+        type: integer
+      total_tokens:
+        type: integer
+      used_amount:
+        type: number
+      web_search_count:
+        type: integer
+    type: object
   model.ModelOwner:
     enum:
     - openai
@@ -1802,6 +1835,15 @@ definitions:
     - input
     - model
     - voice
+    type: object
+  model.TimeModelData:
+    properties:
+      models:
+        items:
+          $ref: '#/definitions/model.ModelData'
+        type: array
+      timestamp:
+        type: integer
     type: object
   model.Tool:
     properties:
@@ -2467,10 +2509,6 @@ paths:
         in: query
         name: channel
         type: integer
-      - description: Type of time span (day, week, month, two_week)
-        in: query
-        name: type
-        type: string
       - description: Model name
         in: query
         name: model
@@ -2516,10 +2554,6 @@ paths:
         in: path
         name: group
         required: true
-        type: string
-      - description: Type of time span (day, week, month, two_week)
-        in: query
-        name: type
         type: string
       - description: Token name
         in: query
@@ -2583,6 +2617,97 @@ paths:
                 data:
                   items:
                     $ref: '#/definitions/model.ModelConfig'
+                  type: array
+              type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Get model usage data for a specific group
+      tags:
+      - dashboard
+  /api/dashboardv2/:
+    get:
+      description: Returns model-specific metrics and usage data for the given channel
+      parameters:
+      - description: Channel ID
+        in: query
+        name: channel
+        type: integer
+      - description: Start timestamp
+        in: query
+        name: start_timestamp
+        type: integer
+      - description: End timestamp
+        in: query
+        name: end_timestamp
+        type: integer
+      - description: Timezone, default is Local
+        in: query
+        name: timezone
+        type: string
+      - description: Time span type (day, hour)
+        in: query
+        name: timespan
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/middleware.APIResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/model.TimeModelData'
+                  type: array
+              type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Get model usage data for a specific channel
+      tags:
+      - dashboard
+  /api/dashboardv2/{group}:
+    get:
+      description: Returns model-specific metrics and usage data for the given group
+      parameters:
+      - description: Group
+        in: path
+        name: group
+        required: true
+        type: string
+      - description: Token name
+        in: query
+        name: token_name
+        type: string
+      - description: Start timestamp
+        in: query
+        name: start_timestamp
+        type: integer
+      - description: End timestamp
+        in: query
+        name: end_timestamp
+        type: integer
+      - description: Timezone, default is Local
+        in: query
+        name: timezone
+        type: string
+      - description: Time span type (day, hour)
+        in: query
+        name: timespan
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/middleware.APIResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/model.TimeModelData'
                   type: array
               type: object
       security:
@@ -3450,64 +3575,6 @@ paths:
       summary: Search group logs
       tags:
       - log
-  /api/log/{group}/used/models:
-    get:
-      description: Get a list of models that have been used in a specific group's
-        logs
-      parameters:
-      - description: Group name
-        in: path
-        name: group
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            allOf:
-            - $ref: '#/definitions/middleware.APIResponse'
-            - properties:
-                data:
-                  items:
-                    type: string
-                  type: array
-              type: object
-      security:
-      - ApiKeyAuth: []
-      summary: Get group used models
-      tags:
-      - log
-  /api/log/{group}/used/token_names:
-    get:
-      description: Get a list of token names that have been used in a specific group's
-        logs
-      parameters:
-      - description: Group name
-        in: path
-        name: group
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            allOf:
-            - $ref: '#/definitions/middleware.APIResponse'
-            - properties:
-                data:
-                  items:
-                    type: string
-                  type: array
-              type: object
-      security:
-      - ApiKeyAuth: []
-      summary: Get group used token names
-      tags:
-      - log
   /api/logs/:
     delete:
       description: Deletes logs older than the specified retention period
@@ -3812,60 +3879,6 @@ paths:
       security:
       - ApiKeyAuth: []
       summary: Search logs
-      tags:
-      - logs
-  /api/logs/used/models:
-    get:
-      description: Get a list of models that have been used in logs
-      parameters:
-      - description: Group or *
-        in: query
-        name: group
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            allOf:
-            - $ref: '#/definitions/middleware.APIResponse'
-            - properties:
-                data:
-                  items:
-                    type: string
-                  type: array
-              type: object
-      security:
-      - ApiKeyAuth: []
-      summary: Get used models
-      tags:
-      - logs
-  /api/logs/used/token_names:
-    get:
-      description: Get a list of token names that have been used in logs
-      parameters:
-      - description: Group or *
-        in: query
-        name: group
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            allOf:
-            - $ref: '#/definitions/middleware.APIResponse'
-            - properties:
-                data:
-                  items:
-                    type: string
-                  type: array
-              type: object
-      security:
-      - ApiKeyAuth: []
-      summary: Get used token names
       tags:
       - logs
   /api/mcp/group/{group}:
