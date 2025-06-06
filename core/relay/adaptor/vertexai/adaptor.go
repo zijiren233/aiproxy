@@ -11,6 +11,7 @@ import (
 	"github.com/labring/aiproxy/core/model"
 	"github.com/labring/aiproxy/core/relay/adaptor"
 	"github.com/labring/aiproxy/core/relay/meta"
+	"github.com/labring/aiproxy/core/relay/mode"
 	relaymodel "github.com/labring/aiproxy/core/relay/model"
 	"github.com/labring/aiproxy/core/relay/utils"
 )
@@ -19,6 +20,10 @@ type Adaptor struct{}
 
 func (a *Adaptor) DefaultBaseURL() string {
 	return ""
+}
+
+func (a *Adaptor) SupportMode(m mode.Mode) bool {
+	return m == mode.ChatCompletions || m == mode.Anthropic
 }
 
 type Config struct {

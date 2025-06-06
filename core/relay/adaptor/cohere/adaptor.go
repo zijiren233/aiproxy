@@ -10,7 +10,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/core/model"
 	"github.com/labring/aiproxy/core/relay/adaptor"
-	"github.com/labring/aiproxy/core/relay/adaptor/openai"
 	"github.com/labring/aiproxy/core/relay/meta"
 	"github.com/labring/aiproxy/core/relay/mode"
 	"github.com/labring/aiproxy/core/relay/utils"
@@ -22,6 +21,10 @@ const baseURL = "https://api.cohere.ai"
 
 func (a *Adaptor) DefaultBaseURL() string {
 	return baseURL
+}
+
+func (a *Adaptor) SupportMode(m mode.Mode) bool {
+	return m == mode.ChatCompletions
 }
 
 func (a *Adaptor) GetRequestURL(meta *meta.Meta, _ adaptor.Store) (adaptor.RequestURL, error) {
@@ -83,15 +86,10 @@ func (a *Adaptor) DoResponse(
 	c *gin.Context,
 	resp *http.Response,
 ) (usage model.Usage, err adaptor.Error) {
-	switch meta.Mode {
-	case mode.Rerank:
-		usage, err = openai.RerankHandler(meta, c, resp)
-	default:
-		if utils.IsStreamResponse(resp) {
-			usage, err = StreamHandler(meta, c, resp)
-		} else {
-			usage, err = Handler(meta, c, resp)
-		}
+	if utils.IsStreamResponse(resp) {
+		usage, err = StreamHandler(meta, c, resp)
+	} else {
+		usage, err = Handler(meta, c, resp)
 	}
 	return
 }

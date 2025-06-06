@@ -29,6 +29,17 @@ func (a *Adaptor) DefaultBaseURL() string {
 	return baseURL
 }
 
+func (a *Adaptor) SupportMode(m mode.Mode) bool {
+	return m == mode.ChatCompletions ||
+		m == mode.Completions ||
+		m == mode.Embeddings ||
+		m == mode.ImagesGenerations ||
+		m == mode.Rerank ||
+		m == mode.AudioSpeech ||
+		m == mode.AudioTranscription ||
+		m == mode.AudioTranslation
+}
+
 func (a *Adaptor) GetRequestURL(meta *meta.Meta, _ adaptor.Store) (adaptor.RequestURL, error) {
 	u := meta.Channel.BaseURL
 	if u == "" {
