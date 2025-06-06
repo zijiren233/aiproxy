@@ -59,6 +59,13 @@ AI Proxy 是一个强大的、生产就绪的 AI 网关，提供智能请求路�
 - **思考模式**：支持推理模型的内容分割
 - **内置分词器**：无需外部 tiktoken 依赖
 
+## 📊 管理面板
+
+AI Proxy 提供了一个管理面板，用于管理 AI Proxy 的配置和监控。
+
+![面板](./docs/images/dashboard.png)
+![日志](./docs/images/logs.png)
+
 ## 🏗️ 架构图
 
 ```mermaid
