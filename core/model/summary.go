@@ -234,26 +234,16 @@ func createSummary(unique SummaryUnique, data SummaryData) error {
 }
 
 func getChartData(
-	group string,
 	start, end time.Time,
-	tokenName, modelName string,
 	channelID int,
+	modelName string,
 	timeSpan TimeSpanType,
 	timezone *time.Location,
 ) ([]*ChartData, error) {
-	var query *gorm.DB
+	query := LogDB.Model(&Summary{})
 
-	if group == "*" || channelID != 0 {
-		query = LogDB.Model(&Summary{})
-		if channelID != 0 {
-			query = query.Where("channel_id = ?", channelID)
-		}
-	} else {
-		query = LogDB.Model(&GroupSummary{}).
-			Where("group_id = ?", group)
-		if tokenName != "" {
-			query = query.Where("token_name = ?", tokenName)
-		}
+	if channelID != 0 {
+		query = query.Where("channel_id = ?", channelID)
 	}
 
 	if modelName != "" {
@@ -276,7 +266,7 @@ func getChartData(
 		"sum(total_tokens) as total_tokens, sum(web_search_count) as web_search_count"
 
 	// Only include max metrics when querying for a specific channel and model
-	if (channelID != 0 && modelName != "") || (group != "*" && tokenName != "" && modelName != "") {
+	if channelID != 0 && modelName != "" {
 		selectFields += ", max(max_rpm) as max_rpm, max(max_rps) as max_rps, max(max_tpm) as max_tpm, max(max_tps) as max_tps"
 	} else {
 		// Set max metrics to 0 when not querying for specific channel and model
@@ -302,23 +292,85 @@ func getChartData(
 	return chartData, nil
 }
 
-func GetUsedChannels(group string, start, end time.Time) ([]int, error) {
-	if group != "*" {
-		return []int{}, nil
+func getGroupChartData(
+	group string,
+	start, end time.Time,
+	tokenName, modelName string,
+	timeSpan TimeSpanType,
+	timezone *time.Location,
+) ([]*ChartData, error) {
+	query := LogDB.Model(&GroupSummary{})
+	if group != "" {
+		query = query.Where("group_id = ?", group)
 	}
-	return getLogGroupByValues[int]("channel_id", group, "", start, end)
+	if tokenName != "" {
+		query = query.Where("token_name = ?", tokenName)
+	}
+
+	if modelName != "" {
+		query = query.Where("model = ?", modelName)
+	}
+
+	switch {
+	case !start.IsZero() && !end.IsZero():
+		query = query.Where("hour_timestamp BETWEEN ? AND ?", start.Unix(), end.Unix())
+	case !start.IsZero():
+		query = query.Where("hour_timestamp >= ?", start.Unix())
+	case !end.IsZero():
+		query = query.Where("hour_timestamp <= ?", end.Unix())
+	}
+
+	// Only include max metrics when we have specific channel and model
+	selectFields := "hour_timestamp as timestamp, sum(request_count) as request_count, sum(used_amount) as used_amount, " +
+		"sum(exception_count) as exception_count, sum(input_tokens) as input_tokens, sum(output_tokens) as output_tokens, " +
+		"sum(cached_tokens) as cached_tokens, sum(cache_creation_tokens) as cache_creation_tokens, " +
+		"sum(total_tokens) as total_tokens, sum(web_search_count) as web_search_count"
+
+	// Only include max metrics when querying for a specific channel and model
+	if group != "" && tokenName != "" && modelName != "" {
+		selectFields += ", max(max_rpm) as max_rpm, max(max_rps) as max_rps, max(max_tpm) as max_tpm, max(max_tps) as max_tps"
+	} else {
+		// Set max metrics to 0 when not querying for specific channel and model
+		selectFields += ", 0 as max_rpm, 0 as max_rps, 0 as max_tpm, 0 as max_tps"
+	}
+
+	query = query.
+		Select(selectFields).
+		Group("timestamp").
+		Order("timestamp ASC")
+
+	var chartData []*ChartData
+	err := query.Scan(&chartData).Error
+	if err != nil {
+		return nil, err
+	}
+
+	// If timeSpan is day, aggregate hour data into day data
+	if timeSpan == TimeSpanDay && len(chartData) > 0 {
+		return aggregateHourDataToDay(chartData, timezone), nil
+	}
+
+	return chartData, nil
 }
 
-func GetUsedModels(group, tokenName string, start, end time.Time) ([]string, error) {
-	return getLogGroupByValues[string]("model", group, tokenName, start, end)
+func GetUsedChannels(start, end time.Time) ([]int, error) {
+	return getLogGroupByValues[int]("channel_id", start, end)
 }
 
-func GetUsedTokenNames(group string, start, end time.Time) ([]string, error) {
-	return getLogGroupByValues[string]("token_name", group, "", start, end)
+func GetUsedModels(start, end time.Time) ([]string, error) {
+	return getLogGroupByValues[string]("model", start, end)
+}
+
+func GetGroupUsedModels(group, tokenName string, start, end time.Time) ([]string, error) {
+	return getGroupLogGroupByValues[string]("model", group, tokenName, start, end)
+}
+
+func GetGroupUsedTokenNames(group string, start, end time.Time) ([]string, error) {
+	return getGroupLogGroupByValues[string]("token_name", group, "", start, end)
 }
 
 func getLogGroupByValues[T cmp.Ordered](
-	field, group, tokenName string,
+	field string,
 	start, end time.Time,
 ) ([]T, error) {
 	type Result struct {
@@ -330,17 +382,8 @@ func getLogGroupByValues[T cmp.Ordered](
 
 	var query *gorm.DB
 
-	if group == "*" {
-		query = LogDB.
-			Model(&Summary{})
-	} else {
-		query = LogDB.
-			Model(&GroupSummary{}).
-			Where("group_id = ?", group)
-		if tokenName != "" {
-			query = query.Where("token_name = ?", tokenName)
-		}
-	}
+	query = LogDB.
+		Model(&Summary{})
 
 	switch {
 	case !start.IsZero() && !end.IsZero():
@@ -379,42 +422,24 @@ func getLogGroupByValues[T cmp.Ordered](
 	return values, nil
 }
 
-type CostRank struct {
-	Model               string  `json:"model"`
-	UsedAmount          float64 `json:"used_amount"`
-	InputTokens         int64   `json:"input_tokens"`
-	OutputTokens        int64   `json:"output_tokens"`
-	CachedTokens        int64   `json:"cached_tokens"`
-	CacheCreationTokens int64   `json:"cache_creation_tokens"`
-	TotalTokens         int64   `json:"total_tokens"`
-	RequestCount        int64   `json:"request_count"`
-	WebSearchCount      int64   `json:"web_search_count"`
-
-	MaxRPM int64 `json:"max_rpm,omitempty"`
-	MaxRPS int64 `json:"max_rps,omitempty"`
-	MaxTPM int64 `json:"max_tpm,omitempty"`
-	MaxTPS int64 `json:"max_tps,omitempty"`
-}
-
-func GetModelCostRank(
-	group, tokenName string,
-	channelID int,
+func getGroupLogGroupByValues[T cmp.Ordered](
+	field, group, tokenName string,
 	start, end time.Time,
-) ([]*CostRank, error) {
-	var ranks []*CostRank
+) ([]T, error) {
+	type Result struct {
+		Value        T
+		UsedAmount   float64
+		RequestCount int64
+	}
+	var results []Result
 
-	var query *gorm.DB
-	if group == "*" || channelID != 0 {
-		query = LogDB.Model(&Summary{})
-		if channelID != 0 {
-			query = query.Where("channel_id = ?", channelID)
-		}
-	} else {
-		query = LogDB.Model(&GroupSummary{}).
-			Where("group_id = ?", group)
-		if tokenName != "" {
-			query = query.Where("token_name = ?", tokenName)
-		}
+	query := LogDB.
+		Model(&GroupSummary{})
+	if group != "" {
+		query = query.Where("group_id = ?", group)
+	}
+	if tokenName != "" {
+		query = query.Where("token_name = ?", tokenName)
 	}
 
 	switch {
@@ -426,36 +451,32 @@ func GetModelCostRank(
 		query = query.Where("hour_timestamp <= ?", end.Unix())
 	}
 
-	selectFields := "model, SUM(used_amount) as used_amount, SUM(request_count) as request_count, SUM(input_tokens) as input_tokens, SUM(output_tokens) as output_tokens, SUM(cached_tokens) as cached_tokens, SUM(cache_creation_tokens) as cache_creation_tokens, SUM(total_tokens) as total_tokens"
-	if (channelID != 0) || (group != "*" && tokenName != "") {
-		selectFields += ", max(max_rpm) as max_rpm, max(max_rps) as max_rps, max(max_tpm) as max_tps, max(max_tps) as max_tps"
-	} else {
-		selectFields += ", 0 as max_rpm, 0 as max_rps, 0 as max_tpm, 0 as max_tps"
-	}
-
-	query = query.
-		Select(selectFields).
-		Group("model")
-
-	err := query.Scan(&ranks).Error
+	err := query.
+		Select(
+			field + " as value, SUM(request_count) as request_count, SUM(used_amount) as used_amount",
+		).
+		Group(field).
+		Scan(&results).Error
 	if err != nil {
 		return nil, err
 	}
 
-	slices.SortFunc(ranks, func(a, b *CostRank) int {
+	slices.SortFunc(results, func(a, b Result) int {
 		if a.UsedAmount != b.UsedAmount {
 			return cmp.Compare(b.UsedAmount, a.UsedAmount)
-		}
-		if a.TotalTokens != b.TotalTokens {
-			return cmp.Compare(b.TotalTokens, a.TotalTokens)
 		}
 		if a.RequestCount != b.RequestCount {
 			return cmp.Compare(b.RequestCount, a.RequestCount)
 		}
-		return cmp.Compare(a.Model, b.Model)
+		return cmp.Compare(a.Value, b.Value)
 	})
 
-	return ranks, nil
+	values := make([]T, len(results))
+	for i, result := range results {
+		values[i] = result.Value
+	}
+
+	return values, nil
 }
 
 type ChartData struct {
@@ -631,19 +652,19 @@ func GetDashboardData(
 
 	g.Go(func() error {
 		var err error
-		chartData, err = getChartData("*", start, end, "", modelName, channelID, timeSpan, timezone)
+		chartData, err = getChartData(start, end, channelID, modelName, timeSpan, timezone)
 		return err
 	})
 
 	g.Go(func() error {
 		var err error
-		channels, err = GetUsedChannels("*", start, end)
+		channels, err = GetUsedChannels(start, end)
 		return err
 	})
 
 	g.Go(func() error {
 		var err error
-		models, err = GetUsedModels("*", "", start, end)
+		models, err = GetUsedModels(start, end)
 		return err
 	})
 
@@ -666,7 +687,7 @@ func GetGroupDashboardData(
 	timeSpan TimeSpanType,
 	timezone *time.Location,
 ) (*GroupDashboardResponse, error) {
-	if group == "" || group == "*" {
+	if group == "" {
 		return nil, errors.New("group is required")
 	}
 
@@ -686,13 +707,12 @@ func GetGroupDashboardData(
 
 	g.Go(func() error {
 		var err error
-		chartData, err = getChartData(
+		chartData, err = getGroupChartData(
 			group,
 			start,
 			end,
 			tokenName,
 			modelName,
-			0,
 			timeSpan,
 			timezone,
 		)
@@ -701,13 +721,13 @@ func GetGroupDashboardData(
 
 	g.Go(func() error {
 		var err error
-		tokenNames, err = GetUsedTokenNames(group, start, end)
+		tokenNames, err = GetGroupUsedTokenNames(group, start, end)
 		return err
 	})
 
 	g.Go(func() error {
 		var err error
-		models, err = GetUsedModels(group, tokenName, start, end)
+		models, err = GetGroupUsedModels(group, tokenName, start, end)
 		return err
 	})
 
