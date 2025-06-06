@@ -2564,8 +2564,7 @@ const docTemplate = `{
                         "type": "string",
                         "description": "Keyword",
                         "name": "keyword",
-                        "in": "query",
-                        "required": true
+                        "in": "query"
                     },
                     {
                         "type": "integer",
@@ -2601,12 +2600,6 @@ const docTemplate = `{
                         "type": "string",
                         "description": "Filter by model name",
                         "name": "model_name",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "description": "Filter by channel",
-                        "name": "channel",
                         "in": "query"
                     },
                     {
@@ -2697,12 +2690,6 @@ const docTemplate = `{
                 "summary": "Get all logs",
                 "parameters": [
                     {
-                        "type": "string",
-                        "description": "Group or *",
-                        "name": "group",
-                        "in": "query"
-                    },
-                    {
                         "type": "integer",
                         "description": "Page number",
                         "name": "page",
@@ -2728,12 +2715,6 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "Token name",
-                        "name": "token_name",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
                         "description": "Model name",
                         "name": "model_name",
                         "in": "query"
@@ -2742,12 +2723,6 @@ const docTemplate = `{
                         "type": "integer",
                         "description": "Channel ID",
                         "name": "channel",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "description": "Token ID",
-                        "name": "token_id",
                         "in": "query"
                     },
                     {
@@ -3053,16 +3028,9 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Group or *",
-                        "name": "group",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
                         "description": "Keyword",
                         "name": "keyword",
-                        "in": "query",
-                        "required": true
+                        "in": "query"
                     },
                     {
                         "type": "integer",
@@ -3086,12 +3054,6 @@ const docTemplate = `{
                         "type": "integer",
                         "description": "End timestamp (milliseconds)",
                         "name": "end_timestamp",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "Filter by token name",
-                        "name": "token_name",
                         "in": "query"
                     },
                     {
@@ -4444,133 +4406,6 @@ const docTemplate = `{
                                                         }
                                                     }
                                                 ]
-                                            }
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    }
-                }
-            }
-        },
-        "/api/model_cost_rank/": {
-            "get": {
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ],
-                "description": "Returns ranking data for models based on cost",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "dashboard"
-                ],
-                "summary": "Get model cost ranking data",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "Channel ID",
-                        "name": "channel",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "description": "Start timestamp",
-                        "name": "start_timestamp",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "description": "End timestamp",
-                        "name": "end_timestamp",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/middleware.APIResponse"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "type": "array",
-                                            "items": {
-                                                "$ref": "#/definitions/model.CostRank"
-                                            }
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    }
-                }
-            }
-        },
-        "/api/model_cost_rank/{group}": {
-            "get": {
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ],
-                "description": "Returns model cost ranking data specific to the given group",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "dashboard"
-                ],
-                "summary": "Get model cost ranking data for a specific group",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Group",
-                        "name": "group",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "Token name",
-                        "name": "token_name",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "description": "Start timestamp",
-                        "name": "start_timestamp",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "description": "End timestamp",
-                        "name": "end_timestamp",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/middleware.APIResponse"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "type": "array",
-                                            "items": {
-                                                "$ref": "#/definitions/model.CostRank"
                                             }
                                         }
                                     }
@@ -9284,50 +9119,6 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "rejected_prediction_tokens": {
-                    "type": "integer"
-                }
-            }
-        },
-        "model.CostRank": {
-            "type": "object",
-            "properties": {
-                "cache_creation_tokens": {
-                    "type": "integer"
-                },
-                "cached_tokens": {
-                    "type": "integer"
-                },
-                "input_tokens": {
-                    "type": "integer"
-                },
-                "max_rpm": {
-                    "type": "integer"
-                },
-                "max_rps": {
-                    "type": "integer"
-                },
-                "max_tpm": {
-                    "type": "integer"
-                },
-                "max_tps": {
-                    "type": "integer"
-                },
-                "model": {
-                    "type": "string"
-                },
-                "output_tokens": {
-                    "type": "integer"
-                },
-                "request_count": {
-                    "type": "integer"
-                },
-                "total_tokens": {
-                    "type": "integer"
-                },
-                "used_amount": {
-                    "type": "number"
-                },
-                "web_search_count": {
                     "type": "integer"
                 }
             }

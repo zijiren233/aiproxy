@@ -252,7 +252,7 @@ func GetLogDetail(logID int) (*RequestDetail, error) {
 }
 
 func GetGroupLogDetail(logID int, group string) (*RequestDetail, error) {
-	if group == "" || group == "*" {
+	if group == "" {
 		return nil, errors.New("invalid group parameter")
 	}
 	var detail RequestDetail
@@ -497,9 +497,7 @@ func buildGetLogsQuery(
 		tx = tx.Where("ip = ?", ip)
 	}
 
-	if group == "" {
-		tx = tx.Where("group_id = ''")
-	} else if group != "*" {
+	if group != "" {
 		tx = tx.Where("group_id = ?", group)
 	}
 	if modelName != "" {
@@ -622,13 +620,10 @@ func getLogs(
 }
 
 func GetLogs(
-	group string,
 	startTimestamp time.Time,
 	endTimestamp time.Time,
 	modelName string,
 	requestID string,
-	tokenID int,
-	tokenName string,
 	channelID int,
 	order string,
 	codeType CodeType,
@@ -647,20 +642,20 @@ func GetLogs(
 
 	g.Go(func() error {
 		var err error
-		channels, err = GetUsedChannels(group, startTimestamp, endTimestamp)
+		channels, err = GetUsedChannels(startTimestamp, endTimestamp)
 		return err
 	})
 
 	g.Go(func() error {
 		var err error
 		total, logs, err = getLogs(
-			group,
+			"",
 			startTimestamp,
 			endTimestamp,
 			modelName,
 			requestID,
-			tokenID,
-			tokenName,
+			0,
+			"",
 			channelID,
 			order,
 			codeType,
@@ -695,7 +690,6 @@ func GetGroupLogs(
 	requestID string,
 	tokenID int,
 	tokenName string,
-	channelID int,
 	order string,
 	codeType CodeType,
 	code int,
@@ -720,14 +714,15 @@ func GetGroupLogs(
 
 	g.Go(func() error {
 		var err error
-		total, logs, err = getLogs(group,
+		total, logs, err = getLogs(
+			group,
 			startTimestamp,
 			endTimestamp,
 			modelName,
 			requestID,
 			tokenID,
 			tokenName,
-			channelID,
+			0,
 			order,
 			codeType,
 			code,
@@ -742,13 +737,13 @@ func GetGroupLogs(
 
 	g.Go(func() error {
 		var err error
-		tokenNames, err = GetUsedTokenNames(group, startTimestamp, endTimestamp)
+		tokenNames, err = GetGroupUsedTokenNames(group, startTimestamp, endTimestamp)
 		return err
 	})
 
 	g.Go(func() error {
 		var err error
-		models, err = GetUsedModels(group, tokenName, startTimestamp, endTimestamp)
+		models, err = GetGroupUsedModels(group, tokenName, startTimestamp, endTimestamp)
 		return err
 	})
 
@@ -790,9 +785,7 @@ func buildSearchLogsQuery(
 		tx = tx.Where("ip = ?", ip)
 	}
 
-	if group == "" {
-		tx = tx.Where("group_id = ''")
-	} else if group != "*" {
+	if group != "" {
 		tx = tx.Where("group_id = ?", group)
 	}
 	if modelName != "" {
@@ -966,11 +959,9 @@ func searchLogs(
 }
 
 func SearchLogs(
-	group string,
 	keyword string,
 	requestID string,
 	tokenID int,
-	tokenName string,
 	modelName string,
 	startTimestamp time.Time,
 	endTimestamp time.Time,
@@ -993,11 +984,11 @@ func SearchLogs(
 	g.Go(func() error {
 		var err error
 		total, logs, err = searchLogs(
-			group,
+			"",
 			keyword,
 			requestID,
 			tokenID,
-			tokenName,
+			"",
 			modelName,
 			startTimestamp,
 			endTimestamp,
@@ -1016,7 +1007,7 @@ func SearchLogs(
 
 	g.Go(func() error {
 		var err error
-		channels, err = GetUsedChannels(group, startTimestamp, endTimestamp)
+		channels, err = GetUsedChannels(startTimestamp, endTimestamp)
 		return err
 	})
 
@@ -1042,7 +1033,6 @@ func SearchGroupLogs(
 	modelName string,
 	startTimestamp time.Time,
 	endTimestamp time.Time,
-	channelID int,
 	order string,
 	codeType CodeType,
 	code int,
@@ -1075,7 +1065,7 @@ func SearchGroupLogs(
 			modelName,
 			startTimestamp,
 			endTimestamp,
-			channelID,
+			0,
 			order,
 			codeType,
 			code,
@@ -1090,13 +1080,13 @@ func SearchGroupLogs(
 
 	g.Go(func() error {
 		var err error
-		tokenNames, err = GetUsedTokenNames(group, startTimestamp, endTimestamp)
+		tokenNames, err = GetGroupUsedTokenNames(group, startTimestamp, endTimestamp)
 		return err
 	})
 
 	g.Go(func() error {
 		var err error
-		models, err = GetUsedModels(group, tokenName, startTimestamp, endTimestamp)
+		models, err = GetGroupUsedModels(group, tokenName, startTimestamp, endTimestamp)
 		return err
 	})
 

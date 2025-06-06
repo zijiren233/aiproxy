@@ -64,15 +64,12 @@ func parseCommonParams(c *gin.Context) (params struct {
 //	@Tags			logs
 //	@Produce		json
 //	@Security		ApiKeyAuth
-//	@Param			group			query		string	false	"Group or *"
 //	@Param			page			query		int		false	"Page number"
 //	@Param			per_page		query		int		false	"Items per page"
 //	@Param			start_timestamp	query		int		false	"Start timestamp (milliseconds)"
 //	@Param			end_timestamp	query		int		false	"End timestamp (milliseconds)"
-//	@Param			token_name		query		string	false	"Token name"
 //	@Param			model_name		query		string	false	"Model name"
 //	@Param			channel			query		int		false	"Channel ID"
-//	@Param			token_id		query		int		false	"Token ID"
 //	@Param			order			query		string	false	"Order"
 //	@Param			request_id		query		string	false	"Request ID"
 //	@Param			code_type		query		string	false	"Status code type"
@@ -86,16 +83,12 @@ func GetLogs(c *gin.Context) {
 	page, perPage := utils.ParsePageParams(c)
 	startTime, endTime := parseTimeRange(c)
 	params := parseCommonParams(c)
-	group := c.Query("group")
 
 	result, err := model.GetLogs(
-		group,
 		startTime,
 		endTime,
 		params.modelName,
 		params.requestID,
-		params.tokenID,
-		params.tokenName,
 		params.channelID,
 		params.order,
 		model.CodeType(params.codeType),
@@ -140,7 +133,7 @@ func GetLogs(c *gin.Context) {
 //	@Router			/api/log/{group} [get]
 func GetGroupLogs(c *gin.Context) {
 	group := c.Param("group")
-	if group == "" || group == "*" {
+	if group == "" {
 		middleware.ErrorResponse(c, http.StatusBadRequest, "invalid group parameter")
 		return
 	}
@@ -157,7 +150,6 @@ func GetGroupLogs(c *gin.Context) {
 		params.requestID,
 		params.tokenID,
 		params.tokenName,
-		params.channelID,
 		params.order,
 		model.CodeType(params.codeType),
 		params.code,
@@ -181,13 +173,11 @@ func GetGroupLogs(c *gin.Context) {
 //	@Tags			logs
 //	@Produce		json
 //	@Security		ApiKeyAuth
-//	@Param			group			query		string	false	"Group or *"
-//	@Param			keyword			query		string	true	"Keyword"
+//	@Param			keyword			query		string	false	"Keyword"
 //	@Param			page			query		int		false	"Page number"
 //	@Param			per_page		query		int		false	"Items per page"
 //	@Param			start_timestamp	query		int		false	"Start timestamp (milliseconds)"
 //	@Param			end_timestamp	query		int		false	"End timestamp (milliseconds)"
-//	@Param			token_name		query		string	false	"Filter by token name"
 //	@Param			model_name		query		string	false	"Filter by model name"
 //	@Param			channel			query		int		false	"Filter by channel"
 //	@Param			token_id		query		int		false	"Filter by token id"
@@ -206,14 +196,11 @@ func SearchLogs(c *gin.Context) {
 	params := parseCommonParams(c)
 
 	keyword := c.Query("keyword")
-	group := c.Query("group")
 
 	result, err := model.SearchLogs(
-		group,
 		keyword,
 		params.requestID,
 		params.tokenID,
-		params.tokenName,
 		params.modelName,
 		startTime,
 		endTime,
@@ -242,14 +229,13 @@ func SearchLogs(c *gin.Context) {
 //	@Produce		json
 //	@Security		ApiKeyAuth
 //	@Param			group			path		string	true	"Group name"
-//	@Param			keyword			query		string	true	"Keyword"
+//	@Param			keyword			query		string	false	"Keyword"
 //	@Param			page			query		int		false	"Page number"
 //	@Param			per_page		query		int		false	"Items per page"
 //	@Param			start_timestamp	query		int		false	"Start timestamp (milliseconds)"
 //	@Param			end_timestamp	query		int		false	"End timestamp (milliseconds)"
 //	@Param			token_name		query		string	false	"Filter by token name"
 //	@Param			model_name		query		string	false	"Filter by model name"
-//	@Param			channel			query		int		false	"Filter by channel"
 //	@Param			token_id		query		int		false	"Filter by token id"
 //	@Param			order			query		string	false	"Order"
 //	@Param			request_id		query		string	false	"Request ID"
@@ -262,7 +248,7 @@ func SearchLogs(c *gin.Context) {
 //	@Router			/api/log/{group}/search [get]
 func SearchGroupLogs(c *gin.Context) {
 	group := c.Param("group")
-	if group == "" || group == "*" {
+	if group == "" {
 		middleware.ErrorResponse(c, http.StatusBadRequest, "invalid group parameter")
 		return
 	}
@@ -281,7 +267,6 @@ func SearchGroupLogs(c *gin.Context) {
 		params.modelName,
 		startTime,
 		endTime,
-		params.channelID,
 		params.order,
 		model.CodeType(params.codeType),
 		params.code,
@@ -331,7 +316,7 @@ func GetLogDetail(c *gin.Context) {
 //	@Router			/api/log/{group}/detail/{log_id} [get]
 func GetGroupLogDetail(c *gin.Context) {
 	group := c.Param("group")
-	if group == "" || group == "*" {
+	if group == "" {
 		middleware.ErrorResponse(c, http.StatusBadRequest, "invalid group parameter")
 		return
 	}

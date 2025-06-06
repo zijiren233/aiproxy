@@ -43,9 +43,10 @@ func getDashboardTime(
 		start = time.Date(start.Year(), start.Month(), start.Day(), 0, 0, 0, 0, timezoneLocation)
 		timeSpan = model.TimeSpanDay
 	case "day":
-		fallthrough
-	default:
 		start = end.AddDate(0, 0, -1)
+		timeSpan = model.TimeSpanHour
+	default:
+		start = end.AddDate(0, 0, -7)
 		timeSpan = model.TimeSpanHour
 	}
 	if startTimestamp != 0 {
@@ -224,7 +225,7 @@ func GetDashboard(c *gin.Context) {
 //	@Router			/api/dashboard/{group} [get]
 func GetGroupDashboard(c *gin.Context) {
 	group := c.Param("group")
-	if group == "" || group == "*" {
+	if group == "" {
 		middleware.ErrorResponse(c, http.StatusBadRequest, "invalid group parameter")
 		return
 	}
@@ -323,58 +324,6 @@ func GetGroupDashboardModels(c *gin.Context) {
 		}
 	}
 	middleware.SuccessResponse(c, newEnabledModelConfigs)
-}
-
-// GetModelCostRank godoc
-//
-//	@Summary		Get model cost ranking data
-//	@Description	Returns ranking data for models based on cost
-//	@Tags			dashboard
-//	@Produce		json
-//	@Security		ApiKeyAuth
-//	@Param			channel			query		int		false	"Channel ID"
-//	@Param			start_timestamp	query		int64	false	"Start timestamp"
-//	@Param			end_timestamp	query		int64	false	"End timestamp"
-//	@Success		200				{object}	middleware.APIResponse{data=[]model.CostRank}
-//	@Router			/api/model_cost_rank/ [get]
-func GetModelCostRank(c *gin.Context) {
-	channelID, _ := strconv.Atoi(c.Query("channel"))
-	startTime, endTime := parseTimeRange(c)
-	models, err := model.GetModelCostRank("*", "", channelID, startTime, endTime)
-	if err != nil {
-		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
-		return
-	}
-	middleware.SuccessResponse(c, models)
-}
-
-// GetGroupModelCostRank godoc
-//
-//	@Summary		Get model cost ranking data for a specific group
-//	@Description	Returns model cost ranking data specific to the given group
-//	@Tags			dashboard
-//	@Produce		json
-//	@Security		ApiKeyAuth
-//	@Param			group			path		string	true	"Group"
-//	@Param			token_name		query		string	false	"Token name"
-//	@Param			start_timestamp	query		int64	false	"Start timestamp"
-//	@Param			end_timestamp	query		int64	false	"End timestamp"
-//	@Success		200				{object}	middleware.APIResponse{data=[]model.CostRank}
-//	@Router			/api/model_cost_rank/{group} [get]
-func GetGroupModelCostRank(c *gin.Context) {
-	group := c.Param("group")
-	if group == "" || group == "*" {
-		middleware.ErrorResponse(c, http.StatusBadRequest, "invalid group parameter")
-		return
-	}
-	tokenName := c.Query("token_name")
-	startTime, endTime := parseTimeRange(c)
-	models, err := model.GetModelCostRank(group, tokenName, 0, startTime, endTime)
-	if err != nil {
-		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
-		return
-	}
-	middleware.SuccessResponse(c, models)
 }
 
 // GetTimeSeriesModelData godoc
