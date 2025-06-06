@@ -724,6 +724,7 @@ func GetGroupDashboardData(
 	}, nil
 }
 
+//nolint:revive
 type ModelData struct {
 	Timestamp           int64   `json:"timestamp,omitempty"`
 	Model               string  `json:"model"`
