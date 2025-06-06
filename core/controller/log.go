@@ -298,52 +298,6 @@ func SearchGroupLogs(c *gin.Context) {
 	middleware.SuccessResponse(c, result)
 }
 
-// GetUsedModels godoc
-//
-//	@Summary		Get used models
-//	@Description	Get a list of models that have been used in logs
-//	@Tags			logs
-//	@Produce		json
-//	@Security		ApiKeyAuth
-//	@Param			group	query		string	false	"Group or *"
-//	@Success		200		{object}	middleware.APIResponse{data=[]string}
-//	@Router			/api/logs/used/models [get]
-func GetUsedModels(c *gin.Context) {
-	group := c.Query("group")
-	startTime, endTime := parseTimeRange(c)
-	models, err := model.GetUsedModelsFromLog(group, startTime, endTime)
-	if err != nil {
-		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
-		return
-	}
-	middleware.SuccessResponse(c, models)
-}
-
-// GetGroupUsedModels godoc
-//
-//	@Summary		Get group used models
-//	@Description	Get a list of models that have been used in a specific group's logs
-//	@Tags			log
-//	@Produce		json
-//	@Security		ApiKeyAuth
-//	@Param			group	path		string	true	"Group name"
-//	@Success		200		{object}	middleware.APIResponse{data=[]string}
-//	@Router			/api/log/{group}/used/models [get]
-func GetGroupUsedModels(c *gin.Context) {
-	group := c.Param("group")
-	if group == "" || group == "*" {
-		middleware.ErrorResponse(c, http.StatusBadRequest, "invalid group parameter")
-		return
-	}
-	startTime, endTime := parseTimeRange(c)
-	models, err := model.GetUsedModelsFromLog(group, startTime, endTime)
-	if err != nil {
-		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
-		return
-	}
-	middleware.SuccessResponse(c, models)
-}
-
 // GetLogDetail godoc
 //
 //	@Summary		Get log detail
@@ -388,52 +342,6 @@ func GetGroupLogDetail(c *gin.Context) {
 		return
 	}
 	middleware.SuccessResponse(c, log)
-}
-
-// GetUsedTokenNames godoc
-//
-//	@Summary		Get used token names
-//	@Description	Get a list of token names that have been used in logs
-//	@Tags			logs
-//	@Produce		json
-//	@Security		ApiKeyAuth
-//	@Param			group	query		string	false	"Group or *"
-//	@Success		200		{object}	middleware.APIResponse{data=[]string}
-//	@Router			/api/logs/used/token_names [get]
-func GetUsedTokenNames(c *gin.Context) {
-	group := c.Query("group")
-	startTime, endTime := parseTimeRange(c)
-	tokenNames, err := model.GetUsedTokenNamesFromLog(group, startTime, endTime)
-	if err != nil {
-		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
-		return
-	}
-	middleware.SuccessResponse(c, tokenNames)
-}
-
-// GetGroupUsedTokenNames godoc
-//
-//	@Summary		Get group used token names
-//	@Description	Get a list of token names that have been used in a specific group's logs
-//	@Tags			log
-//	@Produce		json
-//	@Security		ApiKeyAuth
-//	@Param			group	path		string	true	"Group name"
-//	@Success		200		{object}	middleware.APIResponse{data=[]string}
-//	@Router			/api/log/{group}/used/token_names [get]
-func GetGroupUsedTokenNames(c *gin.Context) {
-	group := c.Param("group")
-	if group == "" || group == "*" {
-		middleware.ErrorResponse(c, http.StatusBadRequest, "invalid group parameter")
-		return
-	}
-	startTime, endTime := parseTimeRange(c)
-	tokenNames, err := model.GetUsedTokenNamesFromLog(group, startTime, endTime)
-	if err != nil {
-		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
-		return
-	}
-	middleware.SuccessResponse(c, tokenNames)
 }
 
 // DeleteHistoryLogs godoc
