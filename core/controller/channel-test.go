@@ -71,6 +71,16 @@ func testSingleModel(
 		}
 	}
 
+	if modelConfig.Type != mode.Unknown {
+		a, ok := adaptors.GetAdaptor(channel.Type)
+		if !ok {
+			return nil, errors.New("adaptor not found")
+		}
+		if !a.SupportMode(modelConfig.Type) {
+			return nil, fmt.Errorf("%s not supported by adaptor", modelConfig.Type)
+		}
+	}
+
 	if modelConfig.ExcludeFromTests {
 		return &model.ChannelTest{
 			TestAt:      time.Now(),
