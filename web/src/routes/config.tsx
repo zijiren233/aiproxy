@@ -8,6 +8,8 @@ import { ProtectedRoute } from "@/feature/auth/components/ProtectedRoute"
 import ModelPage from "@/pages/model/page"
 import ChannelPage from "@/pages/channel/page"
 import TokenPage from "@/pages/token/page"
+import MonitorPage from "@/pages/monitor/page"
+import LogPage from "@/pages/log/page"
 
 // import layout component directly
 import { RootLayout } from "@/components/layout/RootLayOut"
@@ -41,11 +43,11 @@ export function useRoutes(): RouteObject[] {
             children: [
                 {
                     path: "/",
-                    element: <Navigate to={`${ROUTES.KEY}`} replace />
+                    element: <Navigate to={`${ROUTES.MONITOR}`} replace />
                 },
                 {
                     path: ROUTES.MONITOR,
-                    element: <div>monitor</div>,
+                    element: <MonitorPage />,
                 },
                 {
                     path: ROUTES.KEY,
@@ -61,7 +63,7 @@ export function useRoutes(): RouteObject[] {
                 },
                 {
                     path: ROUTES.LOG,
-                    element: <div>log</div>,
+                    element: <LogPage />,
                 }
             ]
         }]

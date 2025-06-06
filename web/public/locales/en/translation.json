@@ -12,7 +12,85 @@
   "common": {
     "noResult": "No Data",
     "copied": "Copied to clipboard",
-    "copyFailed": "Copy failed"
+    "copyFailed": "Copy failed",
+    "validation": {
+      "error": {
+        "title": "Form Validation Error"
+      }
+    },
+    "global": "Global",
+    "loading": "Loading...",
+    "selectDateRange": "Select date range"
+  },
+  "error": {
+    "loading": "Failed to load data",
+    "loadingLogs": "Failed to load logs",
+    "retry": "Retry",
+    "viewDetails": "View Details",
+    "hideDetails": "Hide Details",
+    "message": "Error Message",
+    "code": "Error Code",
+    "network": "Network Error",
+    "networkDescription": "Please check your network connection and try again",
+    "server": "Server Error",
+    "serverDescription": "The server encountered an error while processing your request",
+    "client": "Client Error",
+    "clientDescription": "There was an issue with your request",
+    "validation": "Validation Error",
+    "validationDescription": "Please check your input and try again",
+    "unauthorized": "Unauthorized",
+    "unauthorizedDescription": "You don't have permission to access this resource",
+    "notFound": "Not Found",
+    "notFoundDescription": "The requested resource was not found",
+    "unknown": "Unknown Error",
+    "unknownDescription": "An unexpected error occurred"
+  },
+  "monitor": {
+    "title": "Monitor Dashboard",
+    "noData": "No Data",
+    "noDataDescription": "No data found for the current time range. Please try adjusting the filter conditions or selecting a different time range.",
+    "filters": {
+      "title": "Filters",
+      "key": "API Key",
+      "keyPlaceholder": "Enter API Key name to filter",
+      "model": "Model",
+      "modelPlaceholder": "Enter model name",
+      "dateRange": "Date Range",
+      "dateRangePlaceholder": "Select date range",
+      "timespan": "Time Granularity",
+      "timespanPlaceholder": "Select time granularity",
+      "timespanHour": "Hour",
+      "timespanDay": "Day",
+      "search": "Search",
+      "reset": "Reset"
+    },
+    "metrics": {
+      "totalRequests": "Total Requests",
+      "totalRequestsTooltip": "Total number of requests in the time range",
+      "errorCount": "Error Count",
+      "errorCountTooltip": "Number of exception requests in the time range",
+      "currentRpm": "Current RPM",
+      "currentRpmTooltip": "Requests Per Minute",
+      "currentTpm": "Current TPM",
+      "currentTpmTooltip": "Tokens Per Minute",
+      "outputTokens": "Output Tokens",
+      "outputTokensTooltip": "Total output tokens in the time range",
+      "fullValue": "Full Value"
+    },
+    "charts": {
+      "tokensChart": {
+        "cacheCreationTokens": "Cache Creation Tokens",
+        "cachedTokens": "Cached Tokens",
+        "inputTokens": "Input Tokens",
+        "outputTokens": "Output Tokens",
+        "totalTokens": "Total Tokens",
+        "webSearchCount": "Web Search Count"
+      },
+      "requestsChart": {
+        "requestCount": "Request Count",
+        "exceptionCount": "Exception Count"
+      }
+    }
   },
   "table": {
     "selected": "{{selected}} of {{total}} row(s) selected",
@@ -82,6 +160,13 @@
     "refresh": "Refresh",
     "noResults": "No models found",
     "apiDetails": "API Detail",
+    "pluginInfo": "Plugin Info",
+    "noPluginConfigured": "No plugins configured",
+    "pluginEnabled": "Enabled",
+    "pluginDisabled": "Disabled",
+    "cachePlugin": "Cache",
+    "webSearchPlugin": "Web Search",
+    "thinkSplitPlugin": "Think Split",
     "dialog": {
       "createTitle": "Create Model",
       "updateTitle": "Update Model",
@@ -93,7 +178,65 @@
       "selectType": "Select model type",
       "create": "Create",
       "update": "Update",
-      "submitting": "Submitting..."
+      "submitting": "Submitting...",
+      "modelNameUpdateDisabled": "Model name cannot be modified in update mode",
+      "noSearchEngineConfigured": "Click \"Add Search Engine\" to configure search engines",
+      "pluginConfiguration": "Plugin Configuration",
+      "pluginConfigurationDescription": "Configure optional plugins for this model",
+      "cachePlugin": {
+        "title": "Cache Plugin",
+        "description": "Enable response caching to improve performance",
+        "enable": "Enable Cache",
+        "ttl": "Time to Live (seconds)",
+        "ttlPlaceholder": "Enter cache TTL",
+        "itemMaxSize": "Max Cache Item Size (bytes)",
+        "itemMaxSizePlaceholder": "Enter max item size",
+        "addCacheHitHeader": "Add cache hit header",
+        "cacheHitHeader": "Cache hit header name",
+        "cacheHitHeaderPlaceholder": "Enter header name"
+      },
+      "webSearchPlugin": {
+        "title": "Web Search Plugin",
+        "description": "Enable web search capabilities for enhanced responses",
+        "enable": "Enable Web Search",
+        "searchFrom": "Search Engines",
+        "searchFromPlaceholder": "Select search engines",
+        "addEngine": "Add Search Engine",
+        "removeEngine": "Remove",
+        "engineType": "Engine Type",
+        "engineConfig": "Engine Configuration",
+        "maxResults": "Maximum Results",
+        "maxResultsPlaceholder": "Enter max results",
+        "searchEngines": {
+          "bing": "Bing",
+          "google": "Google",
+          "arxiv": "ArXiv",
+          "searchxng": "SearchXNG"
+        },
+        "engineSpec": {
+          "apiKey": "API Key",
+          "apiKeyPlaceholder": "Enter API key",
+          "cx": "Custom Search Engine ID",
+          "cxPlaceholder": "Enter search engine ID",
+          "baseUrl": "Base URL",
+          "baseUrlPlaceholder": "Enter base URL"
+        },
+        "forceSearch": "Force search on every request",
+        "needReference": "Include references in response",
+        "referenceLocation": "Reference location",
+        "referenceLocationPlaceholder": "Enter reference location",
+        "referenceFormat": "Reference format",
+        "referenceFormatPlaceholder": "Enter reference format",
+        "defaultLanguage": "Default language",
+        "defaultLanguagePlaceholder": "Enter default language",
+        "promptTemplate": "Search prompt template",
+        "promptTemplatePlaceholder": "Enter prompt template"
+      },
+      "thinkSplitPlugin": {
+        "title": "Think Split Plugin",
+        "description": "Split complex thinking into structured responses",
+        "enable": "Enable Think Split"
+      }
     },
     "deleteDialog": {
       "confirmTitle": "Delete Model",
@@ -101,6 +244,54 @@
       "cancel": "Cancel",
       "delete": "Delete",
       "deleting": "Deleting..."
+    }
+  },
+  "log": {
+    "title": "Log List",
+    "keyName": "Key Name",
+    "model": "Model",
+    "inputTokens": "Input Tokens",
+    "outputTokens": "Output Tokens",
+    "duration": "Duration(s)",
+    "state": "State",
+    "time": "Time",
+    "details": "Details",
+    "success": "Success",
+    "failed": "Failed",
+    "basicInfo": "Basic Info",
+    "tokenInfo": "Token Info",
+    "timeInfo": "Time Info",
+    "requestBody": "Request Body",
+    "responseBody": "Response Body",
+    "noRequestBody": "No request body available",
+    "noResponseBody": "No response body available",
+    "contentTruncated": "Content truncated",
+    "id": "ID",
+    "requestId": "Request ID",
+    "channel": "Channel",
+    "user": "User",
+    "ip": "IP",
+    "endpoint": "Endpoint",
+    "cacheCreation": "Cache Creation",
+    "cached": "Cached",
+    "imageInput": "Image Input",
+    "reasoning": "Reasoning",
+    "total": "Total",
+    "webSearchCount": "Web Search Count",
+    "created": "Created",
+    "request": "Request",
+    "retry": "Retry",
+    "retryTimes": "Retry Times",
+    "ttfb": "TTFB",
+    "filters": {
+      "keyPlaceholder": "Enter key name to filter",
+      "modelPlaceholder": "Enter model name to filter",
+      "statusAll": "All",
+      "statusSuccess": "Success",
+      "statusError": "Error",
+      "dateRangePlaceholder": "Select date range",
+      "search": "Search",
+      "reset": "Reset"
     }
   },
   "apiDoc": {
@@ -168,6 +359,7 @@
     "8": "STT",
     "9": "Audio",
     "10": "Rerank",
-    "11": "PDF Parsing"
+    "11": "PDF Parsing",
+    "13": "Video Generation"
   }
 }
