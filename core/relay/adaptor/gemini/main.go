@@ -18,7 +18,6 @@ import (
 	"github.com/labring/aiproxy/core/common/conv"
 	"github.com/labring/aiproxy/core/common/image"
 	"github.com/labring/aiproxy/core/common/render"
-	"github.com/labring/aiproxy/core/middleware"
 	"github.com/labring/aiproxy/core/model"
 	"github.com/labring/aiproxy/core/relay/adaptor"
 	"github.com/labring/aiproxy/core/relay/adaptor/openai"
@@ -645,7 +644,7 @@ func StreamHandler(
 
 	defer resp.Body.Close()
 
-	log := middleware.GetLogger(c)
+	log := common.GetLogger(c)
 
 	responseText := strings.Builder{}
 

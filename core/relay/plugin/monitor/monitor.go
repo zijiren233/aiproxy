@@ -8,11 +8,11 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/labring/aiproxy/core/common"
 	"github.com/labring/aiproxy/core/common/conv"
 	"github.com/labring/aiproxy/core/common/notify"
 	"github.com/labring/aiproxy/core/common/reqlimit"
 	"github.com/labring/aiproxy/core/common/trylock"
-	"github.com/labring/aiproxy/core/middleware"
 	"github.com/labring/aiproxy/core/model"
 	"github.com/labring/aiproxy/core/monitor"
 	"github.com/labring/aiproxy/core/relay/adaptor"
@@ -21,15 +21,14 @@ import (
 	"github.com/labring/aiproxy/core/relay/plugin/noop"
 )
 
-var _ plugin.Plugin = (*Monitor)(nil)
+var _ plugin.Plugin = (*ChannelMonitor)(nil)
 
-// Monitor implements the monitor functionality
-type Monitor struct {
+type ChannelMonitor struct {
 	noop.Noop
 }
 
-func NewMonitorPlugin() plugin.Plugin {
-	return &Monitor{}
+func NewChannelMonitorPlugin() plugin.Plugin {
+	return &ChannelMonitor{}
 }
 
 var channelNoRetryStatusCodesMap = map[int]struct{}{
@@ -56,7 +55,7 @@ func ChannelHasPermission(relayErr adaptor.Error) bool {
 	return !ok
 }
 
-func (m *Monitor) DoRequest(
+func (m *ChannelMonitor) DoRequest(
 	meta *meta.Meta,
 	store adaptor.Store,
 	c *gin.Context,
@@ -72,14 +71,14 @@ func (m *Monitor) DoRequest(
 	return do.DoRequest(meta, store, c, req)
 }
 
-func (m *Monitor) DoResponse(
+func (m *ChannelMonitor) DoResponse(
 	meta *meta.Meta,
 	store adaptor.Store,
 	c *gin.Context,
 	resp *http.Response,
 	do adaptor.DoResponse,
 ) (model.Usage, adaptor.Error) {
-	log := middleware.GetLogger(c)
+	log := common.GetLogger(c)
 
 	usage, relayErr := do.DoResponse(meta, store, c, resp)
 
@@ -91,24 +90,6 @@ func (m *Monitor) DoResponse(
 			int64(usage.TotalTokens),
 		)
 		updateChannelModelTokensRequestRate(c, meta, count+overLimitCount, secondCount)
-
-		count, overLimitCount, secondCount = reqlimit.PushGroupModelTokensRequest(
-			context.Background(),
-			meta.Group.ID,
-			meta.OriginModel,
-			meta.ModelConfig.TPM,
-			int64(usage.TotalTokens),
-		)
-		middleware.UpdateGroupModelTokensRequest(c, meta.Group, count+overLimitCount, secondCount)
-
-		count, overLimitCount, secondCount = reqlimit.PushGroupModelTokennameTokensRequest(
-			context.Background(),
-			meta.Group.ID,
-			meta.OriginModel,
-			meta.Token.Name,
-			int64(usage.TotalTokens),
-		)
-		middleware.UpdateGroupModelTokennameTokensRequest(c, count+overLimitCount, secondCount)
 	}
 
 	if relayErr == nil {
@@ -257,7 +238,7 @@ func GetChannelModelRequestRate(c *gin.Context, meta *meta.Meta) model.RequestRa
 func updateChannelModelRequestRate(c *gin.Context, meta *meta.Meta, rpm, rps int64) {
 	meta.Set(MetaChannelModelKeyRPM, rpm)
 	meta.Set(MetaChannelModelKeyRPS, rps)
-	log := middleware.GetLogger(c)
+	log := common.GetLogger(c)
 	log.Data["ch_rpm"] = rpm
 	log.Data["ch_rps"] = rps
 }
@@ -265,7 +246,7 @@ func updateChannelModelRequestRate(c *gin.Context, meta *meta.Meta, rpm, rps int
 func updateChannelModelTokensRequestRate(c *gin.Context, meta *meta.Meta, tpm, tps int64) {
 	meta.Set(MetaChannelModelKeyTPM, tpm)
 	meta.Set(MetaChannelModelKeyTPS, tps)
-	log := middleware.GetLogger(c)
+	log := common.GetLogger(c)
 	log.Data["ch_tpm"] = tpm
 	log.Data["ch_tps"] = tps
 }

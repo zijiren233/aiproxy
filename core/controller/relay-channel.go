@@ -8,6 +8,7 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"github.com/labring/aiproxy/core/common"
 	"github.com/labring/aiproxy/core/middleware"
 	"github.com/labring/aiproxy/core/model"
 	"github.com/labring/aiproxy/core/monitor"
@@ -273,7 +274,7 @@ type initialChannel struct {
 }
 
 func getInitialChannel(c *gin.Context, modelName string, m mode.Mode) (*initialChannel, error) {
-	log := middleware.GetLogger(c)
+	log := common.GetLogger(c)
 
 	group := middleware.GetGroup(c)
 	availableSet := group.GetAvailableSets()
@@ -343,7 +344,7 @@ func getInitialChannel(c *gin.Context, modelName string, m mode.Mode) (*initialC
 }
 
 func getWebSearchChannel(c *gin.Context, modelName string) (*model.Channel, error) {
-	log := middleware.GetLogger(c)
+	log := common.GetLogger(c)
 	mc := middleware.GetModelCaches(c)
 
 	ids, err := monitor.GetBannedChannelsWithModel(c.Request.Context(), modelName)

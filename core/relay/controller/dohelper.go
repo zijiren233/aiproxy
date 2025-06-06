@@ -14,7 +14,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/core/common"
 	"github.com/labring/aiproxy/core/common/conv"
-	"github.com/labring/aiproxy/core/middleware"
 	"github.com/labring/aiproxy/core/model"
 	"github.com/labring/aiproxy/core/relay/adaptor"
 	"github.com/labring/aiproxy/core/relay/meta"
@@ -137,7 +136,7 @@ func DoHelper(
 	}
 
 	// 5. Update usage metrics
-	updateUsageMetrics(usage, middleware.GetLogger(c))
+	updateUsageMetrics(usage, common.GetLogger(c))
 
 	return usage, &detail, nil
 }
@@ -174,7 +173,7 @@ func prepareAndDoRequest(
 	meta *meta.Meta,
 	store adaptor.Store,
 ) (*http.Response, adaptor.Error) {
-	log := middleware.GetLogger(c)
+	log := common.GetLogger(c)
 
 	convertResult, err := a.ConvertRequest(meta, store, c.Request)
 	if err != nil {

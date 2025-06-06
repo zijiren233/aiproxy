@@ -10,7 +10,6 @@ import (
 	"github.com/bytedance/sonic"
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/core/common"
-	"github.com/labring/aiproxy/core/middleware"
 	"github.com/labring/aiproxy/core/model"
 	"github.com/labring/aiproxy/core/relay/adaptor"
 	"github.com/labring/aiproxy/core/relay/meta"
@@ -91,7 +90,7 @@ func EmbeddingsHandler(
 ) (model.Usage, adaptor.Error) {
 	defer resp.Body.Close()
 
-	log := middleware.GetLogger(c)
+	log := common.GetLogger(c)
 
 	responseBody, err := io.ReadAll(resp.Body)
 	if err != nil {

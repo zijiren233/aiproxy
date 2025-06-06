@@ -14,8 +14,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/bedrockruntime/types"
 	"github.com/bytedance/sonic"
 	"github.com/gin-gonic/gin"
+	"github.com/labring/aiproxy/core/common"
 	"github.com/labring/aiproxy/core/common/render"
-	"github.com/labring/aiproxy/core/middleware"
 	"github.com/labring/aiproxy/core/model"
 	"github.com/labring/aiproxy/core/relay/adaptor"
 	"github.com/labring/aiproxy/core/relay/adaptor/aws/utils"
@@ -200,7 +200,7 @@ func ResponseLlama2OpenAI(meta *meta.Meta, llamaResponse Response) relaymodel.Te
 }
 
 func StreamHandler(meta *meta.Meta, c *gin.Context) (model.Usage, adaptor.Error) {
-	log := middleware.GetLogger(c)
+	log := common.GetLogger(c)
 
 	createdTime := time.Now().Unix()
 	awsModelID, err := awsModelID(meta.ActualModel)

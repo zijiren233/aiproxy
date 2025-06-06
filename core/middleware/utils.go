@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/gin-gonic/gin"
+	"github.com/labring/aiproxy/core/common"
 	"github.com/labring/aiproxy/core/relay/mode"
 	relaymodel "github.com/labring/aiproxy/core/relay/model"
 )
@@ -15,7 +16,7 @@ func AbortLogWithMessageWithMode(
 	message string,
 	typ ...string,
 ) {
-	GetLogger(c).Error(message)
+	common.GetLogger(c).Error(message)
 	AbortWithMessageWithMode(m, c, statusCode, message, typ...)
 }
 
@@ -33,7 +34,7 @@ func AbortWithMessageWithMode(
 }
 
 func AbortLogWithMessage(c *gin.Context, statusCode int, message string, typ ...string) {
-	GetLogger(c).Error(message)
+	common.GetLogger(c).Error(message)
 	AbortWithMessage(c, statusCode, message, typ...)
 }
 

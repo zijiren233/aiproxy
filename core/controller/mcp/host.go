@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/labring/aiproxy/core/common"
 	"github.com/labring/aiproxy/core/common/config"
 	"github.com/labring/aiproxy/core/middleware"
 	"github.com/labring/aiproxy/core/model"
@@ -44,7 +45,7 @@ func routeHostMCP(
 	c *gin.Context,
 	publicHandler, groupHandler func(c *gin.Context, mcpID string),
 ) {
-	log := middleware.GetLogger(c)
+	log := common.GetLogger(c)
 	host := c.Request.Host
 
 	log.Debugf("route host mcp: %s", host)

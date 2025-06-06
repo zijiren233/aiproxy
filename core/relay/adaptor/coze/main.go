@@ -9,9 +9,9 @@ import (
 
 	"github.com/bytedance/sonic"
 	"github.com/gin-gonic/gin"
+	"github.com/labring/aiproxy/core/common"
 	"github.com/labring/aiproxy/core/common/conv"
 	"github.com/labring/aiproxy/core/common/render"
-	"github.com/labring/aiproxy/core/middleware"
 	"github.com/labring/aiproxy/core/model"
 	"github.com/labring/aiproxy/core/relay/adaptor"
 	"github.com/labring/aiproxy/core/relay/adaptor/coze/constant/messagetype"
@@ -104,7 +104,7 @@ func StreamHandler(
 
 	defer resp.Body.Close()
 
-	log := middleware.GetLogger(c)
+	log := common.GetLogger(c)
 
 	responseText := strings.Builder{}
 	createdTime := time.Now().Unix()
@@ -166,7 +166,7 @@ func Handler(meta *meta.Meta, c *gin.Context, resp *http.Response) (model.Usage,
 
 	defer resp.Body.Close()
 
-	log := middleware.GetLogger(c)
+	log := common.GetLogger(c)
 
 	var cozeResponse Response
 	err := sonic.ConfigDefault.NewDecoder(resp.Body).Decode(&cozeResponse)

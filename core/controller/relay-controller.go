@@ -78,7 +78,7 @@ func (s *storeImpl) SaveStore(store adaptor.StoreCache) error {
 }
 
 func relayHandler(c *gin.Context, meta *meta.Meta) *controller.HandleResult {
-	log := middleware.GetLogger(c)
+	log := common.GetLogger(c)
 	middleware.SetLogFieldsFromMeta(meta, log.Data)
 
 	adaptor, ok := adaptors.GetAdaptor(meta.Channel.Type)
@@ -93,12 +93,13 @@ func relayHandler(c *gin.Context, meta *meta.Meta) *controller.HandleResult {
 	}
 
 	a := plugin.WrapperAdaptor(adaptor,
-		monitorplugin.NewMonitorPlugin(),
+		monitorplugin.NewGroupMonitorPlugin(),
 		cache.NewCachePlugin(common.RDB),
 		websearch.NewWebSearchPlugin(func(modelName string) (*model.Channel, error) {
 			return getWebSearchChannel(c, modelName)
 		}),
 		thinksplit.NewThinkPlugin(),
+		monitorplugin.NewChannelMonitorPlugin(),
 	)
 
 	return controller.Handle(a, c, meta, adaptorStore)
@@ -296,7 +297,7 @@ func recordResult(
 		price,
 	)
 	if amount > 0 {
-		log := middleware.GetLogger(c)
+		log := common.GetLogger(c)
 		log.Data["amount"] = strconv.FormatFloat(amount, 'f', -1, 64)
 	}
 
@@ -383,7 +384,7 @@ func initRetryState(
 }
 
 func retryLoop(c *gin.Context, mode mode.Mode, state *retryState, relayController RelayHandler) {
-	log := middleware.GetLogger(c)
+	log := common.GetLogger(c)
 
 	// do not use for i := range state.retryTimes, because the retryTimes is constant
 	i := 0
@@ -549,7 +550,7 @@ func ErrorWithRequestID(c *gin.Context, relayErr adaptor.Error) {
 		c.JSON(relayErr.StatusCode(), relayErr)
 		return
 	}
-	log := middleware.GetLogger(c)
+	log := common.GetLogger(c)
 	data, err := relayErr.MarshalJSON()
 	if err != nil {
 		log.Errorf("marshal error failed: %+v", err)
