@@ -14,8 +14,8 @@ import (
 	"github.com/bytedance/sonic"
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/copier"
+	"github.com/labring/aiproxy/core/common"
 	"github.com/labring/aiproxy/core/common/render"
-	"github.com/labring/aiproxy/core/middleware"
 	"github.com/labring/aiproxy/core/model"
 	"github.com/labring/aiproxy/core/relay/adaptor"
 	"github.com/labring/aiproxy/core/relay/adaptor/anthropic"
@@ -181,7 +181,7 @@ func Handler(meta *meta.Meta, c *gin.Context) (model.Usage, adaptor.Error) {
 }
 
 func StreamHandler(m *meta.Meta, c *gin.Context) (model.Usage, adaptor.Error) {
-	log := middleware.GetLogger(c)
+	log := common.GetLogger(c)
 	awsModelID, err := awsModelID(m.ActualModel)
 	if err != nil {
 		return model.Usage{}, relaymodel.WrapperOpenAIErrorWithMessage(

@@ -10,7 +10,6 @@ import (
 	"github.com/bytedance/sonic/ast"
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/core/common"
-	"github.com/labring/aiproxy/core/middleware"
 	"github.com/labring/aiproxy/core/model"
 	"github.com/labring/aiproxy/core/relay/adaptor"
 	"github.com/labring/aiproxy/core/relay/meta"
@@ -66,7 +65,7 @@ func TTSHandler(
 
 	defer resp.Body.Close()
 
-	log := middleware.GetLogger(c)
+	log := common.GetLogger(c)
 
 	for k, v := range resp.Header {
 		c.Writer.Header().Set(k, v[0])

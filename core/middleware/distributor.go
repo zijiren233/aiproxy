@@ -20,6 +20,7 @@ import (
 	"github.com/labring/aiproxy/core/model"
 	"github.com/labring/aiproxy/core/relay/meta"
 	"github.com/labring/aiproxy/core/relay/mode"
+	monitorplugin "github.com/labring/aiproxy/core/relay/plugin/monitor"
 )
 
 func calculateGroupConsumeLevelRatio(usedAmount float64) float64 {
@@ -96,49 +97,13 @@ func setTpmHeaders(c *gin.Context, tpm, remainingRequests int64) {
 	c.Header(XRateLimitResetTokens, "1m0s")
 }
 
-func UpdateGroupModelRequest(c *gin.Context, group model.GroupCache, rpm, rps int64) {
-	if group.Status == model.GroupStatusInternal {
-		return
-	}
-
-	log := GetLogger(c)
-	log.Data["group_rpm"] = strconv.FormatInt(rpm, 10)
-	log.Data["group_rps"] = strconv.FormatInt(rps, 10)
-}
-
-func UpdateGroupModelTokensRequest(c *gin.Context, group model.GroupCache, tpm, tps int64) {
-	if group.Status == model.GroupStatusInternal {
-		return
-	}
-
-	log := GetLogger(c)
-	log.Data["group_tpm"] = strconv.FormatInt(tpm, 10)
-	log.Data["group_tps"] = strconv.FormatInt(tps, 10)
-}
-
-func UpdateGroupModelTokennameRequest(c *gin.Context, rpm, rps int64) {
-	c.Set(GroupModelTokenRPM, rpm)
-	c.Set(GroupModelTokenRPS, rps)
-	// log := GetLogger(c)
-	// log.Data["rpm"] = strconv.FormatInt(rpm, 10)
-	// log.Data["rps"] = strconv.FormatInt(rps, 10)
-}
-
-func UpdateGroupModelTokennameTokensRequest(c *gin.Context, tpm, tps int64) {
-	c.Set(GroupModelTokenTPM, tpm)
-	c.Set(GroupModelTokenTPS, tps)
-	// log := GetLogger(c)
-	// log.Data["tpm"] = strconv.FormatInt(tpm, 10)
-	// log.Data["tps"] = strconv.FormatInt(tps, 10)
-}
-
 func checkGroupModelRPMAndTPM(
 	c *gin.Context,
 	group model.GroupCache,
 	mc model.ModelConfig,
 	tokenName string,
 ) error {
-	log := GetLogger(c)
+	log := common.GetLogger(c)
 
 	adjustedModelConfig := GetGroupAdjustedModelConfig(group, mc)
 
@@ -148,7 +113,7 @@ func checkGroupModelRPMAndTPM(
 		mc.Model,
 		adjustedModelConfig.RPM,
 	)
-	UpdateGroupModelRequest(
+	monitorplugin.UpdateGroupModelRequest(
 		c,
 		group,
 		groupModelCount+groupModelOverLimitCount,
@@ -161,7 +126,7 @@ func checkGroupModelRPMAndTPM(
 		mc.Model,
 		tokenName,
 	)
-	UpdateGroupModelTokennameRequest(
+	monitorplugin.UpdateGroupModelTokennameRequest(
 		c,
 		groupModelTokenCount+groupModelTokenOverLimitCount,
 		groupModelTokenSecondCount,
@@ -182,7 +147,7 @@ func checkGroupModelRPMAndTPM(
 		group.ID,
 		mc.Model,
 	)
-	UpdateGroupModelTokensRequest(c, group, groupModelCountTPM, groupModelCountTPS)
+	monitorplugin.UpdateGroupModelTokensRequest(c, group, groupModelCountTPM, groupModelCountTPS)
 
 	groupModelTokenCountTPM, groupModelTokenCountTPS := reqlimit.GetGroupModelTokennameTokensRequest(
 		c.Request.Context(),
@@ -190,7 +155,11 @@ func checkGroupModelRPMAndTPM(
 		mc.Model,
 		tokenName,
 	)
-	UpdateGroupModelTokennameTokensRequest(c, groupModelTokenCountTPM, groupModelTokenCountTPS)
+	monitorplugin.UpdateGroupModelTokennameTokensRequest(
+		c,
+		groupModelTokenCountTPM,
+		groupModelTokenCountTPS,
+	)
 
 	if group.Status != model.GroupStatusInternal &&
 		adjustedModelConfig.TPM > 0 {
@@ -242,7 +211,7 @@ func GetGroupBalanceConsumer(
 			Consumer: nil,
 		}
 	} else {
-		log := GetLogger(c)
+		log := common.GetLogger(c)
 		groupBalance, consumer, err := balance.GetGroupRemainBalance(c.Request.Context(), group)
 		if err != nil {
 			return nil, err
@@ -356,7 +325,7 @@ func distribute(c *gin.Context, mode mode.Mode) {
 		return
 	}
 
-	log := GetLogger(c)
+	log := common.GetLogger(c)
 
 	group := GetGroup(c)
 	token := GetToken(c)
@@ -464,27 +433,11 @@ func distribute(c *gin.Context, mode mode.Mode) {
 
 func GetGroupModelTokenRequestRate(c *gin.Context) model.RequestRate {
 	return model.RequestRate{
-		RPM: GetGroupModelTokenRPM(c),
-		RPS: GetGroupModelTokenRPS(c),
-		TPM: GetGroupModelTokenTPM(c),
-		TPS: GetGroupModelTokenTPS(c),
+		RPM: monitorplugin.GetGroupModelTokenRPM(c),
+		RPS: monitorplugin.GetGroupModelTokenRPS(c),
+		TPM: monitorplugin.GetGroupModelTokenTPM(c),
+		TPS: monitorplugin.GetGroupModelTokenTPS(c),
 	}
-}
-
-func GetGroupModelTokenRPM(c *gin.Context) int64 {
-	return c.GetInt64(GroupModelTokenRPM)
-}
-
-func GetGroupModelTokenRPS(c *gin.Context) int64 {
-	return c.GetInt64(GroupModelTokenRPS)
-}
-
-func GetGroupModelTokenTPM(c *gin.Context) int64 {
-	return c.GetInt64(GroupModelTokenTPM)
-}
-
-func GetGroupModelTokenTPS(c *gin.Context) int64 {
-	return c.GetInt64(GroupModelTokenTPS)
 }
 
 func GetRequestModel(c *gin.Context) string {

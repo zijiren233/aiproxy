@@ -11,7 +11,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
-	"github.com/labring/aiproxy/core/middleware"
+	"github.com/labring/aiproxy/core/common"
 	"github.com/labring/aiproxy/core/model"
 	"github.com/labring/aiproxy/core/relay/adaptor"
 	"github.com/labring/aiproxy/core/relay/meta"
@@ -203,7 +203,7 @@ func TTSDoResponse(
 	c *gin.Context,
 	_ *http.Response,
 ) (usage model.Usage, err adaptor.Error) {
-	log := middleware.GetLogger(c)
+	log := common.GetLogger(c)
 
 	conn, ok := meta.MustGet("ws_conn").(*websocket.Conn)
 	if !ok {

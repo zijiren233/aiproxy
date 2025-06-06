@@ -6,13 +6,14 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/labring/aiproxy/core/common"
 	"github.com/labring/aiproxy/core/common/config"
 	"github.com/labring/aiproxy/core/common/network"
 	"github.com/labring/aiproxy/core/model"
 )
 
 func MCPAuth(c *gin.Context) {
-	log := GetLogger(c)
+	log := common.GetLogger(c)
 	key := c.Request.Header.Get("Authorization")
 	if key == "" {
 		key, _ = c.GetQuery("key")

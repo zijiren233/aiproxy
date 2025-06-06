@@ -8,8 +8,8 @@ import (
 	"os"
 
 	"github.com/gin-gonic/gin"
+	"github.com/labring/aiproxy/core/common"
 	"github.com/labring/aiproxy/core/common/audio"
-	"github.com/labring/aiproxy/core/middleware"
 	"github.com/labring/aiproxy/core/model"
 )
 
@@ -29,7 +29,7 @@ func GetSTTRequestUsage(c *gin.Context, _ model.ModelConfig) (model.Usage, error
 	}
 
 	durationInt := int64(math.Ceil(duration))
-	log := middleware.GetLogger(c)
+	log := common.GetLogger(c)
 	log.Data["duration"] = durationInt
 
 	return model.Usage{

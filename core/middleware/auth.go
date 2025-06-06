@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/labring/aiproxy/core/common"
 	"github.com/labring/aiproxy/core/common/config"
 	"github.com/labring/aiproxy/core/common/network"
 	"github.com/labring/aiproxy/core/model"
@@ -62,7 +63,7 @@ func AdminAuth(c *gin.Context) {
 
 	group := c.Param("group")
 	if group != "" {
-		log := GetLogger(c)
+		log := common.GetLogger(c)
 		log.Data["gid"] = group
 	}
 
@@ -70,7 +71,7 @@ func AdminAuth(c *gin.Context) {
 }
 
 func TokenAuth(c *gin.Context) {
-	log := GetLogger(c)
+	log := common.GetLogger(c)
 	key := c.Request.Header.Get("Authorization")
 	if key == "" {
 		key = c.Request.Header.Get("X-Api-Key")

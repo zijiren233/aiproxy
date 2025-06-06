@@ -11,7 +11,6 @@ import (
 	"github.com/bytedance/sonic/ast"
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/core/common"
-	"github.com/labring/aiproxy/core/middleware"
 	"github.com/labring/aiproxy/core/model"
 	"github.com/labring/aiproxy/core/relay/adaptor"
 	"github.com/labring/aiproxy/core/relay/meta"
@@ -103,7 +102,7 @@ func VideoHandler(
 		ExpiresAt: time.Now().Add(time.Hour * 24),
 	})
 	if err != nil {
-		log := middleware.GetLogger(c)
+		log := common.GetLogger(c)
 		log.Errorf("save store failed: %v", err)
 	}
 
@@ -165,7 +164,7 @@ func VideoGetJobsHandler(
 			ExpiresAt: time.Unix(expiresAt, 0),
 		})
 		if err != nil {
-			log := middleware.GetLogger(c)
+			log := common.GetLogger(c)
 			log.Errorf("save store failed: %v", err)
 		}
 		return true
