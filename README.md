@@ -59,6 +59,13 @@ AI Proxy is a powerful, production-ready AI gateway that provides intelligent re
 - **Think Mode**: Support for reasoning models with content splitting
 - **Built-in Tokenizer**: No external tiktoken dependencies
 
+### 📊 **Management Panel**
+
+AI Proxy provides a management panel for managing AI Proxy's configuration and monitoring.
+
+![Dashboard](./docs/images/dashboard.png)
+![Logs](./docs/images/logs.png)
+
 ## 🏗️ Architecture
 
 ```mermaid
