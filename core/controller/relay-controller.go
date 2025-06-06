@@ -268,6 +268,7 @@ func GetChannelFromHeader(
 	mc *model.ModelCaches,
 	availableSet []string,
 	model string,
+	m mode.Mode,
 ) (*model.Channel, error) {
 	channelIDInt, err := strconv.ParseInt(header, 10, 64)
 	if err != nil {
@@ -279,6 +280,13 @@ func GetChannelFromHeader(
 		if len(enabledChannels) > 0 {
 			for _, channel := range enabledChannels {
 				if int64(channel.ID) == channelIDInt {
+					a, ok := adaptors.GetAdaptor(channel.Type)
+					if !ok {
+						return nil, fmt.Errorf("adaptor not found for channel %d", channel.ID)
+					}
+					if !a.SupportMode(m) {
+						return nil, fmt.Errorf("channel %d not supported by adaptor", channel.ID)
+					}
 					return channel, nil
 				}
 			}
@@ -288,6 +296,13 @@ func GetChannelFromHeader(
 		if len(disabledChannels) > 0 {
 			for _, channel := range disabledChannels {
 				if int64(channel.ID) == channelIDInt {
+					a, ok := adaptors.GetAdaptor(channel.Type)
+					if !ok {
+						return nil, fmt.Errorf("adaptor not found for channel %d", channel.ID)
+					}
+					if !a.SupportMode(m) {
+						return nil, fmt.Errorf("channel %d not supported by adaptor", channel.ID)
+					}
 					return channel, nil
 				}
 			}
@@ -316,6 +331,16 @@ func GetChannelFromRequest(
 			if len(enabledChannels) > 0 {
 				for _, channel := range enabledChannels {
 					if channel.ID == channelID {
+						a, ok := adaptors.GetAdaptor(channel.Type)
+						if !ok {
+							return nil, fmt.Errorf("adaptor not found for channel %d", channel.ID)
+						}
+						if !a.SupportMode(m) {
+							return nil, fmt.Errorf(
+								"channel %d not supported by adaptor",
+								channel.ID,
+							)
+						}
 						return channel, nil
 					}
 				}
@@ -332,6 +357,16 @@ func GetChannelFromRequest(
 			if len(enabledChannels) > 0 {
 				for _, channel := range enabledChannels {
 					if channel.ID == channelID {
+						a, ok := adaptors.GetAdaptor(channel.Type)
+						if !ok {
+							return nil, fmt.Errorf("adaptor not found for channel %d", channel.ID)
+						}
+						if !a.SupportMode(m) {
+							return nil, fmt.Errorf(
+								"channel %d not supported by adaptor",
+								channel.ID,
+							)
+						}
 						return channel, nil
 					}
 				}
@@ -809,6 +844,7 @@ func getInitialChannel(c *gin.Context, modelName string, m mode.Mode) (*initialC
 			middleware.GetModelCaches(c),
 			availableSet,
 			modelName,
+			m,
 		)
 		if err != nil {
 			return nil, err
