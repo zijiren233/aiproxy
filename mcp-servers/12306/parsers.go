@@ -11,21 +11,16 @@ import (
 )
 
 // extractPrices extracts price information from ticket data
-func (s *Train12306Server) extractPrices(
+func (s *Server) extractPrices(
 	ypInfo, seatDiscountInfo string,
 	ticketData TicketData,
 ) []Price {
-	const (
-		PRICE_STR_LENGTH    = 10
-		DISCOUNT_STR_LENGTH = 5
-	)
-
-	var prices []Price
+	prices := make([]Price, 0, len(ypInfo)/PriceStrLength)
 	discounts := make(map[string]int)
 
 	// Parse discounts
-	for i := 0; i < len(seatDiscountInfo)/DISCOUNT_STR_LENGTH; i++ {
-		discountStr := seatDiscountInfo[i*DISCOUNT_STR_LENGTH : (i+1)*DISCOUNT_STR_LENGTH]
+	for i := range len(seatDiscountInfo) / DiscountStrLength {
+		discountStr := seatDiscountInfo[i*DiscountStrLength : (i+1)*DiscountStrLength]
 		if len(discountStr) >= 5 {
 			discount, err := strconv.Atoi(discountStr[1:])
 			if err == nil {
@@ -35,9 +30,9 @@ func (s *Train12306Server) extractPrices(
 	}
 
 	// Parse prices
-	for i := 0; i < len(ypInfo)/PRICE_STR_LENGTH; i++ {
-		priceStr := ypInfo[i*PRICE_STR_LENGTH : (i+1)*PRICE_STR_LENGTH]
-		if len(priceStr) < PRICE_STR_LENGTH {
+	for i := range len(ypInfo) / PriceStrLength {
+		priceStr := ypInfo[i*PriceStrLength : (i+1)*PriceStrLength]
+		if len(priceStr) < PriceStrLength {
 			continue
 		}
 
@@ -60,7 +55,7 @@ func (s *Train12306Server) extractPrices(
 		if err != nil {
 			continue
 		}
-		price = price / 10
+		price /= 10
 
 		var discount *int
 		if d, exists := discounts[seatTypeCode]; exists {
@@ -112,7 +107,7 @@ func (s *Train12306Server) extractPrices(
 }
 
 // extractDWFlags extracts DW flags from the flag string
-func (s *Train12306Server) extractDWFlags(dwFlagStr string) []string {
+func (s *Server) extractDWFlags(dwFlagStr string) []string {
 	dwFlagList := strings.Split(dwFlagStr, "#")
 	var result []string
 
@@ -143,7 +138,7 @@ func (s *Train12306Server) extractDWFlags(dwFlagStr string) []string {
 }
 
 // formatTicketStatus formats ticket availability status
-func (s *Train12306Server) formatTicketStatus(num string) string {
+func (s *Server) formatTicketStatus(num string) string {
 	// Check if it's a pure number
 	if matched, _ := regexp.MatchString(`^\d+$`, num); matched {
 		count, _ := strconv.Atoi(num)
@@ -162,12 +157,12 @@ func (s *Train12306Server) formatTicketStatus(num string) string {
 	case "候补":
 		return "无票需候补"
 	default:
-		return fmt.Sprintf("%s票", num)
+		return num + "票"
 	}
 }
 
 // formatTicketsInfo formats ticket information for display
-func (s *Train12306Server) formatTicketsInfo(ticketsInfo []TicketInfo) string {
+func (s *Server) formatTicketsInfo(ticketsInfo []TicketInfo) string {
 	if len(ticketsInfo) == 0 {
 		return "没有查询到相关车次信息"
 	}
@@ -198,7 +193,7 @@ func (s *Train12306Server) formatTicketsInfo(ticketsInfo []TicketInfo) string {
 }
 
 // filterTicketsInfo filters and sorts ticket information
-func (s *Train12306Server) filterTicketsInfo(
+func (s *Server) filterTicketsInfo(
 	ticketsInfo []TicketInfo,
 	trainFilterFlags, sortFlag string,
 	sortReverse bool,
@@ -234,7 +229,7 @@ func (s *Train12306Server) filterTicketsInfo(
 }
 
 // matchesTrainFilter checks if a ticket matches the train filter
-func (s *Train12306Server) matchesTrainFilter(ticketInfo TicketInfo, filter string) bool {
+func (s *Server) matchesTrainFilter(ticketInfo TicketInfo, filter string) bool {
 	switch filter {
 	case "G":
 		return strings.HasPrefix(ticketInfo.StartTrainCode, "G") ||
@@ -262,7 +257,7 @@ func (s *Train12306Server) matchesTrainFilter(ticketInfo TicketInfo, filter stri
 }
 
 // containsFlag checks if the flag list contains a specific flag
-func (s *Train12306Server) containsFlag(flags []string, flag string) bool {
+func (s *Server) containsFlag(flags []string, flag string) bool {
 	for _, f := range flags {
 		if f == flag {
 			return true
@@ -272,7 +267,7 @@ func (s *Train12306Server) containsFlag(flags []string, flag string) bool {
 }
 
 // sortTicketsInfo sorts ticket information
-func (s *Train12306Server) sortTicketsInfo(
+func (s *Server) sortTicketsInfo(
 	ticketsInfo []TicketInfo,
 	sortFlag string,
 	sortReverse bool,
@@ -306,9 +301,9 @@ func (s *Train12306Server) sortTicketsInfo(
 }
 
 // compareStartTime compares start times of two tickets
-func (s *Train12306Server) compareStartTime(a, b TicketInfo) int {
-	dateA, _ := time.Parse("2006-01-02", a.StartDate)
-	dateB, _ := time.Parse("2006-01-02", b.StartDate)
+func (s *Server) compareStartTime(a, b TicketInfo) int {
+	dateA, _ := time.Parse(time.DateOnly, a.StartDate)
+	dateB, _ := time.Parse(time.DateOnly, b.StartDate)
 
 	if dateA.Unix() != dateB.Unix() {
 		return int(dateA.Unix() - dateB.Unix())
@@ -331,9 +326,9 @@ func (s *Train12306Server) compareStartTime(a, b TicketInfo) int {
 }
 
 // compareArriveTime compares arrive times of two tickets
-func (s *Train12306Server) compareArriveTime(a, b TicketInfo) int {
-	dateA, _ := time.Parse("2006-01-02", a.ArriveDate)
-	dateB, _ := time.Parse("2006-01-02", b.ArriveDate)
+func (s *Server) compareArriveTime(a, b TicketInfo) int {
+	dateA, _ := time.Parse(time.DateOnly, a.ArriveDate)
+	dateB, _ := time.Parse(time.DateOnly, b.ArriveDate)
 
 	if dateA.Unix() != dateB.Unix() {
 		return int(dateA.Unix() - dateB.Unix())
@@ -356,7 +351,7 @@ func (s *Train12306Server) compareArriveTime(a, b TicketInfo) int {
 }
 
 // compareDuration compares durations of two tickets
-func (s *Train12306Server) compareDuration(a, b TicketInfo) int {
+func (s *Server) compareDuration(a, b TicketInfo) int {
 	timePartsA := strings.Split(a.Lishi, ":")
 	timePartsB := strings.Split(b.Lishi, ":")
 
@@ -374,8 +369,8 @@ func (s *Train12306Server) compareDuration(a, b TicketInfo) int {
 }
 
 // parseRouteStationsData parses route station data from API response
-func (s *Train12306Server) parseRouteStationsData(rawData []any) ([]RouteStationData, error) {
-	var result []RouteStationData
+func (s *Server) parseRouteStationsData(rawData []any) []RouteStationData {
+	result := make([]RouteStationData, 0, len(rawData))
 
 	for _, item := range rawData {
 		dataBytes, err := json.Marshal(item)
@@ -391,14 +386,14 @@ func (s *Train12306Server) parseRouteStationsData(rawData []any) ([]RouteStation
 		result = append(result, routeStation)
 	}
 
-	return result, nil
+	return result
 }
 
 // parseRouteStationsInfo converts RouteStationData to RouteStationInfo
-func (s *Train12306Server) parseRouteStationsInfo(
+func (s *Server) parseRouteStationsInfo(
 	routeStationsData []RouteStationData,
 ) []RouteStationInfo {
-	var result []RouteStationInfo
+	result := make([]RouteStationInfo, 0, len(routeStationsData))
 
 	for i, routeStationData := range routeStationsData {
 		stationNo, _ := strconv.Atoi(routeStationData.StationNo)
@@ -422,8 +417,8 @@ func (s *Train12306Server) parseRouteStationsInfo(
 }
 
 // parseInterlineData parses interline data from API response
-func (s *Train12306Server) parseInterlineData(rawData []any) ([]InterlineData, error) {
-	var result []InterlineData
+func (s *Server) parseInterlineData(rawData []any) []InterlineData {
+	result := make([]InterlineData, 0, len(rawData))
 
 	for _, item := range rawData {
 		dataBytes, err := json.Marshal(item)
@@ -439,12 +434,12 @@ func (s *Train12306Server) parseInterlineData(rawData []any) ([]InterlineData, e
 		result = append(result, interlineData)
 	}
 
-	return result, nil
+	return result
 }
 
 // parseInterlinesInfo converts InterlineData to InterlineInfo
-func (s *Train12306Server) parseInterlinesInfo(interlineData []InterlineData) []InterlineInfo {
-	var result []InterlineInfo
+func (s *Server) parseInterlinesInfo(interlineData []InterlineData) []InterlineInfo {
+	result := make([]InterlineInfo, 0, len(interlineData))
 
 	for _, ticket := range interlineData {
 		interlineTickets := s.parseInterlinesTicketInfo(ticket.FullList)
@@ -483,10 +478,10 @@ func (s *Train12306Server) parseInterlinesInfo(interlineData []InterlineData) []
 }
 
 // parseInterlinesTicketInfo converts InterlineTicketData to TicketInfo
-func (s *Train12306Server) parseInterlinesTicketInfo(
+func (s *Server) parseInterlinesTicketInfo(
 	interlineTicketsData []InterlineTicketData,
 ) []TicketInfo {
-	var result []TicketInfo
+	result := make([]TicketInfo, 0, len(interlineTicketsData))
 
 	for _, interlineTicketData := range interlineTicketsData {
 		prices := s.extractInterlinePrices(
@@ -525,8 +520,8 @@ func (s *Train12306Server) parseInterlinesTicketInfo(
 		result = append(result, TicketInfo{
 			TrainNo:             interlineTicketData.TrainNo,
 			StartTrainCode:      interlineTicketData.StationTrainCode,
-			StartDate:           startDateTime.Format("2006-01-02"),
-			ArriveDate:          arriveDateTime.Format("2006-01-02"),
+			StartDate:           startDateTime.Format(time.DateOnly),
+			ArriveDate:          arriveDateTime.Format(time.DateOnly),
 			StartTime:           interlineTicketData.StartTime,
 			ArriveTime:          interlineTicketData.ArriveTime,
 			Lishi:               interlineTicketData.Lishi,
@@ -543,21 +538,16 @@ func (s *Train12306Server) parseInterlinesTicketInfo(
 }
 
 // extractInterlinePrices extracts price information from interline ticket data
-func (s *Train12306Server) extractInterlinePrices(
+func (s *Server) extractInterlinePrices(
 	ypInfo, seatDiscountInfo string,
 	ticketData InterlineTicketData,
 ) []Price {
-	const (
-		PRICE_STR_LENGTH    = 10
-		DISCOUNT_STR_LENGTH = 5
-	)
-
-	var prices []Price
+	prices := make([]Price, 0, len(ypInfo)/PriceStrLength)
 	discounts := make(map[string]int)
 
 	// Parse discounts
-	for i := 0; i < len(seatDiscountInfo)/DISCOUNT_STR_LENGTH; i++ {
-		discountStr := seatDiscountInfo[i*DISCOUNT_STR_LENGTH : (i+1)*DISCOUNT_STR_LENGTH]
+	for i := range len(seatDiscountInfo) / DiscountStrLength {
+		discountStr := seatDiscountInfo[i*DiscountStrLength : (i+1)*DiscountStrLength]
 		if len(discountStr) >= 5 {
 			discount, err := strconv.Atoi(discountStr[1:])
 			if err == nil {
@@ -567,9 +557,9 @@ func (s *Train12306Server) extractInterlinePrices(
 	}
 
 	// Parse prices
-	for i := 0; i < len(ypInfo)/PRICE_STR_LENGTH; i++ {
-		priceStr := ypInfo[i*PRICE_STR_LENGTH : (i+1)*PRICE_STR_LENGTH]
-		if len(priceStr) < PRICE_STR_LENGTH {
+	for i := range len(ypInfo) / PriceStrLength {
+		priceStr := ypInfo[i*PriceStrLength : (i+1)*PriceStrLength]
+		if len(priceStr) < PriceStrLength {
 			continue
 		}
 
@@ -592,7 +582,7 @@ func (s *Train12306Server) extractInterlinePrices(
 		if err != nil {
 			continue
 		}
-		price = price / 10
+		price /= 10
 
 		var discount *int
 		if d, exists := discounts[seatTypeCode]; exists {
@@ -644,7 +634,7 @@ func (s *Train12306Server) extractInterlinePrices(
 }
 
 // extractLishi extracts duration in hh:mm format from Chinese format
-func (s *Train12306Server) extractLishi(allLishi string) string {
+func (s *Server) extractLishi(allLishi string) string {
 	re := regexp.MustCompile(`(?:(\d+)小时)?(\d+)分钟`)
 	matches := re.FindStringSubmatch(allLishi)
 	if len(matches) < 3 {
@@ -667,13 +657,13 @@ func (s *Train12306Server) extractLishi(allLishi string) string {
 }
 
 // filterInterlineInfo filters and sorts interline information
-func (s *Train12306Server) filterInterlineInfo(
+func (s *Server) filterInterlineInfo(
 	interlinesInfo []InterlineInfo,
 	trainFilterFlags, sortFlag string,
 	sortReverse bool,
 	limitedNum int,
 ) []InterlineInfo {
-	var result []InterlineInfo
+	result := make([]InterlineInfo, 0, len(interlinesInfo))
 
 	// Apply train filters
 	if trainFilterFlags == "" {
@@ -703,7 +693,7 @@ func (s *Train12306Server) filterInterlineInfo(
 }
 
 // matchesInterlineTrainFilter checks if an interline ticket matches the train filter
-func (s *Train12306Server) matchesInterlineTrainFilter(
+func (s *Server) matchesInterlineTrainFilter(
 	interlineInfo InterlineInfo,
 	filter string,
 ) bool {
@@ -736,7 +726,7 @@ func (s *Train12306Server) matchesInterlineTrainFilter(
 }
 
 // sortInterlineInfo sorts interline information
-func (s *Train12306Server) sortInterlineInfo(
+func (s *Server) sortInterlineInfo(
 	interlinesInfo []InterlineInfo,
 	sortFlag string,
 	sortReverse bool,
@@ -770,9 +760,9 @@ func (s *Train12306Server) sortInterlineInfo(
 }
 
 // compareInterlineStartTime compares start times of two interline tickets
-func (s *Train12306Server) compareInterlineStartTime(a, b InterlineInfo) int {
-	dateA, _ := time.Parse("2006-01-02", a.StartDate)
-	dateB, _ := time.Parse("2006-01-02", b.StartDate)
+func (s *Server) compareInterlineStartTime(a, b InterlineInfo) int {
+	dateA, _ := time.Parse(time.DateOnly, a.StartDate)
+	dateB, _ := time.Parse(time.DateOnly, b.StartDate)
 
 	if dateA.Unix() != dateB.Unix() {
 		return int(dateA.Unix() - dateB.Unix())
@@ -795,9 +785,9 @@ func (s *Train12306Server) compareInterlineStartTime(a, b InterlineInfo) int {
 }
 
 // compareInterlineArriveTime compares arrive times of two interline tickets
-func (s *Train12306Server) compareInterlineArriveTime(a, b InterlineInfo) int {
-	dateA, _ := time.Parse("2006-01-02", a.ArriveDate)
-	dateB, _ := time.Parse("2006-01-02", b.ArriveDate)
+func (s *Server) compareInterlineArriveTime(a, b InterlineInfo) int {
+	dateA, _ := time.Parse(time.DateOnly, a.ArriveDate)
+	dateB, _ := time.Parse(time.DateOnly, b.ArriveDate)
 
 	if dateA.Unix() != dateB.Unix() {
 		return int(dateA.Unix() - dateB.Unix())
@@ -820,7 +810,7 @@ func (s *Train12306Server) compareInterlineArriveTime(a, b InterlineInfo) int {
 }
 
 // compareInterlineDuration compares durations of two interline tickets
-func (s *Train12306Server) compareInterlineDuration(a, b InterlineInfo) int {
+func (s *Server) compareInterlineDuration(a, b InterlineInfo) int {
 	timePartsA := strings.Split(a.Lishi, ":")
 	timePartsB := strings.Split(b.Lishi, ":")
 
@@ -838,7 +828,7 @@ func (s *Train12306Server) compareInterlineDuration(a, b InterlineInfo) int {
 }
 
 // formatInterlinesInfo formats interline information for display
-func (s *Train12306Server) formatInterlinesInfo(interlinesInfo []InterlineInfo) string {
+func (s *Server) formatInterlinesInfo(interlinesInfo []InterlineInfo) string {
 	result := "出发时间 -> 到达时间 | 出发车站 -> 中转车站 -> 到达车站 | 换乘标志 |换乘等待时间| 总历时\n\n"
 
 	for _, interlineInfo := range interlinesInfo {
@@ -856,11 +846,12 @@ func (s *Train12306Server) formatInterlinesInfo(interlinesInfo []InterlineInfo) 
 			interlineInfo.EndStationName,
 		)
 
-		if interlineInfo.SameTrain {
-			result += "同车换乘"
-		} else if interlineInfo.SameStation {
+		switch {
+		case interlineInfo.SameStation:
 			result += "同站换乘"
-		} else {
+		case interlineInfo.SameTrain:
+			result += "同车换乘"
+		default:
 			result += "换站换乘"
 		}
 

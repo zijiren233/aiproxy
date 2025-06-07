@@ -97,3 +97,8 @@ var (
 		"station_short", "station_index", "code", "city", "r1", "r2",
 	}
 )
+
+const (
+	PriceStrLength    = 10
+	DiscountStrLength = 5
+)

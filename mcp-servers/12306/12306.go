@@ -1,6 +1,7 @@
 package train12306
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -36,8 +37,8 @@ var configTemplates = mcpservers.ConfigTemplates{
 	},
 }
 
-// Train12306Server represents the MCP server for 12306 train ticket queries
-type Train12306Server struct {
+// Server represents the MCP server for 12306 train ticket queries
+type Server struct {
 	*server.MCPServer
 	client           *http.Client
 	userAgent        string
@@ -74,14 +75,14 @@ func NewServer(config, _ map[string]string) (mcpservers.Server, error) {
 	// Create MCP server
 	mcpServer := server.NewMCPServer("12306-mcp", VERSION)
 
-	trainServer := &Train12306Server{
+	trainServer := &Server{
 		MCPServer: mcpServer,
 		client:    client,
 		userAgent: userAgent,
 	}
 
 	// Initialize stations and other data
-	if err := trainServer.initialize(); err != nil {
+	if err := trainServer.initialize(context.Background()); err != nil {
 		return nil, fmt.Errorf("failed to initialize server: %w", err)
 	}
 
@@ -92,9 +93,9 @@ func NewServer(config, _ map[string]string) (mcpservers.Server, error) {
 }
 
 // initialize loads station data and other required information
-func (s *Train12306Server) initialize() error {
+func (s *Server) initialize(ctx context.Context) error {
 	// Load stations
-	stations, err := s.getStations()
+	stations, err := s.getStations(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to load stations: %w", err)
 	}
@@ -104,7 +105,7 @@ func (s *Train12306Server) initialize() error {
 	s.buildStationMaps()
 
 	// Get LC query path
-	lcQueryPath, err := s.getLCQueryPath()
+	lcQueryPath, err := s.getLCQueryPath(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to get LC query path: %w", err)
 	}
@@ -114,7 +115,7 @@ func (s *Train12306Server) initialize() error {
 }
 
 // buildStationMaps builds various station lookup maps
-func (s *Train12306Server) buildStationMaps() {
+func (s *Server) buildStationMaps() {
 	s.cityStations = make(map[string][]StationInfo)
 	s.cityStationCodes = make(map[string]StationInfo)
 	s.nameStations = make(map[string]StationInfo)
@@ -152,7 +153,7 @@ func (s *Train12306Server) buildStationMaps() {
 }
 
 // addTools adds all the tools to the server
-func (s *Train12306Server) addTools() {
+func (s *Server) addTools() {
 	s.addGetCurrentDateTool()
 	s.addGetStationsCodeInCityTool()
 	s.addGetStationCodeOfCitysTool()

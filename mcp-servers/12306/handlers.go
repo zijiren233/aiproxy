@@ -11,7 +11,7 @@ import (
 )
 
 // handleGetTickets handles the get tickets tool
-func (s *Train12306Server) handleGetTickets(
+func (s *Server) handleGetTickets(
 	ctx context.Context,
 	request mcp.CallToolRequest,
 ) (*mcp.CallToolResult, error) {
@@ -100,15 +100,8 @@ func (s *Train12306Server) handleGetTickets(
 		return mcp.NewToolResultText("Error: invalid response format."), nil
 	}
 
-	ticketsData, err := s.parseTicketsData(resultData)
-	if err != nil {
-		return mcp.NewToolResultText("Error: parse tickets data failed."), nil
-	}
-
-	ticketsInfo, err := s.parseTicketsInfo(ticketsData, stationMap)
-	if err != nil {
-		return mcp.NewToolResultText("Error: parse tickets info failed."), nil
-	}
+	ticketsData := s.parseTicketsData(resultData)
+	ticketsInfo := s.parseTicketsInfo(ticketsData, stationMap)
 
 	// Filter and sort tickets
 	filteredTicketsInfo := s.filterTicketsInfo(
@@ -125,7 +118,7 @@ func (s *Train12306Server) handleGetTickets(
 }
 
 // addGetInterlineTicketsTool adds the get interline tickets tool
-func (s *Train12306Server) addGetInterlineTicketsTool() {
+func (s *Server) addGetInterlineTicketsTool() {
 	s.AddTool(
 		mcp.Tool{
 			Name:        "get-interline-tickets",
@@ -185,7 +178,7 @@ func (s *Train12306Server) addGetInterlineTicketsTool() {
 }
 
 // handleGetInterlineTickets handles the get interline tickets tool
-func (s *Train12306Server) handleGetInterlineTickets(
+func (s *Server) handleGetInterlineTickets(
 	ctx context.Context,
 	request mcp.CallToolRequest,
 ) (*mcp.CallToolResult, error) {
@@ -297,10 +290,7 @@ func (s *Train12306Server) handleGetInterlineTickets(
 	}
 
 	// Parse interline data
-	interlineData, err := s.parseInterlineData(middleListData)
-	if err != nil {
-		return mcp.NewToolResultText(fmt.Sprintf("Error: parse tickets info failed. %v", err)), nil
-	}
+	interlineData := s.parseInterlineData(middleListData)
 
 	interlineInfo := s.parseInterlinesInfo(interlineData)
 
@@ -319,7 +309,7 @@ func (s *Train12306Server) handleGetInterlineTickets(
 }
 
 // addGetTrainRouteStationsTool adds the get train route stations tool
-func (s *Train12306Server) addGetTrainRouteStationsTool() {
+func (s *Server) addGetTrainRouteStationsTool() {
 	s.AddTool(
 		mcp.Tool{
 			Name:        "get-train-route-stations",
@@ -357,7 +347,7 @@ func (s *Train12306Server) addGetTrainRouteStationsTool() {
 }
 
 // handleGetTrainRouteStations handles the get train route stations tool
-func (s *Train12306Server) handleGetTrainRouteStations(
+func (s *Server) handleGetTrainRouteStations(
 	ctx context.Context,
 	request mcp.CallToolRequest,
 ) (*mcp.CallToolResult, error) {
@@ -413,10 +403,7 @@ func (s *Train12306Server) handleGetTrainRouteStations(
 		return mcp.NewToolResultText("Error: invalid response format."), nil
 	}
 
-	routeStationsData, err := s.parseRouteStationsData(dataMap)
-	if err != nil {
-		return mcp.NewToolResultText("Error: parse route stations data failed."), nil
-	}
+	routeStationsData := s.parseRouteStationsData(dataMap)
 
 	routeStationsInfo := s.parseRouteStationsInfo(routeStationsData)
 

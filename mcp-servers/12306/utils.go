@@ -3,6 +3,7 @@ package train12306
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -14,7 +15,7 @@ import (
 )
 
 // checkDate checks if the date is not earlier than today
-func (s *Train12306Server) checkDate(date string) bool {
+func (s *Server) checkDate(date string) bool {
 	location, err := time.LoadLocation(TimeZone)
 	if err != nil {
 		return false
@@ -23,7 +24,7 @@ func (s *Train12306Server) checkDate(date string) bool {
 	now := time.Now().In(location)
 	now = time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, location)
 
-	inputTime, err := time.ParseInLocation("2006-01-02", date, location)
+	inputTime, err := time.ParseInLocation(time.DateOnly, date, location)
 	if err != nil {
 		return false
 	}
@@ -32,8 +33,8 @@ func (s *Train12306Server) checkDate(date string) bool {
 }
 
 // getCookie gets cookies from the specified URL
-func (s *Train12306Server) getCookie(urlStr string) (map[string]string, error) {
-	req, err := http.NewRequest("GET", urlStr, nil)
+func (s *Server) getCookie(urlStr string) (map[string]string, error) {
+	req, err := http.NewRequest(http.MethodGet, urlStr, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -54,8 +55,8 @@ func (s *Train12306Server) getCookie(urlStr string) (map[string]string, error) {
 }
 
 // formatCookies formats cookies map to cookie string
-func (s *Train12306Server) formatCookies(cookies map[string]string) string {
-	var parts []string
+func (s *Server) formatCookies(cookies map[string]string) string {
+	parts := make([]string, 0, len(cookies))
 	for name, value := range cookies {
 		parts = append(parts, fmt.Sprintf("%s=%s", name, value))
 	}
@@ -63,7 +64,7 @@ func (s *Train12306Server) formatCookies(cookies map[string]string) string {
 }
 
 // make12306Request makes a request to 12306 API
-func (s *Train12306Server) make12306Request(
+func (s *Server) make12306Request(
 	ctx context.Context,
 	urlStr string,
 	params url.Values,
@@ -72,7 +73,7 @@ func (s *Train12306Server) make12306Request(
 ) error {
 	fullURL := urlStr + "?" + params.Encode()
 
-	req, err := http.NewRequestWithContext(ctx, "GET", fullURL, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, fullURL, nil)
 	if err != nil {
 		return err
 	}
@@ -100,10 +101,16 @@ func (s *Train12306Server) make12306Request(
 	return json.Unmarshal(body, result)
 }
 
+var (
+	stationNameJSRegex = regexp.MustCompile(`\.(/script/core/common/station_name.+?\.js)`)
+	stationDataJSRegex = regexp.MustCompile(`var station_names ='([^']+)'`)
+	lcQueryPathRegex   = regexp.MustCompile(`var lc_search_url = '([^']+)'`)
+)
+
 // getStations loads station data from 12306
-func (s *Train12306Server) getStations() (map[string]StationData, error) {
+func (s *Server) getStations(ctx context.Context) (map[string]StationData, error) {
 	// Get main page to find station JS file
-	req, err := http.NewRequest("GET", WebURL, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, WebURL, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -121,16 +128,15 @@ func (s *Train12306Server) getStations() (map[string]StationData, error) {
 	}
 
 	// Find station name JS file path
-	re := regexp.MustCompile(`\.(/script/core/common/station_name.+?\.js)`)
-	matches := re.FindStringSubmatch(string(body))
+	matches := stationNameJSRegex.FindStringSubmatch(string(body))
 	if len(matches) < 2 {
-		return nil, fmt.Errorf("station name JS file not found")
+		return nil, errors.New("station name JS file not found")
 	}
 
 	stationJSURL := WebURL + matches[1]
 
 	// Get station JS file
-	req, err = http.NewRequest("GET", stationJSURL, nil)
+	req, err = http.NewRequestWithContext(ctx, http.MethodGet, stationJSURL, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -149,10 +155,9 @@ func (s *Train12306Server) getStations() (map[string]StationData, error) {
 
 	// Extract station data from JS
 	jsContent := string(jsBody)
-	re = regexp.MustCompile(`var station_names ='([^']+)'`)
-	matches = re.FindStringSubmatch(jsContent)
+	matches = stationDataJSRegex.FindStringSubmatch(jsContent)
 	if len(matches) < 2 {
-		return nil, fmt.Errorf("station data not found in JS file")
+		return nil, errors.New("station data not found in JS file")
 	}
 
 	stationsData := s.parseStationsData(matches[1])
@@ -168,8 +173,8 @@ func (s *Train12306Server) getStations() (map[string]StationData, error) {
 }
 
 // getLCQueryPath gets the LC query path from the init page
-func (s *Train12306Server) getLCQueryPath() (string, error) {
-	req, err := http.NewRequest("GET", LCQueryInitURL, nil)
+func (s *Server) getLCQueryPath(ctx context.Context) (string, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, LCQueryInitURL, nil)
 	if err != nil {
 		return "", err
 	}
@@ -187,21 +192,20 @@ func (s *Train12306Server) getLCQueryPath() (string, error) {
 	}
 
 	// Extract LC query path
-	re := regexp.MustCompile(`var lc_search_url = '([^']+)'`)
-	matches := re.FindStringSubmatch(string(body))
+	matches := lcQueryPathRegex.FindStringSubmatch(string(body))
 	if len(matches) < 2 {
-		return "", fmt.Errorf("LC query path not found")
+		return "", errors.New("LC query path not found")
 	}
 
 	return matches[1], nil
 }
 
 // parseStationsData parses station data from the raw string
-func (s *Train12306Server) parseStationsData(rawData string) map[string]StationData {
+func (s *Server) parseStationsData(rawData string) map[string]StationData {
 	result := make(map[string]StationData)
 	dataArray := strings.Split(rawData, "|")
 
-	for i := 0; i < len(dataArray)/10; i++ {
+	for i := range len(dataArray) / 10 {
 		group := dataArray[i*10 : i*10+10]
 		if len(group) < 10 {
 			continue
@@ -229,8 +233,8 @@ func (s *Train12306Server) parseStationsData(rawData string) map[string]StationD
 }
 
 // parseTicketsData parses raw ticket data from API response
-func (s *Train12306Server) parseTicketsData(rawData []any) ([]TicketData, error) {
-	var result []TicketData
+func (s *Server) parseTicketsData(rawData []any) []TicketData {
+	result := make([]TicketData, 0, len(rawData))
 
 	for _, item := range rawData {
 		itemStr, ok := item.(string)
@@ -297,15 +301,15 @@ func (s *Train12306Server) parseTicketsData(rawData []any) ([]TicketData, error)
 		result = append(result, ticket)
 	}
 
-	return result, nil
+	return result
 }
 
 // parseTicketsInfo converts TicketData to TicketInfo
-func (s *Train12306Server) parseTicketsInfo(
+func (s *Server) parseTicketsInfo(
 	ticketsData []TicketData,
 	stationMap map[string]any,
-) ([]TicketInfo, error) {
-	var result []TicketInfo
+) []TicketInfo {
+	result := make([]TicketInfo, 0, len(ticketsData))
 
 	// Convert station map
 	nameMap := make(map[string]string)
@@ -349,8 +353,8 @@ func (s *Train12306Server) parseTicketsInfo(
 		ticketInfo := TicketInfo{
 			TrainNo:             ticket.TrainNo,
 			StartTrainCode:      ticket.StationTrainCode,
-			StartDate:           startDateTime.Format("2006-01-02"),
-			ArriveDate:          arriveDateTime.Format("2006-01-02"),
+			StartDate:           startDateTime.Format(time.DateOnly),
+			ArriveDate:          arriveDateTime.Format(time.DateOnly),
 			StartTime:           ticket.StartTime,
 			ArriveTime:          ticket.ArriveTime,
 			Lishi:               ticket.Lishi,
@@ -365,5 +369,5 @@ func (s *Train12306Server) parseTicketsInfo(
 		result = append(result, ticketInfo)
 	}
 
-	return result, nil
+	return result
 }

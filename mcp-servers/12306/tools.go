@@ -12,7 +12,7 @@ import (
 )
 
 // addGetCurrentDateTool adds the get current date tool
-func (s *Train12306Server) addGetCurrentDateTool() {
+func (s *Server) addGetCurrentDateTool() {
 	s.AddTool(
 		mcp.Tool{
 			Name:        "get-current-date",
@@ -23,14 +23,14 @@ func (s *Train12306Server) addGetCurrentDateTool() {
 				Required:   []string{},
 			},
 		},
-		func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		func(_ context.Context, _ mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 			location, err := time.LoadLocation(TimeZone)
 			if err != nil {
 				return nil, fmt.Errorf("failed to load timezone: %w", err)
 			}
 
 			now := time.Now().In(location)
-			formattedDate := now.Format("2006-01-02")
+			formattedDate := now.Format(time.DateOnly)
 
 			return mcp.NewToolResultText(formattedDate), nil
 		},
@@ -38,7 +38,7 @@ func (s *Train12306Server) addGetCurrentDateTool() {
 }
 
 // addGetStationsCodeInCityTool adds the get stations code in city tool
-func (s *Train12306Server) addGetStationsCodeInCityTool() {
+func (s *Server) addGetStationsCodeInCityTool() {
 	s.AddTool(
 		mcp.Tool{
 			Name:        "get-stations-code-in-city",
@@ -54,7 +54,7 @@ func (s *Train12306Server) addGetStationsCodeInCityTool() {
 				Required: []string{"city"},
 			},
 		},
-		func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		func(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 			args := request.GetArguments()
 
 			city, ok := args["city"].(string)
@@ -78,7 +78,7 @@ func (s *Train12306Server) addGetStationsCodeInCityTool() {
 }
 
 // addGetStationCodeOfCitysTool adds the get station code of cities tool
-func (s *Train12306Server) addGetStationCodeOfCitysTool() {
+func (s *Server) addGetStationCodeOfCitysTool() {
 	s.AddTool(
 		mcp.Tool{
 			Name:        "get-station-code-of-citys",
@@ -94,7 +94,7 @@ func (s *Train12306Server) addGetStationCodeOfCitysTool() {
 				Required: []string{"citys"},
 			},
 		},
-		func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		func(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 			args := request.GetArguments()
 
 			citys, ok := args["citys"].(string)
@@ -122,7 +122,7 @@ func (s *Train12306Server) addGetStationCodeOfCitysTool() {
 }
 
 // addGetStationCodeByNamesTool adds the get station code by names tool
-func (s *Train12306Server) addGetStationCodeByNamesTool() {
+func (s *Server) addGetStationCodeByNamesTool() {
 	s.AddTool(
 		mcp.Tool{
 			Name:        "get-station-code-by-names",
@@ -138,7 +138,7 @@ func (s *Train12306Server) addGetStationCodeByNamesTool() {
 				Required: []string{"stationNames"},
 			},
 		},
-		func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		func(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 			args := request.GetArguments()
 
 			stationNames, ok := args["stationNames"].(string)
@@ -148,11 +148,7 @@ func (s *Train12306Server) addGetStationCodeByNamesTool() {
 
 			result := make(map[string]any)
 			for _, stationName := range strings.Split(stationNames, "|") {
-				// Remove "站" suffix if present
-				cleanName := stationName
-				if strings.HasSuffix(cleanName, "站") {
-					cleanName = cleanName[:len(cleanName)-3] // Remove "站" (3 bytes in UTF-8)
-				}
+				cleanName := strings.TrimSuffix(stationName, "站")
 
 				if station, exists := s.nameStations[cleanName]; exists {
 					result[stationName] = station
@@ -172,7 +168,7 @@ func (s *Train12306Server) addGetStationCodeByNamesTool() {
 }
 
 // addGetStationByTelecodeTool adds the get station by telecode tool
-func (s *Train12306Server) addGetStationByTelecodeTool() {
+func (s *Server) addGetStationByTelecodeTool() {
 	s.AddTool(
 		mcp.Tool{
 			Name:        "get-station-by-telecode",
@@ -188,7 +184,7 @@ func (s *Train12306Server) addGetStationByTelecodeTool() {
 				Required: []string{"stationTelecode"},
 			},
 		},
-		func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		func(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 			args := request.GetArguments()
 
 			stationTelecode, ok := args["stationTelecode"].(string)
@@ -212,7 +208,7 @@ func (s *Train12306Server) addGetStationByTelecodeTool() {
 }
 
 // addGetTicketsTool adds the get tickets tool
-func (s *Train12306Server) addGetTicketsTool() {
+func (s *Server) addGetTicketsTool() {
 	s.AddTool(
 		mcp.Tool{
 			Name:        "get-tickets",
