@@ -60,7 +60,7 @@ type Response struct {
 	Success      bool   `json:"success"`
 	ErrorMessage string `json:"errorMessage"`
 	ErrorCode    string `json:"errorCode"`
-	TraceId      string `json:"traceId"`
+	TraceID      string `json:"traceId"`
 	ResultObj    string `json:"resultObj"`
 }
 
@@ -152,7 +152,7 @@ func (s *Server) generateChartURL(
 			"failed to generate chart: %s, errorCode: %s, traceId: %s",
 			chartResponse.ErrorMessage,
 			chartResponse.ErrorCode,
-			chartResponse.TraceId,
+			chartResponse.TraceID,
 		)
 	}
 
