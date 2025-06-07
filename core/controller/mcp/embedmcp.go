@@ -50,6 +50,7 @@ type EmbedMCP struct {
 	Enabled         bool                    `json:"enabled"`
 	Name            string                  `json:"name"`
 	Readme          string                  `json:"readme"`
+	GitHubURL       string                  `json:"github_url"`
 	Tags            []string                `json:"tags"`
 	ConfigTemplates EmbedMCPConfigTemplates `json:"config_templates"`
 }
@@ -60,6 +61,7 @@ func newEmbedMCP(mcp *mcpservers.McpServer, enabled bool) *EmbedMCP {
 		Enabled:         enabled,
 		Name:            mcp.Name,
 		Readme:          mcp.Readme,
+		GitHubURL:       mcp.GitHubURL,
 		Tags:            mcp.Tags,
 		ConfigTemplates: newEmbedMCPConfigTemplates(mcp.ConfigTemplates),
 	}
@@ -153,6 +155,7 @@ func ToPublicMCP(
 		Name:        e.Name,
 		LogoURL:     e.LogoURL,
 		Readme:      e.Readme,
+		GithubURL:   e.GitHubURL,
 		Tags:        e.Tags,
 		EmbedConfig: embedConfig,
 	}

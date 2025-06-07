@@ -1,10 +1,10 @@
 # Web Search MCP Server
 
-A comprehensive web search MCP server that provides access to multiple search engines including Google, Bing, and Arxiv.
+A comprehensive web search MCP server that provides access to multiple search engines including Google, Bing, Bing CN(Free), and Arxiv.
 
 ## Features
 
-- **Multiple Search Engines**: Integrated support for Google, Bing, and Arxiv
+- **Multiple Search Engines**: Integrated support for Google, Bing, Bing CN(Free), and Arxiv
 - **Flexible Configuration**: Configure only the search engines you need
 - **Multi-Engine Search**: Search across multiple engines simultaneously
 - **Smart Search**: Intelligent query optimization and result aggregation
@@ -26,6 +26,10 @@ At least one search engine must be configured with valid API credentials:
 #### Bing Search
 
 - `bing_api_key`: Your Bing Search API key
+
+#### Bing CN Search
+
+Free, no API key required.
 
 #### Arxiv Search
 

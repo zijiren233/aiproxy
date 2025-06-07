@@ -132,7 +132,7 @@ type PublicMCP struct {
 	PublicMCPReusingParams []PublicMCPReusingParam `gorm:"foreignKey:MCPID"              json:"-"`
 	Name                   string                  `                                     json:"name"`
 	Type                   PublicMCPType           `gorm:"index"                         json:"type"`
-	RepoURL                string                  `                                     json:"repo_url"`
+	GithubURL              string                  `                                     json:"github_url"`
 	ReadmeURL              string                  `                                     json:"readme_url"`
 	Readme                 string                  `gorm:"type:text"                     json:"readme"`
 	Tags                   []string                `gorm:"serializer:fastjson;type:text" json:"tags,omitempty"`
@@ -226,7 +226,7 @@ func UpdatePublicMCP(mcp *PublicMCP) (err error) {
 	}()
 
 	selects := []string{
-		"repo_url",
+		"github_url",
 		"readme",
 		"readme_url",
 		"tags",

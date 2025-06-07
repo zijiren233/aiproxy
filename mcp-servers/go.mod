@@ -4,17 +4,18 @@ go 1.24
 
 require (
 	github.com/JohannesKaufmann/html-to-markdown v1.6.0
+	github.com/PuerkitoBio/goquery v1.9.2
 	github.com/bytedance/sonic v1.13.2
 	github.com/go-shiori/go-readability v0.0.0-20250217085726-9f5bf5ca7612
 	github.com/labring/aiproxy/core v0.0.0-20250527101240-aac8e89068ad
 	github.com/labring/aiproxy/openapi-mcp v0.0.0-20250527101240-aac8e89068ad
 	github.com/mark3labs/mcp-go v0.30.0
 	github.com/temoto/robotstxt v1.1.2
+	golang.org/x/text v0.25.0
 )
 
 require (
 	github.com/KyleBanks/depth v1.2.1 // indirect
-	github.com/PuerkitoBio/goquery v1.9.2 // indirect
 	github.com/andybalholm/cascadia v1.3.3 // indirect
 	github.com/araddon/dateparse v0.0.0-20210429162001-6b43995a97de // indirect
 	github.com/bytedance/sonic/loader v0.2.4 // indirect
@@ -42,7 +43,6 @@ require (
 	golang.org/x/arch v0.17.0 // indirect
 	golang.org/x/net v0.40.0 // indirect
 	golang.org/x/sys v0.33.0 // indirect
-	golang.org/x/text v0.25.0 // indirect
 	golang.org/x/tools v0.33.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

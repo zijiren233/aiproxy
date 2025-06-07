@@ -1,10 +1,10 @@
 # Web Search MCP Server
 
-This MCP server provides web search capabilities through multiple search engines including Google, Bing, and Arxiv.
+This MCP server provides web search capabilities through multiple search engines including Google, Bing, Bing CN(Free), and Arxiv.
 
 ## Features
 
-- **Multiple Search Engines**: Support for Google, Bing, and Arxiv
+- **Multiple Search Engines**: Support for Google, Bing, Bing CN(Free), and Arxiv
 - **Multi-Engine Search**: Search across multiple engines simultaneously
 - **Smart Search**: Intelligent query optimization and result aggregation
 - **Academic Search**: Specialized support for academic papers via Arxiv
@@ -17,6 +17,7 @@ Configure the search engines you want to use by providing their API keys:
 
 - **Google**: Requires both API key and Custom Search Engine ID
 - **Bing**: Requires Bing Search API key
+- **Bing CN**: Free, no API key required
 - **Arxiv**: No API key required (free to use)
 - **SearchXNG**: No API key required (free to use)
 - **SearchXNG Base URL**: Base URL for SearchXNG
@@ -49,5 +50,5 @@ Intelligently optimize queries and aggregate results for better answers.
 
 3. Multi-engine search:
    - Query: "climate change impacts"
-   - Engines: ["google", "bing", "arxiv", "searchxng"]
+   - Engines: ["google", "bing", "arxiv", "searchxng", "bingcn"]
    - Max results per engine: 5

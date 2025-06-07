@@ -111,6 +111,7 @@ type McpServer struct {
 	ID              string
 	Name            string
 	Type            McpType
+	GitHubURL       string
 	Readme          string
 	LogoURL         string
 	Tags            []string
@@ -123,6 +124,12 @@ type McpConfig func(*McpServer)
 func WithReadme(readme string) McpConfig {
 	return func(e *McpServer) {
 		e.Readme = readme
+	}
+}
+
+func WithGitHubURL(githubURL string) McpConfig {
+	return func(e *McpServer) {
+		e.GitHubURL = githubURL
 	}
 }
 

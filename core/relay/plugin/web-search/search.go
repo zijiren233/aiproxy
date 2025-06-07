@@ -290,6 +290,8 @@ func (p *WebSearch) initializeSearchEngines(configs []EngineConfig) ([]engine.En
 				return nil, false, err
 			}
 			engines = append(engines, engine.NewBingEngine(spec.APIKey))
+		case "bingcn":
+			engines = append(engines, engine.NewBingCNEngine())
 		case "google":
 			var spec GoogleSpec
 			if err := e.LoadSpec(&spec); err != nil {
