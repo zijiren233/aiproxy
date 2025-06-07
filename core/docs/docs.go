@@ -8129,6 +8129,9 @@ const docTemplate = `{
                 "config_templates": {
                     "$ref": "#/definitions/controller.EmbedMCPConfigTemplates"
                 },
+                "embed_config": {
+                    "$ref": "#/definitions/model.MCPEmbeddingConfig"
+                },
                 "enabled": {
                     "type": "boolean"
                 },
