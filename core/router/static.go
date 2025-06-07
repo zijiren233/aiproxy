@@ -64,6 +64,7 @@ func SetStaticFileRouter(router *gin.Engine) {
 
 func checkNoRouteNotFound(path string) bool {
 	if strings.HasPrefix(path, "/api") ||
+		strings.HasPrefix(path, "/mcp") ||
 		strings.HasPrefix(path, "/v1") {
 		return true
 	}
