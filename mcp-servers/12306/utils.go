@@ -2,7 +2,6 @@ package train12306
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -12,6 +11,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/bytedance/sonic"
 )
 
 // checkDate checks if the date is not earlier than today
@@ -98,7 +99,7 @@ func (s *Server) make12306Request(
 		return err
 	}
 
-	return json.Unmarshal(body, result)
+	return sonic.Unmarshal(body, result)
 }
 
 var (
