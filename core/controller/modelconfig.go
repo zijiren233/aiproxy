@@ -116,11 +116,7 @@ func SearchModelConfigs(c *gin.Context) {
 	})
 }
 
-type SaveModelConfigsRequest struct {
-	CreatedAt int64 `json:"created_at"`
-	UpdatedAt int64 `json:"updated_at"`
-	model.ModelConfig
-}
+type SaveModelConfigsRequest = model.ModelConfig
 
 // SaveModelConfigs godoc
 //
@@ -138,11 +134,7 @@ func SaveModelConfigs(c *gin.Context) {
 		middleware.ErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
 	}
-	modelConfigs := make([]model.ModelConfig, len(configs))
-	for i, config := range configs {
-		modelConfigs[i] = config.ModelConfig
-	}
-	err := model.SaveModelConfigs(modelConfigs)
+	err := model.SaveModelConfigs(configs)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
@@ -166,7 +158,7 @@ func SaveModelConfig(c *gin.Context) {
 		middleware.ErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
 	}
-	err := model.SaveModelConfig(config.ModelConfig)
+	err := model.SaveModelConfig(config)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return

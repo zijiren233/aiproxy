@@ -69,6 +69,12 @@ const pluginSchema = z.object({
 export const modelCreateSchema = z.object({
     model: z.string().min(1, 'Model name is required'),
     type: z.number().min(0, 'Type is required'),
+    rpm: z.number().nonnegative('RPM must be a non-negative number').optional(),
+    tpm: z.number().nonnegative('TPM must be a non-negative number').optional(),
+    retry_times: z.number().nonnegative('Retry times must be a non-negative number').optional(),
+    timeout: z.number().nonnegative('Timeout must be a non-negative number').optional(),
+    max_error_rate: z.number().min(0, 'Error rate must be at least 0').max(1, 'Error rate must be at most 1').optional(),
+    force_save_detail: z.boolean().optional(),
     plugin: pluginSchema,
 })
 

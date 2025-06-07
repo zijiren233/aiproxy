@@ -8082,6 +8082,9 @@
                 "exclude_from_tests": {
                     "type": "boolean"
                 },
+                "force_save_detail": {
+                    "type": "boolean"
+                },
                 "image_prices": {
                     "description": "map[size]price_per_image",
                     "type": "object",
@@ -8481,6 +8484,9 @@
         "controller.SaveGroupModelConfigRequest": {
             "type": "object",
             "properties": {
+                "force_save_detail": {
+                    "type": "boolean"
+                },
                 "image_prices": {
                     "type": "object",
                     "additionalProperties": {
@@ -8490,14 +8496,23 @@
                 "model": {
                     "type": "string"
                 },
+                "override_force_save_detail": {
+                    "type": "boolean"
+                },
                 "override_limit": {
                     "type": "boolean"
                 },
                 "override_price": {
                     "type": "boolean"
                 },
+                "override_retry_times": {
+                    "type": "boolean"
+                },
                 "price": {
                     "$ref": "#/definitions/model.Price"
+                },
+                "retry_times": {
+                    "type": "integer"
                 },
                 "rpm": {
                     "type": "integer"
@@ -8518,6 +8533,9 @@
                     "type": "string"
                 },
                 "exclude_from_tests": {
+                    "type": "boolean"
+                },
+                "force_save_detail": {
                     "type": "boolean"
                 },
                 "image_prices": {
@@ -9595,6 +9613,9 @@
         "model.GroupModelConfig": {
             "type": "object",
             "properties": {
+                "force_save_detail": {
+                    "type": "boolean"
+                },
                 "group_id": {
                     "type": "string"
                 },
@@ -9606,6 +9627,9 @@
                 },
                 "model": {
                     "type": "string"
+                },
+                "override_force_save_detail": {
+                    "type": "boolean"
                 },
                 "override_limit": {
                     "type": "boolean"
@@ -9946,6 +9970,9 @@
                     "type": "string"
                 },
                 "exclude_from_tests": {
+                    "type": "boolean"
+                },
+                "force_save_detail": {
                     "type": "boolean"
                 },
                 "image_prices": {

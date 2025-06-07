@@ -1,5 +1,5 @@
 // src/api/model.ts
-import { get, post, del } from './index'
+import { get, post, del, put } from './index'
 import { ModelConfig, ModelCreateRequest } from '@/types/model'
 
 
@@ -16,6 +16,11 @@ export const modelApi = {
 
     createModel: async (data: ModelCreateRequest): Promise<void> => {
         await post('model_config/', data)
+        return
+    },
+
+    updateModel: async (model: string, data: Omit<ModelCreateRequest, 'model'>): Promise<void> => {
+        await put(`model_config/${model}`, data)
         return
     },
 

@@ -97,6 +97,8 @@ definitions:
         type: string
       exclude_from_tests:
         type: boolean
+      force_save_detail:
+        type: boolean
       image_prices:
         additionalProperties:
           type: number
@@ -359,18 +361,26 @@ definitions:
     type: object
   controller.SaveGroupModelConfigRequest:
     properties:
+      force_save_detail:
+        type: boolean
       image_prices:
         additionalProperties:
           type: number
         type: object
       model:
         type: string
+      override_force_save_detail:
+        type: boolean
       override_limit:
         type: boolean
       override_price:
         type: boolean
+      override_retry_times:
+        type: boolean
       price:
         $ref: '#/definitions/model.Price'
+      retry_times:
+        type: integer
       rpm:
         type: integer
       tpm:
@@ -384,6 +394,8 @@ definitions:
       created_at:
         type: string
       exclude_from_tests:
+        type: boolean
+      force_save_detail:
         type: boolean
       image_prices:
         additionalProperties:
@@ -1132,6 +1144,8 @@ definitions:
     - GroupMCPTypeOpenAPI
   model.GroupModelConfig:
     properties:
+      force_save_detail:
+        type: boolean
       group_id:
         type: string
       image_prices:
@@ -1140,6 +1154,8 @@ definitions:
         type: object
       model:
         type: string
+      override_force_save_detail:
+        type: boolean
       override_limit:
         type: boolean
       override_price:
@@ -1367,6 +1383,8 @@ definitions:
       created_at:
         type: string
       exclude_from_tests:
+        type: boolean
+      force_save_detail:
         type: boolean
       image_prices:
         additionalProperties:

@@ -24,7 +24,7 @@ import {
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { ChevronDown, ChevronUp, Plus, X } from 'lucide-react'
 import { modelCreateSchema } from '@/validation/model'
-import { useCreateModel } from '../hooks'
+import { useCreateModel, useUpdateModel } from '../hooks'
 import { useTranslation } from 'react-i18next'
 import { ModelCreateForm } from '@/validation/model'
 import { Plugin, EngineConfig } from '@/types/model'
@@ -40,6 +40,12 @@ interface ModelFormProps {
     defaultValues?: {
         model: string
         type: number
+        rpm?: number
+        tpm?: number
+        retry_times?: number
+        timeout?: number
+        max_error_rate?: number
+        force_save_detail?: boolean
         plugin?: Plugin
     }
 }
@@ -61,10 +67,22 @@ export function ModelForm({
     // API hooks
     const {
         createModel,
-        isLoading,
-        error,
-        clearError
+        isLoading: isCreating,
+        error: createError,
+        clearError: clearCreateError
     } = useCreateModel()
+
+    const {
+        updateModel,
+        isLoading: isUpdating,
+        error: updateError,
+        clearError: clearUpdateError
+    } = useUpdateModel()
+
+    // Combined loading and error states
+    const isLoading = isCreating || isUpdating
+    const error = mode === 'create' ? createError : updateError
+    const clearError = mode === 'create' ? clearCreateError : clearUpdateError
 
     // Form setup with simplified default values
     const form = useForm<ModelCreateForm>({
@@ -73,6 +91,12 @@ export function ModelForm({
         defaultValues: {
             model: defaultValues.model || '',
             type: defaultValues.type || 1,
+            rpm: defaultValues.rpm,
+            tpm: defaultValues.tpm,
+            retry_times: defaultValues.retry_times,
+            timeout: defaultValues.timeout,
+            max_error_rate: defaultValues.max_error_rate,
+            force_save_detail: defaultValues.force_save_detail ?? false,
             plugin: {
                 cache: { enable: false, ...defaultValues.plugin?.cache },
                 "web-search": { enable: false, search_from: [], ...defaultValues.plugin?.["web-search"] },
@@ -248,20 +272,59 @@ export function ModelForm({
         }
 
         // Prepare data for API - 如果没有启用的插件，则不传递 plugin 字段
-        const formData: { model: string; type: number; plugin?: Plugin } = {
-            model: data.model,
+        const formData: { 
+            model?: string; 
+            type: number; 
+            rpm?: number;
+            tpm?: number;
+            retry_times?: number;
+            timeout?: number;
+            max_error_rate?: number;
+            force_save_detail?: boolean;
+            plugin?: Plugin 
+        } = {
             type: Number(data.type),
+            ...(data.rpm !== undefined && { rpm: Number(data.rpm) }),
+            ...(data.tpm !== undefined && { tpm: Number(data.tpm) }),
+            ...(data.retry_times !== undefined && { retry_times: Number(data.retry_times) }),
+            ...(data.timeout !== undefined && { timeout: Number(data.timeout) }),
+            ...(data.max_error_rate !== undefined && { max_error_rate: Number(data.max_error_rate) }),
+            ...(data.force_save_detail !== undefined && { force_save_detail: data.force_save_detail }),
             ...(Object.keys(pluginData).length > 0 && { plugin: pluginData as Plugin })
         }
 
-        createModel(formData, {
-            onSuccess: () => {
-                // Reset form
-                form.reset()
-                // Notify parent component
-                if (onSuccess) onSuccess()
-            }
-        })
+        if (mode === 'create') {
+            // For create mode, include the model name
+            createModel({
+                model: data.model,
+                type: Number(data.type),
+                ...(data.rpm !== undefined && { rpm: Number(data.rpm) }),
+                ...(data.tpm !== undefined && { tpm: Number(data.tpm) }),
+                ...(data.retry_times !== undefined && { retry_times: Number(data.retry_times) }),
+                ...(data.timeout !== undefined && { timeout: Number(data.timeout) }),
+                ...(data.max_error_rate !== undefined && { max_error_rate: Number(data.max_error_rate) }),
+                ...(data.force_save_detail !== undefined && { force_save_detail: data.force_save_detail }),
+                ...(Object.keys(pluginData).length > 0 && { plugin: pluginData as Plugin })
+            }, {
+                onSuccess: () => {
+                    // Reset form
+                    form.reset()
+                    // Notify parent component
+                    if (onSuccess) onSuccess()
+                }
+            })
+        } else {
+            // For update mode, use the model name as the identifier
+            updateModel({
+                model: data.model,
+                data: formData
+            }, {
+                onSuccess: () => {
+                    // Notify parent component
+                    if (onSuccess) onSuccess()
+                }
+            })
+        }
     }
 
     return (
@@ -338,6 +401,126 @@ export function ModelForm({
                                     </SelectContent>
                                 </Select>
                                 <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+
+                    {/* RPM Field */}
+                    <FormField
+                        control={form.control}
+                        name="rpm"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>{t("model.dialog.rpm")}</FormLabel>
+                                <FormControl>
+                                    <Input
+                                        type="number"
+                                        placeholder={t("model.dialog.rpmPlaceholder")}
+                                        {...field}
+                                        onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
+                                    />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+
+                    {/* TPM Field */}
+                    <FormField
+                        control={form.control}
+                        name="tpm"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>{t("model.dialog.tpm")}</FormLabel>
+                                <FormControl>
+                                    <Input
+                                        type="number"
+                                        placeholder={t("model.dialog.tpmPlaceholder")}
+                                        {...field}
+                                        onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
+                                    />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+
+                    {/* Retry Times Field */}
+                    <FormField
+                        control={form.control}
+                        name="retry_times"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>{t("model.dialog.retryTimes")}</FormLabel>
+                                <FormControl>
+                                    <Input
+                                        type="number"
+                                        placeholder={t("model.dialog.retryTimesPlaceholder")}
+                                        {...field}
+                                        onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
+                                    />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+
+                    {/* Timeout Field */}
+                    <FormField
+                        control={form.control}
+                        name="timeout"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>{t("model.dialog.timeout")}</FormLabel>
+                                <FormControl>
+                                    <Input
+                                        type="number"
+                                        placeholder={t("model.dialog.timeoutPlaceholder")}
+                                        {...field}
+                                        onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
+                                    />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+
+                    {/* Max Error Rate Field */}
+                    <FormField
+                        control={form.control}
+                        name="max_error_rate"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>{t("model.dialog.maxErrorRate")}</FormLabel>
+                                <FormControl>
+                                    <Input
+                                        type="number"
+                                        placeholder={t("model.dialog.maxErrorRatePlaceholder")}
+                                        {...field}
+                                        min="0"
+                                        max="1"
+                                        step="0.01"
+                                        onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
+                                    />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+
+                    {/* Force Save Detail Switch */}
+                    <FormField
+                        control={form.control}
+                        name="force_save_detail"
+                        render={({ field }) => (
+                            <FormItem className="flex flex-row items-center justify-between py-2">
+                                <FormLabel>{t("model.dialog.forceSaveDetail")}</FormLabel>
+                                <FormControl>
+                                    <Switch
+                                        checked={field.value}
+                                        onCheckedChange={field.onChange}
+                                    />
+                                </FormControl>
                             </FormItem>
                         )}
                     />

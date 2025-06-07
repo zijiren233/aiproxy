@@ -8091,6 +8091,9 @@ const docTemplate = `{
                 "exclude_from_tests": {
                     "type": "boolean"
                 },
+                "force_save_detail": {
+                    "type": "boolean"
+                },
                 "image_prices": {
                     "description": "map[size]price_per_image",
                     "type": "object",
@@ -8490,6 +8493,9 @@ const docTemplate = `{
         "controller.SaveGroupModelConfigRequest": {
             "type": "object",
             "properties": {
+                "force_save_detail": {
+                    "type": "boolean"
+                },
                 "image_prices": {
                     "type": "object",
                     "additionalProperties": {
@@ -8499,14 +8505,23 @@ const docTemplate = `{
                 "model": {
                     "type": "string"
                 },
+                "override_force_save_detail": {
+                    "type": "boolean"
+                },
                 "override_limit": {
                     "type": "boolean"
                 },
                 "override_price": {
                     "type": "boolean"
                 },
+                "override_retry_times": {
+                    "type": "boolean"
+                },
                 "price": {
                     "$ref": "#/definitions/model.Price"
+                },
+                "retry_times": {
+                    "type": "integer"
                 },
                 "rpm": {
                     "type": "integer"
@@ -8527,6 +8542,9 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "exclude_from_tests": {
+                    "type": "boolean"
+                },
+                "force_save_detail": {
                     "type": "boolean"
                 },
                 "image_prices": {
@@ -9604,6 +9622,9 @@ const docTemplate = `{
         "model.GroupModelConfig": {
             "type": "object",
             "properties": {
+                "force_save_detail": {
+                    "type": "boolean"
+                },
                 "group_id": {
                     "type": "string"
                 },
@@ -9615,6 +9636,9 @@ const docTemplate = `{
                 },
                 "model": {
                     "type": "string"
+                },
+                "override_force_save_detail": {
+                    "type": "boolean"
                 },
                 "override_limit": {
                     "type": "boolean"
@@ -9955,6 +9979,9 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "exclude_from_tests": {
+                    "type": "boolean"
+                },
+                "force_save_detail": {
                     "type": "boolean"
                 },
                 "image_prices": {

@@ -26,6 +26,9 @@ type GroupModelConfig struct {
 
 	OverrideRetryTimes bool  `json:"override_retry_times"`
 	RetryTimes         int64 `json:"retry_times"`
+
+	OverrideForceSaveDetail bool `json:"override_force_save_detail"`
+	ForceSaveDetail         bool `json:"force_save_detail"`
 }
 
 func (g *GroupModelConfig) BeforeSave(_ *gorm.DB) (err error) {

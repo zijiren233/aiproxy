@@ -37,6 +37,10 @@ export interface ModelConfig {
     price: ModelPrice
     rpm: number
     tpm?: number
+    retry_times?: number
+    timeout?: number
+    max_error_rate?: number
+    force_save_detail?: boolean
     plugin: Plugin
 }
 
