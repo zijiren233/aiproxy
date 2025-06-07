@@ -11,8 +11,8 @@ import (
 	"github.com/bytedance/sonic"
 )
 
-// FirecrawlClient represents the Firecrawl API client
-type FirecrawlClient struct {
+// Client represents the Firecrawl API client
+type Client struct {
 	apiKey     string
 	apiURL     string
 	httpClient *http.Client
@@ -143,16 +143,16 @@ type GenerateLLMsTextParams struct {
 
 // Response types
 type ScrapeResponse struct {
-	Success    bool               `json:"success"`
-	Data       *FirecrawlDocument `json:"data,omitempty"`
-	Markdown   string             `json:"markdown,omitempty"`
-	HTML       string             `json:"html,omitempty"`
-	RawHTML    string             `json:"rawHtml,omitempty"`
-	Links      []string           `json:"links,omitempty"`
-	Screenshot string             `json:"screenshot,omitempty"`
-	Extract    map[string]any     `json:"extract,omitempty"`
-	Warning    string             `json:"warning,omitempty"`
-	Error      string             `json:"error,omitempty"`
+	Success    bool           `json:"success"`
+	Data       *Document      `json:"data,omitempty"`
+	Markdown   string         `json:"markdown,omitempty"`
+	HTML       string         `json:"html,omitempty"`
+	RawHTML    string         `json:"rawHtml,omitempty"`
+	Links      []string       `json:"links,omitempty"`
+	Screenshot string         `json:"screenshot,omitempty"`
+	Extract    map[string]any `json:"extract,omitempty"`
+	Warning    string         `json:"warning,omitempty"`
+	Error      string         `json:"error,omitempty"`
 }
 
 type MapResponse struct {
@@ -168,20 +168,20 @@ type CrawlResponse struct {
 }
 
 type CrawlStatusResponse struct {
-	Success     bool                `json:"success"`
-	Status      string              `json:"status"`
-	Completed   int                 `json:"completed"`
-	Total       int                 `json:"total"`
-	CreditsUsed int                 `json:"creditsUsed"`
-	ExpiresAt   string              `json:"expiresAt"`
-	Data        []FirecrawlDocument `json:"data"`
-	Error       string              `json:"error,omitempty"`
+	Success     bool       `json:"success"`
+	Status      string     `json:"status"`
+	Completed   int        `json:"completed"`
+	Total       int        `json:"total"`
+	CreditsUsed int        `json:"creditsUsed"`
+	ExpiresAt   string     `json:"expiresAt"`
+	Data        []Document `json:"data"`
+	Error       string     `json:"error,omitempty"`
 }
 
 type SearchResponse struct {
-	Success bool                `json:"success"`
-	Data    []FirecrawlDocument `json:"data,omitempty"`
-	Error   string              `json:"error,omitempty"`
+	Success bool       `json:"success"`
+	Data    []Document `json:"data,omitempty"`
+	Error   string     `json:"error,omitempty"`
 }
 
 type ExtractResponse struct {
@@ -214,7 +214,7 @@ type LLMsTextData struct {
 	LLMsFullText string `json:"llmsfulltxt,omitempty"`
 }
 
-type FirecrawlDocument struct {
+type Document struct {
 	URL         string         `json:"url,omitempty"`
 	Markdown    string         `json:"markdown,omitempty"`
 	HTML        string         `json:"html,omitempty"`
@@ -225,8 +225,8 @@ type FirecrawlDocument struct {
 }
 
 // NewFirecrawlClient creates a new Firecrawl client
-func NewFirecrawlClient(apiKey, apiURL string) *FirecrawlClient {
-	return &FirecrawlClient{
+func NewFirecrawlClient(apiKey, apiURL string) *Client {
+	return &Client{
 		apiKey: apiKey,
 		apiURL: apiURL,
 		httpClient: &http.Client{
@@ -236,7 +236,7 @@ func NewFirecrawlClient(apiKey, apiURL string) *FirecrawlClient {
 }
 
 // makeRequest makes an HTTP request to the Firecrawl API
-func (c *FirecrawlClient) makeRequest(
+func (c *Client) makeRequest(
 	ctx context.Context,
 	method, endpoint string,
 	body any,
@@ -279,9 +279,9 @@ func (c *FirecrawlClient) makeRequest(
 }
 
 // ScrapeURL scrapes a single URL
-func (c *FirecrawlClient) ScrapeURL(
+func (c *Client) ScrapeURL(
 	ctx context.Context,
-	params ScrapeParams,
+	params *ScrapeParams,
 ) (*ScrapeResponse, error) {
 	respBody, err := c.makeRequest(ctx, http.MethodPost, "/v1/scrape", params)
 	if err != nil {
@@ -297,7 +297,7 @@ func (c *FirecrawlClient) ScrapeURL(
 }
 
 // MapURL maps a website to discover URLs
-func (c *FirecrawlClient) MapURL(ctx context.Context, params MapParams) (*MapResponse, error) {
+func (c *Client) MapURL(ctx context.Context, params MapParams) (*MapResponse, error) {
 	respBody, err := c.makeRequest(ctx, http.MethodPost, "/v1/map", params)
 	if err != nil {
 		return nil, err
@@ -312,7 +312,7 @@ func (c *FirecrawlClient) MapURL(ctx context.Context, params MapParams) (*MapRes
 }
 
 // AsyncCrawlURL starts an asynchronous crawl
-func (c *FirecrawlClient) AsyncCrawlURL(
+func (c *Client) AsyncCrawlURL(
 	ctx context.Context,
 	params CrawlParams,
 ) (*CrawlResponse, error) {
@@ -330,7 +330,7 @@ func (c *FirecrawlClient) AsyncCrawlURL(
 }
 
 // CheckCrawlStatus checks the status of a crawl job
-func (c *FirecrawlClient) CheckCrawlStatus(
+func (c *Client) CheckCrawlStatus(
 	ctx context.Context,
 	id string,
 ) (*CrawlStatusResponse, error) {
@@ -348,7 +348,7 @@ func (c *FirecrawlClient) CheckCrawlStatus(
 }
 
 // Search searches the web
-func (c *FirecrawlClient) Search(
+func (c *Client) Search(
 	ctx context.Context,
 	params SearchParams,
 ) (*SearchResponse, error) {
@@ -366,7 +366,7 @@ func (c *FirecrawlClient) Search(
 }
 
 // Extract extracts structured data
-func (c *FirecrawlClient) Extract(
+func (c *Client) Extract(
 	ctx context.Context,
 	params ExtractParams,
 ) (*ExtractResponse, error) {
@@ -384,7 +384,7 @@ func (c *FirecrawlClient) Extract(
 }
 
 // DeepResearch conducts deep web research
-func (c *FirecrawlClient) DeepResearch(
+func (c *Client) DeepResearch(
 	ctx context.Context,
 	params DeepResearchParams,
 ) (*DeepResearchResponse, error) {
@@ -402,7 +402,7 @@ func (c *FirecrawlClient) DeepResearch(
 }
 
 // GenerateLLMsText generates LLMs.txt file
-func (c *FirecrawlClient) GenerateLLMsText(
+func (c *Client) GenerateLLMsText(
 	ctx context.Context,
 	params GenerateLLMsTextParams,
 ) (*GenerateLLMsTextResponse, error) {

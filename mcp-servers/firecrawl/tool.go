@@ -11,7 +11,7 @@ import (
 )
 
 // addSearchTool adds the search tool
-func (s *FirecrawlServer) addSearchTool() {
+func (s *Server) addSearchTool() {
 	searchTool := mcp.Tool{
 		Name: "firecrawl_search",
 		Description: `Search the web and optionally extract content from search results.
@@ -93,7 +93,7 @@ func (s *FirecrawlServer) addSearchTool() {
 }
 
 // handleSearch handles the search tool
-func (s *FirecrawlServer) handleSearch(
+func (s *Server) handleSearch(
 	ctx context.Context,
 	request mcp.CallToolRequest,
 ) (*mcp.CallToolResult, error) {
@@ -160,7 +160,7 @@ func (s *FirecrawlServer) handleSearch(
 		var err error
 		response, err = s.client.Search(ctx, params)
 		return err
-	}, "search operation")
+	})
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("Search failed: %v", err)), nil
 	}
@@ -170,7 +170,7 @@ func (s *FirecrawlServer) handleSearch(
 	}
 
 	// Format the results
-	var results []string
+	results := make([]string, 0, len(response.Data))
 	for _, result := range response.Data {
 		resultText := fmt.Sprintf("URL: %s\nTitle: %s\nDescription: %s",
 			getStringOrDefault(result.URL, "No URL"),
@@ -188,7 +188,7 @@ func (s *FirecrawlServer) handleSearch(
 }
 
 // addExtractTool adds the extract tool
-func (s *FirecrawlServer) addExtractTool() {
+func (s *Server) addExtractTool() {
 	extractTool := mcp.Tool{
 		Name: "firecrawl_extract",
 		Description: `Extract structured information from web pages using LLM capabilities. Supports both cloud AI and self-hosted LLM extraction.
@@ -267,7 +267,7 @@ func (s *FirecrawlServer) addExtractTool() {
 }
 
 // handleExtract handles the extract tool
-func (s *FirecrawlServer) handleExtract(
+func (s *Server) handleExtract(
 	ctx context.Context,
 	request mcp.CallToolRequest,
 ) (*mcp.CallToolResult, error) {
@@ -324,7 +324,7 @@ func (s *FirecrawlServer) handleExtract(
 		var err error
 		response, err = s.client.Extract(ctx, params)
 		return err
-	}, "extract operation")
+	})
 	if err != nil {
 		// Special handling for self-hosted instance errors
 		if strings.Contains(err.Error(), "not supported") {
@@ -348,7 +348,7 @@ func (s *FirecrawlServer) handleExtract(
 }
 
 // addDeepResearchTool adds the deep research tool
-func (s *FirecrawlServer) addDeepResearchTool() {
+func (s *Server) addDeepResearchTool() {
 	researchTool := mcp.Tool{
 		Name: "firecrawl_deep_research",
 		Description: `Conduct deep web research on a query using intelligent crawling, search, and LLM analysis.
@@ -400,7 +400,7 @@ func (s *FirecrawlServer) addDeepResearchTool() {
 }
 
 // handleDeepResearch handles the deep research tool
-func (s *FirecrawlServer) handleDeepResearch(
+func (s *Server) handleDeepResearch(
 	ctx context.Context,
 	request mcp.CallToolRequest,
 ) (*mcp.CallToolResult, error) {
@@ -437,7 +437,7 @@ func (s *FirecrawlServer) handleDeepResearch(
 		var err error
 		response, err = s.client.DeepResearch(ctx, params)
 		return err
-	}, "deep research operation")
+	})
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("Deep research failed: %v", err)), nil
 	}
@@ -450,7 +450,7 @@ func (s *FirecrawlServer) handleDeepResearch(
 }
 
 // addGenerateLLMsTextTool adds the generate LLMs.txt tool
-func (s *FirecrawlServer) addGenerateLLMsTextTool() {
+func (s *Server) addGenerateLLMsTextTool() {
 	generateTool := mcp.Tool{
 		Name: "firecrawl_generate_llmstxt",
 		Description: `Generate a standardized llms.txt (and optionally llms-full.txt) file for a given domain. This file defines how large language models should interact with the site.
@@ -496,7 +496,7 @@ func (s *FirecrawlServer) addGenerateLLMsTextTool() {
 }
 
 // handleGenerateLLMsText handles the generate LLMs.txt tool
-func (s *FirecrawlServer) handleGenerateLLMsText(
+func (s *Server) handleGenerateLLMsText(
 	ctx context.Context,
 	request mcp.CallToolRequest,
 ) (*mcp.CallToolResult, error) {
@@ -527,7 +527,7 @@ func (s *FirecrawlServer) handleGenerateLLMsText(
 		var err error
 		response, err = s.client.GenerateLLMsText(ctx, params)
 		return err
-	}, "LLMs.txt generation")
+	})
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("LLMs.txt generation failed: %v", err)), nil
 	}
@@ -548,7 +548,7 @@ func (s *FirecrawlServer) handleGenerateLLMsText(
 }
 
 // addScrapeTools adds the scrape tool
-func (s *FirecrawlServer) addScrapeTools() {
+func (s *Server) addScrapeTools() {
 	scrapeTool := mcp.Tool{
 		Name: "firecrawl_scrape",
 		Description: `Scrape content from a single URL with advanced options.
@@ -627,13 +627,7 @@ func (s *FirecrawlServer) addScrapeTools() {
 	s.AddTool(scrapeTool, s.handleScrape)
 }
 
-// handleScrape handles the scrape tool
-func (s *FirecrawlServer) handleScrape(
-	ctx context.Context,
-	request mcp.CallToolRequest,
-) (*mcp.CallToolResult, error) {
-	args := request.GetArguments()
-
+func (s *Server) loadScrapeParams(args map[string]any) (*ScrapeParams, error) {
 	url, ok := args["url"].(string)
 	if !ok || url == "" {
 		return nil, errors.New("url is required")
@@ -695,12 +689,27 @@ func (s *FirecrawlServer) handleScrape(
 		params.RemoveBase64Images = &removeBase64
 	}
 
+	return &params, nil
+}
+
+// handleScrape handles the scrape tool
+func (s *Server) handleScrape(
+	ctx context.Context,
+	request mcp.CallToolRequest,
+) (*mcp.CallToolResult, error) {
+	args := request.GetArguments()
+
+	params, err := s.loadScrapeParams(args)
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("Scraping failed: %v", err)), nil
+	}
+
 	var response *ScrapeResponse
-	err := s.withRetry(ctx, func() error {
+	err = s.withRetry(ctx, func() error {
 		var err error
 		response, err = s.client.ScrapeURL(ctx, params)
 		return err
-	}, "scrape operation")
+	})
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("Scraping failed: %v", err)), nil
 	}
@@ -755,7 +764,7 @@ func (s *FirecrawlServer) handleScrape(
 }
 
 // addMapTool adds the map tool
-func (s *FirecrawlServer) addMapTool() {
+func (s *Server) addMapTool() {
 	mapTool := mcp.Tool{
 		Name: "firecrawl_map",
 		Description: `Map a website to discover all indexed URLs on the site.
@@ -808,7 +817,7 @@ func (s *FirecrawlServer) addMapTool() {
 }
 
 // handleMap handles the map tool
-func (s *FirecrawlServer) handleMap(
+func (s *Server) handleMap(
 	ctx context.Context,
 	request mcp.CallToolRequest,
 ) (*mcp.CallToolResult, error) {
@@ -851,7 +860,7 @@ func (s *FirecrawlServer) handleMap(
 		var err error
 		response, err = s.client.MapURL(ctx, params)
 		return err
-	}, "map operation")
+	})
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("Mapping failed: %v", err)), nil
 	}
@@ -868,7 +877,7 @@ func (s *FirecrawlServer) handleMap(
 }
 
 // addCrawlTools adds crawl and status check tools
-func (s *FirecrawlServer) addCrawlTools() {
+func (s *Server) addCrawlTools() {
 	// Add crawl tool
 	crawlTool := mcp.Tool{
 		Name: "firecrawl_crawl",
@@ -972,7 +981,7 @@ func (s *FirecrawlServer) addCrawlTools() {
 }
 
 // handleCrawl handles the crawl tool
-func (s *FirecrawlServer) handleCrawl(
+func (s *Server) handleCrawl(
 	ctx context.Context,
 	request mcp.CallToolRequest,
 ) (*mcp.CallToolResult, error) {
@@ -1040,7 +1049,7 @@ func (s *FirecrawlServer) handleCrawl(
 		var err error
 		response, err = s.client.AsyncCrawlURL(ctx, params)
 		return err
-	}, "crawl operation")
+	})
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("Crawl failed: %v", err)), nil
 	}
@@ -1058,7 +1067,7 @@ func (s *FirecrawlServer) handleCrawl(
 }
 
 // handleCrawlStatus handles the crawl status check tool
-func (s *FirecrawlServer) handleCrawlStatus(
+func (s *Server) handleCrawlStatus(
 	ctx context.Context,
 	request mcp.CallToolRequest,
 ) (*mcp.CallToolResult, error) {

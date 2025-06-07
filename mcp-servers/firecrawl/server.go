@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
-	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -46,10 +45,10 @@ var configTemplates = mcpservers.ConfigTemplates{
 	},
 }
 
-// FirecrawlServer represents the MCP server for Firecrawl integration
-type FirecrawlServer struct {
+// Server represents the MCP server for Firecrawl integration
+type Server struct {
 	*server.MCPServer
-	client *FirecrawlClient
+	client *Client
 	config RetryConfig
 }
 
@@ -95,7 +94,7 @@ func NewServer(config, _ map[string]string) (mcpservers.Server, error) {
 	// Create Firecrawl client
 	client := NewFirecrawlClient(apiKey, apiURL)
 
-	firecrawlServer := &FirecrawlServer{
+	firecrawlServer := &Server{
 		MCPServer: mcpServer,
 		client:    client,
 		config:    retryConfig,
@@ -108,10 +107,9 @@ func NewServer(config, _ map[string]string) (mcpservers.Server, error) {
 }
 
 // withRetry implements retry logic with exponential backoff
-func (s *FirecrawlServer) withRetry(
+func (s *Server) withRetry(
 	ctx context.Context,
 	operation func() error,
-	operationName string,
 ) error {
 	var lastErr error
 
@@ -129,9 +127,6 @@ func (s *FirecrawlServer) withRetry(
 				if delay > s.config.MaxDelay {
 					delay = s.config.MaxDelay
 				}
-
-				fmt.Fprintf(os.Stderr, "Rate limit hit for %s. Attempt %d/%d. Retrying in %v\n",
-					operationName, attempt, s.config.MaxAttempts, delay)
 
 				select {
 				case <-time.After(delay):
@@ -158,8 +153,8 @@ func trimResponseText(text string) string {
 }
 
 // formatResults formats crawl results
-func formatResults(data []FirecrawlDocument) string {
-	var results []string
+func formatResults(data []Document) string {
+	results := make([]string, 0, len(data))
 	for _, doc := range data {
 		content := doc.Markdown
 		if content == "" {
@@ -198,7 +193,7 @@ func getStringOrDefault(value, defaultValue string) string {
 }
 
 // addAllTools adds all Firecrawl tools to the server
-func (s *FirecrawlServer) addAllTools() {
+func (s *Server) addAllTools() {
 	s.addScrapeTools()
 	s.addMapTool()
 	s.addCrawlTools()
