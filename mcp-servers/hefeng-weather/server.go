@@ -106,7 +106,7 @@ func NewServer(config, _ map[string]string) (mcpservers.Server, error) {
 	}
 
 	if !strings.HasSuffix(apiBase, "/v7") {
-		apiBase = apiBase + "/v7"
+		apiBase += "/v7"
 	}
 
 	// Create MCP server
