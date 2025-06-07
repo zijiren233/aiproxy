@@ -105,6 +105,7 @@ docker run -d \
   --name aiproxy \
   -p 3000:3000 \
   -v $(pwd)/aiproxy:/aiproxy \
+  -e ADMIN_KEY=your-admin-key \
   registry.cn-hangzhou.aliyuncs.com/labring/aiproxy:latest
 
 # 夜间构建
@@ -112,6 +113,7 @@ docker run -d \
   --name aiproxy \
   -p 3000:3000 \
   -v $(pwd)/aiproxy:/aiproxy \
+  -e ADMIN_KEY=your-admin-key \
   registry.cn-hangzhou.aliyuncs.com/labring/aiproxy:main
 ```
 
@@ -148,7 +150,7 @@ REDIS=redis://localhost:6379     # Redis 缓存
 
 ```bash
 BILLING_ENABLED=true           # 启用计费功能
-SAVE_ALL_LOG_DETAIL=false     # 记录所有请求详情
+SAVE_ALL_LOG_DETAIL=true     # 记录所有请求详情
 ```
 
 ### 高级配置
