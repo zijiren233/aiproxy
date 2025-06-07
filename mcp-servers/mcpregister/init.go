@@ -2,6 +2,7 @@ package mcpregister
 
 import (
 	// register embed mcp
+	_ "github.com/labring/aiproxy/mcp-servers/12306"
 	_ "github.com/labring/aiproxy/mcp-servers/aiproxy-openapi"
 	_ "github.com/labring/aiproxy/mcp-servers/alipay"
 	_ "github.com/labring/aiproxy/mcp-servers/amap"
