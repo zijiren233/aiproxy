@@ -46,16 +46,21 @@ func newEmbedMCPConfigTemplates(templates mcpservers.ConfigTemplates) EmbedMCPCo
 }
 
 type EmbedMCP struct {
-	ID              string                  `json:"id"`
-	Enabled         bool                    `json:"enabled"`
-	Name            string                  `json:"name"`
-	Readme          string                  `json:"readme"`
-	GitHubURL       string                  `json:"github_url"`
-	Tags            []string                `json:"tags"`
-	ConfigTemplates EmbedMCPConfigTemplates `json:"config_templates"`
+	ID              string                    `json:"id"`
+	Enabled         bool                      `json:"enabled"`
+	Name            string                    `json:"name"`
+	Readme          string                    `json:"readme"`
+	GitHubURL       string                    `json:"github_url"`
+	Tags            []string                  `json:"tags"`
+	ConfigTemplates EmbedMCPConfigTemplates   `json:"config_templates"`
+	EmbedConfig     *model.MCPEmbeddingConfig `json:"embed_config"`
 }
 
-func newEmbedMCP(mcp *mcpservers.McpServer, enabled bool) *EmbedMCP {
+func newEmbedMCP(
+	mcp *mcpservers.McpServer,
+	enabled bool,
+	embedConfig *model.MCPEmbeddingConfig,
+) *EmbedMCP {
 	emcp := &EmbedMCP{
 		ID:              mcp.ID,
 		Enabled:         enabled,
@@ -64,6 +69,7 @@ func newEmbedMCP(mcp *mcpservers.McpServer, enabled bool) *EmbedMCP {
 		GitHubURL:       mcp.GitHubURL,
 		Tags:            mcp.Tags,
 		ConfigTemplates: newEmbedMCPConfigTemplates(mcp.ConfigTemplates),
+		EmbedConfig:     embedConfig,
 	}
 	return emcp
 }
@@ -80,7 +86,13 @@ func newEmbedMCP(mcp *mcpservers.McpServer, enabled bool) *EmbedMCP {
 //	@Router			/api/embedmcp/ [get]
 func GetEmbedMCPs(c *gin.Context) {
 	embeds := mcpservers.Servers()
-	enabledMCPs, err := model.GetPublicMCPsEnabled(slices.Collect(maps.Keys(embeds)))
+	embedIDs := slices.Collect(maps.Keys(embeds))
+	enabledMCPs, err := model.GetPublicMCPsEnabled(embedIDs)
+	if err != nil {
+		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+	embedConfigs, err := model.GetPublicMCPsEmbedConfig(embedIDs)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
@@ -88,8 +100,33 @@ func GetEmbedMCPs(c *gin.Context) {
 
 	emcps := make([]*EmbedMCP, 0, len(embeds))
 	for _, mcp := range embeds {
-		emcps = append(emcps, newEmbedMCP(&mcp, slices.Contains(enabledMCPs, mcp.ID)))
+		enabled := slices.Contains(enabledMCPs, mcp.ID)
+		var embedConfig *model.MCPEmbeddingConfig
+		if c, ok := embedConfigs[mcp.ID]; ok {
+			embedConfig = &c
+		}
+		emcps = append(
+			emcps,
+			newEmbedMCP(
+				&mcp,
+				enabled,
+				embedConfig,
+			),
+		)
 	}
+
+	slices.SortFunc(emcps, func(a, b *EmbedMCP) int {
+		if a.Name != b.Name {
+			return strings.Compare(a.Name, b.Name)
+		}
+		if a.Enabled != b.Enabled {
+			if a.Enabled {
+				return -1
+			}
+			return 1
+		}
+		return strings.Compare(a.ID, b.ID)
+	})
 
 	middleware.SuccessResponse(c, emcps)
 }
