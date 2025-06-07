@@ -32,6 +32,8 @@ export function ChannelDialog({
 }: ChannelDialogProps) {
     const { t } = useTranslation()
 
+    console.log('ChannelDialog opened with mode:', mode, 'channel:', channel);
+
     // Determine title and description based on mode
     const title = mode === 'create' ? t("channel.dialog.createTitle") : t("channel.dialog.updateTitle")
     const description = mode === 'create'
@@ -46,7 +48,8 @@ export function ChannelDialog({
             key: channel.key,
             base_url: channel.base_url,
             models: channel.models || [],
-            model_mapping: channel.model_mapping || {}
+            model_mapping: channel.model_mapping || {},
+            sets: channel.sets || []
         }
         : {
             type: 0,
@@ -54,8 +57,20 @@ export function ChannelDialog({
             key: '',
             base_url: '',
             models: [],
-            model_mapping: {}
+            model_mapping: {},
+            sets: []
         }
+
+    // Log for debugging
+    if (mode === 'update') {
+        console.log('Update mode detected. Channel ID:', channel?.id);
+        // Make sure channel ID exists
+        if (!channel || !channel.id) {
+            console.error('ERROR: No channel ID available for update!');
+        } else {
+            console.log('Will pass channelId:', channel.id, 'to ChannelForm');
+        }
+    }
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>

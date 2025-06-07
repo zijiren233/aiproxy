@@ -22,7 +22,8 @@
     "global": "全局",
     "loading": "加载中...",
     "selectDateRange": "选择日期范围",
-    "success": "成功"
+    "success": "成功",
+    "optional": "(可选)"
   },
   "error": {
     "loading": "数据加载失败",
@@ -470,6 +471,7 @@
     "disable": "禁用",
     "refresh": "刷新",
     "noResults": "未找到渠道",
+    "sets": "分组",
     "dialog": {
       "createTitle": "创建渠道",
       "updateTitle": "更新渠道",
@@ -483,11 +485,14 @@
       "keyPlaceholder": "输入 API Key",
       "baseUrl": "基础 URL",
       "baseUrlPlaceholder": "输入基础 URL",
+      "baseUrlOptionalHelp": "当不填写时，将使用厂商默认地址",
       "models": "模型",
       "selectModels": "选择模型",
       "createModel": "创建模型",
       "modelMapping": "模型映射",
       "mappedName": "映射名称",
+      "sets": "分组",
+      "setsPlaceholder": "输入分组名称并回车添加",
       "create": "创建",
       "update": "更新",
       "submitting": "提交中..."

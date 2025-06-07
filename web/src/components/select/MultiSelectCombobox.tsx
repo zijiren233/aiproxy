@@ -14,6 +14,9 @@ export const MultiSelectCombobox = function <T>({
     handleFilteredDropdownItems,
     handleDropdownItemDisplay,
     handleSelectedItemDisplay,
+    allowUserCreatedItems = false,
+    placeholder,
+    label
 }: {
     dropdownItems: T[]
     selectedItems: T[]
@@ -21,6 +24,9 @@ export const MultiSelectCombobox = function <T>({
     handleFilteredDropdownItems: (dropdownItems: T[], selectedItems: T[], inputValue: string) => T[]
     handleDropdownItemDisplay: (dropdownItem: T) => ReactNode
     handleSelectedItemDisplay: (selectedItem: T) => ReactNode
+    allowUserCreatedItems?: boolean
+    placeholder?: string
+    label?: string
 }): JSX.Element {
     const { t } = useTranslation()
 
@@ -82,8 +88,16 @@ export const MultiSelectCombobox = function <T>({
         onStateChange({ inputValue: newInputValue, type, selectedItem: newSelectedItem }) {
             switch (type) {
                 case useCombobox.stateChangeTypes.InputKeyDownEnter:
+                    if (allowUserCreatedItems && newInputValue && newInputValue.trim() !== '') {
+                        // If user created items are allowed and we have input, add it as a new item
+                        setSelectedItems([...selectedItems, newInputValue as unknown as T])
+                        setInputValue('')
+                    } else if (newSelectedItem) {
+                        setSelectedItems([...selectedItems, newSelectedItem])
+                        setInputValue('')
+                    }
+                    break;
                 case useCombobox.stateChangeTypes.ItemClick:
-                case useCombobox.stateChangeTypes.InputBlur:
                     if (newSelectedItem) {
                         setSelectedItems([...selectedItems, newSelectedItem])
                         setInputValue('')
@@ -109,7 +123,7 @@ export const MultiSelectCombobox = function <T>({
                 >
                     <div className="flex gap-0.5 items-start">
                         <span className="whitespace-nowrap text-sm font-medium leading-5 tracking-[0.1px]">
-                            {t('channel.dialog.models')}
+                            {label || t('channel.dialog.models')}
                         </span>
                     </div>
                 </Label>
@@ -148,7 +162,7 @@ export const MultiSelectCombobox = function <T>({
                         <div className="flex flex-1 gap-1">
                             <Input
                                 className="border-none shadow-none h-auto p-0 text-xs font-normal leading-4 tracking-[0.048px] bg-transparent"
-                                placeholder={t('channel.dialog.selectModels')}
+                                placeholder={placeholder || t('channel.dialog.selectModels')}
                                 {...getInputProps(getDropdownProps({ preventKeyAction: isOpen }))}
                             />
 

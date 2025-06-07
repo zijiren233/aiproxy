@@ -22,7 +22,8 @@
     "global": "Global",
     "loading": "Loading...",
     "selectDateRange": "Select date range",
-    "success": "Success"
+    "success": "Success",
+    "optional": "(Optional)"
   },
   "error": {
     "loading": "Failed to load data",
@@ -237,7 +238,8 @@
           "cx": "Custom Search Engine ID",
           "cxPlaceholder": "Enter search engine ID",
           "baseUrl": "Base URL",
-          "baseUrlPlaceholder": "Enter base URL"
+          "baseUrlPlaceholder": "Enter base URL",
+          "baseUrlOptionalHelp": "When left empty, the provider's default URL will be used"
         },
         "forceSearch": "Force search on every request",
         "needReference": "Include references in response",
@@ -470,6 +472,7 @@
     "disable": "Disable",
     "refresh": "Refresh",
     "noResults": "No channels found",
+    "sets": "Groups",
     "dialog": {
       "createTitle": "Create Channel",
       "updateTitle": "Update Channel",
@@ -483,11 +486,14 @@
       "keyPlaceholder": "Enter API key",
       "baseUrl": "Base URL",
       "baseUrlPlaceholder": "Enter base URL",
+      "baseUrlOptionalHelp": "When left empty, the provider's default URL will be used",
       "models": "Models",
       "selectModels": "Select models",
       "createModel": "Create Model",
       "modelMapping": "Model Mapping",
       "mappedName": "Mapped name",
+      "sets": "Groups",
+      "setsPlaceholder": "Enter group name and press enter to add",
       "create": "Create",
       "update": "Update",
       "submitting": "Submitting..."
