@@ -370,6 +370,25 @@ func GetPublicMCPsEnabled(ids []string) ([]string, error) {
 	return mcpIDs, nil
 }
 
+func GetPublicMCPsEmbedConfig(ids []string) (map[string]MCPEmbeddingConfig, error) {
+	var configs []struct {
+		ID          string
+		EmbedConfig MCPEmbeddingConfig `gorm:"serializer:fastjson;type:text"`
+	}
+	err := DB.Model(&PublicMCP{}).
+		Select("id, embed_config").
+		Where("id IN (?)", ids).
+		Find(&configs).Error
+	if err != nil {
+		return nil, err
+	}
+	configsMap := make(map[string]MCPEmbeddingConfig)
+	for _, config := range configs {
+		configsMap[config.ID] = config.EmbedConfig
+	}
+	return configsMap, nil
+}
+
 func SavePublicMCPReusingParam(param *PublicMCPReusingParam) (err error) {
 	defer func() {
 		if err == nil {
