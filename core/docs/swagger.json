@@ -8123,6 +8123,9 @@
                 "enabled": {
                     "type": "boolean"
                 },
+                "github_url": {
+                    "type": "string"
+                },
                 "id": {
                     "type": "string"
                 },
@@ -8368,6 +8371,9 @@
                 "endpoints": {
                     "$ref": "#/definitions/controller.MCPEndpoint"
                 },
+                "github_url": {
+                    "type": "string"
+                },
                 "id": {
                     "type": "string"
                 },
@@ -8390,9 +8396,6 @@
                     "type": "string"
                 },
                 "readme_url": {
-                    "type": "string"
-                },
-                "repo_url": {
                     "type": "string"
                 },
                 "status": {
@@ -10209,6 +10212,9 @@
                 "embed_config": {
                     "$ref": "#/definitions/model.MCPEmbeddingConfig"
                 },
+                "github_url": {
+                    "type": "string"
+                },
                 "id": {
                     "type": "string"
                 },
@@ -10231,9 +10237,6 @@
                     "type": "string"
                 },
                 "readme_url": {
-                    "type": "string"
-                },
-                "repo_url": {
                     "type": "string"
                 },
                 "status": {

@@ -8132,6 +8132,9 @@ const docTemplate = `{
                 "enabled": {
                     "type": "boolean"
                 },
+                "github_url": {
+                    "type": "string"
+                },
                 "id": {
                     "type": "string"
                 },
@@ -8377,6 +8380,9 @@ const docTemplate = `{
                 "endpoints": {
                     "$ref": "#/definitions/controller.MCPEndpoint"
                 },
+                "github_url": {
+                    "type": "string"
+                },
                 "id": {
                     "type": "string"
                 },
@@ -8399,9 +8405,6 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "readme_url": {
-                    "type": "string"
-                },
-                "repo_url": {
                     "type": "string"
                 },
                 "status": {
@@ -10218,6 +10221,9 @@ const docTemplate = `{
                 "embed_config": {
                     "$ref": "#/definitions/model.MCPEmbeddingConfig"
                 },
+                "github_url": {
+                    "type": "string"
+                },
                 "id": {
                     "type": "string"
                 },
@@ -10240,9 +10246,6 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "readme_url": {
-                    "type": "string"
-                },
-                "repo_url": {
                     "type": "string"
                 },
                 "status": {

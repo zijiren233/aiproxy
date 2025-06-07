@@ -159,6 +159,8 @@ definitions:
         $ref: '#/definitions/controller.EmbedMCPConfigTemplates'
       enabled:
         type: boolean
+      github_url:
+        type: string
       id:
         type: string
       name:
@@ -319,6 +321,8 @@ definitions:
         $ref: '#/definitions/model.MCPEmbeddingConfig'
       endpoints:
         $ref: '#/definitions/controller.MCPEndpoint'
+      github_url:
+        type: string
       id:
         type: string
       logo_url:
@@ -334,8 +338,6 @@ definitions:
       readme:
         type: string
       readme_url:
-        type: string
-      repo_url:
         type: string
       status:
         $ref: '#/definitions/model.PublicMCPStatus'
@@ -1599,6 +1601,8 @@ definitions:
         type: string
       embed_config:
         $ref: '#/definitions/model.MCPEmbeddingConfig'
+      github_url:
+        type: string
       id:
         type: string
       logo_url:
@@ -1614,8 +1618,6 @@ definitions:
       readme:
         type: string
       readme_url:
-        type: string
-      repo_url:
         type: string
       status:
         $ref: '#/definitions/model.PublicMCPStatus'
