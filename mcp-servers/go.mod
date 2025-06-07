@@ -3,14 +3,20 @@ module github.com/labring/aiproxy/mcp-servers
 go 1.24
 
 require (
+	github.com/JohannesKaufmann/html-to-markdown v1.6.0
 	github.com/bytedance/sonic v1.13.2
+	github.com/go-shiori/go-readability v0.0.0-20250217085726-9f5bf5ca7612
 	github.com/labring/aiproxy/core v0.0.0-20250527101240-aac8e89068ad
 	github.com/labring/aiproxy/openapi-mcp v0.0.0-20250527101240-aac8e89068ad
 	github.com/mark3labs/mcp-go v0.30.0
+	github.com/temoto/robotstxt v1.1.2
 )
 
 require (
 	github.com/KyleBanks/depth v1.2.1 // indirect
+	github.com/PuerkitoBio/goquery v1.9.2 // indirect
+	github.com/andybalholm/cascadia v1.3.3 // indirect
+	github.com/araddon/dateparse v0.0.0-20210429162001-6b43995a97de // indirect
 	github.com/bytedance/sonic/loader v0.2.4 // indirect
 	github.com/cloudwego/base64x v0.1.5 // indirect
 	github.com/getkin/kin-openapi v0.132.0 // indirect
@@ -18,6 +24,8 @@ require (
 	github.com/go-openapi/jsonreference v0.21.0 // indirect
 	github.com/go-openapi/spec v0.21.0 // indirect
 	github.com/go-openapi/swag v0.23.1 // indirect
+	github.com/go-shiori/dom v0.0.0-20230515143342-73569d674e1c // indirect
+	github.com/gogs/chardet v0.0.0-20211120154057-b7413eaefb8f // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.10 // indirect
@@ -32,7 +40,9 @@ require (
 	github.com/ugorji/go/codec v1.2.13 // indirect
 	github.com/yosida95/uritemplate/v3 v3.0.2 // indirect
 	golang.org/x/arch v0.17.0 // indirect
+	golang.org/x/net v0.40.0 // indirect
 	golang.org/x/sys v0.33.0 // indirect
+	golang.org/x/text v0.25.0 // indirect
 	golang.org/x/tools v0.33.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
