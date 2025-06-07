@@ -11,7 +11,6 @@ import {
   RefreshCcw,
   Pencil,
   FileText,
-  Info,
 } from "lucide-react";
 import {
   DropdownMenu,

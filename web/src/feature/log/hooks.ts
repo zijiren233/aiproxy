@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { logApi } from '@/api/log'
-import { LogFilters, LogRequestDetail } from '@/types/log'
+import { LogFilters } from '@/types/log'
 
 // 获取日志数据
 export const useLogs = (filters?: LogFilters) => {

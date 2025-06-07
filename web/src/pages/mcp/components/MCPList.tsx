@@ -16,14 +16,13 @@ import {
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { useTranslation } from "react-i18next";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { KeyRound, ShieldAlert } from "lucide-react";
 
 const MCPList = () => {
   const [mcps, setMcps] = useState<PublicMCP[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedMCP, setSelectedMCP] = useState<PublicMCP | null>(null);
   const [authMethod, setAuthMethod] = useState<"query" | "header">("query");
   const { toast } = useToast();
   const { t } = useTranslation();
@@ -155,7 +154,6 @@ const MCPList = () => {
           {filteredMCPs.map((mcp) => (
             <Dialog
               key={mcp.id}
-              onOpenChange={(open) => open && setSelectedMCP(mcp)}
             >
               <DialogTrigger asChild>
                 <Card className="overflow-hidden cursor-pointer hover:shadow-md transition-shadow">
