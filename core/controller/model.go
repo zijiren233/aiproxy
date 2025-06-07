@@ -258,57 +258,38 @@ func newEnabledModelChannel(ch *model.Channel) EnabledModelChannel {
 	}
 }
 
-// EnabledModelChannels godoc
+// EnabledModelSets godoc
 //
-//	@Summary		Get enabled models and channels
-//	@Description	Returns a list of enabled models
+//	@Summary		Get enabled models and channels sets
+//	@Description	Returns a list of enabled models and channels sets
 //	@Tags			model
 //	@Produce		json
 //	@Security		ApiKeyAuth
 //	@Success		200	{object}	middleware.APIResponse{data=map[string]map[string][]EnabledModelChannel}
-//	@Router			/api/models/channel [get]
-func EnabledModelChannels(c *gin.Context) {
+//	@Router			/api/models/sets [get]
+func EnabledModelSets(c *gin.Context) {
 	raw := model.LoadModelCaches().EnabledModel2ChannelsBySet
 	result := make(map[string]map[string][]EnabledModelChannel)
 
+	// First iterate through sets to get all models
+	for _, modelChannels := range raw {
+		for model := range modelChannels {
+			if _, exists := result[model]; !exists {
+				result[model] = make(map[string][]EnabledModelChannel)
+			}
+		}
+	}
+
+	// Then populate the channels for each model and set
 	for set, modelChannels := range raw {
-		result[set] = make(map[string][]EnabledModelChannel)
 		for model, channels := range modelChannels {
 			chs := make([]EnabledModelChannel, len(channels))
 			for i, channel := range channels {
 				chs[i] = newEnabledModelChannel(channel)
 			}
-			result[set][model] = chs
+			result[model][set] = chs
 		}
 	}
 
-	middleware.SuccessResponse(c, result)
-}
-
-// EnabledModelChannelsSet godoc
-//
-//	@Summary		Get enabled models and channels by set
-//	@Description	Returns a list of enabled models and channels by set
-//	@Tags			model
-//	@Produce		json
-//	@Security		ApiKeyAuth
-//	@Param			set	path		string	true	"Models set"
-//	@Success		200	{object}	middleware.APIResponse{data=map[string][]EnabledModelChannel}
-//	@Router			/api/models/channel/{set} [get]
-func EnabledModelChannelsSet(c *gin.Context) {
-	set := c.Param("set")
-	if set == "" {
-		middleware.ErrorResponse(c, http.StatusBadRequest, "set is required")
-		return
-	}
-	raw := model.LoadModelCaches().EnabledModel2ChannelsBySet[set]
-	result := make(map[string][]EnabledModelChannel, len(raw))
-	for model, channels := range raw {
-		chs := make([]EnabledModelChannel, len(channels))
-		for i, channel := range channels {
-			chs[i] = newEnabledModelChannel(channel)
-		}
-		result[model] = chs
-	}
 	middleware.SuccessResponse(c, result)
 }

@@ -25,6 +25,7 @@ import { ConstructMappingComponent } from '@/components/select/ConstructMappingC
 import { AdvancedErrorDisplay } from '@/components/common/error/errorDisplay'
 import { Skeleton } from "@/components/ui/skeleton"
 import { AnimatedContainer } from '@/components/ui/animation/components/animated-container'
+import { toast } from 'sonner'
 
 interface ChannelFormProps {
     mode?: 'create' | 'update'
@@ -35,16 +36,16 @@ interface ChannelFormProps {
         type: number
         name: string
         key: string
-        base_url: string
+        base_url?: string
         models: string[]
         model_mapping?: Record<string, string>
+        sets?: string[]
     }
 }
 
 export function ChannelForm({
     mode = 'create',
     channelId,
-    // @ts-expect-error 忽略未使用参数
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     channel,
     onSuccess,
@@ -54,18 +55,22 @@ export function ChannelForm({
         key: '',
         base_url: '',
         models: [],
-        model_mapping: {}
+        model_mapping: {},
+        sets: []
     },
 }: ChannelFormProps) {
     const { t } = useTranslation()
     const [modelDialogOpen, setModelDialogOpen] = useState(false)
+    const [isUserSubmitting, setIsUserSubmitting] = useState(false)
+
+    // Log component props for debugging
+    console.log('ChannelForm rendered with props:', { mode, channelId, hasChannel: !!channel });
 
     // 获取渠道类型元数据
     const { data: typeMetas, isLoading: isTypeMetasLoading } = useChannelTypeMetas()
 
     // 获取所有模型
     const { data: models, isLoading: isModelsLoading } = useModels()
-
 
     // API hooks
     const {
@@ -93,40 +98,90 @@ export function ChannelForm({
         defaultValues,
     })
 
-
-
+    // 防止意外的表单提交
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter' && e.target !== e.currentTarget) {
+            // 如果不是在提交按钮上按 Enter，则阻止默认行为
+            const target = e.target as HTMLElement
+            if (target.tagName !== 'BUTTON' || (target as HTMLButtonElement).type !== 'submit') {
+                e.preventDefault()
+            }
+        }
+    }
 
     // 表单提交处理
     const handleFormSubmit = (data: ChannelCreateForm) => {
+        // 只有在用户主动提交时才处理
+        if (!isUserSubmitting) {
+            console.log('Form submission prevented - not explicitly triggered by user')
+            return
+        }
+        
+        setIsUserSubmitting(false) // 重置状态
+
         // 清除之前的错误
         if (clearError) clearError()
-
 
         // 准备提交数据
         const formData = {
             type: data.type,
             name: data.name,
             key: data.key,
-            base_url: data.base_url,
-            models: data.models,
-            model_mapping: data.model_mapping
+            base_url: data.base_url || '',  // Ensure base_url is never undefined for API
+            models: data.models || [],
+            model_mapping: data.model_mapping || {},
+            sets: data.sets || []
         }
+
+        console.log('Submitting form data:', { mode, channelId, formData });
+        console.dir({ mode, channelId, formData }, { depth: null });
 
         if (mode === 'create') {
             createChannel(formData, {
                 onSuccess: () => {
+                    console.log('Channel created successfully');
                     form.reset()
                     if (onSuccess) onSuccess()
+                },
+                onError: (error) => {
+                    console.error('Failed to create channel:', error);
                 }
             })
-        } else if (mode === 'update' && channelId) {
-            updateChannel({ id: channelId, data: formData }, {
+        } else if (mode === 'update') {
+            // Check for channelId
+            if (!channelId) {
+                console.error('Cannot update: missing channelId');
+                toast.error('更新失败：缺少渠道ID');
+                return;
+            }
+
+            console.log('Updating channel with ID:', channelId);
+            // Use explicit typing to ensure id is a number
+            const updateId: number = typeof channelId === 'string' ? parseInt(channelId) : channelId;
+            
+            updateChannel({ 
+                id: updateId, 
+                data: formData 
+            }, {
                 onSuccess: () => {
+                    console.log('Channel updated successfully');
+                    toast.success('渠道更新成功');
                     form.reset()
                     if (onSuccess) onSuccess()
+                },
+                onError: (error) => {
+                    console.error('Failed to update channel:', error);
+                    toast.error('更新渠道失败');
                 }
             })
+        } else {
+            console.error('Unknown mode:', mode);
         }
+    }
+
+    // 处理提交按钮点击
+    const handleSubmitClick = () => {
+        setIsUserSubmitting(true)
     }
 
     // 获取类型对应的字段提示
@@ -162,6 +217,12 @@ export function ChannelForm({
                 <Skeleton className="h-32 w-full" />
             </div>
 
+            {/* 分组字段骨架 */}
+            <div className="space-y-2">
+                <Skeleton className="h-5 w-28" />
+                <Skeleton className="h-[72px] w-full rounded-md" />
+            </div>
+
             {/* 密钥字段骨架 */}
             <div className="space-y-2">
                 <Skeleton className="h-5 w-24" />
@@ -188,7 +249,11 @@ export function ChannelForm({
                     renderFormSkeleton()
                 ) : (
                     <Form {...form}>
-                        <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-6">
+                        <form 
+                            onSubmit={form.handleSubmit(handleFormSubmit)} 
+                            onKeyDown={handleKeyDown}
+                            className="space-y-6"
+                        >
                             {/* API错误提示 */}
                             {error && (
                                 <AdvancedErrorDisplay error={error} />
@@ -245,7 +310,6 @@ export function ChannelForm({
                                                     )
                                                 })
 
-
                                             }}
                                             handleDropdownItemDisplay={(
                                                 dropdownItem: string
@@ -273,7 +337,6 @@ export function ChannelForm({
                                     </FormItem>
                                 )}
                             />
-
 
                             {/* 模型选择字段 */}
                             <FormField
@@ -347,8 +410,6 @@ export function ChannelForm({
                                 }}
                             />
 
-
-
                             {/* 模型映射字段 */}
                             <FormField
                                 control={form.control}
@@ -368,6 +429,39 @@ export function ChannelForm({
                                 }}
                             />
 
+                            {/* 分组字段 */}
+                            <FormField
+                                control={form.control}
+                                name="sets"
+                                render={({ field }) => {
+                                    return (
+                                        <FormItem>
+                                            <FormControl>
+                                                <MultiSelectCombobox<string>
+                                                    dropdownItems={[]}
+                                                    selectedItems={field.value || []}
+                                                    setSelectedItems={(sets) => {
+                                                        field.onChange(sets)
+                                                    }}
+                                                    handleFilteredDropdownItems={(dropdownItems, selectedItems, inputValue) => {
+                                                        // 允许用户创建新的分组
+                                                        if (inputValue && !selectedItems.includes(inputValue) && !dropdownItems.includes(inputValue)) {
+                                                            return [inputValue, ...dropdownItems]
+                                                        }
+                                                        return dropdownItems
+                                                    }}
+                                                    handleDropdownItemDisplay={(item) => item}
+                                                    handleSelectedItemDisplay={(item) => item}
+                                                    allowUserCreatedItems={true}
+                                                    placeholder={t("channel.dialog.setsPlaceholder")}
+                                                    label={t("channel.dialog.sets")}
+                                                />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )
+                                }}
+                            />
 
                             {/* 密钥字段 */}
                             <FormField
@@ -402,23 +496,33 @@ export function ChannelForm({
 
                                     return (
                                         <FormItem>
-                                            <FormLabel>{t("channel.dialog.baseUrl")}</FormLabel>
+                                            <div className="flex items-center gap-2">
+                                                <FormLabel>{t("channel.dialog.baseUrl")}</FormLabel>
+                                                <span className="text-xs text-muted-foreground">{t("common.optional")}</span>
+                                            </div>
                                             <FormControl>
                                                 <Input
                                                     placeholder={defaultBaseUrl || t("channel.dialog.baseUrlPlaceholder")}
                                                     {...field}
+                                                    value={field.value || ''}
                                                 />
                                             </FormControl>
+                                            <p className="text-xs text-muted-foreground mt-1">
+                                                {t("channel.dialog.baseUrlOptionalHelp")}
+                                            </p>
                                             <FormMessage />
                                         </FormItem>
                                     )
                                 }}
                             />
 
-
                             {/* 提交按钮 */}
                             <div className="flex justify-end">
-                                <Button type="submit" disabled={isLoading}>
+                                <Button 
+                                    type="submit" 
+                                    disabled={isLoading}
+                                    onClick={handleSubmitClick}
+                                >
                                     {isLoading ? t("channel.dialog.submitting") : mode === 'create' ? t("channel.dialog.create") : t("channel.dialog.update")}
                                 </Button>
                             </div>

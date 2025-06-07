@@ -280,9 +280,7 @@ func recordResult(
 
 	var detail *model.RequestDetail
 	firstByteAt := result.Detail.FirstByteAt
-	if code == http.StatusOK && !config.GetSaveAllLogDetail() {
-		detail = nil
-	} else {
+	if config.GetSaveAllLogDetail() || meta.ModelConfig.ForceSaveDetail || code != http.StatusOK {
 		detail = &model.RequestDetail{
 			RequestBody:  result.Detail.RequestBody,
 			ResponseBody: result.Detail.ResponseBody,

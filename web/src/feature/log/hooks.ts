@@ -18,4 +18,28 @@ export const useLogs = (filters?: LogFilters) => {
     return {
         ...query,
     }
+}
+
+// 获取日志详情
+export const useLogDetail = (logId: number | null) => {
+    const query = useQuery({
+        queryKey: ['logDetail', logId],
+        queryFn: () => {
+            if (!logId) return null
+            return logApi.getLogDetail(logId)
+        },
+        // 仅在有logId时启用查询
+        enabled: !!logId,
+        // 禁用自动重新获取
+        refetchOnWindowFocus: false,
+        refetchOnMount: false,
+        refetchOnReconnect: false,
+        refetchInterval: false,
+        // 禁用重试
+        retry: false,
+    })
+
+    return {
+        ...query,
+    }
 } 

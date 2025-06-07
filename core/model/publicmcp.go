@@ -143,7 +143,7 @@ type PublicMCP struct {
 	EmbedConfig            *MCPEmbeddingConfig     `gorm:"serializer:fastjson;type:text" json:"embed_config,omitempty"`
 }
 
-func (p *PublicMCP) BeforeSave(_ *gorm.DB) error {
+func (p *PublicMCP) BeforeCreate(_ *gorm.DB) error {
 	if err := validateMCPID(p.ID); err != nil {
 		return err
 	}
@@ -151,7 +151,10 @@ func (p *PublicMCP) BeforeSave(_ *gorm.DB) error {
 	if p.Status == 0 {
 		p.Status = PublicMCPStatusEnabled
 	}
+	return nil
+}
 
+func (p *PublicMCP) BeforeSave(_ *gorm.DB) error {
 	if p.OpenAPIConfig != nil {
 		config := p.OpenAPIConfig
 		if config.OpenAPISpec != "" {

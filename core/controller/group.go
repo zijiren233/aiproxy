@@ -417,6 +417,12 @@ type SaveGroupModelConfigRequest struct {
 	OverridePrice bool               `json:"override_price"`
 	ImagePrices   map[string]float64 `json:"image_prices"`
 	Price         model.Price        `json:"price"`
+
+	OverrideRetryTimes bool  `json:"override_retry_times"`
+	RetryTimes         int64 `json:"retry_times"`
+
+	OverrideForceSaveDetail bool `json:"override_force_save_detail"`
+	ForceSaveDetail         bool `json:"force_save_detail"`
 }
 
 func (r *SaveGroupModelConfigRequest) ToGroupModelConfig(groupID string) model.GroupModelConfig {
@@ -431,6 +437,12 @@ func (r *SaveGroupModelConfigRequest) ToGroupModelConfig(groupID string) model.G
 		OverridePrice: r.OverridePrice,
 		ImagePrices:   r.ImagePrices,
 		Price:         r.Price,
+
+		OverrideRetryTimes: r.OverrideRetryTimes,
+		RetryTimes:         r.RetryTimes,
+
+		OverrideForceSaveDetail: r.OverrideForceSaveDetail,
+		ForceSaveDetail:         r.ForceSaveDetail,
 	}
 }
 

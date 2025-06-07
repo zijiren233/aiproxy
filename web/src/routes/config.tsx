@@ -10,6 +10,7 @@ import ChannelPage from "@/pages/channel/page"
 import TokenPage from "@/pages/token/page"
 import MonitorPage from "@/pages/monitor/page"
 import LogPage from "@/pages/log/page"
+import MCPPage from "@/pages/mcp/page"
 
 // import layout component directly
 import { RootLayout } from "@/components/layout/RootLayOut"
@@ -64,6 +65,10 @@ export function useRoutes(): RouteObject[] {
                 {
                     path: ROUTES.LOG,
                     element: <LogPage />,
+                },
+                {
+                    path: ROUTES.MCP,
+                    element: <MCPPage />,
                 }
             ]
         }]

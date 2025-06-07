@@ -43,6 +43,12 @@ export function ModelDialog({
         ? {
             model: model.model,
             type: model.type,
+            rpm: model.rpm,
+            tpm: model.tpm,
+            retry_times: model.retry_times,
+            timeout: model.timeout,
+            max_error_rate: model.max_error_rate,
+            force_save_detail: model.force_save_detail,
             plugin: model.plugin
         }
         : {

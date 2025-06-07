@@ -102,8 +102,10 @@ export function ChannelTable() {
 
     // 打开更新渠道对话框
     const openUpdateDialog = (channel: Channel) => {
+        console.log('Opening update dialog for channel:', channel);
+        console.log('Channel ID to be updated:', channel.id);
         setDialogMode('update')
-        setSelectedChannel(channel)
+        setSelectedChannel({...channel}) // Create a new reference to ensure update
         setChannelDialogOpen(true)
     }
 
@@ -158,6 +160,28 @@ export function ChannelTable() {
                     {getChannelTypeName(row.original.type)}
                 </div>
             ),
+        },
+        {
+            accessorKey: 'sets',
+            header: () => <div className="font-medium py-3.5 whitespace-nowrap">{t("channel.sets")}</div>,
+            cell: ({ row }) => {
+                const sets = row.original.sets || [];
+                if (sets.length === 0) return <div className="text-muted-foreground text-xs">-</div>;
+                
+                return (
+                    <div className="flex flex-wrap gap-1">
+                        {sets.map((set, index) => (
+                            <Badge 
+                                key={index} 
+                                variant="secondary" 
+                                className="text-xs py-0 px-2"
+                            >
+                                {set}
+                            </Badge>
+                        ))}
+                    </div>
+                );
+            }
         },
         {
             accessorKey: 'request_count',

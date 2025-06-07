@@ -4,7 +4,7 @@ export interface Channel {
     type: number
     name: string
     key: string
-    base_url: string
+    base_url?: string
     models: string[]
     model_mapping: Record<string, string> | null
     request_count: number
@@ -13,6 +13,7 @@ export interface Channel {
     priority: number
     balance?: number
     used_amount?: number
+    sets?: string[]
 }
 
 export interface ChannelTypeMeta {
@@ -32,18 +33,20 @@ export interface ChannelCreateRequest {
     type: number
     name: string
     key: string
-    base_url: string
+    base_url?: string
     models: string[]
     model_mapping?: Record<string, string>
+    sets?: string[]
 }
 
 export interface ChannelUpdateRequest {
     type: number
     name: string
     key: string
-    base_url: string
+    base_url?: string
     models: string[]
     model_mapping?: Record<string, string>
+    sets?: string[]
 }
 
 export interface ChannelStatusRequest {

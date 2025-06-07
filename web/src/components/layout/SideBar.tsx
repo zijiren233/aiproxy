@@ -12,6 +12,7 @@ import {
     FileText,
     Github,
     LogOut,
+    MessageCircle,
 } from "lucide-react"
 import { useTranslation } from "react-i18next"
 import type { TFunction } from "i18next"
@@ -56,6 +57,12 @@ function createSidebarConfig(t: TFunction): SidebarItem[] {
             display: true,
         },
         {
+            title: t("sidebar.mcp"),
+            icon: MessageCircle,
+            href: ROUTES.MCP,
+            display: true,
+        },
+        {
             title: t("sidebar.log"),
             icon: Calendar,
             href: ROUTES.LOG,
@@ -83,6 +90,7 @@ interface SidebarDisplayConfig {
     key?: boolean
     channel?: boolean
     model?: boolean
+    mcp?: boolean
     log?: boolean
     doc?: boolean
     github?: boolean
@@ -108,6 +116,7 @@ export function Sidebar({ displayConfig = {}, collapsed = false, onToggle }: Sid
         if (item.href === ROUTES.KEY) configKey = "key"
         if (item.href === ROUTES.CHANNEL) configKey = "channel"
         if (item.href === ROUTES.MODEL) configKey = "model"
+        if (item.href === ROUTES.MCP) configKey = "mcp"
         if (item.href === ROUTES.LOG) configKey = "log"
         if (item.href === "https://sealos.run/docs/guides/ai-proxy") configKey = "doc"
         if (item.href === "https://github.com/labring/aiproxy") configKey = "github"

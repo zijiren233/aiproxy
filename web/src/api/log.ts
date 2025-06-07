@@ -1,5 +1,5 @@
 import { get } from './index'
-import { LogResponse, LogFilters } from '@/types/log'
+import { LogResponse, LogFilters, LogRequestDetail } from '@/types/log'
 
 export const logApi = {
     // 获取全部日志数据
@@ -74,5 +74,11 @@ export const logApi = {
             // 没有keyName时使用全局API
             return logApi.getLogs(filters)
         }
+    },
+    
+    // 获取日志详情
+    getLogDetail: async (logId: number): Promise<LogRequestDetail> => {
+        const response = await get<LogRequestDetail>(`logs/detail/${logId}`)
+        return response
     }
 } 

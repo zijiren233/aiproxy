@@ -10,8 +10,7 @@ import { ChevronDown, ChevronRight, ChevronLeft, ChevronsLeft, ChevronsRight } f
 import { format } from 'date-fns'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Separator } from '@/components/ui/separator'
-import { JsonViewer } from './JsonViewer'
+import { ExpandedLogContent } from './ExpandedLogContent'
 import type { LogRecord } from '@/types/log'
 
 const columnHelper = createColumnHelper<LogRecord>()
@@ -26,6 +25,7 @@ interface LogTableProps {
     onPageSizeChange: (pageSize: number) => void
 }
 
+// 使用一个单独的组件来处理每行的展开内容，这样每一行都有自己的state
 export function LogTable({
     data,
     total,
@@ -166,92 +166,6 @@ export function LogTable({
         pageCount: Math.ceil(total / pageSize),
     })
 
-    const renderExpandedContent = (log: LogRecord) => {
-        return (
-            <div className="p-4 space-y-4 bg-muted/50 border-t">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {/* 基本信息 */}
-                    <div className="space-y-2">
-                        <h4 className="font-semibold text-sm">{t('log.basicInfo')}</h4>
-                        <div className="space-y-1 text-sm">
-                            <div><span className="font-medium">{t('log.id')}:</span> {log.id}</div>
-                            <div><span className="font-medium">{t('log.requestId')}:</span> {log.request_id}</div>
-                            <div><span className="font-medium">{t('log.channel')}:</span> {log.channel}</div>
-                            <div><span className="font-medium">{t('log.user')}:</span> {log.user || '-'}</div>
-                            <div><span className="font-medium">{t('log.ip')}:</span> {log.ip}</div>
-                            <div><span className="font-medium">{t('log.endpoint')}:</span> {log.endpoint}</div>
-                        </div>
-                    </div>
-
-                    {/* Token信息 */}
-                    <div className="space-y-2">
-                        <h4 className="font-semibold text-sm">{t('log.tokenInfo')}</h4>
-                        <div className="space-y-1 text-sm">
-                            <div><span className="font-medium">{t('log.cacheCreation')}:</span> {log.usage?.cache_creation_tokens || 0}</div>
-                            <div><span className="font-medium">{t('log.cached')}:</span> {log.usage?.cached_tokens || 0}</div>
-                            <div><span className="font-medium">{t('log.imageInput')}:</span> {log.usage?.image_input_tokens || 0}</div>
-                            <div><span className="font-medium">{t('log.reasoning')}:</span> {log.usage?.reasoning_tokens || 0}</div>
-                            <div><span className="font-medium">{t('log.total')}:</span> {log.usage?.total_tokens || 0}</div>
-                            <div><span className="font-medium">{t('log.webSearchCount')}:</span> {log.usage?.web_search_count || 0}</div>
-                        </div>
-                    </div>
-
-                    {/* 时间信息 */}
-                    <div className="space-y-2">
-                        <h4 className="font-semibold text-sm">{t('log.timeInfo')}</h4>
-                        <div className="space-y-1 text-sm">
-                            <div><span className="font-medium">{t('log.created')}:</span> {log.created_at ? format(new Date(log.created_at), 'yyyy-MM-dd HH:mm:ss') : '-'}</div>
-                            <div><span className="font-medium">{t('log.request')}:</span> {log.request_at ? format(new Date(log.request_at), 'yyyy-MM-dd HH:mm:ss') : '-'}</div>
-                            {log.retry_at && <div><span className="font-medium">{t('log.retry')}:</span> {format(new Date(log.retry_at), 'yyyy-MM-dd HH:mm:ss')}</div>}
-                            <div><span className="font-medium">{t('log.retryTimes')}:</span> {log.retry_times || 0}</div>
-                            <div><span className="font-medium">{t('log.ttfb')}:</span> {log.ttfb_milliseconds || 0}ms</div>
-                        </div>
-                    </div>
-                </div>
-
-                <Separator />
-
-                {/* 请求和响应内容 */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                    <div>
-                        <h4 className="font-semibold text-sm mb-2">{t('log.requestBody')}</h4>
-                        {log.request_detail?.request_body ? (
-                            <JsonViewer
-                                src={log.request_detail.request_body}
-                                collapsed={1}
-                                name="request"
-                            />
-                        ) : (
-                            <div className="text-sm text-muted-foreground p-2 border rounded">
-                                {t('log.noRequestBody')}
-                            </div>
-                        )}
-                        {log.request_detail?.request_body_truncated && (
-                            <div className="text-xs text-amber-600 mt-1">⚠️ {t('log.contentTruncated')}</div>
-                        )}
-                    </div>
-                    <div>
-                        <h4 className="font-semibold text-sm mb-2">{t('log.responseBody')}</h4>
-                        {log.request_detail?.response_body ? (
-                            <JsonViewer
-                                src={log.request_detail.response_body}
-                                collapsed={1}
-                                name="response"
-                            />
-                        ) : (
-                            <div className="text-sm text-muted-foreground p-2 border rounded">
-                                {t('log.noResponseBody')}
-                            </div>
-                        )}
-                        {log.request_detail?.response_body_truncated && (
-                            <div className="text-xs text-amber-600 mt-1">⚠️ {t('log.contentTruncated')}</div>
-                        )}
-                    </div>
-                </div>
-            </div>
-        )
-    }
-
     return (
         <div className="h-full flex flex-col">
             <div className="flex-1 min-h-0">
@@ -318,7 +232,7 @@ export function LogTable({
                                             {expandedRows.has(row.original.id) && (
                                                 <tr>
                                                     <td colSpan={columns.length} className="p-0">
-                                                        {renderExpandedContent(row.original)}
+                                                        <ExpandedLogContent log={row.original} />
                                                     </td>
                                                 </tr>
                                             )}

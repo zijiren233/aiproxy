@@ -6,6 +6,7 @@ export const ROUTES = {
     CHANNEL: "/channel",
     MODEL: "/model",
     LOG: "/log",
+    MCP: "/mcp",
 } as const
 
 export type RouteKey = keyof typeof ROUTES
