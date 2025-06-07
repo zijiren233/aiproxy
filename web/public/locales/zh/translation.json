@@ -175,6 +175,10 @@
     "cachePlugin": "缓存",
     "webSearchPlugin": "网络搜索",
     "thinkSplitPlugin": "思考拆分",
+    "accessibleSets": "可访问组",
+    "loading": "加载中...",
+    "noChannel": "无可用渠道",
+    "availableChannels": "可用渠道",
     "dialog": {
       "createTitle": "创建模型",
       "updateTitle": "更新模型",

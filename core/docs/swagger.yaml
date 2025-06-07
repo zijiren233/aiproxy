@@ -4715,62 +4715,6 @@ paths:
       summary: Get channel builtin models by type
       tags:
       - model
-  /api/models/channel:
-    get:
-      description: Returns a list of enabled models
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            allOf:
-            - $ref: '#/definitions/middleware.APIResponse'
-            - properties:
-                data:
-                  additionalProperties:
-                    additionalProperties:
-                      items:
-                        $ref: '#/definitions/controller.EnabledModelChannel'
-                      type: array
-                    type: object
-                  type: object
-              type: object
-      security:
-      - ApiKeyAuth: []
-      summary: Get enabled models and channels
-      tags:
-      - model
-  /api/models/channel/{set}:
-    get:
-      description: Returns a list of enabled models and channels by set
-      parameters:
-      - description: Models set
-        in: path
-        name: set
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            allOf:
-            - $ref: '#/definitions/middleware.APIResponse'
-            - properties:
-                data:
-                  additionalProperties:
-                    items:
-                      $ref: '#/definitions/controller.EnabledModelChannel'
-                    type: array
-                  type: object
-              type: object
-      security:
-      - ApiKeyAuth: []
-      summary: Get enabled models and channels by set
-      tags:
-      - model
   /api/models/default:
     get:
       description: Returns a list of channel default models and mapping
@@ -4893,6 +4837,32 @@ paths:
       security:
       - ApiKeyAuth: []
       summary: Get enabled models by set
+      tags:
+      - model
+  /api/models/sets:
+    get:
+      description: Returns a list of enabled models and channels sets
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/middleware.APIResponse'
+            - properties:
+                data:
+                  additionalProperties:
+                    additionalProperties:
+                      items:
+                        $ref: '#/definitions/controller.EnabledModelChannel'
+                      type: array
+                    type: object
+                  type: object
+              type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Get enabled models and channels sets
       tags:
       - model
   /api/monitor/:

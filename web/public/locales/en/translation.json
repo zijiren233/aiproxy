@@ -175,6 +175,10 @@
     "cachePlugin": "Cache",
     "webSearchPlugin": "Web Search",
     "thinkSplitPlugin": "Think Split",
+    "accessibleSets": "Accessible Sets",
+    "loading": "Loading...",
+    "noChannel": "No available channels",
+    "availableChannels": "Available Channels",
     "dialog": {
       "createTitle": "Create Model",
       "updateTitle": "Update Model",
