@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
-	"os"
 
 	"github.com/bytedance/sonic"
 	mcpservers "github.com/labring/aiproxy/mcp-servers"
@@ -37,10 +36,6 @@ type Server struct {
 func NewServer(config, _ map[string]string) (mcpservers.Server, error) {
 	// Get API URL from config or environment
 	apiURL := config["flomo_api_url"]
-	if apiURL == "" {
-		apiURL = os.Getenv("FLOMO_API_URL")
-	}
-
 	if apiURL == "" {
 		return nil, errors.New(
 			"flomo API URL not set. Please provide flomo_api_url in config or FLOMO_API_URL environment variable",
