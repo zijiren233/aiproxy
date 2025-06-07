@@ -115,10 +115,7 @@ func (s *Server) addWriteNoteTool() {
 				return nil, fmt.Errorf("failed to marshal result: %w", err)
 			}
 
-			responseText := fmt.Sprintf(
-				"Write note to flomo success, result: %s",
-				string(resultJSON),
-			)
+			responseText := "Write note to flomo success, result: " + string(resultJSON)
 
 			return mcp.NewToolResultText(responseText), nil
 		},

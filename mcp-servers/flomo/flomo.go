@@ -3,6 +3,7 @@ package flomo
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -47,7 +48,7 @@ func NewClient(apiURL string) *Client {
 // WriteNote writes a note to Flomo
 func (c *Client) WriteNote(ctx context.Context, content string) (*Response, error) {
 	if content == "" {
-		return nil, fmt.Errorf("invalid content")
+		return nil, errors.New("invalid content")
 	}
 
 	req := WriteNoteRequest{
@@ -93,7 +94,7 @@ func (c *Client) WriteNote(ctx context.Context, content string) (*Response, erro
 
 	// Add memo URL if slug is present
 	if result.Memo != nil && result.Memo.Slug != "" {
-		result.Memo.URL = fmt.Sprintf("https://v.flomoapp.com/mine/?memo_id=%s", result.Memo.Slug)
+		result.Memo.URL = "https://v.flomoapp.com/mine/?memo_id=" + result.Memo.Slug
 	}
 
 	return &result, nil
