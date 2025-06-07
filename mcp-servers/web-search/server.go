@@ -49,7 +49,7 @@ var configTemplates = map[string]mcpservers.ConfigTemplate{
 		Example:     "google",
 		Description: "Default search engine to use (google, bing, arxiv)",
 		Validator: func(value string) error {
-			validEngines := []string{"google", "bing", "arxiv", "searchxng"}
+			validEngines := []string{"google", "bing", "arxiv", "searchxng", "bingcn"}
 			for _, e := range validEngines {
 				if value == e {
 					return nil
@@ -132,6 +132,9 @@ func initializeEngines(config map[string]string) (map[string]engine.Engine, stri
 	if apiKey := config["bing_api_key"]; apiKey != "" {
 		engines["bing"] = engine.NewBingEngine(apiKey)
 	}
+
+	// Bing CN Search
+	engines["bingcn"] = engine.NewBingCNEngine()
 
 	// Arxiv is always available (no API key required)
 	engines["arxiv"] = engine.NewArxivEngine()
@@ -565,6 +568,11 @@ func determineEngine(q searchQuery, engines map[string]engine.Engine, includeAca
 	// Then Bing
 	if _, ok := engines["bing"]; ok {
 		return "bing"
+	}
+
+	// Then Bing CN
+	if _, ok := engines["bingcn"]; ok {
+		return "bingcn"
 	}
 
 	// Then SearchXNG
