@@ -105,6 +105,7 @@ docker run -d \
   --name aiproxy \
   -p 3000:3000 \
   -v $(pwd)/aiproxy:/aiproxy \
+  -e ADMIN_KEY=your-admin-key \
   ghcr.io/labring/aiproxy:latest
 
 # Nightly build
@@ -112,6 +113,7 @@ docker run -d \
   --name aiproxy \
   -p 3000:3000 \
   -v $(pwd)/aiproxy:/aiproxy \
+  -e ADMIN_KEY=your-admin-key \
   ghcr.io/labring/aiproxy:main
 ```
 
@@ -148,7 +150,7 @@ REDIS=redis://localhost:6379     # Redis for caching
 
 ```bash
 BILLING_ENABLED=true           # Enable billing features
-SAVE_ALL_LOG_DETAIL=false     # Log all request details
+SAVE_ALL_LOG_DETAIL=true     # Log all request details
 ```
 
 ### Advanced Configuration
