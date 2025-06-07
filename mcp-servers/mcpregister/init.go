@@ -11,6 +11,7 @@ import (
 	_ "github.com/labring/aiproxy/mcp-servers/fetch"
 	_ "github.com/labring/aiproxy/mcp-servers/firecrawl"
 	_ "github.com/labring/aiproxy/mcp-servers/flomo"
+	_ "github.com/labring/aiproxy/mcp-servers/hefeng-weather"
 	_ "github.com/labring/aiproxy/mcp-servers/jina-tools"
 	_ "github.com/labring/aiproxy/mcp-servers/time"
 	_ "github.com/labring/aiproxy/mcp-servers/web-search"
