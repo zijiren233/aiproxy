@@ -3,7 +3,6 @@ package convert
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -11,6 +10,7 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/bytedance/sonic"
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
@@ -158,7 +158,7 @@ func newHandler(
 		// Create the request body if needed
 		var reqBody io.Reader
 		if arg.Body != nil {
-			bodyBytes, err := json.Marshal(arg.Body)
+			bodyBytes, err := sonic.Marshal(arg.Body)
 			if err != nil {
 				return nil, fmt.Errorf("failed to marshal request body: %w", err)
 			}
@@ -206,7 +206,7 @@ func newHandler(
 			for key, value := range arg.Forms {
 				switch value := value.(type) {
 				case map[string]any:
-					jsonStr, err := json.Marshal(value)
+					jsonStr, err := sonic.Marshal(value)
 					if err != nil {
 						return nil, err
 					}
@@ -428,18 +428,18 @@ func (c *Converter) generateResponseDescription(responses openapi3.Responses) st
 
 		rawSchema, ok := response.Extensions["schema"].(map[string]any)
 		if ok && len(rawSchema) > 0 {
-			jsonStr, err := json.Marshal(rawSchema)
+			jsonStr, err := sonic.Marshal(rawSchema)
 			if err != nil {
 				continue
 			}
 			schema := openapi3.Schema{}
-			err = json.Unmarshal(jsonStr, &schema)
+			err = schema.UnmarshalJSON(jsonStr)
 			if err != nil {
 				continue
 			}
 
 			property := c.processSchemaProperty(&schema, make(map[string]bool))
-			str, err := json.Marshal(property)
+			str, err := sonic.Marshal(property)
 			if err != nil {
 				continue
 			}
@@ -453,7 +453,7 @@ func (c *Converter) generateResponseDescription(responses openapi3.Responses) st
 						mediaType.Schema.Value,
 						make(map[string]bool),
 					)
-					str, err := json.Marshal(property)
+					str, err := sonic.Marshal(property)
 					if err != nil {
 						continue
 					}

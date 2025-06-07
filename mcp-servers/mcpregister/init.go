@@ -6,6 +6,7 @@ import (
 	_ "github.com/labring/aiproxy/mcp-servers/aiproxy-openapi"
 	_ "github.com/labring/aiproxy/mcp-servers/alipay"
 	_ "github.com/labring/aiproxy/mcp-servers/amap"
+	_ "github.com/labring/aiproxy/mcp-servers/baidu-map"
 	_ "github.com/labring/aiproxy/mcp-servers/bingcn"
 	_ "github.com/labring/aiproxy/mcp-servers/fetch"
 	_ "github.com/labring/aiproxy/mcp-servers/jina-tools"

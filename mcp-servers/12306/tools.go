@@ -2,12 +2,12 @@ package train12306
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
 	"time"
 
+	"github.com/bytedance/sonic"
 	"github.com/mark3labs/mcp-go/mcp"
 )
 
@@ -67,7 +67,7 @@ func (s *Server) addGetStationsCodeInCityTool() {
 				return mcp.NewToolResultText("Error: City not found."), nil
 			}
 
-			result, err := json.Marshal(stations)
+			result, err := sonic.Marshal(stations)
 			if err != nil {
 				return nil, fmt.Errorf("failed to marshal response: %w", err)
 			}
@@ -111,7 +111,7 @@ func (s *Server) addGetStationCodeOfCitysTool() {
 				}
 			}
 
-			response, err := json.Marshal(result)
+			response, err := sonic.Marshal(result)
 			if err != nil {
 				return nil, fmt.Errorf("failed to marshal response: %w", err)
 			}
@@ -157,7 +157,7 @@ func (s *Server) addGetStationCodeByNamesTool() {
 				}
 			}
 
-			response, err := json.Marshal(result)
+			response, err := sonic.Marshal(result)
 			if err != nil {
 				return nil, fmt.Errorf("failed to marshal response: %w", err)
 			}
@@ -197,7 +197,7 @@ func (s *Server) addGetStationByTelecodeTool() {
 				return mcp.NewToolResultText("Error: Station not found."), nil
 			}
 
-			result, err := json.Marshal(station)
+			result, err := sonic.Marshal(station)
 			if err != nil {
 				return nil, fmt.Errorf("failed to marshal response: %w", err)
 			}

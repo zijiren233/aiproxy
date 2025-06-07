@@ -1,7 +1,6 @@
 package mcpproxy
 
 import (
-	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -71,7 +70,7 @@ func (s *StreamableHTTPServer) handlePost(w http.ResponseWriter, r *http.Request
 	var baseMessage struct {
 		Method mcp.MCPMethod `json:"method"`
 	}
-	if err := json.Unmarshal(rawData, &baseMessage); err != nil {
+	if err := sonic.Unmarshal(rawData, &baseMessage); err != nil {
 		s.writeJSONRPCError(w, nil, mcp.PARSE_ERROR, "request body is not valid json")
 		return
 	}

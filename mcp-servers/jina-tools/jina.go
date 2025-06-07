@@ -3,7 +3,6 @@ package jinatools
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -295,7 +294,7 @@ func (s *JinaServer) handleJinaReader(
 		URL: urlStr,
 	}
 
-	jsonBody, err := json.Marshal(reqBody)
+	jsonBody, err := sonic.Marshal(reqBody)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal request: %w", err)
 	}
@@ -337,7 +336,7 @@ func (s *JinaServer) handleJinaReader(
 
 	// Parse response
 	var jinaResp JinaReaderResponse
-	if err := json.Unmarshal(respBody, &jinaResp); err != nil {
+	if err := sonic.Unmarshal(respBody, &jinaResp); err != nil {
 		// If parsing fails, return raw response
 		return mcp.NewToolResultText(string(respBody)), nil
 	}
@@ -414,7 +413,7 @@ func (s *JinaServer) handleJinaSearch(
 
 	// Parse response
 	var searchResp JinaSearchResponse
-	if err := json.Unmarshal(respBody, &searchResp); err != nil {
+	if err := sonic.Unmarshal(respBody, &searchResp); err != nil {
 		return nil, fmt.Errorf("failed to parse response: %w", err)
 	}
 
@@ -511,7 +510,7 @@ func (s *JinaServer) handleJinaFactCheck(
 		Deepdive:  deepdive,
 	}
 
-	jsonBody, err := json.Marshal(reqBody)
+	jsonBody, err := sonic.Marshal(reqBody)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal request: %w", err)
 	}

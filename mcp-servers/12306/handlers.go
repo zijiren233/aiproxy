@@ -2,11 +2,11 @@ package train12306
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/url"
 
+	"github.com/bytedance/sonic"
 	"github.com/mark3labs/mcp-go/mcp"
 )
 
@@ -411,7 +411,7 @@ func (s *Server) handleGetTrainRouteStations(
 		return mcp.NewToolResultText("未查询到相关车次信息。"), nil
 	}
 
-	result, err := json.Marshal(routeStationsInfo)
+	result, err := sonic.Marshal(routeStationsInfo)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal response: %w", err)
 	}

@@ -1,13 +1,14 @@
 package train12306
 
 import (
-	"encoding/json"
 	"fmt"
 	"regexp"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/bytedance/sonic"
 )
 
 // extractPrices extracts price information from ticket data
@@ -373,13 +374,13 @@ func (s *Server) parseRouteStationsData(rawData []any) []RouteStationData {
 	result := make([]RouteStationData, 0, len(rawData))
 
 	for _, item := range rawData {
-		dataBytes, err := json.Marshal(item)
+		dataBytes, err := sonic.Marshal(item)
 		if err != nil {
 			continue
 		}
 
 		var routeStation RouteStationData
-		if err := json.Unmarshal(dataBytes, &routeStation); err != nil {
+		if err := sonic.Unmarshal(dataBytes, &routeStation); err != nil {
 			continue
 		}
 
@@ -421,13 +422,13 @@ func (s *Server) parseInterlineData(rawData []any) []InterlineData {
 	result := make([]InterlineData, 0, len(rawData))
 
 	for _, item := range rawData {
-		dataBytes, err := json.Marshal(item)
+		dataBytes, err := sonic.Marshal(item)
 		if err != nil {
 			continue
 		}
 
 		var interlineData InterlineData
-		if err := json.Unmarshal(dataBytes, &interlineData); err != nil {
+		if err := sonic.Unmarshal(dataBytes, &interlineData); err != nil {
 			continue
 		}
 
