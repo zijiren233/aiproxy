@@ -75,6 +75,11 @@ func SetAPIRouter(router *gin.Engine) {
 				groupModelConfigRoute.DELETE("/:model", controller.DeleteGroupModelConfig)
 				groupModelConfigRoute.GET("/:model", controller.GetGroupModelConfig)
 			}
+
+			groupMcpRoute := groupRoute.Group("/:group/mcp")
+			{
+				groupMcpRoute.GET("/", mcp.GetGroupPublicMCPs)
+			}
 		}
 
 		optionRoute := apiRouter.Group("/option")
@@ -184,7 +189,7 @@ func SetAPIRouter(router *gin.Engine) {
 		{
 			publicMcpRoute.GET("/", mcp.GetPublicMCPs)
 			publicMcpRoute.GET("/all", mcp.GetAllPublicMCPs)
-			publicMcpRoute.GET("/:id", mcp.GetPublicMCPByIDHandler)
+			publicMcpRoute.GET("/:id", mcp.GetPublicMCPByID)
 			publicMcpRoute.POST("/", mcp.CreatePublicMCP)
 			publicMcpRoute.PUT("/:id", mcp.UpdatePublicMCP)
 			publicMcpRoute.DELETE("/:id", mcp.DeletePublicMCP)

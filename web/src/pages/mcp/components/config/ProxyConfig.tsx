@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { PublicMCPProxyConfig, ReusingParam } from '@/api/mcp'
+import { PublicMCPProxyConfig, PublicMCPProxyReusingParam } from '@/api/mcp'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -20,7 +20,7 @@ const ProxyConfig = ({ config, onChange }: ProxyConfigProps) => {
       url: '',
       headers: {},
       querys: {},
-      reusing_params: {}
+      reusing: {}
     }
   )
 
@@ -30,7 +30,7 @@ const ProxyConfig = ({ config, onChange }: ProxyConfigProps) => {
   const [newQueryKey, setNewQueryKey] = useState('')
   const [newQueryValue, setNewQueryValue] = useState('')
   const [newReusingKey, setNewReusingKey] = useState('')
-  const [newReusingParam, setNewReusingParam] = useState<ReusingParam>({
+  const [newReusingParam, setNewReusingParam] = useState<PublicMCPProxyReusingParam>({
     name: '',
     description: '',
     required: false,
@@ -111,13 +111,13 @@ const ProxyConfig = ({ config, onChange }: ProxyConfigProps) => {
     if (!newReusingKey.trim() || !newReusingParam.name.trim()) return
     
     const newReusingParams = { 
-      ...proxyConfig.reusing_params, 
+      ...proxyConfig.reusing, 
       [newReusingKey]: { ...newReusingParam } 
     }
     
     const newConfig = { 
       ...proxyConfig, 
-      reusing_params: newReusingParams 
+      reusing: newReusingParams 
     }
     
     setProxyConfig(newConfig)
@@ -132,12 +132,12 @@ const ProxyConfig = ({ config, onChange }: ProxyConfigProps) => {
   }
 
   const removeReusingParam = (key: string) => {
-    const newReusingParams = { ...proxyConfig.reusing_params }
+    const newReusingParams = { ...proxyConfig.reusing }
     delete newReusingParams[key]
     
     const newConfig = { 
       ...proxyConfig, 
-      reusing_params: newReusingParams 
+      reusing: newReusingParams 
     }
     
     setProxyConfig(newConfig)
@@ -302,13 +302,13 @@ const ProxyConfig = ({ config, onChange }: ProxyConfigProps) => {
             </Button>
           </div>
 
-          {Object.keys(proxyConfig.reusing_params).length === 0 ? (
+          {Object.keys(proxyConfig.reusing).length === 0 ? (
             <div className="text-center text-muted-foreground py-4">
               No reusing parameters configured
             </div>
           ) : (
             <div className="space-y-2">
-              {Object.entries(proxyConfig.reusing_params).map(([key, param]) => (
+              {Object.entries(proxyConfig.reusing).map(([key, param]) => (
                 <Card key={key}>
                   <CardHeader>
                     <CardTitle className="text-base flex justify-between">

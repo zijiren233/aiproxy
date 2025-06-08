@@ -1533,6 +1533,80 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/group/{group}/mcp": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Get MCPs by group",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "mcp",
+                    "group"
+                ],
+                "summary": "Get MCPs by group",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Group ID",
+                        "name": "group",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Per Page",
+                        "name": "per_page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Type",
+                        "name": "type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Keyword",
+                        "name": "keyword",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/middleware.APIResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/controller.GroupPublicMCPResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/api/group/{group}/model_config/{model}": {
             "get": {
                 "security": [
@@ -8238,6 +8312,71 @@ const docTemplate = `{
                 }
             }
         },
+        "controller.GroupPublicMCPResponse": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "embed_config": {
+                    "$ref": "#/definitions/model.MCPEmbeddingConfig"
+                },
+                "github_url": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "logo_url": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "openapi_config": {
+                    "$ref": "#/definitions/model.MCPOpenAPIConfig"
+                },
+                "params": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
+                "price": {
+                    "$ref": "#/definitions/model.MCPPrice"
+                },
+                "proxy_config": {
+                    "$ref": "#/definitions/model.PublicMCPProxyConfig"
+                },
+                "readme": {
+                    "type": "string"
+                },
+                "readme_url": {
+                    "type": "string"
+                },
+                "reusing": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "$ref": "#/definitions/model.ReusingParam"
+                    }
+                },
+                "status": {
+                    "$ref": "#/definitions/model.PublicMCPStatus"
+                },
+                "tags": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "type": {
+                    "$ref": "#/definitions/model.PublicMCPType"
+                },
+                "update_at": {
+                    "type": "string"
+                }
+            }
+        },
         "controller.GroupResponse": {
             "type": "object",
             "properties": {
@@ -9845,22 +9984,8 @@ const docTemplate = `{
                 "reusing": {
                     "type": "object",
                     "additionalProperties": {
-                        "$ref": "#/definitions/model.MCPEmbeddingReusingConfig"
+                        "$ref": "#/definitions/model.ReusingParam"
                     }
-                }
-            }
-        },
-        "model.MCPEmbeddingReusingConfig": {
-            "type": "object",
-            "properties": {
-                "description": {
-                    "type": "string"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "required": {
-                    "type": "boolean"
                 }
             }
         },
@@ -10283,14 +10408,31 @@ const docTemplate = `{
                         "type": "string"
                     }
                 },
-                "reusing_params": {
+                "reusing": {
                     "type": "object",
                     "additionalProperties": {
-                        "$ref": "#/definitions/model.ReusingParam"
+                        "$ref": "#/definitions/model.PublicMCPProxyReusingParam"
                     }
                 },
                 "url": {
                     "type": "string"
+                }
+            }
+        },
+        "model.PublicMCPProxyReusingParam": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "required": {
+                    "type": "boolean"
+                },
+                "type": {
+                    "$ref": "#/definitions/model.ParamType"
                 }
             }
         },
@@ -10306,7 +10448,7 @@ const docTemplate = `{
                 "mcp_id": {
                     "type": "string"
                 },
-                "reusing_params": {
+                "params": {
                     "type": "object",
                     "additionalProperties": {
                         "type": "string"
@@ -10475,9 +10617,6 @@ const docTemplate = `{
                 },
                 "required": {
                     "type": "boolean"
-                },
-                "type": {
-                    "$ref": "#/definitions/model.ParamType"
                 }
             }
         },

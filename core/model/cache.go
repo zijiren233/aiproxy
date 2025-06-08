@@ -605,20 +605,20 @@ func CacheUpdatePublicMCPStatus(mcpID string, status PublicMCPStatus) error {
 }
 
 const (
-	PublicMCPReusingParamCacheKey = "public_mcp_reusing_param:%s:%s" // mcp_id:group_id
+	PublicMCPReusingParamCacheKey = "public_mcp_param:%s:%s" // mcp_id:group_id
 )
 
 type PublicMCPReusingParamCache struct {
-	MCPID         string            `json:"mcp_id"         redis:"m"`
-	GroupID       string            `json:"group_id"       redis:"g"`
-	ReusingParams map[string]string `json:"reusing_params" redis:"rp"`
+	MCPID   string            `json:"mcp_id"   redis:"m"`
+	GroupID string            `json:"group_id" redis:"g"`
+	Params  map[string]string `json:"params"   redis:"p"`
 }
 
 func (p *PublicMCPReusingParam) ToPublicMCPReusingParamCache() *PublicMCPReusingParamCache {
 	return &PublicMCPReusingParamCache{
-		MCPID:         p.MCPID,
-		GroupID:       p.GroupID,
-		ReusingParams: p.ReusingParams,
+		MCPID:   p.MCPID,
+		GroupID: p.GroupID,
+		Params:  p.Params,
 	}
 }
 

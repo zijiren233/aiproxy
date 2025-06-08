@@ -1,18 +1,22 @@
 import { get, post, put, del } from './index'
 
-// Types
+type ParamType = 'header' | 'query'
+
+export interface PublicMCPProxyReusingParam extends ReusingParam {
+  type: ParamType
+}
+
 export interface ReusingParam {
   name: string
   description: string
   required: boolean
-  type: 'header' | 'query'
 }
 
 export interface PublicMCPProxyConfig {
   url: string
   querys: Record<string, string>
   headers: Record<string, string>
-  reusing_params: Record<string, ReusingParam>
+  reusing: Record<string, PublicMCPProxyReusingParam>
 }
 
 export interface MCPOpenAPIConfig {
@@ -23,15 +27,9 @@ export interface MCPOpenAPIConfig {
   authorization?: string
 }
 
-export interface MCPEmbeddingReusingConfig {
-  name: string
-  description: string
-  required: boolean
-}
-
 export interface MCPEmbeddingConfig {
   init: Record<string, string>
-  reusing: Record<string, MCPEmbeddingReusingConfig>
+  reusing: Record<string, ReusingParam>
 }
 
 export interface PublicMCP {
@@ -84,7 +82,7 @@ export interface SaveEmbedMCPRequest {
 export interface PublicMCPReusingParam {
   mcp_id: string
   group_id: string
-  reusing_params: Record<string, string>
+  params: Record<string, string>
 }
 
 // API functions

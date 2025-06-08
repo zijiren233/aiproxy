@@ -141,7 +141,7 @@ func GetEmbedConfig(
 	ct mcpservers.ConfigTemplates,
 	initConfig map[string]string,
 ) (*model.MCPEmbeddingConfig, error) {
-	reusingConfig := make(map[string]model.MCPEmbeddingReusingConfig)
+	reusingConfig := make(map[string]model.ReusingParam)
 	embedConfig := &model.MCPEmbeddingConfig{
 		Init: initConfig,
 	}
@@ -155,19 +155,16 @@ func GetEmbedConfig(
 			if _, ok := initConfig[key]; ok {
 				return nil, fmt.Errorf("config %s is provided, but it is not allowed", key)
 			}
-			reusingConfig[key] = model.MCPEmbeddingReusingConfig{
+			reusingConfig[key] = model.ReusingParam{
 				Name:        value.Name,
 				Description: value.Description,
 				Required:    true,
 			}
 		case mcpservers.ConfigRequiredTypeInitOrReusingOnly:
-			if v, ok := initConfig[key]; ok {
-				if v == "" {
-					return nil, fmt.Errorf("config %s is required", key)
-				}
+			if v, ok := initConfig[key]; ok && v != "" {
 				continue
 			}
-			reusingConfig[key] = model.MCPEmbeddingReusingConfig{
+			reusingConfig[key] = model.ReusingParam{
 				Name:        value.Name,
 				Description: value.Description,
 				Required:    true,

@@ -31,14 +31,18 @@ func (mcp *PublicMCPResponse) MarshalJSON() ([]byte, error) {
 		CreatedAt int64 `json:"created_at"`
 		UpdateAt  int64 `json:"update_at"`
 	}{
-		Alias:     (*Alias)(mcp),
-		CreatedAt: mcp.CreatedAt.UnixMilli(),
-		UpdateAt:  mcp.UpdateAt.UnixMilli(),
+		Alias: (*Alias)(mcp),
+	}
+	if !mcp.CreatedAt.IsZero() {
+		a.CreatedAt = mcp.CreatedAt.UnixMilli()
+	}
+	if !mcp.UpdateAt.IsZero() {
+		a.UpdateAt = mcp.UpdateAt.UnixMilli()
 	}
 	return sonic.Marshal(a)
 }
 
-func NewPublicMCPResponse(host string, mcp model.PublicMCP) PublicMCPResponse {
+func NewPublicMCPEndpoint(host string, mcp model.PublicMCP) MCPEndpoint {
 	ep := MCPEndpoint{}
 	switch mcp.Type {
 	case model.PublicMCPTypeProxySSE,
@@ -57,9 +61,13 @@ func NewPublicMCPResponse(host string, mcp model.PublicMCP) PublicMCPResponse {
 		}
 	case model.PublicMCPTypeDocs:
 	}
+	return ep
+}
+
+func NewPublicMCPResponse(host string, mcp model.PublicMCP) PublicMCPResponse {
 	return PublicMCPResponse{
 		PublicMCP: mcp,
-		Endpoints: ep,
+		Endpoints: NewPublicMCPEndpoint(host, mcp),
 	}
 }
 
@@ -91,10 +99,6 @@ func GetPublicMCPs(c *gin.Context) {
 	keyword := c.Query("keyword")
 	status, _ := strconv.Atoi(c.Query("status"))
 
-	if status == 0 {
-		status = int(model.PublicMCPStatusEnabled)
-	}
-
 	mcps, total, err := model.GetPublicMCPs(
 		page,
 		perPage,
@@ -125,11 +129,6 @@ func GetPublicMCPs(c *gin.Context) {
 //	@Router			/api/mcp/public/all [get]
 func GetAllPublicMCPs(c *gin.Context) {
 	status, _ := strconv.Atoi(c.Query("status"))
-
-	if status == 0 {
-		status = int(model.PublicMCPStatusEnabled)
-	}
-
 	mcps, err := model.GetAllPublicMCPs(model.PublicMCPStatus(status))
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
@@ -138,7 +137,7 @@ func GetAllPublicMCPs(c *gin.Context) {
 	middleware.SuccessResponse(c, NewPublicMCPResponses(c.Request.Host, mcps))
 }
 
-// GetPublicMCPByIDHandler godoc
+// GetPublicMCPByID godoc
 //
 //	@Summary		Get MCP by ID
 //	@Description	Get a specific MCP by its ID
@@ -148,7 +147,7 @@ func GetAllPublicMCPs(c *gin.Context) {
 //	@Param			id	path		string	true	"MCP ID"
 //	@Success		200	{object}	middleware.APIResponse{data=PublicMCPResponse}
 //	@Router			/api/mcp/public/{id} [get]
-func GetPublicMCPByIDHandler(c *gin.Context) {
+func GetPublicMCPByID(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
 		middleware.ErrorResponse(c, http.StatusBadRequest, "MCP ID is required")
