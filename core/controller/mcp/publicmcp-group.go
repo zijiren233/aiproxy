@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net/http"
 
+	"github.com/bytedance/sonic"
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/core/controller/utils"
 	"github.com/labring/aiproxy/core/middleware"
@@ -13,20 +14,41 @@ import (
 
 type GroupPublicMCPResponse struct {
 	model.PublicMCP
-	Reusing map[string]model.ReusingParam `json:"reusing"`
-	Params  map[string]string             `json:"params"`
+	Endpoints MCPEndpoint                   `json:"endpoints"`
+	Reusing   map[string]model.ReusingParam `json:"reusing"`
+	Params    map[string]string             `json:"params"`
+}
+
+func (r *GroupPublicMCPResponse) MarshalJSON() ([]byte, error) {
+	type Alias GroupPublicMCPResponse
+	a := &struct {
+		*Alias
+		CreatedAt int64 `json:"created_at"`
+		UpdateAt  int64 `json:"update_at"`
+	}{
+		Alias: (*Alias)(r),
+	}
+	if !r.CreatedAt.IsZero() {
+		a.CreatedAt = r.CreatedAt.UnixMilli()
+	}
+	if !r.UpdateAt.IsZero() {
+		a.UpdateAt = r.UpdateAt.UnixMilli()
+	}
+	return sonic.Marshal(a)
 }
 
 func NewGroupPublicMCPResponse(
+	host string,
 	mcp model.PublicMCP,
 	groupID string,
 ) (GroupPublicMCPResponse, error) {
 	r := GroupPublicMCPResponse{
 		PublicMCP: mcp,
+		Endpoints: NewPublicMCPEndpoint(host, mcp),
 	}
-	r.PublicMCP.ProxyConfig = nil
-	r.PublicMCP.EmbedConfig = nil
-	r.PublicMCP.OpenAPIConfig = nil
+	r.ProxyConfig = nil
+	r.EmbedConfig = nil
+	r.OpenAPIConfig = nil
 
 	switch mcp.Type {
 	case model.PublicMCPTypeProxySSE, model.PublicMCPTypeProxyStreamable:
@@ -55,7 +77,7 @@ func NewGroupPublicMCPResponses(
 ) ([]GroupPublicMCPResponse, error) {
 	responses := make([]GroupPublicMCPResponse, len(mcps))
 	for i, mcp := range mcps {
-		response, err := NewGroupPublicMCPResponse(mcp, groupID)
+		response, err := NewGroupPublicMCPResponse(host, mcp, groupID)
 		if err != nil {
 			return nil, err
 		}
