@@ -361,7 +361,7 @@ const MCPConfig = () => {
             url: "",
             headers: {},
             querys: {},
-            reusing_params: {},
+            reusing: {},
           };
         }
       } else if (type === "mcp_openapi") {

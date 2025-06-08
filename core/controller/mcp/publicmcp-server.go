@@ -142,7 +142,7 @@ func handlePublicSSEMCP(
 
 // processReusingParams handles the reusing parameters for MCP proxy
 func processReusingParams(
-	reusingParams map[string]model.ReusingParam,
+	reusingParams map[string]model.PublicMCPProxyReusingParam,
 	mcpID, groupID string,
 	headers map[string]string,
 	backendQuery *url.Values,
@@ -157,7 +157,7 @@ func processReusingParams(
 	}
 
 	for k, v := range reusingParams {
-		paramValue, ok := param.ReusingParams[k]
+		paramValue, ok := param.Params[k]
 		if !ok {
 			if v.Required {
 				return fmt.Errorf("%s required", k)
@@ -309,7 +309,7 @@ func handlePublicEmbedStreamable(c *gin.Context, mcpID string, config *model.MCP
 			))
 			return
 		}
-		reusingConfig = param.ReusingParams
+		reusingConfig = param.Params
 	}
 	server, err := mcpservers.GetMCPServer(mcpID, config.Init, reusingConfig)
 	if err != nil {
@@ -349,7 +349,7 @@ func handlePublicProxyStreamable(c *gin.Context, mcpID string, config *model.Pub
 	group := middleware.GetGroup(c)
 
 	// Process reusing parameters if any
-	if err := processReusingParams(config.ReusingParams, mcpID, group.ID, headers, &backendQuery); err != nil {
+	if err := processReusingParams(config.Reusing, mcpID, group.ID, headers, &backendQuery); err != nil {
 		c.JSON(http.StatusBadRequest, mcpservers.CreateMCPErrorResponse(
 			mcp.NewRequestId(nil),
 			mcp.INVALID_REQUEST,

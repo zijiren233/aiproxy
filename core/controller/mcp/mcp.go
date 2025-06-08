@@ -94,7 +94,7 @@ func handleEmbedSSEMCP(
 			))
 			return
 		}
-		reusingConfig = param.ReusingParams
+		reusingConfig = param.Params
 	}
 	server, err := mcpservers.GetMCPServer(mcpID, config.Init, reusingConfig)
 	if err != nil {

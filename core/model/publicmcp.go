@@ -42,10 +42,9 @@ const (
 )
 
 type ReusingParam struct {
-	Name        string    `json:"name"`
-	Description string    `json:"description"`
-	Type        ParamType `json:"type"`
-	Required    bool      `json:"required"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	Required    bool   `json:"required"`
 }
 
 type MCPPrice struct {
@@ -53,20 +52,25 @@ type MCPPrice struct {
 	ToolsCallPrices       map[string]float64 `json:"tools_call_prices"        gorm:"serializer:fastjson;type:text"`
 }
 
+type PublicMCPProxyReusingParam struct {
+	ReusingParam
+	Type ParamType `json:"type"`
+}
+
 type PublicMCPProxyConfig struct {
-	URL           string                  `json:"url"`
-	Querys        map[string]string       `json:"querys"`
-	Headers       map[string]string       `json:"headers"`
-	ReusingParams map[string]ReusingParam `json:"reusing_params"`
+	URL     string                                `json:"url"`
+	Querys  map[string]string                     `json:"querys"`
+	Headers map[string]string                     `json:"headers"`
+	Reusing map[string]PublicMCPProxyReusingParam `json:"reusing"`
 }
 
 type PublicMCPReusingParam struct {
-	MCPID         string            `gorm:"primaryKey"                    json:"mcp_id"`
-	GroupID       string            `gorm:"primaryKey"                    json:"group_id"`
-	CreatedAt     time.Time         `gorm:"index"                         json:"created_at"`
-	UpdateAt      time.Time         `gorm:"index"                         json:"update_at"`
-	Group         *Group            `gorm:"foreignKey:GroupID"            json:"-"`
-	ReusingParams map[string]string `gorm:"serializer:fastjson;type:text" json:"reusing_params"`
+	MCPID     string            `gorm:"primaryKey"                    json:"mcp_id"`
+	GroupID   string            `gorm:"primaryKey"                    json:"group_id"`
+	CreatedAt time.Time         `gorm:"index"                         json:"created_at"`
+	UpdateAt  time.Time         `gorm:"index"                         json:"update_at"`
+	Group     *Group            `gorm:"foreignKey:GroupID"            json:"-"`
+	Params    map[string]string `gorm:"serializer:fastjson;type:text" json:"params"`
 }
 
 func (p *PublicMCPReusingParam) BeforeCreate(_ *gorm.DB) (err error) {
@@ -101,15 +105,9 @@ type MCPOpenAPIConfig struct {
 	Authorization  string `json:"authorization,omitempty"`
 }
 
-type MCPEmbeddingReusingConfig struct {
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	Required    bool   `json:"required"`
-}
-
 type MCPEmbeddingConfig struct {
-	Init    map[string]string                    `json:"init"`
-	Reusing map[string]MCPEmbeddingReusingConfig `json:"reusing"`
+	Init    map[string]string       `json:"init"`
+	Reusing map[string]ReusingParam `json:"reusing"`
 }
 
 var validateMCPIDRegex = regexp.MustCompile(`^[a-zA-Z0-9_-]+$`)
@@ -413,7 +411,7 @@ func UpdatePublicMCPReusingParam(param *PublicMCPReusingParam) (err error) {
 
 	result := DB.
 		Select([]string{
-			"reusing_params",
+			"params",
 		}).
 		Where("mcp_id = ? AND group_id = ?", param.MCPID, param.GroupID).
 		Updates(param)

@@ -228,6 +228,49 @@ definitions:
       update_at:
         type: string
     type: object
+  controller.GroupPublicMCPResponse:
+    properties:
+      created_at:
+        type: string
+      embed_config:
+        $ref: '#/definitions/model.MCPEmbeddingConfig'
+      github_url:
+        type: string
+      id:
+        type: string
+      logo_url:
+        type: string
+      name:
+        type: string
+      openapi_config:
+        $ref: '#/definitions/model.MCPOpenAPIConfig'
+      params:
+        additionalProperties:
+          type: string
+        type: object
+      price:
+        $ref: '#/definitions/model.MCPPrice'
+      proxy_config:
+        $ref: '#/definitions/model.PublicMCPProxyConfig'
+      readme:
+        type: string
+      readme_url:
+        type: string
+      reusing:
+        additionalProperties:
+          $ref: '#/definitions/model.ReusingParam'
+        type: object
+      status:
+        $ref: '#/definitions/model.PublicMCPStatus'
+      tags:
+        items:
+          type: string
+        type: array
+      type:
+        $ref: '#/definitions/model.PublicMCPType'
+      update_at:
+        type: string
+    type: object
   controller.GroupResponse:
     properties:
       accessed_at:
@@ -1329,17 +1372,8 @@ definitions:
         type: object
       reusing:
         additionalProperties:
-          $ref: '#/definitions/model.MCPEmbeddingReusingConfig'
+          $ref: '#/definitions/model.ReusingParam'
         type: object
-    type: object
-  model.MCPEmbeddingReusingConfig:
-    properties:
-      description:
-        type: string
-      name:
-        type: string
-      required:
-        type: boolean
     type: object
   model.MCPOpenAPIConfig:
     properties:
@@ -1642,12 +1676,23 @@ definitions:
         additionalProperties:
           type: string
         type: object
-      reusing_params:
+      reusing:
         additionalProperties:
-          $ref: '#/definitions/model.ReusingParam'
+          $ref: '#/definitions/model.PublicMCPProxyReusingParam'
         type: object
       url:
         type: string
+    type: object
+  model.PublicMCPProxyReusingParam:
+    properties:
+      description:
+        type: string
+      name:
+        type: string
+      required:
+        type: boolean
+      type:
+        $ref: '#/definitions/model.ParamType'
     type: object
   model.PublicMCPReusingParam:
     properties:
@@ -1657,7 +1702,7 @@ definitions:
         type: string
       mcp_id:
         type: string
-      reusing_params:
+      params:
         additionalProperties:
           type: string
         type: object
@@ -1771,8 +1816,6 @@ definitions:
         type: string
       required:
         type: boolean
-      type:
-        $ref: '#/definitions/model.ParamType'
     type: object
   model.StreamOptions:
     properties:
@@ -2859,6 +2902,51 @@ paths:
       - ApiKeyAuth: []
       summary: Update a group
       tags:
+      - group
+  /api/group/{group}/mcp:
+    get:
+      description: Get MCPs by group
+      parameters:
+      - description: Group ID
+        in: path
+        name: group
+        required: true
+        type: string
+      - description: Page
+        in: query
+        name: page
+        type: integer
+      - description: Per Page
+        in: query
+        name: per_page
+        type: integer
+      - description: Type
+        in: query
+        name: type
+        type: string
+      - description: Keyword
+        in: query
+        name: keyword
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/middleware.APIResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/controller.GroupPublicMCPResponse'
+                  type: array
+              type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Get MCPs by group
+      tags:
+      - mcp
       - group
   /api/group/{group}/model_config/{model}:
     delete:
