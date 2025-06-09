@@ -3,6 +3,7 @@ package tavily
 import (
 	_ "embed"
 
+	"github.com/labring/aiproxy/core/model"
 	mcpservers "github.com/labring/aiproxy/mcp-servers"
 )
 
@@ -17,7 +18,7 @@ func init() {
 		mcpservers.NewMcp(
 			"tavily",
 			"Tavily AI Search",
-			mcpservers.McpTypeEmbed,
+			model.PublicMCPTypeEmbed,
 			mcpservers.WithNewServerFunc(NewServer),
 			mcpservers.WithDescription(
 				"A powerful web search MCP server powered by Tavily's AI search engine. Provides real-time web search, content extraction, web crawling, and site mapping capabilities with advanced filtering and customization options.",

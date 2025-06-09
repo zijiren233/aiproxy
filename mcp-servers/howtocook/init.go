@@ -3,6 +3,7 @@ package howtocook
 import (
 	_ "embed"
 
+	"github.com/labring/aiproxy/core/model"
 	mcpservers "github.com/labring/aiproxy/mcp-servers"
 )
 
@@ -17,7 +18,7 @@ func init() {
 		mcpservers.NewMcp(
 			"howtocook",
 			"HowToCook Recipe Server",
-			mcpservers.McpTypeEmbed,
+			model.PublicMCPTypeEmbed,
 			mcpservers.WithNewServerFunc(NewServer),
 			mcpservers.WithDescription(
 				"A recipe recommendation server based on the HowToCook project. Provides intelligent meal planning, recipe search by category, and dish recommendations based on the number of people.",

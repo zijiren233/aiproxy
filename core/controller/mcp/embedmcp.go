@@ -14,6 +14,7 @@ import (
 	"github.com/labring/aiproxy/core/middleware"
 	"github.com/labring/aiproxy/core/model"
 	mcpservers "github.com/labring/aiproxy/mcp-servers"
+
 	// init embed mcp
 	_ "github.com/labring/aiproxy/mcp-servers/mcpregister"
 	"github.com/mark3labs/mcp-go/mcp"
@@ -186,36 +187,22 @@ func ToPublicMCP(
 	initConfig map[string]string,
 	enabled bool,
 ) (*model.PublicMCP, error) {
-	embedConfig, err := GetEmbedConfig(e.ConfigTemplates, initConfig)
-	if err != nil {
-		return nil, err
-	}
-	pmcp := &model.PublicMCP{
-		ID:            e.ID,
-		Name:          e.Name,
-		LogoURL:       e.LogoURL,
-		Description:   e.Description,
-		DescriptionCN: e.DescriptionCN,
-		Readme:        e.Readme,
-		ReadmeURL:     e.ReadmeURL,
-		ReadmeCN:      e.ReadmeCN,
-		ReadmeCNURL:   e.ReadmeCNURL,
-		GithubURL:     e.GitHubURL,
-		Tags:          e.Tags,
-		EmbedConfig:   embedConfig,
+	pmcp := e.PublicMCP
+	switch e.Type {
+	case model.PublicMCPTypeEmbed:
+		embedConfig, err := GetEmbedConfig(e.ConfigTemplates, initConfig)
+		if err != nil {
+			return nil, err
+		}
+		pmcp.EmbedConfig = embedConfig
+	default:
 	}
 	if enabled {
 		pmcp.Status = model.PublicMCPStatusEnabled
 	} else {
 		pmcp.Status = model.PublicMCPStatusDisabled
 	}
-	switch e.Type {
-	case mcpservers.McpTypeEmbed:
-		pmcp.Type = model.PublicMCPTypeEmbed
-	case mcpservers.McpTypeDocs:
-		pmcp.Type = model.PublicMCPTypeDocs
-	}
-	return pmcp, nil
+	return &pmcp, nil
 }
 
 // SaveEmbedMCP godoc

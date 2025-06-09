@@ -3,6 +3,7 @@ package gptvis
 import (
 	_ "embed"
 
+	"github.com/labring/aiproxy/core/model"
 	mcpservers "github.com/labring/aiproxy/mcp-servers"
 )
 
@@ -17,7 +18,7 @@ func init() {
 		mcpservers.NewMcp(
 			"gpt-vis",
 			"GPT Vis",
-			mcpservers.McpTypeEmbed,
+			model.PublicMCPTypeEmbed,
 			mcpservers.WithNewServerFunc(NewServer),
 			mcpservers.WithGitHubURL(
 				"https://github.com/antvis/mcp-server-chart",

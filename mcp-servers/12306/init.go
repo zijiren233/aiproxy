@@ -4,6 +4,7 @@ package train12306
 import (
 	_ "embed"
 
+	"github.com/labring/aiproxy/core/model"
 	mcpservers "github.com/labring/aiproxy/mcp-servers"
 )
 
@@ -18,7 +19,7 @@ func init() {
 		mcpservers.NewMcp(
 			"12306",
 			"12306 Train Ticket Query",
-			mcpservers.McpTypeEmbed,
+			model.PublicMCPTypeEmbed,
 			mcpservers.WithNewServerFunc(NewServer),
 			mcpservers.WithGitHubURL(
 				"https://github.com/Joooook/12306-mcp",

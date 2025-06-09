@@ -83,9 +83,21 @@ func (s *StreamableHTTPServer) handlePost(w http.ResponseWriter, r *http.Request
 		return
 	}
 
+	jsonBody, err := sonic.Marshal(response)
+	if err != nil {
+		s.writeJSONRPCError(
+			w,
+			nil,
+			mcp.INTERNAL_ERROR,
+			fmt.Sprintf("marshal response body error: %v", err),
+		)
+		return
+	}
+
 	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Content-Length", strconv.Itoa(len(jsonBody)))
 	w.WriteHeader(http.StatusOK)
-	_ = sonic.ConfigDefault.NewEncoder(w).Encode(response)
+	_, _ = w.Write(jsonBody)
 }
 
 func (s *StreamableHTTPServer) handleGet(w http.ResponseWriter, _ *http.Request) {

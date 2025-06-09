@@ -3,6 +3,7 @@ package hefengweather
 import (
 	_ "embed"
 
+	"github.com/labring/aiproxy/core/model"
 	mcpservers "github.com/labring/aiproxy/mcp-servers"
 )
 
@@ -17,7 +18,7 @@ func init() {
 		mcpservers.NewMcp(
 			"hefeng-weather",
 			"HeFeng Weather",
-			mcpservers.McpTypeEmbed,
+			model.PublicMCPTypeEmbed,
 			mcpservers.WithNewServerFunc(NewServer),
 			mcpservers.WithGitHubURL(
 				"https://github.com/shanggqm/hefeng-mcp-weather",
