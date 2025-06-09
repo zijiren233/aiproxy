@@ -112,7 +112,12 @@ type McpServer struct {
 	Name            string
 	Type            McpType
 	GitHubURL       string
+	Description     string
+	DescriptionCN   string
 	Readme          string
+	ReadmeURL       string
+	ReadmeCN        string
+	ReadmeCNURL     string
 	LogoURL         string
 	Tags            []string
 	ConfigTemplates ConfigTemplates
@@ -121,9 +126,39 @@ type McpServer struct {
 
 type McpConfig func(*McpServer)
 
+func WithDescription(description string) McpConfig {
+	return func(e *McpServer) {
+		e.Description = description
+	}
+}
+
+func WithDescriptionCN(descriptionCN string) McpConfig {
+	return func(e *McpServer) {
+		e.DescriptionCN = descriptionCN
+	}
+}
+
 func WithReadme(readme string) McpConfig {
 	return func(e *McpServer) {
 		e.Readme = readme
+	}
+}
+
+func WithReadmeCN(readmeCN string) McpConfig {
+	return func(e *McpServer) {
+		e.ReadmeCN = readmeCN
+	}
+}
+
+func WithReadmeURL(readmeURL string) McpConfig {
+	return func(e *McpServer) {
+		e.ReadmeURL = readmeURL
+	}
+}
+
+func WithReadmeCNURL(readmeCNURL string) McpConfig {
+	return func(e *McpServer) {
+		e.ReadmeCNURL = readmeCNURL
 	}
 }
 

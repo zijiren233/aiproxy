@@ -57,14 +57,22 @@ func Register(mcp McpServer) {
 	if mcp.Name == "" {
 		panic("mcp name is required")
 	}
+	if mcp.Description == "" && mcp.DescriptionCN == "" {
+		panic(fmt.Sprintf("mcp %s description or description_cn is required", mcp.ID))
+	}
 	switch mcp.Type {
 	case McpTypeEmbed:
 		if mcp.newServer == nil {
 			panic(fmt.Sprintf("mcp %s new server is required", mcp.ID))
 		}
 	case McpTypeDocs:
-		if mcp.Readme == "" {
-			panic(fmt.Sprintf("mcp %s readme is required", mcp.ID))
+		if mcp.Readme == "" && mcp.ReadmeURL == "" && mcp.ReadmeCN == "" && mcp.ReadmeCNURL == "" {
+			panic(
+				fmt.Sprintf(
+					"mcp %s readme or readme_url or readme_cn or readme_cn_url is required",
+					mcp.ID,
+				),
+			)
 		}
 	default:
 		panic(fmt.Sprintf("mcp %s type is invalid", mcp.ID))

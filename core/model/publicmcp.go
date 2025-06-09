@@ -130,9 +130,13 @@ type PublicMCP struct {
 	PublicMCPReusingParams []PublicMCPReusingParam `gorm:"foreignKey:MCPID"              json:"-"`
 	Name                   string                  `                                     json:"name"`
 	Type                   PublicMCPType           `gorm:"index"                         json:"type"`
+	Description            string                  `                                     json:"description"`
+	DescriptionCN          string                  `                                     json:"description_cn"`
 	GithubURL              string                  `                                     json:"github_url"`
-	ReadmeURL              string                  `                                     json:"readme_url"`
 	Readme                 string                  `gorm:"type:text"                     json:"readme"`
+	ReadmeCN               string                  `gorm:"type:text"                     json:"readme_cn"`
+	ReadmeURL              string                  `                                     json:"readme_url"`
+	ReadmeCNURL            string                  `                                     json:"readme_cn_url"`
 	Tags                   []string                `gorm:"serializer:fastjson;type:text" json:"tags,omitempty"`
 	LogoURL                string                  `                                     json:"logo_url"`
 	Price                  MCPPrice                `gorm:"embedded"                      json:"price"`
