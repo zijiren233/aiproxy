@@ -1169,7 +1169,7 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "Time span type (day, hour)",
+                        "description": "Time span type (day, hour, minute)",
                         "name": "timespan",
                         "in": "query"
                     }
@@ -1248,7 +1248,7 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "Time span type (day, hour)",
+                        "description": "Time span type (day, hour, minute)",
                         "name": "timespan",
                         "in": "query"
                     }

@@ -731,7 +731,7 @@ func UpdateGroupModelConfigs(c *gin.Context) {
 //	@Router			/api/groups/ip_groups [get]
 func GetIPGroupList(c *gin.Context) {
 	threshold, _ := strconv.Atoi(c.Query("threshold"))
-	startTime, endTime := parseTimeRange(c)
+	startTime, endTime := utils.ParseTimeRange(c, 0)
 	ipGroupList, err := model.GetIPGroups(threshold, startTime, endTime)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
