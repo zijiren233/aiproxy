@@ -27,7 +27,7 @@ type Server struct {
 }
 
 // NewServer creates a new HowToCook MCP server
-func NewServer(config, _ map[string]string) (mcpservers.Server, error) {
+func NewServer(_, _ map[string]string) (mcpservers.Server, error) {
 	// Create MCP server
 	mcpServer := server.NewMCPServer("howtocook-mcp", Version)
 
@@ -107,7 +107,7 @@ func (s *Server) addGetRecipesByCategoryTool() {
 	s.AddTool(
 		mcp.Tool{
 			Name:        "mcp_howtocook_getRecipesByCategory",
-			Description: fmt.Sprintf("根据分类查询菜谱，可选分类有: %s", strings.Join(s.categories, ", ")),
+			Description: "根据分类查询菜谱，可选分类有: " + strings.Join(s.categories, ", "),
 			InputSchema: mcp.ToolInputSchema{
 				Type: "object",
 				Properties: map[string]any{
@@ -294,7 +294,7 @@ func (s *Server) generateMealPlan(peopleCount int, allergies, avoidItems []strin
 
 	// Generate weekday plans
 	weekdays := []string{"周一", "周二", "周三", "周四", "周五"}
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		dayPlan := DayPlan{
 			Day:       weekdays[i],
 			Breakfast: []SimpleRecipe{},
@@ -329,7 +329,7 @@ func (s *Server) generateMealPlan(peopleCount int, allergies, avoidItems []strin
 
 	// Generate weekend plans
 	weekendDays := []string{"周六", "周日"}
-	for i := 0; i < 2; i++ {
+	for i := range 2 {
 		dayPlan := DayPlan{
 			Day:       weekendDays[i],
 			Breakfast: []SimpleRecipe{},
@@ -428,7 +428,7 @@ func (s *Server) generateDishRecommendation(peopleCount int) DishRecommendation 
 	recommendedDishes = append(recommendedDishes, selectedVegetableDishes...)
 
 	// Convert to simple recipes
-	var simpleDishes []SimpleRecipe
+	simpleDishes := make([]SimpleRecipe, len(recommendedDishes))
 	for _, dish := range recommendedDishes {
 		simpleDishes = append(simpleDishes, s.simplifyRecipe(dish))
 	}
@@ -453,7 +453,7 @@ func (s *Server) generateDishRecommendation(peopleCount int) DishRecommendation 
 
 // simplifyRecipe converts Recipe to SimpleRecipe
 func (s *Server) simplifyRecipe(recipe Recipe) SimpleRecipe {
-	var ingredients []SimpleIngredient
+	ingredients := make([]SimpleIngredient, len(recipe.Ingredients))
 	for _, ing := range recipe.Ingredients {
 		ingredients = append(ingredients, SimpleIngredient{
 			Name:         ing.Name,
@@ -555,7 +555,7 @@ func (s *Server) selectVariedMeals(
 	var meals []SimpleRecipe
 	categories := []string{"主食", "水产", "荤菜", "素菜", "甜品"}
 
-	for i := 0; i < count; i++ {
+	for range count {
 		selectedCategory := categories[rand.Intn(len(categories))]
 
 		// Try to find a category with available recipes
@@ -591,7 +591,7 @@ func (s *Server) selectWeekendMeals(
 	var meals []SimpleRecipe
 	categories := []string{"荤菜", "水产"}
 
-	for i := 0; i < count; i++ {
+	for i := range count {
 		category := categories[i%len(categories)]
 
 		if recipes, exists := recipesByCategory[category]; exists && len(recipes) > 0 {
@@ -621,6 +621,7 @@ func (s *Server) selectWeekendMeals(
 
 // selectMeatDishes selects meat dishes with preference for different meat types
 func (s *Server) selectMeatDishes(meatDishes []Recipe, count int) []Recipe {
+	//nolint:prealloc
 	var selectedMeatDishes []Recipe
 	meatTypes := []string{"猪肉", "鸡肉", "牛肉", "羊肉", "鸭肉", "鱼肉"}
 	availableDishes := make([]Recipe, len(meatDishes))
@@ -676,6 +677,7 @@ func (s *Server) selectMeatDishes(meatDishes []Recipe, count int) []Recipe {
 
 // selectRandomDishes selects random dishes from a list
 func (s *Server) selectRandomDishes(dishes []Recipe, count int) []Recipe {
+	//nolint:prealloc
 	var selectedDishes []Recipe
 	availableDishes := make([]Recipe, len(dishes))
 	copy(availableDishes, dishes)
@@ -699,14 +701,14 @@ func (s *Server) generateGroceryList(selectedRecipes []Recipe) GroceryList {
 	}
 
 	// Convert map to slice
-	var ingredients []GroceryItem
+	ingredients := make([]GroceryItem, len(ingredientMap))
 	for _, item := range ingredientMap {
 		ingredients = append(ingredients, *item)
 	}
 
 	// Sort by usage frequency
-	for i := 0; i < len(ingredients)-1; i++ {
-		for j := 0; j < len(ingredients)-1-i; j++ {
+	for i := range len(ingredients) - 1 {
+		for j := range len(ingredients) - 1 - i {
 			if ingredients[j].RecipeCount < ingredients[j+1].RecipeCount {
 				ingredients[j], ingredients[j+1] = ingredients[j+1], ingredients[j]
 			}
