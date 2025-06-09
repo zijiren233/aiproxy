@@ -50,6 +50,9 @@ type EmbedMCP struct {
 	Enabled         bool                      `json:"enabled"`
 	Name            string                    `json:"name"`
 	Readme          string                    `json:"readme"`
+	ReadmeURL       string                    `json:"readme_url"`
+	ReadmeCN        string                    `json:"readme_cn"`
+	ReadmeCNURL     string                    `json:"readme_cn_url"`
 	GitHubURL       string                    `json:"github_url"`
 	Tags            []string                  `json:"tags"`
 	ConfigTemplates EmbedMCPConfigTemplates   `json:"config_templates"`
@@ -66,6 +69,9 @@ func newEmbedMCP(
 		Enabled:         enabled,
 		Name:            mcp.Name,
 		Readme:          mcp.Readme,
+		ReadmeURL:       mcp.ReadmeURL,
+		ReadmeCN:        mcp.ReadmeCN,
+		ReadmeCNURL:     mcp.ReadmeCNURL,
 		GitHubURL:       mcp.GitHubURL,
 		Tags:            mcp.Tags,
 		ConfigTemplates: newEmbedMCPConfigTemplates(mcp.ConfigTemplates),
@@ -185,13 +191,18 @@ func ToPublicMCP(
 		return nil, err
 	}
 	pmcp := &model.PublicMCP{
-		ID:          e.ID,
-		Name:        e.Name,
-		LogoURL:     e.LogoURL,
-		Readme:      e.Readme,
-		GithubURL:   e.GitHubURL,
-		Tags:        e.Tags,
-		EmbedConfig: embedConfig,
+		ID:            e.ID,
+		Name:          e.Name,
+		LogoURL:       e.LogoURL,
+		Description:   e.Description,
+		DescriptionCN: e.DescriptionCN,
+		Readme:        e.Readme,
+		ReadmeURL:     e.ReadmeURL,
+		ReadmeCN:      e.ReadmeCN,
+		ReadmeCNURL:   e.ReadmeCNURL,
+		GithubURL:     e.GitHubURL,
+		Tags:          e.Tags,
+		EmbedConfig:   embedConfig,
 	}
 	if enabled {
 		pmcp.Status = model.PublicMCPStatusEnabled

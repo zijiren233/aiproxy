@@ -21,6 +21,12 @@ func init() {
 			),
 			mcpservers.WithConfigTemplates(configTemplates),
 			mcpservers.WithTags([]string{"search", "bing", "web", "scraping"}),
+			mcpservers.WithDescription(
+				"A Model Context Protocol server that provides access to Bing CN search results. This server enables LLMs to search Bing CN and retrieve web page content.",
+			),
+			mcpservers.WithDescriptionCN(
+				"一个提供必应中国搜索结果的模型上下文协议服务器。此服务器使LLM能够搜索必应中国并检索网页内容。",
+			),
 			mcpservers.WithReadme(readme),
 		),
 	)
