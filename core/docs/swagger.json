@@ -1160,7 +1160,7 @@
                     },
                     {
                         "type": "string",
-                        "description": "Time span type (day, hour)",
+                        "description": "Time span type (day, hour, minute)",
                         "name": "timespan",
                         "in": "query"
                     }
@@ -1239,7 +1239,7 @@
                     },
                     {
                         "type": "string",
-                        "description": "Time span type (day, hour)",
+                        "description": "Time span type (day, hour, minute)",
                         "name": "timespan",
                         "in": "query"
                     }

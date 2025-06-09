@@ -2712,7 +2712,7 @@ paths:
         in: query
         name: timezone
         type: string
-      - description: Time span type (day, hour)
+      - description: Time span type (day, hour, minute)
         in: query
         name: timespan
         type: string
@@ -2760,7 +2760,7 @@ paths:
         in: query
         name: timezone
         type: string
-      - description: Time span type (day, hour)
+      - description: Time span type (day, hour, minute)
         in: query
         name: timespan
         type: string
