@@ -344,7 +344,7 @@ func GetTimeSeriesModelData(c *gin.Context) {
 	channelID, _ := strconv.Atoi(c.Query("channel"))
 	startTime, endTime := parseTimeRange(c)
 	timezoneLocation, _ := time.LoadLocation(c.DefaultQuery("timezone", "Local"))
-	models, err := model.GetTimeSeriesModelData(
+	models, err := model.GetTimeSeriesModelDataMinute(
 		channelID,
 		startTime,
 		endTime,
@@ -382,7 +382,7 @@ func GetGroupTimeSeriesModelData(c *gin.Context) {
 	tokenName := c.Query("token_name")
 	startTime, endTime := parseTimeRange(c)
 	timezoneLocation, _ := time.LoadLocation(c.DefaultQuery("timezone", "Local"))
-	models, err := model.GetGroupTimeSeriesModelData(
+	models, err := model.GetGroupTimeSeriesModelDataMinute(
 		group,
 		tokenName,
 		startTime,

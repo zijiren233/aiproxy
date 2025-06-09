@@ -51,7 +51,7 @@ func GetGroups(c *gin.Context) {
 	}
 	groupResponses := make([]*GroupResponse, len(groups))
 	for i, group := range groups {
-		lastRequestAt, _ := model.GetGroupLastRequestTime(group.ID)
+		lastRequestAt, _ := model.GetGroupLastRequestTimeMinute(group.ID)
 		groupResponses[i] = &GroupResponse{
 			Group:      group,
 			AccessedAt: lastRequestAt,
@@ -89,7 +89,7 @@ func SearchGroups(c *gin.Context) {
 	}
 	groupResponses := make([]*GroupResponse, len(groups))
 	for i, group := range groups {
-		lastRequestAt, _ := model.GetGroupLastRequestTime(group.ID)
+		lastRequestAt, _ := model.GetGroupLastRequestTimeMinute(group.ID)
 		groupResponses[i] = &GroupResponse{
 			Group:      group,
 			AccessedAt: lastRequestAt,
@@ -122,7 +122,7 @@ func GetGroup(c *gin.Context) {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
-	lastRequestAt, _ := model.GetGroupLastRequestTime(group)
+	lastRequestAt, _ := model.GetGroupLastRequestTimeMinute(group)
 	groupResponse := &GroupResponse{
 		Group:      _group,
 		AccessedAt: lastRequestAt,

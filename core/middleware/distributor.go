@@ -421,23 +421,12 @@ func distribute(c *gin.Context, mode mode.Mode) {
 			true,
 			user,
 			metadata,
-			model.RequestRate{},
-			GetGroupModelTokenRequestRate(c),
 		)
 		AbortLogWithMessage(c, http.StatusTooManyRequests, errMsg, "request_rate_limit_exceeded")
 		return
 	}
 
 	c.Next()
-}
-
-func GetGroupModelTokenRequestRate(c *gin.Context) model.RequestRate {
-	return model.RequestRate{
-		RPM: monitorplugin.GetGroupModelTokenRPM(c),
-		RPS: monitorplugin.GetGroupModelTokenRPS(c),
-		TPM: monitorplugin.GetGroupModelTokenTPM(c),
-		TPS: monitorplugin.GetGroupModelTokenTPS(c),
-	}
 }
 
 func GetRequestModel(c *gin.Context) string {

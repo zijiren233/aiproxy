@@ -198,6 +198,8 @@ func migrateLOGDB() error {
 		&Summary{},
 		&ConsumeError{},
 		&Store{},
+		&SummaryMinute{},
+		&GroupSummaryMinute{},
 	)
 	if err != nil {
 		return err
@@ -228,6 +230,24 @@ func migrateLOGDB() error {
 				"createGroupSummaryIndexs",
 				time.Minute,
 				"failed to create group summary indexs",
+				err.Error(),
+			)
+		}
+		err = CreateSummaryMinuteIndexs(LogDB)
+		if err != nil {
+			notify.ErrorThrottle(
+				"createSummaryMinuteIndexs",
+				time.Minute,
+				"failed to create summary minute indexs",
+				err.Error(),
+			)
+		}
+		err = CreateGroupSummaryMinuteIndexs(LogDB)
+		if err != nil {
+			notify.ErrorThrottle(
+				"createSummaryMinuteIndexs",
+				time.Minute,
+				"failed to create group summary minute indexs",
 				err.Error(),
 			)
 		}
