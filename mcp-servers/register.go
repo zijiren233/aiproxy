@@ -77,14 +77,25 @@ func Register(mcp McpServer) {
 		if mcp.newServer == nil {
 			panic(fmt.Sprintf("mcp %s new server is required", mcp.ID))
 		}
+	case model.PublicMCPTypeProxySSE,
+		model.PublicMCPTypeProxyStreamable:
+		if len(mcp.ProxyConfigTemplates) == 0 {
+			panic(fmt.Sprintf("mcp %s proxy config templates is required", mcp.ID))
+		}
 	default:
 	}
 
-	if mcp.ConfigTemplates != nil {
+	if len(mcp.ConfigTemplates) != 0 {
 		if err := CheckConfigTemplatesValidate(mcp.ConfigTemplates); err != nil {
 			panic(fmt.Sprintf("mcp %s config templates example is invalid: %v", mcp.ID, err))
 		}
 	}
+	if len(mcp.ProxyConfigTemplates) != 0 {
+		if err := CheckProxyConfigTemplatesValidate(mcp.ProxyConfigTemplates); err != nil {
+			panic(fmt.Sprintf("mcp %s config templates example is invalid: %v", mcp.ID, err))
+		}
+	}
+
 	if _, ok := servers[mcp.ID]; ok {
 		panic(fmt.Sprintf("mcp %s already registered", mcp.ID))
 	}

@@ -7,23 +7,24 @@ import (
 
 const defaultURL = "https://mcp.gezhe.com/mcp"
 
-var configTemplates = map[string]mcpservers.ConfigTemplate{
+var configTemplates = mcpservers.ProxyConfigTemplates{
 	"API_KEY": {
-		Name:        "API_KEY",
-		Required:    mcpservers.ConfigRequiredTypeInitOrReusingOnly,
-		Example:     "bx7Qt1BLbxRq...",
-		Description: "The key of the Gezhe MCP server: https://pro.gezhe.com/settings",
+		ConfigTemplate: mcpservers.ConfigTemplate{
+			Name:        "API_KEY",
+			Required:    mcpservers.ConfigRequiredTypeInitOrReusingOnly,
+			Example:     "bx7Qt1BLbxRq...",
+			Description: "The key of the Gezhe MCP server: https://pro.gezhe.com/settings",
+		},
+		Type: model.ParamTypeQuery,
 	},
 
 	"url": {
-		Name:        "URL",
-		Required:    mcpservers.ConfigRequiredTypeInitOptional,
-		Example:     defaultURL,
-		Description: "The Streamable http URL of the gezhe MCP server",
+		ConfigTemplate: mcpservers.ConfigTemplate{
+			Name:        "URL",
+			Required:    mcpservers.ConfigRequiredTypeInitOptional,
+			Example:     defaultURL,
+			Description: "The Streamable http URL of the gezhe MCP server",
+		},
+		Type: model.ParamTypeURL,
 	},
-}
-
-var proxyConfigType = map[string]model.ProxyParamType{
-	"API_KEY": model.ParamTypeQuery,
-	"url":     model.ParamTypeURL,
 }

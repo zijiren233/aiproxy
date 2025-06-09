@@ -20,8 +20,7 @@ func init() {
 			"gezhe",
 			"Gezhe",
 			model.PublicMCPTypeProxyStreamable,
-			mcpservers.WithConfigTemplates(configTemplates),
-			mcpservers.WithProxyConfigType(proxyConfigType),
+			mcpservers.WithProxyConfigType(configTemplates),
 			mcpservers.WithTags([]string{"map"}),
 			mcpservers.WithDescription(
 				"可以通过话题生成 PPT",

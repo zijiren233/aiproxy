@@ -52,6 +52,14 @@ type ConfigTemplate struct {
 
 type ConfigTemplates = map[string]ConfigTemplate
 
+type ProxyConfigTemplate struct {
+	ConfigTemplate
+	Type    model.ProxyParamType
+	Default string
+}
+
+type ProxyConfigTemplates = map[string]ProxyConfigTemplate
+
 func ValidateConfigTemplatesConfig(
 	ct ConfigTemplates,
 	config, reusingConfig map[string]string,
@@ -84,18 +92,36 @@ func ValidateConfigTemplatesConfig(
 
 func CheckConfigTemplatesValidate(ct ConfigTemplates) error {
 	for key, value := range ct {
-		if value.Name == "" {
-			return fmt.Errorf("config %s name is required", key)
+		err := CheckConfigTemplateValidate(value)
+		if err != nil {
+			return fmt.Errorf("config %s validate error: %w", key, err)
 		}
-		if value.Description == "" {
-			return fmt.Errorf("config %s description is required", key)
+	}
+	return nil
+}
+
+func CheckProxyConfigTemplatesValidate(ct ProxyConfigTemplates) error {
+	for key, value := range ct {
+		err := CheckConfigTemplateValidate(value.ConfigTemplate)
+		if err != nil {
+			return fmt.Errorf("config %s validate error: %w", key, err)
 		}
-		if value.Example == "" || value.Validator == nil {
-			continue
-		}
-		if err := value.Validator(value.Example); err != nil {
-			return fmt.Errorf("config %s example is invalid: %w", key, err)
-		}
+	}
+	return nil
+}
+
+func CheckConfigTemplateValidate(value ConfigTemplate) error {
+	if value.Name == "" {
+		return fmt.Errorf("name is required")
+	}
+	if value.Description == "" {
+		return fmt.Errorf("description is required")
+	}
+	if value.Example == "" || value.Validator == nil {
+		return nil
+	}
+	if err := value.Validator(value.Example); err != nil {
+		return fmt.Errorf("example is invalid: %w", err)
 	}
 	return nil
 }
@@ -104,10 +130,10 @@ type NewServerFunc func(config, reusingConfig map[string]string) (Server, error)
 
 type McpServer struct {
 	model.PublicMCP
-	ConfigTemplates ConfigTemplates
-	ProxyConfigType map[string]model.ProxyParamType
-	newServer       NewServerFunc
-	disableCache    bool
+	ConfigTemplates      ConfigTemplates
+	ProxyConfigTemplates ProxyConfigTemplates
+	newServer            NewServerFunc
+	disableCache         bool
 }
 
 type McpConfig func(*McpServer)
@@ -178,9 +204,9 @@ func WithConfigTemplates(configTemplates ConfigTemplates) McpConfig {
 	}
 }
 
-func WithProxyConfigType(proxyConfigType map[string]model.ProxyParamType) McpConfig {
+func WithProxyConfigType(proxyConfigTemplates ProxyConfigTemplates) McpConfig {
 	return func(e *McpServer) {
-		e.ProxyConfigType = proxyConfigType
+		e.ProxyConfigTemplates = proxyConfigTemplates
 	}
 }
 

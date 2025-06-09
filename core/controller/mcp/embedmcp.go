@@ -2,6 +2,7 @@ package controller
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"maps"
 	"net/http"
@@ -14,7 +15,6 @@ import (
 	"github.com/labring/aiproxy/core/middleware"
 	"github.com/labring/aiproxy/core/model"
 	mcpservers "github.com/labring/aiproxy/mcp-servers"
-
 	// init embed mcp
 	_ "github.com/labring/aiproxy/mcp-servers/mcpregister"
 	"github.com/mark3labs/mcp-go/mcp"
@@ -46,6 +46,16 @@ func newEmbedMCPConfigTemplates(templates mcpservers.ConfigTemplates) EmbedMCPCo
 	return emcpTemplates
 }
 
+func newEmbedMCPProxyConfigTemplates(
+	templates mcpservers.ProxyConfigTemplates,
+) EmbedMCPConfigTemplates {
+	emcpTemplates := make(EmbedMCPConfigTemplates, len(templates))
+	for key, template := range templates {
+		emcpTemplates[key] = newEmbedMCPConfigTemplate(template.ConfigTemplate)
+	}
+	return emcpTemplates
+}
+
 type EmbedMCP struct {
 	ID              string                    `json:"id"`
 	Enabled         bool                      `json:"enabled"`
@@ -66,17 +76,25 @@ func newEmbedMCP(
 	embedConfig *model.MCPEmbeddingConfig,
 ) *EmbedMCP {
 	emcp := &EmbedMCP{
-		ID:              mcp.ID,
-		Enabled:         enabled,
-		Name:            mcp.Name,
-		Readme:          mcp.Readme,
-		ReadmeURL:       mcp.ReadmeURL,
-		ReadmeCN:        mcp.ReadmeCN,
-		ReadmeCNURL:     mcp.ReadmeCNURL,
-		GitHubURL:       mcp.GitHubURL,
-		Tags:            mcp.Tags,
-		ConfigTemplates: newEmbedMCPConfigTemplates(mcp.ConfigTemplates),
-		EmbedConfig:     embedConfig,
+		ID:          mcp.ID,
+		Enabled:     enabled,
+		Name:        mcp.Name,
+		Readme:      mcp.Readme,
+		ReadmeURL:   mcp.ReadmeURL,
+		ReadmeCN:    mcp.ReadmeCN,
+		ReadmeCNURL: mcp.ReadmeCNURL,
+		GitHubURL:   mcp.GitHubURL,
+		Tags:        mcp.Tags,
+		EmbedConfig: embedConfig,
+	}
+	if len(mcp.ConfigTemplates) != 0 {
+		emcp.ConfigTemplates = newEmbedMCPConfigTemplates(mcp.ConfigTemplates)
+	}
+	if len(mcp.ProxyConfigTemplates) != 0 {
+		emcp.ConfigTemplates = newEmbedMCPProxyConfigTemplates(mcp.ProxyConfigTemplates)
+	}
+	if emcp.ConfigTemplates == nil {
+		emcp.ConfigTemplates = make(EmbedMCPConfigTemplates)
 	}
 	return emcp
 }
@@ -182,6 +200,52 @@ func GetEmbedConfig(
 	return embedConfig, nil
 }
 
+func GetProxyConfig(
+	proxyConfigType mcpservers.ProxyConfigTemplates,
+	initConfig map[string]string,
+) (*model.PublicMCPProxyConfig, error) {
+	if len(proxyConfigType) == 0 {
+		return nil, errors.New("proxy config type is empty")
+	}
+
+	config := &model.PublicMCPProxyConfig{
+		Querys:  make(map[string]string),
+		Headers: make(map[string]string),
+		Reusing: make(map[string]model.PublicMCPProxyReusingParam),
+	}
+
+	for key, param := range proxyConfigType {
+		value := initConfig[key]
+		if value == "" {
+			value = param.Default
+		}
+
+		switch param.Type {
+		case model.ParamTypeURL:
+			if value == "" {
+				return nil, fmt.Errorf("url parameter %s is required", key)
+			}
+			config.URL = value
+		case model.ParamTypeHeader:
+			if value != "" {
+				config.Headers[key] = value
+			}
+		case model.ParamTypeQuery:
+			if value != "" {
+				config.Querys[key] = value
+			}
+		default:
+			return nil, fmt.Errorf("unsupported proxy param type: %s", param)
+		}
+	}
+
+	if config.URL == "" {
+		return nil, errors.New("url is required in proxy config")
+	}
+
+	return config, nil
+}
+
 func ToPublicMCP(
 	e mcpservers.McpServer,
 	initConfig map[string]string,
@@ -195,6 +259,12 @@ func ToPublicMCP(
 			return nil, err
 		}
 		pmcp.EmbedConfig = embedConfig
+	case model.PublicMCPTypeProxySSE, model.PublicMCPTypeProxyStreamable:
+		proxyConfig, err := GetProxyConfig(e.ProxyConfigTemplates, initConfig)
+		if err != nil {
+			return nil, err
+		}
+		pmcp.ProxyConfig = proxyConfig
 	default:
 	}
 	if enabled {
