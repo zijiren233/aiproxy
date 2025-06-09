@@ -44,7 +44,7 @@ func ParseTimeRange(c *gin.Context, maxSpan time.Duration) (startTime, endTime t
 func smartParseTimestamp(timestampStr string) (time.Time, error) {
 	timestamp, err := strconv.ParseInt(timestampStr, 10, 64)
 	if err != nil {
-		return time.Time{}, nil
+		return time.Time{}, err
 	}
 	digits := len(timestampStr)
 
