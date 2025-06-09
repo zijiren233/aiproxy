@@ -112,10 +112,10 @@ func CheckProxyConfigTemplatesValidate(ct ProxyConfigTemplates) error {
 
 func CheckConfigTemplateValidate(value ConfigTemplate) error {
 	if value.Name == "" {
-		return fmt.Errorf("name is required")
+		return errors.New("name is required")
 	}
 	if value.Description == "" {
-		return fmt.Errorf("description is required")
+		return errors.New("description is required")
 	}
 	if value.Example == "" || value.Validator == nil {
 		return nil

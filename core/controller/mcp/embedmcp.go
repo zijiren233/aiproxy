@@ -235,7 +235,7 @@ func GetProxyConfig(
 				config.Querys[key] = value
 			}
 		default:
-			return nil, fmt.Errorf("unsupported proxy param type: %s", param)
+			return nil, fmt.Errorf("unsupported proxy param type: %s", param.Type)
 		}
 	}
 
