@@ -7,6 +7,8 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/labring/aiproxy/core/model"
 )
 
 type mcpServerCacheItem struct {
@@ -57,32 +59,43 @@ func Register(mcp McpServer) {
 	if mcp.Name == "" {
 		panic("mcp name is required")
 	}
-	if mcp.Description == "" && mcp.DescriptionCN == "" {
-		panic(fmt.Sprintf("mcp %s description or description_cn is required", mcp.ID))
+	if mcp.Description == "" &&
+		mcp.DescriptionCN == "" &&
+		mcp.Readme == "" &&
+		mcp.ReadmeURL == "" &&
+		mcp.ReadmeCN == "" &&
+		mcp.ReadmeCNURL == "" {
+		panic(
+			fmt.Sprintf(
+				"mcp %s description or description_cn readme or readme_url or readme_cn or readme_cn_url is required",
+				mcp.ID,
+			),
+		)
 	}
 	switch mcp.Type {
-	case McpTypeEmbed:
+	case model.PublicMCPTypeEmbed:
 		if mcp.newServer == nil {
 			panic(fmt.Sprintf("mcp %s new server is required", mcp.ID))
 		}
-	case McpTypeDocs:
-		if mcp.Readme == "" && mcp.ReadmeURL == "" && mcp.ReadmeCN == "" && mcp.ReadmeCNURL == "" {
-			panic(
-				fmt.Sprintf(
-					"mcp %s readme or readme_url or readme_cn or readme_cn_url is required",
-					mcp.ID,
-				),
-			)
+	case model.PublicMCPTypeProxySSE,
+		model.PublicMCPTypeProxyStreamable:
+		if len(mcp.ProxyConfigTemplates) == 0 {
+			panic(fmt.Sprintf("mcp %s proxy config templates is required", mcp.ID))
 		}
 	default:
-		panic(fmt.Sprintf("mcp %s type is invalid", mcp.ID))
 	}
 
-	if mcp.ConfigTemplates != nil {
+	if len(mcp.ConfigTemplates) != 0 {
 		if err := CheckConfigTemplatesValidate(mcp.ConfigTemplates); err != nil {
 			panic(fmt.Sprintf("mcp %s config templates example is invalid: %v", mcp.ID, err))
 		}
 	}
+	if len(mcp.ProxyConfigTemplates) != 0 {
+		if err := CheckProxyConfigTemplatesValidate(mcp.ProxyConfigTemplates); err != nil {
+			panic(fmt.Sprintf("mcp %s config templates example is invalid: %v", mcp.ID, err))
+		}
+	}
+
 	if _, ok := servers[mcp.ID]; ok {
 		panic(fmt.Sprintf("mcp %s already registered", mcp.ID))
 	}
@@ -100,6 +113,14 @@ func GetMCPServer(id string, config, reusingConfig map[string]string) (Server, e
 
 	if err := ValidateConfigTemplatesConfig(embedServer.ConfigTemplates, config, reusingConfig); err != nil {
 		return nil, fmt.Errorf("mcp %s config is invalid: %w", id, err)
+	}
+
+	if embedServer.disableCache {
+		return embedServer.NewServer(config, reusingConfig)
+	}
+
+	if len(reusingConfig) == 0 {
+		return loadCacheServer(embedServer, config)
 	}
 
 	for _, template := range embedServer.ConfigTemplates {

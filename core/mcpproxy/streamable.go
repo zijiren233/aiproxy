@@ -92,7 +92,7 @@ func (p *StreamableProxy) handleGetRequest(w http.ResponseWriter, r *http.Reques
 	}
 
 	// Extract the real backend session ID from the stored URL
-	parts := strings.Split(backendInfo, "?sessionId=")
+	parts := strings.Split(backendInfo, "|sessionId=")
 	if len(parts) > 1 {
 		req.Header.Set(headerKeySessionID, parts[1])
 	}
@@ -101,6 +101,8 @@ func (p *StreamableProxy) handleGetRequest(w http.ResponseWriter, r *http.Reques
 	for name, value := range p.headers {
 		req.Header.Set(name, value)
 	}
+
+	req.Header.Set("Content-Type", r.Header.Get("Content-Type"))
 
 	//nolint:bodyclose
 	resp, err := http.DefaultClient.Do(req)
@@ -175,23 +177,31 @@ func (p *StreamableProxy) handlePostRequest(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
+	// Extract the real backend session ID from the stored URL
+	parts := strings.Split(backendInfo, "|sessionId=")
+	if len(parts) != 2 {
+		http.Error(w, "Invalid or expired session ID", http.StatusNotFound)
+		return
+	}
+	backend := parts[0]
+	sessionID := parts[1]
+
 	// Create a request to the backend
-	req, err := http.NewRequestWithContext(r.Context(), http.MethodPost, backendInfo, r.Body)
+	req, err := http.NewRequestWithContext(r.Context(), http.MethodPost, backend, r.Body)
 	if err != nil {
 		http.Error(w, "Failed to create backend request", http.StatusInternalServerError)
 		return
-	}
-
-	// Extract the real backend session ID from the stored URL
-	parts := strings.Split(backendInfo, "?sessionId=")
-	if len(parts) > 1 {
-		req.Header.Set(headerKeySessionID, parts[1])
 	}
 
 	// Add any additional headers
 	for name, value := range p.headers {
 		req.Header.Set(name, value)
 	}
+
+	req.Header.Set(headerKeySessionID, sessionID)
+
+	req.Header.Set("Accept", "application/json, text/event-stream")
+	req.Header.Set("Content-Type", r.Header.Get("Content-Type"))
 
 	//nolint:bodyclose
 	resp, err := http.DefaultClient.Do(req)
@@ -274,7 +284,7 @@ func (p *StreamableProxy) handleDeleteRequest(w http.ResponseWriter, r *http.Req
 	}
 
 	// Extract the real backend session ID from the stored URL
-	parts := strings.Split(backendInfo, "?sessionId=")
+	parts := strings.Split(backendInfo, "|sessionId=")
 	if len(parts) > 1 {
 		req.Header.Set(headerKeySessionID, parts[1])
 	}
@@ -323,6 +333,9 @@ func (p *StreamableProxy) proxyInitialOrNoSessionRequest(w http.ResponseWriter, 
 		req.Header.Set(name, value)
 	}
 
+	req.Header.Set("Accept", "application/json, text/event-stream")
+	req.Header.Set("Content-Type", r.Header.Get("Content-Type"))
+
 	//nolint:bodyclose
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -340,11 +353,7 @@ func (p *StreamableProxy) proxyInitialOrNoSessionRequest(w http.ResponseWriter, 
 		// Store the mapping between our proxy session ID and the backend endpoint with its session
 		// ID
 		backendURL := p.backend
-		if strings.Contains(backendURL, "?") {
-			backendURL += "&sessionId=" + backendSessionID
-		} else {
-			backendURL += "?sessionId=" + backendSessionID
-		}
+		backendURL += "|sessionId=" + backendSessionID
 		p.store.Set(proxySessionID, backendURL)
 
 		// Replace the backend session ID with our proxy session ID in the response

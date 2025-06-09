@@ -3,6 +3,8 @@ package mcpservers
 import (
 	"errors"
 	"fmt"
+
+	"github.com/labring/aiproxy/core/model"
 )
 
 type ConfigValueValidator func(value string) error
@@ -50,6 +52,14 @@ type ConfigTemplate struct {
 
 type ConfigTemplates = map[string]ConfigTemplate
 
+type ProxyConfigTemplate struct {
+	ConfigTemplate
+	Type    model.ProxyParamType
+	Default string
+}
+
+type ProxyConfigTemplates = map[string]ProxyConfigTemplate
+
 func ValidateConfigTemplatesConfig(
 	ct ConfigTemplates,
 	config, reusingConfig map[string]string,
@@ -82,46 +92,48 @@ func ValidateConfigTemplatesConfig(
 
 func CheckConfigTemplatesValidate(ct ConfigTemplates) error {
 	for key, value := range ct {
-		if value.Name == "" {
-			return fmt.Errorf("config %s name is required", key)
+		err := CheckConfigTemplateValidate(value)
+		if err != nil {
+			return fmt.Errorf("config %s validate error: %w", key, err)
 		}
-		if value.Description == "" {
-			return fmt.Errorf("config %s description is required", key)
+	}
+	return nil
+}
+
+func CheckProxyConfigTemplatesValidate(ct ProxyConfigTemplates) error {
+	for key, value := range ct {
+		err := CheckConfigTemplateValidate(value.ConfigTemplate)
+		if err != nil {
+			return fmt.Errorf("config %s validate error: %w", key, err)
 		}
-		if value.Example == "" || value.Validator == nil {
-			continue
-		}
-		if err := value.Validator(value.Example); err != nil {
-			return fmt.Errorf("config %s example is invalid: %w", key, err)
-		}
+	}
+	return nil
+}
+
+func CheckConfigTemplateValidate(value ConfigTemplate) error {
+	if value.Name == "" {
+		return errors.New("name is required")
+	}
+	if value.Description == "" {
+		return errors.New("description is required")
+	}
+	if value.Example == "" || value.Validator == nil {
+		return nil
+	}
+	if err := value.Validator(value.Example); err != nil {
+		return fmt.Errorf("example is invalid: %w", err)
 	}
 	return nil
 }
 
 type NewServerFunc func(config, reusingConfig map[string]string) (Server, error)
 
-type McpType string
-
-const (
-	McpTypeEmbed McpType = "embed"
-	McpTypeDocs  McpType = "docs"
-)
-
 type McpServer struct {
-	ID              string
-	Name            string
-	Type            McpType
-	GitHubURL       string
-	Description     string
-	DescriptionCN   string
-	Readme          string
-	ReadmeURL       string
-	ReadmeCN        string
-	ReadmeCNURL     string
-	LogoURL         string
-	Tags            []string
-	ConfigTemplates ConfigTemplates
-	newServer       NewServerFunc
+	model.PublicMCP
+	ConfigTemplates      ConfigTemplates
+	ProxyConfigTemplates ProxyConfigTemplates
+	newServer            NewServerFunc
+	disableCache         bool
 }
 
 type McpConfig func(*McpServer)
@@ -162,13 +174,13 @@ func WithReadmeCNURL(readmeCNURL string) McpConfig {
 	}
 }
 
-func WithGitHubURL(githubURL string) McpConfig {
+func WithGitHubURL(gitHubURL string) McpConfig {
 	return func(e *McpServer) {
-		e.GitHubURL = githubURL
+		e.GitHubURL = gitHubURL
 	}
 }
 
-func WithType(t McpType) McpConfig {
+func WithType(t model.PublicMCPType) McpConfig {
 	return func(e *McpServer) {
 		e.Type = t
 	}
@@ -192,17 +204,31 @@ func WithConfigTemplates(configTemplates ConfigTemplates) McpConfig {
 	}
 }
 
+func WithProxyConfigType(proxyConfigTemplates ProxyConfigTemplates) McpConfig {
+	return func(e *McpServer) {
+		e.ProxyConfigTemplates = proxyConfigTemplates
+	}
+}
+
 func WithNewServerFunc(newServer NewServerFunc) McpConfig {
 	return func(e *McpServer) {
 		e.newServer = newServer
 	}
 }
 
-func NewMcp(id, name string, mcpType McpType, opts ...McpConfig) McpServer {
+func WithDisableCache(disableCache bool) McpConfig {
+	return func(e *McpServer) {
+		e.disableCache = disableCache
+	}
+}
+
+func NewMcp(id, name string, mcpType model.PublicMCPType, opts ...McpConfig) McpServer {
 	e := McpServer{
-		ID:   id,
-		Name: name,
-		Type: mcpType,
+		PublicMCP: model.PublicMCP{
+			ID:   id,
+			Name: name,
+			Type: mcpType,
+		},
 	}
 	for _, opt := range opts {
 		opt(&e)
@@ -211,6 +237,9 @@ func NewMcp(id, name string, mcpType McpType, opts ...McpConfig) McpServer {
 }
 
 func (e *McpServer) NewServer(config, reusingConfig map[string]string) (Server, error) {
+	if e.newServer != nil {
+		return nil, errors.New("not impl new server")
+	}
 	if err := ValidateConfigTemplatesConfig(e.ConfigTemplates, config, reusingConfig); err != nil {
 		return nil, fmt.Errorf("mcp %s config is invalid: %w", e.ID, err)
 	}

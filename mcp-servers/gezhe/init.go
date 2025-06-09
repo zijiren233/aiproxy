@@ -1,4 +1,4 @@
-package alipay
+package gezhe
 
 import (
 	_ "embed"
@@ -10,18 +10,23 @@ import (
 //go:embed README.md
 var readme string
 
+//go:embed README.cn.md
+var readmeCN string
+
 // need import in mcpregister/init.go
 func init() {
 	mcpservers.Register(
 		mcpservers.NewMcp(
-			"alipay",
-			"Alipay",
-			model.PublicMCPTypeDocs,
-			mcpservers.WithTags([]string{"pay"}),
+			"gezhe",
+			"Gezhe",
+			model.PublicMCPTypeProxyStreamable,
+			mcpservers.WithProxyConfigType(configTemplates),
+			mcpservers.WithTags([]string{"map"}),
 			mcpservers.WithDescription(
-				"支付宝 MCP Server，让你可以轻松将支付宝开放平台提供的交易创建、查询、退款等能力集成到你的 LLM 应用中，并进一步创建具备支付能力的智能工具。",
+				"可以通过话题生成 PPT",
 			),
 			mcpservers.WithReadme(readme),
+			mcpservers.WithReadmeCN(readmeCN),
 		),
 	)
 }

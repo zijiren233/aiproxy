@@ -34,11 +34,12 @@ const (
 	PublicMCPTypeEmbed           PublicMCPType = "mcp_embed"
 )
 
-type ParamType string
+type ProxyParamType string
 
 const (
-	ParamTypeHeader ParamType = "header"
-	ParamTypeQuery  ParamType = "query"
+	ParamTypeURL    ProxyParamType = "url"
+	ParamTypeHeader ProxyParamType = "header"
+	ParamTypeQuery  ProxyParamType = "query"
 )
 
 type ReusingParam struct {
@@ -54,7 +55,7 @@ type MCPPrice struct {
 
 type PublicMCPProxyReusingParam struct {
 	ReusingParam
-	Type ParamType `json:"type"`
+	Type ProxyParamType `json:"type"`
 }
 
 type PublicMCPProxyConfig struct {
@@ -132,7 +133,7 @@ type PublicMCP struct {
 	Type                   PublicMCPType           `gorm:"index"                         json:"type"`
 	Description            string                  `                                     json:"description"`
 	DescriptionCN          string                  `                                     json:"description_cn"`
-	GithubURL              string                  `                                     json:"github_url"`
+	GitHubURL              string                  `                                     json:"github_url"`
 	Readme                 string                  `gorm:"type:text"                     json:"readme"`
 	ReadmeCN               string                  `gorm:"type:text"                     json:"readme_cn"`
 	ReadmeURL              string                  `                                     json:"readme_url"`

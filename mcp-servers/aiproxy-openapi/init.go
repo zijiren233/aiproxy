@@ -1,6 +1,9 @@
 package aiproxyopenapi
 
-import mcpservers "github.com/labring/aiproxy/mcp-servers"
+import (
+	"github.com/labring/aiproxy/core/model"
+	mcpservers "github.com/labring/aiproxy/mcp-servers"
+)
 
 // need import in mcpregister/init.go
 func init() {
@@ -8,7 +11,7 @@ func init() {
 		mcpservers.NewMcp(
 			"aiproxy-openapi",
 			"AI Proxy OpenAPI",
-			mcpservers.McpTypeEmbed,
+			model.PublicMCPTypeEmbed,
 			mcpservers.WithNewServerFunc(NewServer),
 			mcpservers.WithConfigTemplates(configTemplates),
 			mcpservers.WithDescription(
