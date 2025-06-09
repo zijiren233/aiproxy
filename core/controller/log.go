@@ -11,24 +11,6 @@ import (
 	"github.com/labring/aiproxy/core/model"
 )
 
-func parseTimeRange(c *gin.Context) (startTime, endTime time.Time) {
-	startTimestamp, _ := strconv.ParseInt(c.Query("start_timestamp"), 10, 64)
-	endTimestamp, _ := strconv.ParseInt(c.Query("end_timestamp"), 10, 64)
-
-	if startTimestamp != 0 {
-		startTime = time.UnixMilli(startTimestamp)
-	}
-	sevenDaysAgo := time.Now().AddDate(0, 0, -7)
-	if startTime.IsZero() || startTime.Before(sevenDaysAgo) {
-		startTime = sevenDaysAgo
-	}
-
-	if endTimestamp != 0 {
-		endTime = time.UnixMilli(endTimestamp)
-	}
-	return
-}
-
 func parseCommonParams(c *gin.Context) (params struct {
 	tokenName string
 	modelName string
@@ -81,7 +63,7 @@ func parseCommonParams(c *gin.Context) (params struct {
 //	@Router			/api/logs/ [get]
 func GetLogs(c *gin.Context) {
 	page, perPage := utils.ParsePageParams(c)
-	startTime, endTime := parseTimeRange(c)
+	startTime, endTime := utils.ParseTimeRange(c, 0)
 	params := parseCommonParams(c)
 
 	result, err := model.GetLogs(
@@ -139,7 +121,7 @@ func GetGroupLogs(c *gin.Context) {
 	}
 
 	page, perPage := utils.ParsePageParams(c)
-	startTime, endTime := parseTimeRange(c)
+	startTime, endTime := utils.ParseTimeRange(c, 0)
 	params := parseCommonParams(c)
 
 	result, err := model.GetGroupLogs(
@@ -192,7 +174,7 @@ func GetGroupLogs(c *gin.Context) {
 //	@Router			/api/logs/search [get]
 func SearchLogs(c *gin.Context) {
 	page, perPage := utils.ParsePageParams(c)
-	startTime, endTime := parseTimeRange(c)
+	startTime, endTime := utils.ParseTimeRange(c, 0)
 	params := parseCommonParams(c)
 
 	keyword := c.Query("keyword")
@@ -254,7 +236,7 @@ func SearchGroupLogs(c *gin.Context) {
 	}
 
 	page, perPage := utils.ParsePageParams(c)
-	startTime, endTime := parseTimeRange(c)
+	startTime, endTime := utils.ParseTimeRange(c, 0)
 	params := parseCommonParams(c)
 	keyword := c.Query("keyword")
 

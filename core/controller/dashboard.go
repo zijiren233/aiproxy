@@ -10,6 +10,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/core/common/reqlimit"
+	"github.com/labring/aiproxy/core/controller/utils"
 	"github.com/labring/aiproxy/core/middleware"
 	"github.com/labring/aiproxy/core/model"
 	"gorm.io/gorm"
@@ -337,12 +338,12 @@ func GetGroupDashboardModels(c *gin.Context) {
 //	@Param			start_timestamp	query		int64	false	"Start timestamp"
 //	@Param			end_timestamp	query		int64	false	"End timestamp"
 //	@Param			timezone		query		string	false	"Timezone, default is Local"
-//	@Param			timespan		query		string	false	"Time span type (day, hour)"
+//	@Param			timespan		query		string	false	"Time span type (day, hour, minute)"
 //	@Success		200				{object}	middleware.APIResponse{data=[]model.TimeModelData}
 //	@Router			/api/dashboardv2/ [get]
 func GetTimeSeriesModelData(c *gin.Context) {
 	channelID, _ := strconv.Atoi(c.Query("channel"))
-	startTime, endTime := parseTimeRange(c)
+	startTime, endTime := utils.ParseTimeRange(c, -1)
 	timezoneLocation, _ := time.LoadLocation(c.DefaultQuery("timezone", "Local"))
 	models, err := model.GetTimeSeriesModelDataMinute(
 		channelID,
@@ -370,7 +371,7 @@ func GetTimeSeriesModelData(c *gin.Context) {
 //	@Param			start_timestamp	query		int64	false	"Start timestamp"
 //	@Param			end_timestamp	query		int64	false	"End timestamp"
 //	@Param			timezone		query		string	false	"Timezone, default is Local"
-//	@Param			timespan		query		string	false	"Time span type (day, hour)"
+//	@Param			timespan		query		string	false	"Time span type (day, hour, minute)"
 //	@Success		200				{object}	middleware.APIResponse{data=[]model.TimeModelData}
 //	@Router			/api/dashboardv2/{group} [get]
 func GetGroupTimeSeriesModelData(c *gin.Context) {
@@ -380,7 +381,7 @@ func GetGroupTimeSeriesModelData(c *gin.Context) {
 		return
 	}
 	tokenName := c.Query("token_name")
-	startTime, endTime := parseTimeRange(c)
+	startTime, endTime := utils.ParseTimeRange(c, -1)
 	timezoneLocation, _ := time.LoadLocation(c.DefaultQuery("timezone", "Local"))
 	models, err := model.GetGroupTimeSeriesModelDataMinute(
 		group,
