@@ -89,7 +89,7 @@ func validateTokenUpdate(token AddTokenRequest) error {
 }
 
 func buildTokenResponse(token *model.Token) *TokenResponse {
-	lastRequestAt, _ := model.GetGroupTokenLastRequestTime(token.GroupID, string(token.Name))
+	lastRequestAt, _ := model.GetGroupTokenLastRequestTimeMinute(token.GroupID, string(token.Name))
 	return &TokenResponse{
 		Token:      token,
 		AccessedAt: lastRequestAt,

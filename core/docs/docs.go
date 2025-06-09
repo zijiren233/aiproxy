@@ -8221,6 +8221,15 @@ const docTemplate = `{
                 "readme": {
                     "type": "string"
                 },
+                "readme_cn": {
+                    "type": "string"
+                },
+                "readme_cn_url": {
+                    "type": "string"
+                },
+                "readme_url": {
+                    "type": "string"
+                },
                 "tags": {
                     "type": "array",
                     "items": {
@@ -8318,8 +8327,17 @@ const docTemplate = `{
                 "created_at": {
                     "type": "string"
                 },
+                "description": {
+                    "type": "string"
+                },
+                "description_cn": {
+                    "type": "string"
+                },
                 "embed_config": {
                     "$ref": "#/definitions/model.MCPEmbeddingConfig"
+                },
+                "endpoints": {
+                    "$ref": "#/definitions/controller.MCPEndpoint"
                 },
                 "github_url": {
                     "type": "string"
@@ -8349,6 +8367,12 @@ const docTemplate = `{
                     "$ref": "#/definitions/model.PublicMCPProxyConfig"
                 },
                 "readme": {
+                    "type": "string"
+                },
+                "readme_cn": {
+                    "type": "string"
+                },
+                "readme_cn_url": {
                     "type": "string"
                 },
                 "readme_url": {
@@ -8516,6 +8540,12 @@ const docTemplate = `{
                 "created_at": {
                     "type": "string"
                 },
+                "description": {
+                    "type": "string"
+                },
+                "description_cn": {
+                    "type": "string"
+                },
                 "embed_config": {
                     "$ref": "#/definitions/model.MCPEmbeddingConfig"
                 },
@@ -8544,6 +8574,12 @@ const docTemplate = `{
                     "$ref": "#/definitions/model.PublicMCPProxyConfig"
                 },
                 "readme": {
+                    "type": "string"
+                },
+                "readme_cn": {
+                    "type": "string"
+                },
+                "readme_cn_url": {
                     "type": "string"
                 },
                 "readme_url": {
@@ -9188,13 +9224,7 @@ const docTemplate = `{
                 "max_rpm": {
                     "type": "integer"
                 },
-                "max_rps": {
-                    "type": "integer"
-                },
                 "max_tpm": {
-                    "type": "integer"
-                },
-                "max_tps": {
                     "type": "integer"
                 },
                 "output_tokens": {
@@ -9206,7 +9236,13 @@ const docTemplate = `{
                 "timestamp": {
                     "type": "integer"
                 },
+                "total_time_milliseconds": {
+                    "type": "integer"
+                },
                 "total_tokens": {
+                    "type": "integer"
+                },
+                "total_ttfb_milliseconds": {
                     "type": "integer"
                 },
                 "used_amount": {
@@ -9264,13 +9300,7 @@ const docTemplate = `{
                 "max_rpm": {
                     "type": "integer"
                 },
-                "max_rps": {
-                    "type": "integer"
-                },
                 "max_tpm": {
-                    "type": "integer"
-                },
-                "max_tps": {
                     "type": "integer"
                 },
                 "models": {
@@ -9288,7 +9318,13 @@ const docTemplate = `{
                 "total_count": {
                     "type": "integer"
                 },
+                "total_time_milliseconds": {
+                    "type": "integer"
+                },
                 "total_tokens": {
+                    "type": "integer"
+                },
+                "total_ttfb_milliseconds": {
                     "type": "integer"
                 },
                 "tpm": {
@@ -9592,13 +9628,7 @@ const docTemplate = `{
                 "max_rpm": {
                     "type": "integer"
                 },
-                "max_rps": {
-                    "type": "integer"
-                },
                 "max_tpm": {
-                    "type": "integer"
-                },
-                "max_tps": {
                     "type": "integer"
                 },
                 "models": {
@@ -9622,7 +9652,13 @@ const docTemplate = `{
                 "total_count": {
                     "type": "integer"
                 },
+                "total_time_milliseconds": {
+                    "type": "integer"
+                },
                 "total_tokens": {
+                    "type": "integer"
+                },
+                "total_ttfb_milliseconds": {
                     "type": "integer"
                 },
                 "tpm": {
@@ -10139,13 +10175,7 @@ const docTemplate = `{
                 "max_rpm": {
                     "type": "integer"
                 },
-                "max_rps": {
-                    "type": "integer"
-                },
                 "max_tpm": {
-                    "type": "integer"
-                },
-                "max_tps": {
                     "type": "integer"
                 },
                 "model": {
@@ -10160,7 +10190,13 @@ const docTemplate = `{
                 "timestamp": {
                     "type": "integer"
                 },
+                "total_time_milliseconds": {
+                    "type": "integer"
+                },
                 "total_tokens": {
+                    "type": "integer"
+                },
+                "total_ttfb_milliseconds": {
                     "type": "integer"
                 },
                 "used_amount": {
@@ -10346,6 +10382,12 @@ const docTemplate = `{
                 "created_at": {
                     "type": "string"
                 },
+                "description": {
+                    "type": "string"
+                },
+                "description_cn": {
+                    "type": "string"
+                },
                 "embed_config": {
                     "$ref": "#/definitions/model.MCPEmbeddingConfig"
                 },
@@ -10371,6 +10413,12 @@ const docTemplate = `{
                     "$ref": "#/definitions/model.PublicMCPProxyConfig"
                 },
                 "readme": {
+                    "type": "string"
+                },
+                "readme_cn": {
+                    "type": "string"
+                },
+                "readme_cn_url": {
                     "type": "string"
                 },
                 "readme_url": {

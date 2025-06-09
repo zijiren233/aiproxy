@@ -313,8 +313,6 @@ func recordResult(
 		downstreamResult,
 		user,
 		metadata,
-		monitorplugin.GetChannelModelRequestRate(c, meta),
-		middleware.GetGroupModelTokenRequestRate(c),
 	)
 }
 

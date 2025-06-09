@@ -169,6 +169,12 @@ definitions:
         type: string
       readme:
         type: string
+      readme_cn:
+        type: string
+      readme_cn_url:
+        type: string
+      readme_url:
+        type: string
       tags:
         items:
           type: string
@@ -232,8 +238,14 @@ definitions:
     properties:
       created_at:
         type: string
+      description:
+        type: string
+      description_cn:
+        type: string
       embed_config:
         $ref: '#/definitions/model.MCPEmbeddingConfig'
+      endpoints:
+        $ref: '#/definitions/controller.MCPEndpoint'
       github_url:
         type: string
       id:
@@ -253,6 +265,10 @@ definitions:
       proxy_config:
         $ref: '#/definitions/model.PublicMCPProxyConfig'
       readme:
+        type: string
+      readme_cn:
+        type: string
+      readme_cn_url:
         type: string
       readme_url:
         type: string
@@ -362,6 +378,10 @@ definitions:
     properties:
       created_at:
         type: string
+      description:
+        type: string
+      description_cn:
+        type: string
       embed_config:
         $ref: '#/definitions/model.MCPEmbeddingConfig'
       endpoints:
@@ -381,6 +401,10 @@ definitions:
       proxy_config:
         $ref: '#/definitions/model.PublicMCPProxyConfig'
       readme:
+        type: string
+      readme_cn:
+        type: string
+      readme_cn_url:
         type: string
       readme_url:
         type: string
@@ -837,11 +861,7 @@ definitions:
         type: integer
       max_rpm:
         type: integer
-      max_rps:
-        type: integer
       max_tpm:
-        type: integer
-      max_tps:
         type: integer
       output_tokens:
         type: integer
@@ -849,7 +869,11 @@ definitions:
         type: integer
       timestamp:
         type: integer
+      total_time_milliseconds:
+        type: integer
       total_tokens:
+        type: integer
+      total_ttfb_milliseconds:
         type: integer
       used_amount:
         type: number
@@ -887,11 +911,7 @@ definitions:
         type: integer
       max_rpm:
         type: integer
-      max_rps:
-        type: integer
       max_tpm:
-        type: integer
-      max_tps:
         type: integer
       models:
         items:
@@ -903,7 +923,11 @@ definitions:
         type: integer
       total_count:
         type: integer
+      total_time_milliseconds:
+        type: integer
       total_tokens:
+        type: integer
+      total_ttfb_milliseconds:
         type: integer
       tpm:
         type: integer
@@ -1108,11 +1132,7 @@ definitions:
         type: integer
       max_rpm:
         type: integer
-      max_rps:
-        type: integer
       max_tpm:
-        type: integer
-      max_tps:
         type: integer
       models:
         items:
@@ -1128,7 +1148,11 @@ definitions:
         type: array
       total_count:
         type: integer
+      total_time_milliseconds:
+        type: integer
       total_tokens:
+        type: integer
+      total_ttfb_milliseconds:
         type: integer
       tpm:
         type: integer
@@ -1475,11 +1499,7 @@ definitions:
         type: integer
       max_rpm:
         type: integer
-      max_rps:
-        type: integer
       max_tpm:
-        type: integer
-      max_tps:
         type: integer
       model:
         type: string
@@ -1489,7 +1509,11 @@ definitions:
         type: integer
       timestamp:
         type: integer
+      total_time_milliseconds:
+        type: integer
       total_tokens:
+        type: integer
+      total_ttfb_milliseconds:
         type: integer
       used_amount:
         type: number
@@ -1635,6 +1659,10 @@ definitions:
     properties:
       created_at:
         type: string
+      description:
+        type: string
+      description_cn:
+        type: string
       embed_config:
         $ref: '#/definitions/model.MCPEmbeddingConfig'
       github_url:
@@ -1652,6 +1680,10 @@ definitions:
       proxy_config:
         $ref: '#/definitions/model.PublicMCPProxyConfig'
       readme:
+        type: string
+      readme_cn:
+        type: string
+      readme_cn_url:
         type: string
       readme_url:
         type: string

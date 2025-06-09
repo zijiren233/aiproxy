@@ -13,11 +13,13 @@ import (
 )
 
 type batchUpdateData struct {
-	Groups         map[string]*GroupUpdate
-	Tokens         map[int]*TokenUpdate
-	Channels       map[int]*ChannelUpdate
-	Summaries      map[string]*SummaryUpdate
-	GroupSummaries map[string]*GroupSummaryUpdate
+	Groups               map[string]*GroupUpdate
+	Tokens               map[int]*TokenUpdate
+	Channels             map[int]*ChannelUpdate
+	Summaries            map[string]*SummaryUpdate
+	GroupSummaries       map[string]*GroupSummaryUpdate
+	SummariesMinute      map[string]*SummaryMinuteUpdate
+	GroupSummariesMinute map[string]*GroupSummaryMinuteUpdate
 	sync.Mutex
 }
 
@@ -33,7 +35,9 @@ func (b *batchUpdateData) isCleanLocked() bool {
 		len(b.Tokens) == 0 &&
 		len(b.Channels) == 0 &&
 		len(b.Summaries) == 0 &&
-		len(b.GroupSummaries) == 0
+		len(b.GroupSummaries) == 0 &&
+		len(b.SummariesMinute) == 0 &&
+		len(b.GroupSummariesMinute) == 0
 }
 
 type GroupUpdate struct {
@@ -56,12 +60,26 @@ type SummaryUpdate struct {
 	SummaryData
 }
 
+type SummaryMinuteUpdate struct {
+	SummaryMinuteUnique
+	SummaryData
+}
+
 func summaryUniqueKey(unique SummaryUnique) string {
 	return fmt.Sprintf("%d:%s:%d", unique.ChannelID, unique.Model, unique.HourTimestamp)
 }
 
+func summaryMinuteUniqueKey(unique SummaryMinuteUnique) string {
+	return fmt.Sprintf("%d:%s:%d", unique.ChannelID, unique.Model, unique.MinuteTimestamp)
+}
+
 type GroupSummaryUpdate struct {
 	GroupSummaryUnique
+	SummaryData
+}
+
+type GroupSummaryMinuteUpdate struct {
+	GroupSummaryMinuteUnique
 	SummaryData
 }
 
@@ -75,15 +93,27 @@ func groupSummaryUniqueKey(unique GroupSummaryUnique) string {
 	)
 }
 
+func groupSummaryMinuteUniqueKey(unique GroupSummaryMinuteUnique) string {
+	return fmt.Sprintf(
+		"%s:%s:%s:%d",
+		unique.GroupID,
+		unique.TokenName,
+		unique.Model,
+		unique.MinuteTimestamp,
+	)
+}
+
 var batchData batchUpdateData
 
 func init() {
 	batchData = batchUpdateData{
-		Groups:         make(map[string]*GroupUpdate),
-		Tokens:         make(map[int]*TokenUpdate),
-		Channels:       make(map[int]*ChannelUpdate),
-		Summaries:      make(map[string]*SummaryUpdate),
-		GroupSummaries: make(map[string]*GroupSummaryUpdate),
+		Groups:               make(map[string]*GroupUpdate),
+		Tokens:               make(map[int]*TokenUpdate),
+		Channels:             make(map[int]*ChannelUpdate),
+		Summaries:            make(map[string]*SummaryUpdate),
+		GroupSummaries:       make(map[string]*GroupSummaryUpdate),
+		SummariesMinute:      make(map[string]*SummaryMinuteUpdate),
+		GroupSummariesMinute: make(map[string]*GroupSummaryMinuteUpdate),
 	}
 }
 
@@ -140,6 +170,12 @@ func ProcessBatchUpdatesSummary() {
 
 	wg.Add(1)
 	go processSummaryUpdates(&wg)
+
+	wg.Add(1)
+	go processSummaryMinuteUpdates(&wg)
+
+	wg.Add(1)
+	go processGroupSummaryMinuteUpdates(&wg)
 
 	wg.Wait()
 }
@@ -216,6 +252,23 @@ func processGroupSummaryUpdates(wg *sync.WaitGroup) {
 	}
 }
 
+func processGroupSummaryMinuteUpdates(wg *sync.WaitGroup) {
+	defer wg.Done()
+	for key, data := range batchData.GroupSummariesMinute {
+		err := UpsertGroupSummaryMinute(data.GroupSummaryMinuteUnique, data.SummaryData)
+		if err != nil {
+			notify.ErrorThrottle(
+				"batchUpdateGroupSummary",
+				time.Minute,
+				"failed to batch update group summary",
+				err.Error(),
+			)
+		} else {
+			delete(batchData.GroupSummariesMinute, key)
+		}
+	}
+}
+
 func processSummaryUpdates(wg *sync.WaitGroup) {
 	defer wg.Done()
 	for key, data := range batchData.Summaries {
@@ -233,11 +286,21 @@ func processSummaryUpdates(wg *sync.WaitGroup) {
 	}
 }
 
-type RequestRate struct {
-	RPM int64
-	RPS int64
-	TPM int64
-	TPS int64
+func processSummaryMinuteUpdates(wg *sync.WaitGroup) {
+	defer wg.Done()
+	for key, data := range batchData.SummariesMinute {
+		err := UpsertSummaryMinute(data.SummaryMinuteUnique, data.SummaryData)
+		if err != nil {
+			notify.ErrorThrottle(
+				"batchUpdateSummaryMinute",
+				time.Minute,
+				"failed to batch update summary minute",
+				err.Error(),
+			)
+		} else {
+			delete(batchData.SummariesMinute, key)
+		}
+	}
 }
 
 func BatchRecordLogs(
@@ -263,8 +326,6 @@ func BatchRecordLogs(
 	amount float64,
 	user string,
 	metadata map[string]string,
-	channelModelRate RequestRate,
-	groupModelTokenRate RequestRate,
 ) (err error) {
 	now := time.Now()
 
@@ -329,19 +390,54 @@ func BatchRecordLogs(
 	updateTokenData(tokenID, amount, amountDecimal)
 
 	if channelID != 0 {
-		updateSummaryData(channelID, modelName, now, code, amountDecimal, usage, channelModelRate)
+		updateSummaryData(
+			channelID,
+			modelName,
+			now,
+			requestAt,
+			firstByteAt,
+			code,
+			amountDecimal,
+			usage,
+		)
+
+		updateSummaryDataMinute(
+			channelID,
+			modelName,
+			now,
+			requestAt,
+			firstByteAt,
+			code,
+			amountDecimal,
+			usage,
+		)
 	}
 
-	updateGroupSummaryData(
-		group,
-		tokenName,
-		modelName,
-		now,
-		code,
-		amountDecimal,
-		usage,
-		groupModelTokenRate,
-	)
+	if group != "" {
+		updateGroupSummaryData(
+			group,
+			tokenName,
+			modelName,
+			now,
+			requestAt,
+			firstByteAt,
+			code,
+			amountDecimal,
+			usage,
+		)
+
+		updateGroupSummaryDataMinute(
+			group,
+			tokenName,
+			modelName,
+			now,
+			requestAt,
+			firstByteAt,
+			code,
+			amountDecimal,
+			usage,
+		)
+	}
 
 	return err
 }
@@ -391,11 +487,22 @@ func updateTokenData(tokenID int, amount float64, amountDecimal decimal.Decimal)
 func updateGroupSummaryData(
 	group, tokenName, modelName string,
 	createAt time.Time,
+	requestAt time.Time,
+	firstByteAt time.Time,
 	code int,
 	amountDecimal decimal.Decimal,
 	usage Usage,
-	groupModelTokenRate RequestRate,
 ) {
+	if createAt.IsZero() {
+		createAt = time.Now()
+	}
+	if requestAt.IsZero() {
+		requestAt = createAt
+	}
+	if firstByteAt.IsZero() || firstByteAt.Before(requestAt) {
+		firstByteAt = requestAt
+	}
+
 	groupUnique := GroupSummaryUnique{
 		GroupID:       group,
 		TokenName:     tokenName,
@@ -417,18 +524,57 @@ func updateGroupSummaryData(
 		Add(decimal.NewFromFloat(groupSummary.UsedAmount)).
 		InexactFloat64()
 
-	if groupModelTokenRate.RPM > groupSummary.MaxRPM {
-		groupSummary.MaxRPM = groupModelTokenRate.RPM
+	groupSummary.TotalTimeMilliseconds += createAt.Sub(requestAt).Milliseconds()
+	groupSummary.TotalTTFBMilliseconds += firstByteAt.Sub(requestAt).Milliseconds()
+
+	groupSummary.Usage.Add(usage)
+	if code != http.StatusOK {
+		groupSummary.ExceptionCount++
 	}
-	if groupModelTokenRate.RPS > groupSummary.MaxRPS {
-		groupSummary.MaxRPS = groupModelTokenRate.RPS
+}
+
+func updateGroupSummaryDataMinute(
+	group, tokenName, modelName string,
+	createAt time.Time,
+	requestAt time.Time,
+	firstByteAt time.Time,
+	code int,
+	amountDecimal decimal.Decimal,
+	usage Usage,
+) {
+	if createAt.IsZero() {
+		createAt = time.Now()
 	}
-	if groupModelTokenRate.TPM > groupSummary.MaxTPM {
-		groupSummary.MaxTPM = groupModelTokenRate.TPM
+	if requestAt.IsZero() {
+		requestAt = createAt
 	}
-	if groupModelTokenRate.TPS > groupSummary.MaxTPS {
-		groupSummary.MaxTPS = groupModelTokenRate.TPS
+	if firstByteAt.IsZero() || firstByteAt.Before(requestAt) {
+		firstByteAt = requestAt
 	}
+
+	groupUnique := GroupSummaryMinuteUnique{
+		GroupID:         group,
+		TokenName:       tokenName,
+		Model:           modelName,
+		MinuteTimestamp: createAt.Truncate(time.Minute).Unix(),
+	}
+
+	groupSummaryKey := groupSummaryMinuteUniqueKey(groupUnique)
+	groupSummary, ok := batchData.GroupSummariesMinute[groupSummaryKey]
+	if !ok {
+		groupSummary = &GroupSummaryMinuteUpdate{
+			GroupSummaryMinuteUnique: groupUnique,
+		}
+		batchData.GroupSummariesMinute[groupSummaryKey] = groupSummary
+	}
+
+	groupSummary.RequestCount++
+	groupSummary.UsedAmount = amountDecimal.
+		Add(decimal.NewFromFloat(groupSummary.UsedAmount)).
+		InexactFloat64()
+
+	groupSummary.TotalTimeMilliseconds += createAt.Sub(requestAt).Milliseconds()
+	groupSummary.TotalTTFBMilliseconds += firstByteAt.Sub(requestAt).Milliseconds()
 
 	groupSummary.Usage.Add(usage)
 	if code != http.StatusOK {
@@ -440,11 +586,22 @@ func updateSummaryData(
 	channelID int,
 	modelName string,
 	createAt time.Time,
+	requestAt time.Time,
+	firstByteAt time.Time,
 	code int,
 	amountDecimal decimal.Decimal,
 	usage Usage,
-	channelModelRate RequestRate,
 ) {
+	if createAt.IsZero() {
+		createAt = time.Now()
+	}
+	if requestAt.IsZero() {
+		requestAt = createAt
+	}
+	if firstByteAt.IsZero() || firstByteAt.Before(requestAt) {
+		firstByteAt = requestAt
+	}
+
 	summaryUnique := SummaryUnique{
 		ChannelID:     channelID,
 		Model:         modelName,
@@ -465,18 +622,57 @@ func updateSummaryData(
 		Add(decimal.NewFromFloat(summary.UsedAmount)).
 		InexactFloat64()
 
-	if channelModelRate.RPM > summary.MaxRPM {
-		summary.MaxRPM = channelModelRate.RPM
+	summary.TotalTimeMilliseconds += createAt.Sub(requestAt).Milliseconds()
+	summary.TotalTTFBMilliseconds += firstByteAt.Sub(requestAt).Milliseconds()
+
+	summary.Usage.Add(usage)
+	if code != http.StatusOK {
+		summary.ExceptionCount++
 	}
-	if channelModelRate.RPS > summary.MaxRPS {
-		summary.MaxRPS = channelModelRate.RPS
+}
+
+func updateSummaryDataMinute(
+	channelID int,
+	modelName string,
+	createAt time.Time,
+	requestAt time.Time,
+	firstByteAt time.Time,
+	code int,
+	amountDecimal decimal.Decimal,
+	usage Usage,
+) {
+	if createAt.IsZero() {
+		createAt = time.Now()
 	}
-	if channelModelRate.TPM > summary.MaxTPM {
-		summary.MaxTPM = channelModelRate.TPM
+	if requestAt.IsZero() {
+		requestAt = createAt
 	}
-	if channelModelRate.TPS > summary.MaxTPS {
-		summary.MaxTPS = channelModelRate.TPS
+	if firstByteAt.IsZero() || firstByteAt.Before(requestAt) {
+		firstByteAt = requestAt
 	}
+
+	summaryUnique := SummaryMinuteUnique{
+		ChannelID:       channelID,
+		Model:           modelName,
+		MinuteTimestamp: createAt.Truncate(time.Minute).Unix(),
+	}
+
+	summaryKey := summaryMinuteUniqueKey(summaryUnique)
+	summary, ok := batchData.SummariesMinute[summaryKey]
+	if !ok {
+		summary = &SummaryMinuteUpdate{
+			SummaryMinuteUnique: summaryUnique,
+		}
+		batchData.SummariesMinute[summaryKey] = summary
+	}
+
+	summary.RequestCount++
+	summary.UsedAmount = amountDecimal.
+		Add(decimal.NewFromFloat(summary.UsedAmount)).
+		InexactFloat64()
+
+	summary.TotalTimeMilliseconds += createAt.Sub(requestAt).Milliseconds()
+	summary.TotalTTFBMilliseconds += firstByteAt.Sub(requestAt).Milliseconds()
 
 	summary.Usage.Add(usage)
 	if code != http.StatusOK {

@@ -209,8 +209,15 @@ const (
 	MetaChannelModelKeyTPS = "channel_model_tps"
 )
 
-func GetChannelModelRequestRate(c *gin.Context, meta *meta.Meta) model.RequestRate {
-	rate := model.RequestRate{}
+type RequestRate struct {
+	RPM int64
+	RPS int64
+	TPM int64
+	TPS int64
+}
+
+func GetChannelModelRequestRate(c *gin.Context, meta *meta.Meta) RequestRate {
+	rate := RequestRate{}
 
 	if rpm, ok := meta.Get(MetaChannelModelKeyRPM); ok {
 		rate.RPM, _ = rpm.(int64)

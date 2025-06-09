@@ -27,14 +27,12 @@ type SummaryUnique struct {
 }
 
 type SummaryData struct {
-	RequestCount   int64   `json:"request_count"`
-	UsedAmount     float64 `json:"used_amount"`
-	ExceptionCount int64   `json:"exception_count"`
-	MaxRPM         int64   `json:"max_rpm,omitempty"`
-	MaxRPS         int64   `json:"max_rps,omitempty"`
-	MaxTPM         int64   `json:"max_tpm,omitempty"`
-	MaxTPS         int64   `json:"max_tps,omitempty"`
-	Usage          Usage   `json:"usage,omitempty"   gorm:"embedded"`
+	RequestCount          int64   `json:"request_count"`
+	UsedAmount            float64 `json:"used_amount"`
+	ExceptionCount        int64   `json:"exception_count"`
+	TotalTimeMilliseconds int64   `json:"total_time_milliseconds,omitempty"`
+	TotalTTFBMilliseconds int64   `json:"total_ttfb_milliseconds,omitempty"`
+	Usage                 Usage   `json:"usage,omitempty"                   gorm:"embedded"`
 }
 
 func (d *SummaryData) buildUpdateData(tableName string) map[string]any {
@@ -48,50 +46,16 @@ func (d *SummaryData) buildUpdateData(tableName string) map[string]any {
 	if d.ExceptionCount > 0 {
 		data["exception_count"] = gorm.Expr(tableName+".exception_count + ?", d.ExceptionCount)
 	}
-
-	// max rpm tpm update
-	if d.MaxRPM > 0 {
-		data["max_rpm"] = gorm.Expr(
-			fmt.Sprintf(
-				"CASE WHEN %s.max_rpm < ? THEN ? ELSE %s.max_rpm END",
-				tableName,
-				tableName,
-			),
-			d.MaxRPM,
-			d.MaxRPM,
+	if d.TotalTimeMilliseconds > 0 {
+		data["total_time_milliseconds"] = gorm.Expr(
+			tableName+".total_time_milliseconds + ?",
+			d.TotalTimeMilliseconds,
 		)
 	}
-	if d.MaxRPS > 0 {
-		data["max_rps"] = gorm.Expr(
-			fmt.Sprintf(
-				"CASE WHEN %s.max_rps < ? THEN ? ELSE %s.max_rps END",
-				tableName,
-				tableName,
-			),
-			d.MaxRPS,
-			d.MaxRPS,
-		)
-	}
-	if d.MaxTPM > 0 {
-		data["max_tpm"] = gorm.Expr(
-			fmt.Sprintf(
-				"CASE WHEN %s.max_tpm < ? THEN ? ELSE %s.max_tpm END",
-				tableName,
-				tableName,
-			),
-			d.MaxTPM,
-			d.MaxTPM,
-		)
-	}
-	if d.MaxTPS > 0 {
-		data["max_tps"] = gorm.Expr(
-			fmt.Sprintf(
-				"CASE WHEN %s.max_tps < ? THEN ? ELSE %s.max_tps END",
-				tableName,
-				tableName,
-			),
-			d.MaxTPS,
-			d.MaxTPS,
+	if d.TotalTTFBMilliseconds > 0 {
+		data["total_ttfb_milliseconds"] = gorm.Expr(
+			tableName+".total_ttfb_milliseconds + ?",
+			d.TotalTTFBMilliseconds,
 		)
 	}
 
@@ -261,17 +225,10 @@ func getChartData(
 
 	// Only include max metrics when we have specific channel and model
 	selectFields := "hour_timestamp as timestamp, sum(request_count) as request_count, sum(used_amount) as used_amount, " +
-		"sum(exception_count) as exception_count, sum(input_tokens) as input_tokens, sum(output_tokens) as output_tokens, " +
+		"sum(exception_count) as exception_count, sum(total_time_milliseconds) as total_time_milliseconds, sum(total_ttfb_milliseconds) as total_ttfb_milliseconds, " +
+		"sum(input_tokens) as input_tokens, sum(output_tokens) as output_tokens, " +
 		"sum(cached_tokens) as cached_tokens, sum(cache_creation_tokens) as cache_creation_tokens, " +
 		"sum(total_tokens) as total_tokens, sum(web_search_count) as web_search_count"
-
-	// Only include max metrics when querying for a specific channel and model
-	if channelID != 0 && modelName != "" {
-		selectFields += ", max(max_rpm) as max_rpm, max(max_rps) as max_rps, max(max_tpm) as max_tpm, max(max_tps) as max_tps"
-	} else {
-		// Set max metrics to 0 when not querying for specific channel and model
-		selectFields += ", 0 as max_rpm, 0 as max_rps, 0 as max_tpm, 0 as max_tps"
-	}
 
 	query = query.
 		Select(selectFields).
@@ -286,7 +243,7 @@ func getChartData(
 
 	// If timeSpan is day, aggregate hour data into day data
 	if timeSpan == TimeSpanDay && len(chartData) > 0 {
-		return aggregateHourDataToDay(chartData, timezone), nil
+		return aggregateDataToSpan(chartData, timeSpan, timezone), nil
 	}
 
 	return chartData, nil
@@ -322,17 +279,10 @@ func getGroupChartData(
 
 	// Only include max metrics when we have specific channel and model
 	selectFields := "hour_timestamp as timestamp, sum(request_count) as request_count, sum(used_amount) as used_amount, " +
-		"sum(exception_count) as exception_count, sum(input_tokens) as input_tokens, sum(output_tokens) as output_tokens, " +
+		"sum(exception_count) as exception_count, sum(total_time_milliseconds) as total_time_milliseconds, sum(total_ttfb_milliseconds) as total_ttfb_milliseconds, " +
+		"sum(input_tokens) as input_tokens, sum(output_tokens) as output_tokens, " +
 		"sum(cached_tokens) as cached_tokens, sum(cache_creation_tokens) as cache_creation_tokens, " +
 		"sum(total_tokens) as total_tokens, sum(web_search_count) as web_search_count"
-
-	// Only include max metrics when querying for a specific channel and model
-	if group != "" && tokenName != "" && modelName != "" {
-		selectFields += ", max(max_rpm) as max_rpm, max(max_rps) as max_rps, max(max_tpm) as max_tpm, max(max_tps) as max_tps"
-	} else {
-		// Set max metrics to 0 when not querying for specific channel and model
-		selectFields += ", 0 as max_rpm, 0 as max_rps, 0 as max_tpm, 0 as max_tps"
-	}
 
 	query = query.
 		Select(selectFields).
@@ -347,7 +297,7 @@ func getGroupChartData(
 
 	// If timeSpan is day, aggregate hour data into day data
 	if timeSpan == TimeSpanDay && len(chartData) > 0 {
-		return aggregateHourDataToDay(chartData, timezone), nil
+		return aggregateDataToSpan(chartData, timeSpan, timezone), nil
 	}
 
 	return chartData, nil
@@ -480,35 +430,37 @@ func getGroupLogGroupByValues[T cmp.Ordered](
 }
 
 type ChartData struct {
-	Timestamp           int64   `json:"timestamp"`
-	RequestCount        int64   `json:"request_count"`
-	UsedAmount          float64 `json:"used_amount"`
-	InputTokens         int64   `json:"input_tokens,omitempty"`
-	OutputTokens        int64   `json:"output_tokens,omitempty"`
-	CachedTokens        int64   `json:"cached_tokens,omitempty"`
-	CacheCreationTokens int64   `json:"cache_creation_tokens,omitempty"`
-	TotalTokens         int64   `json:"total_tokens,omitempty"`
-	ExceptionCount      int64   `json:"exception_count"`
-	WebSearchCount      int64   `json:"web_search_count,omitempty"`
+	Timestamp    int64   `json:"timestamp"`
+	RequestCount int64   `json:"request_count"`
+	UsedAmount   float64 `json:"used_amount"`
+
+	TotalTimeMilliseconds int64 `json:"total_time_milliseconds,omitempty"`
+	TotalTTFBMilliseconds int64 `json:"total_ttfb_milliseconds,omitempty"`
+
+	InputTokens         int64 `json:"input_tokens,omitempty"`
+	OutputTokens        int64 `json:"output_tokens,omitempty"`
+	CachedTokens        int64 `json:"cached_tokens,omitempty"`
+	CacheCreationTokens int64 `json:"cache_creation_tokens,omitempty"`
+	TotalTokens         int64 `json:"total_tokens,omitempty"`
+	ExceptionCount      int64 `json:"exception_count"`
+	WebSearchCount      int64 `json:"web_search_count,omitempty"`
 
 	MaxRPM int64 `json:"max_rpm,omitempty"`
 	MaxTPM int64 `json:"max_tpm,omitempty"`
-	MaxRPS int64 `json:"max_rps,omitempty"`
-	MaxTPS int64 `json:"max_tps,omitempty"`
 }
 
 type DashboardResponse struct {
-	ChartData      []*ChartData `json:"chart_data"`
-	TotalCount     int64        `json:"total_count"`
-	ExceptionCount int64        `json:"exception_count"`
+	ChartData             []*ChartData `json:"chart_data"`
+	TotalCount            int64        `json:"total_count"`
+	ExceptionCount        int64        `json:"exception_count"`
+	TotalTimeMilliseconds int64        `json:"total_time_milliseconds,omitempty"`
+	TotalTTFBMilliseconds int64        `json:"total_ttfb_milliseconds,omitempty"`
 
 	RPM int64 `json:"rpm"`
 	TPM int64 `json:"tpm"`
 
 	MaxRPM int64 `json:"max_rpm,omitempty"`
 	MaxTPM int64 `json:"max_tpm,omitempty"`
-	MaxRPS int64 `json:"max_rps,omitempty"`
-	MaxTPS int64 `json:"max_tps,omitempty"`
 
 	UsedAmount          float64 `json:"used_amount"`
 	InputTokens         int64   `json:"input_tokens,omitempty"`
@@ -530,60 +482,69 @@ type GroupDashboardResponse struct {
 type TimeSpanType string
 
 const (
-	TimeSpanDay  TimeSpanType = "day"
-	TimeSpanHour TimeSpanType = "hour"
+	TimeSpanMinute TimeSpanType = "minute"
+	TimeSpanDay    TimeSpanType = "day"
+	TimeSpanHour   TimeSpanType = "hour"
 )
 
-// aggregateHourDataToDay converts hourly chart data into daily aggregated data
-func aggregateHourDataToDay(hourlyData []*ChartData, timezone *time.Location) []*ChartData {
-	dayData := make(map[int64]*ChartData)
+func aggregateDataToSpan(
+	data []*ChartData,
+	timeSpan TimeSpanType,
+	timezone *time.Location,
+) []*ChartData {
+	dataMap := make(map[int64]*ChartData)
 	if timezone == nil {
 		timezone = time.Local
 	}
 
-	for _, data := range hourlyData {
+	for _, data := range data {
 		// Convert timestamp to time in the specified timezone
 		t := time.Unix(data.Timestamp, 0).In(timezone)
 		// Get the start of the day in the specified timezone
-		startOfDay := time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, timezone)
-		dayTimestamp := startOfDay.Unix()
+		var timestamp int64
+		switch timeSpan {
+		case TimeSpanDay:
+			startOfDay := time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, timezone)
+			timestamp = startOfDay.Unix()
+		case TimeSpanHour:
+			startOfHour := time.Date(t.Year(), t.Month(), t.Day(), t.Hour(), 0, 0, 0, timezone)
+			timestamp = startOfHour.Unix()
+		case TimeSpanMinute:
+			timestamp = t.Unix()
+		}
 
-		if _, exists := dayData[dayTimestamp]; !exists {
-			dayData[dayTimestamp] = &ChartData{
-				Timestamp: dayTimestamp,
+		if _, exists := dataMap[timestamp]; !exists {
+			dataMap[timestamp] = &ChartData{
+				Timestamp: timestamp,
 			}
 		}
 
-		day := dayData[dayTimestamp]
-		day.RequestCount += data.RequestCount
-		day.UsedAmount = decimal.
-			NewFromFloat(data.UsedAmount).
-			Add(decimal.NewFromFloat(day.UsedAmount)).
+		currentData := dataMap[timestamp]
+		currentData.RequestCount += data.RequestCount
+		currentData.TotalTimeMilliseconds += data.TotalTimeMilliseconds
+		currentData.TotalTTFBMilliseconds += data.TotalTTFBMilliseconds
+		currentData.UsedAmount = decimal.
+			NewFromFloat(currentData.UsedAmount).
+			Add(decimal.NewFromFloat(data.UsedAmount)).
 			InexactFloat64()
-		day.ExceptionCount += data.ExceptionCount
-		day.InputTokens += data.InputTokens
-		day.OutputTokens += data.OutputTokens
-		day.CachedTokens += data.CachedTokens
-		day.CacheCreationTokens += data.CacheCreationTokens
-		day.TotalTokens += data.TotalTokens
-		day.WebSearchCount += data.WebSearchCount
+		currentData.ExceptionCount += data.ExceptionCount
+		currentData.InputTokens += data.InputTokens
+		currentData.OutputTokens += data.OutputTokens
+		currentData.CachedTokens += data.CachedTokens
+		currentData.CacheCreationTokens += data.CacheCreationTokens
+		currentData.TotalTokens += data.TotalTokens
+		currentData.WebSearchCount += data.WebSearchCount
 
-		if data.MaxRPM > day.MaxRPM {
-			day.MaxRPM = data.MaxRPM
+		if data.MaxRPM > currentData.MaxRPM {
+			currentData.MaxRPM = data.MaxRPM
 		}
-		if data.MaxTPM > day.MaxTPM {
-			day.MaxTPM = data.MaxTPM
-		}
-		if data.MaxRPS > day.MaxRPS {
-			day.MaxRPS = data.MaxRPS
-		}
-		if data.MaxTPS > day.MaxTPS {
-			day.MaxTPS = data.MaxTPS
+		if data.MaxTPM > currentData.MaxTPM {
+			currentData.MaxTPM = data.MaxTPM
 		}
 	}
 
-	result := make([]*ChartData, 0, len(dayData))
-	for _, data := range dayData {
+	result := make([]*ChartData, 0, len(dataMap))
+	for _, data := range dataMap {
 		result = append(result, data)
 	}
 
@@ -602,8 +563,13 @@ func sumDashboardResponse(chartData []*ChartData) DashboardResponse {
 	for _, data := range chartData {
 		dashboardResponse.TotalCount += data.RequestCount
 		dashboardResponse.ExceptionCount += data.ExceptionCount
-
+		dashboardResponse.TotalTimeMilliseconds += data.TotalTimeMilliseconds
+		dashboardResponse.TotalTTFBMilliseconds += data.TotalTTFBMilliseconds
 		usedAmount = usedAmount.Add(decimal.NewFromFloat(data.UsedAmount))
+		dashboardResponse.UsedAmount = decimal.
+			NewFromFloat(dashboardResponse.UsedAmount).
+			Add(decimal.NewFromFloat(data.UsedAmount)).
+			InexactFloat64()
 		dashboardResponse.InputTokens += data.InputTokens
 		dashboardResponse.OutputTokens += data.OutputTokens
 		dashboardResponse.TotalTokens += data.TotalTokens
@@ -616,12 +582,6 @@ func sumDashboardResponse(chartData []*ChartData) DashboardResponse {
 		}
 		if data.MaxTPM > dashboardResponse.MaxTPM {
 			dashboardResponse.MaxTPM = data.MaxTPM
-		}
-		if data.MaxRPS > dashboardResponse.MaxRPS {
-			dashboardResponse.MaxRPS = data.MaxRPS
-		}
-		if data.MaxTPS > dashboardResponse.MaxTPS {
-			dashboardResponse.MaxTPS = data.MaxTPS
 		}
 	}
 	dashboardResponse.UsedAmount = usedAmount.InexactFloat64()
@@ -746,255 +706,27 @@ func GetGroupDashboardData(
 
 //nolint:revive
 type ModelData struct {
-	Timestamp           int64   `json:"timestamp,omitempty"`
-	Model               string  `json:"model"`
-	RequestCount        int64   `json:"request_count"`
-	UsedAmount          float64 `json:"used_amount"`
-	ExceptionCount      int64   `json:"exception_count"`
-	InputTokens         int64   `json:"input_tokens,omitempty"`
-	OutputTokens        int64   `json:"output_tokens,omitempty"`
-	CachedTokens        int64   `json:"cached_tokens,omitempty"`
-	CacheCreationTokens int64   `json:"cache_creation_tokens,omitempty"`
-	TotalTokens         int64   `json:"total_tokens,omitempty"`
-	WebSearchCount      int64   `json:"web_search_count,omitempty"`
-	MaxRPM              int64   `json:"max_rpm,omitempty"`
-	MaxRPS              int64   `json:"max_rps,omitempty"`
-	MaxTPM              int64   `json:"max_tpm,omitempty"`
-	MaxTPS              int64   `json:"max_tps,omitempty"`
+	Timestamp      int64   `json:"timestamp,omitempty"`
+	Model          string  `json:"model"`
+	RequestCount   int64   `json:"request_count"`
+	UsedAmount     float64 `json:"used_amount"`
+	ExceptionCount int64   `json:"exception_count"`
+
+	TotalTimeMilliseconds int64 `json:"total_time_milliseconds,omitempty"`
+	TotalTTFBMilliseconds int64 `json:"total_ttfb_milliseconds,omitempty"`
+
+	InputTokens         int64 `json:"input_tokens,omitempty"`
+	OutputTokens        int64 `json:"output_tokens,omitempty"`
+	CachedTokens        int64 `json:"cached_tokens,omitempty"`
+	CacheCreationTokens int64 `json:"cache_creation_tokens,omitempty"`
+	TotalTokens         int64 `json:"total_tokens,omitempty"`
+	WebSearchCount      int64 `json:"web_search_count,omitempty"`
+
+	MaxRPM int64 `json:"max_rpm,omitempty"`
+	MaxTPM int64 `json:"max_tpm,omitempty"`
 }
 
 type TimeModelData struct {
 	Timestamp int64        `json:"timestamp"`
 	Models    []*ModelData `json:"models"`
-}
-
-func GetTimeSeriesModelData(
-	channelID int,
-	start, end time.Time,
-	timeSpan TimeSpanType,
-	timezone *time.Location,
-) ([]*TimeModelData, error) {
-	if end.IsZero() {
-		end = time.Now()
-	} else if end.Before(start) {
-		return nil, errors.New("end time is before start time")
-	}
-
-	query := LogDB.Model(&Summary{})
-
-	if channelID != 0 {
-		query = query.Where("channel_id = ?", channelID)
-	}
-
-	switch {
-	case !start.IsZero() && !end.IsZero():
-		query = query.Where("hour_timestamp BETWEEN ? AND ?", start.Unix(), end.Unix())
-	case !start.IsZero():
-		query = query.Where("hour_timestamp >= ?", start.Unix())
-	case !end.IsZero():
-		query = query.Where("hour_timestamp <= ?", end.Unix())
-	}
-
-	selectFields := "hour_timestamp as timestamp, model, " +
-		"sum(request_count) as request_count, sum(used_amount) as used_amount, " +
-		"sum(exception_count) as exception_count, sum(input_tokens) as input_tokens, " +
-		"sum(output_tokens) as output_tokens, sum(cached_tokens) as cached_tokens, " +
-		"sum(cache_creation_tokens) as cache_creation_tokens, sum(total_tokens) as total_tokens, " +
-		"sum(web_search_count) as web_search_count"
-
-	if channelID != 0 {
-		selectFields += ", max(max_rpm) as max_rpm, max(max_rps) as max_rps, max(max_tpm) as max_tpm, max(max_tps) as max_tps"
-	} else {
-		selectFields += ", 0 as max_rpm, 0 as max_rps, 0 as max_tpm, 0 as max_tps"
-	}
-
-	var rawData []ModelData
-	err := query.
-		Select(selectFields).
-		Group("timestamp, model").
-		Order("timestamp ASC").
-		Scan(&rawData).Error
-	if err != nil {
-		return nil, err
-	}
-
-	if timeSpan == TimeSpanDay && len(rawData) > 0 {
-		rawData = aggregateHourlyToDaily(rawData, timezone)
-	}
-
-	return convertToTimeModelData(rawData), nil
-}
-
-func GetGroupTimeSeriesModelData(
-	group string,
-	tokenName string,
-	start, end time.Time,
-	timeSpan TimeSpanType,
-	timezone *time.Location,
-) ([]*TimeModelData, error) {
-	if end.IsZero() {
-		end = time.Now()
-	} else if end.Before(start) {
-		return nil, errors.New("end time is before start time")
-	}
-
-	query := LogDB.Model(&GroupSummary{}).
-		Where("group_id = ?", group)
-	if tokenName != "" {
-		query = query.Where("token_name = ?", tokenName)
-	}
-
-	switch {
-	case !start.IsZero() && !end.IsZero():
-		query = query.Where("hour_timestamp BETWEEN ? AND ?", start.Unix(), end.Unix())
-	case !start.IsZero():
-		query = query.Where("hour_timestamp >= ?", start.Unix())
-	case !end.IsZero():
-		query = query.Where("hour_timestamp <= ?", end.Unix())
-	}
-
-	selectFields := "hour_timestamp as timestamp, model, " +
-		"sum(request_count) as request_count, sum(used_amount) as used_amount, " +
-		"sum(exception_count) as exception_count, sum(input_tokens) as input_tokens, " +
-		"sum(output_tokens) as output_tokens, sum(cached_tokens) as cached_tokens, " +
-		"sum(cache_creation_tokens) as cache_creation_tokens, sum(total_tokens) as total_tokens, " +
-		"sum(web_search_count) as web_search_count"
-
-	if tokenName != "" {
-		selectFields += ", max(max_rpm) as max_rpm, max(max_rps) as max_rps, max(max_tpm) as max_tpm, max(max_tps) as max_tps"
-	} else {
-		selectFields += ", 0 as max_rpm, 0 as max_rps, 0 as max_tpm, 0 as max_tps"
-	}
-
-	var rawData []ModelData
-	err := query.
-		Select(selectFields).
-		Group("timestamp, model").
-		Order("timestamp ASC").
-		Scan(&rawData).Error
-	if err != nil {
-		return nil, err
-	}
-
-	if timeSpan == TimeSpanDay && len(rawData) > 0 {
-		rawData = aggregateHourlyToDaily(rawData, timezone)
-	}
-
-	return convertToTimeModelData(rawData), nil
-}
-
-func aggregateHourlyToDaily(hourlyData []ModelData, timezone *time.Location) []ModelData {
-	if timezone == nil {
-		timezone = time.Local
-	}
-
-	type AggKey struct {
-		DayTimestamp int64
-		Model        string
-	}
-	dayData := make(map[AggKey]*ModelData)
-
-	for _, data := range hourlyData {
-		t := time.Unix(data.Timestamp, 0).In(timezone)
-		startOfDay := time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, timezone)
-		dayTimestamp := startOfDay.Unix()
-
-		key := AggKey{
-			DayTimestamp: dayTimestamp,
-			Model:        data.Model,
-		}
-
-		if _, exists := dayData[key]; !exists {
-			dayData[key] = &ModelData{
-				Timestamp: dayTimestamp,
-				Model:     data.Model,
-			}
-		}
-
-		day := dayData[key]
-		day.RequestCount += data.RequestCount
-		day.UsedAmount = decimal.
-			NewFromFloat(data.UsedAmount).
-			Add(decimal.NewFromFloat(day.UsedAmount)).
-			InexactFloat64()
-		day.ExceptionCount += data.ExceptionCount
-		day.InputTokens += data.InputTokens
-		day.OutputTokens += data.OutputTokens
-		day.CachedTokens += data.CachedTokens
-		day.CacheCreationTokens += data.CacheCreationTokens
-		day.TotalTokens += data.TotalTokens
-		day.WebSearchCount += data.WebSearchCount
-
-		if data.MaxRPM > day.MaxRPM {
-			day.MaxRPM = data.MaxRPM
-		}
-		if data.MaxTPM > day.MaxTPM {
-			day.MaxTPM = data.MaxTPM
-		}
-		if data.MaxRPS > day.MaxRPS {
-			day.MaxRPS = data.MaxRPS
-		}
-		if data.MaxTPS > day.MaxTPS {
-			day.MaxTPS = data.MaxTPS
-		}
-	}
-
-	result := make([]ModelData, 0, len(dayData))
-	for _, data := range dayData {
-		result = append(result, *data)
-	}
-
-	return result
-}
-
-func convertToTimeModelData(rawData []ModelData) []*TimeModelData {
-	timeMap := make(map[int64][]*ModelData)
-
-	for _, data := range rawData {
-		modelData := &ModelData{
-			Model:               data.Model,
-			RequestCount:        data.RequestCount,
-			UsedAmount:          data.UsedAmount,
-			ExceptionCount:      data.ExceptionCount,
-			InputTokens:         data.InputTokens,
-			OutputTokens:        data.OutputTokens,
-			CachedTokens:        data.CachedTokens,
-			CacheCreationTokens: data.CacheCreationTokens,
-			TotalTokens:         data.TotalTokens,
-			WebSearchCount:      data.WebSearchCount,
-			MaxRPM:              data.MaxRPM,
-			MaxRPS:              data.MaxRPS,
-			MaxTPM:              data.MaxTPM,
-			MaxTPS:              data.MaxTPS,
-		}
-
-		timeMap[data.Timestamp] = append(timeMap[data.Timestamp], modelData)
-	}
-
-	result := make([]*TimeModelData, 0, len(timeMap))
-	for timestamp, models := range timeMap {
-		slices.SortFunc(models, func(a, b *ModelData) int {
-			if a.UsedAmount != b.UsedAmount {
-				return cmp.Compare(b.UsedAmount, a.UsedAmount)
-			}
-			if a.TotalTokens != b.TotalTokens {
-				return cmp.Compare(b.TotalTokens, a.TotalTokens)
-			}
-			if a.RequestCount != b.RequestCount {
-				return cmp.Compare(b.RequestCount, a.RequestCount)
-			}
-			return cmp.Compare(a.Model, b.Model)
-		})
-
-		result = append(result, &TimeModelData{
-			Timestamp: timestamp,
-			Models:    models,
-		})
-	}
-
-	slices.SortFunc(result, func(a, b *TimeModelData) int {
-		return cmp.Compare(a.Timestamp, b.Timestamp)
-	})
-
-	return result
 }

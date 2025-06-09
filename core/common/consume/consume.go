@@ -35,8 +35,6 @@ func AsyncConsume(
 	downstreamResult bool,
 	user string,
 	metadata map[string]string,
-	channelRate model.RequestRate,
-	groupRate model.RequestRate,
 ) {
 	if !checkNeedRecordConsume(code, meta) {
 		return
@@ -65,8 +63,6 @@ func AsyncConsume(
 		downstreamResult,
 		user,
 		metadata,
-		channelRate,
-		groupRate,
 	)
 }
 
@@ -85,8 +81,6 @@ func Consume(
 	downstreamResult bool,
 	user string,
 	metadata map[string]string,
-	channelRate model.RequestRate,
-	groupRate model.RequestRate,
 ) {
 	if !checkNeedRecordConsume(code, meta) {
 		return
@@ -109,8 +103,6 @@ func Consume(
 		downstreamResult,
 		user,
 		metadata,
-		channelRate,
-		groupRate,
 	)
 	if err != nil {
 		log.Error("error batch record consume: " + err.Error())
