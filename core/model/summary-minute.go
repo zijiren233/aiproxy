@@ -494,6 +494,7 @@ type TimeSummaryDataV2 struct {
 
 func GetTimeSeriesModelDataMinute(
 	channelID int,
+	modelName string,
 	start, end time.Time,
 	timeSpan TimeSpanType,
 	timezone *time.Location,
@@ -508,6 +509,10 @@ func GetTimeSeriesModelDataMinute(
 
 	if channelID != 0 {
 		query = query.Where("channel_id = ?", channelID)
+	}
+
+	if modelName != "" {
+		query = query.Where("model = ?", modelName)
 	}
 
 	switch {
@@ -547,6 +552,7 @@ func GetTimeSeriesModelDataMinute(
 func GetGroupTimeSeriesModelDataMinute(
 	group string,
 	tokenName string,
+	modelName string,
 	start, end time.Time,
 	timeSpan TimeSpanType,
 	timezone *time.Location,
@@ -561,6 +567,10 @@ func GetGroupTimeSeriesModelDataMinute(
 		Where("group_id = ?", group)
 	if tokenName != "" {
 		query = query.Where("token_name = ?", tokenName)
+	}
+
+	if modelName != "" {
+		query = query.Where("model = ?", modelName)
 	}
 
 	switch {

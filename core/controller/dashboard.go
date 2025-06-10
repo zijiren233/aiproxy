@@ -335,6 +335,7 @@ func GetGroupDashboardModels(c *gin.Context) {
 //	@Produce		json
 //	@Security		ApiKeyAuth
 //	@Param			channel			query		int		false	"Channel ID"
+//	@Param			model			query		string	false	"Model name"
 //	@Param			start_timestamp	query		int64	false	"Start timestamp"
 //	@Param			end_timestamp	query		int64	false	"End timestamp"
 //	@Param			timezone		query		string	false	"Timezone, default is Local"
@@ -343,10 +344,12 @@ func GetGroupDashboardModels(c *gin.Context) {
 //	@Router			/api/dashboardv2/ [get]
 func GetTimeSeriesModelData(c *gin.Context) {
 	channelID, _ := strconv.Atoi(c.Query("channel"))
+	modelName := c.Query("model")
 	startTime, endTime := utils.ParseTimeRange(c, -1)
 	timezoneLocation, _ := time.LoadLocation(c.DefaultQuery("timezone", "Local"))
 	models, err := model.GetTimeSeriesModelDataMinute(
 		channelID,
+		modelName,
 		startTime,
 		endTime,
 		model.TimeSpanType(c.Query("timespan")),
@@ -368,6 +371,7 @@ func GetTimeSeriesModelData(c *gin.Context) {
 //	@Security		ApiKeyAuth
 //	@Param			group			path		string	true	"Group"
 //	@Param			token_name		query		string	false	"Token name"
+//	@Param			model			query		string	false	"Model name"
 //	@Param			start_timestamp	query		int64	false	"Start timestamp"
 //	@Param			end_timestamp	query		int64	false	"End timestamp"
 //	@Param			timezone		query		string	false	"Timezone, default is Local"
@@ -381,11 +385,13 @@ func GetGroupTimeSeriesModelData(c *gin.Context) {
 		return
 	}
 	tokenName := c.Query("token_name")
+	modelName := c.Query("model")
 	startTime, endTime := utils.ParseTimeRange(c, -1)
 	timezoneLocation, _ := time.LoadLocation(c.DefaultQuery("timezone", "Local"))
 	models, err := model.GetGroupTimeSeriesModelDataMinute(
 		group,
 		tokenName,
+		modelName,
 		startTime,
 		endTime,
 		model.TimeSpanType(c.Query("timespan")),
