@@ -465,7 +465,6 @@ func GetGroupDashboardDataMinute(
 	}, nil
 }
 
-//nolint:revive
 type SummaryDataV2 struct {
 	Timestamp      int64   `json:"timestamp,omitempty"`
 	ChannelID      int     `json:"channel_id,omitempty"`
