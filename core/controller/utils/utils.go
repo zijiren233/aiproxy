@@ -32,7 +32,7 @@ func ParseTimeRange(c *gin.Context, maxSpan time.Duration) (startTime, endTime t
 		endTime = time.Now()
 	}
 	if maxSpan > 0 {
-		sevenDaysAgo := endTime.Add(maxSpan)
+		sevenDaysAgo := endTime.Add(-maxSpan)
 		if startTime.IsZero() || startTime.Before(sevenDaysAgo) {
 			startTime = sevenDaysAgo
 		}
