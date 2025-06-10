@@ -1150,6 +1150,12 @@ const docTemplate = `{
                         "in": "query"
                     },
                     {
+                        "type": "string",
+                        "description": "Model name",
+                        "name": "model",
+                        "in": "query"
+                    },
+                    {
                         "type": "integer",
                         "description": "Start timestamp",
                         "name": "start_timestamp",
@@ -1226,6 +1232,12 @@ const docTemplate = `{
                         "type": "string",
                         "description": "Token name",
                         "name": "token_name",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Model name",
+                        "name": "model",
                         "in": "query"
                     },
                     {

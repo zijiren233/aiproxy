@@ -2704,6 +2704,10 @@ paths:
         in: query
         name: channel
         type: integer
+      - description: Model name
+        in: query
+        name: model
+        type: string
       - description: Start timestamp
         in: query
         name: start_timestamp
@@ -2751,6 +2755,10 @@ paths:
       - description: Token name
         in: query
         name: token_name
+        type: string
+      - description: Model name
+        in: query
+        name: model
         type: string
       - description: Start timestamp
         in: query
