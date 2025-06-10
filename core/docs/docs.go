@@ -1188,7 +1188,7 @@ const docTemplate = `{
                                         "data": {
                                             "type": "array",
                                             "items": {
-                                                "$ref": "#/definitions/model.TimeModelData"
+                                                "$ref": "#/definitions/model.TimeSummaryDataV2"
                                             }
                                         }
                                     }
@@ -1267,7 +1267,7 @@ const docTemplate = `{
                                         "data": {
                                             "type": "array",
                                             "items": {
-                                                "$ref": "#/definitions/model.TimeModelData"
+                                                "$ref": "#/definitions/model.TimeSummaryDataV2"
                                             }
                                         }
                                     }
@@ -10157,56 +10157,6 @@ const docTemplate = `{
                 }
             }
         },
-        "model.ModelData": {
-            "type": "object",
-            "properties": {
-                "cache_creation_tokens": {
-                    "type": "integer"
-                },
-                "cached_tokens": {
-                    "type": "integer"
-                },
-                "exception_count": {
-                    "type": "integer"
-                },
-                "input_tokens": {
-                    "type": "integer"
-                },
-                "max_rpm": {
-                    "type": "integer"
-                },
-                "max_tpm": {
-                    "type": "integer"
-                },
-                "model": {
-                    "type": "string"
-                },
-                "output_tokens": {
-                    "type": "integer"
-                },
-                "request_count": {
-                    "type": "integer"
-                },
-                "timestamp": {
-                    "type": "integer"
-                },
-                "total_time_milliseconds": {
-                    "type": "integer"
-                },
-                "total_tokens": {
-                    "type": "integer"
-                },
-                "total_ttfb_milliseconds": {
-                    "type": "integer"
-                },
-                "used_amount": {
-                    "type": "number"
-                },
-                "web_search_count": {
-                    "type": "integer"
-                }
-            }
-        },
         "model.ModelOwner": {
             "type": "string",
             "enum": [
@@ -10289,17 +10239,6 @@ const docTemplate = `{
                 }
             }
         },
-        "model.ParamType": {
-            "type": "string",
-            "enum": [
-                "header",
-                "query"
-            ],
-            "x-enum-varnames": [
-                "ParamTypeHeader",
-                "ParamTypeQuery"
-            ]
-        },
         "model.ParsePdfResponse": {
             "type": "object",
             "properties": {
@@ -10375,6 +10314,19 @@ const docTemplate = `{
                     "type": "integer"
                 }
             }
+        },
+        "model.ProxyParamType": {
+            "type": "string",
+            "enum": [
+                "url",
+                "header",
+                "query"
+            ],
+            "x-enum-varnames": [
+                "ParamTypeURL",
+                "ParamTypeHeader",
+                "ParamTypeQuery"
+            ]
         },
         "model.PublicMCP": {
             "type": "object",
@@ -10480,7 +10432,7 @@ const docTemplate = `{
                     "type": "boolean"
                 },
                 "type": {
-                    "$ref": "#/definitions/model.ParamType"
+                    "$ref": "#/definitions/model.ProxyParamType"
                 }
             }
         },
@@ -10684,6 +10636,59 @@ const docTemplate = `{
                 }
             }
         },
+        "model.SummaryDataV2": {
+            "type": "object",
+            "properties": {
+                "cache_creation_tokens": {
+                    "type": "integer"
+                },
+                "cached_tokens": {
+                    "type": "integer"
+                },
+                "channel_id": {
+                    "type": "integer"
+                },
+                "exception_count": {
+                    "type": "integer"
+                },
+                "input_tokens": {
+                    "type": "integer"
+                },
+                "max_rpm": {
+                    "type": "integer"
+                },
+                "max_tpm": {
+                    "type": "integer"
+                },
+                "model": {
+                    "type": "string"
+                },
+                "output_tokens": {
+                    "type": "integer"
+                },
+                "request_count": {
+                    "type": "integer"
+                },
+                "timestamp": {
+                    "type": "integer"
+                },
+                "total_time_milliseconds": {
+                    "type": "integer"
+                },
+                "total_tokens": {
+                    "type": "integer"
+                },
+                "total_ttfb_milliseconds": {
+                    "type": "integer"
+                },
+                "used_amount": {
+                    "type": "number"
+                },
+                "web_search_count": {
+                    "type": "integer"
+                }
+            }
+        },
         "model.TextResponse": {
             "type": "object",
             "properties": {
@@ -10752,13 +10757,13 @@ const docTemplate = `{
                 }
             }
         },
-        "model.TimeModelData": {
+        "model.TimeSummaryDataV2": {
             "type": "object",
             "properties": {
-                "models": {
+                "summary": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/model.ModelData"
+                        "$ref": "#/definitions/model.SummaryDataV2"
                     }
                 },
                 "timestamp": {
