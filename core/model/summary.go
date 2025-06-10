@@ -703,30 +703,3 @@ func GetGroupDashboardData(
 		TokenNames:        tokenNames,
 	}, nil
 }
-
-//nolint:revive
-type ModelData struct {
-	Timestamp      int64   `json:"timestamp,omitempty"`
-	Model          string  `json:"model"`
-	RequestCount   int64   `json:"request_count"`
-	UsedAmount     float64 `json:"used_amount"`
-	ExceptionCount int64   `json:"exception_count"`
-
-	TotalTimeMilliseconds int64 `json:"total_time_milliseconds,omitempty"`
-	TotalTTFBMilliseconds int64 `json:"total_ttfb_milliseconds,omitempty"`
-
-	InputTokens         int64 `json:"input_tokens,omitempty"`
-	OutputTokens        int64 `json:"output_tokens,omitempty"`
-	CachedTokens        int64 `json:"cached_tokens,omitempty"`
-	CacheCreationTokens int64 `json:"cache_creation_tokens,omitempty"`
-	TotalTokens         int64 `json:"total_tokens,omitempty"`
-	WebSearchCount      int64 `json:"web_search_count,omitempty"`
-
-	MaxRPM int64 `json:"max_rpm,omitempty"`
-	MaxTPM int64 `json:"max_tpm,omitempty"`
-}
-
-type TimeModelData struct {
-	Timestamp int64        `json:"timestamp"`
-	Models    []*ModelData `json:"models"`
-}

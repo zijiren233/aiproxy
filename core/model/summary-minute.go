@@ -465,12 +465,40 @@ func GetGroupDashboardDataMinute(
 	}, nil
 }
 
+//nolint:revive
+type SummaryDataV2 struct {
+	Timestamp      int64   `json:"timestamp,omitempty"`
+	ChannelID      int     `json:"channel_id,omitempty"`
+	Model          string  `json:"model"`
+	RequestCount   int64   `json:"request_count"`
+	UsedAmount     float64 `json:"used_amount"`
+	ExceptionCount int64   `json:"exception_count"`
+
+	TotalTimeMilliseconds int64 `json:"total_time_milliseconds,omitempty"`
+	TotalTTFBMilliseconds int64 `json:"total_ttfb_milliseconds,omitempty"`
+
+	InputTokens         int64 `json:"input_tokens,omitempty"`
+	OutputTokens        int64 `json:"output_tokens,omitempty"`
+	CachedTokens        int64 `json:"cached_tokens,omitempty"`
+	CacheCreationTokens int64 `json:"cache_creation_tokens,omitempty"`
+	TotalTokens         int64 `json:"total_tokens,omitempty"`
+	WebSearchCount      int64 `json:"web_search_count,omitempty"`
+
+	MaxRPM int64 `json:"max_rpm,omitempty"`
+	MaxTPM int64 `json:"max_tpm,omitempty"`
+}
+
+type TimeSummaryDataV2 struct {
+	Timestamp int64            `json:"timestamp"`
+	Summary   []*SummaryDataV2 `json:"summary"`
+}
+
 func GetTimeSeriesModelDataMinute(
 	channelID int,
 	start, end time.Time,
 	timeSpan TimeSpanType,
 	timezone *time.Location,
-) ([]*TimeModelData, error) {
+) ([]*TimeSummaryDataV2, error) {
 	if end.IsZero() {
 		end = time.Now()
 	} else if end.Before(start) {
@@ -492,7 +520,7 @@ func GetTimeSeriesModelDataMinute(
 		query = query.Where("minute_timestamp <= ?", end.Unix())
 	}
 
-	selectFields := "minute_timestamp as timestamp, model, " +
+	selectFields := "minute_timestamp as timestamp, channel_id, model, " +
 		"sum(request_count) as request_count, sum(used_amount) as used_amount, " +
 		"sum(exception_count) as exception_count, sum(total_time_milliseconds) as total_time_milliseconds, sum(total_ttfb_milliseconds) as total_ttfb_milliseconds, " +
 		"sum(input_tokens) as input_tokens, " +
@@ -500,10 +528,10 @@ func GetTimeSeriesModelDataMinute(
 		"sum(cache_creation_tokens) as cache_creation_tokens, sum(total_tokens) as total_tokens, " +
 		"sum(web_search_count) as web_search_count, sum(request_count) as max_rpm, sum(total_tokens) as max_tpm"
 
-	var rawData []ModelData
+	var rawData []SummaryDataV2
 	err := query.
 		Select(selectFields).
-		Group("timestamp, model").
+		Group("timestamp, channel_id, model").
 		Order("timestamp ASC").
 		Scan(&rawData).Error
 	if err != nil {
@@ -523,7 +551,7 @@ func GetGroupTimeSeriesModelDataMinute(
 	start, end time.Time,
 	timeSpan TimeSpanType,
 	timezone *time.Location,
-) ([]*TimeModelData, error) {
+) ([]*TimeSummaryDataV2, error) {
 	if end.IsZero() {
 		end = time.Now()
 	} else if end.Before(start) {
@@ -553,7 +581,7 @@ func GetGroupTimeSeriesModelDataMinute(
 		"sum(cache_creation_tokens) as cache_creation_tokens, sum(total_tokens) as total_tokens, " +
 		"sum(web_search_count) as web_search_count, sum(request_count) as max_rpm, sum(total_tokens) as max_tpm"
 
-	var rawData []ModelData
+	var rawData []SummaryDataV2
 	err := query.
 		Select(selectFields).
 		Group("timestamp, model").
@@ -571,10 +599,10 @@ func GetGroupTimeSeriesModelDataMinute(
 }
 
 func aggregatToSpan(
-	minuteData []ModelData,
+	minuteData []SummaryDataV2,
 	timeSpan TimeSpanType,
 	timezone *time.Location,
-) []ModelData {
+) []SummaryDataV2 {
 	if timezone == nil {
 		timezone = time.Local
 	}
@@ -583,7 +611,7 @@ func aggregatToSpan(
 		Timestamp int64
 		Model     string
 	}
-	dataMap := make(map[AggKey]*ModelData)
+	dataMap := make(map[AggKey]*SummaryDataV2)
 
 	for _, data := range minuteData {
 		t := time.Unix(data.Timestamp, 0).In(timezone)
@@ -616,8 +644,9 @@ func aggregatToSpan(
 		}
 
 		if _, exists := dataMap[key]; !exists {
-			dataMap[key] = &ModelData{
+			dataMap[key] = &SummaryDataV2{
 				Timestamp: key.Timestamp,
+				ChannelID: data.ChannelID,
 				Model:     data.Model,
 			}
 		}
@@ -646,7 +675,7 @@ func aggregatToSpan(
 		}
 	}
 
-	result := make([]ModelData, 0, len(dataMap))
+	result := make([]SummaryDataV2, 0, len(dataMap))
 	for _, data := range dataMap {
 		result = append(result, *data)
 	}
@@ -654,11 +683,12 @@ func aggregatToSpan(
 	return result
 }
 
-func convertToTimeModelData(rawData []ModelData) []*TimeModelData {
-	timeMap := make(map[int64][]*ModelData)
+func convertToTimeModelData(rawData []SummaryDataV2) []*TimeSummaryDataV2 {
+	timeMap := make(map[int64][]*SummaryDataV2)
 
 	for _, data := range rawData {
-		modelData := &ModelData{
+		modelData := &SummaryDataV2{
+			ChannelID:             data.ChannelID,
 			Model:                 data.Model,
 			RequestCount:          data.RequestCount,
 			UsedAmount:            data.UsedAmount,
@@ -678,9 +708,9 @@ func convertToTimeModelData(rawData []ModelData) []*TimeModelData {
 		timeMap[data.Timestamp] = append(timeMap[data.Timestamp], modelData)
 	}
 
-	result := make([]*TimeModelData, 0, len(timeMap))
+	result := make([]*TimeSummaryDataV2, 0, len(timeMap))
 	for timestamp, models := range timeMap {
-		slices.SortFunc(models, func(a, b *ModelData) int {
+		slices.SortFunc(models, func(a, b *SummaryDataV2) int {
 			if a.UsedAmount != b.UsedAmount {
 				return cmp.Compare(b.UsedAmount, a.UsedAmount)
 			}
@@ -693,13 +723,13 @@ func convertToTimeModelData(rawData []ModelData) []*TimeModelData {
 			return cmp.Compare(a.Model, b.Model)
 		})
 
-		result = append(result, &TimeModelData{
+		result = append(result, &TimeSummaryDataV2{
 			Timestamp: timestamp,
-			Models:    models,
+			Summary:   models,
 		})
 	}
 
-	slices.SortFunc(result, func(a, b *TimeModelData) int {
+	slices.SortFunc(result, func(a, b *TimeSummaryDataV2) int {
 		return cmp.Compare(a.Timestamp, b.Timestamp)
 	})
 

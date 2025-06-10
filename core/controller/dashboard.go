@@ -339,7 +339,7 @@ func GetGroupDashboardModels(c *gin.Context) {
 //	@Param			end_timestamp	query		int64	false	"End timestamp"
 //	@Param			timezone		query		string	false	"Timezone, default is Local"
 //	@Param			timespan		query		string	false	"Time span type (day, hour, minute)"
-//	@Success		200				{object}	middleware.APIResponse{data=[]model.TimeModelData}
+//	@Success		200				{object}	middleware.APIResponse{data=[]model.TimeSummaryDataV2}
 //	@Router			/api/dashboardv2/ [get]
 func GetTimeSeriesModelData(c *gin.Context) {
 	channelID, _ := strconv.Atoi(c.Query("channel"))
@@ -372,7 +372,7 @@ func GetTimeSeriesModelData(c *gin.Context) {
 //	@Param			end_timestamp	query		int64	false	"End timestamp"
 //	@Param			timezone		query		string	false	"Timezone, default is Local"
 //	@Param			timespan		query		string	false	"Time span type (day, hour, minute)"
-//	@Success		200				{object}	middleware.APIResponse{data=[]model.TimeModelData}
+//	@Success		200				{object}	middleware.APIResponse{data=[]model.TimeSummaryDataV2}
 //	@Router			/api/dashboardv2/{group} [get]
 func GetGroupTimeSeriesModelData(c *gin.Context) {
 	group := c.Param("group")

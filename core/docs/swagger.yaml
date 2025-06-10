@@ -1487,39 +1487,6 @@ definitions:
       updated_at:
         type: string
     type: object
-  model.ModelData:
-    properties:
-      cache_creation_tokens:
-        type: integer
-      cached_tokens:
-        type: integer
-      exception_count:
-        type: integer
-      input_tokens:
-        type: integer
-      max_rpm:
-        type: integer
-      max_tpm:
-        type: integer
-      model:
-        type: string
-      output_tokens:
-        type: integer
-      request_count:
-        type: integer
-      timestamp:
-        type: integer
-      total_time_milliseconds:
-        type: integer
-      total_tokens:
-        type: integer
-      total_ttfb_milliseconds:
-        type: integer
-      used_amount:
-        type: number
-      web_search_count:
-        type: integer
-    type: object
   model.ModelOwner:
     enum:
     - openai
@@ -1595,14 +1562,6 @@ definitions:
       value:
         type: string
     type: object
-  model.ParamType:
-    enum:
-    - header
-    - query
-    type: string
-    x-enum-varnames:
-    - ParamTypeHeader
-    - ParamTypeQuery
   model.ParsePdfResponse:
     properties:
       markdown:
@@ -1655,6 +1614,16 @@ definitions:
       cached_tokens:
         type: integer
     type: object
+  model.ProxyParamType:
+    enum:
+    - url
+    - header
+    - query
+    type: string
+    x-enum-varnames:
+    - ParamTypeURL
+    - ParamTypeHeader
+    - ParamTypeQuery
   model.PublicMCP:
     properties:
       created_at:
@@ -1724,7 +1693,7 @@ definitions:
       required:
         type: boolean
       type:
-        $ref: '#/definitions/model.ParamType'
+        $ref: '#/definitions/model.ProxyParamType'
     type: object
   model.PublicMCPReusingParam:
     properties:
@@ -1859,6 +1828,41 @@ definitions:
       text:
         type: string
     type: object
+  model.SummaryDataV2:
+    properties:
+      cache_creation_tokens:
+        type: integer
+      cached_tokens:
+        type: integer
+      channel_id:
+        type: integer
+      exception_count:
+        type: integer
+      input_tokens:
+        type: integer
+      max_rpm:
+        type: integer
+      max_tpm:
+        type: integer
+      model:
+        type: string
+      output_tokens:
+        type: integer
+      request_count:
+        type: integer
+      timestamp:
+        type: integer
+      total_time_milliseconds:
+        type: integer
+      total_tokens:
+        type: integer
+      total_ttfb_milliseconds:
+        type: integer
+      used_amount:
+        type: number
+      web_search_count:
+        type: integer
+    type: object
   model.TextResponse:
     properties:
       choices:
@@ -1904,11 +1908,11 @@ definitions:
     - model
     - voice
     type: object
-  model.TimeModelData:
+  model.TimeSummaryDataV2:
     properties:
-      models:
+      summary:
         items:
-          $ref: '#/definitions/model.ModelData'
+          $ref: '#/definitions/model.SummaryDataV2'
         type: array
       timestamp:
         type: integer
@@ -2727,7 +2731,7 @@ paths:
             - properties:
                 data:
                   items:
-                    $ref: '#/definitions/model.TimeModelData'
+                    $ref: '#/definitions/model.TimeSummaryDataV2'
                   type: array
               type: object
       security:
@@ -2775,7 +2779,7 @@ paths:
             - properties:
                 data:
                   items:
-                    $ref: '#/definitions/model.TimeModelData'
+                    $ref: '#/definitions/model.TimeSummaryDataV2'
                   type: array
               type: object
       security:
