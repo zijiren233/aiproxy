@@ -83,10 +83,6 @@ func SearchConsumeError(
 		var conditions []string
 		var values []any
 
-		if tokenID == 0 {
-			conditions = append(conditions, "token_id = ?")
-			values = append(values, String2Int(keyword))
-		}
 		if requestID == "" {
 			if common.UsingPostgreSQL {
 				conditions = append(conditions, "request_id ILIKE ?")

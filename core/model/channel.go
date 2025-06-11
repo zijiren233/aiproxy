@@ -282,13 +282,13 @@ func SearchChannels(
 		var conditions []string
 		var values []any
 
-		if id == 0 {
-			conditions = append(conditions, "id = ?")
-			values = append(values, String2Int(keyword))
-		}
-		if channelType == 0 {
-			conditions = append(conditions, "type = ?")
-			values = append(values, String2Int(keyword))
+		keywordInt := String2Int(keyword)
+
+		if keywordInt != 0 {
+			if id == 0 {
+				conditions = append(conditions, "id = ?")
+				values = append(values, keywordInt)
+			}
 		}
 		if name == "" {
 			if common.UsingPostgreSQL {
