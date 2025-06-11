@@ -192,11 +192,6 @@ func SearchTokens(
 			values = append(values, "%"+keyword+"%")
 		}
 
-		if status == 0 {
-			conditions = append(conditions, "status = ?")
-			values = append(values, String2Int(keyword))
-		}
-
 		if common.UsingPostgreSQL {
 			conditions = append(conditions, "models ILIKE ?")
 		} else {
@@ -263,11 +258,6 @@ func SearchGroupTokens(
 				conditions = append(conditions, "key LIKE ?")
 			}
 			values = append(values, "%"+keyword+"%")
-		}
-
-		if status == 0 {
-			conditions = append(conditions, "status = ?")
-			values = append(values, String2Int(keyword))
 		}
 
 		if common.UsingPostgreSQL {
