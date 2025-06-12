@@ -188,7 +188,7 @@ func GroupMCPStreamable(c *gin.Context) {
 		return
 	}
 
-	handleGroupSSEStreamable(c, groupMcp)
+	handleGroupStreamable(c, groupMcp)
 }
 
 // handleGroupProxyStreamable processes Streamable proxy requests for group
