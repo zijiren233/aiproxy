@@ -169,7 +169,7 @@ func handleGroupSSEMessage(c *gin.Context, mcpType model.GroupMCPType, sessionID
 	}
 }
 
-func handleGroupSSEStreamable(c *gin.Context, groupMcp *model.GroupMCPCache) {
+func handleGroupStreamable(c *gin.Context, groupMcp *model.GroupMCPCache) {
 	switch groupMcp.Type {
 	case model.GroupMCPTypeProxyStreamable:
 		handleGroupProxyStreamable(c, groupMcp.ProxyConfig)

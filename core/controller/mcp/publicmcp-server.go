@@ -241,10 +241,10 @@ func PublicMCPStreamable(c *gin.Context) {
 		return
 	}
 
-	handlePublicSSEStreamable(c, publicMcp)
+	handlePublicStreamable(c, publicMcp)
 }
 
-func handlePublicSSEStreamable(c *gin.Context, publicMcp *model.PublicMCPCache) {
+func handlePublicStreamable(c *gin.Context, publicMcp *model.PublicMCPCache) {
 	switch publicMcp.Type {
 	case model.PublicMCPTypeProxySSE:
 		client, err := transport.NewSSE(

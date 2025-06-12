@@ -170,7 +170,7 @@ func HostMCPStreamable(c *gin.Context) {
 			))
 			return
 		}
-		handlePublicSSEStreamable(c, publicMcp)
+		handlePublicStreamable(c, publicMcp)
 	}, func(c *gin.Context, mcpID string) {
 		group := middleware.GetGroup(c)
 
@@ -192,6 +192,6 @@ func HostMCPStreamable(c *gin.Context) {
 			return
 		}
 
-		handleGroupSSEStreamable(c, groupMcp)
+		handleGroupStreamable(c, groupMcp)
 	})
 }
