@@ -16,6 +16,8 @@ var (
 	FfmpegEnabled        bool
 	InternalToken        string
 	DisableModelConfig   bool
+	Redis                string
+	RedisKeyPrefix       string
 )
 
 func ReloadEnv() {
@@ -28,6 +30,8 @@ func ReloadEnv() {
 	FfmpegEnabled = env.Bool("FFMPEG_ENABLED", false)
 	InternalToken = os.Getenv("INTERNAL_TOKEN")
 	DisableModelConfig = env.Bool("DISABLE_MODEL_CONFIG", false)
+	Redis = env.String("REDIS", os.Getenv("REDIS_CONN_STRING"))
+	RedisKeyPrefix = os.Getenv("REDIS_KEY_PREFIX")
 }
 
 func init() {

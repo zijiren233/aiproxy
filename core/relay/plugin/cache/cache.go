@@ -146,7 +146,7 @@ func (c *Cache) getFromRedis(ctx context.Context, key string) (*Item, error) {
 		return nil, nil
 	}
 
-	data, err := c.rdb.Get(ctx, redisCachePrefix+key).Bytes()
+	data, err := c.rdb.Get(ctx, common.RedisKey(redisCachePrefix, key)).Bytes()
 	if err != nil {
 		if errors.Is(err, redis.Nil) {
 			return nil, nil
@@ -172,7 +172,7 @@ func (c *Cache) setToRedis(ctx context.Context, key string, item *Item, ttl time
 		return err
 	}
 
-	return c.rdb.Set(ctx, redisCachePrefix+key, data, ttl).Err()
+	return c.rdb.Set(ctx, common.RedisKey(redisCachePrefix, key), data, ttl).Err()
 }
 
 // getFromCache retrieves item from cache (Redis or memory)

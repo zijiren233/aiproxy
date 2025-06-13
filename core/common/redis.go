@@ -2,10 +2,11 @@ package common
 
 import (
 	"context"
-	"os"
+	"fmt"
+	"strings"
 	"time"
 
-	"github.com/labring/aiproxy/core/common/env"
+	"github.com/labring/aiproxy/core/common/config"
 	"github.com/redis/go-redis/v9"
 	log "github.com/sirupsen/logrus"
 )
@@ -15,9 +16,35 @@ var (
 	RedisEnabled = false
 )
 
+const defaultRedisKeyPrefix = "aiproxy"
+
+func RedisKeyPrefix() string {
+	if config.RedisKeyPrefix == "" {
+		return defaultRedisKeyPrefix
+	}
+	return config.RedisKeyPrefix
+}
+
+func RedisKeyf(format string, args ...any) string {
+	if len(args) == 0 {
+		return RedisKeyPrefix() + ":" + format
+	}
+	return RedisKeyPrefix() + ":" + fmt.Sprintf(format, args...)
+}
+
+func RedisKey(keys ...string) string {
+	if len(keys) == 0 {
+		panic("redis keys is empty")
+	}
+	if len(keys) == 1 {
+		return RedisKeyPrefix() + ":" + keys[0]
+	}
+	return RedisKeyPrefix() + ":" + strings.Join(keys, ":")
+}
+
 // InitRedisClient This function is called after init()
 func InitRedisClient() (err error) {
-	redisConn := env.String("REDIS", os.Getenv("REDIS_CONN_STRING"))
+	redisConn := config.Redis
 	if redisConn == "" {
 		log.Info("REDIS not set, redis is not enabled")
 		return nil
@@ -39,9 +66,4 @@ func InitRedisClient() (err error) {
 	}
 
 	return nil
-}
-
-func RedisDel(key string) error {
-	ctx := context.Background()
-	return RDB.Del(ctx, key).Err()
 }

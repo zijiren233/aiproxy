@@ -145,7 +145,7 @@ var (
 )
 
 func (r *redisRateRecord) buildKey(keys ...string) string {
-	return r.prefix + ":" + strings.Join(keys, ":")
+	return common.RedisKey(r.prefix + ":" + strings.Join(keys, ":"))
 }
 
 func (r *redisRateRecord) GetRequest(
