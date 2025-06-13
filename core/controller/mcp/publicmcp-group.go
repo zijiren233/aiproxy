@@ -13,7 +13,17 @@ import (
 	"gorm.io/gorm"
 )
 
-type GroupPublicMCPResponse model.PublicMCP
+func IsHostedMCP(t model.PublicMCPType) bool {
+	return t == model.PublicMCPTypeEmbed ||
+		t == model.PublicMCPTypeOpenAPI ||
+		t == model.PublicMCPTypeProxySSE ||
+		t == model.PublicMCPTypeProxyStreamable
+}
+
+type GroupPublicMCPResponse struct {
+	model.PublicMCP
+	Hosted bool `json:"hosted"`
+}
 
 func (r *GroupPublicMCPResponse) MarshalJSON() ([]byte, error) {
 	type Alias GroupPublicMCPResponse
@@ -34,7 +44,11 @@ func (r *GroupPublicMCPResponse) MarshalJSON() ([]byte, error) {
 }
 
 func NewGroupPublicMCPResponse(mcp model.PublicMCP) GroupPublicMCPResponse {
-	r := GroupPublicMCPResponse(mcp)
+	r := GroupPublicMCPResponse{
+		PublicMCP: mcp,
+		Hosted:    IsHostedMCP(mcp.Type),
+	}
+	r.Type = ""
 	r.Readme = ""
 	r.ReadmeCN = ""
 	r.ReadmeURL = ""
@@ -56,6 +70,7 @@ func NewGroupPublicMCPResponses(mcps []model.PublicMCP) []GroupPublicMCPResponse
 
 type GroupPublicMCPDetailResponse struct {
 	model.PublicMCP
+	Hosted    bool                          `json:"hosted"`
 	Endpoints MCPEndpoint                   `json:"endpoints"`
 	Reusing   map[string]model.ReusingParam `json:"reusing"`
 	Params    map[string]string             `json:"params"`
@@ -99,8 +114,10 @@ func NewGroupPublicMCPDetailResponse(
 ) (GroupPublicMCPDetailResponse, error) {
 	r := GroupPublicMCPDetailResponse{
 		PublicMCP: mcp,
+		Hosted:    IsHostedMCP(mcp.Type),
 	}
 
+	r.Type = ""
 	r.ProxyConfig = nil
 	r.EmbedConfig = nil
 	r.OpenAPIConfig = nil

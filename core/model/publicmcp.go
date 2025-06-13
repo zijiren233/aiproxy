@@ -137,19 +137,19 @@ type PublicMCP struct {
 	PublicMCPReusingParams []PublicMCPReusingParam `gorm:"foreignKey:MCPID"     json:"-"`
 
 	Name          string          `json:"name"`
-	NameCN        string          `json:"name_cn"`
-	Status        PublicMCPStatus `json:"status"         gorm:"index;default:1"`
-	Type          PublicMCPType   `json:"type"           gorm:"index"`
+	NameCN        string          `json:"name_cn,omitempty"`
+	Status        PublicMCPStatus `json:"status"                   gorm:"index;default:1"`
+	Type          PublicMCPType   `json:"type,omitempty"           gorm:"index"`
 	Description   string          `json:"description"`
-	DescriptionCN string          `json:"description_cn"`
+	DescriptionCN string          `json:"description_cn,omitempty"`
 	GitHubURL     string          `json:"github_url"`
-	Readme        string          `json:"readme"         gorm:"type:text"`
-	ReadmeCN      string          `json:"readme_cn"      gorm:"type:text"`
+	Readme        string          `json:"readme"                   gorm:"type:text"`
+	ReadmeCN      string          `json:"readme_cn,omitempty"      gorm:"type:text"`
 	ReadmeURL     string          `json:"readme_url"`
-	ReadmeCNURL   string          `json:"readme_cn_url"`
-	Tags          []string        `json:"tags,omitempty" gorm:"serializer:fastjson;type:text"`
-	LogoURL       string          `json:"logo_url"`
-	Price         MCPPrice        `json:"price"          gorm:"embedded"`
+	ReadmeCNURL   string          `json:"readme_cn_url,omitempty"`
+	Tags          []string        `json:"tags,omitempty"           gorm:"serializer:fastjson;type:text"`
+	LogoURL       string          `json:"logo_url,omitempty"`
+	Price         MCPPrice        `json:"price"                    gorm:"embedded"`
 
 	ProxyConfig   *PublicMCPProxyConfig `gorm:"serializer:fastjson;type:text" json:"proxy_config,omitempty"`
 	OpenAPIConfig *MCPOpenAPIConfig     `gorm:"serializer:fastjson;type:text" json:"openapi_config,omitempty"`
