@@ -362,7 +362,7 @@ func GetAllChannelModelErrorRates(ctx context.Context) (map[int64]map[string]flo
 const (
 	addRequestLuaScript = `
 local prefix = KEYS[1]
-local model = KEYS[1]
+local model = KEYS[2]
 local channel_id = ARGV[1]
 local is_error = tonumber(ARGV[2])
 local now_ts = tonumber(ARGV[3])
