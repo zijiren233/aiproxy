@@ -115,7 +115,7 @@ func AddRequest(
 func buildStatsKey(model, channelID string) string {
 	return fmt.Sprintf(
 		"%s%s%s%v%s",
-		modelKeyPrefix,
+		modelKeyPrefix(),
 		model,
 		channelKeyPart,
 		channelID,
