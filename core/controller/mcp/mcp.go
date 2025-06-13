@@ -108,7 +108,7 @@ func prepareEmbedReusingConfig(
 	}
 
 	group := middleware.GetGroup(c)
-	processor := NewReusingParamProcessor(mcpID, group.ID)
+	processor := NewReusingParamProcessor(mcpID, newGroupParams(mcpID, group.ID))
 
 	return processor.ProcessEmbedReusingParams(reusingParams)
 }

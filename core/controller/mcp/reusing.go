@@ -7,16 +7,47 @@ import (
 	"github.com/labring/aiproxy/core/model"
 )
 
-// ReusingParamProcessor 统一处理reusing参数
-type ReusingParamProcessor struct {
+type ParamsFunc interface {
+	GetParams() (map[string]string, error)
+}
+
+type groupParams struct {
 	mcpID   string
 	groupID string
 }
 
-func NewReusingParamProcessor(mcpID, groupID string) *ReusingParamProcessor {
-	return &ReusingParamProcessor{
+func (g *groupParams) GetParams() (map[string]string, error) {
+	param, err := model.CacheGetPublicMCPReusingParam(g.mcpID, g.groupID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get reusing params: %w", err)
+	}
+
+	return param.Params, nil
+}
+
+func newGroupParams(mcpID, groupID string) ParamsFunc {
+	return &groupParams{
 		mcpID:   mcpID,
 		groupID: groupID,
+	}
+}
+
+type staticParams map[string]string
+
+func (s staticParams) GetParams() (map[string]string, error) {
+	return s, nil
+}
+
+// ReusingParamProcessor 统一处理reusing参数
+type ReusingParamProcessor struct {
+	mcpID      string
+	paramsFunc ParamsFunc
+}
+
+func NewReusingParamProcessor(mcpID string, paramsFunc ParamsFunc) *ReusingParamProcessor {
+	return &ReusingParamProcessor{
+		mcpID:      mcpID,
+		paramsFunc: paramsFunc,
 	}
 }
 
@@ -30,13 +61,13 @@ func (p *ReusingParamProcessor) ProcessProxyReusingParams(
 		return nil
 	}
 
-	param, err := model.CacheGetPublicMCPReusingParam(p.mcpID, p.groupID)
+	param, err := p.paramsFunc.GetParams()
 	if err != nil {
-		return fmt.Errorf("failed to get reusing params: %w", err)
+		return err
 	}
 
 	for key, config := range reusingParams {
-		value, exists := param.Params[key]
+		value, exists := param[key]
 		if !exists {
 			if config.Required {
 				return fmt.Errorf("required reusing parameter %s is missing", key)
@@ -60,14 +91,14 @@ func (p *ReusingParamProcessor) ProcessEmbedReusingParams(
 		return nil, nil
 	}
 
-	param, err := model.CacheGetPublicMCPReusingParam(p.mcpID, p.groupID)
+	param, err := p.paramsFunc.GetParams()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get reusing params: %w", err)
 	}
 
 	reusingConfig := make(map[string]string)
 	for key, config := range reusingParams {
-		value, exists := param.Params[key]
+		value, exists := param[key]
 		if !exists {
 			if config.Required {
 				return nil, fmt.Errorf("required reusing parameter %s is missing", key)
