@@ -1,7 +1,6 @@
 package controller
 
 import (
-	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -76,72 +75,153 @@ func handlePublicSSEMCP(
 ) {
 	switch publicMcp.Type {
 	case model.PublicMCPTypeProxySSE:
-		client, err := transport.NewSSE(
-			publicMcp.ProxyConfig.URL,
-			transport.WithHeaders(publicMcp.ProxyConfig.Headers),
-		)
-		if err != nil {
+		if err := handlePublicProxySSE(c, publicMcp, endpoint); err != nil {
 			http.Error(c.Writer, err.Error(), http.StatusBadRequest)
 			return
 		}
-		err = client.Start(c.Request.Context())
-		if err != nil {
-			http.Error(c.Writer, err.Error(), http.StatusBadRequest)
-			return
-		}
-		defer client.Close()
-		handleSSEMCPServer(
-			c,
-			mcpservers.WrapMCPClient2Server(client),
-			string(model.PublicMCPTypeProxySSE),
-			endpoint,
-		)
 	case model.PublicMCPTypeProxyStreamable:
-		client, err := transport.NewStreamableHTTP(
-			publicMcp.ProxyConfig.URL,
-			transport.WithHTTPHeaders(publicMcp.ProxyConfig.Headers),
-		)
-		if err != nil {
+		if err := handlePublicProxyStreamableSSE(c, publicMcp, endpoint); err != nil {
 			http.Error(c.Writer, err.Error(), http.StatusBadRequest)
 			return
 		}
-		err = client.Start(c.Request.Context())
-		if err != nil {
-			http.Error(c.Writer, err.Error(), http.StatusBadRequest)
-			return
-		}
-		defer client.Close()
-		handleSSEMCPServer(
-			c,
-			mcpservers.WrapMCPClient2Server(client),
-			string(model.PublicMCPTypeProxyStreamable),
-			endpoint,
-		)
 	case model.PublicMCPTypeOpenAPI:
 		server, err := newOpenAPIMCPServer(publicMcp.OpenAPIConfig)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, mcpservers.CreateMCPErrorResponse(
-				mcp.NewRequestId(nil),
-				mcp.INVALID_REQUEST,
-				err.Error(),
-			))
+			http.Error(c.Writer, err.Error(), http.StatusBadRequest)
 			return
 		}
 		handleSSEMCPServer(c, server, string(model.PublicMCPTypeOpenAPI), endpoint)
 	case model.PublicMCPTypeEmbed:
 		handleEmbedSSEMCP(c, publicMcp.ID, publicMcp.EmbedConfig, endpoint)
 	default:
-		c.JSON(http.StatusBadRequest, mcpservers.CreateMCPErrorResponse(
-			mcp.NewRequestId(nil),
-			mcp.INVALID_REQUEST,
-			"unknown mcp type",
-		))
-		return
+		http.Error(c.Writer, "unknown mcp type", http.StatusBadRequest)
 	}
 }
 
-// processReusingParams handles the reusing parameters for MCP proxy
-func processReusingParams(
+// handlePublicProxySSE 处理公共代理SSE
+func handlePublicProxySSE(
+	c *gin.Context,
+	publicMcp *model.PublicMCPCache,
+	endpoint EndpointProvider,
+) error {
+	client, err := createProxySSEClient(c, publicMcp)
+	if err != nil {
+		return err
+	}
+	defer client.Close()
+
+	handleSSEMCPServer(
+		c,
+		mcpservers.WrapMCPClient2Server(client),
+		string(model.PublicMCPTypeProxySSE),
+		endpoint,
+	)
+	return nil
+}
+
+// handlePublicProxyStreamableSSE 处理公共代理Streamable SSE
+func handlePublicProxyStreamableSSE(
+	c *gin.Context,
+	publicMcp *model.PublicMCPCache,
+	endpoint EndpointProvider,
+) error {
+	client, err := createProxyStreamableClient(c, publicMcp)
+	if err != nil {
+		return err
+	}
+	defer client.Close()
+
+	handleSSEMCPServer(
+		c,
+		mcpservers.WrapMCPClient2Server(client),
+		string(model.PublicMCPTypeProxyStreamable),
+		endpoint,
+	)
+	return nil
+}
+
+// createProxySSEClient 创建代理SSE客户端
+func createProxySSEClient(
+	c *gin.Context,
+	publicMcp *model.PublicMCPCache,
+) (transport.Interface, error) {
+	url, headers, err := prepareProxyConfig(c, publicMcp)
+	if err != nil {
+		return nil, err
+	}
+
+	client, err := transport.NewSSE(url, transport.WithHeaders(headers))
+	if err != nil {
+		return nil, err
+	}
+
+	if err := client.Start(c.Request.Context()); err != nil {
+		return nil, err
+	}
+
+	return client, nil
+}
+
+// createProxyStreamableClient 创建代理Streamable客户端
+func createProxyStreamableClient(
+	c *gin.Context,
+	publicMcp *model.PublicMCPCache,
+) (transport.Interface, error) {
+	url, headers, err := prepareProxyConfig(c, publicMcp)
+	if err != nil {
+		return nil, err
+	}
+
+	client, err := transport.NewStreamableHTTP(url, transport.WithHTTPHeaders(headers))
+	if err != nil {
+		return nil, err
+	}
+
+	if err := client.Start(c.Request.Context()); err != nil {
+		return nil, err
+	}
+
+	return client, nil
+}
+
+// prepareProxyConfig 准备代理配置
+func prepareProxyConfig(
+	c *gin.Context,
+	publicMcp *model.PublicMCPCache,
+) (string, map[string]string, error) {
+	url, err := url.Parse(publicMcp.ProxyConfig.URL)
+	if err != nil {
+		return "", nil, fmt.Errorf("invalid proxy URL: %w", err)
+	}
+
+	headers := make(map[string]string)
+	backendQuery := url.Query()
+
+	// 复制静态配置
+	for k, v := range publicMcp.ProxyConfig.Headers {
+		headers[k] = v
+	}
+
+	// 处理reusing参数
+	if len(publicMcp.ProxyConfig.Reusing) > 0 {
+		group := middleware.GetGroup(c)
+		processor := NewReusingParamProcessor(publicMcp.ID, group.ID)
+
+		if err := processor.ProcessProxyReusingParams(
+			publicMcp.ProxyConfig.Reusing,
+			headers,
+			&backendQuery,
+		); err != nil {
+			return "", nil, err
+		}
+	}
+
+	url.RawQuery = backendQuery.Encode()
+	return url.String(), headers, nil
+}
+
+// processProxyReusingParams handles the reusing parameters for MCP proxy
+func processProxyReusingParams(
 	reusingParams map[string]model.PublicMCPProxyReusingParam,
 	mcpID, groupID string,
 	headers map[string]string,
@@ -160,7 +240,7 @@ func processReusingParams(
 		paramValue, ok := param.Params[k]
 		if !ok {
 			if v.Required {
-				return fmt.Errorf("%s required", k)
+				return fmt.Errorf("required reusing parameter %s is missing", k)
 			}
 			continue
 		}
@@ -170,8 +250,10 @@ func processReusingParams(
 			headers[k] = paramValue
 		case model.ParamTypeQuery:
 			backendQuery.Set(k, paramValue)
+		case model.ParamTypeURL:
+			return fmt.Errorf("URL parameter %s cannot be set via reusing", k)
 		default:
-			return errors.New("unknow param type")
+			return fmt.Errorf("unknown param type: %s", v.Type)
 		}
 	}
 
@@ -247,28 +329,13 @@ func PublicMCPStreamable(c *gin.Context) {
 func handlePublicStreamable(c *gin.Context, publicMcp *model.PublicMCPCache) {
 	switch publicMcp.Type {
 	case model.PublicMCPTypeProxySSE:
-		client, err := transport.NewSSE(
-			publicMcp.ProxyConfig.URL,
-			transport.WithHeaders(publicMcp.ProxyConfig.Headers),
-		)
+		client, err := createProxySSEClient(c, publicMcp)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, mcpservers.CreateMCPErrorResponse(
-				mcp.NewRequestId(nil),
-				mcp.INVALID_REQUEST,
-				err.Error(),
-			))
-			return
-		}
-		err = client.Start(c.Request.Context())
-		if err != nil {
-			c.JSON(http.StatusBadRequest, mcpservers.CreateMCPErrorResponse(
-				mcp.NewRequestId(nil),
-				mcp.INVALID_REQUEST,
-				err.Error(),
-			))
+			http.Error(c.Writer, err.Error(), http.StatusBadRequest)
 			return
 		}
 		defer client.Close()
+
 		mcpproxy.NewStatelessStreamableHTTPServer(
 			mcpservers.WrapMCPClient2Server(client),
 		).ServeHTTP(c.Writer, c.Request)
@@ -349,7 +416,7 @@ func handlePublicProxyStreamable(c *gin.Context, mcpID string, config *model.Pub
 	group := middleware.GetGroup(c)
 
 	// Process reusing parameters if any
-	if err := processReusingParams(config.Reusing, mcpID, group.ID, headers, &backendQuery); err != nil {
+	if err := processProxyReusingParams(config.Reusing, mcpID, group.ID, headers, &backendQuery); err != nil {
 		c.JSON(http.StatusBadRequest, mcpservers.CreateMCPErrorResponse(
 			mcp.NewRequestId(nil),
 			mcp.INVALID_REQUEST,

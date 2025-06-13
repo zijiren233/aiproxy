@@ -12,6 +12,7 @@ func init() {
 			"amap",
 			"AMAP",
 			model.PublicMCPTypeEmbed,
+			mcpservers.WithNameCN("高德地图"),
 			mcpservers.WithNewServerFunc(NewServer),
 			mcpservers.WithConfigTemplates(configTemplates),
 			mcpservers.WithTags([]string{"map"}),

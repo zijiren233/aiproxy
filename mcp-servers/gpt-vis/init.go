@@ -19,6 +19,7 @@ func init() {
 			"gpt-vis",
 			"GPT Vis",
 			model.PublicMCPTypeEmbed,
+			mcpservers.WithNameCN("可视化图表"),
 			mcpservers.WithNewServerFunc(NewServer),
 			mcpservers.WithGitHubURL(
 				"https://github.com/antvis/mcp-server-chart",

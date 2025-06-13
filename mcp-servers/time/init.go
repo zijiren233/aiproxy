@@ -19,6 +19,7 @@ func init() {
 			"time",
 			"Time",
 			model.PublicMCPTypeEmbed,
+			mcpservers.WithNameCN("时间"),
 			mcpservers.WithNewServerFunc(NewServer),
 			mcpservers.WithGitHubURL(
 				"https://github.com/modelcontextprotocol/servers/tree/main/src/time",

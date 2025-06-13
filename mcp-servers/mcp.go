@@ -138,6 +138,12 @@ type McpServer struct {
 
 type McpConfig func(*McpServer)
 
+func WithNameCN(nameCN string) McpConfig {
+	return func(e *McpServer) {
+		e.NameCN = nameCN
+	}
+}
+
 func WithDescription(description string) McpConfig {
 	return func(e *McpServer) {
 		e.Description = description
@@ -237,7 +243,7 @@ func NewMcp(id, name string, mcpType model.PublicMCPType, opts ...McpConfig) Mcp
 }
 
 func (e *McpServer) NewServer(config, reusingConfig map[string]string) (Server, error) {
-	if e.newServer != nil {
+	if e.newServer == nil {
 		return nil, errors.New("not impl new server")
 	}
 	if err := ValidateConfigTemplatesConfig(e.ConfigTemplates, config, reusingConfig); err != nil {

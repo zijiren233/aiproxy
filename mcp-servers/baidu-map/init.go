@@ -16,6 +16,7 @@ func init() {
 			"baidu-map",
 			"Baidu Map",
 			model.PublicMCPTypeEmbed,
+			mcpservers.WithNameCN("百度地图"),
 			mcpservers.WithNewServerFunc(NewServer),
 			mcpservers.WithGitHubURL(
 				"https://github.com/baidu-maps/mcp",

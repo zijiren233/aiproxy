@@ -20,6 +20,7 @@ func init() {
 			"12306",
 			"12306 Train Ticket Query",
 			model.PublicMCPTypeEmbed,
+			mcpservers.WithNameCN("12306 购票搜索"),
 			mcpservers.WithNewServerFunc(NewServer),
 			mcpservers.WithGitHubURL(
 				"https://github.com/Joooook/12306-mcp",
