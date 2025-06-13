@@ -145,7 +145,8 @@ func createProxySSEClient(
 	c *gin.Context,
 	publicMcp *model.PublicMCPCache,
 ) (transport.Interface, error) {
-	url, headers, err := prepareProxyConfig(c, publicMcp)
+	group := middleware.GetGroup(c)
+	url, headers, err := prepareProxyConfig(publicMcp, newGroupParams(publicMcp.ID, group.ID))
 	if err != nil {
 		return nil, err
 	}
@@ -167,7 +168,8 @@ func createProxyStreamableClient(
 	c *gin.Context,
 	publicMcp *model.PublicMCPCache,
 ) (transport.Interface, error) {
-	url, headers, err := prepareProxyConfig(c, publicMcp)
+	group := middleware.GetGroup(c)
+	url, headers, err := prepareProxyConfig(publicMcp, newGroupParams(publicMcp.ID, group.ID))
 	if err != nil {
 		return nil, err
 	}
@@ -186,8 +188,8 @@ func createProxyStreamableClient(
 
 // prepareProxyConfig 准备代理配置
 func prepareProxyConfig(
-	c *gin.Context,
 	publicMcp *model.PublicMCPCache,
+	paramsFunc ParamsFunc,
 ) (string, map[string]string, error) {
 	url, err := url.Parse(publicMcp.ProxyConfig.URL)
 	if err != nil {
@@ -197,15 +199,8 @@ func prepareProxyConfig(
 	headers := make(map[string]string)
 	backendQuery := url.Query()
 
-	// 复制静态配置
-	for k, v := range publicMcp.ProxyConfig.Headers {
-		headers[k] = v
-	}
-
-	// 处理reusing参数
 	if len(publicMcp.ProxyConfig.Reusing) > 0 {
-		group := middleware.GetGroup(c)
-		processor := NewReusingParamProcessor(publicMcp.ID, group.ID)
+		processor := NewReusingParamProcessor(publicMcp.ID, paramsFunc)
 
 		if err := processor.ProcessProxyReusingParams(
 			publicMcp.ProxyConfig.Reusing,
@@ -214,6 +209,10 @@ func prepareProxyConfig(
 		); err != nil {
 			return "", nil, err
 		}
+	}
+
+	for k, v := range publicMcp.ProxyConfig.Headers {
+		headers[k] = v
 	}
 
 	url.RawQuery = backendQuery.Encode()

@@ -614,8 +614,8 @@ type PublicMCPReusingParamCache struct {
 	Params  map[string]string `json:"params"   redis:"p"`
 }
 
-func (p *PublicMCPReusingParam) ToPublicMCPReusingParamCache() *PublicMCPReusingParamCache {
-	return &PublicMCPReusingParamCache{
+func (p *PublicMCPReusingParam) ToPublicMCPReusingParamCache() PublicMCPReusingParamCache {
+	return PublicMCPReusingParamCache{
 		MCPID:   p.MCPID,
 		GroupID: p.GroupID,
 		Params:  p.Params,
@@ -629,7 +629,7 @@ func CacheDeletePublicMCPReusingParam(mcpID, groupID string) error {
 	return common.RedisDel(fmt.Sprintf(PublicMCPReusingParamCacheKey, mcpID, groupID))
 }
 
-func CacheSetPublicMCPReusingParam(param *PublicMCPReusingParamCache) error {
+func CacheSetPublicMCPReusingParam(param PublicMCPReusingParamCache) error {
 	if !common.RedisEnabled {
 		return nil
 	}
@@ -642,9 +642,9 @@ func CacheSetPublicMCPReusingParam(param *PublicMCPReusingParamCache) error {
 	return err
 }
 
-func CacheGetPublicMCPReusingParam(mcpID, groupID string) (*PublicMCPReusingParamCache, error) {
+func CacheGetPublicMCPReusingParam(mcpID, groupID string) (PublicMCPReusingParamCache, error) {
 	if groupID == "" {
-		return &PublicMCPReusingParamCache{
+		return PublicMCPReusingParamCache{
 			MCPID:   mcpID,
 			GroupID: groupID,
 			Params:  make(map[string]string),
@@ -653,14 +653,14 @@ func CacheGetPublicMCPReusingParam(mcpID, groupID string) (*PublicMCPReusingPara
 	if !common.RedisEnabled {
 		param, err := GetPublicMCPReusingParam(mcpID, groupID)
 		if err != nil {
-			return nil, err
+			return PublicMCPReusingParamCache{}, err
 		}
 		return param.ToPublicMCPReusingParamCache(), nil
 	}
 
 	cacheKey := fmt.Sprintf(PublicMCPReusingParamCacheKey, mcpID, groupID)
-	paramCache := &PublicMCPReusingParamCache{}
-	err := common.RDB.HGetAll(context.Background(), cacheKey).Scan(paramCache)
+	paramCache := PublicMCPReusingParamCache{}
+	err := common.RDB.HGetAll(context.Background(), cacheKey).Scan(&paramCache)
 	if err == nil && paramCache.MCPID != "" {
 		return paramCache, nil
 	} else if err != nil && !errors.Is(err, redis.Nil) {
@@ -669,7 +669,7 @@ func CacheGetPublicMCPReusingParam(mcpID, groupID string) (*PublicMCPReusingPara
 
 	param, err := GetPublicMCPReusingParam(mcpID, groupID)
 	if err != nil {
-		return nil, err
+		return PublicMCPReusingParamCache{}, err
 	}
 
 	prc := param.ToPublicMCPReusingParamCache()

@@ -6,6 +6,7 @@ import (
 
 	"github.com/bytedance/sonic"
 	"github.com/gin-gonic/gin"
+	"github.com/labring/aiproxy/core/common"
 	"github.com/labring/aiproxy/core/controller/utils"
 	"github.com/labring/aiproxy/core/middleware"
 	"github.com/labring/aiproxy/core/model"
@@ -108,6 +109,7 @@ func checkParamsIsFull(params model.Params, reusing map[string]model.ReusingPara
 }
 
 func NewGroupPublicMCPDetailResponse(
+	ctx *gin.Context,
 	host string,
 	mcp model.PublicMCP,
 	groupID string,
@@ -116,6 +118,8 @@ func NewGroupPublicMCPDetailResponse(
 		PublicMCP: mcp,
 		Hosted:    IsHostedMCP(mcp.Type),
 	}
+
+	testConfig := mcp.TestConfig
 
 	r.Type = ""
 	r.ProxyConfig = nil
@@ -134,7 +138,7 @@ func NewGroupPublicMCPDetailResponse(
 		return r, nil
 	}
 
-	reusingParams, err := model.GetPublicMCPReusingParam(mcp.ID, groupID)
+	reusingParams, err := model.CacheGetPublicMCPReusingParam(mcp.ID, groupID)
 	if err != nil {
 		if !errors.Is(err, gorm.ErrRecordNotFound) {
 			return r, err
@@ -144,6 +148,26 @@ func NewGroupPublicMCPDetailResponse(
 
 	if checkParamsIsFull(r.Params, r.Reusing) {
 		r.Endpoints = NewPublicMCPEndpoint(host, mcp)
+
+		if len(r.Tools) == 0 {
+			tools, err := getPublicMCPTools(ctx.Request.Context(), mcp, r.Params)
+			if err != nil {
+				log := common.GetLogger(ctx)
+				log.Errorf("get public mcp tools error: %s", err.Error())
+			} else {
+				r.Tools = tools
+			}
+		}
+	}
+
+	if len(r.Tools) == 0 && testConfig != nil && testConfig.Enabled {
+		tools, err := getPublicMCPTools(ctx.Request.Context(), mcp, testConfig.Params)
+		if err != nil {
+			log := common.GetLogger(ctx)
+			log.Errorf("get public mcp tools error: %s", err.Error())
+		} else {
+			r.Tools = tools
+		}
 	}
 
 	return r, nil
@@ -215,7 +239,12 @@ func GetGroupPublicMCPByID(c *gin.Context) {
 		return
 	}
 
-	response, err := NewGroupPublicMCPDetailResponse(c.Request.Host, mcp, groupID)
+	response, err := NewGroupPublicMCPDetailResponse(
+		c,
+		c.Request.Host,
+		mcp,
+		groupID,
+	)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
