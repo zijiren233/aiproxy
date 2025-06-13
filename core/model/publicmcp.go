@@ -143,9 +143,9 @@ type PublicMCP struct {
 	Description   string          `json:"description"`
 	DescriptionCN string          `json:"description_cn,omitempty"`
 	GitHubURL     string          `json:"github_url"`
-	Readme        string          `json:"readme"                   gorm:"type:text"`
+	Readme        string          `json:"readme,omitempty"         gorm:"type:text"`
 	ReadmeCN      string          `json:"readme_cn,omitempty"      gorm:"type:text"`
-	ReadmeURL     string          `json:"readme_url"`
+	ReadmeURL     string          `json:"readme_url,omitempty"`
 	ReadmeCNURL   string          `json:"readme_cn_url,omitempty"`
 	Tags          []string        `json:"tags,omitempty"           gorm:"serializer:fastjson;type:text"`
 	LogoURL       string          `json:"logo_url,omitempty"`
