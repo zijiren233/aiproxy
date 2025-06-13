@@ -1619,6 +1619,60 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/group/{group}/mcp/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Get a specific MCP by its ID",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "mcp",
+                    "group"
+                ],
+                "summary": "Get MCP by ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Group ID",
+                        "name": "group",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "MCP ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/middleware.APIResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/controller.GroupPublicMCPDetailResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/api/group/{group}/model_config/{model}": {
             "get": {
                 "security": [
@@ -8230,6 +8284,9 @@ const docTemplate = `{
                 "name": {
                     "type": "string"
                 },
+                "name_cn": {
+                    "type": "string"
+                },
                 "readme": {
                     "type": "string"
                 },
@@ -8333,7 +8390,7 @@ const docTemplate = `{
                 }
             }
         },
-        "controller.GroupPublicMCPResponse": {
+        "controller.GroupPublicMCPDetailResponse": {
             "type": "object",
             "properties": {
                 "created_at": {
@@ -8361,6 +8418,9 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "name": {
+                    "type": "string"
+                },
+                "name_cn": {
                     "type": "string"
                 },
                 "openapi_config": {
@@ -8404,6 +8464,86 @@ const docTemplate = `{
                     "items": {
                         "type": "string"
                     }
+                },
+                "test_config": {
+                    "$ref": "#/definitions/model.TestConfig"
+                },
+                "tools": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/mcp.Tool"
+                    }
+                },
+                "type": {
+                    "$ref": "#/definitions/model.PublicMCPType"
+                },
+                "update_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "controller.GroupPublicMCPResponse": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "description_cn": {
+                    "type": "string"
+                },
+                "embed_config": {
+                    "$ref": "#/definitions/model.MCPEmbeddingConfig"
+                },
+                "github_url": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "logo_url": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "name_cn": {
+                    "type": "string"
+                },
+                "openapi_config": {
+                    "$ref": "#/definitions/model.MCPOpenAPIConfig"
+                },
+                "price": {
+                    "$ref": "#/definitions/model.MCPPrice"
+                },
+                "proxy_config": {
+                    "$ref": "#/definitions/model.PublicMCPProxyConfig"
+                },
+                "readme": {
+                    "type": "string"
+                },
+                "readme_cn": {
+                    "type": "string"
+                },
+                "readme_cn_url": {
+                    "type": "string"
+                },
+                "readme_url": {
+                    "type": "string"
+                },
+                "status": {
+                    "$ref": "#/definitions/model.PublicMCPStatus"
+                },
+                "tags": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "test_config": {
+                    "$ref": "#/definitions/model.TestConfig"
                 },
                 "type": {
                     "$ref": "#/definitions/model.PublicMCPType"
@@ -8576,6 +8716,9 @@ const docTemplate = `{
                 "name": {
                     "type": "string"
                 },
+                "name_cn": {
+                    "type": "string"
+                },
                 "openapi_config": {
                     "$ref": "#/definitions/model.MCPOpenAPIConfig"
                 },
@@ -8605,6 +8748,9 @@ const docTemplate = `{
                     "items": {
                         "type": "string"
                     }
+                },
+                "test_config": {
+                    "$ref": "#/definitions/model.TestConfig"
                 },
                 "type": {
                     "$ref": "#/definitions/model.PublicMCPType"
@@ -8945,6 +9091,78 @@ const docTemplate = `{
                 },
                 "web_search_count": {
                     "type": "integer"
+                }
+            }
+        },
+        "mcp.Tool": {
+            "type": "object",
+            "properties": {
+                "annotations": {
+                    "description": "Optional properties describing tool behavior",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/mcp.ToolAnnotation"
+                        }
+                    ]
+                },
+                "description": {
+                    "description": "A human-readable description of the tool.",
+                    "type": "string"
+                },
+                "inputSchema": {
+                    "description": "A JSON Schema object defining the expected parameters for the tool.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/mcp.ToolInputSchema"
+                        }
+                    ]
+                },
+                "name": {
+                    "description": "The name of the tool.",
+                    "type": "string"
+                }
+            }
+        },
+        "mcp.ToolAnnotation": {
+            "type": "object",
+            "properties": {
+                "destructiveHint": {
+                    "description": "If true, the tool may perform destructive updates",
+                    "type": "boolean"
+                },
+                "idempotentHint": {
+                    "description": "If true, repeated calls with same args have no additional effect",
+                    "type": "boolean"
+                },
+                "openWorldHint": {
+                    "description": "If true, tool interacts with external entities",
+                    "type": "boolean"
+                },
+                "readOnlyHint": {
+                    "description": "If true, the tool does not modify its environment",
+                    "type": "boolean"
+                },
+                "title": {
+                    "description": "Human-readable title for the tool",
+                    "type": "string"
+                }
+            }
+        },
+        "mcp.ToolInputSchema": {
+            "type": "object",
+            "properties": {
+                "properties": {
+                    "type": "object",
+                    "additionalProperties": {}
+                },
+                "required": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "type": {
+                    "type": "string"
                 }
             }
         },
@@ -10251,6 +10469,12 @@ const docTemplate = `{
                 }
             }
         },
+        "model.Params": {
+            "type": "object",
+            "additionalProperties": {
+                "type": "string"
+            }
+        },
         "model.ParsePdfResponse": {
             "type": "object",
             "properties": {
@@ -10367,6 +10591,9 @@ const docTemplate = `{
                 "name": {
                     "type": "string"
                 },
+                "name_cn": {
+                    "type": "string"
+                },
                 "openapi_config": {
                     "$ref": "#/definitions/model.MCPOpenAPIConfig"
                 },
@@ -10396,6 +10623,9 @@ const docTemplate = `{
                     "items": {
                         "type": "string"
                     }
+                },
+                "test_config": {
+                    "$ref": "#/definitions/model.TestConfig"
                 },
                 "type": {
                     "$ref": "#/definitions/model.PublicMCPType"
@@ -10461,10 +10691,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "params": {
-                    "type": "object",
-                    "additionalProperties": {
-                        "type": "string"
-                    }
+                    "$ref": "#/definitions/model.Params"
                 },
                 "update_at": {
                     "type": "string"
@@ -10698,6 +10925,17 @@ const docTemplate = `{
                 },
                 "web_search_count": {
                     "type": "integer"
+                }
+            }
+        },
+        "model.TestConfig": {
+            "type": "object",
+            "properties": {
+                "enabled": {
+                    "type": "boolean"
+                },
+                "params": {
+                    "$ref": "#/definitions/model.Params"
                 }
             }
         },

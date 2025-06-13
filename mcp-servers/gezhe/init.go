@@ -20,6 +20,7 @@ func init() {
 			"gezhe",
 			"Gezhe",
 			model.PublicMCPTypeProxyStreamable,
+			mcpservers.WithNameCN("歌者"),
 			mcpservers.WithProxyConfigType(configTemplates),
 			mcpservers.WithTags([]string{"map"}),
 			mcpservers.WithDescription(

@@ -60,6 +60,7 @@ type EmbedMCP struct {
 	ID              string                    `json:"id"`
 	Enabled         bool                      `json:"enabled"`
 	Name            string                    `json:"name"`
+	NameCN          string                    `json:"name_cn"`
 	Readme          string                    `json:"readme"`
 	ReadmeURL       string                    `json:"readme_url"`
 	ReadmeCN        string                    `json:"readme_cn"`
@@ -79,6 +80,7 @@ func newEmbedMCP(
 		ID:          mcp.ID,
 		Enabled:     enabled,
 		Name:        mcp.Name,
+		NameCN:      mcp.NameCN,
 		Readme:      mcp.Readme,
 		ReadmeURL:   mcp.ReadmeURL,
 		ReadmeCN:    mcp.ReadmeCN,
@@ -220,22 +222,48 @@ func GetProxyConfig(
 			value = param.Default
 		}
 
-		switch param.Type {
-		case model.ParamTypeURL:
+		switch param.Required {
+		case mcpservers.ConfigRequiredTypeInitOnly:
+			// 必须在初始化时提供
 			if value == "" {
-				return nil, fmt.Errorf("url parameter %s is required", key)
+				return nil, fmt.Errorf("parameter %s is required", key)
 			}
-			config.URL = value
-		case model.ParamTypeHeader:
+			applyParamToConfig(config, key, value, param.Type)
+		case mcpservers.ConfigRequiredTypeReusingOnly:
+			// 只能通过 reusing 提供，不能在初始化时提供
 			if value != "" {
-				config.Headers[key] = value
+				return nil, fmt.Errorf(
+					"parameter %s should not be provided in init config, it should be provided via reusing",
+					key,
+				)
 			}
-		case model.ParamTypeQuery:
+			config.Reusing[key] = model.PublicMCPProxyReusingParam{
+				ReusingParam: model.ReusingParam{
+					Name:        param.Name,
+					Description: param.Description,
+					Required:    true,
+				},
+				Type: model.ProxyParamType(param.Type),
+			}
+		case mcpservers.ConfigRequiredTypeInitOrReusingOnly:
+			// 可以在初始化时提供，也可以通过 reusing 提供
 			if value != "" {
-				config.Querys[key] = value
+				applyParamToConfig(config, key, value, param.Type)
+			} else {
+				config.Reusing[key] = model.PublicMCPProxyReusingParam{
+					ReusingParam: model.ReusingParam{
+						Name:        param.Name,
+						Description: param.Description,
+						Required:    true,
+					},
+					Type: model.ProxyParamType(param.Type),
+				}
 			}
 		default:
-			return nil, fmt.Errorf("unsupported proxy param type: %s", param.Type)
+			// 可选参数
+			if value != "" {
+				applyParamToConfig(config, key, value, param.Type)
+			}
 		}
 	}
 
@@ -244,6 +272,22 @@ func GetProxyConfig(
 	}
 
 	return config, nil
+}
+
+// 辅助函数：将参数应用到配置中
+func applyParamToConfig(
+	config *model.PublicMCPProxyConfig,
+	key, value string,
+	paramType model.ProxyParamType,
+) {
+	switch paramType {
+	case model.ParamTypeURL:
+		config.URL = value
+	case model.ParamTypeHeader:
+		config.Headers[key] = value
+	case model.ParamTypeQuery:
+		config.Querys[key] = value
+	}
 }
 
 func ToPublicMCP(

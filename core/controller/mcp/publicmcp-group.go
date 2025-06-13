@@ -9,22 +9,18 @@ import (
 	"github.com/labring/aiproxy/core/controller/utils"
 	"github.com/labring/aiproxy/core/middleware"
 	"github.com/labring/aiproxy/core/model"
+	"github.com/mark3labs/mcp-go/mcp"
 	"gorm.io/gorm"
 )
 
-type GroupPublicMCPResponse struct {
-	model.PublicMCP
-	Endpoints MCPEndpoint                   `json:"endpoints"`
-	Reusing   map[string]model.ReusingParam `json:"reusing"`
-	Params    map[string]string             `json:"params"`
-}
+type GroupPublicMCPResponse model.PublicMCP
 
 func (r *GroupPublicMCPResponse) MarshalJSON() ([]byte, error) {
 	type Alias GroupPublicMCPResponse
 	a := &struct {
 		*Alias
-		CreatedAt int64 `json:"created_at"`
-		UpdateAt  int64 `json:"update_at"`
+		CreatedAt int64 `json:"created_at,omitempty"`
+		UpdateAt  int64 `json:"update_at,omitempty"`
 	}{
 		Alias: (*Alias)(r),
 	}
@@ -37,18 +33,78 @@ func (r *GroupPublicMCPResponse) MarshalJSON() ([]byte, error) {
 	return sonic.Marshal(a)
 }
 
-func NewGroupPublicMCPResponse(
-	host string,
-	mcp model.PublicMCP,
-	groupID string,
-) (GroupPublicMCPResponse, error) {
-	r := GroupPublicMCPResponse{
-		PublicMCP: mcp,
-		Endpoints: NewPublicMCPEndpoint(host, mcp),
-	}
+func NewGroupPublicMCPResponse(mcp model.PublicMCP) GroupPublicMCPResponse {
+	r := GroupPublicMCPResponse(mcp)
+	r.Readme = ""
+	r.ReadmeCN = ""
+	r.ReadmeURL = ""
+	r.ReadmeCNURL = ""
 	r.ProxyConfig = nil
 	r.EmbedConfig = nil
 	r.OpenAPIConfig = nil
+	r.TestConfig = nil
+	return r
+}
+
+func NewGroupPublicMCPResponses(mcps []model.PublicMCP) []GroupPublicMCPResponse {
+	responses := make([]GroupPublicMCPResponse, len(mcps))
+	for i, mcp := range mcps {
+		responses[i] = NewGroupPublicMCPResponse(mcp)
+	}
+	return responses
+}
+
+type GroupPublicMCPDetailResponse struct {
+	model.PublicMCP
+	Endpoints MCPEndpoint                   `json:"endpoints"`
+	Reusing   map[string]model.ReusingParam `json:"reusing"`
+	Params    map[string]string             `json:"params"`
+	Tools     []mcp.Tool                    `json:"tools"`
+}
+
+func (r *GroupPublicMCPDetailResponse) MarshalJSON() ([]byte, error) {
+	type Alias GroupPublicMCPDetailResponse
+	a := &struct {
+		*Alias
+		CreatedAt int64 `json:"created_at,omitempty"`
+		UpdateAt  int64 `json:"update_at,omitempty"`
+	}{
+		Alias: (*Alias)(r),
+	}
+	if !r.CreatedAt.IsZero() {
+		a.CreatedAt = r.CreatedAt.UnixMilli()
+	}
+	if !r.UpdateAt.IsZero() {
+		a.UpdateAt = r.UpdateAt.UnixMilli()
+	}
+	return sonic.Marshal(a)
+}
+
+func checkParamsIsFull(params model.Params, reusing map[string]model.ReusingParam) bool {
+	for _, r := range reusing {
+		if !r.Required {
+			continue
+		}
+		if v, ok := params[r.Name]; !ok || v == "" {
+			return false
+		}
+	}
+	return true
+}
+
+func NewGroupPublicMCPDetailResponse(
+	host string,
+	mcp model.PublicMCP,
+	groupID string,
+) (GroupPublicMCPDetailResponse, error) {
+	r := GroupPublicMCPDetailResponse{
+		PublicMCP: mcp,
+	}
+
+	r.ProxyConfig = nil
+	r.EmbedConfig = nil
+	r.OpenAPIConfig = nil
+	r.TestConfig = nil
 
 	switch mcp.Type {
 	case model.PublicMCPTypeProxySSE, model.PublicMCPTypeProxyStreamable:
@@ -57,6 +113,8 @@ func NewGroupPublicMCPResponse(
 		}
 	case model.PublicMCPTypeEmbed:
 		r.Reusing = mcp.EmbedConfig.Reusing
+	default:
+		return r, nil
 	}
 
 	reusingParams, err := model.GetPublicMCPReusingParam(mcp.ID, groupID)
@@ -67,23 +125,11 @@ func NewGroupPublicMCPResponse(
 	}
 	r.Params = reusingParams.Params
 
-	return r, nil
-}
-
-func NewGroupPublicMCPResponses(
-	host string,
-	mcps []model.PublicMCP,
-	groupID string,
-) ([]GroupPublicMCPResponse, error) {
-	responses := make([]GroupPublicMCPResponse, len(mcps))
-	for i, mcp := range mcps {
-		response, err := NewGroupPublicMCPResponse(host, mcp, groupID)
-		if err != nil {
-			return nil, err
-		}
-		responses[i] = response
+	if checkParamsIsFull(r.Params, r.Reusing) {
+		r.Endpoints = NewPublicMCPEndpoint(host, mcp)
 	}
-	return responses, nil
+
+	return r, nil
 }
 
 // GetGroupPublicMCPs godoc
@@ -102,8 +148,6 @@ func NewGroupPublicMCPResponses(
 //	@Success		200			{object}	middleware.APIResponse{data=[]GroupPublicMCPResponse}
 //	@Router			/api/group/{group}/mcp [get]
 func GetGroupPublicMCPs(c *gin.Context) {
-	groupID := c.Param("group")
-
 	page, perPage := utils.ParsePageParams(c)
 	mcpType := model.PublicMCPType(c.Query("type"))
 	keyword := c.Query("keyword")
@@ -120,14 +164,45 @@ func GetGroupPublicMCPs(c *gin.Context) {
 		return
 	}
 
-	responses, err := NewGroupPublicMCPResponses(c.Request.Host, mcps, groupID)
-	if err != nil {
-		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
-		return
-	}
+	responses := NewGroupPublicMCPResponses(mcps)
 
 	middleware.SuccessResponse(c, gin.H{
 		"mcps":  responses,
 		"total": total,
 	})
+}
+
+// GetGroupPublicMCPByID godoc
+//
+//	@Summary		Get MCP by ID
+//	@Description	Get a specific MCP by its ID
+//	@Tags			mcp
+//	@Tags			group
+//	@Produce		json
+//	@Security		ApiKeyAuth
+//	@Param			group	path		string	true	"Group ID"
+//	@Param			id		path		string	true	"MCP ID"
+//	@Success		200		{object}	middleware.APIResponse{data=GroupPublicMCPDetailResponse}
+//	@Router			/api/group/{group}/mcp/{id} [get]
+func GetGroupPublicMCPByID(c *gin.Context) {
+	groupID := c.Param("group")
+	id := c.Param("id")
+	if id == "" {
+		middleware.ErrorResponse(c, http.StatusBadRequest, "MCP ID is required")
+		return
+	}
+
+	mcp, err := model.GetPublicMCPByID(id)
+	if err != nil {
+		middleware.ErrorResponse(c, http.StatusNotFound, err.Error())
+		return
+	}
+
+	response, err := NewGroupPublicMCPDetailResponse(c.Request.Host, mcp, groupID)
+	if err != nil {
+		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	middleware.SuccessResponse(c, response)
 }

@@ -16,6 +16,7 @@ func init() {
 			"bing-cn-search",
 			"Bing CN Search",
 			model.PublicMCPTypeEmbed,
+			mcpservers.WithNameCN("必应中国搜索"),
 			mcpservers.WithNewServerFunc(NewServer),
 			mcpservers.WithGitHubURL(
 				"https://github.com/yan5236/bing-cn-mcp-server",

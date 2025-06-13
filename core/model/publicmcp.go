@@ -65,13 +65,15 @@ type PublicMCPProxyConfig struct {
 	Reusing map[string]PublicMCPProxyReusingParam `json:"reusing"`
 }
 
+type Params = map[string]string
+
 type PublicMCPReusingParam struct {
-	MCPID     string            `gorm:"primaryKey"                    json:"mcp_id"`
-	GroupID   string            `gorm:"primaryKey"                    json:"group_id"`
-	CreatedAt time.Time         `gorm:"index"                         json:"created_at"`
-	UpdateAt  time.Time         `gorm:"index"                         json:"update_at"`
-	Group     *Group            `gorm:"foreignKey:GroupID"            json:"-"`
-	Params    map[string]string `gorm:"serializer:fastjson;type:text" json:"params"`
+	MCPID     string    `gorm:"primaryKey"                    json:"mcp_id"`
+	GroupID   string    `gorm:"primaryKey"                    json:"group_id"`
+	CreatedAt time.Time `gorm:"index"                         json:"created_at"`
+	UpdateAt  time.Time `gorm:"index"                         json:"update_at"`
+	Group     *Group    `gorm:"foreignKey:GroupID"            json:"-"`
+	Params    Params    `gorm:"serializer:fastjson;type:text" json:"params"`
 }
 
 func (p *PublicMCPReusingParam) BeforeCreate(_ *gorm.DB) (err error) {
@@ -123,27 +125,36 @@ func validateMCPID(id string) error {
 	return nil
 }
 
+type TestConfig struct {
+	Enabled bool   `json:"enabled"`
+	Params  Params `json:"params"`
+}
+
 type PublicMCP struct {
-	ID                     string                  `gorm:"primaryKey"                    json:"id"`
-	Status                 PublicMCPStatus         `gorm:"index;default:1"               json:"status"`
-	CreatedAt              time.Time               `gorm:"index,autoCreateTime"          json:"created_at"`
-	UpdateAt               time.Time               `gorm:"index,autoUpdateTime"          json:"update_at"`
-	PublicMCPReusingParams []PublicMCPReusingParam `gorm:"foreignKey:MCPID"              json:"-"`
-	Name                   string                  `                                     json:"name"`
-	Type                   PublicMCPType           `gorm:"index"                         json:"type"`
-	Description            string                  `                                     json:"description"`
-	DescriptionCN          string                  `                                     json:"description_cn"`
-	GitHubURL              string                  `                                     json:"github_url"`
-	Readme                 string                  `gorm:"type:text"                     json:"readme"`
-	ReadmeCN               string                  `gorm:"type:text"                     json:"readme_cn"`
-	ReadmeURL              string                  `                                     json:"readme_url"`
-	ReadmeCNURL            string                  `                                     json:"readme_cn_url"`
-	Tags                   []string                `gorm:"serializer:fastjson;type:text" json:"tags,omitempty"`
-	LogoURL                string                  `                                     json:"logo_url"`
-	Price                  MCPPrice                `gorm:"embedded"                      json:"price"`
-	ProxyConfig            *PublicMCPProxyConfig   `gorm:"serializer:fastjson;type:text" json:"proxy_config,omitempty"`
-	OpenAPIConfig          *MCPOpenAPIConfig       `gorm:"serializer:fastjson;type:text" json:"openapi_config,omitempty"`
-	EmbedConfig            *MCPEmbeddingConfig     `gorm:"serializer:fastjson;type:text" json:"embed_config,omitempty"`
+	ID                     string                  `gorm:"primaryKey"           json:"id"`
+	CreatedAt              time.Time               `gorm:"index,autoCreateTime" json:"created_at"`
+	UpdateAt               time.Time               `gorm:"index,autoUpdateTime" json:"update_at"`
+	PublicMCPReusingParams []PublicMCPReusingParam `gorm:"foreignKey:MCPID"     json:"-"`
+
+	Name          string          `json:"name"`
+	NameCN        string          `json:"name_cn"`
+	Status        PublicMCPStatus `json:"status"         gorm:"index;default:1"`
+	Type          PublicMCPType   `json:"type"           gorm:"index"`
+	Description   string          `json:"description"`
+	DescriptionCN string          `json:"description_cn"`
+	GitHubURL     string          `json:"github_url"`
+	Readme        string          `json:"readme"         gorm:"type:text"`
+	ReadmeCN      string          `json:"readme_cn"      gorm:"type:text"`
+	ReadmeURL     string          `json:"readme_url"`
+	ReadmeCNURL   string          `json:"readme_cn_url"`
+	Tags          []string        `json:"tags,omitempty" gorm:"serializer:fastjson;type:text"`
+	LogoURL       string          `json:"logo_url"`
+	Price         MCPPrice        `json:"price"          gorm:"embedded"`
+
+	ProxyConfig   *PublicMCPProxyConfig `gorm:"serializer:fastjson;type:text" json:"proxy_config,omitempty"`
+	OpenAPIConfig *MCPOpenAPIConfig     `gorm:"serializer:fastjson;type:text" json:"openapi_config,omitempty"`
+	EmbedConfig   *MCPEmbeddingConfig   `gorm:"serializer:fastjson;type:text" json:"embed_config,omitempty"`
+	TestConfig    *TestConfig           `gorm:"serializer:fastjson;type:text" json:"test_config,omitempty"`
 }
 
 func (p *PublicMCP) BeforeCreate(_ *gorm.DB) error {
@@ -230,20 +241,27 @@ func UpdatePublicMCP(mcp *PublicMCP) (err error) {
 
 	selects := []string{
 		"github_url",
+		"description",
+		"description_cn",
 		"readme",
+		"readme_cn",
 		"readme_url",
+		"readme_cn_url",
 		"tags",
-		"author",
 		"logo_url",
 		"proxy_config",
 		"openapi_config",
 		"embed_config",
+		"test_config",
 	}
 	if mcp.Status != 0 {
 		selects = append(selects, "status")
 	}
 	if mcp.Name != "" {
 		selects = append(selects, "name")
+	}
+	if mcp.NameCN != "" {
+		selects = append(selects, "name_cn")
 	}
 	if mcp.Type != "" {
 		selects = append(selects, "type")
@@ -443,11 +461,11 @@ func DeletePublicMCPReusingParam(mcpID, groupID string) (err error) {
 }
 
 // GetPublicMCPReusingParam retrieves a GroupMCPReusingParam by MCP ID and Group ID
-func GetPublicMCPReusingParam(mcpID, groupID string) (*PublicMCPReusingParam, error) {
+func GetPublicMCPReusingParam(mcpID, groupID string) (PublicMCPReusingParam, error) {
 	if mcpID == "" || groupID == "" {
-		return nil, errors.New("MCP ID or Group ID is empty")
+		return PublicMCPReusingParam{}, errors.New("MCP ID or Group ID is empty")
 	}
 	var param PublicMCPReusingParam
 	err := DB.Where("mcp_id = ? AND group_id = ?", mcpID, groupID).First(&param).Error
-	return &param, HandleNotFound(err, ErrMCPReusingParamNotFound)
+	return param, HandleNotFound(err, ErrMCPReusingParamNotFound)
 }

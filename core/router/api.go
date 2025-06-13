@@ -79,6 +79,7 @@ func SetAPIRouter(router *gin.Engine) {
 			groupMcpRoute := groupRoute.Group("/:group/mcp")
 			{
 				groupMcpRoute.GET("/", mcp.GetGroupPublicMCPs)
+				groupMcpRoute.GET("/:id", mcp.GetGroupPublicMCPByID)
 			}
 		}
 

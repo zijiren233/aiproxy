@@ -167,6 +167,8 @@ definitions:
         type: string
       name:
         type: string
+      name_cn:
+        type: string
       readme:
         type: string
       readme_cn:
@@ -234,7 +236,7 @@ definitions:
       update_at:
         type: string
     type: object
-  controller.GroupPublicMCPResponse:
+  controller.GroupPublicMCPDetailResponse:
     properties:
       created_at:
         type: string
@@ -253,6 +255,8 @@ definitions:
       logo_url:
         type: string
       name:
+        type: string
+      name_cn:
         type: string
       openapi_config:
         $ref: '#/definitions/model.MCPOpenAPIConfig'
@@ -282,6 +286,59 @@ definitions:
         items:
           type: string
         type: array
+      test_config:
+        $ref: '#/definitions/model.TestConfig'
+      tools:
+        items:
+          $ref: '#/definitions/mcp.Tool'
+        type: array
+      type:
+        $ref: '#/definitions/model.PublicMCPType'
+      update_at:
+        type: string
+    type: object
+  controller.GroupPublicMCPResponse:
+    properties:
+      created_at:
+        type: string
+      description:
+        type: string
+      description_cn:
+        type: string
+      embed_config:
+        $ref: '#/definitions/model.MCPEmbeddingConfig'
+      github_url:
+        type: string
+      id:
+        type: string
+      logo_url:
+        type: string
+      name:
+        type: string
+      name_cn:
+        type: string
+      openapi_config:
+        $ref: '#/definitions/model.MCPOpenAPIConfig'
+      price:
+        $ref: '#/definitions/model.MCPPrice'
+      proxy_config:
+        $ref: '#/definitions/model.PublicMCPProxyConfig'
+      readme:
+        type: string
+      readme_cn:
+        type: string
+      readme_cn_url:
+        type: string
+      readme_url:
+        type: string
+      status:
+        $ref: '#/definitions/model.PublicMCPStatus'
+      tags:
+        items:
+          type: string
+        type: array
+      test_config:
+        $ref: '#/definitions/model.TestConfig'
       type:
         $ref: '#/definitions/model.PublicMCPType'
       update_at:
@@ -394,6 +451,8 @@ definitions:
         type: string
       name:
         type: string
+      name_cn:
+        type: string
       openapi_config:
         $ref: '#/definitions/model.MCPOpenAPIConfig'
       price:
@@ -414,6 +473,8 @@ definitions:
         items:
           type: string
         type: array
+      test_config:
+        $ref: '#/definitions/model.TestConfig'
       type:
         $ref: '#/definitions/model.PublicMCPType'
       update_at:
@@ -636,6 +697,54 @@ definitions:
         type: integer
       web_search_count:
         type: integer
+    type: object
+  mcp.Tool:
+    properties:
+      annotations:
+        allOf:
+        - $ref: '#/definitions/mcp.ToolAnnotation'
+        description: Optional properties describing tool behavior
+      description:
+        description: A human-readable description of the tool.
+        type: string
+      inputSchema:
+        allOf:
+        - $ref: '#/definitions/mcp.ToolInputSchema'
+        description: A JSON Schema object defining the expected parameters for the
+          tool.
+      name:
+        description: The name of the tool.
+        type: string
+    type: object
+  mcp.ToolAnnotation:
+    properties:
+      destructiveHint:
+        description: If true, the tool may perform destructive updates
+        type: boolean
+      idempotentHint:
+        description: If true, repeated calls with same args have no additional effect
+        type: boolean
+      openWorldHint:
+        description: If true, tool interacts with external entities
+        type: boolean
+      readOnlyHint:
+        description: If true, the tool does not modify its environment
+        type: boolean
+      title:
+        description: Human-readable title for the tool
+        type: string
+    type: object
+  mcp.ToolInputSchema:
+    properties:
+      properties:
+        additionalProperties: {}
+        type: object
+      required:
+        items:
+          type: string
+        type: array
+      type:
+        type: string
     type: object
   middleware.APIResponse:
     properties:
@@ -1562,6 +1671,10 @@ definitions:
       value:
         type: string
     type: object
+  model.Params:
+    additionalProperties:
+      type: string
+    type: object
   model.ParsePdfResponse:
     properties:
       markdown:
@@ -1642,6 +1755,8 @@ definitions:
         type: string
       name:
         type: string
+      name_cn:
+        type: string
       openapi_config:
         $ref: '#/definitions/model.MCPOpenAPIConfig'
       price:
@@ -1662,6 +1777,8 @@ definitions:
         items:
           type: string
         type: array
+      test_config:
+        $ref: '#/definitions/model.TestConfig'
       type:
         $ref: '#/definitions/model.PublicMCPType'
       update_at:
@@ -1704,9 +1821,7 @@ definitions:
       mcp_id:
         type: string
       params:
-        additionalProperties:
-          type: string
-        type: object
+        $ref: '#/definitions/model.Params'
       update_at:
         type: string
     type: object
@@ -1862,6 +1977,13 @@ definitions:
         type: number
       web_search_count:
         type: integer
+    type: object
+  model.TestConfig:
+    properties:
+      enabled:
+        type: boolean
+      params:
+        $ref: '#/definitions/model.Params'
     type: object
   model.TextResponse:
     properties:
@@ -2989,6 +3111,38 @@ paths:
       security:
       - ApiKeyAuth: []
       summary: Get MCPs by group
+      tags:
+      - mcp
+      - group
+  /api/group/{group}/mcp/{id}:
+    get:
+      description: Get a specific MCP by its ID
+      parameters:
+      - description: Group ID
+        in: path
+        name: group
+        required: true
+        type: string
+      - description: MCP ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/middleware.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/controller.GroupPublicMCPDetailResponse'
+              type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Get MCP by ID
       tags:
       - mcp
       - group

@@ -643,6 +643,13 @@ func CacheSetPublicMCPReusingParam(param *PublicMCPReusingParamCache) error {
 }
 
 func CacheGetPublicMCPReusingParam(mcpID, groupID string) (*PublicMCPReusingParamCache, error) {
+	if groupID == "" {
+		return &PublicMCPReusingParamCache{
+			MCPID:   mcpID,
+			GroupID: groupID,
+			Params:  make(map[string]string),
+		}, nil
+	}
 	if !common.RedisEnabled {
 		param, err := GetPublicMCPReusingParam(mcpID, groupID)
 		if err != nil {

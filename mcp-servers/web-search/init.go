@@ -20,6 +20,7 @@ func init() {
 			"web-search",
 			"Web Search",
 			model.PublicMCPTypeEmbed,
+			mcpservers.WithNameCN("网络搜索"),
 			mcpservers.WithNewServerFunc(NewServer),
 			mcpservers.WithConfigTemplates(configTemplates),
 			mcpservers.WithTags([]string{"search", "web", "google", "bing", "arxiv", "searchxng"}),

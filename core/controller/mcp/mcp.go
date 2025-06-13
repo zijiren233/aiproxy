@@ -82,30 +82,35 @@ func handleEmbedSSEMCP(
 	config *model.MCPEmbeddingConfig,
 	endpoint EndpointProvider,
 ) {
-	var reusingConfig map[string]string
-	if len(config.Reusing) != 0 {
-		group := middleware.GetGroup(c)
-		param, err := model.CacheGetPublicMCPReusingParam(mcpID, group.ID)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, mcpservers.CreateMCPErrorResponse(
-				mcp.NewRequestId(nil),
-				mcp.INVALID_REQUEST,
-				err.Error(),
-			))
-			return
-		}
-		reusingConfig = param.Params
-	}
-	server, err := mcpservers.GetMCPServer(mcpID, config.Init, reusingConfig)
+	reusingConfig, err := prepareEmbedReusingConfig(c, mcpID, config.Reusing)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, mcpservers.CreateMCPErrorResponse(
-			mcp.NewRequestId(nil),
-			mcp.INVALID_REQUEST,
-			err.Error(),
-		))
+		http.Error(c.Writer, err.Error(), http.StatusBadRequest)
 		return
 	}
+
+	server, err := mcpservers.GetMCPServer(mcpID, config.Init, reusingConfig)
+	if err != nil {
+		http.Error(c.Writer, err.Error(), http.StatusBadRequest)
+		return
+	}
+
 	handleSSEMCPServer(c, server, string(model.PublicMCPTypeEmbed), endpoint)
+}
+
+// prepareEmbedReusingConfig 准备嵌入MCP的reusing配置
+func prepareEmbedReusingConfig(
+	c *gin.Context,
+	mcpID string,
+	reusingParams map[string]model.ReusingParam,
+) (map[string]string, error) {
+	if len(reusingParams) == 0 {
+		return nil, nil
+	}
+
+	group := middleware.GetGroup(c)
+	processor := NewReusingParamProcessor(mcpID, group.ID)
+
+	return processor.ProcessEmbedReusingParams(reusingParams)
 }
 
 func sendMCPSSEMessage(c *gin.Context, mcpType, sessionID string) {
