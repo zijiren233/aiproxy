@@ -243,7 +243,7 @@ func GetProxyConfig(
 					Description: param.Description,
 					Required:    true,
 				},
-				Type: model.ProxyParamType(param.Type),
+				Type: param.Type,
 			}
 		case mcpservers.ConfigRequiredTypeInitOrReusingOnly:
 			// 可以在初始化时提供，也可以通过 reusing 提供
@@ -256,7 +256,7 @@ func GetProxyConfig(
 						Description: param.Description,
 						Required:    true,
 					},
-					Type: model.ProxyParamType(param.Type),
+					Type: param.Type,
 				}
 			}
 		default:
