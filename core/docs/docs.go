@@ -5531,43 +5531,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/test-embedmcp/message": {
-            "post": {
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ],
-                "description": "Send a message to the test embed MCP server",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "embedmcp"
-                ],
-                "summary": "Test Embed MCP Message",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Session ID",
-                        "name": "sessionId",
-                        "in": "query",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK"
-                    },
-                    "400": {
-                        "description": "Bad Request"
-                    }
-                }
-            }
-        },
         "/api/test-embedmcp/{id}": {
             "get": {
                 "security": [
@@ -6818,17 +6781,6 @@ const docTemplate = `{
                 "responses": {}
             }
         },
-        "/mcp/group/message": {
-            "post": {
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ],
-                "summary": "MCP SSE Proxy",
-                "responses": {}
-            }
-        },
         "/mcp/group/{id}": {
             "get": {
                 "security": [
@@ -6866,17 +6818,6 @@ const docTemplate = `{
                     }
                 ],
                 "summary": "Group MCP SSE Server",
-                "responses": {}
-            }
-        },
-        "/mcp/public/message": {
-            "post": {
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ],
-                "summary": "Public MCP SSE Server",
                 "responses": {}
             }
         },
@@ -6922,12 +6863,7 @@ const docTemplate = `{
         },
         "/message": {
             "post": {
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ],
-                "summary": "Public MCP SSE Server",
+                "summary": "MCP SSE Message",
                 "responses": {}
             }
         },
@@ -8411,6 +8347,9 @@ const docTemplate = `{
                 "github_url": {
                     "type": "string"
                 },
+                "hosted": {
+                    "type": "boolean"
+                },
                 "id": {
                     "type": "string"
                 },
@@ -8499,6 +8438,9 @@ const docTemplate = `{
                 },
                 "github_url": {
                     "type": "string"
+                },
+                "hosted": {
+                    "type": "boolean"
                 },
                 "id": {
                     "type": "string"

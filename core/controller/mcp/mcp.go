@@ -3,6 +3,7 @@ package controller
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -113,9 +114,9 @@ func prepareEmbedReusingConfig(
 	return processor.ProcessEmbedReusingParams(reusingParams)
 }
 
-func sendMCPSSEMessage(c *gin.Context, mcpType, sessionID string) {
-	backend, ok := getStore().Get(sessionID)
-	if !ok || backend != mcpType {
+func sendMCPSSEMessage(c *gin.Context, sessionID string) {
+	_, ok := getStore().Get(sessionID)
+	if !ok {
 		http.Error(c.Writer, "invalid session", http.StatusBadRequest)
 		return
 	}
@@ -159,19 +160,6 @@ func handleStreamableMCPServer(c *gin.Context, s mcpservers.Server) {
 		return
 	}
 	c.JSON(http.StatusOK, respMessage)
-}
-
-func handleGroupSSEMessage(c *gin.Context, mcpType model.GroupMCPType, sessionID string) {
-	switch mcpType {
-	case model.GroupMCPTypeProxySSE:
-		sendMCPSSEMessage(c, string(mcpType), sessionID)
-	case model.GroupMCPTypeProxyStreamable:
-		sendMCPSSEMessage(c, string(mcpType), sessionID)
-	case model.GroupMCPTypeOpenAPI:
-		sendMCPSSEMessage(c, string(mcpType), sessionID)
-	default:
-		http.Error(c.Writer, "unknown mcp type", http.StatusBadRequest)
-	}
 }
 
 func handleGroupStreamable(c *gin.Context, groupMcp *model.GroupMCPCache) {
@@ -256,4 +244,35 @@ func parseOpenAPIFromContent(config *model.MCPOpenAPIConfig, parser *convert.Par
 		return parser.ParseV2([]byte(config.OpenAPIContent))
 	}
 	return parser.Parse([]byte(config.OpenAPIContent))
+}
+
+// sseEndpointProvider implements the EndpointProvider interface for MCP
+type sseEndpointProvider struct{}
+
+var sseEndpoint = &sseEndpointProvider{}
+
+func (m *sseEndpointProvider) NewEndpoint(session string) (newEndpoint string) {
+	endpoint := fmt.Sprintf("/message?sessionId=%s", session)
+	return endpoint
+}
+
+func (m *sseEndpointProvider) LoadEndpoint(endpoint string) (session string) {
+	parsedURL, err := url.Parse(endpoint)
+	if err != nil {
+		return ""
+	}
+	return parsedURL.Query().Get("sessionId")
+}
+
+// MCPMessage godoc
+//
+//	@Summary	MCP SSE Message
+//	@Router		/message [post]
+func MCPMessage(c *gin.Context) {
+	sessionID, _ := c.GetQuery("sessionId")
+	if sessionID == "" {
+		http.Error(c.Writer, "missing sessionId", http.StatusBadRequest)
+		return
+	}
+	sendMCPSSEMessage(c, sessionID)
 }

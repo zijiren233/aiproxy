@@ -14,32 +14,6 @@ import (
 	"github.com/mark3labs/mcp-go/mcp"
 )
 
-// publicMcpEndpointProvider implements the EndpointProvider interface for MCP
-type publicMcpEndpointProvider struct {
-	key string
-	t   model.PublicMCPType
-}
-
-func newPublicMcpEndpoint(key string, t model.PublicMCPType) EndpointProvider {
-	return &publicMcpEndpointProvider{
-		key: key,
-		t:   t,
-	}
-}
-
-func (m *publicMcpEndpointProvider) NewEndpoint(session string) (newEndpoint string) {
-	endpoint := fmt.Sprintf("/mcp/public/message?sessionId=%s&key=%s&type=%s", session, m.key, m.t)
-	return endpoint
-}
-
-func (m *publicMcpEndpointProvider) LoadEndpoint(endpoint string) (session string) {
-	parsedURL, err := url.Parse(endpoint)
-	if err != nil {
-		return ""
-	}
-	return parsedURL.Query().Get("sessionId")
-}
-
 // PublicMCPSSEServer godoc
 //
 //	@Summary	Public MCP SSE Server
@@ -62,10 +36,7 @@ func PublicMCPSSEServer(c *gin.Context) {
 		return
 	}
 
-	token := middleware.GetToken(c)
-	endpoint := newPublicMcpEndpoint(token.Key, publicMcp.Type)
-
-	handlePublicSSEMCP(c, publicMcp, endpoint)
+	handlePublicSSEMCP(c, publicMcp, sseEndpoint)
 }
 
 func handlePublicSSEMCP(
@@ -257,42 +228,6 @@ func processProxyReusingParams(
 	}
 
 	return nil
-}
-
-// PublicMCPMessage godoc
-//
-//	@Summary	Public MCP SSE Server
-//	@Security	ApiKeyAuth
-//	@Router		/mcp/public/message [post]
-func PublicMCPMessage(c *gin.Context) {
-	mcpTypeStr, _ := c.GetQuery("type")
-	if mcpTypeStr == "" {
-		http.Error(c.Writer, "missing mcp type", http.StatusBadRequest)
-		return
-	}
-	mcpType := model.PublicMCPType(mcpTypeStr)
-	sessionID, _ := c.GetQuery("sessionId")
-	if sessionID == "" {
-		http.Error(c.Writer, "missing sessionId", http.StatusBadRequest)
-		return
-	}
-
-	handlePublicSSEMessage(c, mcpType, sessionID)
-}
-
-func handlePublicSSEMessage(c *gin.Context, mcpType model.PublicMCPType, sessionID string) {
-	switch mcpType {
-	case model.PublicMCPTypeProxySSE:
-		sendMCPSSEMessage(c, string(mcpType), sessionID)
-	case model.PublicMCPTypeProxyStreamable:
-		sendMCPSSEMessage(c, string(mcpType), sessionID)
-	case model.PublicMCPTypeOpenAPI:
-		sendMCPSSEMessage(c, string(mcpType), sessionID)
-	case model.PublicMCPTypeEmbed:
-		sendMCPSSEMessage(c, string(mcpType), sessionID)
-	default:
-		http.Error(c.Writer, "unknown mcp type", http.StatusBadRequest)
-	}
 }
 
 // PublicMCPStreamable godoc

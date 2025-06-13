@@ -1,9 +1,7 @@
 package controller
 
 import (
-	"fmt"
 	"net/http"
-	"net/url"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -14,32 +12,6 @@ import (
 	mcpservers "github.com/labring/aiproxy/mcp-servers"
 	"github.com/mark3labs/mcp-go/mcp"
 )
-
-// hostMcpEndpointProvider implements the EndpointProvider interface for MCP
-type hostMcpEndpointProvider struct {
-	key string
-	t   string
-}
-
-func newHostMcpEndpoint(key, t string) EndpointProvider {
-	return &hostMcpEndpointProvider{
-		key: key,
-		t:   t,
-	}
-}
-
-func (m *hostMcpEndpointProvider) NewEndpoint(session string) (newEndpoint string) {
-	endpoint := fmt.Sprintf("/message?sessionId=%s&key=%s&type=%s", session, m.key, m.t)
-	return endpoint
-}
-
-func (m *hostMcpEndpointProvider) LoadEndpoint(endpoint string) (session string) {
-	parsedURL, err := url.Parse(endpoint)
-	if err != nil {
-		return ""
-	}
-	return parsedURL.Query().Get("sessionId")
-}
 
 func routeHostMCP(
 	c *gin.Context,
@@ -82,10 +54,7 @@ func HostMCPSSEServer(c *gin.Context) {
 			return
 		}
 
-		token := middleware.GetToken(c)
-		endpoint := newHostMcpEndpoint(token.Key, string(publicMcp.Type))
-
-		handlePublicSSEMCP(c, publicMcp, endpoint)
+		handlePublicSSEMCP(c, publicMcp, sseEndpoint)
 	}, func(c *gin.Context, mcpID string) {
 		group := middleware.GetGroup(c)
 
@@ -99,48 +68,7 @@ func HostMCPSSEServer(c *gin.Context) {
 			return
 		}
 
-		token := middleware.GetToken(c)
-		endpoint := newHostMcpEndpoint(token.Key, string(groupMcp.Type))
-
-		handleGroupSSEMCPServer(c, groupMcp, endpoint)
-	})
-}
-
-// HostMCPMessage godoc
-//
-//	@Summary	Public MCP SSE Server
-//	@Security	ApiKeyAuth
-//	@Router		/message [post]
-func HostMCPMessage(c *gin.Context) {
-	routeHostMCP(c, func(c *gin.Context, _ string) {
-		mcpTypeStr, _ := c.GetQuery("type")
-		if mcpTypeStr == "" {
-			http.Error(c.Writer, "missing mcp type", http.StatusBadRequest)
-			return
-		}
-		mcpType := model.PublicMCPType(mcpTypeStr)
-		sessionID, _ := c.GetQuery("sessionId")
-		if sessionID == "" {
-			http.Error(c.Writer, "missing sessionId", http.StatusBadRequest)
-			return
-		}
-
-		handlePublicSSEMessage(c, mcpType, sessionID)
-	}, func(c *gin.Context, _ string) {
-		mcpTypeStr, _ := c.GetQuery("type")
-		if mcpTypeStr == "" {
-			http.Error(c.Writer, "missing mcp type", http.StatusBadRequest)
-			return
-		}
-		mcpType := model.GroupMCPType(mcpTypeStr)
-
-		sessionID, _ := c.GetQuery("sessionId")
-		if sessionID == "" {
-			http.Error(c.Writer, "missing sessionId", http.StatusBadRequest)
-			return
-		}
-
-		handleGroupSSEMessage(c, mcpType, sessionID)
+		handleGroupSSEMCPServer(c, groupMcp, sseEndpoint)
 	})
 }
 
