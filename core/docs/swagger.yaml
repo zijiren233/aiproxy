@@ -250,6 +250,8 @@ definitions:
         $ref: '#/definitions/controller.MCPEndpoint'
       github_url:
         type: string
+      hosted:
+        type: boolean
       id:
         type: string
       logo_url:
@@ -309,6 +311,8 @@ definitions:
         $ref: '#/definitions/model.MCPEmbeddingConfig'
       github_url:
         type: string
+      hosted:
+        type: boolean
       id:
         type: string
       logo_url:
@@ -5591,29 +5595,6 @@ paths:
       summary: Test Embed MCP SSE Server
       tags:
       - embedmcp
-  /api/test-embedmcp/message:
-    post:
-      consumes:
-      - application/json
-      description: Send a message to the test embed MCP server
-      parameters:
-      - description: Session ID
-        in: query
-        name: sessionId
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-        "400":
-          description: Bad Request
-      security:
-      - ApiKeyAuth: []
-      summary: Test Embed MCP Message
-      tags:
-      - embedmcp
   /api/token/{group}:
     post:
       consumes:
@@ -6284,12 +6265,6 @@ paths:
       security:
       - ApiKeyAuth: []
       summary: Group MCP SSE Server
-  /mcp/group/message:
-    post:
-      responses: {}
-      security:
-      - ApiKeyAuth: []
-      summary: MCP SSE Proxy
   /mcp/public/{id}:
     delete:
       responses: {}
@@ -6312,18 +6287,10 @@ paths:
       security:
       - ApiKeyAuth: []
       summary: Public MCP SSE Server
-  /mcp/public/message:
-    post:
-      responses: {}
-      security:
-      - ApiKeyAuth: []
-      summary: Public MCP SSE Server
   /message:
     post:
       responses: {}
-      security:
-      - ApiKeyAuth: []
-      summary: Public MCP SSE Server
+      summary: MCP SSE Message
   /sse:
     get:
       responses: {}

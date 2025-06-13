@@ -1,7 +1,6 @@
 package controller
 
 import (
-	"fmt"
 	"net/http"
 	"net/url"
 
@@ -13,31 +12,6 @@ import (
 	"github.com/mark3labs/mcp-go/client/transport"
 	"github.com/mark3labs/mcp-go/mcp"
 )
-
-type groupMcpEndpointProvider struct {
-	key string
-	t   model.GroupMCPType
-}
-
-func newGroupMcpEndpoint(key string, t model.GroupMCPType) EndpointProvider {
-	return &groupMcpEndpointProvider{
-		key: key,
-		t:   t,
-	}
-}
-
-func (m *groupMcpEndpointProvider) NewEndpoint(session string) (newEndpoint string) {
-	endpoint := fmt.Sprintf("/mcp/group/message?sessionId=%s&key=%s&type=%s", session, m.key, m.t)
-	return endpoint
-}
-
-func (m *groupMcpEndpointProvider) LoadEndpoint(endpoint string) (session string) {
-	parsedURL, err := url.Parse(endpoint)
-	if err != nil {
-		return ""
-	}
-	return parsedURL.Query().Get("sessionId")
-}
 
 // GroupMCPSSEServer godoc
 //
@@ -63,10 +37,7 @@ func GroupMCPSSEServer(c *gin.Context) {
 		return
 	}
 
-	token := middleware.GetToken(c)
-	endpoint := newGroupMcpEndpoint(token.Key, groupMcp.Type)
-
-	handleGroupSSEMCPServer(c, groupMcp, endpoint)
+	handleGroupSSEMCPServer(c, groupMcp, sseEndpoint)
 }
 
 func handleGroupSSEMCPServer(
@@ -126,28 +97,6 @@ func handleGroupSSEMCPServer(
 	default:
 		http.Error(c.Writer, "unsupported mcp type", http.StatusBadRequest)
 	}
-}
-
-// GroupMCPMessage godoc
-//
-//	@Summary	MCP SSE Proxy
-//	@Security	ApiKeyAuth
-//	@Router		/mcp/group/message [post]
-func GroupMCPMessage(c *gin.Context) {
-	mcpTypeStr, _ := c.GetQuery("type")
-	if mcpTypeStr == "" {
-		http.Error(c.Writer, "missing mcp type", http.StatusBadRequest)
-		return
-	}
-	mcpType := model.GroupMCPType(mcpTypeStr)
-
-	sessionID, _ := c.GetQuery("sessionId")
-	if sessionID == "" {
-		http.Error(c.Writer, "missing sessionId", http.StatusBadRequest)
-		return
-	}
-
-	handleGroupSSEMessage(c, mcpType, sessionID)
 }
 
 // GroupMCPStreamable godoc

@@ -222,7 +222,6 @@ func SetAPIRouter(router *gin.Engine) {
 		testEmbedMcpRoute := apiRouter.Group("/test-embedmcp")
 		{
 			testEmbedMcpRoute.GET("/:id/sse", mcp.TestEmbedMCPSseServer)
-			testEmbedMcpRoute.POST("/message", mcp.TestEmbedMCPMessage)
 			testEmbedMcpRoute.GET("/:id", mcp.TestEmbedMCPStreamable)
 			testEmbedMcpRoute.POST("/:id", mcp.TestEmbedMCPStreamable)
 			testEmbedMcpRoute.DELETE("/:id", mcp.TestEmbedMCPStreamable)

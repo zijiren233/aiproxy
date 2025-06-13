@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"maps"
 	"net/http"
-	"net/url"
 	"slices"
 	"strings"
 
@@ -357,29 +356,6 @@ func SaveEmbedMCP(c *gin.Context) {
 	middleware.SuccessResponse(c, nil)
 }
 
-type testEmbedMcpEndpointProvider struct {
-	key string
-}
-
-func newTestEmbedMcpEndpoint(key string) EndpointProvider {
-	return &testEmbedMcpEndpointProvider{
-		key: key,
-	}
-}
-
-func (m *testEmbedMcpEndpointProvider) NewEndpoint(session string) (newEndpoint string) {
-	endpoint := fmt.Sprintf("/api/test-embedmcp/message?sessionId=%s&key=%s", session, m.key)
-	return endpoint
-}
-
-func (m *testEmbedMcpEndpointProvider) LoadEndpoint(endpoint string) (session string) {
-	parsedURL, err := url.Parse(endpoint)
-	if err != nil {
-		return ""
-	}
-	return parsedURL.Query().Get("sessionId")
-}
-
 // query like:
 // /api/test-embedmcp/aiproxy-openapi/sse?key=adminkey&config[key1]=value1&config[key2]=value2&reusing[key3]=value3
 func getConfigFromQuery(c *gin.Context) (map[string]string, map[string]string) {
@@ -447,13 +423,11 @@ const (
 )
 
 func handleTestEmbedMCPServer(c *gin.Context, s mcpservers.Server) {
-	token := middleware.GetToken(c)
-
 	// Store the session
 	store := getStore()
 	newSession := store.New()
 
-	newEndpoint := newTestEmbedMcpEndpoint(token.Key).NewEndpoint(newSession)
+	newEndpoint := sseEndpoint.NewEndpoint(newSession)
 	server := mcpproxy.NewSSEServer(
 		s,
 		mcpproxy.WithMessageEndpoint(newEndpoint),
@@ -472,28 +446,6 @@ func handleTestEmbedMCPServer(c *gin.Context, s mcpservers.Server) {
 
 	// Handle SSE connection
 	server.ServeHTTP(c.Writer, c.Request)
-}
-
-// TestEmbedMCPMessage godoc
-//
-//	@Summary		Test Embed MCP Message
-//	@Description	Send a message to the test embed MCP server
-//	@Tags			embedmcp
-//	@Security		ApiKeyAuth
-//	@Param			sessionId	query	string	true	"Session ID"
-//	@Accept			json
-//	@Produce		json
-//	@Success		200	{object}	nil
-//	@Failure		400	{object}	nil
-//	@Router			/api/test-embedmcp/message [post]
-func TestEmbedMCPMessage(c *gin.Context) {
-	sessionID, _ := c.GetQuery("sessionId")
-	if sessionID == "" {
-		http.Error(c.Writer, "missing sessionId", http.StatusBadRequest)
-		return
-	}
-
-	sendMCPSSEMessage(c, testEmbedMcpType, sessionID)
 }
 
 // TestEmbedMCPStreamable godoc
