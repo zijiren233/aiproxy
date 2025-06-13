@@ -3,7 +3,6 @@ package controller
 import (
 	"context"
 	"errors"
-	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -252,7 +251,7 @@ type sseEndpointProvider struct{}
 var sseEndpoint = &sseEndpointProvider{}
 
 func (m *sseEndpointProvider) NewEndpoint(session string) (newEndpoint string) {
-	endpoint := fmt.Sprintf("/message?sessionId=%s", session)
+	endpoint := "/message?sessionId=" + session
 	return endpoint
 }
 
