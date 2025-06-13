@@ -217,6 +217,8 @@ definitions:
     properties:
       created_at:
         type: string
+      description:
+        type: string
       endpoints:
         $ref: '#/definitions/controller.MCPEndpoint'
       group_id:
@@ -1277,6 +1279,8 @@ definitions:
   model.GroupMCP:
     properties:
       created_at:
+        type: string
+      description:
         type: string
       group_id:
         type: string
@@ -3090,7 +3094,11 @@ paths:
         in: query
         name: per_page
         type: integer
-      - description: Type
+      - description: MCP ID
+        in: query
+        name: id
+        type: string
+      - description: hosted or local
         in: query
         name: type
         type: string
@@ -4155,7 +4163,11 @@ paths:
         in: query
         name: per_page
         type: integer
-      - description: MCP type
+      - description: MCP id
+        in: query
+        name: id
+        type: string
+      - description: MCP type, mcp_proxy_sse, mcp_proxy_streamable, mcp_openapi
         in: query
         name: type
         type: string
@@ -4386,9 +4398,13 @@ paths:
         in: query
         name: per_page
         type: integer
-      - description: MCP type
+      - description: hosted or local
         in: query
         name: type
+        type: string
+      - description: MCP id
+        in: query
+        name: id
         type: string
       - description: Search keyword
         in: query

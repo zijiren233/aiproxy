@@ -2,8 +2,10 @@ package model
 
 import (
 	"errors"
+	"fmt"
 	"net/url"
 	"regexp"
+	"strings"
 	"time"
 
 	"github.com/bytedance/sonic"
@@ -320,33 +322,87 @@ func GetPublicMCPByID(id string) (PublicMCP, error) {
 // GetPublicMCPs retrieves MCPs with pagination and filtering
 func GetPublicMCPs(
 	page, perPage int,
-	mcpType PublicMCPType,
+	id string,
+	mcpType []PublicMCPType,
 	keyword string,
 	status PublicMCPStatus,
 ) (mcps []PublicMCP, total int64, err error) {
 	tx := DB.Model(&PublicMCP{})
 
-	if mcpType != "" {
-		tx = tx.Where("type = ?", mcpType)
-	}
-
-	if keyword != "" {
-		keyword = "%" + keyword + "%"
-		if common.UsingPostgreSQL {
-			tx = tx.Where(
-				"name ILIKE ? OR author ILIKE ? OR tags ILIKE ? OR id ILIKE ?",
-				keyword,
-				keyword,
-				keyword,
-				keyword,
-			)
-		} else {
-			tx = tx.Where("name LIKE ? OR author LIKE ? OR tags LIKE ? OR id LIKE ?", keyword, keyword, keyword, keyword)
-		}
+	if id != "" {
+		tx = tx.Where("id = ?", id)
 	}
 
 	if status != 0 {
 		tx = tx.Where("status = ?", status)
+	}
+
+	if len(mcpType) > 0 {
+		tx = tx.Where("type IN (?)", mcpType)
+	}
+
+	if keyword != "" {
+		var conditions []string
+		var values []any
+
+		if id == "" {
+			if common.UsingPostgreSQL {
+				conditions = append(conditions, "id ILIKE ?")
+				values = append(values, "%"+keyword+"%")
+			} else {
+				conditions = append(conditions, "id LIKE ?")
+				values = append(values, "%"+keyword+"%")
+			}
+		}
+
+		if common.UsingPostgreSQL {
+			conditions = append(conditions, "name ILIKE ?")
+			values = append(values, "%"+keyword+"%")
+		} else {
+			conditions = append(conditions, "name LIKE ?")
+			values = append(values, "%"+keyword+"%")
+		}
+		if common.UsingPostgreSQL {
+			conditions = append(conditions, "name_cn ILIKE ?")
+			values = append(values, "%"+keyword+"%")
+		} else {
+			conditions = append(conditions, "name_cn LIKE ?")
+			values = append(values, "%"+keyword+"%")
+		}
+
+		if common.UsingPostgreSQL {
+			conditions = append(conditions, "description ILIKE ?")
+			values = append(values, "%"+keyword+"%")
+		} else {
+			conditions = append(conditions, "description LIKE ?")
+			values = append(values, "%"+keyword+"%")
+		}
+		if common.UsingPostgreSQL {
+			conditions = append(conditions, "description_cn ILIKE ?")
+			values = append(values, "%"+keyword+"%")
+		} else {
+			conditions = append(conditions, "description_cn LIKE ?")
+			values = append(values, "%"+keyword+"%")
+		}
+
+		if common.UsingPostgreSQL {
+			conditions = append(conditions, "readme ILIKE ?")
+			values = append(values, "%"+keyword+"%")
+		} else {
+			conditions = append(conditions, "readme LIKE ?")
+			values = append(values, "%"+keyword+"%")
+		}
+		if common.UsingPostgreSQL {
+			conditions = append(conditions, "readme_cn ILIKE ?")
+			values = append(values, "%"+keyword+"%")
+		} else {
+			conditions = append(conditions, "readme_cn LIKE ?")
+			values = append(values, "%"+keyword+"%")
+		}
+
+		if len(conditions) > 0 {
+			tx = tx.Where(fmt.Sprintf("(%s)", strings.Join(conditions, " OR ")), values...)
+		}
 	}
 
 	err = tx.Count(&total).Error

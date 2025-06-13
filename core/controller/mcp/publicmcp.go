@@ -79,6 +79,19 @@ func NewPublicMCPResponses(host string, mcps []model.PublicMCP) []PublicMCPRespo
 	return responses
 }
 
+func getHostedMCPTypes() []model.PublicMCPType {
+	return []model.PublicMCPType{
+		model.PublicMCPTypeProxySSE,
+		model.PublicMCPTypeProxyStreamable,
+		model.PublicMCPTypeEmbed,
+		model.PublicMCPTypeOpenAPI,
+	}
+}
+
+func getLocalMCPTypes() []model.PublicMCPType {
+	return []model.PublicMCPType{model.PublicMCPTypeDocs}
+}
+
 // GetPublicMCPs godoc
 //
 //	@Summary		Get MCPs
@@ -88,21 +101,32 @@ func NewPublicMCPResponses(host string, mcps []model.PublicMCP) []PublicMCPRespo
 //	@Security		ApiKeyAuth
 //	@Param			page		query		int		false	"Page number"
 //	@Param			per_page	query		int		false	"Items per page"
-//	@Param			type		query		string	false	"MCP type"
+//	@Param			type		query		string	false	"hosted or local"
+//	@Param			id			query		string	false	"MCP id"
 //	@Param			keyword		query		string	false	"Search keyword"
 //	@Param			status		query		int		false	"MCP status"
 //	@Success		200			{object}	middleware.APIResponse{data=[]PublicMCPResponse}
 //	@Router			/api/mcp/public/ [get]
 func GetPublicMCPs(c *gin.Context) {
 	page, perPage := utils.ParsePageParams(c)
-	mcpType := model.PublicMCPType(c.Query("type"))
+	mcpType := c.Query("type")
+	id := c.Query("id")
 	keyword := c.Query("keyword")
 	status, _ := strconv.Atoi(c.Query("status"))
+
+	var mcpTypes []model.PublicMCPType
+	switch mcpType {
+	case "hosted":
+		mcpTypes = getHostedMCPTypes()
+	case "local":
+		mcpTypes = getLocalMCPTypes()
+	}
 
 	mcps, total, err := model.GetPublicMCPs(
 		page,
 		perPage,
-		mcpType,
+		id,
+		mcpTypes,
 		keyword,
 		model.PublicMCPStatus(status),
 	)

@@ -1583,7 +1583,13 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "Type",
+                        "description": "MCP ID",
+                        "name": "id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "hosted or local",
                         "name": "type",
                         "in": "query"
                     },
@@ -3364,7 +3370,13 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "MCP type",
+                        "description": "MCP id",
+                        "name": "id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "MCP type, mcp_proxy_sse, mcp_proxy_streamable, mcp_openapi",
                         "name": "type",
                         "in": "query"
                     },
@@ -3700,8 +3712,14 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "MCP type",
+                        "description": "hosted or local",
                         "name": "type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "MCP id",
+                        "name": "id",
                         "in": "query"
                     },
                     {
@@ -8297,6 +8315,9 @@ const docTemplate = `{
                 "created_at": {
                     "type": "string"
                 },
+                "description": {
+                    "type": "string"
+                },
                 "endpoints": {
                     "$ref": "#/definitions/controller.MCPEndpoint"
                 },
@@ -9848,6 +9869,9 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "created_at": {
+                    "type": "string"
+                },
+                "description": {
                     "type": "string"
                 },
                 "group_id": {

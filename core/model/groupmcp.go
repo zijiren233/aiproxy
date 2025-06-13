@@ -2,6 +2,8 @@ package model
 
 import (
 	"errors"
+	"fmt"
+	"strings"
 	"time"
 
 	"github.com/labring/aiproxy/core/common"
@@ -43,6 +45,7 @@ type GroupMCP struct {
 	UpdateAt      time.Time            `gorm:"index,autoUpdateTime"          json:"update_at"`
 	Name          string               `                                     json:"name"`
 	Type          GroupMCPType         `gorm:"index"                         json:"type"`
+	Description   string               `                                     json:"description"`
 	ProxyConfig   *GroupMCPProxyConfig `gorm:"serializer:fastjson;type:text" json:"proxy_config,omitempty"`
 	OpenAPIConfig *MCPOpenAPIConfig    `gorm:"serializer:fastjson;type:text" json:"openapi_config,omitempty"`
 }
@@ -104,6 +107,7 @@ func UpdateGroupMCP(mcp *GroupMCP) (err error) {
 		"name",
 		"proxy_config",
 		"openapi_config",
+		"description",
 	}
 	if mcp.Type != "" {
 		selects = append(selects, "type")
@@ -174,7 +178,8 @@ func GetGroupMCPByID(id, groupID string) (GroupMCP, error) {
 func GetGroupMCPs(
 	groupID string,
 	page, perPage int,
-	mcpType PublicMCPType,
+	id string,
+	mcpType GroupMCPType,
 	keyword string,
 	status GroupMCPStatus,
 ) (mcps []GroupMCP, total int64, err error) {
@@ -184,21 +189,50 @@ func GetGroupMCPs(
 
 	tx := DB.Model(&GroupMCP{}).Where("group_id = ?", groupID)
 
+	if id != "" {
+		tx = tx.Where("id = ?", id)
+	}
+
+	if status != 0 {
+		tx = tx.Where("status = ?", status)
+	}
+
 	if mcpType != "" {
 		tx = tx.Where("type = ?", mcpType)
 	}
 
 	if keyword != "" {
-		keyword = "%" + keyword + "%"
-		if common.UsingPostgreSQL {
-			tx = tx.Where("name ILIKE ? OR id ILIKE ?", keyword, keyword)
-		} else {
-			tx = tx.Where("name LIKE ? OR id LIKE ?", keyword, keyword)
-		}
-	}
+		var conditions []string
+		var values []any
 
-	if status != 0 {
-		tx = tx.Where("status = ?", status)
+		if id == "" {
+			if common.UsingPostgreSQL {
+				conditions = append(conditions, "id ILIKE ?")
+				values = append(values, "%"+keyword+"%")
+			} else {
+				conditions = append(conditions, "id LIKE ?")
+				values = append(values, "%"+keyword+"%")
+			}
+		}
+
+		if common.UsingPostgreSQL {
+			conditions = append(conditions, "name ILIKE ?")
+			values = append(values, "%"+keyword+"%")
+		} else {
+			conditions = append(conditions, "name LIKE ?")
+			values = append(values, "%"+keyword+"%")
+		}
+		if common.UsingPostgreSQL {
+			conditions = append(conditions, "description ILIKE ?")
+			values = append(values, "%"+keyword+"%")
+		} else {
+			conditions = append(conditions, "description LIKE ?")
+			values = append(values, "%"+keyword+"%")
+		}
+
+		if len(conditions) > 0 {
+			tx = tx.Where(fmt.Sprintf("(%s)", strings.Join(conditions, " OR ")), values...)
+		}
 	}
 
 	err = tx.Count(&total).Error
