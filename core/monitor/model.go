@@ -13,12 +13,15 @@ import (
 
 // Redis key prefixes and patterns
 const (
-	modelKeyPrefix        = "model:"
 	bannedKeySuffix       = ":banned"
 	statsKeySuffix        = ":stats"
 	modelTotalStatsSuffix = ":total_stats"
 	channelKeyPart        = ":channel:"
 )
+
+func modelKeyPrefix() string {
+	return common.RedisKey("model:")
+}
 
 // Redis scripts
 var (
@@ -29,21 +32,20 @@ var (
 	clearAllModelErrorsScript        = redis.NewScript(clearAllModelErrorsLuaScript)
 )
 
-// GetModelErrorRate gets error rate for a specific model across all channels
 func GetModelsErrorRate(ctx context.Context) (map[string]float64, error) {
 	if !common.RedisEnabled {
 		return memModelMonitor.GetModelsErrorRate(ctx)
 	}
 
 	result := make(map[string]float64)
-	pattern := modelKeyPrefix + "*" + modelTotalStatsSuffix
+	pattern := modelKeyPrefix() + "*" + modelTotalStatsSuffix
 
 	now := time.Now().UnixMilli()
 
 	iter := common.RDB.Scan(ctx, 0, pattern, 0).Iterator()
 	for iter.Next(ctx) {
 		key := iter.Val()
-		model := strings.TrimPrefix(key, modelKeyPrefix)
+		model := strings.TrimPrefix(key, modelKeyPrefix())
 		model = strings.TrimSuffix(model, modelTotalStatsSuffix)
 
 		rate, err := getErrorRateScript.Run(
@@ -96,7 +98,7 @@ func AddRequest(
 	val, err := addRequestScript.Run(
 		ctx,
 		common.RDB,
-		[]string{model},
+		[]string{common.RedisKeyPrefix(), model},
 		channelID,
 		errorFlag,
 		now,
@@ -113,7 +115,7 @@ func AddRequest(
 func buildStatsKey(model, channelID string) string {
 	return fmt.Sprintf(
 		"%s%s%s%v%s",
-		modelKeyPrefix,
+		modelKeyPrefix(),
 		model,
 		channelKeyPart,
 		channelID,
@@ -122,7 +124,7 @@ func buildStatsKey(model, channelID string) string {
 }
 
 func getModelChannelID(key string) (string, int64, bool) {
-	content := strings.TrimPrefix(key, modelKeyPrefix)
+	content := strings.TrimPrefix(key, modelKeyPrefix())
 	content = strings.TrimSuffix(content, statsKeySuffix)
 	model, channelIDStr, ok := strings.Cut(content, channelKeyPart)
 	if !ok {
@@ -219,7 +221,7 @@ func GetBannedChannelsWithModel(ctx context.Context, model string) ([]int64, err
 	}
 
 	result := []int64{}
-	prefix := modelKeyPrefix + model + channelKeyPart
+	prefix := modelKeyPrefix() + model + channelKeyPart
 	pattern := prefix + "*" + bannedKeySuffix
 	iter := common.RDB.Scan(ctx, 0, pattern, 0).Iterator()
 
@@ -250,7 +252,7 @@ func ClearChannelModelErrors(ctx context.Context, model string, channelID int) e
 	return clearChannelModelErrorsScript.Run(
 		ctx,
 		common.RDB,
-		[]string{model},
+		[]string{common.RedisKeyPrefix(), model},
 		strconv.Itoa(channelID),
 	).Err()
 }
@@ -263,7 +265,7 @@ func ClearChannelAllModelErrors(ctx context.Context, channelID int) error {
 	return clearChannelAllModelErrorsScript.Run(
 		ctx,
 		common.RDB,
-		[]string{},
+		[]string{common.RedisKeyPrefix()},
 		strconv.Itoa(channelID),
 	).Err()
 }
@@ -273,7 +275,7 @@ func ClearAllModelErrors(ctx context.Context) error {
 	if !common.RedisEnabled {
 		return memModelMonitor.ClearAllModelErrors(ctx)
 	}
-	return clearAllModelErrorsScript.Run(ctx, common.RDB, []string{}).Err()
+	return clearAllModelErrorsScript.Run(ctx, common.RDB, []string{common.RedisKeyPrefix()}).Err()
 }
 
 // GetAllBannedModelChannels gets all banned channels for all models
@@ -283,12 +285,12 @@ func GetAllBannedModelChannels(ctx context.Context) (map[string][]int64, error) 
 	}
 
 	result := make(map[string][]int64)
-	pattern := modelKeyPrefix + "*" + channelKeyPart + "*" + bannedKeySuffix
+	pattern := modelKeyPrefix() + "*" + channelKeyPart + "*" + bannedKeySuffix
 	iter := common.RDB.Scan(ctx, 0, pattern, 0).Iterator()
 
 	for iter.Next(ctx) {
 		key := iter.Val()
-		parts := strings.TrimPrefix(key, modelKeyPrefix)
+		parts := strings.TrimPrefix(key, modelKeyPrefix())
 		parts = strings.TrimSuffix(parts, bannedKeySuffix)
 
 		model, channelIDStr, ok := strings.Cut(parts, channelKeyPart)
@@ -359,7 +361,8 @@ func GetAllChannelModelErrorRates(ctx context.Context) (map[int64]map[string]flo
 // Lua scripts
 const (
 	addRequestLuaScript = `
-local model = KEYS[1]
+local prefix = KEYS[1]
+local model = KEYS[2]
 local channel_id = ARGV[1]
 local is_error = tonumber(ARGV[2])
 local now_ts = tonumber(ARGV[3])
@@ -367,9 +370,9 @@ local max_error_rate = tonumber(ARGV[4])
 local can_ban = tonumber(ARGV[5])
 local try_ban = tonumber(ARGV[6])
 
-local banned_key = "model:" .. model .. ":channel:" .. channel_id .. ":banned"
-local stats_key = "model:" .. model .. ":channel:" .. channel_id .. ":stats"
-local model_stats_key = "model:" .. model .. ":total_stats"
+local banned_key = prefix .. ":model:" .. model .. ":channel:" .. channel_id .. ":banned"
+local stats_key = prefix .. ":model:" .. model .. ":channel:" .. channel_id .. ":stats"
+local model_stats_key = prefix .. ":model:" .. model .. ":total_stats"
 local maxSliceCount = 12
 local statsExpiry = maxSliceCount * 10 * 1000
 local banExpiry = 5 * 60 * 1000
@@ -477,10 +480,11 @@ return string.format("%.2f", total_err / total_req)
 `
 
 	clearChannelModelErrorsLuaScript = `
-local model = KEYS[1]
+local prefix = KEYS[1]
+local model = KEYS[2]
 local channel_id = ARGV[1]
-local stats_key = "model:" .. model .. ":channel:" .. channel_id .. ":stats"
-local banned_key = "model:" .. model .. ":channel:" .. channel_id .. ":banned"
+local stats_key = prefix .. ":model:" .. model .. ":channel:" .. channel_id .. ":stats"
+local banned_key = prefix .. ":model:" .. model .. ":channel:" .. channel_id .. ":banned"
 
 redis.call("DEL", stats_key)
 redis.call("DEL", banned_key)
@@ -488,14 +492,15 @@ return redis.status_reply("ok")
 `
 
 	clearChannelAllModelErrorsLuaScript = `
+local prefix = KEYS[1]
 local function del_keys(pattern)
     local keys = redis.call("KEYS", pattern)
     if #keys > 0 then redis.call("DEL", unpack(keys)) end
 end
 
 local channel_id = ARGV[1]
-local stats_pattern = "model:*:channel:" .. channel_id .. ":stats"
-local banned_pattern = "model:*:channel:" .. channel_id .. ":banned"
+local stats_pattern = prefix .. ":model:*:channel:" .. channel_id .. ":stats"
+local banned_pattern = prefix .. ":model:*:channel:" .. channel_id .. ":banned"
 
 del_keys(stats_pattern)
 del_keys(banned_pattern)
@@ -504,13 +509,14 @@ return redis.status_reply("ok")
 `
 
 	clearAllModelErrorsLuaScript = `
+local prefix = KEYS[1]
 local function del_keys(pattern)
     local keys = redis.call("KEYS", pattern)
     if #keys > 0 then redis.call("DEL", unpack(keys)) end
 end
 
-del_keys("model:*:channel:*:stats")
-del_keys("model:*:channel:*:banned")
+del_keys(prefix .. ":model:*:channel:*:stats")
+del_keys(prefix .. ":model:*:channel:*:banned")
 
 return redis.status_reply("ok")
 `

@@ -55,7 +55,7 @@ func (r *redisStoreManager) New() string {
 func (r *redisStoreManager) Get(sessionID string) (string, bool) {
 	ctx := context.Background()
 
-	result, err := redisStoreManagerScript.Run(ctx, r.rdb, []string{"mcp:session:" + sessionID}).
+	result, err := redisStoreManagerScript.Run(ctx, r.rdb, []string{common.RedisKey("mcp:session", sessionID)}).
 		Result()
 	if err != nil || result == nil {
 		return "", false
@@ -67,10 +67,10 @@ func (r *redisStoreManager) Get(sessionID string) (string, bool) {
 
 func (r *redisStoreManager) Set(sessionID, endpoint string) {
 	ctx := context.Background()
-	r.rdb.Set(ctx, "mcp:session:"+sessionID, endpoint, time.Minute*5)
+	r.rdb.Set(ctx, common.RedisKey("mcp:session", sessionID), endpoint, time.Minute*5)
 }
 
 func (r *redisStoreManager) Delete(session string) {
 	ctx := context.Background()
-	r.rdb.Del(ctx, "mcp:session:"+session)
+	r.rdb.Del(ctx, common.RedisKey("mcp:session", session))
 }

@@ -2,7 +2,6 @@ package ipblack
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/labring/aiproxy/core/common"
@@ -13,7 +12,7 @@ const (
 )
 
 func redisSetIPBlack(ctx context.Context, ip string, duration time.Duration) (bool, error) {
-	key := fmt.Sprintf(ipBlackKey, ip)
+	key := common.RedisKeyf(ipBlackKey, ip)
 	success, err := common.RDB.SetNX(ctx, key, duration.Seconds(), duration).Result()
 	if err != nil {
 		return false, err
@@ -22,7 +21,7 @@ func redisSetIPBlack(ctx context.Context, ip string, duration time.Duration) (bo
 }
 
 func redisGetIPIsBlock(ctx context.Context, ip string) (bool, error) {
-	key := fmt.Sprintf(ipBlackKey, ip)
+	key := common.RedisKeyf(ipBlackKey, ip)
 	exists, err := common.RDB.Exists(ctx, key).Result()
 	if err != nil {
 		return false, err

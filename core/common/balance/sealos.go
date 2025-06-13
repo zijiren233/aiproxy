@@ -115,12 +115,12 @@ func cacheSetGroupBalance(ctx context.Context, group string, balance int64, user
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 	pipe := common.RDB.Pipeline()
-	pipe.HSet(ctx, fmt.Sprintf(sealosGroupBalanceKey, group), sealosCache{
+	pipe.HSet(ctx, common.RedisKeyf(sealosGroupBalanceKey, group), sealosCache{
 		Balance: balance,
 		UserUID: userUID,
 	})
 	expireTime := sealosCacheExpire + time.Duration(rand.Int64N(10)-5)*time.Second
-	pipe.Expire(ctx, fmt.Sprintf(sealosGroupBalanceKey, group), expireTime)
+	pipe.Expire(ctx, common.RedisKeyf(sealosGroupBalanceKey, group), expireTime)
 	_, err := pipe.Exec(ctx)
 	return err
 }
@@ -132,7 +132,7 @@ func cacheGetGroupBalance(ctx context.Context, group string) (*sealosCache, erro
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 	var cache sealosCache
-	if err := common.RDB.HGetAll(ctx, fmt.Sprintf(sealosGroupBalanceKey, group)).Scan(&cache); err != nil {
+	if err := common.RDB.HGetAll(ctx, common.RedisKeyf(sealosGroupBalanceKey, group)).Scan(&cache); err != nil {
 		return nil, err
 	}
 	return &cache, nil
@@ -150,7 +150,7 @@ func cacheDecreaseGroupBalance(ctx context.Context, group string, amount int64) 
 	if !common.RedisEnabled || !sealosRedisCacheEnable {
 		return nil
 	}
-	return decreaseGroupBalanceScript.Run(ctx, common.RDB, []string{fmt.Sprintf(sealosGroupBalanceKey, group)}, amount).
+	return decreaseGroupBalanceScript.Run(ctx, common.RDB, []string{common.RedisKeyf(sealosGroupBalanceKey, group)}, amount).
 		Err()
 }
 
@@ -184,7 +184,7 @@ func cacheGetUserRealName(ctx context.Context, userUID string) (bool, error) {
 	}
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
-	realName, err := common.RDB.Get(ctx, fmt.Sprintf(sealosUserRealNameKey, userUID)).Bool()
+	realName, err := common.RDB.Get(ctx, common.RedisKeyf(sealosUserRealNameKey, userUID)).Bool()
 	if err != nil {
 		return false, err
 	}
@@ -203,7 +203,7 @@ func cacheSetUserRealName(ctx context.Context, userUID string, realName bool) er
 	} else {
 		expireTime = time.Minute * 1
 	}
-	return common.RDB.Set(ctx, fmt.Sprintf(sealosUserRealNameKey, userUID), realName, expireTime).
+	return common.RDB.Set(ctx, common.RedisKeyf(sealosUserRealNameKey, userUID), realName, expireTime).
 		Err()
 }
 

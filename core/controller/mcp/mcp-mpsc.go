@@ -142,7 +142,7 @@ func newRedisMCPMPSC(rdb *redis.Client) *redisMCPMPSC {
 
 func (r *redisMCPMPSC) send(ctx context.Context, id string, data []byte) error {
 	// Set expiration to 15 seconds when sending data
-	id = "mcp:mpsc:" + id
+	id = common.RedisKey("mcp:mpsc", id)
 	pipe := r.rdb.Pipeline()
 	pipe.LPush(ctx, id, data)
 	pipe.Expire(ctx, id, 15*time.Second)
@@ -151,7 +151,7 @@ func (r *redisMCPMPSC) send(ctx context.Context, id string, data []byte) error {
 }
 
 func (r *redisMCPMPSC) recv(ctx context.Context, id string) ([]byte, error) {
-	id = "mcp:mpsc:" + id
+	id = common.RedisKey("mcp:mpsc", id)
 	for {
 		select {
 		case <-ctx.Done():

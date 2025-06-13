@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding"
 	"errors"
-	"fmt"
 	"math/rand/v2"
 	"slices"
 	"sort"
@@ -145,14 +144,14 @@ func CacheDeleteToken(key string) error {
 	if !common.RedisEnabled {
 		return nil
 	}
-	return common.RedisDel(fmt.Sprintf(TokenCacheKey, key))
+	return common.RDB.Del(context.Background(), common.RedisKeyf(TokenCacheKey, key)).Err()
 }
 
 func CacheSetToken(token *TokenCache) error {
 	if !common.RedisEnabled {
 		return nil
 	}
-	key := fmt.Sprintf(TokenCacheKey, token.Key)
+	key := common.RedisKeyf(TokenCacheKey, token.Key)
 	pipe := common.RDB.Pipeline()
 	pipe.HSet(context.Background(), key, token)
 	expireTime := SyncFrequency + time.Duration(rand.Int64N(60)-30)*time.Second
@@ -170,7 +169,7 @@ func CacheGetTokenByKey(key string) (*TokenCache, error) {
 		return token.ToTokenCache(), nil
 	}
 
-	cacheKey := fmt.Sprintf(TokenCacheKey, key)
+	cacheKey := common.RedisKeyf(TokenCacheKey, key)
 	tokenCache := &TokenCache{}
 	err := common.RDB.HGetAll(context.Background(), cacheKey).Scan(tokenCache)
 	if err == nil && tokenCache.ID != 0 {
@@ -210,7 +209,7 @@ func CacheUpdateTokenUsedAmountOnlyIncrease(key string, amount float64) error {
 	if !common.RedisEnabled {
 		return nil
 	}
-	return updateTokenUsedAmountOnlyIncreaseScript.Run(context.Background(), common.RDB, []string{fmt.Sprintf(TokenCacheKey, key)}, amount).
+	return updateTokenUsedAmountOnlyIncreaseScript.Run(context.Background(), common.RDB, []string{common.RedisKeyf(TokenCacheKey, key)}, amount).
 		Err()
 }
 
@@ -225,7 +224,7 @@ func CacheUpdateTokenName(key, name string) error {
 	if !common.RedisEnabled {
 		return nil
 	}
-	return updateTokenNameScript.Run(context.Background(), common.RDB, []string{fmt.Sprintf(TokenCacheKey, key)}, name).
+	return updateTokenNameScript.Run(context.Background(), common.RDB, []string{common.RedisKeyf(TokenCacheKey, key)}, name).
 		Err()
 }
 
@@ -240,7 +239,7 @@ func CacheUpdateTokenStatus(key string, status int) error {
 	if !common.RedisEnabled {
 		return nil
 	}
-	return updateTokenStatusScript.Run(context.Background(), common.RDB, []string{fmt.Sprintf(TokenCacheKey, key)}, status).
+	return updateTokenStatusScript.Run(context.Background(), common.RDB, []string{common.RedisKeyf(TokenCacheKey, key)}, status).
 		Err()
 }
 
@@ -306,7 +305,7 @@ func CacheDeleteGroup(id string) error {
 	if !common.RedisEnabled {
 		return nil
 	}
-	return common.RedisDel(fmt.Sprintf(GroupCacheKey, id))
+	return common.RDB.Del(context.Background(), common.RedisKeyf(GroupCacheKey, id)).Err()
 }
 
 var updateGroupRPMRatioScript = redis.NewScript(`
@@ -320,7 +319,7 @@ func CacheUpdateGroupRPMRatio(id string, rpmRatio float64) error {
 	if !common.RedisEnabled {
 		return nil
 	}
-	return updateGroupRPMRatioScript.Run(context.Background(), common.RDB, []string{fmt.Sprintf(GroupCacheKey, id)}, rpmRatio).
+	return updateGroupRPMRatioScript.Run(context.Background(), common.RDB, []string{common.RedisKeyf(GroupCacheKey, id)}, rpmRatio).
 		Err()
 }
 
@@ -335,7 +334,7 @@ func CacheUpdateGroupTPMRatio(id string, tpmRatio float64) error {
 	if !common.RedisEnabled {
 		return nil
 	}
-	return updateGroupTPMRatioScript.Run(context.Background(), common.RDB, []string{fmt.Sprintf(GroupCacheKey, id)}, tpmRatio).
+	return updateGroupTPMRatioScript.Run(context.Background(), common.RDB, []string{common.RedisKeyf(GroupCacheKey, id)}, tpmRatio).
 		Err()
 }
 
@@ -350,7 +349,7 @@ func CacheUpdateGroupStatus(id string, status int) error {
 	if !common.RedisEnabled {
 		return nil
 	}
-	return updateGroupStatusScript.Run(context.Background(), common.RDB, []string{fmt.Sprintf(GroupCacheKey, id)}, status).
+	return updateGroupStatusScript.Run(context.Background(), common.RDB, []string{common.RedisKeyf(GroupCacheKey, id)}, status).
 		Err()
 }
 
@@ -358,7 +357,7 @@ func CacheSetGroup(group *GroupCache) error {
 	if !common.RedisEnabled {
 		return nil
 	}
-	key := fmt.Sprintf(GroupCacheKey, group.ID)
+	key := common.RedisKeyf(GroupCacheKey, group.ID)
 	pipe := common.RDB.Pipeline()
 	pipe.HSet(context.Background(), key, group)
 	expireTime := SyncFrequency + time.Duration(rand.Int64N(60)-30)*time.Second
@@ -376,7 +375,7 @@ func CacheGetGroup(id string) (*GroupCache, error) {
 		return group.ToGroupCache(), nil
 	}
 
-	cacheKey := fmt.Sprintf(GroupCacheKey, id)
+	cacheKey := common.RedisKeyf(GroupCacheKey, id)
 	groupCache := &GroupCache{}
 	err := common.RDB.HGetAll(context.Background(), cacheKey).Scan(groupCache)
 	if err == nil && groupCache.Status != 0 {
@@ -416,7 +415,7 @@ func CacheUpdateGroupUsedAmountOnlyIncrease(id string, amount float64) error {
 	if !common.RedisEnabled {
 		return nil
 	}
-	return updateGroupUsedAmountOnlyIncreaseScript.Run(context.Background(), common.RDB, []string{fmt.Sprintf(GroupCacheKey, id)}, amount).
+	return updateGroupUsedAmountOnlyIncreaseScript.Run(context.Background(), common.RDB, []string{common.RedisKeyf(GroupCacheKey, id)}, amount).
 		Err()
 }
 
@@ -448,14 +447,15 @@ func CacheDeleteGroupMCP(groupID, mcpID string) error {
 	if !common.RedisEnabled {
 		return nil
 	}
-	return common.RedisDel(fmt.Sprintf(GroupMCPCacheKey, groupID, mcpID))
+	return common.RDB.Del(context.Background(), common.RedisKeyf(GroupMCPCacheKey, groupID, mcpID)).
+		Err()
 }
 
 func CacheSetGroupMCP(groupMCP *GroupMCPCache) error {
 	if !common.RedisEnabled {
 		return nil
 	}
-	key := fmt.Sprintf(GroupMCPCacheKey, groupMCP.GroupID, groupMCP.ID)
+	key := common.RedisKeyf(GroupMCPCacheKey, groupMCP.GroupID, groupMCP.ID)
 	pipe := common.RDB.Pipeline()
 	pipe.HSet(context.Background(), key, groupMCP)
 	expireTime := SyncFrequency + time.Duration(rand.Int64N(60)-30)*time.Second
@@ -473,7 +473,7 @@ func CacheGetGroupMCP(groupID, mcpID string) (*GroupMCPCache, error) {
 		return groupMCP.ToGroupMCPCache(), nil
 	}
 
-	cacheKey := fmt.Sprintf(GroupMCPCacheKey, groupID, mcpID)
+	cacheKey := common.RedisKeyf(GroupMCPCacheKey, groupID, mcpID)
 	groupMCPCache := &GroupMCPCache{}
 	err := common.RDB.HGetAll(context.Background(), cacheKey).Scan(groupMCPCache)
 	if err == nil && groupMCPCache.ID != "" {
@@ -507,7 +507,7 @@ func CacheUpdateGroupMCPStatus(groupID, mcpID string, status GroupMCPStatus) err
 	if !common.RedisEnabled {
 		return nil
 	}
-	return updateGroupMCPStatusScript.Run(context.Background(), common.RDB, []string{fmt.Sprintf(GroupMCPCacheKey, groupID, mcpID)}, status).
+	return updateGroupMCPStatusScript.Run(context.Background(), common.RDB, []string{common.RedisKeyf(GroupMCPCacheKey, groupID, mcpID)}, status).
 		Err()
 }
 
@@ -541,14 +541,14 @@ func CacheDeletePublicMCP(mcpID string) error {
 	if !common.RedisEnabled {
 		return nil
 	}
-	return common.RedisDel(fmt.Sprintf(PublicMCPCacheKey, mcpID))
+	return common.RDB.Del(context.Background(), common.RedisKeyf(PublicMCPCacheKey, mcpID)).Err()
 }
 
 func CacheSetPublicMCP(publicMCP *PublicMCPCache) error {
 	if !common.RedisEnabled {
 		return nil
 	}
-	key := fmt.Sprintf(PublicMCPCacheKey, publicMCP.ID)
+	key := common.RedisKeyf(PublicMCPCacheKey, publicMCP.ID)
 	pipe := common.RDB.Pipeline()
 	pipe.HSet(context.Background(), key, publicMCP)
 	expireTime := SyncFrequency + time.Duration(rand.Int64N(60)-30)*time.Second
@@ -566,7 +566,7 @@ func CacheGetPublicMCP(mcpID string) (*PublicMCPCache, error) {
 		return publicMCP.ToPublicMCPCache(), nil
 	}
 
-	cacheKey := fmt.Sprintf(PublicMCPCacheKey, mcpID)
+	cacheKey := common.RedisKeyf(PublicMCPCacheKey, mcpID)
 	publicMCPCache := &PublicMCPCache{}
 	err := common.RDB.HGetAll(context.Background(), cacheKey).Scan(publicMCPCache)
 	if err == nil && publicMCPCache.ID != "" {
@@ -600,7 +600,7 @@ func CacheUpdatePublicMCPStatus(mcpID string, status PublicMCPStatus) error {
 	if !common.RedisEnabled {
 		return nil
 	}
-	return updatePublicMCPStatusScript.Run(context.Background(), common.RDB, []string{fmt.Sprintf(PublicMCPCacheKey, mcpID)}, status).
+	return updatePublicMCPStatusScript.Run(context.Background(), common.RDB, []string{common.RedisKeyf(PublicMCPCacheKey, mcpID)}, status).
 		Err()
 }
 
@@ -626,14 +626,15 @@ func CacheDeletePublicMCPReusingParam(mcpID, groupID string) error {
 	if !common.RedisEnabled {
 		return nil
 	}
-	return common.RedisDel(fmt.Sprintf(PublicMCPReusingParamCacheKey, mcpID, groupID))
+	return common.RDB.Del(context.Background(), common.RedisKeyf(PublicMCPReusingParamCacheKey, mcpID, groupID)).
+		Err()
 }
 
 func CacheSetPublicMCPReusingParam(param PublicMCPReusingParamCache) error {
 	if !common.RedisEnabled {
 		return nil
 	}
-	key := fmt.Sprintf(PublicMCPReusingParamCacheKey, param.MCPID, param.GroupID)
+	key := common.RedisKeyf(PublicMCPReusingParamCacheKey, param.MCPID, param.GroupID)
 	pipe := common.RDB.Pipeline()
 	pipe.HSet(context.Background(), key, param)
 	expireTime := SyncFrequency + time.Duration(rand.Int64N(60)-30)*time.Second
@@ -658,7 +659,7 @@ func CacheGetPublicMCPReusingParam(mcpID, groupID string) (PublicMCPReusingParam
 		return param.ToPublicMCPReusingParamCache(), nil
 	}
 
-	cacheKey := fmt.Sprintf(PublicMCPReusingParamCacheKey, mcpID, groupID)
+	cacheKey := common.RedisKeyf(PublicMCPReusingParamCacheKey, mcpID, groupID)
 	paramCache := PublicMCPReusingParamCache{}
 	err := common.RDB.HGetAll(context.Background(), cacheKey).Scan(&paramCache)
 	if err == nil && paramCache.MCPID != "" {
@@ -709,7 +710,7 @@ func CacheSetStore(store *StoreCache) error {
 	if !common.RedisEnabled {
 		return nil
 	}
-	key := fmt.Sprintf(StoreCacheKey, store.ID)
+	key := common.RedisKeyf(StoreCacheKey, store.ID)
 	pipe := common.RDB.Pipeline()
 	pipe.HSet(context.Background(), key, store)
 	expireTime := SyncFrequency + time.Duration(rand.Int64N(60)-30)*time.Second
@@ -727,7 +728,7 @@ func CacheGetStore(id string) (*StoreCache, error) {
 		return store.ToStoreCache(), nil
 	}
 
-	cacheKey := fmt.Sprintf(StoreCacheKey, id)
+	cacheKey := common.RedisKeyf(StoreCacheKey, id)
 	storeCache := &StoreCache{}
 	err := common.RDB.HGetAll(context.Background(), cacheKey).Scan(storeCache)
 	if err == nil && storeCache.ID != "" {
