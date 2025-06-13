@@ -184,19 +184,29 @@ func NewGroupPublicMCPDetailResponse(
 //	@Param			group		path		string	true	"Group ID"
 //	@Param			page		query		int		false	"Page"
 //	@Param			per_page	query		int		false	"Per Page"
-//	@Param			type		query		string	false	"Type"
+//	@Param			id			query		string	false	"MCP ID"
+//	@Param			type		query		string	false	"hosted or local"
 //	@Param			keyword		query		string	false	"Keyword"
 //	@Success		200			{object}	middleware.APIResponse{data=[]GroupPublicMCPResponse}
 //	@Router			/api/group/{group}/mcp [get]
 func GetGroupPublicMCPs(c *gin.Context) {
 	page, perPage := utils.ParsePageParams(c)
-	mcpType := model.PublicMCPType(c.Query("type"))
+	id := c.Query("id")
+	mcpType := c.Query("type")
+	var mcpTypes []model.PublicMCPType
+	switch mcpType {
+	case "hosted":
+		mcpTypes = getHostedMCPTypes()
+	case "local":
+		mcpTypes = getLocalMCPTypes()
+	}
 	keyword := c.Query("keyword")
 
 	mcps, total, err := model.GetPublicMCPs(
 		page,
 		perPage,
-		mcpType,
+		id,
+		mcpTypes,
 		keyword,
 		model.PublicMCPStatusEnabled,
 	)

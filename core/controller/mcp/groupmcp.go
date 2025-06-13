@@ -73,7 +73,8 @@ func NewGroupMCPResponses(host string, mcps []model.GroupMCP) []GroupMCPResponse
 //	@Param			group		path		string	true	"Group ID"
 //	@Param			page		query		int		false	"Page number"
 //	@Param			per_page	query		int		false	"Items per page"
-//	@Param			type		query		string	false	"MCP type"
+//	@Param			id			query		string	false	"MCP id"
+//	@Param			type		query		string	false	"MCP type, mcp_proxy_sse, mcp_proxy_streamable, mcp_openapi"
 //	@Param			keyword		query		string	false	"Search keyword"
 //	@Param			status		query		int		false	"MCP status"
 //	@Success		200			{object}	middleware.APIResponse{data=[]GroupMCPResponse}
@@ -86,7 +87,8 @@ func GetGroupMCPs(c *gin.Context) {
 	}
 
 	page, perPage := utils.ParsePageParams(c)
-	mcpType := model.PublicMCPType(c.Query("type"))
+	id := c.Query("id")
+	mcpType := model.GroupMCPType(c.Query("type"))
 	keyword := c.Query("keyword")
 	status, _ := strconv.Atoi(c.Query("status"))
 
@@ -98,6 +100,7 @@ func GetGroupMCPs(c *gin.Context) {
 		groupID,
 		page,
 		perPage,
+		id,
 		mcpType,
 		keyword,
 		model.GroupMCPStatus(status),
