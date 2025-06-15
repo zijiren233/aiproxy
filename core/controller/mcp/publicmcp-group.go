@@ -97,11 +97,11 @@ func (r *GroupPublicMCPDetailResponse) MarshalJSON() ([]byte, error) {
 }
 
 func checkParamsIsFull(params model.Params, reusing map[string]model.ReusingParam) bool {
-	for _, r := range reusing {
+	for key, r := range reusing {
 		if !r.Required {
 			continue
 		}
-		if v, ok := params[r.Name]; !ok || v == "" {
+		if v, ok := params[key]; !ok || v == "" {
 			return false
 		}
 	}
