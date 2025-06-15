@@ -609,9 +609,9 @@ const (
 )
 
 type PublicMCPReusingParamCache struct {
-	MCPID   string            `json:"mcp_id"   redis:"m"`
-	GroupID string            `json:"group_id" redis:"g"`
-	Params  map[string]string `json:"params"   redis:"p"`
+	MCPID   string                   `json:"mcp_id"   redis:"m"`
+	GroupID string                   `json:"group_id" redis:"g"`
+	Params  redisMap[string, string] `json:"params"   redis:"p"`
 }
 
 func (p *PublicMCPReusingParam) ToPublicMCPReusingParamCache() PublicMCPReusingParamCache {
