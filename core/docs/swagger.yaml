@@ -4461,6 +4461,31 @@ paths:
       summary: Create MCP
       tags:
       - mcp
+    put:
+      consumes:
+      - application/json
+      description: Save a list of MCPs
+      parameters:
+      - description: MCP object
+        in: body
+        name: mcp
+        required: true
+        schema:
+          items:
+            $ref: '#/definitions/model.PublicMCP'
+          type: array
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/middleware.APIResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Save MCPs
+      tags:
+      - mcp
   /api/mcp/public/{id}:
     delete:
       description: Delete an MCP by ID
@@ -4507,7 +4532,7 @@ paths:
       summary: Get MCP by ID
       tags:
       - mcp
-    put:
+    post:
       consumes:
       - application/json
       description: Update an existing MCP
@@ -4538,6 +4563,39 @@ paths:
       security:
       - ApiKeyAuth: []
       summary: Update MCP
+      tags:
+      - mcp
+    put:
+      consumes:
+      - application/json
+      description: Save a MCP
+      parameters:
+      - description: MCP ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: MCP object
+        in: body
+        name: mcp
+        required: true
+        schema:
+          $ref: '#/definitions/model.PublicMCP'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/middleware.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/controller.PublicMCPResponse'
+              type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Save MCP
       tags:
       - mcp
   /api/mcp/public/{id}/group/{group}/params:

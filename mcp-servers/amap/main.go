@@ -13,7 +13,7 @@ import (
 var configTemplates = map[string]mcpservers.ConfigTemplate{
 	"key": {
 		Name:        "Key",
-		Required:    mcpservers.ConfigRequiredTypeInitOnly,
+		Required:    mcpservers.ConfigRequiredTypeInitOrReusingOnly,
 		Example:     "1234567890",
 		Description: "The key of the AMap MCP server: https://console.amap.com/dev/key/app",
 	},
@@ -26,8 +26,11 @@ var configTemplates = map[string]mcpservers.ConfigTemplate{
 	},
 }
 
-func NewServer(config, _ map[string]string) (mcpservers.Server, error) {
+func NewServer(config, reusingConfig map[string]string) (mcpservers.Server, error) {
 	key := config["key"]
+	if key == "" {
+		key = reusingConfig["key"]
+	}
 	if key == "" {
 		return nil, errors.New("key is required")
 	}

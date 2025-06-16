@@ -17,7 +17,7 @@ func getPublicMCPTools(
 	publicMcp model.PublicMCP,
 	params map[string]string,
 ) ([]mcp.Tool, error) {
-	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
 
 	switch publicMcp.Type {

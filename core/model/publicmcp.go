@@ -228,7 +228,31 @@ func SavePublicMCP(mcp *PublicMCP) (err error) {
 		}
 	}()
 
-	return DB.Save(mcp).Error
+	return DB.
+		Omit(
+			"created_at",
+			"update_at",
+		).
+		Save(mcp).Error
+}
+
+func SavePublicMCPs(msps []PublicMCP) (err error) {
+	defer func() {
+		if err == nil {
+			for _, mcp := range msps {
+				if err := CacheDeletePublicMCP(mcp.ID); err != nil {
+					log.Error("cache delete public mcp error: " + err.Error())
+				}
+			}
+		}
+	}()
+
+	return DB.
+		Omit(
+			"created_at",
+			"update_at",
+		).
+		Save(msps).Error
 }
 
 // UpdatePublicMCP updates an existing MCP

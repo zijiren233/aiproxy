@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -52,6 +53,9 @@ func NewPublicMCPEndpoint(host string, mcp model.PublicMCP) MCPEndpoint {
 		publicMCPHost := config.GetPublicMCPHost()
 		if publicMCPHost == "" {
 			ep.Host = host
+			if defaultHost := config.GetDefaultMCPHost(); defaultHost != "" {
+				ep.Host = defaultHost
+			}
 			ep.SSE = fmt.Sprintf("/mcp/public/%s/sse", mcp.ID)
 			ep.StreamableHTTP = "/mcp/public/" + mcp.ID
 		} else {
@@ -213,6 +217,78 @@ func CreatePublicMCP(c *gin.Context) {
 	middleware.SuccessResponse(c, NewPublicMCPResponse(c.Request.Host, mcp))
 }
 
+type SavePublicMCPRequest struct {
+	model.PublicMCP
+	CreatedAt json.RawMessage `json:"created_at"`
+	UpdateAt  json.RawMessage `json:"update_at"`
+}
+
+// SavePublicMCP godoc
+//
+//	@Summary		Save MCP
+//	@Description	Save a MCP
+//	@Tags			mcp
+//	@Accept			json
+//	@Produce		json
+//	@Security		ApiKeyAuth
+//	@Param			id	path		string			true	"MCP ID"
+//	@Param			mcp	body		model.PublicMCP	true	"MCP object"
+//	@Success		200	{object}	middleware.APIResponse{data=PublicMCPResponse}
+//	@Router			/api/mcp/public/{id} [put]
+func SavePublicMCP(c *gin.Context) {
+	id := c.Param("id")
+	if id == "" {
+		middleware.ErrorResponse(c, http.StatusBadRequest, "MCP ID is required")
+		return
+	}
+
+	var mcp SavePublicMCPRequest
+	if err := c.ShouldBindJSON(&mcp); err != nil {
+		middleware.ErrorResponse(c, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	mcp.ID = id
+
+	if err := model.SavePublicMCP(&mcp.PublicMCP); err != nil {
+		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	middleware.SuccessResponse(c, NewPublicMCPResponse(c.Request.Host, mcp.PublicMCP))
+}
+
+// SavePublicMCPs godoc
+//
+//	@Summary		Save MCPs
+//	@Description	Save a list of MCPs
+//	@Tags			mcp
+//	@Accept			json
+//	@Produce		json
+//	@Security		ApiKeyAuth
+//	@Param			mcp	body		[]model.PublicMCP	true	"MCP object"
+//	@Success		200	{object}	middleware.APIResponse
+//	@Router			/api/mcp/public/ [put]
+func SavePublicMCPs(c *gin.Context) {
+	var mcps []SavePublicMCPRequest
+	if err := c.ShouldBindJSON(&mcps); err != nil {
+		middleware.ErrorResponse(c, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	pmcps := make([]model.PublicMCP, len(mcps))
+	for i, mcp := range mcps {
+		pmcps[i] = mcp.PublicMCP
+	}
+
+	if err := model.SavePublicMCPs(pmcps); err != nil {
+		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	middleware.SuccessResponse(c, nil)
+}
+
 type UpdatePublicMCPStatusRequest struct {
 	Status model.PublicMCPStatus `json:"status"`
 }
@@ -261,7 +337,7 @@ func UpdatePublicMCPStatus(c *gin.Context) {
 //	@Param			id	path		string			true	"MCP ID"
 //	@Param			mcp	body		model.PublicMCP	true	"MCP object"
 //	@Success		200	{object}	middleware.APIResponse{data=PublicMCPResponse}
-//	@Router			/api/mcp/public/{id} [put]
+//	@Router			/api/mcp/public/{id} [post]
 func UpdatePublicMCP(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
