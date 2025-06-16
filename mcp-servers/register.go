@@ -108,6 +108,9 @@ func GetMCPServer(id string, config, reusingConfig map[string]string) (Server, e
 		return nil, fmt.Errorf("mcp %s not found", id)
 	}
 	if len(embedServer.ConfigTemplates) == 0 {
+		if embedServer.disableCache {
+			return embedServer.NewServer(config, reusingConfig)
+		}
 		return loadCacheServer(embedServer, nil)
 	}
 
