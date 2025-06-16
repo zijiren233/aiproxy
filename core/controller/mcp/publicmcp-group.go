@@ -146,6 +146,8 @@ func NewGroupPublicMCPDetailResponse(
 	}
 	r.Params = reusingParams.Params
 
+	gettedTools := false
+
 	if checkParamsIsFull(r.Params, r.Reusing) {
 		r.Endpoints = NewPublicMCPEndpoint(host, mcp)
 
@@ -155,17 +157,19 @@ func NewGroupPublicMCPDetailResponse(
 				log := common.GetLogger(ctx)
 				log.Errorf("get public mcp tools error: %s", err.Error())
 			} else {
+				gettedTools = true
 				r.Tools = tools
 			}
 		}
 	}
 
-	if len(r.Tools) == 0 && testConfig != nil && testConfig.Enabled {
+	if !gettedTools && testConfig != nil && testConfig.Enabled {
 		tools, err := getPublicMCPTools(ctx.Request.Context(), mcp, testConfig.Params)
 		if err != nil {
 			log := common.GetLogger(ctx)
 			log.Errorf("get public mcp tools error: %s", err.Error())
 		} else {
+			gettedTools = true
 			r.Tools = tools
 		}
 	}
