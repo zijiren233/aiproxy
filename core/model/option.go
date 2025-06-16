@@ -91,6 +91,7 @@ func initOptionMap() error {
 	}
 	optionMap["GroupConsumeLevelRatio"] = conv.BytesToString(groupConsumeLevelRatioJSON)
 	optionMap["NotifyNote"] = config.GetNotifyNote()
+	optionMap["DefaultMCPHost"] = config.GetDefaultMCPHost()
 	optionMap["PublicMCPHost"] = config.GetPublicMCPHost()
 	optionMap["GroupMCPHost"] = config.GetGroupMCPHost()
 
@@ -340,6 +341,8 @@ func updateOption(key, value string, isInit bool) (err error) {
 		config.SetGroupConsumeLevelRatio(newGroupRpmRatioMap)
 	case "NotifyNote":
 		config.SetNotifyNote(value)
+	case "DefaultMCPHost":
+		config.SetDefaultMCPHost(value)
 	case "PublicMCPHost":
 		config.SetPublicMCPHost(value)
 	case "GroupMCPHost":

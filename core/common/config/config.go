@@ -26,8 +26,9 @@ var (
 	groupMaxTokenNum             atomic.Int64
 	groupConsumeLevelRatio       atomic.Value
 
-	publicMCPHost atomic.Value
-	groupMCPHost  atomic.Value
+	defaultMCPHost atomic.Value
+	publicMCPHost  atomic.Value
+	groupMCPHost   atomic.Value
 )
 
 func init() {
@@ -35,6 +36,7 @@ func init() {
 	defaultChannelModelMapping.Store(make(map[int]map[string]string))
 	groupConsumeLevelRatio.Store(make(map[float64]float64))
 	notifyNote.Store("")
+	defaultMCPHost.Store("")
 	publicMCPHost.Store("")
 	groupMCPHost.Store("")
 }
@@ -199,6 +201,16 @@ func GetNotifyNote() string {
 func SetNotifyNote(note string) {
 	note = env.String("NOTIFY_NOTE", note)
 	notifyNote.Store(note)
+}
+
+func GetDefaultMCPHost() string {
+	h, _ := defaultMCPHost.Load().(string)
+	return h
+}
+
+func SetDefaultMCPHost(host string) {
+	host = env.String("DEFAULT_MCP_HOST", host)
+	defaultMCPHost.Store(host)
 }
 
 func GetPublicMCPHost() string {
