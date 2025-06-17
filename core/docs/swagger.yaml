@@ -5691,6 +5691,23 @@ paths:
       summary: Test Embed MCP SSE Server
       tags:
       - embedmcp
+  /api/test-publicmcp/{group}/{id}/sse:
+    get:
+      parameters:
+      - description: Group ID
+        in: path
+        name: group
+        required: true
+        type: string
+      - description: MCP ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses: {}
+      security:
+      - ApiKeyAuth: []
+      summary: Test Public MCP SSE Server
   /api/token/{group}:
     post:
       consumes:

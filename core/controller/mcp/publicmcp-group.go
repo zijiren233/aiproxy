@@ -101,6 +101,9 @@ func checkParamsIsFull(params model.Params, reusing map[string]model.ReusingPara
 		if !r.Required {
 			continue
 		}
+		if params == nil {
+			return false
+		}
 		if v, ok := params[key]; !ok || v == "" {
 			return false
 		}
@@ -119,7 +122,10 @@ func NewGroupPublicMCPDetailResponse(
 		Hosted:    IsHostedMCP(mcp.Type),
 	}
 
-	testConfig := mcp.TestConfig
+	var testConfig model.TestConfig
+	if mcp.TestConfig != nil {
+		testConfig = *mcp.TestConfig
+	}
 
 	r.Type = ""
 	r.ProxyConfig = nil
@@ -149,7 +155,7 @@ func NewGroupPublicMCPDetailResponse(
 
 	gettedTools := false
 
-	if !gettedTools && testConfig != nil && testConfig.Enabled {
+	if testConfig.Enabled || checkParamsIsFull(nil, r.Reusing) {
 		tools, err := getPublicMCPTools(ctx.Request.Context(), mcp, testConfig.Params)
 		if err != nil {
 			log := common.GetLogger(ctx)

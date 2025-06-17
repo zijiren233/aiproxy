@@ -54,7 +54,10 @@ func HostMCPSSEServer(c *gin.Context) {
 			return
 		}
 
-		handlePublicSSEMCP(c, publicMcp, sseEndpoint)
+		group := middleware.GetGroup(c)
+		paramsFunc := newGroupParams(publicMcp.ID, group.ID)
+
+		handlePublicSSEMCP(c, publicMcp, paramsFunc, sseEndpoint)
 	}, func(c *gin.Context, mcpID string) {
 		group := middleware.GetGroup(c)
 
@@ -98,7 +101,11 @@ func HostMCPStreamable(c *gin.Context) {
 			))
 			return
 		}
-		handlePublicStreamable(c, publicMcp)
+
+		group := middleware.GetGroup(c)
+		paramsFunc := newGroupParams(publicMcp.ID, group.ID)
+
+		handlePublicStreamable(c, publicMcp, paramsFunc)
 	}, func(c *gin.Context, mcpID string) {
 		group := middleware.GetGroup(c)
 
