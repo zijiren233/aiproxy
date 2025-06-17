@@ -89,12 +89,15 @@ func Consume(
 	amount := CalculateAmount(code, usage, modelPrice)
 	amount = consumeAmount(ctx, amount, postGroupConsumer, meta)
 
+	selectedModelPrice := modelPrice.SelectConditionalPrice(usage)
+	selectedModelPrice.ConditionalPrices = nil
+
 	err := recordConsume(
 		meta,
 		code,
 		firstByteAt,
 		usage,
-		modelPrice,
+		selectedModelPrice,
 		content,
 		ip,
 		requestDetail,
