@@ -82,7 +82,7 @@ func handleEmbedSSEMCP(
 	paramsFunc ParamsFunc,
 	endpoint EndpointProvider,
 ) {
-	reusingConfig, err := prepareEmbedReusingConfig(c, mcpID, paramsFunc, config.Reusing)
+	reusingConfig, err := prepareEmbedReusingConfig(mcpID, paramsFunc, config.Reusing)
 	if err != nil {
 		http.Error(c.Writer, err.Error(), http.StatusBadRequest)
 		return
@@ -99,7 +99,6 @@ func handleEmbedSSEMCP(
 
 // prepareEmbedReusingConfig 准备嵌入MCP的reusing配置
 func prepareEmbedReusingConfig(
-	c *gin.Context,
 	mcpID string,
 	paramsFunc ParamsFunc,
 	reusingParams map[string]model.ReusingParam,
