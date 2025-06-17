@@ -144,6 +144,8 @@ func CalculateAmount(
 		return float64(modelPrice.PerRequestPrice)
 	}
 
+	modelPrice = modelPrice.SelectConditionalPrice(usage)
+
 	inputTokens := usage.InputTokens
 	if modelPrice.ImageInputPrice > 0 {
 		inputTokens -= usage.ImageInputTokens

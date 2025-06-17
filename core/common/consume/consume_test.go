@@ -144,3 +144,217 @@ func TestCalculateAmount(t *testing.T) {
 		}
 	}
 }
+
+func TestCalculateAmountWithConditionalPricing(t *testing.T) {
+	tests := []struct {
+		name  string
+		code  int
+		usage model.Usage
+		price model.Price
+		want  float64
+	}{
+		{
+			name: "Conditional Pricing - Small Input/Output",
+			code: http.StatusOK,
+			usage: model.Usage{
+				InputTokens:  20000, // 20k tokens
+				OutputTokens: 100,   // 0.1k tokens
+			},
+			price: model.Price{
+				ConditionalPrices: []model.ConditionalPrice{
+					{
+						Condition: model.PriceCondition{
+							InputTokenMin:  0,
+							InputTokenMax:  32000,
+							OutputTokenMin: 0,
+							OutputTokenMax: 200,
+						},
+						Price: model.Price{
+							InputPrice:  0.0008, // 0.80 per million tokens
+							OutputPrice: 0.002,  // 2.00 per million tokens
+						},
+					},
+					{
+						Condition: model.PriceCondition{
+							InputTokenMin:  0,
+							InputTokenMax:  32000,
+							OutputTokenMin: 201,
+							OutputTokenMax: 16000,
+						},
+						Price: model.Price{
+							InputPrice:  0.0008, // 0.80 per million tokens
+							OutputPrice: 0.008,  // 8.00 per million tokens
+						},
+					},
+				},
+			},
+			want: 0.0162, // 0.0008 * 20000/1000 + 0.002 * 100/1000
+		},
+		{
+			name: "Conditional Pricing - Medium Input",
+			code: http.StatusOK,
+			usage: model.Usage{
+				InputTokens:  80000, // 80k tokens
+				OutputTokens: 5000,  // 5k tokens
+			},
+			price: model.Price{
+				ConditionalPrices: []model.ConditionalPrice{
+					{
+						Condition: model.PriceCondition{
+							InputTokenMin: 32001,
+							InputTokenMax: 128000,
+						},
+						Price: model.Price{
+							InputPrice:  0.0012, // 1.20 per million tokens
+							OutputPrice: 0.016,  // 16.00 per million tokens
+						},
+					},
+				},
+			},
+			want: 0.176, // 0.0012 * 80000/1000 + 0.016 * 5000/1000
+		},
+		{
+			name: "Conditional Pricing - Large Input",
+			code: http.StatusOK,
+			usage: model.Usage{
+				InputTokens:  200000, // 200k tokens
+				OutputTokens: 10000,  // 10k tokens
+			},
+			price: model.Price{
+				ConditionalPrices: []model.ConditionalPrice{
+					{
+						Condition: model.PriceCondition{
+							InputTokenMin: 128001,
+							InputTokenMax: 256000,
+						},
+						Price: model.Price{
+							InputPrice:  0.0024, // 2.40 per million tokens
+							OutputPrice: 0.024,  // 24.00 per million tokens
+						},
+					},
+				},
+			},
+			want: 0.72, // 0.0024 * 200000/1000 + 0.024 * 10000/1000
+		},
+		{
+			name: "Conditional Pricing with Cache",
+			code: http.StatusOK,
+			usage: model.Usage{
+				InputTokens:         50000, // 50k tokens
+				OutputTokens:        2000,  // 2k tokens
+				CachedTokens:        10000, // 10k cached tokens
+				CacheCreationTokens: 5000,  // 5k cache creation tokens
+			},
+			price: model.Price{
+				ConditionalPrices: []model.ConditionalPrice{
+					{
+						Condition: model.PriceCondition{
+							InputTokenMin: 32001,
+							InputTokenMax: 128000,
+						},
+						Price: model.Price{
+							InputPrice:         0.0012,   // 1.20 per million tokens
+							OutputPrice:        0.016,    // 16.00 per million tokens
+							CachedPrice:        0.00016,  // 0.16 per million tokens
+							CacheCreationPrice: 0.000017, // 0.017 per million tokens per hour
+						},
+					},
+				},
+			},
+			want: 0.075685, // 0.0012 * (50000-10000-5000)/1000 + 0.016 * 2000/1000 + 0.00016 * 10000/1000 + 0.000017 * 5000/1000
+		},
+		{
+			name: "Conditional Pricing Thinking",
+			code: http.StatusOK,
+			usage: model.Usage{
+				InputTokens:     30000, // 30k tokens
+				OutputTokens:    3000,  // 3k tokens
+				ReasoningTokens: 1000,  // 1k reasoning tokens (triggers thinking mode)
+			},
+			price: model.Price{
+				ConditionalPrices: []model.ConditionalPrice{
+					{
+						Condition: model.PriceCondition{
+							InputTokenMin: 0,
+							InputTokenMax: 32000,
+						},
+						Price: model.Price{
+							InputPrice:  0.0008, // 0.80 per million tokens
+							OutputPrice: 0.008,  // 8.00 per million tokens (thinking mode)
+						},
+					},
+				},
+			},
+			want: 0.048, // 0.0008 * 30000/1000 + 0.008 * 3000/1000
+		},
+		{
+			name: "Fallback to Base Price",
+			code: http.StatusOK,
+			usage: model.Usage{
+				InputTokens:  500000, // 500k tokens (exceeds all conditional ranges)
+				OutputTokens: 1000,
+			},
+			price: model.Price{
+				InputPrice:  0.001,
+				OutputPrice: 0.002,
+				ConditionalPrices: []model.ConditionalPrice{
+					{
+						Condition: model.PriceCondition{
+							InputTokenMax: 256000,
+						},
+						Price: model.Price{
+							InputPrice:  0.0024,
+							OutputPrice: 0.024,
+						},
+					},
+				},
+			},
+			want: 0.502, // 0.001 * 500000/1000 + 0.002 * 1000/1000 (uses base price)
+		},
+		{
+			name: "Conditional Prices - No Fallback to Base Price",
+			code: http.StatusOK,
+			usage: model.Usage{
+				InputTokens:  500000, // 500k tokens (exceeds all conditional ranges)
+				OutputTokens: 1000,
+			},
+			price: model.Price{
+				InputPrice:  0.001,
+				OutputPrice: 0.002,
+				ConditionalPrices: []model.ConditionalPrice{
+					{
+						Condition: model.PriceCondition{
+							InputTokenMin: 256000,
+						},
+						Price: model.Price{
+							InputPrice:  0.0024,
+							OutputPrice: 0.024,
+						},
+					},
+				},
+			},
+			want: 1.224, // 0.0024 * 500000/1000 + 0.024 * 1000/1000
+		},
+		{
+			name: "No Conditional Prices - Use Base Price",
+			code: http.StatusOK,
+			usage: model.Usage{
+				InputTokens:  1000,
+				OutputTokens: 500,
+			},
+			price: model.Price{
+				InputPrice:  0.001,
+				OutputPrice: 0.002,
+				// No conditional prices defined
+			},
+			want: 0.002, // 0.001 * 1000/1000 + 0.002 * 500/1000
+		},
+	}
+
+	for _, tt := range tests {
+		got := consume.CalculateAmount(tt.code, tt.usage, tt.price)
+		if got != tt.want {
+			t.Errorf("CalculateAmount()\n%s\n\tgot: %v\n\twant: %v\n\t", tt.name, got, tt.want)
+		}
+	}
+}
