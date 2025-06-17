@@ -13,7 +13,7 @@ import (
 
 	"github.com/bytedance/sonic"
 	mcpservers "github.com/labring/aiproxy/mcp-servers"
-	"github.com/labring/aiproxy/mcp-servers/web-search/engine"
+	"github.com/labring/aiproxy/mcp-servers/hosted/web-search/engine"
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 )

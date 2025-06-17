@@ -30,7 +30,7 @@ import (
 	"github.com/labring/aiproxy/core/relay/plugin"
 	"github.com/labring/aiproxy/core/relay/plugin/noop"
 	"github.com/labring/aiproxy/core/relay/utils"
-	"github.com/labring/aiproxy/mcp-servers/web-search/engine"
+	"github.com/labring/aiproxy/mcp-servers/hosted/web-search/engine"
 	"golang.org/x/sync/errgroup"
 )
 
