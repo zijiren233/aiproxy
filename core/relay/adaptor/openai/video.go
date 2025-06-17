@@ -92,6 +92,22 @@ func VideoHandler(
 			http.StatusInternalServerError,
 		)
 	}
+	nSecondsNode := node.Get("n_seconds")
+	nSeconds, err := nSecondsNode.Int64()
+	if err != nil {
+		return model.Usage{}, relaymodel.WrapperOpenAIVideoError(
+			err,
+			http.StatusInternalServerError,
+		)
+	}
+	nVariantsNode := node.Get("n_variants")
+	nVariants, err := nVariantsNode.Int64()
+	if err != nil {
+		return model.Usage{}, relaymodel.WrapperOpenAIVideoError(
+			err,
+			http.StatusInternalServerError,
+		)
+	}
 
 	err = store.SaveStore(adaptor.StoreCache{
 		ID:        id,
@@ -109,7 +125,10 @@ func VideoHandler(
 	c.Writer.Header().Set("Content-Type", "application/json")
 	c.Writer.Header().Set("Content-Length", strconv.Itoa(len(responseBody)))
 	_, _ = c.Writer.Write(responseBody)
-	return model.Usage{}, nil
+	return model.Usage{
+		VideoSeconds:  model.ZeroNullInt64(nSeconds),
+		VideoVariants: model.ZeroNullInt64(nVariants),
+	}, nil
 }
 
 func VideoGetJobsHandler(

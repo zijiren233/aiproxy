@@ -148,6 +148,7 @@ func getChartDataMinute(
 		"sum(input_tokens) as input_tokens, sum(output_tokens) as output_tokens, " +
 		"sum(cached_tokens) as cached_tokens, sum(cache_creation_tokens) as cache_creation_tokens, " +
 		"sum(total_tokens) as total_tokens, sum(web_search_count) as web_search_count, " +
+		"sum(video_seconds) as video_seconds, sum(video_variants) as video_variants, " +
 		"sum(request_count) as max_rpm, sum(total_tokens) as max_tpm"
 
 	query = query.
@@ -202,6 +203,7 @@ func getGroupChartDataMinute(
 		"sum(input_tokens) as input_tokens, sum(output_tokens) as output_tokens, " +
 		"sum(cached_tokens) as cached_tokens, sum(cache_creation_tokens) as cache_creation_tokens, " +
 		"sum(total_tokens) as total_tokens, sum(web_search_count) as web_search_count, " +
+		"sum(video_seconds) as video_seconds, sum(video_variants) as video_variants, " +
 		"sum(request_count) as max_rpm, sum(total_tokens) as max_tpm"
 
 	query = query.
@@ -482,6 +484,8 @@ type SummaryDataV2 struct {
 	CacheCreationTokens int64 `json:"cache_creation_tokens,omitempty"`
 	TotalTokens         int64 `json:"total_tokens,omitempty"`
 	WebSearchCount      int64 `json:"web_search_count,omitempty"`
+	VideoSeconds        int64 `json:"video_seconds,omitempty"`
+	VideoVariants       int64 `json:"video_variants,omitempty"`
 
 	MaxRPM int64 `json:"max_rpm,omitempty"`
 	MaxTPM int64 `json:"max_tpm,omitempty"`
@@ -530,7 +534,8 @@ func GetTimeSeriesModelDataMinute(
 		"sum(input_tokens) as input_tokens, " +
 		"sum(output_tokens) as output_tokens, sum(cached_tokens) as cached_tokens, " +
 		"sum(cache_creation_tokens) as cache_creation_tokens, sum(total_tokens) as total_tokens, " +
-		"sum(web_search_count) as web_search_count, sum(request_count) as max_rpm, sum(total_tokens) as max_tpm"
+		"sum(web_search_count) as web_search_count, sum(request_count) as max_rpm, sum(total_tokens) as max_tpm, " +
+		"sum(video_seconds) as video_seconds, sum(video_variants) as video_variants"
 
 	var rawData []SummaryDataV2
 	err := query.
@@ -588,7 +593,8 @@ func GetGroupTimeSeriesModelDataMinute(
 		"sum(input_tokens) as input_tokens, " +
 		"sum(output_tokens) as output_tokens, sum(cached_tokens) as cached_tokens, " +
 		"sum(cache_creation_tokens) as cache_creation_tokens, sum(total_tokens) as total_tokens, " +
-		"sum(web_search_count) as web_search_count, sum(request_count) as max_rpm, sum(total_tokens) as max_tpm"
+		"sum(web_search_count) as web_search_count, sum(request_count) as max_rpm, sum(total_tokens) as max_tpm, " +
+		"sum(video_seconds) as video_seconds, sum(video_variants) as video_variants"
 
 	var rawData []SummaryDataV2
 	err := query.
@@ -675,6 +681,8 @@ func aggregatToSpan(
 		currentData.CacheCreationTokens += data.CacheCreationTokens
 		currentData.TotalTokens += data.TotalTokens
 		currentData.WebSearchCount += data.WebSearchCount
+		currentData.VideoSeconds += data.VideoSeconds
+		currentData.VideoVariants += data.VideoVariants
 
 		if data.MaxRPM > currentData.MaxRPM {
 			currentData.MaxRPM = data.MaxRPM
@@ -710,6 +718,8 @@ func convertToTimeModelData(rawData []SummaryDataV2) []*TimeSummaryDataV2 {
 			CacheCreationTokens:   data.CacheCreationTokens,
 			TotalTokens:           data.TotalTokens,
 			WebSearchCount:        data.WebSearchCount,
+			VideoSeconds:          data.VideoSeconds,
+			VideoVariants:         data.VideoVariants,
 			MaxRPM:                data.MaxRPM,
 			MaxTPM:                data.MaxTPM,
 		}

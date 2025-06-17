@@ -194,12 +194,16 @@ func CalculateAmount(
 		Mul(decimal.NewFromFloat(outputPrice)).
 		Div(decimal.NewFromInt(outputPriceUnit))
 
+	videoSecondsAmount := decimal.NewFromInt(int64(usage.VideoSeconds)).
+		Mul(decimal.NewFromFloat(float64(modelPrice.VideoPerSecondPrice)))
+
 	return inputAmount.
 		Add(imageInputAmount).
 		Add(cachedAmount).
 		Add(cacheCreationAmount).
 		Add(webSearchAmount).
 		Add(outputAmount).
+		Add(videoSecondsAmount).
 		InexactFloat64()
 }
 

@@ -9,8 +9,8 @@ type VideoGenerationJobRequest struct {
 	Model     string `json:"model"`
 	Width     int    `json:"width"`
 	Height    int    `json:"height"`
-	NVariants int    `json:"n_variants"`
-	NSeconds  int    `json:"n_seconds"`
+	NVariants int64  `json:"n_variants"`
+	NSeconds  int64  `json:"n_seconds"`
 }
 
 type VideoGenerationJobStatus = string
@@ -32,8 +32,8 @@ type VideoGenerationJob struct {
 	Generations  []VideoGenerations       `json:"generations"`
 	Prompt       string                   `json:"prompt"`
 	Model        string                   `json:"model"`
-	NVariants    int                      `json:"n_variants"`
-	NSeconds     int                      `json:"n_seconds"`
+	NVariants    int64                    `json:"n_variants"`
+	NSeconds     int64                    `json:"n_seconds"`
 	Width        int                      `json:"width"`
 	Height       int                      `json:"height"`
 	FinishReason *string                  `json:"finish_reason"`
@@ -47,7 +47,7 @@ type VideoGenerations struct {
 	Width     int    `json:"width"`
 	Height    int    `json:"height"`
 	Prompt    string `json:"prompt"`
-	NSeconds  int    `json:"n_seconds"`
+	NSeconds  int64  `json:"n_seconds"`
 }
 
 type OpenAIVideoError struct {

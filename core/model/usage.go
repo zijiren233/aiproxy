@@ -43,6 +43,8 @@ type Price struct {
 	WebSearchPrice     ZeroNullFloat64 `json:"web_search_price,omitempty"`
 	WebSearchPriceUnit ZeroNullInt64   `json:"web_search_price_unit,omitempty"`
 
+	VideoPerSecondPrice ZeroNullFloat64 `json:"video_per_second_price,omitempty"`
+
 	ConditionalPrices []ConditionalPrice `gorm:"serializer:fastjson;type:text" json:"conditional_prices,omitempty"`
 }
 
@@ -263,6 +265,8 @@ type Usage struct {
 	ReasoningTokens     ZeroNullInt64 `json:"reasoning_tokens,omitempty"`
 	TotalTokens         ZeroNullInt64 `json:"total_tokens,omitempty"`
 	WebSearchCount      ZeroNullInt64 `json:"web_search_count,omitempty"`
+	VideoSeconds        ZeroNullInt64 `json:"video_seconds,omitempty"`
+	VideoVariants       ZeroNullInt64 `json:"video_variants,omitempty"`
 }
 
 func (u *Usage) Add(other Usage) {
@@ -273,4 +277,6 @@ func (u *Usage) Add(other Usage) {
 	u.CacheCreationTokens += other.CacheCreationTokens
 	u.TotalTokens += other.TotalTokens
 	u.WebSearchCount += other.WebSearchCount
+	u.VideoSeconds += other.VideoSeconds
+	u.VideoVariants += other.VideoVariants
 }

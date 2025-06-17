@@ -18,6 +18,12 @@ const (
 	PriceUnit = 1000
 )
 
+type VideoPriceItem struct {
+	SecondMin int64   `json:"second_min,omitempty"`
+	SecondMax int64   `json:"second_max,omitempty"`
+	Price     float64 `json:"price,omitempty"`
+}
+
 //nolint:revive
 type ModelConfig struct {
 	CreatedAt        time.Time                  `gorm:"index;autoCreateTime"          json:"created_at"`
@@ -33,12 +39,14 @@ type ModelConfig struct {
 	// map[size]map[quality]price_per_image
 	ImageQualityPrices map[string]map[string]float64 `gorm:"serializer:fastjson;type:text" json:"image_quality_prices,omitempty"`
 	// map[size]price_per_image
-	ImagePrices     map[string]float64 `gorm:"serializer:fastjson;type:text" json:"image_prices,omitempty"`
-	Price           Price              `gorm:"embedded"                      json:"price,omitempty"`
-	RetryTimes      int64              `                                     json:"retry_times,omitempty"`
-	Timeout         int64              `                                     json:"timeout,omitempty"`
-	MaxErrorRate    float64            `                                     json:"max_error_rate,omitempty"`
-	ForceSaveDetail bool               `                                     json:"force_save_detail,omitempty"`
+	ImagePrices map[string]float64 `gorm:"serializer:fastjson;type:text" json:"image_prices,omitempty"`
+	// map[size][]VideoPriceItem
+	VideoPrices     map[string][]VideoPriceItem `gorm:"serializer:fastjson;type:text" json:"video_prices,omitempty"`
+	Price           Price                       `gorm:"embedded"                      json:"price,omitempty"`
+	RetryTimes      int64                       `                                     json:"retry_times,omitempty"`
+	Timeout         int64                       `                                     json:"timeout,omitempty"`
+	MaxErrorRate    float64                     `                                     json:"max_error_rate,omitempty"`
+	ForceSaveDetail bool                        `                                     json:"force_save_detail,omitempty"`
 }
 
 func (c *ModelConfig) BeforeSave(_ *gorm.DB) (err error) {
