@@ -36,22 +36,26 @@ func PublicMCPSSEServer(c *gin.Context) {
 		return
 	}
 
-	handlePublicSSEMCP(c, publicMcp, sseEndpoint)
+	group := middleware.GetGroup(c)
+	paramsFunc := newGroupParams(publicMcp.ID, group.ID)
+
+	handlePublicSSEMCP(c, publicMcp, paramsFunc, sseEndpoint)
 }
 
 func handlePublicSSEMCP(
 	c *gin.Context,
 	publicMcp *model.PublicMCPCache,
+	paramsFunc ParamsFunc,
 	endpoint EndpointProvider,
 ) {
 	switch publicMcp.Type {
 	case model.PublicMCPTypeProxySSE:
-		if err := handlePublicProxySSE(c, publicMcp, endpoint); err != nil {
+		if err := handlePublicProxySSE(c, publicMcp, paramsFunc, endpoint); err != nil {
 			http.Error(c.Writer, err.Error(), http.StatusBadRequest)
 			return
 		}
 	case model.PublicMCPTypeProxyStreamable:
-		if err := handlePublicProxyStreamableSSE(c, publicMcp, endpoint); err != nil {
+		if err := handlePublicProxyStreamableSSE(c, publicMcp, paramsFunc, endpoint); err != nil {
 			http.Error(c.Writer, err.Error(), http.StatusBadRequest)
 			return
 		}
@@ -63,7 +67,7 @@ func handlePublicSSEMCP(
 		}
 		handleSSEMCPServer(c, server, string(model.PublicMCPTypeOpenAPI), endpoint)
 	case model.PublicMCPTypeEmbed:
-		handleEmbedSSEMCP(c, publicMcp.ID, publicMcp.EmbedConfig, endpoint)
+		handleEmbedSSEMCP(c, publicMcp.ID, publicMcp.EmbedConfig, paramsFunc, endpoint)
 	default:
 		http.Error(c.Writer, "unknown mcp type", http.StatusBadRequest)
 	}
@@ -73,9 +77,10 @@ func handlePublicSSEMCP(
 func handlePublicProxySSE(
 	c *gin.Context,
 	publicMcp *model.PublicMCPCache,
+	paramsFunc ParamsFunc,
 	endpoint EndpointProvider,
 ) error {
-	client, err := createProxySSEClient(c, publicMcp)
+	client, err := createProxySSEClient(c, publicMcp, paramsFunc)
 	if err != nil {
 		return err
 	}
@@ -94,9 +99,10 @@ func handlePublicProxySSE(
 func handlePublicProxyStreamableSSE(
 	c *gin.Context,
 	publicMcp *model.PublicMCPCache,
+	paramsFunc ParamsFunc,
 	endpoint EndpointProvider,
 ) error {
-	client, err := createProxyStreamableClient(c, publicMcp)
+	client, err := createProxyStreamableClient(c, publicMcp, paramsFunc)
 	if err != nil {
 		return err
 	}
@@ -115,9 +121,9 @@ func handlePublicProxyStreamableSSE(
 func createProxySSEClient(
 	c *gin.Context,
 	publicMcp *model.PublicMCPCache,
+	paramsFunc ParamsFunc,
 ) (transport.Interface, error) {
-	group := middleware.GetGroup(c)
-	url, headers, err := prepareProxyConfig(publicMcp, newGroupParams(publicMcp.ID, group.ID))
+	url, headers, err := prepareProxyConfig(publicMcp, paramsFunc)
 	if err != nil {
 		return nil, err
 	}
@@ -138,9 +144,9 @@ func createProxySSEClient(
 func createProxyStreamableClient(
 	c *gin.Context,
 	publicMcp *model.PublicMCPCache,
+	paramsFunc ParamsFunc,
 ) (transport.Interface, error) {
-	group := middleware.GetGroup(c)
-	url, headers, err := prepareProxyConfig(publicMcp, newGroupParams(publicMcp.ID, group.ID))
+	url, headers, err := prepareProxyConfig(publicMcp, paramsFunc)
 	if err != nil {
 		return nil, err
 	}
@@ -193,7 +199,7 @@ func prepareProxyConfig(
 // processProxyReusingParams handles the reusing parameters for MCP proxy
 func processProxyReusingParams(
 	reusingParams map[string]model.PublicMCPProxyReusingParam,
-	mcpID, groupID string,
+	paramsFunc ParamsFunc,
 	headers map[string]string,
 	backendQuery *url.Values,
 ) error {
@@ -201,13 +207,13 @@ func processProxyReusingParams(
 		return nil
 	}
 
-	param, err := model.CacheGetPublicMCPReusingParam(mcpID, groupID)
+	params, err := paramsFunc.GetParams()
 	if err != nil {
 		return err
 	}
 
 	for k, v := range reusingParams {
-		paramValue, ok := param.Params[k]
+		paramValue, ok := params[k]
 		if !ok {
 			if v.Required {
 				return fmt.Errorf("required reusing parameter %s is missing", k)
@@ -257,13 +263,20 @@ func PublicMCPStreamable(c *gin.Context) {
 		return
 	}
 
-	handlePublicStreamable(c, publicMcp)
+	group := middleware.GetGroup(c)
+	paramsFunc := newGroupParams(publicMcp.ID, group.ID)
+
+	handlePublicStreamable(c, publicMcp, paramsFunc)
 }
 
-func handlePublicStreamable(c *gin.Context, publicMcp *model.PublicMCPCache) {
+func handlePublicStreamable(
+	c *gin.Context,
+	publicMcp *model.PublicMCPCache,
+	paramsFunc ParamsFunc,
+) {
 	switch publicMcp.Type {
 	case model.PublicMCPTypeProxySSE:
-		client, err := createProxySSEClient(c, publicMcp)
+		client, err := createProxySSEClient(c, publicMcp, paramsFunc)
 		if err != nil {
 			http.Error(c.Writer, err.Error(), http.StatusBadRequest)
 			return
@@ -274,7 +287,7 @@ func handlePublicStreamable(c *gin.Context, publicMcp *model.PublicMCPCache) {
 			mcpservers.WrapMCPClient2Server(client),
 		).ServeHTTP(c.Writer, c.Request)
 	case model.PublicMCPTypeProxyStreamable:
-		handlePublicProxyStreamable(c, publicMcp.ID, publicMcp.ProxyConfig)
+		handlePublicProxyStreamable(c, paramsFunc, publicMcp.ProxyConfig)
 	case model.PublicMCPTypeOpenAPI:
 		server, err := newOpenAPIMCPServer(publicMcp.OpenAPIConfig)
 		if err != nil {
@@ -287,7 +300,7 @@ func handlePublicStreamable(c *gin.Context, publicMcp *model.PublicMCPCache) {
 		}
 		handleStreamableMCPServer(c, server)
 	case model.PublicMCPTypeEmbed:
-		handlePublicEmbedStreamable(c, publicMcp.ID, publicMcp.EmbedConfig)
+		handlePublicEmbedStreamable(c, publicMcp.ID, paramsFunc, publicMcp.EmbedConfig)
 	default:
 		c.JSON(http.StatusBadRequest, mcpservers.CreateMCPErrorResponse(
 			mcp.NewRequestId(nil),
@@ -297,11 +310,15 @@ func handlePublicStreamable(c *gin.Context, publicMcp *model.PublicMCPCache) {
 	}
 }
 
-func handlePublicEmbedStreamable(c *gin.Context, mcpID string, config *model.MCPEmbeddingConfig) {
+func handlePublicEmbedStreamable(
+	c *gin.Context,
+	mcpID string,
+	paramsFunc ParamsFunc,
+	config *model.MCPEmbeddingConfig,
+) {
 	var reusingConfig map[string]string
 	if len(config.Reusing) != 0 {
-		group := middleware.GetGroup(c)
-		param, err := model.CacheGetPublicMCPReusingParam(mcpID, group.ID)
+		params, err := paramsFunc.GetParams()
 		if err != nil {
 			c.JSON(http.StatusBadRequest, mcpservers.CreateMCPErrorResponse(
 				mcp.NewRequestId(nil),
@@ -310,7 +327,7 @@ func handlePublicEmbedStreamable(c *gin.Context, mcpID string, config *model.MCP
 			))
 			return
 		}
-		reusingConfig = param.Params
+		reusingConfig = params
 	}
 	server, err := mcpservers.GetMCPServer(mcpID, config.Init, reusingConfig)
 	if err != nil {
@@ -325,7 +342,11 @@ func handlePublicEmbedStreamable(c *gin.Context, mcpID string, config *model.MCP
 }
 
 // handlePublicProxyStreamable processes Streamable proxy requests
-func handlePublicProxyStreamable(c *gin.Context, mcpID string, config *model.PublicMCPProxyConfig) {
+func handlePublicProxyStreamable(
+	c *gin.Context,
+	paramsFunc ParamsFunc,
+	config *model.PublicMCPProxyConfig,
+) {
 	if config == nil || config.URL == "" {
 		c.JSON(http.StatusBadRequest, mcpservers.CreateMCPErrorResponse(
 			mcp.NewRequestId(nil),
@@ -347,10 +368,9 @@ func handlePublicProxyStreamable(c *gin.Context, mcpID string, config *model.Pub
 
 	headers := make(map[string]string)
 	backendQuery := backendURL.Query()
-	group := middleware.GetGroup(c)
 
 	// Process reusing parameters if any
-	if err := processProxyReusingParams(config.Reusing, mcpID, group.ID, headers, &backendQuery); err != nil {
+	if err := processProxyReusingParams(config.Reusing, paramsFunc, headers, &backendQuery); err != nil {
 		c.JSON(http.StatusBadRequest, mcpservers.CreateMCPErrorResponse(
 			mcp.NewRequestId(nil),
 			mcp.INVALID_REQUEST,
@@ -369,4 +389,38 @@ func handlePublicProxyStreamable(c *gin.Context, mcpID string, config *model.Pub
 	backendURL.RawQuery = backendQuery.Encode()
 	mcpproxy.NewStreamableProxy(backendURL.String(), headers, getStore()).
 		ServeHTTP(c.Writer, c.Request)
+}
+
+// TestPublicMCPSSEServer godoc
+//
+//	@Summary	Test Public MCP SSE Server
+//	@Security	ApiKeyAuth
+//	@Param		group	path	string	true	"Group ID"
+//	@Param		id		path	string	true	"MCP ID"
+//	@Router		/api/test-publicmcp/{group}/{id}/sse [get]
+func TestPublicMCPSSEServer(c *gin.Context) {
+	mcpID := c.Param("id")
+	if mcpID == "" {
+		http.Error(c.Writer, "mcp id is required", http.StatusBadRequest)
+		return
+	}
+	groupID := c.Param("group")
+	if groupID == "" {
+		http.Error(c.Writer, "group id is required", http.StatusBadRequest)
+		return
+	}
+
+	publicMcp, err := model.CacheGetPublicMCP(mcpID)
+	if err != nil {
+		http.Error(c.Writer, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if publicMcp.Status != model.PublicMCPStatusEnabled {
+		http.Error(c.Writer, "mcp is not enabled", http.StatusBadRequest)
+		return
+	}
+
+	paramsFunc := newGroupParams(publicMcp.ID, groupID)
+
+	handlePublicSSEMCP(c, publicMcp, paramsFunc, sseEndpoint)
 }

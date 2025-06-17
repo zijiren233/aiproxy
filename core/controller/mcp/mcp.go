@@ -9,7 +9,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/core/mcpproxy"
-	"github.com/labring/aiproxy/core/middleware"
 	"github.com/labring/aiproxy/core/model"
 	mcpservers "github.com/labring/aiproxy/mcp-servers"
 	"github.com/labring/aiproxy/openapi-mcp/convert"
@@ -80,9 +79,10 @@ func handleEmbedSSEMCP(
 	c *gin.Context,
 	mcpID string,
 	config *model.MCPEmbeddingConfig,
+	paramsFunc ParamsFunc,
 	endpoint EndpointProvider,
 ) {
-	reusingConfig, err := prepareEmbedReusingConfig(c, mcpID, config.Reusing)
+	reusingConfig, err := prepareEmbedReusingConfig(c, mcpID, paramsFunc, config.Reusing)
 	if err != nil {
 		http.Error(c.Writer, err.Error(), http.StatusBadRequest)
 		return
@@ -101,16 +101,15 @@ func handleEmbedSSEMCP(
 func prepareEmbedReusingConfig(
 	c *gin.Context,
 	mcpID string,
+	paramsFunc ParamsFunc,
 	reusingParams map[string]model.ReusingParam,
 ) (map[string]string, error) {
 	if len(reusingParams) == 0 {
 		return nil, nil
 	}
 
-	group := middleware.GetGroup(c)
-	processor := NewReusingParamProcessor(mcpID, newGroupParams(mcpID, group.ID))
-
-	return processor.ProcessEmbedReusingParams(reusingParams)
+	return NewReusingParamProcessor(mcpID, paramsFunc).
+		ProcessEmbedReusingParams(reusingParams)
 }
 
 func sendMCPSSEMessage(c *gin.Context, sessionID string) {

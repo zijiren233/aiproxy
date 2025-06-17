@@ -156,7 +156,8 @@ type PublicMCP struct {
 	ProxyConfig   *PublicMCPProxyConfig `gorm:"serializer:fastjson;type:text" json:"proxy_config,omitempty"`
 	OpenAPIConfig *MCPOpenAPIConfig     `gorm:"serializer:fastjson;type:text" json:"openapi_config,omitempty"`
 	EmbedConfig   *MCPEmbeddingConfig   `gorm:"serializer:fastjson;type:text" json:"embed_config,omitempty"`
-	TestConfig    *TestConfig           `gorm:"serializer:fastjson;type:text" json:"test_config,omitempty"`
+	// only used by list tools
+	TestConfig *TestConfig `gorm:"serializer:fastjson;type:text" json:"test_config,omitempty"`
 }
 
 func (p *PublicMCP) BeforeCreate(_ *gorm.DB) error {

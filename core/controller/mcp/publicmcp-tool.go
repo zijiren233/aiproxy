@@ -2,22 +2,171 @@ package controller
 
 import (
 	"context"
+	"encoding"
 	"errors"
+	"sync"
 	"time"
 
 	"github.com/bytedance/sonic"
+	"github.com/labring/aiproxy/core/common"
+	"github.com/labring/aiproxy/core/common/conv"
 	"github.com/labring/aiproxy/core/model"
 	mcpservers "github.com/labring/aiproxy/mcp-servers"
 	"github.com/mark3labs/mcp-go/client/transport"
 	"github.com/mark3labs/mcp-go/mcp"
+	"github.com/redis/go-redis/v9"
+	log "github.com/sirupsen/logrus"
 )
+
+const (
+	ToolCacheKey = "tool:%s:%d" // mcp_id:updated_at
+)
+
+type redisToolSlice []mcp.Tool
+
+var (
+	_ redis.Scanner            = (*redisToolSlice)(nil)
+	_ encoding.BinaryMarshaler = (*redisToolSlice)(nil)
+)
+
+func (r *redisToolSlice) ScanRedis(value string) error {
+	return sonic.Unmarshal(conv.StringToBytes(value), r)
+}
+
+func (r redisToolSlice) MarshalBinary() ([]byte, error) {
+	return sonic.Marshal(r)
+}
+
+type toolCacheMemItem struct {
+	tools      []mcp.Tool
+	lastUsedAt time.Time
+}
+
+type toolMemoryCache struct {
+	mu             sync.Mutex
+	items          map[string]toolCacheMemItem
+	cleanStartOnce sync.Once
+}
+
+var toolMemCache = &toolMemoryCache{
+	items: make(map[string]toolCacheMemItem),
+}
+
+func getToolCacheKey(mcpID string, updatedAt int64) string {
+	return common.RedisKeyf(ToolCacheKey, mcpID, updatedAt)
+}
+
+func (c *toolMemoryCache) set(key string, tools []mcp.Tool) {
+	c.startCleanupOnStart()
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.items[key] = toolCacheMemItem{
+		tools:      tools,
+		lastUsedAt: time.Now(),
+	}
+}
+
+func (c *toolMemoryCache) get(key string) ([]mcp.Tool, bool) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	item, exists := c.items[key]
+	if !exists {
+		return nil, false
+	}
+
+	if time.Now().After(item.lastUsedAt.Add(time.Minute * 10)) {
+		delete(c.items, key)
+		return nil, false
+	}
+
+	item.lastUsedAt = time.Now()
+
+	return item.tools, true
+}
+
+func (c *toolMemoryCache) cleanup() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	now := time.Now()
+	for key, item := range c.items {
+		if now.After(item.lastUsedAt.Add(time.Minute * 10)) {
+			delete(c.items, key)
+		}
+	}
+}
+
+func (c *toolMemoryCache) startCleanupOnStart() {
+	c.cleanStartOnce.Do(func() {
+		go func() {
+			ticker := time.NewTicker(time.Minute * 10)
+			defer ticker.Stop()
+
+			for range ticker.C {
+				c.cleanup()
+			}
+		}()
+	})
+}
+
+func CacheSetTools(mcpID string, updatedAt int64, tools []mcp.Tool) error {
+	key := getToolCacheKey(mcpID, updatedAt)
+
+	if common.RedisEnabled {
+		redisKey := common.RedisKeyf(ToolCacheKey, mcpID, updatedAt)
+		pipe := common.RDB.Pipeline()
+		pipe.HSet(context.Background(), redisKey, tools)
+		pipe.Expire(context.Background(), redisKey, time.Hour)
+		_, err := pipe.Exec(context.Background())
+		return err
+	}
+
+	toolMemCache.set(key, tools)
+
+	return nil
+}
+
+func CacheGetTools(mcpID string, updatedAt int64) ([]mcp.Tool, bool) {
+	key := getToolCacheKey(mcpID, updatedAt)
+
+	if common.RedisEnabled {
+		tools := redisToolSlice{}
+		err := common.RDB.HGetAll(context.Background(), key).Scan(&tools)
+		if err != nil {
+			log.Errorf("failed to get tools cache from redis (%s): %v", key, err)
+		} else {
+			return tools, true
+		}
+	}
+
+	item, exists := toolMemCache.get(key)
+	if exists {
+		return item, true
+	}
+
+	return nil, false
+}
 
 func getPublicMCPTools(
 	ctx context.Context,
 	publicMcp model.PublicMCP,
 	params map[string]string,
-) ([]mcp.Tool, error) {
-	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
+) (tools []mcp.Tool, err error) {
+	tools, exists := CacheGetTools(publicMcp.ID, publicMcp.UpdateAt.Unix())
+	if exists {
+		return tools, nil
+	}
+	defer func() {
+		if err != nil {
+			return
+		}
+		if err := CacheSetTools(publicMcp.ID, publicMcp.UpdateAt.Unix(), tools); err != nil {
+			log.Errorf("failed to set tools cache in redis: %v", err)
+		}
+	}()
+
+	ctx, cancel := context.WithTimeout(ctx, time.Second)
 	defer cancel()
 
 	switch publicMcp.Type {

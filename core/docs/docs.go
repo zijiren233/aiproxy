@@ -5831,6 +5831,33 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/test-publicmcp/{group}/{id}/sse": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "summary": "Test Public MCP SSE Server",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Group ID",
+                        "name": "group",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "MCP ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {}
+            }
+        },
         "/api/token/{group}": {
             "post": {
                 "security": [
