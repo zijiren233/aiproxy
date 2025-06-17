@@ -45,6 +45,9 @@ func (c *ModelConfig) BeforeSave(_ *gorm.DB) (err error) {
 	if c.Model == "" {
 		return errors.New("model is required")
 	}
+	if err := c.Price.ValidateConditionalPrices(); err != nil {
+		return err
+	}
 	return nil
 }
 

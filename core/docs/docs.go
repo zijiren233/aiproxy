@@ -9559,6 +9559,17 @@ const docTemplate = `{
                 }
             }
         },
+        "model.ConditionalPrice": {
+            "type": "object",
+            "properties": {
+                "condition": {
+                    "$ref": "#/definitions/model.PriceCondition"
+                },
+                "price": {
+                    "$ref": "#/definitions/model.Price"
+                }
+            }
+        },
         "model.DashboardResponse": {
             "type": "object",
             "properties": {
@@ -10563,6 +10574,12 @@ const docTemplate = `{
                 "cached_price_unit": {
                     "type": "integer"
                 },
+                "conditional_prices": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.ConditionalPrice"
+                    }
+                },
                 "image_input_price": {
                     "type": "number"
                 },
@@ -10595,6 +10612,23 @@ const docTemplate = `{
                     "type": "number"
                 },
                 "web_search_price_unit": {
+                    "type": "integer"
+                }
+            }
+        },
+        "model.PriceCondition": {
+            "type": "object",
+            "properties": {
+                "input_token_max": {
+                    "type": "integer"
+                },
+                "input_token_min": {
+                    "type": "integer"
+                },
+                "output_token_max": {
+                    "type": "integer"
+                },
+                "output_token_min": {
                     "type": "integer"
                 }
             }

@@ -12,6 +12,8 @@ import (
 	"github.com/labring/aiproxy/core/relay/mode"
 )
 
+// https://azure.microsoft.com/en-us/pricing/details/cognitive-services/openai-service/
+
 type Adaptor struct {
 	openai.Adaptor
 }

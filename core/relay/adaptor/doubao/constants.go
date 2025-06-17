@@ -6,8 +6,199 @@ import (
 )
 
 // https://console.volcengine.com/ark/region:ark+cn-beijing/model
+// https://www.volcengine.com/docs/82379/1544106
 
 var ModelList = []model.ModelConfig{
+	{
+		Model: "doubao-seed-1-6-250615",
+		Type:  mode.ChatCompletions,
+		Owner: model.ModelOwnerDoubao,
+		Price: model.Price{
+			InputPrice:         0.0024,   // 2.40 per million tokens
+			OutputPrice:        0.024,    // 24.00 per million tokens
+			CacheCreationPrice: 0.000017, // 0.017 per million tokens per hour
+			CachedPrice:        0.00016,  // 0.16 per million tokens
+
+			ConditionalPrices: []model.ConditionalPrice{
+				{
+					Condition: model.PriceCondition{
+						InputTokenMin:  0,
+						InputTokenMax:  32000,
+						OutputTokenMin: 0,
+						OutputTokenMax: 200,
+					},
+					Price: model.Price{
+						InputPrice:         0.0008,   // 0.80 per million tokens
+						OutputPrice:        0.002,    // 2.00 per million tokens
+						CacheCreationPrice: 0.000017, // 0.017 per million tokens per hour
+						CachedPrice:        0.00016,  // 0.16 per million tokens
+					},
+				},
+				{
+					Condition: model.PriceCondition{
+						InputTokenMin:  0,
+						InputTokenMax:  32000,
+						OutputTokenMin: 201,
+						OutputTokenMax: 16000,
+					},
+					Price: model.Price{
+						InputPrice:         0.0008,   // 0.80 per million tokens
+						OutputPrice:        0.008,    // 8.00 per million tokens
+						CacheCreationPrice: 0.000017, // 0.017 per million tokens per hour
+						CachedPrice:        0.00016,  // 0.16 per million tokens
+					},
+				},
+				{
+					Condition: model.PriceCondition{
+						InputTokenMin: 32001,
+						InputTokenMax: 128000,
+					},
+					Price: model.Price{
+						InputPrice:         0.0012,   // 1.20 per million tokens
+						OutputPrice:        0.016,    // 16.00 per million tokens
+						CacheCreationPrice: 0.000017, // 0.017 per million tokens per hour
+						CachedPrice:        0.00016,  // 0.16 per million tokens
+					},
+				},
+				{
+					Condition: model.PriceCondition{
+						InputTokenMin: 128001,
+						InputTokenMax: 256000,
+					},
+					Price: model.Price{
+						InputPrice:         0.0024,   // 2.40 per million tokens
+						OutputPrice:        0.024,    // 24.00 per million tokens
+						CacheCreationPrice: 0.000017, // 0.017 per million tokens per hour
+						CachedPrice:        0.00016,  // 0.16 per million tokens
+					},
+				},
+			},
+		},
+		RPM: 30000,
+		Config: model.NewModelConfig(
+			model.WithModelConfigMaxContextTokens(256000),
+			model.WithModelConfigMaxOutputTokens(16000),
+			model.WithModelConfigMaxInputTokens(224000),
+			model.WithModelConfigToolChoice(true),
+			model.WithModelConfigVision(true),
+		),
+	},
+	{
+		Model: "doubao-seed-1-6-thinking-250615",
+		Type:  mode.ChatCompletions,
+		Owner: model.ModelOwnerDoubao,
+		Price: model.Price{
+			InputPrice:         0.0024,   // 2.40 per million tokens
+			OutputPrice:        0.024,    // 24.00 per million tokens
+			CacheCreationPrice: 0.000017, // 0.017 per million tokens per hour
+			CachedPrice:        0.00016,  // 0.16 per million tokens
+
+			ConditionalPrices: []model.ConditionalPrice{
+				{
+					Condition: model.PriceCondition{
+						InputTokenMin: 0,
+						InputTokenMax: 32000,
+					},
+					Price: model.Price{
+						InputPrice:         0.0008,   // 0.80 per million tokens
+						OutputPrice:        0.008,    // 8.00 per million tokens
+						CacheCreationPrice: 0.000017, // 0.017 per million tokens per hour
+						CachedPrice:        0.00016,  // 0.16 per million tokens
+					},
+				},
+				{
+					Condition: model.PriceCondition{
+						InputTokenMin: 32001,
+						InputTokenMax: 128000,
+					},
+					Price: model.Price{
+						InputPrice:         0.0012,   // 1.20 per million tokens
+						OutputPrice:        0.016,    // 16.00 per million tokens
+						CacheCreationPrice: 0.000017, // 0.017 per million tokens per hour
+						CachedPrice:        0.00016,  // 0.16 per million tokens
+					},
+				},
+				{
+					Condition: model.PriceCondition{
+						InputTokenMin: 128001,
+						InputTokenMax: 256000,
+					},
+					Price: model.Price{
+						InputPrice:         0.0024,   // 2.40 per million tokens
+						OutputPrice:        0.024,    // 24.00 per million tokens
+						CacheCreationPrice: 0.000017, // 0.017 per million tokens per hour
+						CachedPrice:        0.00016,  // 0.16 per million tokens
+					},
+				},
+			},
+		},
+		RPM: 30000,
+		Config: model.NewModelConfig(
+			model.WithModelConfigMaxContextTokens(256000),
+			model.WithModelConfigMaxOutputTokens(16000),
+			model.WithModelConfigMaxInputTokens(224000),
+			model.WithModelConfigToolChoice(true),
+			model.WithModelConfigVision(true),
+		),
+	},
+	{
+		Model: "doubao-seed-1-6-flash-250615",
+		Type:  mode.ChatCompletions,
+		Owner: model.ModelOwnerDoubao,
+		Price: model.Price{
+			InputPrice:         0.0006,   // 0.60 per million tokens
+			OutputPrice:        0.006,    // 6.00 per million tokens
+			CacheCreationPrice: 0.000017, // 0.017 per million tokens per hour
+			CachedPrice:        0.00003,  // 0.03 per million tokens
+
+			ConditionalPrices: []model.ConditionalPrice{
+				{
+					Condition: model.PriceCondition{
+						InputTokenMin: 0,
+						InputTokenMax: 32000,
+					},
+					Price: model.Price{
+						InputPrice:         0.00015,  // 0.15 per million tokens
+						OutputPrice:        0.0015,   // 1.50 per million tokens
+						CacheCreationPrice: 0.000017, // 0.017 per million tokens per hour
+						CachedPrice:        0.00003,  // 0.03 per million tokens
+					},
+				},
+				{
+					Condition: model.PriceCondition{
+						InputTokenMin: 32001,
+						InputTokenMax: 128000,
+					},
+					Price: model.Price{
+						InputPrice:         0.0003,   // 0.30 per million tokens
+						OutputPrice:        0.003,    // 3.00 per million tokens
+						CacheCreationPrice: 0.000017, // 0.017 per million tokens per hour
+						CachedPrice:        0.00003,  // 0.03 per million tokens
+					},
+				},
+				{
+					Condition: model.PriceCondition{
+						InputTokenMin: 128001,
+						InputTokenMax: 256000,
+					},
+					Price: model.Price{
+						InputPrice:         0.0006,   // 0.60 per million tokens
+						OutputPrice:        0.006,    // 6.00 per million tokens
+						CacheCreationPrice: 0.000017, // 0.017 per million tokens per hour
+						CachedPrice:        0.00003,  // 0.03 per million tokens
+					},
+				},
+			},
+		},
+		RPM: 30000,
+		Config: model.NewModelConfig(
+			model.WithModelConfigMaxContextTokens(256000),
+			model.WithModelConfigMaxOutputTokens(16000),
+			model.WithModelConfigMaxInputTokens(224000),
+			model.WithModelConfigToolChoice(true),
+			model.WithModelConfigVision(true),
+		),
+	},
 	{
 		Model: "Doubao-1.5-vision-pro-32k",
 		Type:  mode.ChatCompletions,
