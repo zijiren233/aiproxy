@@ -24,7 +24,10 @@ func init() {
 			mcpservers.WithProxyConfigType(configTemplates),
 			mcpservers.WithTags([]string{"map"}),
 			mcpservers.WithDescription(
-				"可以通过话题生成 PPT",
+				"Gezhe MCP Server provides comprehensive Gezhe services including topic generation, PPT generation, and more through Gezhe's APIs.",
+			),
+			mcpservers.WithDescriptionCN(
+				"歌者 MCP 服务器通过歌者 API 提供全面的歌者服务，包括话题生成 PPT 等。",
 			),
 			mcpservers.WithReadme(readme),
 			mcpservers.WithReadmeCN(readmeCN),

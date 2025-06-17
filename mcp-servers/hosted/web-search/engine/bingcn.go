@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/labring/aiproxy/mcp-servers/bingcn"
+	"github.com/labring/aiproxy/mcp-servers/hosted/bingcn"
 )
 
 type BingCNEngine struct {
