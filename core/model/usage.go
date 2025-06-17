@@ -141,7 +141,7 @@ func (p *Price) validateConditionalPriceOrdering() error {
 		return nil
 	}
 
-	for i := 0; i < len(p.ConditionalPrices)-1; i++ {
+	for i := range len(p.ConditionalPrices) - 1 {
 		current := p.ConditionalPrices[i].Condition
 		next := p.ConditionalPrices[i+1].Condition
 

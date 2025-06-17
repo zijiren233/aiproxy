@@ -1006,6 +1006,13 @@ definitions:
       rejected_prediction_tokens:
         type: integer
     type: object
+  model.ConditionalPrice:
+    properties:
+      condition:
+        $ref: '#/definitions/model.PriceCondition'
+      price:
+        $ref: '#/definitions/model.Price'
+    type: object
   model.DashboardResponse:
     properties:
       cache_creation_tokens:
@@ -1700,6 +1707,10 @@ definitions:
         type: number
       cached_price_unit:
         type: integer
+      conditional_prices:
+        items:
+          $ref: '#/definitions/model.ConditionalPrice'
+        type: array
       image_input_price:
         type: number
       image_input_price_unit:
@@ -1724,6 +1735,17 @@ definitions:
       web_search_price:
         type: number
       web_search_price_unit:
+        type: integer
+    type: object
+  model.PriceCondition:
+    properties:
+      input_token_max:
+        type: integer
+      input_token_min:
+        type: integer
+      output_token_max:
+        type: integer
+      output_token_min:
         type: integer
     type: object
   model.PromptTokensDetails:
