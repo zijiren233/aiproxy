@@ -129,6 +129,7 @@ func NewGroupPublicMCPDetailResponse(
 
 	switch mcp.Type {
 	case model.PublicMCPTypeProxySSE, model.PublicMCPTypeProxyStreamable:
+		r.Reusing = make(map[string]model.ReusingParam, len(mcp.ProxyConfig.Reusing))
 		for _, v := range mcp.ProxyConfig.Reusing {
 			r.Reusing[v.Name] = v.ReusingParam
 		}
