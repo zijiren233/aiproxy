@@ -14,6 +14,11 @@ var ModelList = []model.ModelConfig{
 		Type:  mode.ChatCompletions,
 		Owner: model.ModelOwnerDoubao,
 		Price: model.Price{
+			InputPrice:         0.0024,   // 2.40 per million tokens
+			OutputPrice:        0.024,    // 24.00 per million tokens
+			CacheCreationPrice: 0.000017, // 0.017 per million tokens per hour
+			CachedPrice:        0.00016,  // 0.16 per million tokens
+
 			ConditionalPrices: []model.ConditionalPrice{
 				{
 					Condition: model.PriceCondition{
@@ -83,6 +88,11 @@ var ModelList = []model.ModelConfig{
 		Type:  mode.ChatCompletions,
 		Owner: model.ModelOwnerDoubao,
 		Price: model.Price{
+			InputPrice:         0.0024,   // 2.40 per million tokens
+			OutputPrice:        0.024,    // 24.00 per million tokens
+			CacheCreationPrice: 0.000017, // 0.017 per million tokens per hour
+			CachedPrice:        0.00016,  // 0.16 per million tokens
+
 			ConditionalPrices: []model.ConditionalPrice{
 				{
 					Condition: model.PriceCondition{
@@ -136,6 +146,11 @@ var ModelList = []model.ModelConfig{
 		Type:  mode.ChatCompletions,
 		Owner: model.ModelOwnerDoubao,
 		Price: model.Price{
+			InputPrice:         0.0006,   // 0.60 per million tokens
+			OutputPrice:        0.006,    // 6.00 per million tokens
+			CacheCreationPrice: 0.000017, // 0.017 per million tokens per hour
+			CachedPrice:        0.00003,  // 0.03 per million tokens
+
 			ConditionalPrices: []model.ConditionalPrice{
 				{
 					Condition: model.PriceCondition{
