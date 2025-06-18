@@ -10,7 +10,6 @@ import (
 	"github.com/labring/aiproxy/core/controller/utils"
 	"github.com/labring/aiproxy/core/middleware"
 	"github.com/labring/aiproxy/core/model"
-	mcpservers "github.com/labring/aiproxy/mcp-servers"
 	"github.com/mark3labs/mcp-go/mcp"
 	"gorm.io/gorm"
 )
@@ -97,21 +96,6 @@ func (r *GroupPublicMCPDetailResponse) MarshalJSON() ([]byte, error) {
 	return sonic.Marshal(a)
 }
 
-func checkParamsIsFull(params model.Params, reusing map[string]model.ReusingParam) bool {
-	for key, r := range reusing {
-		if !r.Required {
-			continue
-		}
-		if params == nil {
-			return false
-		}
-		if v, ok := params[key]; !ok || v == "" {
-			return false
-		}
-	}
-	return true
-}
-
 func NewGroupPublicMCPDetailResponse(
 	ctx *gin.Context,
 	host string,
@@ -154,39 +138,16 @@ func NewGroupPublicMCPDetailResponse(
 	}
 	r.Params = reusingParams.Params
 
-	gettedTools := false
-
-	if testConfig.Enabled || checkParamsIsFull(nil, r.Reusing) {
-		tools, err := getPublicMCPTools(ctx.Request.Context(), mcp, testConfig.Params)
-		if err != nil {
-			log := common.GetLogger(ctx)
-			log.Errorf("get public mcp tools error: %s", err.Error())
-		} else {
-			gettedTools = true
-			r.Tools = tools
-		}
-	}
-
-	if !gettedTools && mcp.Type == model.PublicMCPTypeEmbed {
-		tools, err := mcpservers.ListTools(ctx.Request.Context(), mcp.ID)
-		if err == nil {
-			gettedTools = true
-			r.Tools = tools
-		}
+	tools, err := getPublicMCPTools(ctx.Request.Context(), mcp, testConfig, r.Params, r.Reusing)
+	if err != nil {
+		log := common.GetLogger(ctx)
+		log.Errorf("get public mcp tools error: %s", err.Error())
+	} else {
+		r.Tools = tools
 	}
 
 	if checkParamsIsFull(r.Params, r.Reusing) {
 		r.Endpoints = NewPublicMCPEndpoint(host, mcp)
-
-		if !gettedTools {
-			tools, err := getPublicMCPTools(ctx.Request.Context(), mcp, r.Params)
-			if err != nil {
-				log := common.GetLogger(ctx)
-				log.Errorf("get public mcp tools error: %s", err.Error())
-			} else {
-				r.Tools = tools
-			}
-		}
 	}
 
 	return r, nil

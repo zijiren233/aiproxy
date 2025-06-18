@@ -152,15 +152,33 @@ func CacheGetTools(mcpID string, updatedAt int64) ([]mcp.Tool, bool) {
 	return nil, false
 }
 
+func checkParamsIsFull(params model.Params, reusing map[string]model.ReusingParam) bool {
+	for key, r := range reusing {
+		if !r.Required {
+			continue
+		}
+		if params == nil {
+			return false
+		}
+		if v, ok := params[key]; !ok || v == "" {
+			return false
+		}
+	}
+	return true
+}
+
 func getPublicMCPTools(
 	ctx context.Context,
 	publicMcp model.PublicMCP,
+	testConfig model.TestConfig,
 	params map[string]string,
+	reusing map[string]model.ReusingParam,
 ) (tools []mcp.Tool, err error) {
 	tools, exists := CacheGetTools(publicMcp.ID, publicMcp.UpdateAt.Unix())
 	if exists {
 		return tools, nil
 	}
+
 	defer func() {
 		if err != nil {
 			return
@@ -175,13 +193,13 @@ func getPublicMCPTools(
 
 	switch publicMcp.Type {
 	case model.PublicMCPTypeEmbed:
-		return getEmbedMCPTools(ctx, publicMcp, params)
+		return getEmbedMCPTools(ctx, publicMcp, testConfig, params, reusing)
 	case model.PublicMCPTypeOpenAPI:
 		return getOpenAPIMCPTools(ctx, publicMcp)
 	case model.PublicMCPTypeProxySSE:
-		return getProxySSEMCPTools(ctx, publicMcp, params)
+		return getProxySSEMCPTools(ctx, publicMcp, testConfig, params, reusing)
 	case model.PublicMCPTypeProxyStreamable:
-		return getProxyStreamableMCPTools(ctx, publicMcp, params)
+		return getProxyStreamableMCPTools(ctx, publicMcp, testConfig, params, reusing)
 	default:
 		return nil, nil
 	}
@@ -190,13 +208,33 @@ func getPublicMCPTools(
 func getEmbedMCPTools(
 	ctx context.Context,
 	publicMcp model.PublicMCP,
+	testConfig model.TestConfig,
 	params map[string]string,
+	reusing map[string]model.ReusingParam,
 ) ([]mcp.Tool, error) {
+	tools, err := mcpservers.ListTools(ctx, publicMcp.ID)
+	if err == nil {
+		return tools, nil
+	}
+
 	if publicMcp.EmbedConfig == nil {
 		return nil, nil
 	}
 
-	server, err := mcpservers.GetMCPServer(publicMcp.ID, publicMcp.EmbedConfig.Init, params)
+	var effectiveParams map[string]string
+	if testConfig.Enabled && checkParamsIsFull(testConfig.Params, reusing) {
+		effectiveParams = testConfig.Params
+	} else if checkParamsIsFull(params, reusing) {
+		effectiveParams = params
+	} else {
+		return nil, nil
+	}
+
+	server, err := mcpservers.GetMCPServer(
+		publicMcp.ID,
+		publicMcp.EmbedConfig.Init,
+		effectiveParams,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -220,13 +258,27 @@ func getOpenAPIMCPTools(ctx context.Context, publicMcp model.PublicMCP) ([]mcp.T
 func getProxySSEMCPTools(
 	ctx context.Context,
 	publicMcp model.PublicMCP,
+	testConfig model.TestConfig,
 	params map[string]string,
+	reusing map[string]model.ReusingParam,
 ) ([]mcp.Tool, error) {
 	if publicMcp.ProxyConfig == nil {
 		return nil, nil
 	}
 
-	url, headers, err := prepareProxyConfig(publicMcp.ToPublicMCPCache(), staticParams(params))
+	var effectiveParams map[string]string
+	if testConfig.Enabled && checkParamsIsFull(testConfig.Params, reusing) {
+		effectiveParams = testConfig.Params
+	} else if checkParamsIsFull(params, reusing) {
+		effectiveParams = params
+	} else {
+		return nil, nil
+	}
+
+	url, headers, err := prepareProxyConfig(
+		publicMcp.ToPublicMCPCache(),
+		staticParams(effectiveParams),
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -246,13 +298,27 @@ func getProxySSEMCPTools(
 func getProxyStreamableMCPTools(
 	ctx context.Context,
 	publicMcp model.PublicMCP,
+	testConfig model.TestConfig,
 	params map[string]string,
+	reusing map[string]model.ReusingParam,
 ) ([]mcp.Tool, error) {
 	if publicMcp.ProxyConfig == nil {
 		return nil, nil
 	}
 
-	url, headers, err := prepareProxyConfig(publicMcp.ToPublicMCPCache(), staticParams(params))
+	var effectiveParams map[string]string
+	if testConfig.Enabled && checkParamsIsFull(testConfig.Params, reusing) {
+		effectiveParams = testConfig.Params
+	} else if checkParamsIsFull(params, reusing) {
+		effectiveParams = params
+	} else {
+		return nil, nil
+	}
+
+	url, headers, err := prepareProxyConfig(
+		publicMcp.ToPublicMCPCache(),
+		staticParams(effectiveParams),
+	)
 	if err != nil {
 		return nil, err
 	}
