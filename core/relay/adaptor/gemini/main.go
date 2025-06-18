@@ -214,14 +214,19 @@ func buildContents(
 			} else {
 				contentMap = make(map[string]any)
 			}
+			name := ""
+			if message.Name != nil {
+				name = *message.Name
+			}
+
 			content.Parts = append(content.Parts, &Part{
 				FunctionResponse: &FunctionResponse{
-					Name: *message.Name,
+					Name: name,
 					Response: struct {
 						Name    string         `json:"name"`
 						Content map[string]any `json:"content"`
 					}{
-						Name:    *message.Name,
+						Name:    name,
 						Content: contentMap,
 					},
 				},
