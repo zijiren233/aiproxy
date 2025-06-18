@@ -22,6 +22,7 @@ func init() {
 			model.PublicMCPTypeEmbed,
 			mcpservers.WithNameCN("网络搜索"),
 			mcpservers.WithNewServerFunc(NewServer),
+			mcpservers.WithListToolsFunc(ListTools),
 			mcpservers.WithConfigTemplates(configTemplates),
 			mcpservers.WithTags([]string{"search", "web", "google", "bing", "arxiv", "searchxng"}),
 			mcpservers.WithDescription(
