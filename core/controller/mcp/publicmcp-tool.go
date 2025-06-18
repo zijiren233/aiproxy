@@ -222,11 +222,12 @@ func getEmbedMCPTools(
 	}
 
 	var effectiveParams map[string]string
-	if testConfig.Enabled && checkParamsIsFull(testConfig.Params, reusing) {
+	switch {
+	case testConfig.Enabled && checkParamsIsFull(testConfig.Params, reusing):
 		effectiveParams = testConfig.Params
-	} else if checkParamsIsFull(params, reusing) {
+	case checkParamsIsFull(params, reusing):
 		effectiveParams = params
-	} else {
+	default:
 		return nil, nil
 	}
 
@@ -267,11 +268,12 @@ func getProxySSEMCPTools(
 	}
 
 	var effectiveParams map[string]string
-	if testConfig.Enabled && checkParamsIsFull(testConfig.Params, reusing) {
+	switch {
+	case testConfig.Enabled && checkParamsIsFull(testConfig.Params, reusing):
 		effectiveParams = testConfig.Params
-	} else if checkParamsIsFull(params, reusing) {
+	case checkParamsIsFull(params, reusing):
 		effectiveParams = params
-	} else {
+	default:
 		return nil, nil
 	}
 
@@ -307,11 +309,12 @@ func getProxyStreamableMCPTools(
 	}
 
 	var effectiveParams map[string]string
-	if testConfig.Enabled && checkParamsIsFull(testConfig.Params, reusing) {
+	switch {
+	case testConfig.Enabled && checkParamsIsFull(testConfig.Params, reusing):
 		effectiveParams = testConfig.Params
-	} else if checkParamsIsFull(params, reusing) {
+	case checkParamsIsFull(params, reusing):
 		effectiveParams = params
-	} else {
+	default:
 		return nil, nil
 	}
 
