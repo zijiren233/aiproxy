@@ -165,6 +165,7 @@ Arxiv 搜索引擎无需额外配置参数。
         }
     ],
     "web_search_options": {
+        "enable": true,
         "search_context_size": "medium"
     }
 }
@@ -174,6 +175,7 @@ Arxiv 搜索引擎无需额外配置参数。
 
 | 字段 | 类型 | 可选值 | 说明 |
 |------|------|--------|------|
+| `enable` | bool | - | 是否启用搜索，如果为 `false`，则不启用搜索 |
 | `search_context_size` | string | `low`、`medium`、`high` | 控制搜索上下文的大小，影响搜索查询的数量和深度 |
 
 #### search_context_size 详解
@@ -206,7 +208,9 @@ Web Search 插件在以下情况下会被启用：
             "content": "今天的天气如何？"
         }
     ],
-    "web_search_options": {}
+    "web_search_options": {
+        "enable": true
+    }
 }
 ```
 
@@ -222,6 +226,7 @@ Web Search 插件在以下情况下会被启用：
         }
     ],
     "web_search_options": {
+        "enable": true,
         "search_context_size": "high"
     }
 }

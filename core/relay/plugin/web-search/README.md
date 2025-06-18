@@ -165,6 +165,7 @@ Users can add the `web_search_options` field in their requests to control search
         }
     ],
     "web_search_options": {
+        "enable": true,
         "search_context_size": "medium"
     }
 }
@@ -174,6 +175,7 @@ Users can add the `web_search_options` field in their requests to control search
 
 | Field | Type | Options | Description |
 |-------|------|---------|-------------|
+| `enable` | bool | - | Whether to enable search, if `false`, search will not be enabled |
 | `search_context_size` | string | `low`, `medium`, `high` | Controls the size of search context, affecting the number and depth of search queries |
 
 #### search_context_size Details
@@ -206,7 +208,9 @@ The Web Search plugin is enabled under the following conditions:
             "content": "What's the weather like today?"
         }
     ],
-    "web_search_options": {}
+    "web_search_options": {
+        "enable": true
+    }
 }
 ```
 
@@ -222,6 +226,7 @@ The Web Search plugin is enabled under the following conditions:
         }
     ],
     "web_search_options": {
+        "enable": true,
         "search_context_size": "high"
     }
 }
