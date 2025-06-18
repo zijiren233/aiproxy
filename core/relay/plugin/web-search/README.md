@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Web Search Plugin is a plugin that provides real-time web search capabilities for AI models, supporting multiple search engines (Google, Bing, Arxiv), with automatic search query rewriting and search result formatting.
+The Web Search Plugin is a plugin that provides real-time web search capabilities for AI models, supporting multiple search engines (Google, Bing, BingCN, Arxiv, SearchXNG), with automatic search query rewriting and search result formatting.
 
 ## Configuration Example
 
@@ -79,7 +79,7 @@ Each search engine configuration contains the following fields:
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `type` | string | Yes | Search engine type: `google`, `bing`, `arxiv`, `searchxng` |
+| `type` | string | Yes | Search engine type: `google`, `bing`, `bingcn`, `arxiv`, `searchxng` |
 | `max_results` | int | No | Maximum results for this engine |
 | `spec` | object | Depends on type | Engine-specific configuration parameters |
 
@@ -114,6 +114,18 @@ Each search engine configuration contains the following fields:
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `api_key` | string | Yes | Bing Search API key |
+
+##### BingCN Search Engine Configuration (`spec`)
+
+```json
+
+{
+    "type": "bingcn",
+    "spec": {}
+}
+```
+
+BingCN search engine requires no additional configuration parameters.
 
 ##### Arxiv Search Engine Configuration (`spec`)
 

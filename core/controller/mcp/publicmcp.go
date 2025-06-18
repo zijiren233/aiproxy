@@ -110,7 +110,7 @@ func getLocalMCPTypes() []model.PublicMCPType {
 //	@Param			keyword		query		string	false	"Search keyword"
 //	@Param			status		query		int		false	"MCP status"
 //	@Success		200			{object}	middleware.APIResponse{data=[]PublicMCPResponse}
-//	@Router			/api/mcp/public/ [get]
+//	@Router			/api/mcp/publics/ [get]
 func GetPublicMCPs(c *gin.Context) {
 	page, perPage := utils.ParsePageParams(c)
 	mcpType := c.Query("type")
@@ -154,7 +154,7 @@ func GetPublicMCPs(c *gin.Context) {
 //	@Security		ApiKeyAuth
 //	@Param			status	query		int	false	"MCP status"
 //	@Success		200		{object}	middleware.APIResponse{data=[]PublicMCPResponse}
-//	@Router			/api/mcp/public/all [get]
+//	@Router			/api/mcp/publics/all [get]
 func GetAllPublicMCPs(c *gin.Context) {
 	status, _ := strconv.Atoi(c.Query("status"))
 	mcps, err := model.GetAllPublicMCPs(model.PublicMCPStatus(status))
@@ -268,7 +268,7 @@ func SavePublicMCP(c *gin.Context) {
 //	@Security		ApiKeyAuth
 //	@Param			mcp	body		[]model.PublicMCP	true	"MCP object"
 //	@Success		200	{object}	middleware.APIResponse
-//	@Router			/api/mcp/public/ [put]
+//	@Router			/api/mcp/publics/ [post]
 func SavePublicMCPs(c *gin.Context) {
 	var mcps []SavePublicMCPRequest
 	if err := c.ShouldBindJSON(&mcps); err != nil {
