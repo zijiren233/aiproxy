@@ -123,6 +123,16 @@ func NewServer(config, _ map[string]string) (mcpservers.Server, error) {
 	return jinaServer, nil
 }
 
+func ListTools(ctx context.Context) ([]mcp.Tool, error) {
+	jinaServer := &JinaServer{
+		MCPServer: server.NewMCPServer("jina-mcp-tools", "1.0.3"),
+	}
+	jinaServer.addJinaReaderTool()
+	jinaServer.addJinaSearchTool()
+	jinaServer.addJinaFactCheckTool()
+	return mcpservers.ListServerTools(ctx, jinaServer)
+}
+
 // createHeaders creates HTTP headers with optional API key
 func (s *JinaServer) createHeaders(baseHeaders map[string]string) map[string]string {
 	headers := make(map[string]string)

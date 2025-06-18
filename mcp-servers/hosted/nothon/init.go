@@ -21,6 +21,7 @@ func init() {
 			model.PublicMCPTypeEmbed,
 			mcpservers.WithNameCN("Notion"),
 			mcpservers.WithNewServerFunc(NewServer),
+			mcpservers.WithListToolsFunc(ListTools),
 			mcpservers.WithConfigTemplates(configTemplates),
 			mcpservers.WithGitHubURL(
 				"https://github.com/suekou/mcp-notion-server",

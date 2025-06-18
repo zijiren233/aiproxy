@@ -92,6 +92,17 @@ func NewServer(config, reuse map[string]string) (mcpservers.Server, error) {
 	return baiduServer, nil
 }
 
+func ListTools(ctx context.Context) ([]mcp.Tool, error) {
+	baiduServer := &Server{
+		MCPServer: server.NewMCPServer(
+			"mcp-server/baidu-map",
+			"1.0.0",
+		),
+	}
+	baiduServer.addTools()
+	return mcpservers.ListServerTools(ctx, baiduServer)
+}
+
 // addTools adds all Baidu Map tools to the server
 func (s *Server) addTools() {
 	s.addGeocodeTools()

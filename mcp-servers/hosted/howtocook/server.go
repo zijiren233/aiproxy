@@ -46,6 +46,14 @@ func NewServer(_, _ map[string]string) (mcpservers.Server, error) {
 	return cookServer, nil
 }
 
+func ListTools(ctx context.Context) ([]mcp.Tool, error) {
+	cookServer := &Server{
+		MCPServer: server.NewMCPServer("howtocook-mcp", Version),
+	}
+	cookServer.addTools()
+	return mcpservers.ListServerTools(ctx, cookServer)
+}
+
 // initialize loads recipe data and categories
 func (s *Server) initialize(ctx context.Context) error {
 	recipes, err := s.fetchRecipes(ctx)

@@ -18,6 +18,7 @@ func init() {
 			model.PublicMCPTypeEmbed,
 			mcpservers.WithNameCN("必应中国搜索"),
 			mcpservers.WithNewServerFunc(NewServer),
+			mcpservers.WithListToolsFunc(ListTools),
 			mcpservers.WithGitHubURL(
 				"https://github.com/yan5236/bing-cn-mcp-server",
 			),

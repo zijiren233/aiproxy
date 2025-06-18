@@ -10,6 +10,7 @@ import (
 	"time"
 
 	mcpservers "github.com/labring/aiproxy/mcp-servers"
+	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 )
 
@@ -104,6 +105,14 @@ func NewServer(config, _ map[string]string) (mcpservers.Server, error) {
 	firecrawlServer.addAllTools()
 
 	return firecrawlServer, nil
+}
+
+func ListTools(ctx context.Context) ([]mcp.Tool, error) {
+	firecrawlServer := &Server{
+		MCPServer: server.NewMCPServer("firecrawl-mcp", "1.7.0"),
+	}
+	firecrawlServer.addAllTools()
+	return mcpservers.ListServerTools(ctx, firecrawlServer)
 }
 
 // withRetry implements retry logic with exponential backoff

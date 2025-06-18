@@ -21,6 +21,7 @@ func init() {
 			model.PublicMCPTypeEmbed,
 			mcpservers.WithNameCN("和风天气"),
 			mcpservers.WithNewServerFunc(NewServer),
+			mcpservers.WithListToolsFunc(ListTools),
 			mcpservers.WithGitHubURL(
 				"https://github.com/shanggqm/hefeng-mcp-weather",
 			),

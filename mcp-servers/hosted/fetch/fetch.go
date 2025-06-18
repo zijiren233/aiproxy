@@ -409,3 +409,8 @@ func NewServer(config, _ map[string]string) (mcpservers.Server, error) {
 
 	return createFetchServer(customUserAgent, ignoreRobotsTxt, proxyURL), nil
 }
+
+func ListTools(ctx context.Context) ([]mcp.Tool, error) {
+	fetchServer := createFetchServer("", false, "")
+	return mcpservers.ListServerTools(ctx, fetchServer)
+}

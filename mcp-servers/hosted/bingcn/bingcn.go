@@ -61,7 +61,7 @@ func NewServer(config, _ map[string]string) (mcpservers.Server, error) {
 	}
 
 	// Create MCP server
-	mcpServer := server.NewMCPServer("bing-search", "1.0.0")
+	mcpServer := server.NewMCPServer("bing-cn-search", "1.0.0")
 
 	// Create search engine and webpage fetcher
 	searchEngine := NewSearchEngine(userAgent, timeout)
@@ -76,6 +76,14 @@ func NewServer(config, _ map[string]string) (mcpservers.Server, error) {
 	bingServer.addTools()
 
 	return bingServer, nil
+}
+
+func ListTools(ctx context.Context) ([]mcp.Tool, error) {
+	bingServer := &BingSearchServer{
+		MCPServer: server.NewMCPServer("bing-cn-search", "1.0.0"),
+	}
+	bingServer.addTools()
+	return mcpservers.ListServerTools(ctx, bingServer)
 }
 
 // addTools adds the search and fetch tools to the server

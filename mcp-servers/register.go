@@ -1,6 +1,7 @@
 package mcpservers
 
 import (
+	"context"
 	"fmt"
 	"sort"
 	"strings"
@@ -9,6 +10,7 @@ import (
 	"time"
 
 	"github.com/labring/aiproxy/core/model"
+	"github.com/mark3labs/mcp-go/mcp"
 )
 
 type mcpServerCacheItem struct {
@@ -100,6 +102,18 @@ func Register(mcp McpServer) {
 		panic(fmt.Sprintf("mcp %s already registered", mcp.ID))
 	}
 	servers[mcp.ID] = mcp
+}
+
+func ListTools(ctx context.Context, id string) ([]mcp.Tool, error) {
+	embedServer, ok := servers[id]
+	if !ok {
+		return nil, fmt.Errorf("mcp %s not found", id)
+	}
+	tools, err := embedServer.ListTools(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("mcp %s list tools error: %w", id, err)
+	}
+	return tools, nil
 }
 
 func GetMCPServer(id string, config, reusingConfig map[string]string) (Server, error) {

@@ -65,6 +65,14 @@ func NewServer(config, reuse map[string]string) (mcpservers.Server, error) {
 	return flomoServer, nil
 }
 
+func ListTools(ctx context.Context) ([]mcp.Tool, error) {
+	flomoServer := &Server{
+		MCPServer: server.NewMCPServer("mcp-server-flomo", "0.0.3"),
+	}
+	flomoServer.addWriteNoteTool()
+	return mcpservers.ListServerTools(ctx, flomoServer)
+}
+
 // addWriteNoteTool adds the write_note tool to the server
 func (s *Server) addWriteNoteTool() {
 	writeNoteTool := mcp.Tool{

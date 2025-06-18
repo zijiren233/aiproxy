@@ -134,6 +134,14 @@ func NewServer(config, reuse map[string]string) (mcpservers.Server, error) {
 	return tavilyServer, nil
 }
 
+func ListTools(ctx context.Context) ([]mcp.Tool, error) {
+	tavilyServer := &Server{
+		MCPServer: server.NewMCPServer("tavily-mcp", "0.2.2"),
+	}
+	tavilyServer.addTools()
+	return mcpservers.ListServerTools(ctx, tavilyServer)
+}
+
 // addTools adds all Tavily tools to the server
 func (s *Server) addTools() {
 	s.addSearchTool()

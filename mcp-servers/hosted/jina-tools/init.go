@@ -21,6 +21,7 @@ func init() {
 			model.PublicMCPTypeEmbed,
 			mcpservers.WithNameCN("Jina AI 工具"),
 			mcpservers.WithNewServerFunc(NewServer),
+			mcpservers.WithListToolsFunc(ListTools),
 			mcpservers.WithGitHubURL(
 				"https://github.com/PsychArch/jina-mcp-tools",
 			),

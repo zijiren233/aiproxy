@@ -3,7 +3,6 @@ package controller
 import (
 	"context"
 	"encoding"
-	"errors"
 	"sync"
 	"time"
 
@@ -202,7 +201,7 @@ func getEmbedMCPTools(
 		return nil, err
 	}
 
-	return getMCPServerTools(ctx, server)
+	return mcpservers.ListServerTools(ctx, server)
 }
 
 func getOpenAPIMCPTools(ctx context.Context, publicMcp model.PublicMCP) ([]mcp.Tool, error) {
@@ -215,7 +214,7 @@ func getOpenAPIMCPTools(ctx context.Context, publicMcp model.PublicMCP) ([]mcp.T
 		return nil, err
 	}
 
-	return getMCPServerTools(ctx, server)
+	return mcpservers.ListServerTools(ctx, server)
 }
 
 func getProxySSEMCPTools(
@@ -241,7 +240,7 @@ func getProxySSEMCPTools(
 		return nil, err
 	}
 
-	return getMCPServerTools(ctx, mcpservers.WrapMCPClient2Server(client))
+	return mcpservers.ListServerTools(ctx, mcpservers.WrapMCPClient2Server(client))
 }
 
 func getProxyStreamableMCPTools(
@@ -271,51 +270,5 @@ func getProxyStreamableMCPTools(
 		return nil, err
 	}
 
-	return getMCPServerTools(ctx, mcpservers.WrapMCPClient2Server(client))
-}
-
-func getMCPServerTools(ctx context.Context, server mcpservers.Server) ([]mcp.Tool, error) {
-	requestBytes, err := sonic.Marshal(mcp.JSONRPCRequest{
-		JSONRPC: mcp.JSONRPC_VERSION,
-		ID:      mcp.NewRequestId(1),
-		Request: mcp.Request{
-			Method: string(mcp.MethodToolsList),
-			Params: mcp.RequestParams{},
-		},
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	response := server.HandleMessage(ctx, requestBytes)
-	if response == nil {
-		return nil, errors.New("no response from server")
-	}
-
-	responseBytes, err := sonic.Marshal(response)
-	if err != nil {
-		return nil, err
-	}
-
-	var jsonRPCResponse struct {
-		Result *mcp.ListToolsResult `json:"result"`
-		Error  *struct {
-			Code    int    `json:"code"`
-			Message string `json:"message"`
-		} `json:"error"`
-	}
-
-	if err := sonic.Unmarshal(responseBytes, &jsonRPCResponse); err != nil {
-		return nil, err
-	}
-
-	if jsonRPCResponse.Error != nil {
-		return nil, errors.New(jsonRPCResponse.Error.Message)
-	}
-
-	if jsonRPCResponse.Result == nil {
-		return nil, nil
-	}
-
-	return jsonRPCResponse.Result.Tools, nil
+	return mcpservers.ListServerTools(ctx, mcpservers.WrapMCPClient2Server(client))
 }

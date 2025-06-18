@@ -54,6 +54,14 @@ func NewServer(config, reusingConfig map[string]string) (mcpservers.Server, erro
 	return notionServer, nil
 }
 
+func ListTools(ctx context.Context) ([]mcp.Tool, error) {
+	notionServer := &Server{
+		MCPServer: server.NewMCPServer("notion-mcp", "1.0.0"),
+	}
+	notionServer.addTools(nil)
+	return mcpservers.ListServerTools(ctx, notionServer)
+}
+
 // addTools adds all tools to the server
 func (s *Server) addTools(enabledToolsSet map[string]bool) {
 	allTools := []mcp.Tool{
