@@ -21,6 +21,7 @@ func init() {
 			model.PublicMCPTypeEmbed,
 			mcpservers.WithNameCN("程序员做饭指南"),
 			mcpservers.WithNewServerFunc(NewServer),
+			mcpservers.WithListToolsFunc(ListTools),
 			mcpservers.WithDescription(
 				"A recipe recommendation server based on the HowToCook project. Provides intelligent meal planning, recipe search by category, and dish recommendations based on the number of people.",
 			),

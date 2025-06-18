@@ -139,6 +139,14 @@ func NewServer(config, reuse map[string]string) (mcpservers.Server, error) {
 	return weatherServer, nil
 }
 
+func ListTools(ctx context.Context) ([]mcp.Tool, error) {
+	weatherServer := &WeatherServer{
+		MCPServer: server.NewMCPServer("hefeng-weather", "1.0.0"),
+	}
+	weatherServer.addWeatherTool()
+	return mcpservers.ListServerTools(ctx, weatherServer)
+}
+
 // validateDays validates the days parameter
 func validateDays(days string) error {
 	validDays := []string{"now", "24h", "72h", "168h", "3d", "7d", "10d", "15d", "30d"}

@@ -10,6 +10,7 @@ import (
 	"github.com/labring/aiproxy/core/controller/utils"
 	"github.com/labring/aiproxy/core/middleware"
 	"github.com/labring/aiproxy/core/model"
+	mcpservers "github.com/labring/aiproxy/mcp-servers"
 	"github.com/mark3labs/mcp-go/mcp"
 	"gorm.io/gorm"
 )
@@ -161,6 +162,14 @@ func NewGroupPublicMCPDetailResponse(
 			log := common.GetLogger(ctx)
 			log.Errorf("get public mcp tools error: %s", err.Error())
 		} else {
+			gettedTools = true
+			r.Tools = tools
+		}
+	}
+
+	if !gettedTools && mcp.Type == model.PublicMCPTypeEmbed {
+		tools, err := mcpservers.ListTools(ctx.Request.Context(), mcp.ID)
+		if err == nil {
 			gettedTools = true
 			r.Tools = tools
 		}

@@ -21,6 +21,7 @@ func init() {
 			model.PublicMCPTypeEmbed,
 			mcpservers.WithNameCN("Tavily AI 搜索"),
 			mcpservers.WithNewServerFunc(NewServer),
+			mcpservers.WithListToolsFunc(ListTools),
 			mcpservers.WithDescription(
 				"A powerful web search MCP server powered by Tavily's AI search engine. Provides real-time web search, content extraction, web crawling, and site mapping capabilities with advanced filtering and customization options.",
 			),

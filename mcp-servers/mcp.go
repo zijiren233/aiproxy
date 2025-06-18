@@ -1,10 +1,12 @@
 package mcpservers
 
 import (
+	"context"
 	"errors"
 	"fmt"
 
 	"github.com/labring/aiproxy/core/model"
+	"github.com/mark3labs/mcp-go/mcp"
 )
 
 type ConfigValueValidator func(value string) error
@@ -126,13 +128,17 @@ func CheckConfigTemplateValidate(value ConfigTemplate) error {
 	return nil
 }
 
-type NewServerFunc func(config, reusingConfig map[string]string) (Server, error)
+type (
+	NewServerFunc func(config, reusingConfig map[string]string) (Server, error)
+	ListToolsFunc func(ctx context.Context) ([]mcp.Tool, error)
+)
 
 type McpServer struct {
 	model.PublicMCP
 	ConfigTemplates      ConfigTemplates
 	ProxyConfigTemplates ProxyConfigTemplates
 	newServer            NewServerFunc
+	listTools            ListToolsFunc
 	disableCache         bool
 }
 
@@ -216,6 +222,12 @@ func WithProxyConfigType(proxyConfigTemplates ProxyConfigTemplates) McpConfig {
 	}
 }
 
+func WithListToolsFunc(listTools ListToolsFunc) McpConfig {
+	return func(e *McpServer) {
+		e.listTools = listTools
+	}
+}
+
 func WithNewServerFunc(newServer NewServerFunc) McpConfig {
 	return func(e *McpServer) {
 		e.newServer = newServer
@@ -242,12 +254,24 @@ func NewMcp(id, name string, mcpType model.PublicMCPType, opts ...McpConfig) Mcp
 	return e
 }
 
+var (
+	ErrNotImplNewServer = errors.New("not impl new server")
+	ErrNotImplListTools = errors.New("not impl list tools")
+)
+
 func (e *McpServer) NewServer(config, reusingConfig map[string]string) (Server, error) {
 	if e.newServer == nil {
-		return nil, errors.New("not impl new server")
+		return nil, ErrNotImplNewServer
 	}
 	if err := ValidateConfigTemplatesConfig(e.ConfigTemplates, config, reusingConfig); err != nil {
 		return nil, fmt.Errorf("mcp %s config is invalid: %w", e.ID, err)
 	}
 	return e.newServer(config, reusingConfig)
+}
+
+func (e *McpServer) ListTools(ctx context.Context) ([]mcp.Tool, error) {
+	if e.listTools == nil {
+		return nil, ErrNotImplListTools
+	}
+	return e.listTools(ctx)
 }

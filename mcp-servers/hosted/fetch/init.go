@@ -21,6 +21,7 @@ func init() {
 			model.PublicMCPTypeEmbed,
 			mcpservers.WithNameCN("网页内容获取"),
 			mcpservers.WithNewServerFunc(NewServer),
+			mcpservers.WithListToolsFunc(ListTools),
 			mcpservers.WithGitHubURL(
 				"https://github.com/modelcontextprotocol/servers/tree/main/src/fetch",
 			),

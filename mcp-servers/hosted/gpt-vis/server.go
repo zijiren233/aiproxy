@@ -95,6 +95,14 @@ func NewServer(config, _ map[string]string) (mcpservers.Server, error) {
 	return chartServer, nil
 }
 
+func ListTools(ctx context.Context) ([]mcp.Tool, error) {
+	chartServer := &Server{
+		MCPServer: server.NewMCPServer("mcp-server-chart", "0.0.1"),
+	}
+	chartServer.addAllChartTools()
+	return mcpservers.ListServerTools(ctx, chartServer)
+}
+
 // generateChartURL generates a chart URL using the provided configuration
 func (s *Server) generateChartURL(
 	ctx context.Context,

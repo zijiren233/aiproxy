@@ -117,6 +117,14 @@ func NewServer(config, _ map[string]string) (mcpservers.Server, error) {
 	return mcpServer, nil
 }
 
+func ListTools(ctx context.Context) ([]mcp.Tool, error) {
+	mcpServer := server.NewMCPServer("web-search", "1.0.0")
+	addWebSearchTool(mcpServer, nil, "", 0)
+	addMultiSearchTool(mcpServer, nil, 0)
+	addSmartSearchTool(mcpServer, nil)
+	return mcpservers.ListServerTools(ctx, mcpServer)
+}
+
 // initializeEngines sets up search engines based on configuration
 func initializeEngines(config map[string]string) (map[string]engine.Engine, string, int) {
 	engines := make(map[string]engine.Engine)

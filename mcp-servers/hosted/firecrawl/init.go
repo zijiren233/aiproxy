@@ -20,6 +20,7 @@ func init() {
 			"Firecrawl",
 			model.PublicMCPTypeEmbed,
 			mcpservers.WithNewServerFunc(NewServer),
+			mcpservers.WithListToolsFunc(ListTools),
 			mcpservers.WithGitHubURL(
 				"https://github.com/mendableai/firecrawl-mcp-server",
 			),

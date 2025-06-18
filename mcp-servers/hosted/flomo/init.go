@@ -20,6 +20,7 @@ func init() {
 			"Flomo",
 			model.PublicMCPTypeEmbed,
 			mcpservers.WithNewServerFunc(NewServer),
+			mcpservers.WithListToolsFunc(ListTools),
 			mcpservers.WithGitHubURL(
 				"https://github.com/chatmcp/mcp-server-flomo",
 			),
