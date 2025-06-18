@@ -1116,7 +1116,7 @@ const docTemplate = `{
                                         "data": {
                                             "type": "array",
                                             "items": {
-                                                "$ref": "#/definitions/model.ModelConfig"
+                                                "$ref": "#/definitions/controller.GroupModel"
                                             }
                                         }
                                     }
@@ -3683,122 +3683,6 @@ const docTemplate = `{
             }
         },
         "/api/mcp/public/": {
-            "get": {
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ],
-                "description": "Get a list of MCPs with pagination and filtering",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "mcp"
-                ],
-                "summary": "Get MCPs",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "Page number",
-                        "name": "page",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "description": "Items per page",
-                        "name": "per_page",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "hosted or local",
-                        "name": "type",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "MCP id",
-                        "name": "id",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "Search keyword",
-                        "name": "keyword",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "description": "MCP status",
-                        "name": "status",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/middleware.APIResponse"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "type": "array",
-                                            "items": {
-                                                "$ref": "#/definitions/controller.PublicMCPResponse"
-                                            }
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    }
-                }
-            },
-            "put": {
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ],
-                "description": "Save a list of MCPs",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "mcp"
-                ],
-                "summary": "Save MCPs",
-                "parameters": [
-                    {
-                        "description": "MCP object",
-                        "name": "mcp",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/model.PublicMCP"
-                            }
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/middleware.APIResponse"
-                        }
-                    }
-                }
-            },
             "post": {
                 "security": [
                     {
@@ -3840,54 +3724,6 @@ const docTemplate = `{
                                     "properties": {
                                         "data": {
                                             "$ref": "#/definitions/controller.PublicMCPResponse"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    }
-                }
-            }
-        },
-        "/api/mcp/public/all": {
-            "get": {
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ],
-                "description": "Get all MCPs with filtering",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "mcp"
-                ],
-                "summary": "Get all MCPs",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "MCP status",
-                        "name": "status",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/middleware.APIResponse"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "type": "array",
-                                            "items": {
-                                                "$ref": "#/definitions/controller.PublicMCPResponse"
-                                            }
                                         }
                                     }
                                 }
@@ -4232,6 +4068,172 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/middleware.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/mcp/publics/": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Get a list of MCPs with pagination and filtering",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "mcp"
+                ],
+                "summary": "Get MCPs",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Items per page",
+                        "name": "per_page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "hosted or local",
+                        "name": "type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "MCP id",
+                        "name": "id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Search keyword",
+                        "name": "keyword",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "MCP status",
+                        "name": "status",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/middleware.APIResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/controller.PublicMCPResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Save a list of MCPs",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "mcp"
+                ],
+                "summary": "Save MCPs",
+                "parameters": [
+                    {
+                        "description": "MCP object",
+                        "name": "mcp",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.PublicMCP"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/mcp/publics/all": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Get all MCPs with filtering",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "mcp"
+                ],
+                "summary": "Get all MCPs",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "MCP status",
+                        "name": "status",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/middleware.APIResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/controller.PublicMCPResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     }
                 }
@@ -8470,6 +8472,62 @@ const docTemplate = `{
                 }
             }
         },
+        "controller.GroupModel": {
+            "type": "object",
+            "properties": {
+                "config": {
+                    "type": "object",
+                    "additionalProperties": {}
+                },
+                "created_at": {
+                    "type": "integer"
+                },
+                "enabled_plugins": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "image_prices": {
+                    "description": "map[size]price_per_image",
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "number"
+                    }
+                },
+                "image_quality_prices": {
+                    "description": "map[size]map[quality]price_per_image",
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "number"
+                        }
+                    }
+                },
+                "model": {
+                    "type": "string"
+                },
+                "owner": {
+                    "$ref": "#/definitions/model.ModelOwner"
+                },
+                "price": {
+                    "$ref": "#/definitions/model.Price"
+                },
+                "rpm": {
+                    "type": "integer"
+                },
+                "tpm": {
+                    "type": "integer"
+                },
+                "type": {
+                    "$ref": "#/definitions/mode.Mode"
+                },
+                "updated_at": {
+                    "type": "integer"
+                }
+            }
+        },
         "controller.GroupPublicMCPDetailResponse": {
             "type": "object",
             "properties": {
@@ -8549,7 +8607,12 @@ const docTemplate = `{
                     }
                 },
                 "test_config": {
-                    "$ref": "#/definitions/model.TestConfig"
+                    "description": "only used by list tools",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/model.TestConfig"
+                        }
+                    ]
                 },
                 "tools": {
                     "type": "array",
@@ -8629,7 +8692,12 @@ const docTemplate = `{
                     }
                 },
                 "test_config": {
-                    "$ref": "#/definitions/model.TestConfig"
+                    "description": "only used by list tools",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/model.TestConfig"
+                        }
+                    ]
                 },
                 "type": {
                     "$ref": "#/definitions/model.PublicMCPType"
@@ -8836,7 +8904,12 @@ const docTemplate = `{
                     }
                 },
                 "test_config": {
-                    "$ref": "#/definitions/model.TestConfig"
+                    "description": "only used by list tools",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/model.TestConfig"
+                        }
+                    ]
                 },
                 "type": {
                     "$ref": "#/definitions/model.PublicMCPType"
@@ -10748,7 +10821,12 @@ const docTemplate = `{
                     }
                 },
                 "test_config": {
-                    "$ref": "#/definitions/model.TestConfig"
+                    "description": "only used by list tools",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/model.TestConfig"
+                        }
+                    ]
                 },
                 "type": {
                     "$ref": "#/definitions/model.PublicMCPType"

@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -8,11 +9,13 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/bytedance/sonic"
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/core/common/reqlimit"
 	"github.com/labring/aiproxy/core/controller/utils"
 	"github.com/labring/aiproxy/core/middleware"
 	"github.com/labring/aiproxy/core/model"
+	"github.com/labring/aiproxy/core/relay/mode"
 	"gorm.io/gorm"
 )
 
@@ -279,6 +282,59 @@ func GetGroupDashboard(c *gin.Context) {
 	middleware.SuccessResponse(c, dashboards)
 }
 
+type GroupModel struct {
+	CreatedAt int64                        `json:"created_at,omitempty"`
+	UpdatedAt int64                        `json:"updated_at,omitempty"`
+	Config    map[model.ModelConfigKey]any `json:"config,omitempty"`
+	Model     string                       `json:"model"`
+	Owner     model.ModelOwner             `json:"owner"`
+	Type      mode.Mode                    `json:"type"`
+	RPM       int64                        `json:"rpm,omitempty"`
+	TPM       int64                        `json:"tpm,omitempty"`
+	// map[size]map[quality]price_per_image
+	ImageQualityPrices map[string]map[string]float64 `json:"image_quality_prices,omitempty"`
+	// map[size]price_per_image
+	ImagePrices    map[string]float64 `json:"image_prices,omitempty"`
+	Price          model.Price        `json:"price,omitempty"`
+	EnabledPlugins []string           `json:"enabled_plugins,omitempty"`
+}
+
+func getEnabledPlugins(plugin map[string]json.RawMessage) []string {
+	enabledPlugins := make([]string, 0, len(plugin))
+	for pluginName, pluginConfig := range plugin {
+		pluginConfigNode, err := sonic.Get(pluginConfig)
+		if err != nil {
+			continue
+		}
+		if enable, err := pluginConfigNode.Get("enable").Bool(); err == nil && enable {
+			enabledPlugins = append(enabledPlugins, pluginName)
+		}
+	}
+	return enabledPlugins
+}
+
+func NewGroupModel(mc model.ModelConfig) GroupModel {
+	gm := GroupModel{
+		Config:             mc.Config,
+		Model:              mc.Model,
+		Owner:              mc.Owner,
+		Type:               mc.Type,
+		RPM:                mc.RPM,
+		TPM:                mc.TPM,
+		ImageQualityPrices: mc.ImageQualityPrices,
+		ImagePrices:        mc.ImagePrices,
+		Price:              mc.Price,
+		EnabledPlugins:     getEnabledPlugins(mc.Plugin),
+	}
+	if !mc.CreatedAt.IsZero() {
+		gm.CreatedAt = mc.CreatedAt.Unix()
+	}
+	if !mc.UpdatedAt.IsZero() {
+		gm.UpdatedAt = mc.UpdatedAt.Unix()
+	}
+	return gm
+}
+
 // GetGroupDashboardModels godoc
 //
 //	@Summary		Get model usage data for a specific group
@@ -287,7 +343,7 @@ func GetGroupDashboard(c *gin.Context) {
 //	@Produce		json
 //	@Security		ApiKeyAuth
 //	@Param			group	path		string	true	"Group"
-//	@Success		200		{object}	middleware.APIResponse{data=[]model.ModelConfig}
+//	@Success		200		{object}	middleware.APIResponse{data=[]GroupModel}
 //	@Router			/api/dashboard/{group}/models [get]
 func GetGroupDashboardModels(c *gin.Context) {
 	group := c.Param("group")
@@ -310,17 +366,19 @@ func GetGroupDashboardModels(c *gin.Context) {
 
 	availableSet := groupCache.GetAvailableSets()
 	enabledModelConfigs := model.LoadModelCaches().EnabledModelConfigsBySet
-	newEnabledModelConfigs := make([]model.ModelConfig, 0)
+	newEnabledModelConfigs := make([]GroupModel, 0)
 	for _, set := range availableSet {
 		for _, mc := range enabledModelConfigs[set] {
-			if slices.ContainsFunc(newEnabledModelConfigs, func(m model.ModelConfig) bool {
+			if slices.ContainsFunc(newEnabledModelConfigs, func(m GroupModel) bool {
 				return m.Model == mc.Model
 			}) {
 				continue
 			}
 			newEnabledModelConfigs = append(
 				newEnabledModelConfigs,
-				middleware.GetGroupAdjustedModelConfig(*groupCache, mc),
+				NewGroupModel(
+					middleware.GetGroupAdjustedModelConfig(*groupCache, mc),
+				),
 			)
 		}
 	}

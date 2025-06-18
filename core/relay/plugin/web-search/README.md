@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Web Search Plugin is a plugin that provides real-time web search capabilities for AI models, supporting multiple search engines (Google, Bing, Arxiv), with automatic search query rewriting and search result formatting.
+The Web Search Plugin is a plugin that provides real-time web search capabilities for AI models, supporting multiple search engines (Google, Bing, BingCN, Arxiv, SearchXNG), with automatic search query rewriting and search result formatting.
 
 ## Configuration Example
 
@@ -79,7 +79,7 @@ Each search engine configuration contains the following fields:
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `type` | string | Yes | Search engine type: `google`, `bing`, `arxiv`, `searchxng` |
+| `type` | string | Yes | Search engine type: `google`, `bing`, `bingcn`, `arxiv`, `searchxng` |
 | `max_results` | int | No | Maximum results for this engine |
 | `spec` | object | Depends on type | Engine-specific configuration parameters |
 
@@ -114,6 +114,18 @@ Each search engine configuration contains the following fields:
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `api_key` | string | Yes | Bing Search API key |
+
+##### BingCN Search Engine Configuration (`spec`)
+
+```json
+
+{
+    "type": "bingcn",
+    "spec": {}
+}
+```
+
+BingCN search engine requires no additional configuration parameters.
 
 ##### Arxiv Search Engine Configuration (`spec`)
 
@@ -153,6 +165,7 @@ Users can add the `web_search_options` field in their requests to control search
         }
     ],
     "web_search_options": {
+        "enable": true,
         "search_context_size": "medium"
     }
 }
@@ -162,6 +175,7 @@ Users can add the `web_search_options` field in their requests to control search
 
 | Field | Type | Options | Description |
 |-------|------|---------|-------------|
+| `enable` | bool | - | Whether to enable search, if `false`, search will not be enabled |
 | `search_context_size` | string | `low`, `medium`, `high` | Controls the size of search context, affecting the number and depth of search queries |
 
 #### search_context_size Details
@@ -194,7 +208,9 @@ The Web Search plugin is enabled under the following conditions:
             "content": "What's the weather like today?"
         }
     ],
-    "web_search_options": {}
+    "web_search_options": {
+        "enable": true
+    }
 }
 ```
 
@@ -210,6 +226,7 @@ The Web Search plugin is enabled under the following conditions:
         }
     ],
     "web_search_options": {
+        "enable": true,
         "search_context_size": "high"
     }
 }

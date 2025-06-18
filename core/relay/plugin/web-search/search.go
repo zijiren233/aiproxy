@@ -146,6 +146,10 @@ func (p *WebSearch) ConvertRequest(
 	if !pluginConfig.ForceSearch && !hasWebSearchOptions {
 		return do.ConvertRequest(meta, store, req)
 	}
+	webSearchEnable, ok := webSearchOptions["enable"].(bool)
+	if ok && !webSearchEnable {
+		return do.ConvertRequest(meta, store, req)
+	}
 
 	// Extract user query from messages
 	messages, ok := chatRequest["messages"].([]any)

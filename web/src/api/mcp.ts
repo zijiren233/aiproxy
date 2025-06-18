@@ -93,11 +93,11 @@ export const getMCPs = (params: {
   keyword?: string
   status?: number
 }) => {
-  return get<MCPListResponse>('/mcp/public/', { params })
+  return get<MCPListResponse>('/mcp/publics/', { params })
 }
 
 export const getAllMCPs = (params?: { status?: number }) => {
-  return get<PublicMCP[]>('/mcp/public/all', { params })
+  return get<PublicMCP[]>('/mcp/publics/all', { params })
 }
 
 export const getMCPById = (id: string) => {

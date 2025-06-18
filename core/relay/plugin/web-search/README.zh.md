@@ -2,7 +2,7 @@
 
 ## 概述
 
-Web Search Plugin 是一个为 AI 模型提供实时网络搜索能力的插件，支持多种搜索引擎（Google、Bing、Arxiv），能够自动重写搜索查询并格式化搜索结果。
+Web Search Plugin 是一个为 AI 模型提供实时网络搜索能力的插件，支持多种搜索引擎（Google、Bing、BingCN、Arxiv、SearchXNG），能够自动重写搜索查询并格式化搜索结果。
 
 ## 配置示例
 
@@ -79,7 +79,7 @@ Web Search Plugin 是一个为 AI 模型提供实时网络搜索能力的插件�
 
 | 字段 | 类型 | 必填 | 说明 |
 |------|------|------|------|
-| `type` | string | 是 | 搜索引擎类型：`google`、`bing`、`arxiv`、`searchxng` |
+| `type` | string | 是 | 搜索引擎类型：`google`、`bing`、`bingcn`、`arxiv`、`searchxng` |
 | `max_results` | int | 否 | 该引擎的最大结果数量 |
 | `spec` | object | 视类型而定 | 引擎特定的配置参数 |
 
@@ -114,6 +114,18 @@ Web Search Plugin 是一个为 AI 模型提供实时网络搜索能力的插件�
 | 字段 | 类型 | 必填 | 说明 |
 |------|------|------|------|
 | `api_key` | string | 是 | Bing Search API 密钥 |
+
+
+##### BingCN 搜索引擎配置 (`spec`)
+
+```json
+{
+    "type": "bingcn",
+    "spec": {}
+}
+```
+
+BingCN 搜索引擎无需额外配置参数，使用默认配置。
 
 ##### Arxiv 搜索引擎配置 (`spec`)
 
@@ -153,6 +165,7 @@ Arxiv 搜索引擎无需额外配置参数。
         }
     ],
     "web_search_options": {
+        "enable": true,
         "search_context_size": "medium"
     }
 }
@@ -162,6 +175,7 @@ Arxiv 搜索引擎无需额外配置参数。
 
 | 字段 | 类型 | 可选值 | 说明 |
 |------|------|--------|------|
+| `enable` | bool | - | 是否启用搜索，如果为 `false`，则不启用搜索 |
 | `search_context_size` | string | `low`、`medium`、`high` | 控制搜索上下文的大小，影响搜索查询的数量和深度 |
 
 #### search_context_size 详解
@@ -194,7 +208,9 @@ Web Search 插件在以下情况下会被启用：
             "content": "今天的天气如何？"
         }
     ],
-    "web_search_options": {}
+    "web_search_options": {
+        "enable": true
+    }
 }
 ```
 
@@ -210,6 +226,7 @@ Web Search 插件在以下情况下会被启用：
         }
     ],
     "web_search_options": {
+        "enable": true,
         "search_context_size": "high"
     }
 }
