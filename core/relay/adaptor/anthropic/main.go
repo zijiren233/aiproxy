@@ -192,6 +192,12 @@ func StreamHandler(
 			if writed {
 				log.Errorf("response error: %+v", err)
 			} else {
+				if usage == nil {
+					usage = &relaymodel.Usage{}
+				}
+				if response.Usage != nil {
+					usage.Add(response.Usage)
+				}
 				return usage.ToModelUsage(), err
 			}
 		}
