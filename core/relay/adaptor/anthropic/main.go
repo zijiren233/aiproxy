@@ -195,7 +195,7 @@ func StreamHandler(
 				if usage == nil {
 					usage = &relaymodel.Usage{}
 				}
-				if response.Usage != nil {
+				if response != nil && response.Usage != nil {
 					usage.Add(response.Usage)
 				}
 				return usage.ToModelUsage(), err
