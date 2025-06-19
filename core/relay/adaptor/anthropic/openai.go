@@ -487,6 +487,12 @@ func OpenAIStreamHandler(
 				log.Errorf("response error: %+v", err)
 				continue
 			}
+			if usage == nil {
+				usage = &relaymodel.Usage{}
+			}
+			if response != nil && response.Usage != nil {
+				usage.Add(response.Usage)
+			}
 			return usage.ToModelUsage(), err
 		}
 		if response == nil {
