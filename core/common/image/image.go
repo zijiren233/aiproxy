@@ -24,7 +24,7 @@ import (
 )
 
 // Regex to match data URL pattern
-var dataURLPattern = regexp.MustCompile(`data:image/([^;]+);base64,(.*)`)
+var dataURLPattern = regexp.MustCompile(`^data:image/([^;]+);base64,(.*)`)
 
 func IsImageURL(contentType string) bool {
 	return strings.HasPrefix(contentType, "image/")
@@ -88,6 +88,10 @@ func GetImageFromURL(ctx context.Context, url string) (string, string, error) {
 	if resp.StatusCode != http.StatusOK {
 		return "", "", fmt.Errorf("status code: %d", resp.StatusCode)
 	}
+	if resp.ContentLength > MaxImageSize {
+		return "", "", fmt.Errorf("image too large: %d, max: %d", resp.ContentLength, MaxImageSize)
+	}
+
 	var buf []byte
 	if resp.ContentLength <= 0 {
 		buf, err = io.ReadAll(common.LimitReader(resp.Body, MaxImageSize))
@@ -98,9 +102,6 @@ func GetImageFromURL(ctx context.Context, url string) (string, string, error) {
 			return "", "", fmt.Errorf("image read failed: %w", err)
 		}
 	} else {
-		if resp.ContentLength > MaxImageSize {
-			return "", "", fmt.Errorf("image too large: %d, max: %d", resp.ContentLength, MaxImageSize)
-		}
 		buf = make([]byte, resp.ContentLength)
 		_, err = io.ReadFull(resp.Body, buf)
 	}
