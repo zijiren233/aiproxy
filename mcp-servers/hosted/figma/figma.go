@@ -154,10 +154,6 @@ func (s *Server) downloadFigmaImagesTool() mcp.Tool {
 					"description": "Export scale for PNG images. Optional, defaults to 2 if not specified. Affects PNG images only.",
 					"default":     2,
 				},
-				"localPath": map[string]any{
-					"type":        "string",
-					"description": "The absolute path to the directory where images are stored in the project. If the directory does not exist, it will be created.",
-				},
 				"svgOptions": map[string]any{
 					"type":        "object",
 					"description": "Options for SVG export",
@@ -180,7 +176,7 @@ func (s *Server) downloadFigmaImagesTool() mcp.Tool {
 					},
 				},
 			},
-			Required: []string{"fileKey", "nodes", "localPath"},
+			Required: []string{"fileKey", "nodes"},
 		},
 	}
 }
