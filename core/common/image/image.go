@@ -73,7 +73,7 @@ func GetImageFromURL(ctx context.Context, url string) (string, string, error) {
 		if len(matches) == 3 {
 			return "image/" + matches[1], matches[2], nil
 		}
-		return "", "", fmt.Errorf("not an image url")
+		return "", "", errors.New("not an image url")
 	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
@@ -111,13 +111,13 @@ func GetImageFromURL(ctx context.Context, url string) (string, string, error) {
 	if !IsImageURL(contentType) {
 		contentType = http.DetectContentType(buf)
 		if !IsImageURL(contentType) {
-			return "", "", fmt.Errorf("not an image")
+			return "", "", errors.New("not an image")
 		}
 	}
 	return contentType, base64.StdEncoding.EncodeToString(buf), nil
 }
 
-var reg = regexp.MustCompile(`data:image/([^;]+);base64,`)
+var reg = regexp.MustCompile(`^data:image/([^;]+);base64,`)
 
 func GetImageSizeFromBase64(encoded string) (width, height int, err error) {
 	decoded, err := base64.StdEncoding.DecodeString(reg.ReplaceAllString(encoded, ""))
