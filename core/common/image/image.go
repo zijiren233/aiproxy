@@ -26,8 +26,8 @@ import (
 // Regex to match data URL pattern
 var dataURLPattern = regexp.MustCompile(`data:image/([^;]+);base64,(.*)`)
 
-func IsImageURL(resp *http.Response) bool {
-	return strings.HasPrefix(resp.Header.Get("Content-Type"), "image/")
+func IsImageURL(contentType string) bool {
+	return strings.HasPrefix(contentType, "image/")
 }
 
 func GetImageSizeFromURL(url string) (width, height int, err error) {
@@ -44,12 +44,17 @@ func GetImageSizeFromURL(url string) (width, height int, err error) {
 	if resp.StatusCode != http.StatusOK {
 		return 0, 0, fmt.Errorf("status code: %d", resp.StatusCode)
 	}
-
-	isImage := IsImageURL(resp)
-	if !isImage {
-		return
+	if resp.ContentLength > MaxImageSize {
+		return 0, 0, fmt.Errorf("image too large: %d, max: %d", resp.ContentLength, MaxImageSize)
 	}
-	img, _, err := image.DecodeConfig(resp.Body)
+
+	var reader io.Reader
+	if resp.ContentLength <= 0 {
+		reader = common.LimitReader(resp.Body, MaxImageSize)
+	} else {
+		reader = resp.Body
+	}
+	img, _, err := image.DecodeConfig(reader)
 	if err != nil {
 		return
 	}
@@ -62,10 +67,13 @@ const (
 
 func GetImageFromURL(ctx context.Context, url string) (string, string, error) {
 	// Check if the URL is a data URL
-	matches := dataURLPattern.FindStringSubmatch(url)
-	if len(matches) == 3 {
-		// URL is a data URL
-		return "image/" + matches[1], matches[2], nil
+	if !strings.HasPrefix(url, "http://") &&
+		!strings.HasPrefix(url, "https://") {
+		matches := dataURLPattern.FindStringSubmatch(url)
+		if len(matches) == 3 {
+			return "image/" + matches[1], matches[2], nil
+		}
+		return "", "", fmt.Errorf("not an image url")
 	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
@@ -79,10 +87,6 @@ func GetImageFromURL(ctx context.Context, url string) (string, string, error) {
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		return "", "", fmt.Errorf("status code: %d", resp.StatusCode)
-	}
-	isImage := IsImageURL(resp)
-	if !isImage {
-		return "", "", errors.New("not an image")
 	}
 	var buf []byte
 	if resp.ContentLength <= 0 {
@@ -103,7 +107,14 @@ func GetImageFromURL(ctx context.Context, url string) (string, string, error) {
 	if err != nil {
 		return "", "", err
 	}
-	return resp.Header.Get("Content-Type"), base64.StdEncoding.EncodeToString(buf), nil
+	contentType := resp.Header.Get("Content-Type")
+	if !IsImageURL(contentType) {
+		contentType = http.DetectContentType(buf)
+		if !IsImageURL(contentType) {
+			return "", "", fmt.Errorf("not an image")
+		}
+	}
+	return contentType, base64.StdEncoding.EncodeToString(buf), nil
 }
 
 var reg = regexp.MustCompile(`data:image/([^;]+);base64,`)
