@@ -40,6 +40,7 @@ spec:
       labels:
         app: aiproxy
     spec:
+      terminationGracePeriodSeconds: 600
       containers:
         - name: aiproxy
           image: ghcr.io/labring/aiproxy:latest
