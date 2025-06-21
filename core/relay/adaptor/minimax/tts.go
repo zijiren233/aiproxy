@@ -97,18 +97,12 @@ type TTSExtraInfo struct {
 	UsageCharacters int64  `json:"usage_characters"`
 }
 
-type TTSBaseResp struct {
-	StatusMsg  string `json:"status_msg"`
-	StatusCode int    `json:"status_code"`
-}
-
 type TTSData struct {
 	Audio  string `json:"audio"`
 	Status int    `json:"status"`
 }
 
 type TTSResponse struct {
-	BaseResp  *TTSBaseResp `json:"base_resp"`
 	ExtraInfo TTSExtraInfo `json:"extra_info"`
 	Data      TTSData      `json:"data"`
 }
@@ -118,8 +112,8 @@ func TTSHandler(
 	c *gin.Context,
 	resp *http.Response,
 ) (model.Usage, adaptor.Error) {
-	if resp.StatusCode != http.StatusOK {
-		return model.Usage{}, openai.ErrorHanlder(resp)
+	if err := TryErrorHanlder(resp); err != nil {
+		return model.Usage{}, err
 	}
 
 	if !strings.Contains(resp.Header.Get("Content-Type"), "application/json") &&
@@ -148,13 +142,6 @@ func TTSHandler(
 			http.StatusInternalServerError,
 		)
 	}
-	if result.BaseResp != nil && result.BaseResp.StatusCode != 0 {
-		return model.Usage{}, relaymodel.WrapperOpenAIErrorWithMessage(
-			result.BaseResp.StatusMsg,
-			"TTS_ERROR_"+strconv.Itoa(result.BaseResp.StatusCode),
-			http.StatusInternalServerError,
-		)
-	}
 
 	usageCharacters := meta.RequestUsage.InputTokens
 	if result.ExtraInfo.UsageCharacters > 0 {
@@ -165,8 +152,6 @@ func TTSHandler(
 		InputTokens: usageCharacters,
 		TotalTokens: usageCharacters,
 	}
-
-	resp.Header.Set("Content-Type", "audio/"+result.ExtraInfo.AudioFormat)
 
 	audioBytes, err := hex.DecodeString(result.Data.Audio)
 	if err != nil {
