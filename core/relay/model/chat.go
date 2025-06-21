@@ -87,14 +87,23 @@ func NewOpenAIError(statusCode int, err OpenAIError) adaptor.Error {
 	})
 }
 
-func WrapperOpenAIError(err error, code any, statusCode int) adaptor.Error {
-	return WrapperOpenAIErrorWithMessage(err.Error(), code, statusCode)
+func WrapperOpenAIError(err error, code any, statusCode int, _type ...string) adaptor.Error {
+	return WrapperOpenAIErrorWithMessage(err.Error(), code, statusCode, _type...)
 }
 
-func WrapperOpenAIErrorWithMessage(message string, code any, statusCode int) adaptor.Error {
+func WrapperOpenAIErrorWithMessage(
+	message string,
+	code any,
+	statusCode int,
+	_type ...string,
+) adaptor.Error {
+	errType := ErrorTypeAIPROXY
+	if len(_type) > 0 {
+		errType = _type[0]
+	}
 	return NewOpenAIError(statusCode, OpenAIError{
 		Message: message,
-		Type:    ErrorTypeAIPROXY,
+		Type:    errType,
 		Code:    code,
 	})
 }

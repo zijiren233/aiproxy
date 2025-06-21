@@ -97,6 +97,9 @@ func (a *Adaptor) DoResponse(
 	case mode.AudioSpeech:
 		return TTSHandler(meta, c, resp)
 	default:
+		if err := TryErrorHanlder(resp); err != nil {
+			return model.Usage{}, err
+		}
 		return a.Adaptor.DoResponse(meta, store, c, resp)
 	}
 }
