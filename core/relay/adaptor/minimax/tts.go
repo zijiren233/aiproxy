@@ -7,7 +7,6 @@ import (
 	"io"
 	"net/http"
 	"strconv"
-	"strings"
 
 	"github.com/bytedance/sonic"
 	"github.com/gin-gonic/gin"
@@ -72,10 +71,6 @@ func ConvertTTSRequest(meta *meta.Meta, req *http.Request) (adaptor.ConvertResul
 
 	if responseFormat == "wav" {
 		reqMap["stream"] = false
-		meta.Set("stream", false)
-	} else {
-		stream, _ := reqMap["stream"].(bool)
-		meta.Set("stream", stream)
 	}
 
 	body, err := sonic.Marshal(reqMap)
@@ -112,13 +107,12 @@ func TTSHandler(
 	c *gin.Context,
 	resp *http.Response,
 ) (model.Usage, adaptor.Error) {
-	if err := TryErrorHanlder(resp); err != nil {
-		return model.Usage{}, err
+	if utils.IsStreamResponse(resp) {
+		return ttsStreamHandler(meta, c, resp)
 	}
 
-	if !strings.Contains(resp.Header.Get("Content-Type"), "application/json") &&
-		meta.GetBool("stream") {
-		return ttsStreamHandler(meta, c, resp)
+	if err := TryErrorHanlder(resp); err != nil {
+		return model.Usage{}, err
 	}
 
 	defer resp.Body.Close()
@@ -179,7 +173,7 @@ func ttsStreamHandler(
 ) (model.Usage, adaptor.Error) {
 	defer resp.Body.Close()
 
-	resp.Header.Set("Content-Type", "application/octet-stream")
+	c.Writer.Header().Set("Content-Type", "application/octet-stream")
 
 	log := common.GetLogger(c)
 
