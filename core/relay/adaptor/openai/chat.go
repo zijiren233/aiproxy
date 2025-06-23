@@ -375,6 +375,7 @@ func Handler(
 			)
 		}
 	}
+
 	usage, choices, err := GetUsageOrChoicesResponseFromNode(&node)
 	if err != nil {
 		return model.Usage{}, relaymodel.WrapperOpenAIError(

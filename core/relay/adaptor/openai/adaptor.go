@@ -189,7 +189,7 @@ func DoResponse(
 	case mode.Moderations:
 		usage, err = ModerationsHandler(meta, c, resp)
 	case mode.Embeddings:
-		usage, err = EmbeddingsHandler(meta, c, resp)
+		usage, err = EmbeddingsHandler(meta, c, resp, nil)
 	case mode.Completions, mode.ChatCompletions:
 		if utils.IsStreamResponse(resp) {
 			usage, err = StreamHandler(meta, c, resp, nil)

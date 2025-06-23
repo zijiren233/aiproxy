@@ -42,17 +42,14 @@ func ConvertEmbeddingsRequest(
 
 	if inputToSlices {
 		inputNode := node.Get("input")
-		if inputNode.Exists() {
+		if inputNode.Exists() && inputNode.TypeSafe() == ast.V_STRING {
 			inputString, err := inputNode.String()
 			if err != nil {
-				if !errors.Is(err, ast.ErrUnsupportType) {
-					return adaptor.ConvertResult{}, err
-				}
-			} else {
-				_, err = node.SetAny("input", []string{inputString})
-				if err != nil {
-					return adaptor.ConvertResult{}, err
-				}
+				return adaptor.ConvertResult{}, err
+			}
+			_, err = node.SetAny("input", []string{inputString})
+			if err != nil {
+				return adaptor.ConvertResult{}, err
 			}
 		}
 	}
@@ -63,7 +60,8 @@ func ConvertEmbeddingsRequest(
 	}
 	return adaptor.ConvertResult{
 		Header: http.Header{
-			"Content-Type": {"application/json"},
+			"Content-Type":   {"application/json"},
+			"Content-Length": {strconv.Itoa(len(jsonData))},
 		},
 		Body: bytes.NewReader(jsonData),
 	}, nil
@@ -91,6 +89,7 @@ func EmbeddingsHandler(
 	meta *meta.Meta,
 	c *gin.Context,
 	resp *http.Response,
+	preHandler PreHandler,
 ) (model.Usage, adaptor.Error) {
 	if resp.StatusCode != http.StatusOK {
 		return model.Usage{}, ErrorHanlder(resp)
@@ -117,6 +116,17 @@ func EmbeddingsHandler(
 			http.StatusInternalServerError,
 		)
 	}
+	if preHandler != nil {
+		err := preHandler(meta, &node)
+		if err != nil {
+			return model.Usage{}, relaymodel.WrapperOpenAIError(
+				err,
+				"pre_handler_failed",
+				http.StatusInternalServerError,
+			)
+		}
+	}
+
 	usage, err := GetEmbeddingsUsageFromNode(&node)
 	if err != nil {
 		return model.Usage{}, relaymodel.WrapperOpenAIError(
@@ -162,7 +172,7 @@ func EmbeddingsHandler(
 		)
 	}
 
-	newData, err := sonic.Marshal(&node)
+	newData, err := node.MarshalJSON()
 	if err != nil {
 		return usage.ToModelUsage(), relaymodel.WrapperOpenAIError(
 			err,
