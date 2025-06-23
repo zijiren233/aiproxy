@@ -54,50 +54,48 @@ func (s *Server) handleGetTickets(
 
 	// Check if date is valid
 	if !s.checkDate(date) {
-		return mcp.NewToolResultText("Error: The date cannot be earlier than today."), nil
+		return nil, errors.New("the date cannot be earlier than today")
 	}
 
 	// Check if stations exist
 	if _, exists := s.stations[fromStation]; !exists {
-		return mcp.NewToolResultText("Error: From station not found."), nil
+		return nil, errors.New("from station not found")
 	}
 	if _, exists := s.stations[toStation]; !exists {
-		return mcp.NewToolResultText("Error: To station not found."), nil
+		return nil, errors.New("to station not found")
 	}
 
 	// Get cookies
 	cookies, err := s.getCookie(APIBase)
 	if err != nil {
-		return mcp.NewToolResultText("Error: get cookie failed. Check your network."), nil
+		return nil, err
 	}
 
-	// Query tickets
-	queryParams := url.Values{
-		"leftTicketDTO.train_date":   {date},
-		"leftTicketDTO.from_station": {fromStation},
-		"leftTicketDTO.to_station":   {toStation},
-		"purpose_codes":              {"ADULT"},
-	}
-
-	queryURL := APIBase + "/otn/leftTicket/query"
+	queryURL := fmt.Sprintf(
+		"%s/otn/leftTicket/query?leftTicketDTO.train_date=%s&leftTicketDTO.from_station=%s&leftTicketDTO.to_station=%s&purpose_codes=ADULT",
+		APIBase,
+		url.QueryEscape(date),
+		url.QueryEscape(fromStation),
+		url.QueryEscape(toStation),
+	)
 	headers := map[string]string{
 		"Cookie": s.formatCookies(cookies),
 	}
 
 	var queryResponse LeftTicketsQueryResponse
-	if err := s.make12306Request(ctx, queryURL, queryParams, headers, &queryResponse); err != nil {
-		return mcp.NewToolResultText("Error: get tickets data failed."), nil
+	if err := s.make12306Request(ctx, queryURL, headers, &queryResponse); err != nil {
+		return nil, err
 	}
 
 	// Parse tickets data
 	resultData, ok := queryResponse.Data["result"].([]any)
 	if !ok {
-		return mcp.NewToolResultText("Error: invalid response format."), nil
+		return nil, errors.New("invalid response format")
 	}
 
 	stationMap, ok := queryResponse.Data["map"].(map[string]any)
 	if !ok {
-		return mcp.NewToolResultText("Error: invalid response format."), nil
+		return nil, errors.New("invalid response format")
 	}
 
 	ticketsData := s.parseTicketsData(resultData)
@@ -231,21 +229,21 @@ func (s *Server) handleGetInterlineTickets(
 
 	// Check if date is valid
 	if !s.checkDate(date) {
-		return mcp.NewToolResultText("Error: The date cannot be earlier than today."), nil
+		return nil, errors.New("the date cannot be earlier than today")
 	}
 
 	// Check if stations exist
 	if _, exists := s.stations[fromStation]; !exists {
-		return mcp.NewToolResultText("Error: From station not found."), nil
+		return nil, errors.New("from station not found")
 	}
 	if _, exists := s.stations[toStation]; !exists {
-		return mcp.NewToolResultText("Error: To station not found."), nil
+		return nil, errors.New("to station not found")
 	}
 
 	// Get cookies
 	cookies, err := s.getCookie(APIBase)
 	if err != nil {
-		return mcp.NewToolResultText("Error: get cookie failed. Check your network."), nil
+		return nil, err
 	}
 
 	// Query interline tickets
@@ -261,32 +259,35 @@ func (s *Server) handleGetInterlineTickets(
 		"channel":               {"E"},
 	}
 
-	queryURL := APIBase + s.lcQueryPath
+	queryURL := fmt.Sprintf(
+		"%s%s?%s",
+		APIBase,
+		s.lcQueryPath,
+		queryParams.Encode(),
+	)
 	headers := map[string]string{
 		"Cookie": s.formatCookies(cookies),
 	}
 
 	var queryResponse InterlineQueryResponse
-	if err := s.make12306Request(ctx, queryURL, queryParams, headers, &queryResponse); err != nil {
-		return mcp.NewToolResultText("Error: request interline tickets data failed."), nil
+	if err := s.make12306Request(ctx, queryURL, headers, &queryResponse); err != nil {
+		return nil, err
 	}
 
 	// Check if response contains error
 	if _, ok := queryResponse.Data.(string); ok {
-		return mcp.NewToolResultText(
-			fmt.Sprintf("很抱歉，未查到相关的列车余票。(%s)", queryResponse.ErrorMsg),
-		), nil
+		return nil, fmt.Errorf("很抱歉，未查到相关的列车余票。(%s)", queryResponse.ErrorMsg)
 	}
 
 	// Parse response data
 	dataMap, ok := queryResponse.Data.(map[string]any)
 	if !ok {
-		return mcp.NewToolResultText("Error: invalid response format."), nil
+		return nil, errors.New("invalid response format")
 	}
 
 	middleListData, ok := dataMap["middleList"].([]any)
 	if !ok {
-		return mcp.NewToolResultText("Error: invalid response format."), nil
+		return nil, errors.New("invalid response format")
 	}
 
 	// Parse interline data
@@ -376,7 +377,7 @@ func (s *Server) handleGetTrainRouteStations(
 	// Get cookies
 	cookies, err := s.getCookie(APIBase)
 	if err != nil {
-		return mcp.NewToolResultText("Error: get cookie failed."), nil
+		return nil, err
 	}
 
 	// Query route stations
@@ -387,20 +388,24 @@ func (s *Server) handleGetTrainRouteStations(
 		"depart_date":           {departDate},
 	}
 
-	queryURL := APIBase + "/otn/czxx/queryByTrainNo"
+	queryURL := fmt.Sprintf(
+		"%s/otn/czxx/queryByTrainNo?%s",
+		APIBase,
+		queryParams.Encode(),
+	)
 	headers := map[string]string{
 		"Cookie": s.formatCookies(cookies),
 	}
 
 	var queryResponse RouteQueryResponse
-	if err := s.make12306Request(ctx, queryURL, queryParams, headers, &queryResponse); err != nil {
-		return mcp.NewToolResultText("Error: get train route stations failed."), nil
+	if err := s.make12306Request(ctx, queryURL, headers, &queryResponse); err != nil {
+		return nil, err
 	}
 
 	// Parse route stations data
 	dataMap, ok := queryResponse.Data["data"].([]any)
 	if !ok {
-		return mcp.NewToolResultText("Error: invalid response format."), nil
+		return nil, errors.New("invalid response format")
 	}
 
 	routeStationsData := s.parseRouteStationsData(dataMap)
@@ -408,12 +413,12 @@ func (s *Server) handleGetTrainRouteStations(
 	routeStationsInfo := s.parseRouteStationsInfo(routeStationsData)
 
 	if len(routeStationsInfo) == 0 {
-		return mcp.NewToolResultText("未查询到相关车次信息。"), nil
+		return nil, errors.New("未查询到相关车次信息。")
 	}
 
 	result, err := sonic.Marshal(routeStationsInfo)
 	if err != nil {
-		return nil, fmt.Errorf("failed to marshal response: %w", err)
+		return nil, err
 	}
 
 	return mcp.NewToolResultText(string(result)), nil
