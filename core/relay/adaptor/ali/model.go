@@ -38,8 +38,8 @@ type TaskResponse struct {
 			Failed    int `json:"FAILED,omitempty"`
 		} `json:"task_metrics,omitempty"`
 	} `json:"output,omitempty"`
-	Usage      model.Usage `json:"usage"`
-	StatusCode int         `json:"status_code,omitempty"`
+	Usage      model.ChatUsage `json:"usage"`
+	StatusCode int             `json:"status_code,omitempty"`
 }
 
 type EmbeddingRequest struct {
@@ -62,7 +62,7 @@ type EmbeddingResponse struct {
 	Output struct {
 		Embeddings []Embedding `json:"embeddings"`
 	} `json:"output"`
-	Usage model.Usage `json:"usage"`
+	Usage model.EmbeddingUsage `json:"usage"`
 }
 
 type Error struct {

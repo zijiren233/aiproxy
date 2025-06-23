@@ -282,7 +282,7 @@ func StreamResponse2OpenAI(
 	meta *meta.Meta,
 	respData []byte,
 ) (*relaymodel.ChatCompletionsStreamResponse, adaptor.Error) {
-	var usage *relaymodel.Usage
+	var usage *relaymodel.ChatUsage
 	var content string
 	var thinking string
 	var stopReason string
@@ -438,7 +438,7 @@ func Response2OpenAI(
 		Object:  relaymodel.ChatCompletionObject,
 		Created: time.Now().Unix(),
 		Choices: []*relaymodel.TextResponseChoice{&choice},
-		Usage:   claudeResponse.Usage.ToOpenAIUsage(),
+		ChatUsage:   claudeResponse.Usage.ToOpenAIUsage(),
 	}
 	if fullTextResponse.PromptTokens == 0 {
 		fullTextResponse.PromptTokens = int64(meta.RequestUsage.InputTokens)
@@ -467,7 +467,7 @@ func OpenAIStreamHandler(
 
 	responseText := strings.Builder{}
 
-	var usage *relaymodel.Usage
+	var usage *relaymodel.ChatUsage
 	var writed bool
 
 	for scanner.Scan() {
@@ -488,7 +488,7 @@ func OpenAIStreamHandler(
 				continue
 			}
 			if usage == nil {
-				usage = &relaymodel.Usage{}
+				usage = &relaymodel.ChatUsage{}
 			}
 			if response != nil && response.Usage != nil {
 				usage.Add(response.Usage)
@@ -502,7 +502,7 @@ func OpenAIStreamHandler(
 		switch {
 		case response.Usage != nil:
 			if usage == nil {
-				usage = &relaymodel.Usage{}
+				usage = &relaymodel.ChatUsage{}
 			}
 			usage.Add(response.Usage)
 			if usage.PromptTokens == 0 {
@@ -528,7 +528,7 @@ func OpenAIStreamHandler(
 	}
 
 	if usage == nil {
-		usage = &relaymodel.Usage{
+		usage = &relaymodel.ChatUsage{
 			PromptTokens:     int64(m.RequestUsage.InputTokens),
 			CompletionTokens: openai.CountTokenText(responseText.String(), m.OriginModel),
 			TotalTokens: int64(

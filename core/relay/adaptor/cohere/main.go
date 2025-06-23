@@ -118,7 +118,7 @@ func StreamResponse2OpenAI(
 		Choices: []*relaymodel.ChatCompletionsStreamResponseChoice{&choice},
 	}
 	if response != nil {
-		openaiResponse.Usage = &relaymodel.Usage{
+		openaiResponse.Usage = &relaymodel.ChatUsage{
 			PromptTokens:     response.Meta.Tokens.InputTokens,
 			CompletionTokens: response.Meta.Tokens.OutputTokens,
 			TotalTokens:      response.Meta.Tokens.InputTokens + response.Meta.Tokens.OutputTokens,
@@ -143,7 +143,7 @@ func Response2OpenAI(meta *meta.Meta, cohereResponse *Response) *relaymodel.Text
 		Object:  relaymodel.ChatCompletionObject,
 		Created: time.Now().Unix(),
 		Choices: []*relaymodel.TextResponseChoice{&choice},
-		Usage: relaymodel.Usage{
+		ChatUsage: relaymodel.ChatUsage{
 			PromptTokens:     cohereResponse.Meta.Tokens.InputTokens,
 			CompletionTokens: cohereResponse.Meta.Tokens.OutputTokens,
 			TotalTokens:      cohereResponse.Meta.Tokens.InputTokens + cohereResponse.Meta.Tokens.OutputTokens,
@@ -170,7 +170,7 @@ func StreamHandler(
 	defer openai.PutScannerBuffer(buf)
 	scanner.Buffer(*buf, cap(*buf))
 
-	var usage relaymodel.Usage
+	var usage relaymodel.ChatUsage
 
 	for scanner.Scan() {
 		data := scanner.Text()

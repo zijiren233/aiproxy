@@ -16,7 +16,7 @@ import (
 
 type EmbeddingsResponse struct {
 	*Error
-	Usage relaymodel.Usage `json:"usage"`
+	Usage relaymodel.ChatUsage `json:"usage"`
 }
 
 func EmbeddingsHandler(

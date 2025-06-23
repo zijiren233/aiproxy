@@ -107,7 +107,7 @@ func response2OpenAI(meta *meta.Meta, response *ChatResponse) *relaymodel.TextRe
 		Choices: []*relaymodel.TextResponseChoice{&choice},
 	}
 	if response.Usage != nil {
-		fullTextResponse.Usage = *response.Usage
+		fullTextResponse.ChatUsage = *response.Usage
 	}
 	return &fullTextResponse
 }
@@ -141,7 +141,7 @@ func StreamHandler(
 
 	log := common.GetLogger(c)
 
-	var usage relaymodel.Usage
+	var usage relaymodel.ChatUsage
 	scanner := bufio.NewScanner(resp.Body)
 	buf := openai.GetScannerBuffer()
 	defer openai.PutScannerBuffer(buf)

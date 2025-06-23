@@ -44,7 +44,7 @@ func RerankHandler(
 			http.StatusInternalServerError,
 		)
 	}
-	var usage relaymodel.Usage
+	var usage relaymodel.ChatUsage
 	usageNode := node.Get("usage")
 	usageStr, err := usageNode.Raw()
 	if err != nil {

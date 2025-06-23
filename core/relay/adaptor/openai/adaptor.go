@@ -188,9 +188,9 @@ func DoResponse(
 		usage, err = RerankHandler(meta, c, resp)
 	case mode.Moderations:
 		usage, err = ModerationsHandler(meta, c, resp)
-	case mode.Embeddings, mode.Completions:
-		fallthrough
-	case mode.ChatCompletions:
+	case mode.Embeddings:
+		usage, err = EmbeddingsHandler(meta, c, resp)
+	case mode.Completions, mode.ChatCompletions:
 		if utils.IsStreamResponse(resp) {
 			usage, err = StreamHandler(meta, c, resp, nil)
 		} else {

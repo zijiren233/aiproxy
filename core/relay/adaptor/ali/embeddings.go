@@ -115,7 +115,7 @@ func EmbeddingsHandler(
 	openaiResponse := embeddingResponse2OpenAI(meta, &respBody)
 	data, err := sonic.Marshal(openaiResponse)
 	if err != nil {
-		return openaiResponse.ToModelUsage(), relaymodel.WrapperOpenAIError(
+		return openaiResponse.Usage.ToModelUsage(), relaymodel.WrapperOpenAIError(
 			err,
 			"marshal_response_body_failed",
 			resp.StatusCode,
@@ -128,5 +128,5 @@ func EmbeddingsHandler(
 	if err != nil {
 		log.Warnf("write response body failed: %v", err)
 	}
-	return openaiResponse.ToModelUsage(), nil
+	return openaiResponse.Usage.ToModelUsage(), nil
 }

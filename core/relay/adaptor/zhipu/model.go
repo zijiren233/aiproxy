@@ -18,10 +18,10 @@ type EmbeddingRequest struct {
 }
 
 type EmbeddingResponse struct {
-	Model       string          `json:"model"`
-	Object      string          `json:"object"`
-	Embeddings  []EmbeddingData `json:"data"`
-	model.Usage `json:"usage"`
+	Model      string               `json:"model"`
+	Object     string               `json:"object"`
+	Embeddings []EmbeddingData      `json:"data"`
+	Usage      model.EmbeddingUsage `json:"usage"`
 }
 
 type EmbeddingData struct {

@@ -248,7 +248,7 @@ func StreamHandler(m *meta.Meta, c *gin.Context) (model.Usage, adaptor.Error) {
 	stream := awsResp.GetStream()
 	defer stream.Close()
 
-	var usage *relaymodel.Usage
+	var usage *relaymodel.ChatUsage
 	responseText := strings.Builder{}
 	var writed bool
 
@@ -267,7 +267,7 @@ func StreamHandler(m *meta.Meta, c *gin.Context) (model.Usage, adaptor.Error) {
 				switch {
 				case response.Usage != nil:
 					if usage == nil {
-						usage = &relaymodel.Usage{}
+						usage = &relaymodel.ChatUsage{}
 					}
 					usage.Add(response.Usage)
 					if usage.PromptTokens == 0 {
@@ -297,7 +297,7 @@ func StreamHandler(m *meta.Meta, c *gin.Context) (model.Usage, adaptor.Error) {
 	}
 
 	if usage == nil {
-		usage = &relaymodel.Usage{
+		usage = &relaymodel.ChatUsage{
 			PromptTokens:     int64(m.RequestUsage.InputTokens),
 			CompletionTokens: openai.CountTokenText(responseText.String(), m.OriginModel),
 			TotalTokens: int64(

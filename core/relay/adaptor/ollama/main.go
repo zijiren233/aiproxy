@@ -159,7 +159,7 @@ func response2OpenAI(meta *meta.Meta, response *ChatResponse) *relaymodel.TextRe
 		Object:  relaymodel.ChatCompletionObject,
 		Created: time.Now().Unix(),
 		Choices: []*relaymodel.TextResponseChoice{&choice},
-		Usage: relaymodel.Usage{
+		ChatUsage: relaymodel.ChatUsage{
 			PromptTokens:     response.PromptEvalCount,
 			CompletionTokens: response.EvalCount,
 			TotalTokens:      response.PromptEvalCount + response.EvalCount,
@@ -194,7 +194,7 @@ func streamResponse2OpenAI(
 	}
 
 	if ollamaResponse.EvalCount != 0 {
-		response.Usage = &relaymodel.Usage{
+		response.Usage = &relaymodel.ChatUsage{
 			PromptTokens:     ollamaResponse.PromptEvalCount,
 			CompletionTokens: ollamaResponse.EvalCount,
 			TotalTokens:      ollamaResponse.PromptEvalCount + ollamaResponse.EvalCount,
@@ -217,7 +217,7 @@ func StreamHandler(
 
 	log := common.GetLogger(c)
 
-	var usage *relaymodel.Usage
+	var usage *relaymodel.ChatUsage
 	scanner := bufio.NewScanner(resp.Body)
 	buf := openai.GetScannerBuffer()
 	defer openai.PutScannerBuffer(buf)
@@ -318,7 +318,7 @@ func EmbeddingHandler(
 	fullTextResponse := embeddingResponseOllama2OpenAI(meta, &ollamaResponse)
 	jsonResponse, err := sonic.Marshal(fullTextResponse)
 	if err != nil {
-		return fullTextResponse.ToModelUsage(), relaymodel.WrapperOpenAIError(
+		return fullTextResponse.Usage.ToModelUsage(), relaymodel.WrapperOpenAIError(
 			err,
 			"marshal_response_body_failed",
 			http.StatusInternalServerError,
@@ -327,7 +327,7 @@ func EmbeddingHandler(
 	c.Writer.Header().Set("Content-Type", "application/json")
 	c.Writer.Header().Set("Content-Length", strconv.Itoa(len(jsonResponse)))
 	_, _ = c.Writer.Write(jsonResponse)
-	return fullTextResponse.ToModelUsage(), nil
+	return fullTextResponse.Usage.ToModelUsage(), nil
 }
 
 func embeddingResponseOllama2OpenAI(
@@ -338,7 +338,7 @@ func embeddingResponseOllama2OpenAI(
 		Object: "list",
 		Data:   make([]*relaymodel.EmbeddingResponseItem, 0, len(response.Embeddings)),
 		Model:  meta.OriginModel,
-		Usage: relaymodel.Usage{
+		Usage: relaymodel.EmbeddingUsage{
 			PromptTokens: response.PromptEvalCount,
 			TotalTokens:  response.PromptEvalCount,
 		},

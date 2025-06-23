@@ -190,7 +190,7 @@ func ResponseLlama2OpenAI(meta *meta.Meta, llamaResponse Response) relaymodel.Te
 		Created: time.Now().Unix(),
 		Choices: []*relaymodel.TextResponseChoice{&choice},
 		Model:   meta.OriginModel,
-		Usage: relaymodel.Usage{
+		ChatUsage: relaymodel.ChatUsage{
 			PromptTokens:     llamaResponse.PromptTokenCount,
 			CompletionTokens: llamaResponse.GenerationTokenCount,
 			TotalTokens:      llamaResponse.PromptTokenCount + llamaResponse.GenerationTokenCount,
@@ -257,7 +257,7 @@ func StreamHandler(meta *meta.Meta, c *gin.Context) (model.Usage, adaptor.Error)
 	defer stream.Close()
 
 	c.Writer.Header().Set("Content-Type", "text/event-stream")
-	var usage relaymodel.Usage
+	var usage relaymodel.ChatUsage
 	c.Stream(func(_ io.Writer) bool {
 		event, ok := <-stream.Events()
 		if !ok {

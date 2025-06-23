@@ -367,8 +367,8 @@ type UsageMetadata struct {
 	PromptTokensDetails  []PromptTokensDetail `json:"promptTokensDetails"`
 }
 
-func (u *UsageMetadata) ToUsage() relaymodel.Usage {
-	return relaymodel.Usage{
+func (u *UsageMetadata) ToUsage() relaymodel.ChatUsage {
+	return relaymodel.ChatUsage{
 		PromptTokens: u.PromptTokenCount,
 		CompletionTokens: u.CandidatesTokenCount +
 			u.ThoughtsTokenCount,
@@ -456,7 +456,7 @@ func responseChat2OpenAI(meta *meta.Meta, response *ChatResponse) *relaymodel.Te
 		Choices: make([]*relaymodel.TextResponseChoice, 0, len(response.Candidates)),
 	}
 	if response.UsageMetadata != nil {
-		fullTextResponse.Usage = response.UsageMetadata.ToUsage()
+		fullTextResponse.ChatUsage = response.UsageMetadata.ToUsage()
 	}
 	for i, candidate := range response.Candidates {
 		choice := relaymodel.TextResponseChoice{
@@ -664,7 +664,7 @@ func StreamHandler(
 		scanner.Buffer(*buf, cap(*buf))
 	}
 
-	usage := relaymodel.Usage{
+	usage := relaymodel.ChatUsage{
 		PromptTokens: int64(meta.RequestUsage.InputTokens),
 	}
 
