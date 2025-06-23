@@ -76,14 +76,15 @@ func (a *Adaptor) ConvertRequest(
 	switch meta.Mode {
 	case mode.Embeddings:
 		if strings.Contains(meta.ActualModel, "vision") {
-			return ConvertEmbeddingsVisionRequest(meta, store, req)
+			return openai.ConvertEmbeddingsRequest(meta, req, patchEmbeddingsVisionInput, false)
 		} else {
-			return openai.ConvertRequest(meta, store, req)
+			return openai.ConvertEmbeddingsRequest(meta, req, nil, true)
 		}
 	case mode.ChatCompletions:
 		return ConvertChatCompletionsRequest(meta, req)
+	default:
+		return openai.ConvertRequest(meta, store, req)
 	}
-	return openai.ConvertRequest(meta, store, req)
 }
 
 func (a *Adaptor) DoResponse(

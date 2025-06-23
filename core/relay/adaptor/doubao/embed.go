@@ -1,48 +1,9 @@
 package doubao
 
 import (
-	"bytes"
-	"net/http"
-	"strconv"
-
 	"github.com/bytedance/sonic/ast"
-	"github.com/labring/aiproxy/core/common"
-	"github.com/labring/aiproxy/core/relay/adaptor"
 	"github.com/labring/aiproxy/core/relay/meta"
 )
-
-func ConvertEmbeddingsVisionRequest(
-	meta *meta.Meta,
-	_ adaptor.Store,
-	req *http.Request,
-) (adaptor.ConvertResult, error) {
-	node, err := common.UnmarshalBody2Node(req)
-	if err != nil {
-		return adaptor.ConvertResult{}, err
-	}
-
-	_, err = node.Set("model", ast.NewString(meta.ActualModel))
-	if err != nil {
-		return adaptor.ConvertResult{}, err
-	}
-
-	err = patchEmbeddingsVisionInput(&node)
-	if err != nil {
-		return adaptor.ConvertResult{}, err
-	}
-
-	jsonData, err := node.MarshalJSON()
-	if err != nil {
-		return adaptor.ConvertResult{}, err
-	}
-	return adaptor.ConvertResult{
-		Header: http.Header{
-			"Content-Type":   {"application/json"},
-			"Content-Length": {strconv.Itoa(len(jsonData))},
-		},
-		Body: bytes.NewReader(jsonData),
-	}, nil
-}
 
 func patchEmbeddingsVisionInput(node *ast.Node) error {
 	inputNode := node.Get("input")
