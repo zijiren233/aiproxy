@@ -167,7 +167,7 @@ func Handler(meta *meta.Meta, c *gin.Context) (model.Usage, adaptor.Error) {
 
 	jsonBody, err := sonic.Marshal(openaiResp)
 	if err != nil {
-		return openaiResp.ToModelUsage(), relaymodel.WrapperOpenAIErrorWithMessage(
+		return openaiResp.Usage.ToModelUsage(), relaymodel.WrapperOpenAIErrorWithMessage(
 			err.Error(),
 			nil,
 			http.StatusInternalServerError,
@@ -177,7 +177,7 @@ func Handler(meta *meta.Meta, c *gin.Context) (model.Usage, adaptor.Error) {
 	c.Writer.Header().Set("Content-Type", "application/json")
 	c.Writer.Header().Set("Content-Length", strconv.Itoa(len(jsonBody)))
 	_, _ = c.Writer.Write(jsonBody)
-	return openaiResp.ToModelUsage(), nil
+	return openaiResp.Usage.ToModelUsage(), nil
 }
 
 func StreamHandler(m *meta.Meta, c *gin.Context) (model.Usage, adaptor.Error) {

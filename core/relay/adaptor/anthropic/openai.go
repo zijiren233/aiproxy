@@ -433,17 +433,17 @@ func Response2OpenAI(
 	}
 
 	fullTextResponse := relaymodel.TextResponse{
-		ID:        openai.ChatCompletionID(),
-		Model:     meta.OriginModel,
-		Object:    relaymodel.ChatCompletionObject,
-		Created:   time.Now().Unix(),
-		Choices:   []*relaymodel.TextResponseChoice{&choice},
-		ChatUsage: claudeResponse.Usage.ToOpenAIUsage(),
+		ID:      openai.ChatCompletionID(),
+		Model:   meta.OriginModel,
+		Object:  relaymodel.ChatCompletionObject,
+		Created: time.Now().Unix(),
+		Choices: []*relaymodel.TextResponseChoice{&choice},
+		Usage:   claudeResponse.Usage.ToOpenAIUsage(),
 	}
-	if fullTextResponse.PromptTokens == 0 {
-		fullTextResponse.PromptTokens = int64(meta.RequestUsage.InputTokens)
+	if fullTextResponse.Usage.PromptTokens == 0 {
+		fullTextResponse.Usage.PromptTokens = int64(meta.RequestUsage.InputTokens)
 	}
-	fullTextResponse.TotalTokens = fullTextResponse.PromptTokens + fullTextResponse.CompletionTokens
+	fullTextResponse.Usage.TotalTokens = fullTextResponse.Usage.PromptTokens + fullTextResponse.Usage.CompletionTokens
 	return &fullTextResponse, nil
 }
 
@@ -588,5 +588,5 @@ func OpenAIHandler(
 	c.Writer.Header().Set("Content-Type", "application/json")
 	c.Writer.Header().Set("Content-Length", strconv.Itoa(len(jsonResponse)))
 	_, _ = c.Writer.Write(jsonResponse)
-	return fullTextResponse.ToModelUsage(), nil
+	return fullTextResponse.Usage.ToModelUsage(), nil
 }

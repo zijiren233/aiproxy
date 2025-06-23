@@ -96,12 +96,12 @@ type TextResponseChoice struct {
 }
 
 type TextResponse struct {
-	ID        string                `json:"id"`
-	Model     string                `json:"model,omitempty"`
-	Object    string                `json:"object"`
-	Choices   []*TextResponseChoice `json:"choices"`
-	ChatUsage `json:"usage"`
-	Created   int64 `json:"created"`
+	ID      string                `json:"id"`
+	Model   string                `json:"model,omitempty"`
+	Object  string                `json:"object"`
+	Choices []*TextResponseChoice `json:"choices"`
+	Usage   ChatUsage             `json:"usage"`
+	Created int64                 `json:"created"`
 }
 
 type Message struct {
