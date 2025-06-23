@@ -225,15 +225,13 @@ type InterlineTicketData struct {
 
 // API response types
 type QueryResponse struct {
-	HTTPStatus string `json:"httpstatus,omitempty"`
-	Data       any    `json:"data"`
-	Status     bool   `json:"status"`
+	Data   any  `json:"data"`
+	Status bool `json:"status"`
 }
 
 type LeftTicketsQueryResponse struct {
-	HTTPStatus string         `json:"httpstatus"`
-	Data       map[string]any `json:"data"`
-	Messages   string         `json:"messages"`
+	Data     map[string]any `json:"data"`
+	Messages string         `json:"messages"`
 }
 
 type InterlineQueryResponse struct {
@@ -242,7 +240,6 @@ type InterlineQueryResponse struct {
 }
 
 type RouteQueryResponse struct {
-	HTTPStatus       string         `json:"httpstatus"`
 	Data             map[string]any `json:"data"`
 	Messages         []string       `json:"messages"`
 	ValidateMessages map[string]any `json:"validateMessages"`

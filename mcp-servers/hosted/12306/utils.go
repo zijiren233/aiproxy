@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
@@ -68,13 +67,10 @@ func (s *Server) formatCookies(cookies map[string]string) string {
 func (s *Server) make12306Request(
 	ctx context.Context,
 	urlStr string,
-	params url.Values,
 	headers map[string]string,
 	result any,
 ) error {
-	fullURL := urlStr + "?" + params.Encode()
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, fullURL, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, urlStr, nil)
 	if err != nil {
 		return err
 	}
