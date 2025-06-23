@@ -9201,58 +9201,6 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_labring_aiproxy_core_model.Usage": {
-            "type": "object",
-            "properties": {
-                "cache_creation_tokens": {
-                    "type": "integer"
-                },
-                "cached_tokens": {
-                    "type": "integer"
-                },
-                "image_input_tokens": {
-                    "type": "integer"
-                },
-                "input_tokens": {
-                    "type": "integer"
-                },
-                "output_tokens": {
-                    "type": "integer"
-                },
-                "reasoning_tokens": {
-                    "type": "integer"
-                },
-                "total_tokens": {
-                    "type": "integer"
-                },
-                "web_search_count": {
-                    "type": "integer"
-                }
-            }
-        },
-        "github_com_labring_aiproxy_core_relay_model.Usage": {
-            "type": "object",
-            "properties": {
-                "completion_tokens": {
-                    "type": "integer"
-                },
-                "completion_tokens_details": {
-                    "$ref": "#/definitions/model.CompletionTokensDetails"
-                },
-                "prompt_tokens": {
-                    "type": "integer"
-                },
-                "prompt_tokens_details": {
-                    "$ref": "#/definitions/model.PromptTokensDetails"
-                },
-                "total_tokens": {
-                    "type": "integer"
-                },
-                "web_search_count": {
-                    "type": "integer"
-                }
-            }
-        },
         "mcp.Tool": {
             "type": "object",
             "properties": {
@@ -9642,6 +9590,29 @@ const docTemplate = `{
                 }
             }
         },
+        "model.ChatUsage": {
+            "type": "object",
+            "properties": {
+                "completion_tokens": {
+                    "type": "integer"
+                },
+                "completion_tokens_details": {
+                    "$ref": "#/definitions/model.CompletionTokensDetails"
+                },
+                "prompt_tokens": {
+                    "type": "integer"
+                },
+                "prompt_tokens_details": {
+                    "$ref": "#/definitions/model.PromptTokensDetails"
+                },
+                "total_tokens": {
+                    "type": "integer"
+                },
+                "web_search_count": {
+                    "type": "integer"
+                }
+            }
+        },
         "model.CompletionTokensDetails": {
             "type": "object",
             "properties": {
@@ -9746,6 +9717,17 @@ const docTemplate = `{
                 }
             }
         },
+        "model.EmbeddingPromptTokensDetails": {
+            "type": "object",
+            "properties": {
+                "image_tokens": {
+                    "type": "integer"
+                },
+                "text_tokens": {
+                    "type": "integer"
+                }
+            }
+        },
         "model.EmbeddingRequest": {
             "type": "object",
             "properties": {
@@ -9779,7 +9761,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "usage": {
-                    "$ref": "#/definitions/github_com_labring_aiproxy_core_relay_model.Usage"
+                    "$ref": "#/definitions/model.EmbeddingUsage"
                 }
             }
         },
@@ -9797,6 +9779,20 @@ const docTemplate = `{
                 },
                 "object": {
                     "type": "string"
+                }
+            }
+        },
+        "model.EmbeddingUsage": {
+            "type": "object",
+            "properties": {
+                "prompt_tokens": {
+                    "type": "integer"
+                },
+                "prompt_tokens_details": {
+                    "$ref": "#/definitions/model.EmbeddingPromptTokensDetails"
+                },
+                "total_tokens": {
+                    "type": "integer"
                 }
             }
         },
@@ -10400,7 +10396,7 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "usage": {
-                    "$ref": "#/definitions/github_com_labring_aiproxy_core_model.Usage"
+                    "$ref": "#/definitions/model.Usage"
                 },
                 "used_amount": {
                     "type": "number"
@@ -11162,7 +11158,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "usage": {
-                    "$ref": "#/definitions/github_com_labring_aiproxy_core_relay_model.Usage"
+                    "$ref": "#/definitions/model.ChatUsage"
                 }
             }
         },
@@ -11203,6 +11199,9 @@ const docTemplate = `{
                 "speed": {
                     "type": "number"
                 },
+                "stream_format": {
+                    "type": "string"
+                },
                 "voice": {
                     "type": "string"
                 }
@@ -11233,6 +11232,35 @@ const docTemplate = `{
                 },
                 "type": {
                     "type": "string"
+                }
+            }
+        },
+        "model.Usage": {
+            "type": "object",
+            "properties": {
+                "cache_creation_tokens": {
+                    "type": "integer"
+                },
+                "cached_tokens": {
+                    "type": "integer"
+                },
+                "image_input_tokens": {
+                    "type": "integer"
+                },
+                "input_tokens": {
+                    "type": "integer"
+                },
+                "output_tokens": {
+                    "type": "integer"
+                },
+                "reasoning_tokens": {
+                    "type": "integer"
+                },
+                "total_tokens": {
+                    "type": "integer"
+                },
+                "web_search_count": {
+                    "type": "integer"
                 }
             }
         },

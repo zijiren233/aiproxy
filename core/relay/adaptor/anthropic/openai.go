@@ -433,12 +433,12 @@ func Response2OpenAI(
 	}
 
 	fullTextResponse := relaymodel.TextResponse{
-		ID:      openai.ChatCompletionID(),
-		Model:   meta.OriginModel,
-		Object:  relaymodel.ChatCompletionObject,
-		Created: time.Now().Unix(),
-		Choices: []*relaymodel.TextResponseChoice{&choice},
-		ChatUsage:   claudeResponse.Usage.ToOpenAIUsage(),
+		ID:        openai.ChatCompletionID(),
+		Model:     meta.OriginModel,
+		Object:    relaymodel.ChatCompletionObject,
+		Created:   time.Now().Unix(),
+		Choices:   []*relaymodel.TextResponseChoice{&choice},
+		ChatUsage: claudeResponse.Usage.ToOpenAIUsage(),
 	}
 	if fullTextResponse.PromptTokens == 0 {
 		fullTextResponse.PromptTokens = int64(meta.RequestUsage.InputTokens)

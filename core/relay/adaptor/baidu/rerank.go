@@ -15,7 +15,7 @@ import (
 )
 
 type RerankResponse struct {
-	Error *Error           `json:"error"`
+	Error *Error               `json:"error"`
 	Usage relaymodel.ChatUsage `json:"usage"`
 }
 

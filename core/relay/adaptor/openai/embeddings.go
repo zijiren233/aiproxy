@@ -156,7 +156,7 @@ func EmbeddingsHandler(
 			)
 		}
 	} else if usage.TotalTokens != 0 && usage.PromptTokens == 0 { // some channels don't return prompt tokens
-		usage.PromptTokens = int64(usage.TotalTokens)
+		usage.PromptTokens = usage.TotalTokens
 		_, err = node.Set("usage", ast.NewAny(usage))
 		if err != nil {
 			return usage.ToModelUsage(), relaymodel.WrapperOpenAIError(err, "set_usage_failed", http.StatusInternalServerError)
