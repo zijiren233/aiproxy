@@ -276,7 +276,7 @@ func (s *Server) handleGetInterlineTickets(
 
 	// Check if response contains error
 	if _, ok := queryResponse.Data.(string); ok {
-		return nil, errors.New(fmt.Sprintf("很抱歉，未查到相关的列车余票。(%s)", queryResponse.ErrorMsg))
+		return nil, fmt.Errorf("很抱歉，未查到相关的列车余票。(%s)", queryResponse.ErrorMsg)
 	}
 
 	// Parse response data
