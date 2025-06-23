@@ -5,7 +5,7 @@ import (
 	"github.com/labring/aiproxy/core/relay/adaptor"
 )
 
-type Usage struct {
+type ChatUsage struct {
 	PromptTokens     int64 `json:"prompt_tokens,omitempty"`
 	CompletionTokens int64 `json:"completion_tokens,omitempty"`
 	TotalTokens      int64 `json:"total_tokens"`
@@ -16,7 +16,7 @@ type Usage struct {
 	CompletionTokensDetails *CompletionTokensDetails `json:"completion_tokens_details,omitempty"`
 }
 
-func (u Usage) ToModelUsage() model.Usage {
+func (u ChatUsage) ToModelUsage() model.Usage {
 	usage := model.Usage{
 		InputTokens:    model.ZeroNullInt64(u.PromptTokens),
 		OutputTokens:   model.ZeroNullInt64(u.CompletionTokens),
@@ -33,7 +33,7 @@ func (u Usage) ToModelUsage() model.Usage {
 	return usage
 }
 
-func (u *Usage) Add(other *Usage) {
+func (u *ChatUsage) Add(other *ChatUsage) {
 	if other == nil {
 		return
 	}

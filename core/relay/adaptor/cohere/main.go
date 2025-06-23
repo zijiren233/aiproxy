@@ -118,7 +118,7 @@ func StreamResponse2OpenAI(
 		Choices: []*relaymodel.ChatCompletionsStreamResponseChoice{&choice},
 	}
 	if response != nil {
-		openaiResponse.Usage = &relaymodel.Usage{
+		openaiResponse.Usage = &relaymodel.ChatUsage{
 			PromptTokens:     response.Meta.Tokens.InputTokens,
 			CompletionTokens: response.Meta.Tokens.OutputTokens,
 			TotalTokens:      response.Meta.Tokens.InputTokens + response.Meta.Tokens.OutputTokens,
@@ -143,7 +143,7 @@ func Response2OpenAI(meta *meta.Meta, cohereResponse *Response) *relaymodel.Text
 		Object:  relaymodel.ChatCompletionObject,
 		Created: time.Now().Unix(),
 		Choices: []*relaymodel.TextResponseChoice{&choice},
-		Usage: relaymodel.Usage{
+		Usage: relaymodel.ChatUsage{
 			PromptTokens:     cohereResponse.Meta.Tokens.InputTokens,
 			CompletionTokens: cohereResponse.Meta.Tokens.OutputTokens,
 			TotalTokens:      cohereResponse.Meta.Tokens.InputTokens + cohereResponse.Meta.Tokens.OutputTokens,
@@ -170,7 +170,7 @@ func StreamHandler(
 	defer openai.PutScannerBuffer(buf)
 	scanner.Buffer(*buf, cap(*buf))
 
-	var usage relaymodel.Usage
+	var usage relaymodel.ChatUsage
 
 	for scanner.Scan() {
 		data := scanner.Text()
@@ -226,7 +226,7 @@ func Handler(meta *meta.Meta, c *gin.Context, resp *http.Response) (model.Usage,
 	fullTextResponse := Response2OpenAI(meta, &cohereResponse)
 	jsonResponse, err := sonic.Marshal(fullTextResponse)
 	if err != nil {
-		return fullTextResponse.ToModelUsage(), relaymodel.WrapperOpenAIError(
+		return fullTextResponse.Usage.ToModelUsage(), relaymodel.WrapperOpenAIError(
 			err,
 			"marshal_response_body_failed",
 			http.StatusInternalServerError,
@@ -235,5 +235,5 @@ func Handler(meta *meta.Meta, c *gin.Context, resp *http.Response) (model.Usage,
 	c.Writer.Header().Set("Content-Type", "application/json")
 	c.Writer.Header().Set("Content-Length", strconv.Itoa(len(jsonResponse)))
 	_, _ = c.Writer.Write(jsonResponse)
-	return fullTextResponse.ToModelUsage(), nil
+	return fullTextResponse.Usage.ToModelUsage(), nil
 }

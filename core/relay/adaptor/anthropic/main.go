@@ -177,7 +177,7 @@ func StreamHandler(
 
 	responseText := strings.Builder{}
 
-	var usage *relaymodel.Usage
+	var usage *relaymodel.ChatUsage
 	var writed bool
 
 	for scanner.Scan() {
@@ -193,7 +193,7 @@ func StreamHandler(
 				log.Errorf("response error: %+v", err)
 			} else {
 				if usage == nil {
-					usage = &relaymodel.Usage{}
+					usage = &relaymodel.ChatUsage{}
 				}
 				if response != nil && response.Usage != nil {
 					usage.Add(response.Usage)
@@ -205,7 +205,7 @@ func StreamHandler(
 			switch {
 			case response.Usage != nil:
 				if usage == nil {
-					usage = &relaymodel.Usage{}
+					usage = &relaymodel.ChatUsage{}
 				}
 				usage.Add(response.Usage)
 				if usage.PromptTokens == 0 {
@@ -232,7 +232,7 @@ func StreamHandler(
 	}
 
 	if usage == nil {
-		usage = &relaymodel.Usage{
+		usage = &relaymodel.ChatUsage{
 			PromptTokens:     int64(m.RequestUsage.InputTokens),
 			CompletionTokens: openai.CountTokenText(responseText.String(), m.OriginModel),
 			TotalTokens: int64(
@@ -270,5 +270,5 @@ func Handler(meta *meta.Meta, c *gin.Context, resp *http.Response) (model.Usage,
 	c.Writer.Header().Set("Content-Type", "application/json")
 	c.Writer.Header().Set("Content-Length", strconv.Itoa(len(respBody)))
 	_, _ = c.Writer.Write(respBody)
-	return fullTextResponse.ToModelUsage(), nil
+	return fullTextResponse.Usage.ToModelUsage(), nil
 }

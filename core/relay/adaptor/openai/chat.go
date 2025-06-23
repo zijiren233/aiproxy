@@ -167,14 +167,14 @@ func patchStreamOptions(node *ast.Node) error {
 
 func GetUsageOrChatChoicesResponseFromNode(
 	node *ast.Node,
-) (*relaymodel.Usage, []*relaymodel.ChatCompletionsStreamResponseChoice, error) {
+) (*relaymodel.ChatUsage, []*relaymodel.ChatCompletionsStreamResponseChoice, error) {
 	usageNode, err := node.Get("usage").Raw()
 	if err != nil {
 		if !errors.Is(err, ast.ErrNotExist) {
 			return nil, nil, err
 		}
 	} else {
-		var usage relaymodel.Usage
+		var usage relaymodel.ChatUsage
 		err = sonic.UnmarshalString(usageNode, &usage)
 		if err != nil {
 			return nil, nil, err
@@ -220,7 +220,7 @@ func StreamHandler(
 	defer PutScannerBuffer(buf)
 	scanner.Buffer(*buf, cap(*buf))
 
-	var usage relaymodel.Usage
+	var usage relaymodel.ChatUsage
 
 	for scanner.Scan() {
 		data := scanner.Bytes()
@@ -304,14 +304,14 @@ func StreamHandler(
 
 func GetUsageOrChoicesResponseFromNode(
 	node *ast.Node,
-) (*relaymodel.Usage, []*relaymodel.TextResponseChoice, error) {
+) (*relaymodel.ChatUsage, []*relaymodel.TextResponseChoice, error) {
 	usageNode, err := node.Get("usage").Raw()
 	if err != nil {
 		if !errors.Is(err, ast.ErrNotExist) {
 			return nil, nil, err
 		}
 	} else {
-		var usage relaymodel.Usage
+		var usage relaymodel.ChatUsage
 		err = sonic.UnmarshalString(usageNode, &usage)
 		if err != nil {
 			return nil, nil, err
@@ -375,6 +375,7 @@ func Handler(
 			)
 		}
 	}
+
 	usage, choices, err := GetUsageOrChoicesResponseFromNode(&node)
 	if err != nil {
 		return model.Usage{}, relaymodel.WrapperOpenAIError(
@@ -395,7 +396,7 @@ func Handler(
 			}
 			completionTokens += CountTokenText(choice.Message.StringContent(), meta.ActualModel)
 		}
-		usage = &relaymodel.Usage{
+		usage = &relaymodel.ChatUsage{
 			PromptTokens:     int64(meta.RequestUsage.InputTokens),
 			CompletionTokens: completionTokens,
 			TotalTokens:      int64(meta.RequestUsage.InputTokens) + completionTokens,

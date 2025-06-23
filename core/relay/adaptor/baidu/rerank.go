@@ -15,8 +15,8 @@ import (
 )
 
 type RerankResponse struct {
-	Error *Error           `json:"error"`
-	Usage relaymodel.Usage `json:"usage"`
+	Error *Error               `json:"error"`
+	Usage relaymodel.ChatUsage `json:"usage"`
 }
 
 func RerankHandler(

@@ -10,6 +10,7 @@ import (
 	"github.com/labring/aiproxy/core/relay/adaptor/openai"
 	"github.com/labring/aiproxy/core/relay/meta"
 	"github.com/labring/aiproxy/core/relay/mode"
+	"github.com/labring/aiproxy/core/relay/utils"
 )
 
 type Adaptor struct {
@@ -97,8 +98,10 @@ func (a *Adaptor) DoResponse(
 	case mode.AudioSpeech:
 		return TTSHandler(meta, c, resp)
 	default:
-		if err := TryErrorHanlder(resp); err != nil {
-			return model.Usage{}, err
+		if !utils.IsStreamResponse(resp) {
+			if err := TryErrorHanlder(resp); err != nil {
+				return model.Usage{}, err
+			}
 		}
 		return a.Adaptor.DoResponse(meta, store, c, resp)
 	}

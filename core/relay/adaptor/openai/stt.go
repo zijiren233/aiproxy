@@ -138,7 +138,7 @@ func STTHandler(
 		promptTokens = CountTokenText(text, meta.ActualModel)
 	}
 
-	usage := relaymodel.Usage{
+	usage := relaymodel.ChatUsage{
 		PromptTokens: promptTokens,
 		TotalTokens:  promptTokens,
 	}

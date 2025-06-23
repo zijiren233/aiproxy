@@ -714,40 +714,6 @@ definitions:
       status:
         type: integer
     type: object
-  github_com_labring_aiproxy_core_model.Usage:
-    properties:
-      cache_creation_tokens:
-        type: integer
-      cached_tokens:
-        type: integer
-      image_input_tokens:
-        type: integer
-      input_tokens:
-        type: integer
-      output_tokens:
-        type: integer
-      reasoning_tokens:
-        type: integer
-      total_tokens:
-        type: integer
-      web_search_count:
-        type: integer
-    type: object
-  github_com_labring_aiproxy_core_relay_model.Usage:
-    properties:
-      completion_tokens:
-        type: integer
-      completion_tokens_details:
-        $ref: '#/definitions/model.CompletionTokensDetails'
-      prompt_tokens:
-        type: integer
-      prompt_tokens_details:
-        $ref: '#/definitions/model.PromptTokensDetails'
-      total_tokens:
-        type: integer
-      web_search_count:
-        type: integer
-    type: object
   mcp.Tool:
     properties:
       annotations:
@@ -1039,6 +1005,21 @@ definitions:
       web_search_count:
         type: integer
     type: object
+  model.ChatUsage:
+    properties:
+      completion_tokens:
+        type: integer
+      completion_tokens_details:
+        $ref: '#/definitions/model.CompletionTokensDetails'
+      prompt_tokens:
+        type: integer
+      prompt_tokens_details:
+        $ref: '#/definitions/model.PromptTokensDetails'
+      total_tokens:
+        type: integer
+      web_search_count:
+        type: integer
+    type: object
   model.CompletionTokensDetails:
     properties:
       accepted_prediction_tokens:
@@ -1107,6 +1088,13 @@ definitions:
       text:
         type: string
     type: object
+  model.EmbeddingPromptTokensDetails:
+    properties:
+      image_tokens:
+        type: integer
+      text_tokens:
+        type: integer
+    type: object
   model.EmbeddingRequest:
     properties:
       dimensions:
@@ -1129,7 +1117,7 @@ definitions:
       object:
         type: string
       usage:
-        $ref: '#/definitions/github_com_labring_aiproxy_core_relay_model.Usage'
+        $ref: '#/definitions/model.EmbeddingUsage'
     type: object
   model.EmbeddingResponseItem:
     properties:
@@ -1141,6 +1129,15 @@ definitions:
         type: integer
       object:
         type: string
+    type: object
+  model.EmbeddingUsage:
+    properties:
+      prompt_tokens:
+        type: integer
+      prompt_tokens_details:
+        $ref: '#/definitions/model.EmbeddingPromptTokensDetails'
+      total_tokens:
+        type: integer
     type: object
   model.FinishReason:
     enum:
@@ -1549,7 +1546,7 @@ definitions:
       ttfb_milliseconds:
         type: integer
       usage:
-        $ref: '#/definitions/github_com_labring_aiproxy_core_model.Usage'
+        $ref: '#/definitions/model.Usage'
       used_amount:
         type: number
       user:
@@ -2076,7 +2073,7 @@ definitions:
       object:
         type: string
       usage:
-        $ref: '#/definitions/github_com_labring_aiproxy_core_relay_model.Usage'
+        $ref: '#/definitions/model.ChatUsage'
     type: object
   model.TextResponseChoice:
     properties:
@@ -2099,6 +2096,8 @@ definitions:
         type: string
       speed:
         type: number
+      stream_format:
+        type: string
       voice:
         type: string
     required:
@@ -2123,6 +2122,25 @@ definitions:
         type: string
       type:
         type: string
+    type: object
+  model.Usage:
+    properties:
+      cache_creation_tokens:
+        type: integer
+      cached_tokens:
+        type: integer
+      image_input_tokens:
+        type: integer
+      input_tokens:
+        type: integer
+      output_tokens:
+        type: integer
+      reasoning_tokens:
+        type: integer
+      total_tokens:
+        type: integer
+      web_search_count:
+        type: integer
     type: object
   model.VideoGenerationJob:
     properties:

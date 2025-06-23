@@ -81,7 +81,7 @@ func EmbeddingHandler(
 	fullTextResponse := embeddingResponse2OpenAI(meta, &geminiEmbeddingResponse)
 	jsonResponse, err := sonic.Marshal(fullTextResponse)
 	if err != nil {
-		return fullTextResponse.ToModelUsage(), relaymodel.WrapperOpenAIError(
+		return fullTextResponse.Usage.ToModelUsage(), relaymodel.WrapperOpenAIError(
 			err,
 			"marshal_response_body_failed",
 			http.StatusInternalServerError,
@@ -90,7 +90,7 @@ func EmbeddingHandler(
 	c.Writer.Header().Set("Content-Type", "application/json")
 	c.Writer.Header().Set("Content-Length", strconv.Itoa(len(jsonResponse)))
 	_, _ = c.Writer.Write(jsonResponse)
-	return fullTextResponse.ToModelUsage(), nil
+	return fullTextResponse.Usage.ToModelUsage(), nil
 }
 
 func embeddingResponse2OpenAI(
@@ -101,7 +101,7 @@ func embeddingResponse2OpenAI(
 		Object: "list",
 		Data:   make([]*relaymodel.EmbeddingResponseItem, 0, len(response.Embeddings)),
 		Model:  meta.OriginModel,
-		Usage: relaymodel.Usage{
+		Usage: relaymodel.EmbeddingUsage{
 			TotalTokens:  int64(meta.RequestUsage.InputTokens),
 			PromptTokens: int64(meta.RequestUsage.InputTokens),
 		},

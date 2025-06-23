@@ -157,7 +157,7 @@ func Handler(meta *meta.Meta, c *gin.Context) (model.Usage, adaptor.Error) {
 
 	jsonData, err := sonic.Marshal(llamaResponse)
 	if err != nil {
-		return openaiResp.ToModelUsage(), relaymodel.WrapperOpenAIErrorWithMessage(
+		return openaiResp.Usage.ToModelUsage(), relaymodel.WrapperOpenAIErrorWithMessage(
 			err.Error(),
 			nil,
 			http.StatusInternalServerError,
@@ -167,7 +167,7 @@ func Handler(meta *meta.Meta, c *gin.Context) (model.Usage, adaptor.Error) {
 	c.Writer.Header().Set("Content-Type", "application/json")
 	c.Writer.Header().Set("Content-Length", strconv.Itoa(len(jsonData)))
 	_, _ = c.Writer.Write(jsonData)
-	return openaiResp.ToModelUsage(), nil
+	return openaiResp.Usage.ToModelUsage(), nil
 }
 
 func ResponseLlama2OpenAI(meta *meta.Meta, llamaResponse Response) relaymodel.TextResponse {
@@ -190,7 +190,7 @@ func ResponseLlama2OpenAI(meta *meta.Meta, llamaResponse Response) relaymodel.Te
 		Created: time.Now().Unix(),
 		Choices: []*relaymodel.TextResponseChoice{&choice},
 		Model:   meta.OriginModel,
-		Usage: relaymodel.Usage{
+		Usage: relaymodel.ChatUsage{
 			PromptTokens:     llamaResponse.PromptTokenCount,
 			CompletionTokens: llamaResponse.GenerationTokenCount,
 			TotalTokens:      llamaResponse.PromptTokenCount + llamaResponse.GenerationTokenCount,
@@ -257,7 +257,7 @@ func StreamHandler(meta *meta.Meta, c *gin.Context) (model.Usage, adaptor.Error)
 	defer stream.Close()
 
 	c.Writer.Header().Set("Content-Type", "text/event-stream")
-	var usage relaymodel.Usage
+	var usage relaymodel.ChatUsage
 	c.Stream(func(_ io.Writer) bool {
 		event, ok := <-stream.Events()
 		if !ok {

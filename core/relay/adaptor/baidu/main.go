@@ -141,7 +141,7 @@ func StreamHandler(
 
 	log := common.GetLogger(c)
 
-	var usage relaymodel.Usage
+	var usage relaymodel.ChatUsage
 	scanner := bufio.NewScanner(resp.Body)
 	buf := openai.GetScannerBuffer()
 	defer openai.PutScannerBuffer(buf)
@@ -198,7 +198,7 @@ func Handler(meta *meta.Meta, c *gin.Context, resp *http.Response) (model.Usage,
 	fullTextResponse := response2OpenAI(meta, &baiduResponse)
 	jsonResponse, err := sonic.Marshal(fullTextResponse)
 	if err != nil {
-		return fullTextResponse.ToModelUsage(), relaymodel.WrapperOpenAIError(
+		return fullTextResponse.Usage.ToModelUsage(), relaymodel.WrapperOpenAIError(
 			err,
 			"marshal_response_body_failed",
 			http.StatusInternalServerError,
@@ -207,5 +207,5 @@ func Handler(meta *meta.Meta, c *gin.Context, resp *http.Response) (model.Usage,
 	c.Writer.Header().Set("Content-Type", "application/json")
 	c.Writer.Header().Set("Content-Length", strconv.Itoa(len(jsonResponse)))
 	_, _ = c.Writer.Write(jsonResponse)
-	return fullTextResponse.ToModelUsage(), nil
+	return fullTextResponse.Usage.ToModelUsage(), nil
 }

@@ -167,7 +167,7 @@ func Handler(meta *meta.Meta, c *gin.Context) (model.Usage, adaptor.Error) {
 
 	jsonBody, err := sonic.Marshal(openaiResp)
 	if err != nil {
-		return openaiResp.ToModelUsage(), relaymodel.WrapperOpenAIErrorWithMessage(
+		return openaiResp.Usage.ToModelUsage(), relaymodel.WrapperOpenAIErrorWithMessage(
 			err.Error(),
 			nil,
 			http.StatusInternalServerError,
@@ -177,7 +177,7 @@ func Handler(meta *meta.Meta, c *gin.Context) (model.Usage, adaptor.Error) {
 	c.Writer.Header().Set("Content-Type", "application/json")
 	c.Writer.Header().Set("Content-Length", strconv.Itoa(len(jsonBody)))
 	_, _ = c.Writer.Write(jsonBody)
-	return openaiResp.ToModelUsage(), nil
+	return openaiResp.Usage.ToModelUsage(), nil
 }
 
 func StreamHandler(m *meta.Meta, c *gin.Context) (model.Usage, adaptor.Error) {
@@ -248,7 +248,7 @@ func StreamHandler(m *meta.Meta, c *gin.Context) (model.Usage, adaptor.Error) {
 	stream := awsResp.GetStream()
 	defer stream.Close()
 
-	var usage *relaymodel.Usage
+	var usage *relaymodel.ChatUsage
 	responseText := strings.Builder{}
 	var writed bool
 
@@ -267,7 +267,7 @@ func StreamHandler(m *meta.Meta, c *gin.Context) (model.Usage, adaptor.Error) {
 				switch {
 				case response.Usage != nil:
 					if usage == nil {
-						usage = &relaymodel.Usage{}
+						usage = &relaymodel.ChatUsage{}
 					}
 					usage.Add(response.Usage)
 					if usage.PromptTokens == 0 {
@@ -297,7 +297,7 @@ func StreamHandler(m *meta.Meta, c *gin.Context) (model.Usage, adaptor.Error) {
 	}
 
 	if usage == nil {
-		usage = &relaymodel.Usage{
+		usage = &relaymodel.ChatUsage{
 			PromptTokens:     int64(m.RequestUsage.InputTokens),
 			CompletionTokens: openai.CountTokenText(responseText.String(), m.OriginModel),
 			TotalTokens: int64(

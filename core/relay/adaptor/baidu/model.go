@@ -15,7 +15,7 @@ type ErrorResponse struct {
 }
 
 type ChatResponse struct {
-	Usage            *model.Usage `json:"usage"`
+	Usage            *model.ChatUsage `json:"usage"`
 	*Error           `json:"error"`
 	ID               string `json:"id"`
 	Object           string `json:"object"`

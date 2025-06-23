@@ -37,7 +37,7 @@ func TryErrorHanlder(resp *http.Response) adaptor.Error {
 	if err := sonic.Unmarshal(respBody, &result); err != nil {
 		return relaymodel.WrapperOpenAIError(
 			err,
-			"TTS_ERROR",
+			"unmarshal_response_body_failed",
 			http.StatusInternalServerError,
 		)
 	}

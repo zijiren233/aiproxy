@@ -258,7 +258,7 @@ func STTDoResponse(
 			usage.TotalTokens = model.ZeroNullInt64(msg.Payload.Usage.Characters)
 			c.JSON(http.StatusOK, gin.H{
 				"text": output.String(),
-				"usage": relaymodel.Usage{
+				"usage": relaymodel.ChatUsage{
 					PromptTokens: int64(usage.InputTokens),
 					TotalTokens:  int64(usage.TotalTokens),
 				},

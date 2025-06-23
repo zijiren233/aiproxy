@@ -36,7 +36,7 @@ func EmbeddingsHandler(c *gin.Context, resp *http.Response) (model.Usage, adapto
 	fullTextResponse := embeddingResponseZhipu2OpenAI(&zhipuResponse)
 	jsonResponse, err := sonic.Marshal(fullTextResponse)
 	if err != nil {
-		return fullTextResponse.ToModelUsage(), relaymodel.WrapperOpenAIError(
+		return fullTextResponse.Usage.ToModelUsage(), relaymodel.WrapperOpenAIError(
 			err,
 			"marshal_response_body_failed",
 			http.StatusInternalServerError,
@@ -45,7 +45,7 @@ func EmbeddingsHandler(c *gin.Context, resp *http.Response) (model.Usage, adapto
 	c.Writer.Header().Set("Content-Type", "application/json")
 	c.Writer.Header().Set("Content-Length", strconv.Itoa(len(jsonResponse)))
 	_, _ = c.Writer.Write(jsonResponse)
-	return fullTextResponse.ToModelUsage(), nil
+	return fullTextResponse.Usage.ToModelUsage(), nil
 }
 
 func embeddingResponseZhipu2OpenAI(response *EmbeddingResponse) *relaymodel.EmbeddingResponse {
@@ -53,11 +53,7 @@ func embeddingResponseZhipu2OpenAI(response *EmbeddingResponse) *relaymodel.Embe
 		Object: "list",
 		Data:   make([]*relaymodel.EmbeddingResponseItem, 0, len(response.Embeddings)),
 		Model:  response.Model,
-		Usage: relaymodel.Usage{
-			PromptTokens:     response.PromptTokens,
-			CompletionTokens: response.CompletionTokens,
-			TotalTokens:      response.TotalTokens,
-		},
+		Usage:  response.Usage,
 	}
 
 	for _, item := range response.Embeddings {

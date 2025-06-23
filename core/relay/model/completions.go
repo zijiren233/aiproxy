@@ -80,7 +80,7 @@ type ChatCompletionsStreamResponseChoice struct {
 }
 
 type ChatCompletionsStreamResponse struct {
-	Usage   *Usage                                 `json:"usage,omitempty"`
+	Usage   *ChatUsage                             `json:"usage,omitempty"`
 	ID      string                                 `json:"id"`
 	Object  string                                 `json:"object"`
 	Model   string                                 `json:"model"`
@@ -100,8 +100,8 @@ type TextResponse struct {
 	Model   string                `json:"model,omitempty"`
 	Object  string                `json:"object"`
 	Choices []*TextResponseChoice `json:"choices"`
-	Usage   `json:"usage"`
-	Created int64 `json:"created"`
+	Usage   ChatUsage             `json:"usage"`
+	Created int64                 `json:"created"`
 }
 
 type Message struct {
