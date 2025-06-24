@@ -13,26 +13,28 @@ import (
 )
 
 const (
-	nn   = "\n\n"
-	data = "data: "
-	DONE = "[DONE]"
+	nn               = "\n\n"
+	DONE             = "[DONE]"
+	DataPrefix       = "data:"
+	DataPrefixLength = len(DataPrefix)
 )
 
 var (
-	nnBytes   = conv.StringToBytes(nn)
-	dataBytes = conv.StringToBytes(data)
+	DataPrefixBytes = conv.StringToBytes(DataPrefix)
+	DoneBytes       = conv.StringToBytes(DONE)
+	nnBytes         = conv.StringToBytes(nn)
 )
 
 type SSE struct {
-	Data string
+	Data []byte
 }
 
 func (r *SSE) Render(w http.ResponseWriter) error {
 	r.WriteContentType(w)
 
 	for _, bytes := range [][]byte{
-		dataBytes,
-		conv.StringToBytes(r.Data),
+		DataPrefixBytes,
+		r.Data,
 		nnBytes,
 	} {
 		// nosemgrep:
@@ -59,7 +61,7 @@ func StringData(c *gin.Context, str string) {
 	if c.IsAborted() {
 		return
 	}
-	c.Render(-1, &SSE{Data: str})
+	c.Render(-1, &SSE{Data: conv.StringToBytes(str)})
 	c.Writer.Flush()
 }
 
@@ -74,7 +76,7 @@ func ObjectData(c *gin.Context, object any) error {
 	if err != nil {
 		return fmt.Errorf("error marshalling object: %w", err)
 	}
-	c.Render(-1, &SSE{Data: conv.BytesToString(jsonData)})
+	c.Render(-1, &SSE{Data: jsonData})
 	c.Writer.Flush()
 	return nil
 }
@@ -107,7 +109,7 @@ func (r *TtsSSE) Render(w http.ResponseWriter) error {
 	}
 
 	for _, bytes := range [][]byte{
-		dataBytes,
+		DataPrefixBytes,
 		jsonData,
 		nnBytes,
 	} {
