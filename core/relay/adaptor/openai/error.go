@@ -63,18 +63,8 @@ func GetErrorWithBody(statusCode int, respBody []byte) (int, relaymodel.OpenAIEr
 }
 
 func ErrorHanlder(resp *http.Response) adaptor.Error {
-	defer resp.Body.Close()
-
-	respBody, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return relaymodel.NewOpenAIError(resp.StatusCode, relaymodel.OpenAIError{
-			Message: err.Error(),
-			Type:    relaymodel.ErrorTypeUpstream,
-			Code:    relaymodel.ErrorCodeBadResponse,
-		})
-	}
-
-	return ErrorHanlderWithBody(resp.StatusCode, respBody)
+	statusCode, openAIError := GetError(resp)
+	return relaymodel.NewOpenAIError(statusCode, openAIError)
 }
 
 func ErrorHanlderWithBody(statusCode int, respBody []byte) adaptor.Error {
