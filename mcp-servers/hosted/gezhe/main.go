@@ -23,6 +23,7 @@ var configTemplates = mcpservers.ProxyConfigTemplates{
 			Name:        "URL",
 			Required:    mcpservers.ConfigRequiredTypeInitOptional,
 			Example:     defaultURL,
+			Default:     defaultURL,
 			Description: "The Streamable http URL of the gezhe MCP server",
 		},
 		Type: model.ParamTypeURL,

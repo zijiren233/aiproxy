@@ -7,6 +7,7 @@ import (
 	_ "github.com/labring/aiproxy/mcp-servers/hosted/amap"
 	_ "github.com/labring/aiproxy/mcp-servers/hosted/baidu-map"
 	_ "github.com/labring/aiproxy/mcp-servers/hosted/bingcn"
+	_ "github.com/labring/aiproxy/mcp-servers/hosted/context7"
 	_ "github.com/labring/aiproxy/mcp-servers/hosted/fetch"
 	_ "github.com/labring/aiproxy/mcp-servers/hosted/figma"
 	_ "github.com/labring/aiproxy/mcp-servers/hosted/firecrawl"

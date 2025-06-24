@@ -48,6 +48,7 @@ type ConfigTemplate struct {
 	Name        string               `json:"name"`
 	Required    ConfigRequiredType   `json:"required"`
 	Example     string               `json:"example,omitempty"`
+	Default     string               `json:"default,omitempty"`
 	Description string               `json:"description,omitempty"`
 	Validator   ConfigValueValidator `json:"-"`
 }
@@ -56,8 +57,7 @@ type ConfigTemplates = map[string]ConfigTemplate
 
 type ProxyConfigTemplate struct {
 	ConfigTemplate
-	Type    model.ProxyParamType
-	Default string
+	Type model.ProxyParamType
 }
 
 type ProxyConfigTemplates = map[string]ProxyConfigTemplate
@@ -119,11 +119,15 @@ func CheckConfigTemplateValidate(value ConfigTemplate) error {
 	if value.Description == "" {
 		return errors.New("description is required")
 	}
-	if value.Example == "" || value.Validator == nil {
-		return nil
+	if value.Example != "" && value.Validator != nil {
+		if err := value.Validator(value.Example); err != nil {
+			return fmt.Errorf("example is invalid: %w", err)
+		}
 	}
-	if err := value.Validator(value.Example); err != nil {
-		return fmt.Errorf("example is invalid: %w", err)
+	if value.Default != "" && value.Validator != nil {
+		if err := value.Validator(value.Default); err != nil {
+			return fmt.Errorf("default is invalid: %w", err)
+		}
 	}
 	return nil
 }

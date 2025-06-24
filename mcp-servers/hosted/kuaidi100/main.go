@@ -23,6 +23,7 @@ var configTemplates = mcpservers.ProxyConfigTemplates{
 			Name:        "URL",
 			Required:    mcpservers.ConfigRequiredTypeInitOptional,
 			Example:     defaultURL,
+			Default:     defaultURL,
 			Description: "The SSE URL of the Kuaidi100 MCP server",
 		},
 		Type: model.ParamTypeURL,
