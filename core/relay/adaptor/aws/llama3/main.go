@@ -284,7 +284,7 @@ func StreamHandler(meta *meta.Meta, c *gin.Context) (model.Usage, adaptor.Error)
 			response.ID = openai.ChatCompletionID()
 			response.Model = meta.OriginModel
 			response.Created = createdTime
-			err =openai.ObjectData(c, response)
+			err = openai.ObjectData(c, response)
 			if err != nil {
 				log.Error("error stream response: " + err.Error())
 				return true

@@ -167,7 +167,7 @@ func StreamHandler(
 		if response.Usage != nil {
 			usage = *response.Usage
 		}
-		_ =openai.ObjectData(c, response)
+		_ = openai.ObjectData(c, response)
 	}
 
 	if err := scanner.Err(); err != nil {

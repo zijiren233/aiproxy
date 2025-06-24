@@ -284,7 +284,7 @@ func StreamHandler(m *meta.Meta, c *gin.Context) (model.Usage, adaptor.Error) {
 				}
 			}
 
-			_ =openai.ObjectData(c, response)
+			_ = openai.ObjectData(c, response)
 			writed = true
 		case *types.UnknownUnionMember:
 			log.Error("unknown tag: " + v.Tag)
@@ -306,7 +306,7 @@ func StreamHandler(m *meta.Meta, c *gin.Context) (model.Usage, adaptor.Error) {
 				m.OriginModel,
 			),
 		}
-		_ =openai.ObjectData(c, &relaymodel.ChatCompletionsStreamResponse{
+		_ = openai.ObjectData(c, &relaymodel.ChatCompletionsStreamResponse{
 			ID:      openai.ChatCompletionID(),
 			Model:   m.OriginModel,
 			Object:  relaymodel.ChatCompletionChunkObject,

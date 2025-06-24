@@ -345,7 +345,7 @@ func TestChannelModels(c *gin.Context) {
 			}
 			resultsMutex.Lock()
 			if isStream {
-				err :=openai.ObjectData(c, result)
+				err := openai.ObjectData(c, result)
 				if err != nil {
 					log.Errorf("failed to render result: %s", err.Error())
 				}
@@ -452,7 +452,7 @@ func TestAllChannels(c *gin.Context) {
 				}
 				resultsMutex.Lock()
 				if isStream {
-					err :=openai.ObjectData(c, result)
+					err := openai.ObjectData(c, result)
 					if err != nil {
 						log.Errorf("failed to render result: %s", err.Error())
 					}

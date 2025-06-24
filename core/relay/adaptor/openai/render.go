@@ -23,11 +23,11 @@ var (
 	dataBytes = conv.StringToBytes(data)
 )
 
-type OpenAISSE struct {
+type SSE struct {
 	Data string
 }
 
-func (r *OpenAISSE) Render(w http.ResponseWriter) error {
+func (r *SSE) Render(w http.ResponseWriter) error {
 	r.WriteContentType(w)
 
 	for _, bytes := range [][]byte{
@@ -44,7 +44,7 @@ func (r *OpenAISSE) Render(w http.ResponseWriter) error {
 	return nil
 }
 
-func (r *OpenAISSE) WriteContentType(w http.ResponseWriter) {
+func (r *SSE) WriteContentType(w http.ResponseWriter) {
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Connection", "keep-alive")
@@ -59,7 +59,7 @@ func StringData(c *gin.Context, str string) {
 	if c.IsAborted() {
 		return
 	}
-	c.Render(-1, &OpenAISSE{Data: str})
+	c.Render(-1, &SSE{Data: str})
 	c.Writer.Flush()
 }
 
@@ -74,7 +74,7 @@ func ObjectData(c *gin.Context, object any) error {
 	if err != nil {
 		return fmt.Errorf("error marshalling object: %w", err)
 	}
-	c.Render(-1, &OpenAISSE{Data: conv.BytesToString(jsonData)})
+	c.Render(-1, &SSE{Data: conv.BytesToString(jsonData)})
 	c.Writer.Flush()
 	return nil
 }
@@ -83,12 +83,12 @@ func Done(c *gin.Context) {
 	StringData(c, DONE)
 }
 
-type OpenAITTSSSE struct {
+type TtsSSE struct {
 	Audio string // base64 encode audio data
 	Usage *model.TextToSpeechUsage
 }
 
-func (r *OpenAITTSSSE) Render(w http.ResponseWriter) error {
+func (r *TtsSSE) Render(w http.ResponseWriter) error {
 	r.WriteContentType(w)
 
 	payload := model.TextToSpeechSSEResponse{
@@ -120,7 +120,7 @@ func (r *OpenAITTSSSE) Render(w http.ResponseWriter) error {
 	return nil
 }
 
-func (r *OpenAITTSSSE) WriteContentType(w http.ResponseWriter) {
+func (r *TtsSSE) WriteContentType(w http.ResponseWriter) {
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Connection", "keep-alive")
@@ -135,7 +135,7 @@ func AudioData(c *gin.Context, audio string) {
 	if c.IsAborted() {
 		return
 	}
-	c.Render(-1, &OpenAITTSSSE{Audio: audio})
+	c.Render(-1, &TtsSSE{Audio: audio})
 	c.Writer.Flush()
 }
 
@@ -159,6 +159,6 @@ func AudioDone(c *gin.Context, usage model.TextToSpeechUsage) {
 	if c.IsAborted() {
 		return
 	}
-	c.Render(-1, &OpenAITTSSSE{Usage: &usage})
+	c.Render(-1, &TtsSSE{Usage: &usage})
 	c.Writer.Flush()
 }

@@ -142,7 +142,7 @@ func StreamHandler(
 		response.Model = meta.OriginModel
 		response.Created = createdTime
 
-		_ =openai.ObjectData(c, response)
+		_ = openai.ObjectData(c, response)
 	}
 
 	if err := scanner.Err(); err != nil {

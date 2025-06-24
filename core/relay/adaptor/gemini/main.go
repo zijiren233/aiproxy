@@ -687,7 +687,7 @@ func StreamHandler(
 
 		responseText.WriteString(response.Choices[0].Delta.StringContent())
 
-		_ =openai.ObjectData(c, response)
+		_ = openai.ObjectData(c, response)
 	}
 
 	if err := scanner.Err(); err != nil {
