@@ -223,7 +223,7 @@ func ttsStreamHandler(
 		if len(data) < openai.DataPrefixLength {
 			continue
 		}
-		if !bytes.Equal(data[:openai.DataPrefixLength], openai.DataPrefixBytes) {
+		if !slices.Equal(data[:openai.DataPrefixLength], openai.DataPrefixBytes) {
 			continue
 		}
 		data = bytes.TrimSpace(data[openai.DataPrefixLength:])
