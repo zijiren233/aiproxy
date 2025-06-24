@@ -9,6 +9,65 @@ import (
 
 var ModelList = []model.ModelConfig{
 	{
+		Model: "MiniMax-M1",
+		Type:  mode.ChatCompletions,
+		Owner: model.ModelOwnerMiniMax,
+		Price: model.Price{
+			InputPrice:  0.0024,
+			OutputPrice: 0.024,
+			ConditionalPrices: []model.ConditionalPrice{
+				{
+					Condition: model.PriceCondition{
+						InputTokenMax: 32000,
+					},
+					Price: model.Price{
+						InputPrice:  0.0008,
+						OutputPrice: 0.008,
+					},
+				},
+				{
+					Condition: model.PriceCondition{
+						InputTokenMin: 32001,
+						InputTokenMax: 128000,
+					},
+					Price: model.Price{
+						InputPrice:  0.0012,
+						OutputPrice: 0.016,
+					},
+				},
+				{
+					Condition: model.PriceCondition{
+						InputTokenMin: 128001,
+					},
+					Price: model.Price{
+						InputPrice:  0.0024,
+						OutputPrice: 0.024,
+					},
+				},
+			},
+		},
+		RPM: 120,
+		Config: model.NewModelConfig(
+			model.WithModelConfigMaxContextTokens(1000000),
+			model.WithModelConfigToolChoice(true),
+		),
+	},
+	{
+		Model: "MiniMax-Text-01",
+		Type:  mode.ChatCompletions,
+		Owner: model.ModelOwnerMiniMax,
+		Price: model.Price{
+			InputPrice:  0.001,
+			OutputPrice: 0.008,
+		},
+		RPM: 120,
+		Config: model.NewModelConfig(
+			model.WithModelConfigMaxContextTokens(1000000),
+			model.WithModelConfigToolChoice(true),
+		),
+	},
+
+	{
 		Model: "abab7-chat-preview",
 		Type:  mode.ChatCompletions,
 		Owner: model.ModelOwnerMiniMax,
