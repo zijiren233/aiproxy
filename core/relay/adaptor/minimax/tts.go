@@ -201,8 +201,11 @@ func ttsStreamHandler(
 
 	defer resp.Body.Close()
 
-	if audioFormat != "" {
+	contextTypeWritten := false
+
+	if !sseFormat && audioFormat != "" {
 		c.Writer.Header().Set("Content-Type", "audio/"+audioFormat)
+		contextTypeWritten = true
 	}
 
 	log := common.GetLogger(c)
@@ -247,6 +250,12 @@ func ttsStreamHandler(
 		if sseFormat {
 			openai.AudioData(c, base64.StdEncoding.EncodeToString(audioBytes))
 			continue
+		}
+
+		// do not write content type for sse format
+		if !contextTypeWritten {
+			c.Writer.Header().Set("Content-Type", http.DetectContentType(audioBytes))
+			contextTypeWritten = true
 		}
 
 		_, err = c.Writer.Write(audioBytes)
