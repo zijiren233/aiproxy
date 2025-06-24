@@ -7,6 +7,7 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -14,7 +15,6 @@ import (
 	"github.com/bytedance/sonic/ast"
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/core/common"
-	"github.com/labring/aiproxy/core/common/conv"
 	"github.com/labring/aiproxy/core/common/image"
 	"github.com/labring/aiproxy/core/model"
 	"github.com/labring/aiproxy/core/relay/adaptor"
@@ -182,10 +182,16 @@ func StreamHandler(
 
 	for scanner.Scan() {
 		data := scanner.Bytes()
-		if len(data) < 6 || conv.BytesToString(data[:6]) != "data: " {
+		if len(data) < openai.DataPrefixLength {
 			continue
 		}
-		data = data[6:]
+		if !bytes.Equal(data[:openai.DataPrefixLength], openai.DataPrefixBytes) {
+			continue
+		}
+		data = bytes.TrimSpace(data[openai.DataPrefixLength:])
+		if slices.Equal(data, openai.DoneBytes) {
+			break
+		}
 
 		response, err := StreamResponse2OpenAI(m, data)
 		if err != nil {

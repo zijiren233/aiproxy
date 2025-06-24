@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"io"
 	"net/http"
+	"slices"
 	"strconv"
 
 	"github.com/bytedance/sonic"
@@ -219,13 +220,16 @@ func ttsStreamHandler(
 
 	for scanner.Scan() {
 		data := scanner.Bytes()
-		if len(data) < openai.DataPrefixLength { // ignore blank line or wrong format
+		if len(data) < openai.DataPrefixLength {
 			continue
 		}
-		if bytes.Equal(data[:openai.DataPrefixLength], openai.DataPrefixBytes) {
+		if !bytes.Equal(data[:openai.DataPrefixLength], openai.DataPrefixBytes) {
 			continue
 		}
-		data = data[openai.DataPrefixLength:]
+		data = bytes.TrimSpace(data[openai.DataPrefixLength:])
+		if slices.Equal(data, openai.DoneBytes) {
+			break
+		}
 
 		var result TTSResponse
 		if err := sonic.Unmarshal(data, &result); err != nil {
