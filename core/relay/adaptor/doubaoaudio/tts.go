@@ -3,6 +3,7 @@ package doubaoaudio
 import (
 	"bytes"
 	"compress/gzip"
+	"encoding/base64"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -18,6 +19,7 @@ import (
 	"github.com/labring/aiproxy/core/common/conv"
 	"github.com/labring/aiproxy/core/model"
 	"github.com/labring/aiproxy/core/relay/adaptor"
+	"github.com/labring/aiproxy/core/relay/adaptor/openai"
 	"github.com/labring/aiproxy/core/relay/meta"
 	relaymodel "github.com/labring/aiproxy/core/relay/model"
 	"github.com/labring/aiproxy/core/relay/utils"
@@ -70,6 +72,8 @@ func ConvertTTSRequest(meta *meta.Meta, req *http.Request) (adaptor.ConvertResul
 	if err != nil {
 		return adaptor.ConvertResult{}, err
 	}
+
+	meta.Set("stream_format", request.StreamFormat)
 
 	reqMap, err := utils.UnmarshalMap(req)
 	if err != nil {
@@ -189,6 +193,8 @@ func TTSDoResponse(
 	}
 	defer conn.Close()
 
+	sseFormat := meta.GetString("stream_format") == "sse"
+
 	usage := model.Usage{
 		InputTokens: meta.RequestUsage.InputTokens,
 		TotalTokens: meta.RequestUsage.InputTokens,
@@ -213,14 +219,26 @@ func TTSDoResponse(
 			)
 		}
 
-		_, err = c.Writer.Write(resp.Audio)
-		if err != nil {
-			log.Error("write tts response chunk failed: " + err.Error())
+		if sseFormat {
+			openai.AudioData(c, base64.StdEncoding.EncodeToString(resp.Audio))
+		} else {
+			_, err = c.Writer.Write(resp.Audio)
+			if err != nil {
+				log.Error("write tts response chunk failed: " + err.Error())
+			}
 		}
 
 		if resp.IsLast {
 			break
 		}
+	}
+
+	if sseFormat {
+		openai.AudioDone(c, relaymodel.TextToSpeechUsage{
+			InputTokens:  int64(usage.InputTokens),
+			OutputTokens: int64(usage.OutputTokens),
+			TotalTokens:  int64(usage.TotalTokens),
+		})
 	}
 
 	return usage, nil

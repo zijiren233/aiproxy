@@ -15,7 +15,6 @@ import (
 	"github.com/bytedance/sonic"
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/core/common"
-	"github.com/labring/aiproxy/core/common/render"
 	"github.com/labring/aiproxy/core/model"
 	"github.com/labring/aiproxy/core/relay/adaptor"
 	"github.com/labring/aiproxy/core/relay/adaptor/aws/utils"
@@ -261,7 +260,7 @@ func StreamHandler(meta *meta.Meta, c *gin.Context) (model.Usage, adaptor.Error)
 	c.Stream(func(_ io.Writer) bool {
 		event, ok := <-stream.Events()
 		if !ok {
-			render.Done(c)
+			openai.Done(c)
 			return false
 		}
 
@@ -285,7 +284,7 @@ func StreamHandler(meta *meta.Meta, c *gin.Context) (model.Usage, adaptor.Error)
 			response.ID = openai.ChatCompletionID()
 			response.Model = meta.OriginModel
 			response.Created = createdTime
-			err = render.ObjectData(c, response)
+			err =openai.ObjectData(c, response)
 			if err != nil {
 				log.Error("error stream response: " + err.Error())
 				return true

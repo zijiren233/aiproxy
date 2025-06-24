@@ -3,6 +3,7 @@ package minimax
 import (
 	"bufio"
 	"bytes"
+	"encoding/base64"
 	"encoding/hex"
 	"io"
 	"net/http"
@@ -24,6 +25,8 @@ func ConvertTTSRequest(meta *meta.Meta, req *http.Request) (adaptor.ConvertResul
 	if err != nil {
 		return adaptor.ConvertResult{}, err
 	}
+
+	meta.Set("stream_format", reqMap["stream_format"])
 
 	reqMap["model"] = meta.ActualModel
 
@@ -171,6 +174,8 @@ func ttsStreamHandler(
 	c *gin.Context,
 	resp *http.Response,
 ) (model.Usage, adaptor.Error) {
+	sseFormat := meta.GetString("stream_format") == "sse"
+
 	defer resp.Body.Close()
 
 	c.Writer.Header().Set("Content-Type", "application/octet-stream")
@@ -209,10 +214,23 @@ func ttsStreamHandler(
 			continue
 		}
 
+		if sseFormat {
+			openai.AudioData(c, base64.StdEncoding.EncodeToString(audioBytes))
+			continue
+		}
+
 		_, err = c.Writer.Write(audioBytes)
 		if err != nil {
 			log.Warnf("write response body failed: %v", err)
 		}
+	}
+
+	if sseFormat {
+		openai.AudioDone(c, relaymodel.TextToSpeechUsage{
+			InputTokens:  int64(usageCharacters),
+			OutputTokens: int64(usageCharacters),
+			TotalTokens:  int64(usageCharacters),
+		})
 	}
 
 	return model.Usage{

@@ -18,7 +18,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/core/common"
 	"github.com/labring/aiproxy/core/common/conv"
-	"github.com/labring/aiproxy/core/common/render"
 	"github.com/labring/aiproxy/core/model"
 	"github.com/labring/aiproxy/core/relay/adaptor"
 	"github.com/labring/aiproxy/core/relay/meta"
@@ -27,13 +26,12 @@ import (
 
 const (
 	DataPrefix       = "data:"
-	Done             = "[DONE]"
-	DataPrefixLength = len(DataPrefix)
+	DataPrefixLength = len(DONE)
 )
 
 var (
 	DataPrefixBytes = conv.StringToBytes(DataPrefix)
-	DoneBytes       = conv.StringToBytes(Done)
+	DoneBytes       = conv.StringToBytes(DONE)
 )
 
 const scannerBufferSize = 256 * 1024
@@ -271,7 +269,7 @@ func StreamHandler(
 			log.Error("error set model: " + err.Error())
 		}
 
-		_ = render.ObjectData(c, &node)
+		_ = ObjectData(c, &node)
 	}
 
 	if err := scanner.Err(); err != nil {
@@ -284,7 +282,7 @@ func StreamHandler(
 			meta.ActualModel,
 			int64(meta.RequestUsage.InputTokens),
 		)
-		_ = render.ObjectData(c, &relaymodel.ChatCompletionsStreamResponse{
+		_ = ObjectData(c, &relaymodel.ChatCompletionsStreamResponse{
 			ID:      ChatCompletionID(),
 			Model:   meta.OriginModel,
 			Object:  relaymodel.ChatCompletionChunkObject,
@@ -297,7 +295,7 @@ func StreamHandler(
 		usage.CompletionTokens = usage.TotalTokens - int64(meta.RequestUsage.InputTokens)
 	}
 
-	render.Done(c)
+	Done(c)
 
 	return usage.ToModelUsage(), nil
 }

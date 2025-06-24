@@ -15,7 +15,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/copier"
 	"github.com/labring/aiproxy/core/common"
-	"github.com/labring/aiproxy/core/common/render"
 	"github.com/labring/aiproxy/core/model"
 	"github.com/labring/aiproxy/core/relay/adaptor"
 	"github.com/labring/aiproxy/core/relay/adaptor/anthropic"
@@ -285,7 +284,7 @@ func StreamHandler(m *meta.Meta, c *gin.Context) (model.Usage, adaptor.Error) {
 				}
 			}
 
-			_ = render.ObjectData(c, response)
+			_ =openai.ObjectData(c, response)
 			writed = true
 		case *types.UnknownUnionMember:
 			log.Error("unknown tag: " + v.Tag)
@@ -307,7 +306,7 @@ func StreamHandler(m *meta.Meta, c *gin.Context) (model.Usage, adaptor.Error) {
 				m.OriginModel,
 			),
 		}
-		_ = render.ObjectData(c, &relaymodel.ChatCompletionsStreamResponse{
+		_ =openai.ObjectData(c, &relaymodel.ChatCompletionsStreamResponse{
 			ID:      openai.ChatCompletionID(),
 			Model:   m.OriginModel,
 			Object:  relaymodel.ChatCompletionChunkObject,
@@ -317,7 +316,7 @@ func StreamHandler(m *meta.Meta, c *gin.Context) (model.Usage, adaptor.Error) {
 		})
 	}
 
-	render.Done(c)
+	openai.Done(c)
 
 	return usage.ToModelUsage(), nil
 }

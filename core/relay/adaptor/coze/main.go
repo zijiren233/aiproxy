@@ -11,7 +11,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/core/common"
 	"github.com/labring/aiproxy/core/common/conv"
-	"github.com/labring/aiproxy/core/common/render"
 	"github.com/labring/aiproxy/core/model"
 	"github.com/labring/aiproxy/core/relay/adaptor"
 	"github.com/labring/aiproxy/core/relay/adaptor/coze/constant/messagetype"
@@ -143,14 +142,14 @@ func StreamHandler(
 		response.Model = meta.OriginModel
 		response.Created = createdTime
 
-		_ = render.ObjectData(c, response)
+		_ =openai.ObjectData(c, response)
 	}
 
 	if err := scanner.Err(); err != nil {
 		log.Error("error reading stream: " + err.Error())
 	}
 
-	render.Done(c)
+	openai.Done(c)
 
 	return openai.ResponseText2Usage(
 		responseText.String(),

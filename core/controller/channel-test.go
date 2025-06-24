@@ -18,11 +18,11 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/core/common/conv"
 	"github.com/labring/aiproxy/core/common/notify"
-	"github.com/labring/aiproxy/core/common/render"
 	"github.com/labring/aiproxy/core/common/trylock"
 	"github.com/labring/aiproxy/core/middleware"
 	"github.com/labring/aiproxy/core/model"
 	"github.com/labring/aiproxy/core/monitor"
+	"github.com/labring/aiproxy/core/relay/adaptor/openai"
 	"github.com/labring/aiproxy/core/relay/adaptors"
 	"github.com/labring/aiproxy/core/relay/meta"
 	"github.com/labring/aiproxy/core/relay/mode"
@@ -345,7 +345,7 @@ func TestChannelModels(c *gin.Context) {
 			}
 			resultsMutex.Lock()
 			if isStream {
-				err := render.ObjectData(c, result)
+				err :=openai.ObjectData(c, result)
 				if err != nil {
 					log.Errorf("failed to render result: %s", err.Error())
 				}
@@ -452,7 +452,7 @@ func TestAllChannels(c *gin.Context) {
 				}
 				resultsMutex.Lock()
 				if isStream {
-					err := render.ObjectData(c, result)
+					err :=openai.ObjectData(c, result)
 					if err != nil {
 						log.Errorf("failed to render result: %s", err.Error())
 					}
