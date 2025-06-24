@@ -28,7 +28,7 @@ func init() {
 				"Context7 is a tool that can help you find the latest documents and fight against code hallucinations.",
 			),
 			mcpservers.WithDescriptionCN(
-				"Context7 可以定最新文档，对抗代码幻觉。",
+				"Context7 可以获取最新文档，对抗代码幻觉。",
 			),
 			mcpservers.WithReadme(readme),
 			mcpservers.WithReadmeCN(readmeCN),
