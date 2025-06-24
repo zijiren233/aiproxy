@@ -28,7 +28,7 @@ func ConvertChatCompletionsRequest(
 	if err != nil {
 		return adaptor.ConvertResult{}, err
 	}
-	if strings.HasPrefix(meta.OriginModel, "deepseek-reasoner") {
+	if !strings.HasPrefix(meta.OriginModel, "deepseek-reasoner") {
 		return result, nil
 	}
 
