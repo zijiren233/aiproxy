@@ -5,7 +5,6 @@ import (
 	"io"
 	"net/http"
 	"strconv"
-	"strings"
 
 	"github.com/bytedance/sonic"
 	"github.com/labring/aiproxy/core/relay/adaptor"
@@ -44,8 +43,7 @@ func TryErrorHanlder(resp *http.Response) adaptor.Error {
 	if result.BaseResp != nil && result.BaseResp.StatusCode != 0 {
 		statusCode := http.StatusInternalServerError
 		switch {
-		case result.BaseResp.StatusCode == 1008,
-			strings.Contains(result.BaseResp.StatusMsg, "insufficient balance"):
+		case result.BaseResp.StatusCode == 1008:
 			statusCode = http.StatusPaymentRequired
 		case result.BaseResp.StatusCode == 1001:
 			statusCode = http.StatusRequestTimeout
@@ -55,8 +53,12 @@ func TryErrorHanlder(resp *http.Response) adaptor.Error {
 			result.BaseResp.StatusCode == 1027,
 			result.BaseResp.StatusCode == 2013:
 			statusCode = http.StatusBadRequest
-		case result.BaseResp.StatusCode == 1039:
+		case result.BaseResp.StatusCode == 1002,
+			result.BaseResp.StatusCode == 1039:
 			statusCode = http.StatusTooManyRequests
+		case result.BaseResp.StatusCode == 1000,
+			result.BaseResp.StatusCode == 1013:
+			statusCode = http.StatusInternalServerError
 		}
 		return relaymodel.WrapperOpenAIErrorWithMessage(
 			result.BaseResp.StatusMsg,
