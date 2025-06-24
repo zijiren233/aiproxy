@@ -253,17 +253,17 @@ func ttsStreamHandler(
 		if err != nil {
 			log.Warnf("write response body failed: %v", err)
 		}
+		c.Writer.Flush()
+	}
+
+	usage := relaymodel.TextToSpeechUsage{
+		InputTokens: int64(usageCharacters),
+		TotalTokens: int64(usageCharacters),
 	}
 
 	if sseFormat {
-		openai.AudioDone(c, relaymodel.TextToSpeechUsage{
-			InputTokens: int64(usageCharacters),
-			TotalTokens: int64(usageCharacters),
-		})
+		openai.AudioDone(c, usage)
 	}
 
-	return model.Usage{
-		InputTokens: usageCharacters,
-		TotalTokens: usageCharacters,
-	}, nil
+	return usage.ToModelUsage(), nil
 }
