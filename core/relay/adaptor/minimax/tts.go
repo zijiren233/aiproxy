@@ -60,11 +60,16 @@ func ConvertTTSRequest(meta *meta.Meta, req *http.Request) (adaptor.ConvertResul
 		reqMap["audio_setting"] = audioSetting
 	}
 
-	responseFormat, ok := reqMap["response_format"].(string)
-	if ok && responseFormat != "" {
-		audioSetting["format"] = responseFormat
+	responseFormat, _ := reqMap["response_format"].(string)
+	if responseFormat == "" {
+		responseFormat, _ = reqMap["format"].(string)
 	}
+	if responseFormat == "" {
+		responseFormat = "mp3"
+	}
+	audioSetting["format"] = responseFormat
 	delete(reqMap, "response_format")
+	meta.Set("audio_format", responseFormat)
 
 	sampleRate, ok := reqMap["sample_rate"].(float64)
 	if ok {
@@ -74,7 +79,14 @@ func ConvertTTSRequest(meta *meta.Meta, req *http.Request) (adaptor.ConvertResul
 
 	if responseFormat == "wav" {
 		reqMap["stream"] = false
+	} else {
+		reqMap["stream"] = true
+		reqMap["stream_options"] = map[string]any{
+			"exclude_aggregated_audio": true,
+		}
 	}
+
+	reqMap["language_boost"] = "auto"
 
 	body, err := sonic.Marshal(reqMap)
 	if err != nil {
@@ -120,6 +132,8 @@ func TTSHandler(
 
 	defer resp.Body.Close()
 
+	audioFormat := meta.GetString("audio_format")
+
 	log := common.GetLogger(c)
 
 	body, err := io.ReadAll(resp.Body)
@@ -159,7 +173,15 @@ func TTSHandler(
 		)
 	}
 
-	c.Writer.Header().Set("Content-Type", "audio/"+result.ExtraInfo.AudioFormat)
+	if result.ExtraInfo.AudioFormat != "" {
+		audioFormat = result.ExtraInfo.AudioFormat
+	}
+	if audioFormat == "" {
+		c.Writer.Header().Set("Content-Type", http.DetectContentType(audioBytes))
+	} else {
+		c.Writer.Header().Set("Content-Type", "audio/"+audioFormat)
+	}
+
 	c.Writer.Header().Set("Content-Length", strconv.Itoa(len(audioBytes)))
 	_, err = c.Writer.Write(audioBytes)
 	if err != nil {
@@ -175,10 +197,13 @@ func ttsStreamHandler(
 	resp *http.Response,
 ) (model.Usage, adaptor.Error) {
 	sseFormat := meta.GetString("stream_format") == "sse"
+	audioFormat := meta.GetString("audio_format")
 
 	defer resp.Body.Close()
 
-	c.Writer.Header().Set("Content-Type", "application/octet-stream")
+	if audioFormat != "" {
+		c.Writer.Header().Set("Content-Type", "audio/"+audioFormat)
+	}
 
 	log := common.GetLogger(c)
 
@@ -190,22 +215,27 @@ func ttsStreamHandler(
 	usageCharacters := meta.RequestUsage.InputTokens
 
 	for scanner.Scan() {
-		data := scanner.Text()
+		data := scanner.Bytes()
 		if len(data) < openai.DataPrefixLength { // ignore blank line or wrong format
 			continue
 		}
-		if data[:openai.DataPrefixLength] != openai.DataPrefix {
+		if bytes.Equal(data[:openai.DataPrefixLength], openai.DataPrefixBytes) {
 			continue
 		}
 		data = data[openai.DataPrefixLength:]
 
 		var result TTSResponse
-		if err := sonic.UnmarshalString(data, &result); err != nil {
+		if err := sonic.Unmarshal(data, &result); err != nil {
 			log.Error("unmarshal tts response failed: " + err.Error())
 			continue
 		}
+
 		if result.ExtraInfo.UsageCharacters > 0 {
 			usageCharacters = model.ZeroNullInt64(result.ExtraInfo.UsageCharacters)
+		}
+
+		if result.Data.Audio == "" {
+			continue
 		}
 
 		audioBytes, err := hex.DecodeString(result.Data.Audio)
@@ -227,9 +257,8 @@ func ttsStreamHandler(
 
 	if sseFormat {
 		openai.AudioDone(c, relaymodel.TextToSpeechUsage{
-			InputTokens:  int64(usageCharacters),
-			OutputTokens: int64(usageCharacters),
-			TotalTokens:  int64(usageCharacters),
+			InputTokens: int64(usageCharacters),
+			TotalTokens: int64(usageCharacters),
 		})
 	}
 
