@@ -79,7 +79,7 @@ func handleChatCompletionsRequest(meta *meta.Meta, request *http.Request) ([]byt
 }
 
 func handleAnthropicRequest(meta *meta.Meta, request *http.Request) ([]byte, error) {
-	reqBody, err := common.GetRequestBody(request)
+	reqBody, err := common.GetRequestBodyReusable(request)
 	if err != nil {
 		return nil, err
 	}

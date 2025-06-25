@@ -3,7 +3,6 @@ package howtocook
 import (
 	"context"
 	"fmt"
-	"io"
 	"net/http"
 	"time"
 
@@ -31,13 +30,8 @@ func (s *Server) fetchRecipes(ctx context.Context) ([]Recipe, error) {
 		return nil, fmt.Errorf("HTTP error: %d", resp.StatusCode)
 	}
 
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read response: %w", err)
-	}
-
 	var recipes []Recipe
-	if err := sonic.Unmarshal(body, &recipes); err != nil {
+	if err := sonic.ConfigDefault.NewDecoder(resp.Body).Decode(&recipes); err != nil {
 		return nil, fmt.Errorf("failed to parse recipes: %w", err)
 	}
 

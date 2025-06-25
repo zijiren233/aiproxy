@@ -36,19 +36,20 @@ func (c *Client) makeRequest(
 	ctx context.Context,
 	method, endpoint string,
 	body any,
-) ([]byte, error) {
+	v any,
+) error {
 	var reqBody io.Reader
 	if body != nil {
 		jsonBody, err := sonic.Marshal(body)
 		if err != nil {
-			return nil, fmt.Errorf("failed to marshal request body: %w", err)
+			return fmt.Errorf("failed to marshal request body: %w", err)
 		}
 		reqBody = bytes.NewReader(jsonBody)
 	}
 
 	req, err := http.NewRequestWithContext(ctx, method, c.baseURL+endpoint, reqBody)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
+		return fmt.Errorf("failed to create request: %w", err)
 	}
 
 	req.Header.Set("Authorization", "Bearer "+c.token)
@@ -57,20 +58,15 @@ func (c *Client) makeRequest(
 
 	resp, err := c.client.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("failed to make request: %w", err)
+		return fmt.Errorf("failed to make request: %w", err)
 	}
 	defer resp.Body.Close()
 
-	respBody, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read response body: %w", err)
-	}
-
 	if resp.StatusCode >= 400 {
-		return nil, fmt.Errorf("API error %d: %s", resp.StatusCode, string(respBody))
+		return fmt.Errorf("API error %d: %s", resp.StatusCode, resp.Status)
 	}
 
-	return respBody, nil
+	return sonic.ConfigDefault.NewDecoder(resp.Body).Decode(v)
 }
 
 // AppendBlockChildren appends children to a block
@@ -83,14 +79,10 @@ func (c *Client) AppendBlockChildren(
 		"children": children,
 	}
 
-	respBody, err := c.makeRequest(ctx, http.MethodPatch, "/blocks/"+blockID+"/children", body)
+	var result BlockResponse
+	err := c.makeRequest(ctx, http.MethodPatch, "/blocks/"+blockID+"/children", body, &result)
 	if err != nil {
 		return nil, err
-	}
-
-	var result BlockResponse
-	if err := sonic.Unmarshal(respBody, &result); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal response: %w", err)
 	}
 
 	return &result, nil
@@ -98,14 +90,10 @@ func (c *Client) AppendBlockChildren(
 
 // RetrieveBlock retrieves a block
 func (c *Client) RetrieveBlock(ctx context.Context, blockID string) (*BlockResponse, error) {
-	respBody, err := c.makeRequest(ctx, http.MethodGet, "/blocks/"+blockID, nil)
+	var result BlockResponse
+	err := c.makeRequest(ctx, http.MethodGet, "/blocks/"+blockID, nil, &result)
 	if err != nil {
 		return nil, err
-	}
-
-	var result BlockResponse
-	if err := sonic.Unmarshal(respBody, &result); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal response: %w", err)
 	}
 
 	return &result, nil
@@ -131,14 +119,10 @@ func (c *Client) RetrieveBlockChildren(
 		endpoint += "?" + params.Encode()
 	}
 
-	respBody, err := c.makeRequest(ctx, http.MethodGet, endpoint, nil)
+	var result ListResponse
+	err := c.makeRequest(ctx, http.MethodGet, endpoint, nil, &result)
 	if err != nil {
 		return nil, err
-	}
-
-	var result ListResponse
-	if err := sonic.Unmarshal(respBody, &result); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal response: %w", err)
 	}
 
 	return &result, nil
@@ -146,14 +130,10 @@ func (c *Client) RetrieveBlockChildren(
 
 // DeleteBlock deletes a block
 func (c *Client) DeleteBlock(ctx context.Context, blockID string) (*BlockResponse, error) {
-	respBody, err := c.makeRequest(ctx, http.MethodDelete, "/blocks/"+blockID, nil)
+	var result BlockResponse
+	err := c.makeRequest(ctx, http.MethodDelete, "/blocks/"+blockID, nil, &result)
 	if err != nil {
 		return nil, err
-	}
-
-	var result BlockResponse
-	if err := sonic.Unmarshal(respBody, &result); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal response: %w", err)
 	}
 
 	return &result, nil
@@ -165,14 +145,10 @@ func (c *Client) UpdateBlock(
 	blockID string,
 	block BlockResponse,
 ) (*BlockResponse, error) {
-	respBody, err := c.makeRequest(ctx, http.MethodPatch, "/blocks/"+blockID, block)
+	var result BlockResponse
+	err := c.makeRequest(ctx, http.MethodPatch, "/blocks/"+blockID, block, &result)
 	if err != nil {
 		return nil, err
-	}
-
-	var result BlockResponse
-	if err := sonic.Unmarshal(respBody, &result); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal response: %w", err)
 	}
 
 	return &result, nil
@@ -180,14 +156,10 @@ func (c *Client) UpdateBlock(
 
 // RetrievePage retrieves a page
 func (c *Client) RetrievePage(ctx context.Context, pageID string) (*PageResponse, error) {
-	respBody, err := c.makeRequest(ctx, http.MethodGet, "/pages/"+pageID, nil)
+	var result PageResponse
+	err := c.makeRequest(ctx, http.MethodGet, "/pages/"+pageID, nil, &result)
 	if err != nil {
 		return nil, err
-	}
-
-	var result PageResponse
-	if err := sonic.Unmarshal(respBody, &result); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal response: %w", err)
 	}
 
 	return &result, nil
@@ -203,14 +175,10 @@ func (c *Client) UpdatePageProperties(
 		"properties": properties,
 	}
 
-	respBody, err := c.makeRequest(ctx, http.MethodPatch, "/pages/"+pageID, body)
+	var result PageResponse
+	err := c.makeRequest(ctx, http.MethodPatch, "/pages/"+pageID, body, &result)
 	if err != nil {
 		return nil, err
-	}
-
-	var result PageResponse
-	if err := sonic.Unmarshal(respBody, &result); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal response: %w", err)
 	}
 
 	return &result, nil
@@ -235,14 +203,10 @@ func (c *Client) ListAllUsers(
 		endpoint += "?" + params.Encode()
 	}
 
-	respBody, err := c.makeRequest(ctx, http.MethodGet, endpoint, nil)
+	var result ListResponse
+	err := c.makeRequest(ctx, http.MethodGet, endpoint, nil, &result)
 	if err != nil {
 		return nil, err
-	}
-
-	var result ListResponse
-	if err := sonic.Unmarshal(respBody, &result); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal response: %w", err)
 	}
 
 	return &result, nil
@@ -250,14 +214,10 @@ func (c *Client) ListAllUsers(
 
 // RetrieveUser retrieves a user
 func (c *Client) RetrieveUser(ctx context.Context, userID string) (*UserResponse, error) {
-	respBody, err := c.makeRequest(ctx, http.MethodGet, "/users/"+userID, nil)
+	var result UserResponse
+	err := c.makeRequest(ctx, http.MethodGet, "/users/"+userID, nil, &result)
 	if err != nil {
 		return nil, err
-	}
-
-	var result UserResponse
-	if err := sonic.Unmarshal(respBody, &result); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal response: %w", err)
 	}
 
 	return &result, nil
@@ -265,14 +225,10 @@ func (c *Client) RetrieveUser(ctx context.Context, userID string) (*UserResponse
 
 // RetrieveBotUser retrieves the bot user
 func (c *Client) RetrieveBotUser(ctx context.Context) (*UserResponse, error) {
-	respBody, err := c.makeRequest(ctx, http.MethodGet, "/users/me", nil)
+	var result UserResponse
+	err := c.makeRequest(ctx, http.MethodGet, "/users/me", nil, &result)
 	if err != nil {
 		return nil, err
-	}
-
-	var result UserResponse
-	if err := sonic.Unmarshal(respBody, &result); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal response: %w", err)
 	}
 
 	return &result, nil
@@ -293,14 +249,10 @@ func (c *Client) CreateDatabase(
 		body["title"] = title
 	}
 
-	respBody, err := c.makeRequest(ctx, http.MethodPost, "/databases", body)
+	var result DatabaseResponse
+	err := c.makeRequest(ctx, http.MethodPost, "/databases", body, &result)
 	if err != nil {
 		return nil, err
-	}
-
-	var result DatabaseResponse
-	if err := sonic.Unmarshal(respBody, &result); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal response: %w", err)
 	}
 
 	return &result, nil
@@ -329,14 +281,10 @@ func (c *Client) QueryDatabase(
 		body["page_size"] = *pageSize
 	}
 
-	respBody, err := c.makeRequest(ctx, http.MethodPost, "/databases/"+databaseID+"/query", body)
+	var result ListResponse
+	err := c.makeRequest(ctx, http.MethodPost, "/databases/"+databaseID+"/query", body, &result)
 	if err != nil {
 		return nil, err
-	}
-
-	var result ListResponse
-	if err := sonic.Unmarshal(respBody, &result); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal response: %w", err)
 	}
 
 	return &result, nil
@@ -347,14 +295,10 @@ func (c *Client) RetrieveDatabase(
 	ctx context.Context,
 	databaseID string,
 ) (*DatabaseResponse, error) {
-	respBody, err := c.makeRequest(ctx, http.MethodGet, "/databases/"+databaseID, nil)
+	var result DatabaseResponse
+	err := c.makeRequest(ctx, http.MethodGet, "/databases/"+databaseID, nil, &result)
 	if err != nil {
 		return nil, err
-	}
-
-	var result DatabaseResponse
-	if err := sonic.Unmarshal(respBody, &result); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal response: %w", err)
 	}
 
 	return &result, nil
@@ -378,14 +322,10 @@ func (c *Client) UpdateDatabase(
 		body["properties"] = properties
 	}
 
-	respBody, err := c.makeRequest(ctx, http.MethodPatch, "/databases/"+databaseID, body)
+	var result DatabaseResponse
+	err := c.makeRequest(ctx, http.MethodPatch, "/databases/"+databaseID, body, &result)
 	if err != nil {
 		return nil, err
-	}
-
-	var result DatabaseResponse
-	if err := sonic.Unmarshal(respBody, &result); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal response: %w", err)
 	}
 
 	return &result, nil
@@ -404,14 +344,10 @@ func (c *Client) CreateDatabaseItem(
 		"properties": properties,
 	}
 
-	respBody, err := c.makeRequest(ctx, http.MethodPost, "/pages", body)
+	var result PageResponse
+	err := c.makeRequest(ctx, http.MethodPost, "/pages", body, &result)
 	if err != nil {
 		return nil, err
-	}
-
-	var result PageResponse
-	if err := sonic.Unmarshal(respBody, &result); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal response: %w", err)
 	}
 
 	return &result, nil
@@ -434,14 +370,10 @@ func (c *Client) CreateComment(
 		body["discussion_id"] = *discussionID
 	}
 
-	respBody, err := c.makeRequest(ctx, http.MethodPost, "/comments", body)
+	var result CommentResponse
+	err := c.makeRequest(ctx, http.MethodPost, "/comments", body, &result)
 	if err != nil {
 		return nil, err
-	}
-
-	var result CommentResponse
-	if err := sonic.Unmarshal(respBody, &result); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal response: %w", err)
 	}
 
 	return &result, nil
@@ -465,14 +397,10 @@ func (c *Client) RetrieveComments(
 
 	endpoint := "/comments?" + params.Encode()
 
-	respBody, err := c.makeRequest(ctx, http.MethodGet, endpoint, nil)
+	var result ListResponse
+	err := c.makeRequest(ctx, http.MethodGet, endpoint, nil, &result)
 	if err != nil {
 		return nil, err
-	}
-
-	var result ListResponse
-	if err := sonic.Unmarshal(respBody, &result); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal response: %w", err)
 	}
 
 	return &result, nil
@@ -504,14 +432,10 @@ func (c *Client) Search(
 		body["page_size"] = *pageSize
 	}
 
-	respBody, err := c.makeRequest(ctx, http.MethodPost, "/search", body)
+	var result ListResponse
+	err := c.makeRequest(ctx, http.MethodPost, "/search", body, &result)
 	if err != nil {
 		return nil, err
-	}
-
-	var result ListResponse
-	if err := sonic.Unmarshal(respBody, &result); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal response: %w", err)
 	}
 
 	return &result, nil

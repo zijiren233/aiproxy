@@ -240,19 +240,20 @@ func (c *Client) makeRequest(
 	ctx context.Context,
 	method, endpoint string,
 	body any,
-) ([]byte, error) {
+	v any,
+) error {
 	var reqBody io.Reader
 	if body != nil {
 		jsonData, err := sonic.Marshal(body)
 		if err != nil {
-			return nil, fmt.Errorf("failed to marshal request body: %w", err)
+			return fmt.Errorf("failed to marshal request body: %w", err)
 		}
 		reqBody = bytes.NewBuffer(jsonData)
 	}
 
 	req, err := http.NewRequestWithContext(ctx, method, c.apiURL+endpoint, reqBody)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
+		return fmt.Errorf("failed to create request: %w", err)
 	}
 
 	req.Header.Set("Content-Type", "application/json")
@@ -262,20 +263,16 @@ func (c *Client) makeRequest(
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("request failed: %w", err)
+		return fmt.Errorf("request failed: %w", err)
 	}
 	defer resp.Body.Close()
 
-	respBody, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read response: %w", err)
-	}
-
 	if resp.StatusCode >= 400 {
-		return nil, fmt.Errorf("API error (%d): %s", resp.StatusCode, string(respBody))
+		body, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("API error (%d): %s", resp.StatusCode, string(body))
 	}
 
-	return respBody, nil
+	return sonic.ConfigDefault.NewDecoder(resp.Body).Decode(v)
 }
 
 // ScrapeURL scrapes a single URL
@@ -283,14 +280,10 @@ func (c *Client) ScrapeURL(
 	ctx context.Context,
 	params *ScrapeParams,
 ) (*ScrapeResponse, error) {
-	respBody, err := c.makeRequest(ctx, http.MethodPost, "/v1/scrape", params)
+	var response ScrapeResponse
+	err := c.makeRequest(ctx, http.MethodPost, "/v1/scrape", params, &response)
 	if err != nil {
 		return nil, err
-	}
-
-	var response ScrapeResponse
-	if err := sonic.Unmarshal(respBody, &response); err != nil {
-		return nil, fmt.Errorf("failed to parse response: %w", err)
 	}
 
 	return &response, nil
@@ -298,14 +291,10 @@ func (c *Client) ScrapeURL(
 
 // MapURL maps a website to discover URLs
 func (c *Client) MapURL(ctx context.Context, params MapParams) (*MapResponse, error) {
-	respBody, err := c.makeRequest(ctx, http.MethodPost, "/v1/map", params)
+	var response MapResponse
+	err := c.makeRequest(ctx, http.MethodPost, "/v1/map", params, &response)
 	if err != nil {
 		return nil, err
-	}
-
-	var response MapResponse
-	if err := sonic.Unmarshal(respBody, &response); err != nil {
-		return nil, fmt.Errorf("failed to parse response: %w", err)
 	}
 
 	return &response, nil
@@ -316,14 +305,10 @@ func (c *Client) AsyncCrawlURL(
 	ctx context.Context,
 	params CrawlParams,
 ) (*CrawlResponse, error) {
-	respBody, err := c.makeRequest(ctx, http.MethodPost, "/v1/crawl", params)
+	var response CrawlResponse
+	err := c.makeRequest(ctx, http.MethodPost, "/v1/crawl", params, &response)
 	if err != nil {
 		return nil, err
-	}
-
-	var response CrawlResponse
-	if err := sonic.Unmarshal(respBody, &response); err != nil {
-		return nil, fmt.Errorf("failed to parse response: %w", err)
 	}
 
 	return &response, nil
@@ -334,14 +319,10 @@ func (c *Client) CheckCrawlStatus(
 	ctx context.Context,
 	id string,
 ) (*CrawlStatusResponse, error) {
-	respBody, err := c.makeRequest(ctx, http.MethodGet, "/v1/crawl/"+id, nil)
+	var response CrawlStatusResponse
+	err := c.makeRequest(ctx, http.MethodGet, "/v1/crawl/"+id, nil, &response)
 	if err != nil {
 		return nil, err
-	}
-
-	var response CrawlStatusResponse
-	if err := sonic.Unmarshal(respBody, &response); err != nil {
-		return nil, fmt.Errorf("failed to parse response: %w", err)
 	}
 
 	return &response, nil
@@ -352,14 +333,10 @@ func (c *Client) Search(
 	ctx context.Context,
 	params SearchParams,
 ) (*SearchResponse, error) {
-	respBody, err := c.makeRequest(ctx, http.MethodPost, "/v1/search", params)
+	var response SearchResponse
+	err := c.makeRequest(ctx, http.MethodPost, "/v1/search", params, &response)
 	if err != nil {
 		return nil, err
-	}
-
-	var response SearchResponse
-	if err := sonic.Unmarshal(respBody, &response); err != nil {
-		return nil, fmt.Errorf("failed to parse response: %w", err)
 	}
 
 	return &response, nil
@@ -370,14 +347,10 @@ func (c *Client) Extract(
 	ctx context.Context,
 	params ExtractParams,
 ) (*ExtractResponse, error) {
-	respBody, err := c.makeRequest(ctx, http.MethodPost, "/v1/extract", params)
+	var response ExtractResponse
+	err := c.makeRequest(ctx, http.MethodPost, "/v1/extract", params, &response)
 	if err != nil {
 		return nil, err
-	}
-
-	var response ExtractResponse
-	if err := sonic.Unmarshal(respBody, &response); err != nil {
-		return nil, fmt.Errorf("failed to parse response: %w", err)
 	}
 
 	return &response, nil
@@ -388,14 +361,10 @@ func (c *Client) DeepResearch(
 	ctx context.Context,
 	params DeepResearchParams,
 ) (*DeepResearchResponse, error) {
-	respBody, err := c.makeRequest(ctx, http.MethodPost, "/v1/research", params)
+	var response DeepResearchResponse
+	err := c.makeRequest(ctx, http.MethodPost, "/v1/research", params, &response)
 	if err != nil {
 		return nil, err
-	}
-
-	var response DeepResearchResponse
-	if err := sonic.Unmarshal(respBody, &response); err != nil {
-		return nil, fmt.Errorf("failed to parse response: %w", err)
 	}
 
 	return &response, nil
@@ -406,14 +375,10 @@ func (c *Client) GenerateLLMsText(
 	ctx context.Context,
 	params GenerateLLMsTextParams,
 ) (*GenerateLLMsTextResponse, error) {
-	respBody, err := c.makeRequest(ctx, http.MethodPost, "/v1/llmstxt", params)
+	var response GenerateLLMsTextResponse
+	err := c.makeRequest(ctx, http.MethodPost, "/v1/llmstxt", params, &response)
 	if err != nil {
 		return nil, err
-	}
-
-	var response GenerateLLMsTextResponse
-	if err := sonic.Unmarshal(respBody, &response); err != nil {
-		return nil, fmt.Errorf("failed to parse response: %w", err)
 	}
 
 	return &response, nil

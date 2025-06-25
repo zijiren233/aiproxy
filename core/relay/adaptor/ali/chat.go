@@ -29,7 +29,7 @@ func ChatHandler(
 		return model.Usage{}, ErrorHanlder(resp)
 	}
 
-	node, err := common.UnmarshalBody2Node(c.Request)
+	node, err := common.UnmarshalRequest2NodeReusable(c.Request)
 	if err != nil {
 		return model.Usage{}, relaymodel.WrapperOpenAIErrorWithMessage(
 			fmt.Sprintf("get request body failed: %s", err),

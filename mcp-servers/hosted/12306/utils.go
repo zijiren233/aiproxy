@@ -90,12 +90,7 @@ func (s *Server) make12306Request(
 		return fmt.Errorf("HTTP error: %d", resp.StatusCode)
 	}
 
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return err
-	}
-
-	return sonic.Unmarshal(body, result)
+	return sonic.ConfigDefault.NewDecoder(resp.Body).Decode(result)
 }
 
 var (

@@ -21,7 +21,7 @@ func ConvertVideoRequest(
 	meta *meta.Meta,
 	req *http.Request,
 ) (adaptor.ConvertResult, error) {
-	node, err := common.UnmarshalBody2Node(req)
+	node, err := common.UnmarshalRequest2NodeReusable(req)
 	if err != nil {
 		return adaptor.ConvertResult{}, err
 	}
@@ -69,7 +69,7 @@ func VideoHandler(
 		return model.Usage{}, VideoErrorHanlder(resp)
 	}
 
-	responseBody, err := io.ReadAll(resp.Body)
+	responseBody, err := common.GetResponseBody(resp)
 	if err != nil {
 		return model.Usage{}, relaymodel.WrapperOpenAIVideoError(
 			err,
@@ -122,7 +122,7 @@ func VideoGetJobsHandler(
 		return model.Usage{}, VideoErrorHanlder(resp)
 	}
 
-	responseBody, err := io.ReadAll(resp.Body)
+	responseBody, err := common.GetResponseBody(resp)
 	if err != nil {
 		return model.Usage{}, relaymodel.WrapperOpenAIVideoError(
 			err,

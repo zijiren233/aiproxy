@@ -2,12 +2,12 @@ package openai
 
 import (
 	"fmt"
-	"io"
 	"net/http"
 	"strconv"
 	"strings"
 
 	"github.com/bytedance/sonic"
+	"github.com/labring/aiproxy/core/common"
 	"github.com/labring/aiproxy/core/common/conv"
 	"github.com/labring/aiproxy/core/relay/adaptor"
 	relaymodel "github.com/labring/aiproxy/core/relay/model"
@@ -16,7 +16,7 @@ import (
 func GetError(resp *http.Response) (int, relaymodel.OpenAIError) {
 	defer resp.Body.Close()
 
-	respBody, err := io.ReadAll(resp.Body)
+	respBody, err := common.GetResponseBody(resp)
 	if err != nil {
 		return resp.StatusCode, relaymodel.OpenAIError{
 			Message: err.Error(),
@@ -75,7 +75,7 @@ func ErrorHanlderWithBody(statusCode int, respBody []byte) adaptor.Error {
 func VideoErrorHanlder(resp *http.Response) adaptor.Error {
 	defer resp.Body.Close()
 
-	respBody, err := io.ReadAll(resp.Body)
+	respBody, err := common.GetResponseBody(resp)
 	if err != nil {
 		return relaymodel.NewOpenAIVideoError(resp.StatusCode, relaymodel.OpenAIVideoError{
 			Detail: err.Error(),

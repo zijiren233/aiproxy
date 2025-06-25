@@ -10,7 +10,7 @@ import (
 
 func UnmarshalAnthropicMessageRequest(req *http.Request) (*model.AnthropicMessageRequest, error) {
 	var request model.AnthropicMessageRequest
-	err := common.UnmarshalBodyReusable(req, &request)
+	err := common.UnmarshalRequestReusable(req, &request)
 	if err != nil {
 		return nil, err
 	}
@@ -19,7 +19,7 @@ func UnmarshalAnthropicMessageRequest(req *http.Request) (*model.AnthropicMessag
 
 func UnmarshalGeneralOpenAIRequest(req *http.Request) (*model.GeneralOpenAIRequest, error) {
 	var request model.GeneralOpenAIRequest
-	err := common.UnmarshalBodyReusable(req, &request)
+	err := common.UnmarshalRequestReusable(req, &request)
 	if err != nil {
 		return nil, err
 	}
@@ -30,7 +30,7 @@ func UnmarshalVideoGenerationJobRequest(
 	req *http.Request,
 ) (*model.VideoGenerationJobRequest, error) {
 	var request model.VideoGenerationJobRequest
-	err := common.UnmarshalBodyReusable(req, &request)
+	err := common.UnmarshalRequestReusable(req, &request)
 	if err != nil {
 		return nil, err
 	}
@@ -39,7 +39,7 @@ func UnmarshalVideoGenerationJobRequest(
 
 func UnmarshalImageRequest(req *http.Request) (*model.ImageRequest, error) {
 	var request model.ImageRequest
-	err := common.UnmarshalBodyReusable(req, &request)
+	err := common.UnmarshalRequestReusable(req, &request)
 	if err != nil {
 		return nil, err
 	}
@@ -48,7 +48,7 @@ func UnmarshalImageRequest(req *http.Request) (*model.ImageRequest, error) {
 
 func UnmarshalRerankRequest(req *http.Request) (*model.RerankRequest, error) {
 	var request model.RerankRequest
-	err := common.UnmarshalBodyReusable(req, &request)
+	err := common.UnmarshalRequestReusable(req, &request)
 	if err != nil {
 		return nil, err
 	}
@@ -57,7 +57,7 @@ func UnmarshalRerankRequest(req *http.Request) (*model.RerankRequest, error) {
 
 func UnmarshalTTSRequest(req *http.Request) (*model.TextToSpeechRequest, error) {
 	var request model.TextToSpeechRequest
-	err := common.UnmarshalBodyReusable(req, &request)
+	err := common.UnmarshalRequestReusable(req, &request)
 	if err != nil {
 		return nil, err
 	}
@@ -66,7 +66,7 @@ func UnmarshalTTSRequest(req *http.Request) (*model.TextToSpeechRequest, error) 
 
 func UnmarshalMap(req *http.Request) (map[string]any, error) {
 	var request map[string]any
-	err := common.UnmarshalBodyReusable(req, &request)
+	err := common.UnmarshalRequestReusable(req, &request)
 	if err != nil {
 		return nil, err
 	}

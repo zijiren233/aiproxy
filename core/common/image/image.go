@@ -62,7 +62,7 @@ func GetImageSizeFromURL(url string) (width, height int, err error) {
 }
 
 const (
-	MaxImageSize = 1024 * 1024 * 5 // 5MB
+	MaxImageSize = 1024 * 1024 * 10 // 10MB
 )
 
 func GetImageFromURL(ctx context.Context, url string) (string, string, error) {
@@ -88,23 +88,7 @@ func GetImageFromURL(ctx context.Context, url string) (string, string, error) {
 	if resp.StatusCode != http.StatusOK {
 		return "", "", fmt.Errorf("status code: %d", resp.StatusCode)
 	}
-	if resp.ContentLength > MaxImageSize {
-		return "", "", fmt.Errorf("image too large: %d, max: %d", resp.ContentLength, MaxImageSize)
-	}
-
-	var buf []byte
-	if resp.ContentLength <= 0 {
-		buf, err = io.ReadAll(common.LimitReader(resp.Body, MaxImageSize))
-		if err != nil {
-			if errors.Is(err, common.ErrLimitedReaderExceeded) {
-				return "", "", fmt.Errorf("image too large, max: %d", MaxImageSize)
-			}
-			return "", "", fmt.Errorf("image read failed: %w", err)
-		}
-	} else {
-		buf = make([]byte, resp.ContentLength)
-		_, err = io.ReadFull(resp.Body, buf)
-	}
+	buf, err := common.GetResponseBodyLimit(resp, MaxImageSize)
 	if err != nil {
 		return "", "", err
 	}

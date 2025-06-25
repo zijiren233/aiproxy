@@ -150,7 +150,7 @@ func getRequestBody(meta *meta.Meta, c *gin.Context, detail *RequestDetail) adap
 	case !strings.Contains(c.GetHeader("Content-Type"), "/json"):
 		return nil
 	default:
-		reqBody, err := common.GetRequestBody(c.Request)
+		reqBody, err := common.GetRequestBodyReusable(c.Request)
 		if err != nil {
 			return relaymodel.WrapperErrorWithMessage(
 				meta.Mode,

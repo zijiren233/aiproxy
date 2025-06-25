@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/hex"
-	"io"
 	"net/http"
 	"slices"
 	"strconv"
@@ -137,17 +136,8 @@ func TTSHandler(
 
 	log := common.GetLogger(c)
 
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return model.Usage{}, relaymodel.WrapperOpenAIError(
-			err,
-			"TTS_ERROR",
-			http.StatusInternalServerError,
-		)
-	}
-
 	var result TTSResponse
-	if err := sonic.Unmarshal(body, &result); err != nil {
+	if err := common.UnmarshalResponse(resp, &result); err != nil {
 		return model.Usage{}, relaymodel.WrapperOpenAIError(
 			err,
 			"TTS_ERROR",

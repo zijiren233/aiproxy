@@ -100,7 +100,7 @@ func STTHandler(
 
 	responseFormat := meta.GetString(MetaResponseFormat)
 
-	responseBody, err := io.ReadAll(resp.Body)
+	responseBody, err := common.GetResponseBody(resp)
 	if err != nil {
 		return model.Usage{}, relaymodel.WrapperOpenAIError(
 			err,

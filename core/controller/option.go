@@ -1,10 +1,10 @@
 package controller
 
 import (
-	"io"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/labring/aiproxy/core/common"
 	"github.com/labring/aiproxy/core/middleware"
 	"github.com/labring/aiproxy/core/model"
 )
@@ -94,7 +94,7 @@ func UpdateOption(c *gin.Context) {
 //	@Router			/api/option/{key} [put]
 func UpdateOptionByKey(c *gin.Context) {
 	key := c.Param("key")
-	body, err := io.ReadAll(c.Request.Body)
+	body, err := common.GetRequestBody(c.Request)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusBadRequest, err.Error())
 		return

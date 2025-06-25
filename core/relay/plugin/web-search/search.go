@@ -131,7 +131,7 @@ func (p *WebSearch) ConvertRequest(
 	}
 
 	// Read and parse request body
-	body, err := common.GetRequestBody(req)
+	body, err := common.GetRequestBodyReusable(req)
 	if err != nil {
 		return adaptor.ConvertResult{}, fmt.Errorf("failed to read request body: %w", err)
 	}

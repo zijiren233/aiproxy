@@ -21,7 +21,7 @@ import (
 
 func ConvertRequest(meta *meta.Meta, req *http.Request) (adaptor.ConvertResult, error) {
 	var request relaymodel.GeneralOpenAIRequest
-	err := common.UnmarshalBodyReusable(req, &request)
+	err := common.UnmarshalRequestReusable(req, &request)
 	if err != nil {
 		return adaptor.ConvertResult{}, err
 	}

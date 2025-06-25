@@ -2,7 +2,6 @@ package ali
 
 import (
 	"bytes"
-	"io"
 	"net/http"
 	"strconv"
 
@@ -32,7 +31,7 @@ func ConvertRerankRequest(
 	req *http.Request,
 ) (adaptor.ConvertResult, error) {
 	reqMap := make(map[string]any)
-	err := common.UnmarshalBodyReusable(req, &reqMap)
+	err := common.UnmarshalRequestReusable(req, &reqMap)
 	if err != nil {
 		return adaptor.ConvertResult{}, err
 	}
@@ -78,16 +77,8 @@ func RerankHandler(
 
 	log := common.GetLogger(c)
 
-	responseBody, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return model.Usage{}, relaymodel.WrapperOpenAIError(
-			err,
-			"read_response_body_failed",
-			http.StatusInternalServerError,
-		)
-	}
 	var rerankResponse RerankResponse
-	err = sonic.Unmarshal(responseBody, &rerankResponse)
+	err := common.UnmarshalResponse(resp, &rerankResponse)
 	if err != nil {
 		return model.Usage{}, relaymodel.WrapperOpenAIError(
 			err,

@@ -1,7 +1,6 @@
 package jina
 
 import (
-	"io"
 	"net/http"
 	"strconv"
 
@@ -28,15 +27,7 @@ func RerankHandler(
 
 	log := common.GetLogger(c)
 
-	responseBody, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return model.Usage{}, relaymodel.WrapperOpenAIError(
-			err,
-			"read_response_body_failed",
-			http.StatusInternalServerError,
-		)
-	}
-	node, err := sonic.Get(responseBody)
+	node, err := common.UnmarshalResponse2Node(resp)
 	if err != nil {
 		return model.Usage{}, relaymodel.WrapperOpenAIError(
 			err,

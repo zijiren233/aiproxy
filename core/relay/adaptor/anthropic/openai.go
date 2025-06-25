@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"io"
 	"net/http"
 	"slices"
 	"strconv"
@@ -56,13 +55,13 @@ type onlyThinkingRequest struct {
 
 func OpenAIConvertRequest(meta *meta.Meta, req *http.Request) (*Request, error) {
 	var textRequest OpenAIRequest
-	err := common.UnmarshalBodyReusable(req, &textRequest)
+	err := common.UnmarshalRequestReusable(req, &textRequest)
 	if err != nil {
 		return nil, err
 	}
 
 	var onlyThinking onlyThinkingRequest
-	err = common.UnmarshalBodyReusable(req, &onlyThinking)
+	err = common.UnmarshalRequestReusable(req, &onlyThinking)
 	if err != nil {
 		return nil, err
 	}
@@ -566,7 +565,7 @@ func OpenAIHandler(
 
 	defer resp.Body.Close()
 
-	body, err := io.ReadAll(resp.Body)
+	body, err := common.GetResponseBody(resp)
 	if err != nil {
 		return model.Usage{}, relaymodel.WrapperOpenAIError(
 			err,

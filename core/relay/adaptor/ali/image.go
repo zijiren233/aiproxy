@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"io"
 	"net/http"
 	"strconv"
 	"strings"
@@ -73,15 +72,7 @@ func ImageHandler(
 	responseFormat, _ := meta.MustGet(MetaResponseFormat).(string)
 
 	var aliTaskResponse TaskResponse
-	responseBody, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return model.Usage{}, relaymodel.WrapperOpenAIError(
-			err,
-			"read_response_body_failed",
-			http.StatusInternalServerError,
-		)
-	}
-	err = sonic.Unmarshal(responseBody, &aliTaskResponse)
+	err := common.UnmarshalResponse(resp, &aliTaskResponse)
 	if err != nil {
 		return model.Usage{}, relaymodel.WrapperOpenAIError(
 			err,

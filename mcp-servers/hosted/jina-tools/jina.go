@@ -5,7 +5,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -331,31 +330,18 @@ func (s *JinaServer) handleJinaReader(
 	}
 	defer resp.Body.Close()
 
-	// Read response
-	respBody, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read response: %w", err)
-	}
-
 	if resp.StatusCode != http.StatusOK {
-		return mcp.NewToolResultError(
-			fmt.Sprintf("Error: Jina Reader API error (%d): %s", resp.StatusCode, respBody),
-		), nil
+		return nil, fmt.Errorf("request failed: %s", resp.Status)
 	}
 
 	// Parse response
 	var jinaResp JinaReaderResponse
-	if err := sonic.Unmarshal(respBody, &jinaResp); err != nil {
+	if err := sonic.ConfigDefault.NewDecoder(resp.Body).Decode(&jinaResp); err != nil {
 		// If parsing fails, return raw response
-		return mcp.NewToolResultText(string(respBody)), nil
+		return nil, fmt.Errorf("failed to parse response: %w", err)
 	}
 
-	content := jinaResp.Data.Content
-	if content == "" {
-		content = string(respBody)
-	}
-
-	return mcp.NewToolResultText(content), nil
+	return mcp.NewToolResultText(jinaResp.Data.Content), nil
 }
 
 // handleJinaSearch handles the Jina Search tool
@@ -408,21 +394,13 @@ func (s *JinaServer) handleJinaSearch(
 	}
 	defer resp.Body.Close()
 
-	// Read response
-	respBody, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read response: %w", err)
-	}
-
 	if resp.StatusCode != http.StatusOK {
-		return mcp.NewToolResultError(
-			fmt.Sprintf("Error: Jina Search API error (%d): %s", resp.StatusCode, respBody),
-		), nil
+		return nil, fmt.Errorf("request failed: %s", resp.Status)
 	}
 
 	// Parse response
 	var searchResp JinaSearchResponse
-	if err := sonic.Unmarshal(respBody, &searchResp); err != nil {
+	if err := sonic.ConfigDefault.NewDecoder(resp.Body).Decode(&searchResp); err != nil {
 		return nil, fmt.Errorf("failed to parse response: %w", err)
 	}
 
@@ -547,28 +525,20 @@ func (s *JinaServer) handleJinaFactCheck(
 	}
 	defer resp.Body.Close()
 
-	// Read response
-	respBody, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read response: %w", err)
-	}
-
 	if resp.StatusCode != http.StatusOK {
-		return mcp.NewToolResultError(
-			fmt.Sprintf("Error: Jina Fact-Check API error (%d): %s", resp.StatusCode, respBody),
-		), nil
+		return nil, fmt.Errorf("request failed: %s", resp.Status)
 	}
 
 	// Parse and format response
 	var jsonData any
-	if err := sonic.Unmarshal(respBody, &jsonData); err != nil {
+	if err := sonic.ConfigDefault.NewDecoder(resp.Body).Decode(&jsonData); err != nil {
 		// If JSON parsing fails, return raw response
-		return mcp.NewToolResultText(string(respBody)), nil
+		return nil, fmt.Errorf("failed to parse response: %w", err)
 	}
 
 	formattedJSON, err := sonic.MarshalIndent(jsonData, "", "  ")
 	if err != nil {
-		return mcp.NewToolResultText(string(respBody)), nil
+		return nil, fmt.Errorf("failed to marshal response: %w", err)
 	}
 
 	return mcp.NewToolResultText(string(formattedJSON)), nil

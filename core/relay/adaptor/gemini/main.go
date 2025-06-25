@@ -92,7 +92,7 @@ func buildGenerationConfig(
 	}
 
 	var thinkingConfigOnly thinkingConfigOnly
-	err := common.UnmarshalBodyReusable(req, &thinkingConfigOnly)
+	err := common.UnmarshalRequestReusable(req, &thinkingConfigOnly)
 	if err != nil {
 		return nil, err
 	}

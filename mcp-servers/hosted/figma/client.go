@@ -66,12 +66,7 @@ func (c *Client) makeRequest(
 		return fmt.Errorf("API error %d: %s", resp.StatusCode, string(body))
 	}
 
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return fmt.Errorf("failed to read response body: %w", err)
-	}
-
-	if err := sonic.Unmarshal(body, result); err != nil {
+	if err := sonic.ConfigDefault.NewDecoder(resp.Body).Decode(result); err != nil {
 		return fmt.Errorf("failed to unmarshal response: %w", err)
 	}
 

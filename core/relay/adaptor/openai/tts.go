@@ -25,7 +25,7 @@ func ConvertTTSRequest(
 	req *http.Request,
 	defaultVoice string,
 ) (adaptor.ConvertResult, error) {
-	node, err := common.UnmarshalBody2Node(req)
+	node, err := common.UnmarshalRequest2NodeReusable(req)
 	if err != nil {
 		return adaptor.ConvertResult{}, err
 	}
