@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"slices"
 	"strconv"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -170,7 +171,7 @@ func TestChannel(c *gin.Context) {
 		return
 	}
 
-	modelName := c.Param("model")
+	modelName := strings.TrimPrefix(c.Param("model"), "/")
 	if modelName == "" {
 		c.JSON(http.StatusOK, middleware.APIResponse{
 			Success: false,
