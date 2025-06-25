@@ -14,10 +14,10 @@ func AbortLogWithMessageWithMode(
 	c *gin.Context,
 	statusCode int,
 	message string,
-	typ ...string,
+	opts ...relaymodel.WrapperErrorOptionFunc,
 ) {
 	common.GetLogger(c).Error(message)
-	AbortWithMessageWithMode(m, c, statusCode, message, typ...)
+	AbortWithMessageWithMode(m, c, statusCode, message, opts...)
 }
 
 func AbortWithMessageWithMode(
@@ -25,22 +25,32 @@ func AbortWithMessageWithMode(
 	c *gin.Context,
 	statusCode int,
 	message string,
-	typ ...string,
+	opts ...relaymodel.WrapperErrorOptionFunc,
 ) {
 	c.JSON(statusCode,
-		relaymodel.WrapperErrorWithMessage(m, statusCode, message, typ...),
+		relaymodel.WrapperErrorWithMessage(m, statusCode, message, opts...),
 	)
 	c.Abort()
 }
 
-func AbortLogWithMessage(c *gin.Context, statusCode int, message string, typ ...string) {
+func AbortLogWithMessage(
+	c *gin.Context,
+	statusCode int,
+	message string,
+	opts ...relaymodel.WrapperErrorOptionFunc,
+) {
 	common.GetLogger(c).Error(message)
-	AbortWithMessage(c, statusCode, message, typ...)
+	AbortWithMessage(c, statusCode, message, opts...)
 }
 
-func AbortWithMessage(c *gin.Context, statusCode int, message string, typ ...string) {
+func AbortWithMessage(
+	c *gin.Context,
+	statusCode int,
+	message string,
+	opts ...relaymodel.WrapperErrorOptionFunc,
+) {
 	c.JSON(statusCode,
-		relaymodel.WrapperErrorWithMessage(GetMode(c), statusCode, message, typ...),
+		relaymodel.WrapperErrorWithMessage(GetMode(c), statusCode, message, opts...),
 	)
 	c.Abort()
 }

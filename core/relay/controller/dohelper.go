@@ -118,7 +118,6 @@ func DoHelper(
 			meta.Mode,
 			http.StatusInternalServerError,
 			"response is nil",
-			relaymodel.ErrorCodeBadResponse,
 		)
 		respBody, _ := relayErr.MarshalJSON()
 		detail.ResponseBody = conv.BytesToString(respBody)
@@ -156,7 +155,6 @@ func getRequestBody(meta *meta.Meta, c *gin.Context, detail *RequestDetail) adap
 				meta.Mode,
 				http.StatusBadRequest,
 				"get request body failed: "+err.Error(),
-				"get_request_body_failed",
 			)
 		}
 		detail.RequestBody = conv.BytesToString(reqBody)
@@ -181,7 +179,6 @@ func prepareAndDoRequest(
 			meta.Mode,
 			http.StatusBadRequest,
 			"convert request failed: "+err.Error(),
-			"convert_request_failed",
 		)
 	}
 	if closer, ok := convertResult.Body.(io.Closer); ok {
@@ -198,7 +195,6 @@ func prepareAndDoRequest(
 			meta.Mode,
 			http.StatusBadRequest,
 			"get request url failed: "+err.Error(),
-			"get_request_url_failed",
 		)
 	}
 
@@ -215,7 +211,6 @@ func prepareAndDoRequest(
 			meta.Mode,
 			http.StatusBadRequest,
 			"new request failed: "+err.Error(),
-			"new_request_failed",
 		)
 	}
 
@@ -242,7 +237,6 @@ func setupRequestHeader(
 			meta.Mode,
 			http.StatusInternalServerError,
 			"setup request header failed: "+err.Error(),
-			"setup_request_header_failed",
 		)
 	}
 	return nil
@@ -261,39 +255,34 @@ func doRequest(
 			return nil, relaymodel.WrapperErrorWithMessage(
 				meta.Mode,
 				http.StatusBadRequest,
-				"do request failed: request canceled by client",
-				"request_canceled",
+				"request canceled by client: "+err.Error(),
 			)
 		}
 		if errors.Is(err, context.DeadlineExceeded) {
 			return nil, relaymodel.WrapperErrorWithMessage(
 				meta.Mode,
 				http.StatusGatewayTimeout,
-				"do request failed: request timeout",
-				"request_timeout",
+				"request timeout: "+err.Error(),
 			)
 		}
 		if errors.Is(err, io.EOF) {
 			return nil, relaymodel.WrapperErrorWithMessage(
 				meta.Mode,
 				http.StatusServiceUnavailable,
-				"do request failed: "+err.Error(),
-				"request_failed",
+				"request eof: "+err.Error(),
 			)
 		}
 		if errors.Is(err, io.ErrUnexpectedEOF) {
 			return nil, relaymodel.WrapperErrorWithMessage(
 				meta.Mode,
 				http.StatusInternalServerError,
-				"do request failed: "+err.Error(),
-				"request_failed",
+				"request unexpected eof: "+err.Error(),
 			)
 		}
 		return nil, relaymodel.WrapperErrorWithMessage(
 			meta.Mode,
 			http.StatusBadRequest,
-			"do request failed: "+err.Error(),
-			"request_failed",
+			"request error: "+err.Error(),
 		)
 	}
 	return resp, nil

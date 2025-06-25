@@ -217,7 +217,7 @@ func relay(c *gin.Context, mode mode.Mode, relayController RelayController) {
 			middleware.AbortLogWithMessageWithMode(mode, c,
 				http.StatusForbidden,
 				fmt.Sprintf("group (%s) balance not enough", gbc.Group),
-				middleware.GroupBalanceNotEnough,
+				relaymodel.WithType(middleware.GroupBalanceNotEnough),
 			)
 			return
 		}
