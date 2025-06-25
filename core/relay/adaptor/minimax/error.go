@@ -5,9 +5,9 @@ import (
 	"io"
 	"net/http"
 	"strconv"
-	"strings"
 
 	"github.com/bytedance/sonic"
+	"github.com/labring/aiproxy/core/common"
 	"github.com/labring/aiproxy/core/relay/adaptor"
 	relaymodel "github.com/labring/aiproxy/core/relay/model"
 )
@@ -24,7 +24,7 @@ type ErrorResponse struct {
 func TryErrorHanlder(resp *http.Response) adaptor.Error {
 	defer resp.Body.Close()
 
-	respBody, err := io.ReadAll(resp.Body)
+	respBody, err := common.GetResponseBody(resp)
 	if err != nil {
 		return relaymodel.NewOpenAIError(resp.StatusCode, relaymodel.OpenAIError{
 			Message: err.Error(),
@@ -43,20 +43,19 @@ func TryErrorHanlder(resp *http.Response) adaptor.Error {
 	}
 	if result.BaseResp != nil && result.BaseResp.StatusCode != 0 {
 		statusCode := http.StatusInternalServerError
-		switch {
-		case result.BaseResp.StatusCode == 1008,
-			strings.Contains(result.BaseResp.StatusMsg, "insufficient balance"):
+		switch result.BaseResp.StatusCode {
+		case 1008:
 			statusCode = http.StatusPaymentRequired
-		case result.BaseResp.StatusCode == 1001:
+		case 1001:
 			statusCode = http.StatusRequestTimeout
-		case result.BaseResp.StatusCode == 1004:
+		case 1004:
 			statusCode = http.StatusForbidden
-		case result.BaseResp.StatusCode == 1026,
-			result.BaseResp.StatusCode == 1027,
-			result.BaseResp.StatusCode == 2013:
+		case 1026, 1027, 2013:
 			statusCode = http.StatusBadRequest
-		case result.BaseResp.StatusCode == 1039:
+		case 1002, 1039:
 			statusCode = http.StatusTooManyRequests
+		case 1000, 1013:
+			statusCode = http.StatusInternalServerError
 		}
 		return relaymodel.WrapperOpenAIErrorWithMessage(
 			result.BaseResp.StatusMsg,

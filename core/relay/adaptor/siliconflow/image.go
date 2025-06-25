@@ -25,7 +25,7 @@ type ImageRequest struct {
 
 func ConvertImageRequest(meta *meta.Meta, request *http.Request) (http.Header, io.Reader, error) {
 	var reqMap map[string]any
-	err := common.UnmarshalBodyReusable(request, &reqMap)
+	err := common.UnmarshalRequestReusable(request, &reqMap)
 	if err != nil {
 		return nil, nil, err
 	}

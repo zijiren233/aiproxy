@@ -6,10 +6,8 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/bytedance/sonic"
 	"github.com/bytedance/sonic/ast"
 	"github.com/gin-gonic/gin"
-	"github.com/labring/aiproxy/core/common"
 	"github.com/labring/aiproxy/core/model"
 	"github.com/labring/aiproxy/core/relay/adaptor"
 	"github.com/labring/aiproxy/core/relay/adaptor/openai"
@@ -185,33 +183,10 @@ func (a *Adaptor) DoResponse(
 	switch meta.Mode {
 	case mode.ImagesGenerations:
 		return ImageHandler(meta, c, resp)
-	case mode.Embeddings, mode.Completions:
-		return openai.DoResponse(meta, store, c, resp)
-	case mode.ChatCompletions:
-		reqBody, err := common.GetRequestBody(c.Request)
-		if err != nil {
-			return model.Usage{}, relaymodel.WrapperOpenAIErrorWithMessage(
-				fmt.Sprintf("get request body failed: %s", err),
-				"get_request_body_failed",
-				http.StatusInternalServerError,
-			)
-		}
-		enableSearch, err := getEnableSearch(reqBody)
-		if err != nil {
-			return model.Usage{}, relaymodel.WrapperOpenAIErrorWithMessage(
-				fmt.Sprintf("get enable_search failed: %s", err),
-				"get_enable_search_failed",
-				http.StatusInternalServerError,
-			)
-		}
-		u, e := openai.DoResponse(meta, store, c, resp)
-		if e != nil {
-			return model.Usage{}, e
-		}
-		if enableSearch {
-			u.WebSearchCount++
-		}
-		return u, nil
+	case mode.Embeddings:
+		return EmbeddingsHandler(meta, store, c, resp)
+	case mode.Completions, mode.ChatCompletions:
+		return ChatHandler(meta, store, c, resp)
 	case mode.Rerank:
 		return RerankHandler(meta, c, resp)
 	case mode.AudioSpeech:
@@ -225,24 +200,6 @@ func (a *Adaptor) DoResponse(
 			http.StatusBadRequest,
 		)
 	}
-}
-
-func getEnableSearch(reqBody []byte) (bool, error) {
-	searchNode, err := sonic.Get(reqBody, "enable_search")
-	if err != nil {
-		if errors.Is(err, ast.ErrNotExist) {
-			return false, nil
-		}
-		return false, fmt.Errorf("get enable_search failed: %w", err)
-	}
-	enableSearch, err := searchNode.Bool()
-	if err != nil {
-		if errors.Is(err, ast.ErrNotExist) {
-			return false, nil
-		}
-		return false, fmt.Errorf("get enable_search failed: %w", err)
-	}
-	return enableSearch, nil
 }
 
 func (a *Adaptor) Metadata() adaptor.Metadata {

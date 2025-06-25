@@ -4,13 +4,12 @@ import (
 	"bufio"
 	"bytes"
 	"net/http"
+	"slices"
 	"strconv"
 
 	"github.com/bytedance/sonic"
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/core/common"
-	"github.com/labring/aiproxy/core/common/conv"
-	"github.com/labring/aiproxy/core/common/render"
 	"github.com/labring/aiproxy/core/model"
 	"github.com/labring/aiproxy/core/relay/adaptor"
 	"github.com/labring/aiproxy/core/relay/adaptor/openai"
@@ -149,12 +148,14 @@ func StreamHandler(
 
 	for scanner.Scan() {
 		data := scanner.Bytes()
-		if len(data) < 6 || conv.BytesToString(data[:6]) != "data: " {
+		if len(data) < openai.DataPrefixLength {
 			continue
 		}
-		data = data[6:]
-
-		if conv.BytesToString(data) == "[DONE]" {
+		if !slices.Equal(data[:openai.DataPrefixLength], openai.DataPrefixBytes) {
+			continue
+		}
+		data = bytes.TrimSpace(data[openai.DataPrefixLength:])
+		if slices.Equal(data, openai.DoneBytes) {
 			break
 		}
 
@@ -168,14 +169,14 @@ func StreamHandler(
 		if response.Usage != nil {
 			usage = *response.Usage
 		}
-		_ = render.ObjectData(c, response)
+		_ = openai.ObjectData(c, response)
 	}
 
 	if err := scanner.Err(); err != nil {
 		log.Error("error reading stream: " + err.Error())
 	}
 
-	render.Done(c)
+	openai.Done(c)
 
 	return usage.ToModelUsage(), nil
 }

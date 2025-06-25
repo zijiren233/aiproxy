@@ -541,7 +541,7 @@ func getRequestModel(c *gin.Context, m mode.Mode, groupID string, tokenID int) (
 		c.Set(ChannelID, store.ChannelID)
 		return store.Model, nil
 	default:
-		body, err := common.GetRequestBody(c.Request)
+		body, err := common.GetRequestBodyReusable(c.Request)
 		if err != nil {
 			return "", fmt.Errorf("get request model failed: %w", err)
 		}
@@ -580,7 +580,7 @@ func getRequestUser(c *gin.Context, m mode.Mode) (string, error) {
 		mode.AudioSpeech,
 		mode.Rerank,
 		mode.Anthropic:
-		body, err := common.GetRequestBody(c.Request)
+		body, err := common.GetRequestBodyReusable(c.Request)
 		if err != nil {
 			return "", fmt.Errorf("get request model failed: %w", err)
 		}
@@ -613,7 +613,7 @@ func getRequestMetadata(c *gin.Context, m mode.Mode) (map[string]string, error) 
 		mode.AudioSpeech,
 		mode.Rerank,
 		mode.Anthropic:
-		body, err := common.GetRequestBody(c.Request)
+		body, err := common.GetRequestBodyReusable(c.Request)
 		if err != nil {
 			return nil, fmt.Errorf("get request metadata failed: %w", err)
 		}

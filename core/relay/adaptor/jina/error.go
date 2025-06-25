@@ -1,10 +1,10 @@
 package jina
 
 import (
-	"io"
 	"net/http"
 
 	"github.com/bytedance/sonic"
+	"github.com/labring/aiproxy/core/common"
 	"github.com/labring/aiproxy/core/relay/adaptor"
 	relaymodel "github.com/labring/aiproxy/core/relay/model"
 )
@@ -18,12 +18,7 @@ type Detail struct {
 func ErrorHanlder(resp *http.Response) adaptor.Error {
 	defer resp.Body.Close()
 
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return relaymodel.WrapperOpenAIError(err, "read_response_body_failed", resp.StatusCode)
-	}
-
-	detailValue, err := sonic.Get(body, "detail")
+	detailValue, err := common.UnmarshalResponse2Node(resp, "detail")
 	if err != nil {
 		return relaymodel.WrapperOpenAIError(err, "unmarshal_response_body_failed", resp.StatusCode)
 	}

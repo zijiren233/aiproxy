@@ -1,7 +1,6 @@
 package baidu
 
 import (
-	"io"
 	"net/http"
 	"strconv"
 
@@ -28,7 +27,7 @@ func RerankHandler(
 
 	log := common.GetLogger(c)
 
-	respBody, err := io.ReadAll(resp.Body)
+	respBody, err := common.GetResponseBody(resp)
 	if err != nil {
 		return model.Usage{}, relaymodel.WrapperOpenAIError(
 			err,
@@ -36,8 +35,8 @@ func RerankHandler(
 			http.StatusInternalServerError,
 		)
 	}
-	reRankResp := &RerankResponse{}
-	err = sonic.Unmarshal(respBody, reRankResp)
+	reRankResp := RerankResponse{}
+	err = sonic.Unmarshal(respBody, &reRankResp)
 	if err != nil {
 		return model.Usage{}, relaymodel.WrapperOpenAIError(
 			err,

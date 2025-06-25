@@ -3,9 +3,10 @@ package minimax
 import (
 	"bufio"
 	"bytes"
+	"encoding/base64"
 	"encoding/hex"
-	"io"
 	"net/http"
+	"slices"
 	"strconv"
 
 	"github.com/bytedance/sonic"
@@ -24,6 +25,8 @@ func ConvertTTSRequest(meta *meta.Meta, req *http.Request) (adaptor.ConvertResul
 	if err != nil {
 		return adaptor.ConvertResult{}, err
 	}
+
+	meta.Set("stream_format", reqMap["stream_format"])
 
 	reqMap["model"] = meta.ActualModel
 
@@ -57,11 +60,16 @@ func ConvertTTSRequest(meta *meta.Meta, req *http.Request) (adaptor.ConvertResul
 		reqMap["audio_setting"] = audioSetting
 	}
 
-	responseFormat, ok := reqMap["response_format"].(string)
-	if ok && responseFormat != "" {
-		audioSetting["format"] = responseFormat
+	responseFormat, _ := reqMap["response_format"].(string)
+	if responseFormat == "" {
+		responseFormat, _ = reqMap["format"].(string)
 	}
+	if responseFormat == "" {
+		responseFormat = "mp3"
+	}
+	audioSetting["format"] = responseFormat
 	delete(reqMap, "response_format")
+	meta.Set("audio_format", responseFormat)
 
 	sampleRate, ok := reqMap["sample_rate"].(float64)
 	if ok {
@@ -71,7 +79,14 @@ func ConvertTTSRequest(meta *meta.Meta, req *http.Request) (adaptor.ConvertResul
 
 	if responseFormat == "wav" {
 		reqMap["stream"] = false
+	} else {
+		reqMap["stream"] = true
+		reqMap["stream_options"] = map[string]any{
+			"exclude_aggregated_audio": true,
+		}
 	}
+
+	reqMap["language_boost"] = "auto"
 
 	body, err := sonic.Marshal(reqMap)
 	if err != nil {
@@ -117,19 +132,12 @@ func TTSHandler(
 
 	defer resp.Body.Close()
 
+	audioFormat := meta.GetString("audio_format")
+
 	log := common.GetLogger(c)
 
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return model.Usage{}, relaymodel.WrapperOpenAIError(
-			err,
-			"TTS_ERROR",
-			http.StatusInternalServerError,
-		)
-	}
-
 	var result TTSResponse
-	if err := sonic.Unmarshal(body, &result); err != nil {
+	if err := common.UnmarshalResponse(resp, &result); err != nil {
 		return model.Usage{}, relaymodel.WrapperOpenAIError(
 			err,
 			"TTS_ERROR",
@@ -156,7 +164,15 @@ func TTSHandler(
 		)
 	}
 
-	c.Writer.Header().Set("Content-Type", "audio/"+result.ExtraInfo.AudioFormat)
+	if result.ExtraInfo.AudioFormat != "" {
+		audioFormat = result.ExtraInfo.AudioFormat
+	}
+	if audioFormat == "" {
+		c.Writer.Header().Set("Content-Type", http.DetectContentType(audioBytes))
+	} else {
+		c.Writer.Header().Set("Content-Type", "audio/"+audioFormat)
+	}
+
 	c.Writer.Header().Set("Content-Length", strconv.Itoa(len(audioBytes)))
 	_, err = c.Writer.Write(audioBytes)
 	if err != nil {
@@ -171,9 +187,17 @@ func ttsStreamHandler(
 	c *gin.Context,
 	resp *http.Response,
 ) (model.Usage, adaptor.Error) {
+	sseFormat := meta.GetString("stream_format") == "sse"
+	audioFormat := meta.GetString("audio_format")
+
 	defer resp.Body.Close()
 
-	c.Writer.Header().Set("Content-Type", "application/octet-stream")
+	contextTypeWritten := false
+
+	if !sseFormat && audioFormat != "" {
+		c.Writer.Header().Set("Content-Type", "audio/"+audioFormat)
+		contextTypeWritten = true
+	}
 
 	log := common.GetLogger(c)
 
@@ -185,22 +209,30 @@ func ttsStreamHandler(
 	usageCharacters := meta.RequestUsage.InputTokens
 
 	for scanner.Scan() {
-		data := scanner.Text()
-		if len(data) < openai.DataPrefixLength { // ignore blank line or wrong format
+		data := scanner.Bytes()
+		if len(data) < openai.DataPrefixLength {
 			continue
 		}
-		if data[:openai.DataPrefixLength] != openai.DataPrefix {
+		if !slices.Equal(data[:openai.DataPrefixLength], openai.DataPrefixBytes) {
 			continue
 		}
-		data = data[openai.DataPrefixLength:]
+		data = bytes.TrimSpace(data[openai.DataPrefixLength:])
+		if slices.Equal(data, openai.DoneBytes) {
+			break
+		}
 
 		var result TTSResponse
-		if err := sonic.UnmarshalString(data, &result); err != nil {
+		if err := sonic.Unmarshal(data, &result); err != nil {
 			log.Error("unmarshal tts response failed: " + err.Error())
 			continue
 		}
+
 		if result.ExtraInfo.UsageCharacters > 0 {
 			usageCharacters = model.ZeroNullInt64(result.ExtraInfo.UsageCharacters)
+		}
+
+		if result.Data.Audio == "" {
+			continue
 		}
 
 		audioBytes, err := hex.DecodeString(result.Data.Audio)
@@ -209,14 +241,32 @@ func ttsStreamHandler(
 			continue
 		}
 
+		if sseFormat {
+			openai.AudioData(c, base64.StdEncoding.EncodeToString(audioBytes))
+			continue
+		}
+
+		// do not write content type for sse format
+		if !contextTypeWritten {
+			c.Writer.Header().Set("Content-Type", http.DetectContentType(audioBytes))
+			contextTypeWritten = true
+		}
+
 		_, err = c.Writer.Write(audioBytes)
 		if err != nil {
 			log.Warnf("write response body failed: %v", err)
 		}
+		c.Writer.Flush()
 	}
 
-	return model.Usage{
-		InputTokens: usageCharacters,
-		TotalTokens: usageCharacters,
-	}, nil
+	usage := relaymodel.TextToSpeechUsage{
+		InputTokens: int64(usageCharacters),
+		TotalTokens: int64(usageCharacters),
+	}
+
+	if sseFormat {
+		openai.AudioDone(c, usage)
+	}
+
+	return usage.ToModelUsage(), nil
 }

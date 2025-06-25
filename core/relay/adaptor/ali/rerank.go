@@ -2,7 +2,6 @@ package ali
 
 import (
 	"bytes"
-	"io"
 	"net/http"
 	"strconv"
 
@@ -11,7 +10,6 @@ import (
 	"github.com/labring/aiproxy/core/common"
 	"github.com/labring/aiproxy/core/model"
 	"github.com/labring/aiproxy/core/relay/adaptor"
-	"github.com/labring/aiproxy/core/relay/adaptor/openai"
 	"github.com/labring/aiproxy/core/relay/meta"
 	relaymodel "github.com/labring/aiproxy/core/relay/model"
 )
@@ -33,7 +31,7 @@ func ConvertRerankRequest(
 	req *http.Request,
 ) (adaptor.ConvertResult, error) {
 	reqMap := make(map[string]any)
-	err := common.UnmarshalBodyReusable(req, &reqMap)
+	err := common.UnmarshalRequestReusable(req, &reqMap)
 	if err != nil {
 		return adaptor.ConvertResult{}, err
 	}
@@ -72,23 +70,15 @@ func RerankHandler(
 	resp *http.Response,
 ) (model.Usage, adaptor.Error) {
 	if resp.StatusCode != http.StatusOK {
-		return model.Usage{}, openai.ErrorHanlder(resp)
+		return model.Usage{}, ErrorHanlder(resp)
 	}
 
 	defer resp.Body.Close()
 
 	log := common.GetLogger(c)
 
-	responseBody, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return model.Usage{}, relaymodel.WrapperOpenAIError(
-			err,
-			"read_response_body_failed",
-			http.StatusInternalServerError,
-		)
-	}
 	var rerankResponse RerankResponse
-	err = sonic.Unmarshal(responseBody, &rerankResponse)
+	err := common.UnmarshalResponse(resp, &rerankResponse)
 	if err != nil {
 		return model.Usage{}, relaymodel.WrapperOpenAIError(
 			err,

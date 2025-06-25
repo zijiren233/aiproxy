@@ -2,10 +2,11 @@ package anthropic
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"errors"
-	"io"
 	"net/http"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -14,9 +15,7 @@ import (
 	"github.com/bytedance/sonic"
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/core/common"
-	"github.com/labring/aiproxy/core/common/conv"
 	"github.com/labring/aiproxy/core/common/image"
-	"github.com/labring/aiproxy/core/common/render"
 	"github.com/labring/aiproxy/core/model"
 	"github.com/labring/aiproxy/core/relay/adaptor"
 	"github.com/labring/aiproxy/core/relay/adaptor/openai"
@@ -56,13 +55,13 @@ type onlyThinkingRequest struct {
 
 func OpenAIConvertRequest(meta *meta.Meta, req *http.Request) (*Request, error) {
 	var textRequest OpenAIRequest
-	err := common.UnmarshalBodyReusable(req, &textRequest)
+	err := common.UnmarshalRequestReusable(req, &textRequest)
 	if err != nil {
 		return nil, err
 	}
 
 	var onlyThinking onlyThinkingRequest
-	err = common.UnmarshalBodyReusable(req, &onlyThinking)
+	err = common.UnmarshalRequestReusable(req, &onlyThinking)
 	if err != nil {
 		return nil, err
 	}
@@ -472,12 +471,14 @@ func OpenAIStreamHandler(
 
 	for scanner.Scan() {
 		data := scanner.Bytes()
-		if len(data) < 6 || conv.BytesToString(data[:6]) != "data: " {
+		if len(data) < openai.DataPrefixLength {
 			continue
 		}
-		data = data[6:]
-
-		if conv.BytesToString(data) == "[DONE]" {
+		if !slices.Equal(data[:openai.DataPrefixLength], openai.DataPrefixBytes) {
+			continue
+		}
+		data = bytes.TrimSpace(data[openai.DataPrefixLength:])
+		if slices.Equal(data, openai.DoneBytes) {
 			break
 		}
 
@@ -519,7 +520,7 @@ func OpenAIStreamHandler(
 			response.Usage = usage
 		}
 
-		_ = render.ObjectData(c, response)
+		_ = openai.ObjectData(c, response)
 		writed = true
 	}
 
@@ -538,7 +539,7 @@ func OpenAIStreamHandler(
 				m.OriginModel,
 			),
 		}
-		_ = render.ObjectData(c, &relaymodel.ChatCompletionsStreamResponse{
+		_ = openai.ObjectData(c, &relaymodel.ChatCompletionsStreamResponse{
 			ID:      openai.ChatCompletionID(),
 			Model:   m.OriginModel,
 			Object:  relaymodel.ChatCompletionChunkObject,
@@ -548,7 +549,7 @@ func OpenAIStreamHandler(
 		})
 	}
 
-	render.Done(c)
+	openai.Done(c)
 
 	return usage.ToModelUsage(), nil
 }
@@ -564,7 +565,7 @@ func OpenAIHandler(
 
 	defer resp.Body.Close()
 
-	body, err := io.ReadAll(resp.Body)
+	body, err := common.GetResponseBody(resp)
 	if err != nil {
 		return model.Usage{}, relaymodel.WrapperOpenAIError(
 			err,

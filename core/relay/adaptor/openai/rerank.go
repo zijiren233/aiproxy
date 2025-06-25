@@ -2,7 +2,6 @@ package openai
 
 import (
 	"bytes"
-	"io"
 	"net/http"
 	"strconv"
 
@@ -20,7 +19,7 @@ func ConvertRerankRequest(
 	meta *meta.Meta,
 	req *http.Request,
 ) (adaptor.ConvertResult, error) {
-	node, err := common.UnmarshalBody2Node(req)
+	node, err := common.UnmarshalRequest2NodeReusable(req)
 	if err != nil {
 		return adaptor.ConvertResult{}, err
 	}
@@ -56,7 +55,7 @@ func RerankHandler(
 
 	log := common.GetLogger(c)
 
-	responseBody, err := io.ReadAll(resp.Body)
+	responseBody, err := common.GetResponseBody(resp)
 	if err != nil {
 		return model.Usage{}, relaymodel.WrapperOpenAIError(
 			err,

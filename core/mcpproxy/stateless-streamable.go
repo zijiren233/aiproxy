@@ -2,11 +2,11 @@ package mcpproxy
 
 import (
 	"fmt"
-	"io"
 	"net/http"
 	"strconv"
 
 	"github.com/bytedance/sonic"
+	"github.com/labring/aiproxy/core/common"
 	mcpservers "github.com/labring/aiproxy/mcp-servers"
 	"github.com/mark3labs/mcp-go/mcp"
 )
@@ -57,7 +57,7 @@ func (s *StreamableHTTPServer) handlePost(w http.ResponseWriter, r *http.Request
 	}
 
 	// Check the request body is valid json, meanwhile, get the request Method
-	rawData, err := io.ReadAll(r.Body)
+	rawData, err := common.GetRequestBody(r)
 	if err != nil {
 		s.writeJSONRPCError(
 			w,

@@ -2,6 +2,7 @@ package ali
 
 import (
 	"bytes"
+	"encoding/base64"
 	"fmt"
 	"io"
 	"net/http"
@@ -14,6 +15,7 @@ import (
 	"github.com/labring/aiproxy/core/common"
 	"github.com/labring/aiproxy/core/model"
 	"github.com/labring/aiproxy/core/relay/adaptor"
+	"github.com/labring/aiproxy/core/relay/adaptor/openai"
 	"github.com/labring/aiproxy/core/relay/meta"
 	relaymodel "github.com/labring/aiproxy/core/relay/model"
 	"github.com/labring/aiproxy/core/relay/utils"
@@ -109,6 +111,8 @@ func ConvertTTSRequest(meta *meta.Meta, req *http.Request) (adaptor.ConvertResul
 		sampleRate = int(sampleRateI)
 	}
 	request.Model = meta.ActualModel
+
+	meta.Set("stream_format", request.StreamFormat)
 
 	if strings.HasPrefix(request.Model, "sambert-v") {
 		voice := request.Voice
@@ -211,6 +215,8 @@ func TTSDoResponse(
 	}
 	defer conn.Close()
 
+	sseFormat := meta.GetString("stream_format") == "sse"
+
 	usage = model.Usage{}
 
 	for {
@@ -244,6 +250,14 @@ func TTSDoResponse(
 				usage.TotalTokens = model.ZeroNullInt64(msg.Payload.Usage.Characters)
 				return usage, nil
 			case "task-failed":
+				if sseFormat {
+					openai.AudioDone(c, relaymodel.TextToSpeechUsage{
+						InputTokens:  int64(usage.InputTokens),
+						OutputTokens: int64(usage.OutputTokens),
+						TotalTokens:  int64(usage.TotalTokens),
+					})
+					return usage, nil
+				}
 				return usage, relaymodel.WrapperOpenAIErrorWithMessage(
 					msg.Header.ErrorMessage,
 					msg.Header.ErrorCode,
@@ -251,6 +265,10 @@ func TTSDoResponse(
 				)
 			}
 		case websocket.BinaryMessage:
+			if sseFormat {
+				openai.AudioData(c, base64.StdEncoding.EncodeToString(data))
+				continue
+			}
 			_, writeErr := c.Writer.Write(data)
 			if writeErr != nil {
 				log.Error("write tts response chunk failed: " + writeErr.Error())

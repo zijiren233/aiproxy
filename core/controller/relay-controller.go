@@ -475,7 +475,7 @@ func retryLoop(c *gin.Context, mode mode.Mode, state *retryState, relayControlle
 }
 
 func prepareRetry(c *gin.Context) error {
-	requestBody, err := common.GetRequestBody(c.Request)
+	requestBody, err := common.GetRequestBodyReusable(c.Request)
 	if err != nil {
 		return fmt.Errorf("get request body failed in prepare retry: %w", err)
 	}

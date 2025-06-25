@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"io"
 	"net/http"
 	"strconv"
 	"strings"
@@ -16,7 +15,6 @@ import (
 	"github.com/labring/aiproxy/core/common/image"
 	"github.com/labring/aiproxy/core/model"
 	"github.com/labring/aiproxy/core/relay/adaptor"
-	"github.com/labring/aiproxy/core/relay/adaptor/openai"
 	"github.com/labring/aiproxy/core/relay/meta"
 	relaymodel "github.com/labring/aiproxy/core/relay/model"
 	"github.com/labring/aiproxy/core/relay/utils"
@@ -64,7 +62,7 @@ func ImageHandler(
 	resp *http.Response,
 ) (model.Usage, adaptor.Error) {
 	if resp.StatusCode != http.StatusOK {
-		return model.Usage{}, openai.ErrorHanlder(resp)
+		return model.Usage{}, ErrorHanlder(resp)
 	}
 
 	defer resp.Body.Close()
@@ -74,15 +72,7 @@ func ImageHandler(
 	responseFormat, _ := meta.MustGet(MetaResponseFormat).(string)
 
 	var aliTaskResponse TaskResponse
-	responseBody, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return model.Usage{}, relaymodel.WrapperOpenAIError(
-			err,
-			"read_response_body_failed",
-			http.StatusInternalServerError,
-		)
-	}
-	err = sonic.Unmarshal(responseBody, &aliTaskResponse)
+	err := common.UnmarshalResponse(resp, &aliTaskResponse)
 	if err != nil {
 		return model.Usage{}, relaymodel.WrapperOpenAIError(
 			err,

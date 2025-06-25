@@ -159,30 +159,26 @@ func validateDays(days string) error {
 }
 
 // makeHeFengRequest makes a request to the HeFeng API
-func (s *WeatherServer) makeHeFengRequest(ctx context.Context, endpoint string) ([]byte, error) {
+func (s *WeatherServer) makeHeFengRequest(ctx context.Context, endpoint string, v any) error {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
 	if err != nil {
-		return nil, fmt.Errorf("创建请求失败: %w", err)
+		return fmt.Errorf("创建请求失败: %w", err)
 	}
 
 	req.Header.Set("Accept", "application/json")
 
 	resp, err := s.httpClient.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("请求失败: %w", err)
+		return fmt.Errorf("请求失败: %w", err)
 	}
 	defer resp.Body.Close()
 
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("读取响应失败: %w", err)
-	}
-
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("HTTP错误: %d, %s", resp.StatusCode, body)
+		body, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("HTTP错误: %d, %s", resp.StatusCode, string(body))
 	}
 
-	return body, nil
+	return sonic.ConfigDefault.NewDecoder(resp.Body).Decode(v)
 }
 
 // addWeatherTool adds the weather tool to the server
@@ -260,14 +256,10 @@ func (s *WeatherServer) handleCurrentWeather(
 		s.apiKey,
 	)
 
-	body, err := s.makeHeFengRequest(ctx, weatherURL)
+	var weatherData NowResponse
+	err := s.makeHeFengRequest(ctx, weatherURL, &weatherData)
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("获取天气数据失败: %v", err)), nil
-	}
-
-	var weatherData NowResponse
-	if err := sonic.Unmarshal(body, &weatherData); err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("解析天气数据失败: %v", err)), nil
 	}
 
 	// Check API response code
@@ -307,14 +299,10 @@ func (s *WeatherServer) handleHourlyWeather(
 		s.apiKey,
 	)
 
-	body, err := s.makeHeFengRequest(ctx, weatherURL)
+	var weatherData HourlyResponse
+	err := s.makeHeFengRequest(ctx, weatherURL, &weatherData)
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("获取逐小时天气预报数据失败: %v", err)), nil
-	}
-
-	var weatherData HourlyResponse
-	if err := sonic.Unmarshal(body, &weatherData); err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("解析逐小时天气预报数据失败: %v", err)), nil
 	}
 
 	// Check API response code
@@ -360,14 +348,10 @@ func (s *WeatherServer) handleDailyWeather(
 		s.apiKey,
 	)
 
-	body, err := s.makeHeFengRequest(ctx, weatherURL)
+	var weatherData DailyResponse
+	err := s.makeHeFengRequest(ctx, weatherURL, &weatherData)
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("获取天气预报数据失败: %v", err)), nil
-	}
-
-	var weatherData DailyResponse
-	if err := sonic.Unmarshal(body, &weatherData); err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("解析天气预报数据失败: %v", err)), nil
 	}
 
 	// Check API response code

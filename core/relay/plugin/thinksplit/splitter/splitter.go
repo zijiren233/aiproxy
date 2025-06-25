@@ -1,8 +1,6 @@
 package splitter
 
-import (
-	"bytes"
-)
+import "slices"
 
 type Splitter struct {
 	heads           [][]byte
@@ -87,7 +85,7 @@ func (s *Splitter) Process(data []byte) ([]byte, []byte) {
 
 			// Check for complete match
 			if bufLen >= headLen {
-				if bytes.Equal(s.buffer[:headLen], head) {
+				if slices.Equal(s.buffer[:headLen], head) {
 					headMatched = true
 					headMatchLen = headLen
 					break
@@ -97,7 +95,7 @@ func (s *Splitter) Process(data []byte) ([]byte, []byte) {
 			} else {
 				// Check for partial match (potential match)
 				matchLen := bufLen
-				if bytes.Equal(s.buffer[:matchLen], head[:matchLen]) {
+				if slices.Equal(s.buffer[:matchLen], head[:matchLen]) {
 					anyPossibleHead = true
 				} else {
 					// Mark this head as impossible to match

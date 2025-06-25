@@ -1,7 +1,6 @@
 package baidu
 
 import (
-	"io"
 	"net/http"
 	"strconv"
 
@@ -28,7 +27,7 @@ func EmbeddingsHandler(
 
 	log := common.GetLogger(c)
 
-	body, err := io.ReadAll(resp.Body)
+	body, err := common.GetResponseBody(resp)
 	if err != nil {
 		return model.Usage{}, relaymodel.WrapperOpenAIErrorWithMessage(
 			err.Error(),

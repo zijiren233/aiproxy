@@ -11,7 +11,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/core/common"
 	"github.com/labring/aiproxy/core/common/image"
-	"github.com/labring/aiproxy/core/common/render"
 	"github.com/labring/aiproxy/core/model"
 	"github.com/labring/aiproxy/core/relay/adaptor"
 	"github.com/labring/aiproxy/core/relay/adaptor/openai"
@@ -22,7 +21,7 @@ import (
 
 func ConvertRequest(meta *meta.Meta, req *http.Request) (adaptor.ConvertResult, error) {
 	var request relaymodel.GeneralOpenAIRequest
-	err := common.UnmarshalBodyReusable(req, &request)
+	err := common.UnmarshalRequestReusable(req, &request)
 	if err != nil {
 		return adaptor.ConvertResult{}, err
 	}
@@ -238,14 +237,14 @@ func StreamHandler(
 			usage = response.Usage
 		}
 
-		_ = render.ObjectData(c, response)
+		_ = openai.ObjectData(c, response)
 	}
 
 	if err := scanner.Err(); err != nil {
 		log.Error("error reading stream: " + err.Error())
 	}
 
-	render.Done(c)
+	openai.Done(c)
 
 	if usage == nil {
 		return meta.RequestUsage, nil

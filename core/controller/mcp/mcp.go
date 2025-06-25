@@ -3,11 +3,11 @@ package controller
 import (
 	"context"
 	"errors"
-	"io"
 	"net/http"
 	"net/url"
 
 	"github.com/gin-gonic/gin"
+	"github.com/labring/aiproxy/core/common"
 	"github.com/labring/aiproxy/core/mcpproxy"
 	"github.com/labring/aiproxy/core/model"
 	mcpservers "github.com/labring/aiproxy/mcp-servers"
@@ -118,7 +118,7 @@ func sendMCPSSEMessage(c *gin.Context, sessionID string) {
 		return
 	}
 	mpscInstance := getMCPMpsc()
-	body, err := io.ReadAll(c.Request.Body)
+	body, err := common.GetRequestBody(c.Request)
 	if err != nil {
 		http.Error(c.Writer, err.Error(), http.StatusInternalServerError)
 		return
@@ -141,7 +141,7 @@ func handleStreamableMCPServer(c *gin.Context, s mcpservers.Server) {
 		))
 		return
 	}
-	reqBody, err := io.ReadAll(c.Request.Body)
+	reqBody, err := common.GetRequestBody(c.Request)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, mcpservers.CreateMCPErrorResponse(
 			mcp.NewRequestId(nil),

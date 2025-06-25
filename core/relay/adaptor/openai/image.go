@@ -23,7 +23,7 @@ func ConvertImagesRequest(
 	meta *meta.Meta,
 	req *http.Request,
 ) (adaptor.ConvertResult, error) {
-	node, err := common.UnmarshalBody2Node(req)
+	node, err := common.UnmarshalRequest2NodeReusable(req)
 	if err != nil {
 		return adaptor.ConvertResult{}, err
 	}
@@ -130,16 +130,8 @@ func ImagesHandler(
 
 	log := common.GetLogger(c)
 
-	responseBody, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return model.Usage{}, relaymodel.WrapperOpenAIError(
-			err,
-			"read_response_body_failed",
-			http.StatusInternalServerError,
-		)
-	}
 	var imageResponse relaymodel.ImageResponse
-	err = sonic.Unmarshal(responseBody, &imageResponse)
+	err := common.UnmarshalResponse(resp, &imageResponse)
 	if err != nil {
 		return model.Usage{}, relaymodel.WrapperOpenAIError(
 			err,

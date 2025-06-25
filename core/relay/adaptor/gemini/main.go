@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -17,7 +18,6 @@ import (
 	"github.com/labring/aiproxy/core/common"
 	"github.com/labring/aiproxy/core/common/conv"
 	"github.com/labring/aiproxy/core/common/image"
-	"github.com/labring/aiproxy/core/common/render"
 	"github.com/labring/aiproxy/core/model"
 	"github.com/labring/aiproxy/core/relay/adaptor"
 	"github.com/labring/aiproxy/core/relay/adaptor/openai"
@@ -92,7 +92,7 @@ func buildGenerationConfig(
 	}
 
 	var thinkingConfigOnly thinkingConfigOnly
-	err := common.UnmarshalBodyReusable(req, &thinkingConfigOnly)
+	err := common.UnmarshalRequestReusable(req, &thinkingConfigOnly)
 	if err != nil {
 		return nil, err
 	}
@@ -670,10 +670,16 @@ func StreamHandler(
 
 	for scanner.Scan() {
 		data := scanner.Bytes()
-		if len(data) < 6 || conv.BytesToString(data[:6]) != "data: " {
+		if len(data) < openai.DataPrefixLength {
 			continue
 		}
-		data = data[6:]
+		if !slices.Equal(data[:openai.DataPrefixLength], openai.DataPrefixBytes) {
+			continue
+		}
+		data = bytes.TrimSpace(data[openai.DataPrefixLength:])
+		if slices.Equal(data, openai.DoneBytes) {
+			break
+		}
 
 		var geminiResponse ChatResponse
 		err := sonic.Unmarshal(data, &geminiResponse)
@@ -688,14 +694,14 @@ func StreamHandler(
 
 		responseText.WriteString(response.Choices[0].Delta.StringContent())
 
-		_ = render.ObjectData(c, response)
+		_ = openai.ObjectData(c, response)
 	}
 
 	if err := scanner.Err(); err != nil {
 		log.Error("error reading stream: " + err.Error())
 	}
 
-	render.Done(c)
+	openai.Done(c)
 
 	return usage.ToModelUsage(), nil
 }

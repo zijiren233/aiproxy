@@ -5,8 +5,8 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"io"
 	"net/http"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -14,7 +14,6 @@ import (
 	"github.com/bytedance/sonic/ast"
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/core/common"
-	"github.com/labring/aiproxy/core/common/conv"
 	"github.com/labring/aiproxy/core/common/image"
 	"github.com/labring/aiproxy/core/model"
 	"github.com/labring/aiproxy/core/relay/adaptor"
@@ -26,7 +25,7 @@ import (
 
 func ConvertRequest(meta *meta.Meta, req *http.Request) (adaptor.ConvertResult, error) {
 	// Parse request body into AST node
-	node, err := common.UnmarshalBody2Node(req)
+	node, err := common.UnmarshalRequest2NodeReusable(req)
 	if err != nil {
 		return adaptor.ConvertResult{}, err
 	}
@@ -182,10 +181,16 @@ func StreamHandler(
 
 	for scanner.Scan() {
 		data := scanner.Bytes()
-		if len(data) < 6 || conv.BytesToString(data[:6]) != "data: " {
+		if len(data) < openai.DataPrefixLength {
 			continue
 		}
-		data = data[6:]
+		if !slices.Equal(data[:openai.DataPrefixLength], openai.DataPrefixBytes) {
+			continue
+		}
+		data = bytes.TrimSpace(data[openai.DataPrefixLength:])
+		if slices.Equal(data, openai.DoneBytes) {
+			break
+		}
 
 		response, err := StreamResponse2OpenAI(m, data)
 		if err != nil {
@@ -254,7 +259,7 @@ func Handler(meta *meta.Meta, c *gin.Context, resp *http.Response) (model.Usage,
 
 	defer resp.Body.Close()
 
-	respBody, err := io.ReadAll(resp.Body)
+	respBody, err := common.GetResponseBody(resp)
 	if err != nil {
 		return model.Usage{}, relaymodel.WrapperAnthropicError(
 			err,

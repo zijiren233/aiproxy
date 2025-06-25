@@ -1,8 +1,8 @@
-package xai
+package siliconflow
 
 import (
 	"net/http"
-	"strings"
+	"strconv"
 
 	"github.com/labring/aiproxy/core/common"
 	"github.com/labring/aiproxy/core/relay/adaptor"
@@ -10,8 +10,8 @@ import (
 )
 
 type errorResponse struct {
-	Error string `json:"error"`
-	Code  string `json:"code"`
+	Message string `json:"message"`
+	Code    int    `json:"code"`
 }
 
 func ErrorHandler(resp *http.Response) adaptor.Error {
@@ -29,9 +29,10 @@ func ErrorHandler(resp *http.Response) adaptor.Error {
 
 	statusCode := resp.StatusCode
 
-	if strings.Contains(er.Error, "Incorrect API key provided") {
-		statusCode = http.StatusUnauthorized
-	}
-
-	return relaymodel.WrapperOpenAIErrorWithMessage(er.Error, er.Code, statusCode)
+	return relaymodel.WrapperOpenAIErrorWithMessage(
+		er.Message,
+		strconv.Itoa(er.Code),
+		statusCode,
+		relaymodel.ErrorTypeUpstream,
+	)
 }

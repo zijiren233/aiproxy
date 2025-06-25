@@ -227,7 +227,7 @@ func (c *Cache) ConvertRequest(
 		return do.ConvertRequest(meta, store, req)
 	}
 
-	body, err := common.GetRequestBody(req)
+	body, err := common.GetRequestBodyReusable(req)
 	if err != nil {
 		return adaptor.ConvertResult{}, err
 	}

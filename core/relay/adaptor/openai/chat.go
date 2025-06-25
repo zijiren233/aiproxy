@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"slices"
 	"strconv"
@@ -17,23 +16,10 @@ import (
 	"github.com/bytedance/sonic/ast"
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/core/common"
-	"github.com/labring/aiproxy/core/common/conv"
-	"github.com/labring/aiproxy/core/common/render"
 	"github.com/labring/aiproxy/core/model"
 	"github.com/labring/aiproxy/core/relay/adaptor"
 	"github.com/labring/aiproxy/core/relay/meta"
 	relaymodel "github.com/labring/aiproxy/core/relay/model"
-)
-
-const (
-	DataPrefix       = "data:"
-	Done             = "[DONE]"
-	DataPrefixLength = len(DataPrefix)
-)
-
-var (
-	DataPrefixBytes = conv.StringToBytes(DataPrefix)
-	DoneBytes       = conv.StringToBytes(Done)
 )
 
 const scannerBufferSize = 256 * 1024
@@ -66,7 +52,7 @@ func ConvertCompletionsRequest(
 	req *http.Request,
 	callback func(node *ast.Node) error,
 ) (adaptor.ConvertResult, error) {
-	node, err := common.UnmarshalBody2Node(req)
+	node, err := common.UnmarshalRequest2NodeReusable(req)
 	if err != nil {
 		return adaptor.ConvertResult{}, err
 	}
@@ -101,7 +87,7 @@ func ConvertChatCompletionsRequest(
 	callback func(node *ast.Node) error,
 	doNotPatchStreamOptionsIncludeUsage bool,
 ) (adaptor.ConvertResult, error) {
-	node, err := common.UnmarshalBody2Node(req)
+	node, err := common.UnmarshalRequest2NodeReusable(req)
 	if err != nil {
 		return adaptor.ConvertResult{}, err
 	}
@@ -271,7 +257,7 @@ func StreamHandler(
 			log.Error("error set model: " + err.Error())
 		}
 
-		_ = render.ObjectData(c, &node)
+		_ = ObjectData(c, &node)
 	}
 
 	if err := scanner.Err(); err != nil {
@@ -284,7 +270,7 @@ func StreamHandler(
 			meta.ActualModel,
 			int64(meta.RequestUsage.InputTokens),
 		)
-		_ = render.ObjectData(c, &relaymodel.ChatCompletionsStreamResponse{
+		_ = ObjectData(c, &relaymodel.ChatCompletionsStreamResponse{
 			ID:      ChatCompletionID(),
 			Model:   meta.OriginModel,
 			Object:  relaymodel.ChatCompletionChunkObject,
@@ -297,7 +283,7 @@ func StreamHandler(
 		usage.CompletionTokens = usage.TotalTokens - int64(meta.RequestUsage.InputTokens)
 	}
 
-	render.Done(c)
+	Done(c)
 
 	return usage.ToModelUsage(), nil
 }
@@ -348,16 +334,7 @@ func Handler(
 
 	log := common.GetLogger(c)
 
-	responseBody, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return model.Usage{}, relaymodel.WrapperOpenAIError(
-			err,
-			"read_response_body_failed",
-			http.StatusInternalServerError,
-		)
-	}
-
-	node, err := sonic.Get(responseBody)
+	node, err := common.UnmarshalResponse2Node(resp)
 	if err != nil {
 		return model.Usage{}, relaymodel.WrapperOpenAIError(
 			err,

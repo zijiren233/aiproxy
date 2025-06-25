@@ -5,7 +5,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"strconv"
 	"strings"
@@ -484,14 +483,10 @@ func (s *Server) handleSearch(
 		params["exclude_domains"] = domains
 	}
 
-	response, err := s.makeRequest(ctx, "search", params)
-	if err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("Tavily search failed: %v", err)), nil
-	}
-
 	var searchResponse Response
-	if err := sonic.Unmarshal(response, &searchResponse); err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("Failed to parse response: %v", err)), nil
+	err := s.makeRequest(ctx, "search", params, &searchResponse)
+	if err != nil {
+		return nil, fmt.Errorf("tavily search failed: %w", err)
 	}
 
 	return mcp.NewToolResultText(s.formatSearchResults(searchResponse)), nil
@@ -537,14 +532,10 @@ func (s *Server) handleExtract(
 		params["format"] = format
 	}
 
-	response, err := s.makeRequest(ctx, "extract", params)
-	if err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("Tavily extract failed: %v", err)), nil
-	}
-
 	var extractResponse Response
-	if err := sonic.Unmarshal(response, &extractResponse); err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("Failed to parse response: %v", err)), nil
+	err := s.makeRequest(ctx, "extract", params, &extractResponse)
+	if err != nil {
+		return nil, fmt.Errorf("tavily extract failed: %w", err)
 	}
 
 	return mcp.NewToolResultText(s.formatSearchResults(extractResponse)), nil
@@ -618,14 +609,10 @@ func (s *Server) handleCrawl(
 		params["format"] = format
 	}
 
-	response, err := s.makeRequest(ctx, "crawl", params)
-	if err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("Tavily crawl failed: %v", err)), nil
-	}
-
 	var crawlResponse CrawlResponse
-	if err := sonic.Unmarshal(response, &crawlResponse); err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("Failed to parse response: %v", err)), nil
+	err := s.makeRequest(ctx, "crawl", params, &crawlResponse)
+	if err != nil {
+		return nil, fmt.Errorf("tavily crawl failed: %w", err)
 	}
 
 	return mcp.NewToolResultText(s.formatCrawlResults(crawlResponse)), nil
@@ -693,14 +680,10 @@ func (s *Server) handleMap(
 		params["categories"] = cats
 	}
 
-	response, err := s.makeRequest(ctx, "map", params)
-	if err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("Tavily map failed: %v", err)), nil
-	}
-
 	var mapResponse MapResponse
-	if err := sonic.Unmarshal(response, &mapResponse); err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("Failed to parse response: %v", err)), nil
+	err := s.makeRequest(ctx, "map", params, &mapResponse)
+	if err != nil {
+		return nil, fmt.Errorf("tavily map failed: %w", err)
 	}
 
 	return mcp.NewToolResultText(s.formatMapResults(mapResponse)), nil
@@ -711,20 +694,21 @@ func (s *Server) makeRequest(
 	ctx context.Context,
 	endpoint string,
 	params map[string]any,
-) ([]byte, error) {
+	v any,
+) error {
 	url, exists := s.baseURLs[endpoint]
 	if !exists {
-		return nil, fmt.Errorf("unknown endpoint: %s", endpoint)
+		return fmt.Errorf("unknown endpoint: %s", endpoint)
 	}
 
 	jsonData, err := sonic.Marshal(params)
 	if err != nil {
-		return nil, fmt.Errorf("failed to marshal request: %w", err)
+		return fmt.Errorf("failed to marshal request: %w", err)
 	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewBuffer(jsonData))
 	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
+		return fmt.Errorf("failed to create request: %w", err)
 	}
 
 	req.Header.Set("Accept", "application/json")
@@ -733,25 +717,20 @@ func (s *Server) makeRequest(
 
 	resp, err := s.httpClient.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("request failed: %w", err)
+		return fmt.Errorf("request failed: %w", err)
 	}
 	defer resp.Body.Close()
 
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read response: %w", err)
-	}
-
 	switch {
 	case resp.StatusCode == http.StatusUnauthorized:
-		return nil, errors.New("invalid API key")
+		return errors.New("invalid API key")
 	case resp.StatusCode == http.StatusTooManyRequests:
-		return nil, errors.New("usage limit exceeded")
+		return errors.New("usage limit exceeded")
 	case resp.StatusCode != http.StatusOK:
-		return nil, fmt.Errorf("API error (%d): %s", resp.StatusCode, string(body))
+		return fmt.Errorf("API error (%d): %s", resp.StatusCode, resp.Status)
 	}
 
-	return body, nil
+	return sonic.ConfigDefault.NewDecoder(resp.Body).Decode(v)
 }
 
 // Formatting functions

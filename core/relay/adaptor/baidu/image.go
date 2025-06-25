@@ -1,7 +1,6 @@
 package baidu
 
 import (
-	"io"
 	"net/http"
 	"strconv"
 
@@ -30,16 +29,8 @@ func ImageHandler(_ *meta.Meta, c *gin.Context, resp *http.Response) (model.Usag
 
 	log := common.GetLogger(c)
 
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return model.Usage{}, relaymodel.WrapperOpenAIErrorWithMessage(
-			err.Error(),
-			nil,
-			http.StatusInternalServerError,
-		)
-	}
 	var imageResponse ImageResponse
-	err = sonic.Unmarshal(body, &imageResponse)
+	err := common.UnmarshalResponse(resp, &imageResponse)
 	if err != nil {
 		return model.Usage{}, relaymodel.WrapperOpenAIErrorWithMessage(
 			err.Error(),

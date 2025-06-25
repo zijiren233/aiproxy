@@ -5,7 +5,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"maps"
 	"net/http"
 	"time"
@@ -143,15 +142,9 @@ func (s *Server) generateChartURL(
 		return "", fmt.Errorf("HTTP error: %d", resp.StatusCode)
 	}
 
-	// Read response
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return "", fmt.Errorf("failed to read response: %w", err)
-	}
-
 	// Parse response
 	var chartResponse Response
-	if err := sonic.Unmarshal(body, &chartResponse); err != nil {
+	if err := sonic.ConfigDefault.NewDecoder(resp.Body).Decode(&chartResponse); err != nil {
 		return "", fmt.Errorf("failed to parse response: %w", err)
 	}
 

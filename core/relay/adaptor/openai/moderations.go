@@ -2,11 +2,9 @@ package openai
 
 import (
 	"bytes"
-	"io"
 	"net/http"
 	"strconv"
 
-	"github.com/bytedance/sonic"
 	"github.com/bytedance/sonic/ast"
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/core/common"
@@ -20,7 +18,7 @@ func ConvertModerationsRequest(
 	meta *meta.Meta,
 	req *http.Request,
 ) (adaptor.ConvertResult, error) {
-	node, err := common.UnmarshalBody2Node(req)
+	node, err := common.UnmarshalRequest2NodeReusable(req)
 	if err != nil {
 		return adaptor.ConvertResult{}, err
 	}
@@ -56,16 +54,7 @@ func ModerationsHandler(
 
 	log := common.GetLogger(c)
 
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return model.Usage{}, relaymodel.WrapperOpenAIError(
-			err,
-			"read_response_body_failed",
-			http.StatusInternalServerError,
-		)
-	}
-
-	node, err := sonic.Get(body)
+	node, err := common.UnmarshalResponse2Node(resp)
 	if err != nil {
 		return model.Usage{}, relaymodel.WrapperOpenAIError(
 			err,

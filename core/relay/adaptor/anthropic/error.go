@@ -1,18 +1,18 @@
 package anthropic
 
 import (
-	"io"
 	"net/http"
 	"strings"
 
 	"github.com/bytedance/sonic"
+	"github.com/labring/aiproxy/core/common"
 	"github.com/labring/aiproxy/core/relay/adaptor"
 	relaymodel "github.com/labring/aiproxy/core/relay/model"
 )
 
 func OpenAIErrorHandler(resp *http.Response) adaptor.Error {
 	defer resp.Body.Close()
-	respBody, err := io.ReadAll(resp.Body)
+	respBody, err := common.GetResponseBody(resp)
 	if err != nil {
 		return relaymodel.WrapperOpenAIError(
 			err,
@@ -37,7 +37,7 @@ func ErrorHandler(resp *http.Response) adaptor.Error {
 func GetError(resp *http.Response) (int, relaymodel.AnthropicError) {
 	defer resp.Body.Close()
 
-	respBody, err := io.ReadAll(resp.Body)
+	respBody, err := common.GetResponseBody(resp)
 	if err != nil {
 		return resp.StatusCode, relaymodel.AnthropicError{
 			Type:    "aiproxy_error",

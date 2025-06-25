@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -419,13 +418,8 @@ func (s *Server) handleGeocode(
 	}
 	defer resp.Body.Close()
 
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read response: %w", err)
-	}
-
 	var geocodeResp GeocodeResponse
-	if err := sonic.Unmarshal(body, &geocodeResp); err != nil {
+	if err := sonic.ConfigDefault.NewDecoder(resp.Body).Decode(&geocodeResp); err != nil {
 		return nil, fmt.Errorf("failed to parse response: %w", err)
 	}
 
@@ -485,13 +479,8 @@ func (s *Server) handleReverseGeocode(
 	}
 	defer resp.Body.Close()
 
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read response: %w", err)
-	}
-
 	var reverseResp ReverseGeocodeResponse
-	if err := sonic.Unmarshal(body, &reverseResp); err != nil {
+	if err := sonic.ConfigDefault.NewDecoder(resp.Body).Decode(&reverseResp); err != nil {
 		return nil, fmt.Errorf("failed to parse response: %w", err)
 	}
 
@@ -569,13 +558,8 @@ func (s *Server) handlePlaceSearch(
 	}
 	defer resp.Body.Close()
 
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read response: %w", err)
-	}
-
 	var searchResp PlacesSearchResponse
-	if err := sonic.Unmarshal(body, &searchResp); err != nil {
+	if err := sonic.ConfigDefault.NewDecoder(resp.Body).Decode(&searchResp); err != nil {
 		return nil, fmt.Errorf("failed to parse response: %w", err)
 	}
 
@@ -653,13 +637,8 @@ func (s *Server) handlePlaceDetails(
 	}
 	defer resp.Body.Close()
 
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read response: %w", err)
-	}
-
 	var detailResp PlaceDetailsResponse
-	if err := sonic.Unmarshal(body, &detailResp); err != nil {
+	if err := sonic.ConfigDefault.NewDecoder(resp.Body).Decode(&detailResp); err != nil {
 		return nil, fmt.Errorf("failed to parse response: %w", err)
 	}
 
@@ -745,13 +724,8 @@ func (s *Server) handleDistanceMatrix(
 	}
 	defer resp.Body.Close()
 
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read response: %w", err)
-	}
-
 	var matrixResp DistanceMatrixResponse
-	if err := sonic.Unmarshal(body, &matrixResp); err != nil {
+	if err := sonic.ConfigDefault.NewDecoder(resp.Body).Decode(&matrixResp); err != nil {
 		return nil, fmt.Errorf("failed to parse response: %w", err)
 	}
 
@@ -821,13 +795,8 @@ func (s *Server) handleDirections(
 	}
 	defer resp.Body.Close()
 
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read response: %w", err)
-	}
-
 	var directionsResp DirectionsResponse
-	if err := sonic.Unmarshal(body, &directionsResp); err != nil {
+	if err := sonic.ConfigDefault.NewDecoder(resp.Body).Decode(&directionsResp); err != nil {
 		return nil, fmt.Errorf("failed to parse response: %w", err)
 	}
 
@@ -895,13 +864,8 @@ func (s *Server) handleWeather(
 	}
 	defer resp.Body.Close()
 
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read response: %w", err)
-	}
-
 	var weatherResp WeatherResponse
-	if err := sonic.Unmarshal(body, &weatherResp); err != nil {
+	if err := sonic.ConfigDefault.NewDecoder(resp.Body).Decode(&weatherResp); err != nil {
 		return nil, fmt.Errorf("failed to parse response: %w", err)
 	}
 
@@ -956,13 +920,8 @@ func (s *Server) handleIPLocation(
 	}
 	defer resp.Body.Close()
 
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read response: %w", err)
-	}
-
 	var ipResp IPLocationResponse
-	if err := sonic.Unmarshal(body, &ipResp); err != nil {
+	if err := sonic.ConfigDefault.NewDecoder(resp.Body).Decode(&ipResp); err != nil {
 		return nil, fmt.Errorf("failed to parse response: %w", err)
 	}
 
@@ -1034,13 +993,8 @@ func (s *Server) handleRoadTraffic(
 	}
 	defer resp.Body.Close()
 
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read response: %w", err)
-	}
-
 	var trafficResp RoadTrafficResponse
-	if err := sonic.Unmarshal(body, &trafficResp); err != nil {
+	if err := sonic.ConfigDefault.NewDecoder(resp.Body).Decode(&trafficResp); err != nil {
 		return nil, fmt.Errorf("failed to parse response: %w", err)
 	}
 
@@ -1098,13 +1052,8 @@ func (s *Server) handlePOIExtract(
 	}
 	defer submitResp.Body.Close()
 
-	submitBody, err := io.ReadAll(submitResp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read submit response: %w", err)
-	}
-
 	var submitData MarkSubmitResponse
-	if err := sonic.Unmarshal(submitBody, &submitData); err != nil {
+	if err := sonic.ConfigDefault.NewDecoder(submitResp.Body).Decode(&submitData); err != nil {
 		return nil, fmt.Errorf("failed to parse submit response: %w", err)
 	}
 
@@ -1147,14 +1096,8 @@ func (s *Server) handlePOIExtract(
 		}
 		defer resultResp.Body.Close()
 
-		resultBody, err := io.ReadAll(resultResp.Body)
-		if err != nil {
-			time.Sleep(intervalTime)
-			continue
-		}
-
 		var resultData MarkResultResponse
-		if err := sonic.Unmarshal(resultBody, &resultData); err != nil {
+		if err := sonic.ConfigDefault.NewDecoder(resultResp.Body).Decode(&resultData); err != nil {
 			time.Sleep(intervalTime)
 			continue
 		}
