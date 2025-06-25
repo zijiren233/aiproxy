@@ -62,10 +62,14 @@ func SetStaticFileRouter(router *gin.Engine) {
 	}
 }
 
-func checkNoRouteNotFound(path string) bool {
-	if strings.HasPrefix(path, "/api") ||
-		strings.HasPrefix(path, "/mcp") ||
-		strings.HasPrefix(path, "/v1") {
+func checkNoRouteNotFound(req *http.Request) bool {
+	if req.Method != http.MethodGet &&
+		req.Method != http.MethodHead {
+		return true
+	}
+	if strings.HasPrefix(req.URL.Path, "/api") ||
+		strings.HasPrefix(req.URL.Path, "/mcp") ||
+		strings.HasPrefix(req.URL.Path, "/v1") {
 		return true
 	}
 	return false
@@ -73,7 +77,7 @@ func checkNoRouteNotFound(path string) bool {
 
 func newIndexNoRouteHandler(fs http.FileSystem) func(ctx *gin.Context) {
 	return func(ctx *gin.Context) {
-		if checkNoRouteNotFound(ctx.Request.URL.Path) {
+		if checkNoRouteNotFound(ctx.Request) {
 			http.NotFound(ctx.Writer, ctx.Request)
 			return
 		}
@@ -84,7 +88,7 @@ func newIndexNoRouteHandler(fs http.FileSystem) func(ctx *gin.Context) {
 func newDynamicNoRouteHandler(fs http.FileSystem) func(ctx *gin.Context) {
 	fileServer := http.StripPrefix("/", http.FileServer(fs))
 	return func(c *gin.Context) {
-		if checkNoRouteNotFound(c.Request.URL.Path) {
+		if checkNoRouteNotFound(c.Request) {
 			http.NotFound(c.Writer, c.Request)
 			return
 		}
