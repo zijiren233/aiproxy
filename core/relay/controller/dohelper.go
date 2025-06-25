@@ -281,7 +281,7 @@ func doRequest(
 		}
 		return nil, relaymodel.WrapperErrorWithMessage(
 			meta.Mode,
-			http.StatusBadRequest,
+			http.StatusInternalServerError,
 			"request error: "+err.Error(),
 		)
 	}

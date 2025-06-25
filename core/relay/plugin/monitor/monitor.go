@@ -12,7 +12,6 @@ import (
 	"github.com/labring/aiproxy/core/common/conv"
 	"github.com/labring/aiproxy/core/common/notify"
 	"github.com/labring/aiproxy/core/common/reqlimit"
-	"github.com/labring/aiproxy/core/common/trylock"
 	"github.com/labring/aiproxy/core/model"
 	"github.com/labring/aiproxy/core/monitor"
 	"github.com/labring/aiproxy/core/relay/adaptor"
@@ -68,7 +67,76 @@ func (m *ChannelMonitor) DoRequest(
 		meta.OriginModel,
 	)
 	updateChannelModelRequestRate(c, meta, count+overLimitCount, secondCount)
-	return do.DoRequest(meta, store, c, req)
+	resp, err := do.DoRequest(meta, store, c, req)
+	if err == nil {
+		return resp, nil
+	}
+
+	log := common.GetLogger(c)
+	beyondThreshold, banExecution, err := monitor.AddRequest(
+		context.Background(),
+		meta.OriginModel,
+		int64(meta.Channel.ID),
+		true,
+		false,
+		meta.ModelConfig.MaxErrorRate,
+	)
+	if err != nil {
+		log.Errorf("add request failed: %+v", err)
+	}
+	switch {
+	case banExecution:
+		notifyChannelRequestIssue(meta, "autoBanned", "Auto Banned", err)
+	case beyondThreshold:
+		notifyChannelRequestIssue(meta, "beyondThreshold", "Error Rate Beyond Threshold", err)
+	default:
+		notifyChannelRequestIssue(meta, "requestFailed", "Request Failed", err)
+	}
+
+	return resp, err
+}
+
+func notifyChannelRequestIssue(
+	meta *meta.Meta,
+	issueType, titleSuffix string,
+	err error,
+) {
+	var notifyFunc func(title, message string)
+
+	lockKey := fmt.Sprintf(
+		"%s:%d:%s:%s",
+		issueType,
+		meta.Channel.ID,
+		meta.OriginModel,
+		issueType,
+	)
+	switch issueType {
+	case "beyondThreshold":
+		notifyFunc = func(title, message string) {
+			notify.WarnThrottle(lockKey, time.Minute, title, message)
+		}
+	default:
+		notifyFunc = func(title, message string) {
+			notify.ErrorThrottle(lockKey, time.Minute, title, message)
+		}
+	}
+
+	message := fmt.Sprintf(
+		"channel: %s (type: %d, type name: %s, id: %d)\nmodel: %s\nmode: %s\nerror: %s\nrequest id: %s",
+		meta.Channel.Name,
+		meta.Channel.Type,
+		meta.Channel.Type.String(),
+		meta.Channel.ID,
+		meta.OriginModel,
+		meta.Mode,
+		err.Error(),
+		meta.RequestID,
+	)
+
+	notifyFunc(
+		fmt.Sprintf("%s `%s` %s", meta.Channel.Name, meta.OriginModel, titleSuffix),
+		message,
+	)
 }
 
 func (m *ChannelMonitor) DoResponse(
@@ -123,10 +191,18 @@ func (m *ChannelMonitor) DoResponse(
 		log.Errorf("add request failed: %+v", err)
 	}
 	switch {
+	case relayErr.StatusCode() == http.StatusTooManyRequests:
+		notifyChannelResponseIssue(
+			c,
+			meta,
+			"requestRateLimitExceeded",
+			"Request Rate Limit Exceeded",
+			relayErr,
+		)
 	case banExecution:
-		notifyChannelIssue(c, meta, "autoBanned", "Auto Banned", relayErr)
+		notifyChannelResponseIssue(c, meta, "autoBanned", "Auto Banned", relayErr)
 	case beyondThreshold:
-		notifyChannelIssue(
+		notifyChannelResponseIssue(
 			c,
 			meta,
 			"beyondThreshold",
@@ -134,13 +210,13 @@ func (m *ChannelMonitor) DoResponse(
 			relayErr,
 		)
 	case !hasPermission:
-		notifyChannelIssue(c, meta, "channelHasPermission", "No Permission", relayErr)
+		notifyChannelResponseIssue(c, meta, "channelHasPermission", "No Permission", relayErr)
 	}
 
 	return usage, relayErr
 }
 
-func notifyChannelIssue(
+func notifyChannelResponseIssue(
 	c *gin.Context,
 	meta *meta.Meta,
 	issueType, titleSuffix string,
@@ -148,9 +224,16 @@ func notifyChannelIssue(
 ) {
 	var notifyFunc func(title, message string)
 
-	lockKey := fmt.Sprintf("%s:%d:%s", issueType, meta.Channel.ID, meta.OriginModel)
+	lockKey := fmt.Sprintf(
+		"%s:%d:%s:%s:%d",
+		issueType,
+		meta.Channel.ID,
+		meta.OriginModel,
+		issueType,
+		err.StatusCode(),
+	)
 	switch issueType {
-	case "beyondThreshold":
+	case "beyondThreshold", "requestRateLimitExceeded":
 		notifyFunc = func(title, message string) {
 			notify.WarnThrottle(lockKey, time.Minute, title, message)
 		}
@@ -176,16 +259,6 @@ func notifyChannelIssue(
 	)
 
 	if err.StatusCode() == http.StatusTooManyRequests {
-		if !trylock.Lock(lockKey, time.Minute) {
-			return
-		}
-		switch issueType {
-		case "beyondThreshold":
-			notifyFunc = notify.Warn
-		default:
-			notifyFunc = notify.Error
-		}
-
 		rate := GetChannelModelRequestRate(c, meta)
 		message += fmt.Sprintf(
 			"\nrpm: %d\nrps: %d\ntpm: %d\ntps: %d",
