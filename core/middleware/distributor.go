@@ -20,6 +20,7 @@ import (
 	"github.com/labring/aiproxy/core/model"
 	"github.com/labring/aiproxy/core/relay/meta"
 	"github.com/labring/aiproxy/core/relay/mode"
+	relaymodel "github.com/labring/aiproxy/core/relay/model"
 	monitorplugin "github.com/labring/aiproxy/core/relay/plugin/monitor"
 )
 
@@ -244,7 +245,6 @@ func checkGroupBalance(c *gin.Context, group model.GroupCache) bool {
 				c,
 				http.StatusForbidden,
 				err.Error(),
-				"no_real_name_used_amount_limit",
 			)
 			return false
 		}
@@ -258,7 +258,6 @@ func checkGroupBalance(c *gin.Context, group model.GroupCache) bool {
 			c,
 			http.StatusInternalServerError,
 			fmt.Sprintf("get group `%s` balance error", group.ID),
-			"get_group_balance_error",
 		)
 		return false
 	}
@@ -283,7 +282,7 @@ func checkGroupBalance(c *gin.Context, group model.GroupCache) bool {
 			c,
 			http.StatusForbidden,
 			fmt.Sprintf("group `%s` balance not enough", group.ID),
-			GroupBalanceNotEnough,
+			relaymodel.WithType(GroupBalanceNotEnough),
 		)
 		return false
 	}
@@ -340,12 +339,11 @@ func distribute(c *gin.Context, mode mode.Mode) {
 			c,
 			http.StatusInternalServerError,
 			err.Error(),
-			"get_request_model_error",
 		)
 		return
 	}
 	if requestModel == "" {
-		AbortLogWithMessage(c, http.StatusBadRequest, "no model provided", "no_model_provided")
+		AbortLogWithMessage(c, http.StatusBadRequest, "no model provided")
 		return
 	}
 
@@ -362,7 +360,6 @@ func distribute(c *gin.Context, mode mode.Mode) {
 				"The model `%s` does not exist or you do not have access to it.",
 				requestModel,
 			),
-			"model_not_found",
 		)
 		return
 	}
@@ -376,7 +373,6 @@ func distribute(c *gin.Context, mode mode.Mode) {
 				"The model `%s` does not exist or you do not have access to it.",
 				requestModel,
 			),
-			"model_not_found",
 		)
 		return
 	}
@@ -387,7 +383,6 @@ func distribute(c *gin.Context, mode mode.Mode) {
 			c,
 			http.StatusInternalServerError,
 			err.Error(),
-			"get_request_user_error",
 		)
 		return
 	}
@@ -399,7 +394,6 @@ func distribute(c *gin.Context, mode mode.Mode) {
 			c,
 			http.StatusInternalServerError,
 			err.Error(),
-			"get_request_metadata_error",
 		)
 		return
 	}
@@ -422,7 +416,7 @@ func distribute(c *gin.Context, mode mode.Mode) {
 			user,
 			metadata,
 		)
-		AbortLogWithMessage(c, http.StatusTooManyRequests, errMsg, "request_rate_limit_exceeded")
+		AbortLogWithMessage(c, http.StatusTooManyRequests, errMsg)
 		return
 	}
 
