@@ -54,6 +54,18 @@ func ChannelHasPermission(relayErr adaptor.Error) bool {
 	return !ok
 }
 
+func getRequestDuration(meta *meta.Meta) time.Duration {
+	requestAt, ok := meta.Get("requestAt")
+	if !ok {
+		return 0
+	}
+	requestAtTime, ok := requestAt.(time.Time)
+	if !ok {
+		return 0
+	}
+	return time.Since(requestAtTime)
+}
+
 func (m *ChannelMonitor) DoRequest(
 	meta *meta.Meta,
 	store adaptor.Store,
@@ -67,6 +79,8 @@ func (m *ChannelMonitor) DoRequest(
 		meta.OriginModel,
 	)
 	updateChannelModelRequestRate(c, meta, count+overLimitCount, secondCount)
+	requestAt := time.Now()
+	meta.Set("requestAt", requestAt)
 	resp, err := do.DoRequest(meta, store, c, req)
 	if err == nil {
 		return resp, nil
@@ -122,7 +136,7 @@ func notifyChannelRequestIssue(
 	}
 
 	message := fmt.Sprintf(
-		"channel: %s (type: %d, type name: %s, id: %d)\nmodel: %s\nmode: %s\nerror: %s\nrequest id: %s",
+		"channel: %s (type: %d, type name: %s, id: %d)\nmodel: %s\nmode: %s\nerror: %s\nrequest id: %s\ntime cost: %s",
 		meta.Channel.Name,
 		meta.Channel.Type,
 		meta.Channel.Type.String(),
@@ -131,6 +145,7 @@ func notifyChannelRequestIssue(
 		meta.Mode,
 		err.Error(),
 		meta.RequestID,
+		getRequestDuration(meta).String(),
 	)
 
 	notifyFunc(
@@ -246,7 +261,7 @@ func notifyChannelResponseIssue(
 	respBody, _ := err.MarshalJSON()
 
 	message := fmt.Sprintf(
-		"channel: %s (type: %d, type name: %s, id: %d)\nmodel: %s\nmode: %s\nstatus code: %d\ndetail: %s\nrequest id: %s",
+		"channel: %s (type: %d, type name: %s, id: %d)\nmodel: %s\nmode: %s\nstatus code: %d\ndetail: %s\nrequest id: %s\ntime cost: %s",
 		meta.Channel.Name,
 		meta.Channel.Type,
 		meta.Channel.Type.String(),
@@ -256,6 +271,7 @@ func notifyChannelResponseIssue(
 		err.StatusCode(),
 		conv.BytesToString(respBody),
 		meta.RequestID,
+		getRequestDuration(meta).String(),
 	)
 
 	if err.StatusCode() == http.StatusTooManyRequests {
