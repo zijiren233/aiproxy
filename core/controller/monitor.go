@@ -3,6 +3,7 @@ package controller
 import (
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/core/middleware"
@@ -105,7 +106,7 @@ func ClearChannelAllModelErrors(c *gin.Context) {
 //	@Success		200		{object}	middleware.APIResponse
 //	@Router			/api/monitor/{id}/{model} [delete]
 func ClearChannelModelErrors(c *gin.Context) {
-	model := c.Param("model")
+	model := strings.TrimPrefix(c.Param("model"), "/")
 	channelID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusBadRequest, "Invalid channel ID")

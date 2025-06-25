@@ -3361,7 +3361,7 @@ paths:
       summary: Update group model config
       tags:
       - group
-  /api/group/{group}/model_configs/:
+  /api/group/{group}/model_configs:
     delete:
       description: Delete group model configs
       parameters:

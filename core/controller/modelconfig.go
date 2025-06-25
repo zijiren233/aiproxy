@@ -2,6 +2,7 @@ package controller
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/core/controller/utils"
@@ -177,7 +178,7 @@ func SaveModelConfig(c *gin.Context) {
 //	@Success		200		{object}	middleware.APIResponse
 //	@Router			/api/model_config/{model} [delete]
 func DeleteModelConfig(c *gin.Context) {
-	_model := c.Param("model")
+	_model := strings.TrimPrefix(c.Param("model"), "/")
 	err := model.DeleteModelConfig(_model)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
@@ -222,7 +223,7 @@ func DeleteModelConfigs(c *gin.Context) {
 //	@Success		200		{object}	middleware.APIResponse{data=model.ModelConfig}
 //	@Router			/api/model_config/{model} [get]
 func GetModelConfig(c *gin.Context) {
-	_model := c.Param("model")
+	_model := strings.TrimPrefix(c.Param("model"), "/")
 	config, err := model.GetModelConfig(_model)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())

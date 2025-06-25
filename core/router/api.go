@@ -66,14 +66,14 @@ func SetAPIRouter(router *gin.Engine) {
 
 			groupModelConfigRoute := groupRoute.Group("/:group/model_config")
 			{
-				groupModelConfigRoute.GET("/", controller.GetGroupModelConfigs)
-				groupModelConfigRoute.POST("/", controller.SaveGroupModelConfigs)
-				groupModelConfigRoute.PUT("/", controller.UpdateGroupModelConfigs)
-				groupModelConfigRoute.DELETE("/", controller.DeleteGroupModelConfigs)
-				groupModelConfigRoute.POST("/:model", controller.SaveGroupModelConfig)
-				groupModelConfigRoute.PUT("/:model", controller.UpdateGroupModelConfig)
-				groupModelConfigRoute.DELETE("/:model", controller.DeleteGroupModelConfig)
-				groupModelConfigRoute.GET("/:model", controller.GetGroupModelConfig)
+				groupModelConfigRoute.GET("", controller.GetGroupModelConfigs)
+				groupModelConfigRoute.POST("", controller.SaveGroupModelConfigs)
+				groupModelConfigRoute.PUT("", controller.UpdateGroupModelConfigs)
+				groupModelConfigRoute.DELETE("", controller.DeleteGroupModelConfigs)
+				groupModelConfigRoute.POST("/*model", controller.SaveGroupModelConfig)
+				groupModelConfigRoute.PUT("/*model", controller.UpdateGroupModelConfig)
+				groupModelConfigRoute.DELETE("/*model", controller.DeleteGroupModelConfig)
+				groupModelConfigRoute.GET("/*model", controller.GetGroupModelConfig)
 			}
 
 			groupMcpRoute := groupRoute.Group("/:group/mcp")
@@ -117,7 +117,7 @@ func SetAPIRouter(router *gin.Engine) {
 			channelRoute.POST("/:id/status", controller.UpdateChannelStatus)
 			channelRoute.DELETE("/:id", controller.DeleteChannel)
 			channelRoute.GET("/:id/test", controller.TestChannelModels)
-			channelRoute.GET("/:id/test/:model", controller.TestChannel)
+			channelRoute.GET("/:id/test/*model", controller.TestChannel)
 			channelRoute.GET("/:id/update_balance", controller.UpdateChannelBalance)
 		}
 
@@ -171,9 +171,9 @@ func SetAPIRouter(router *gin.Engine) {
 		}
 		modelConfigRoute := apiRouter.Group("/model_config")
 		{
-			modelConfigRoute.GET("/:model", controller.GetModelConfig)
+			modelConfigRoute.GET("/*model", controller.GetModelConfig)
 			modelConfigRoute.POST("/", controller.SaveModelConfig)
-			modelConfigRoute.DELETE("/:model", controller.DeleteModelConfig)
+			modelConfigRoute.DELETE("/*model", controller.DeleteModelConfig)
 		}
 
 		monitorRoute := apiRouter.Group("/monitor")
@@ -182,7 +182,7 @@ func SetAPIRouter(router *gin.Engine) {
 			monitorRoute.GET("/:id", controller.GetChannelModelErrorRates)
 			monitorRoute.DELETE("/", controller.ClearAllModelErrors)
 			monitorRoute.DELETE("/:id", controller.ClearChannelAllModelErrors)
-			monitorRoute.DELETE("/:id/:model", controller.ClearChannelModelErrors)
+			monitorRoute.DELETE("/:id/*model", controller.ClearChannelModelErrors)
 			monitorRoute.GET("/models", controller.GetModelsErrorRate)
 			monitorRoute.GET("/banned_channels", controller.GetAllBannedModelChannels)
 		}
