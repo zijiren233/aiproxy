@@ -86,8 +86,7 @@ func (m *ChannelMonitor) DoRequest(
 		return resp, nil
 	}
 
-	log := common.GetLogger(c)
-	beyondThreshold, banExecution, err := monitor.AddRequest(
+	beyondThreshold, banExecution, _err := monitor.AddRequest(
 		context.Background(),
 		meta.OriginModel,
 		int64(meta.Channel.ID),
@@ -95,8 +94,9 @@ func (m *ChannelMonitor) DoRequest(
 		false,
 		meta.ModelConfig.MaxErrorRate,
 	)
-	if err != nil {
-		log.Errorf("add request failed: %+v", err)
+	if _err != nil {
+		common.GetLogger(c).
+			Errorf("add request failed: %+v", _err)
 	}
 	switch {
 	case banExecution:
