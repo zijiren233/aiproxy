@@ -49,6 +49,8 @@ AI Proxy is a powerful, production-ready AI gateway that provides intelligent re
 
 - **Cache Plugin**: High-performance caching for identical requests with Redis/memory storage
 - **Web Search Plugin**: Real-time web search capabilities with support for Google, Bing, and Arxiv
+- **Think Split Plugin**: Support for reasoning models with content splitting, automatically handling `<think>` tags
+- **Stream Fake Plugin**: Avoid non-streaming request timeouts through internal streaming transmission
 - **Extensible Architecture**: Easy to add custom plugins for additional functionality
 
 ### 🔧 **Advanced Capabilities**
@@ -59,7 +61,7 @@ AI Proxy is a powerful, production-ready AI gateway that provides intelligent re
 - **Think Mode**: Support for reasoning models with content splitting
 - **Built-in Tokenizer**: No external tiktoken dependencies
 
-### 📊 **Management Panel**
+## 📊 Management Panel
 
 AI Proxy provides a management panel for managing AI Proxy's configuration and monitoring.
 
@@ -79,6 +81,7 @@ graph TB
     Plugins --> CachePlugin[Cache Plugin]
     Plugins --> SearchPlugin[Web Search Plugin]
     Plugins --> ThinkSplitPlugin[Think Split Plugin]
+    Plugins --> StreamFakePlugin[Stream Fake Plugin]
 
     Router --> Provider1[OpenAI]
     Router --> Provider2[Anthropic]
@@ -216,6 +219,17 @@ The Think Split Plugin supports content splitting for reasoning models:
 - **Streaming Support**: Supports both streaming and non-streaming responses
 
 [View Think Split Plugin Documentation](./core/relay/plugin/thinksplit/README.md)
+
+### Stream Fake Plugin
+
+The Stream Fake Plugin solves timeout issues with non-streaming requests:
+
+- **Timeout Avoidance**: Prevents request timeouts through internal streaming transmission
+- **Transparent Conversion**: Automatically converts non-streaming requests to streaming format, transparent to clients
+- **Response Reconstruction**: Collects all streaming data chunks and reconstructs them into complete non-streaming responses
+- **Connection Keep-Alive**: Maintains active connections through streaming transmission to avoid network timeouts
+
+[View Stream Fake Plugin Documentation](./core/relay/plugin/streamfake/README.md)
 
 ## 📚 API Documentation
 
