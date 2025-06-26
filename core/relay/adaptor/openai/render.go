@@ -17,12 +17,14 @@ const (
 	DONE             = "[DONE]"
 	DataPrefix       = "data:"
 	DataPrefixLength = len(DataPrefix)
+	dataSpace        = "data: "
 )
 
 var (
 	DataPrefixBytes = conv.StringToBytes(DataPrefix)
 	DoneBytes       = conv.StringToBytes(DONE)
 	nnBytes         = conv.StringToBytes(nn)
+	dataSpaceBytes  = conv.StringToBytes(dataSpace)
 )
 
 type SSE struct {
@@ -33,7 +35,7 @@ func (r *SSE) Render(w http.ResponseWriter) error {
 	r.WriteContentType(w)
 
 	for _, bytes := range [][]byte{
-		DataPrefixBytes,
+		dataSpaceBytes,
 		r.Data,
 		nnBytes,
 	} {
@@ -109,7 +111,7 @@ func (r *TtsSSE) Render(w http.ResponseWriter) error {
 	}
 
 	for _, bytes := range [][]byte{
-		DataPrefixBytes,
+		dataSpaceBytes,
 		jsonData,
 		nnBytes,
 	} {
