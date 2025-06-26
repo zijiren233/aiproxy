@@ -192,6 +192,9 @@ type fakeStreamResponseWriter struct {
 // ignore flush
 func (rw *fakeStreamResponseWriter) Flush() {}
 
+// ignore WriteHeaderNow
+func (rw *fakeStreamResponseWriter) WriteHeaderNow() {}
+
 func (rw *fakeStreamResponseWriter) Write(b []byte) (int, error) {
 	// Parse streaming data
 	_ = rw.parseStreamingData(b)
