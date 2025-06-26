@@ -288,6 +288,9 @@ func (rw *fakeStreamResponseWriter) convertToNonStream() ([]byte, error) {
 	}
 
 	if len(rw.toolCalls) > 0 {
+		slices.SortFunc(rw.toolCalls, func(a, b *relaymodel.ToolCall) int {
+			return a.Index - b.Index
+		})
 		message["tool_calls"] = rw.toolCalls
 	}
 	if len(rw.logprobsContent) > 0 {
@@ -332,7 +335,6 @@ func mergeToolCall(oldToolCall, newToolCall *relaymodel.ToolCall) *relaymodel.To
 		return oldToolCall
 	}
 
-	// 合并后的工具调用
 	merged := &relaymodel.ToolCall{
 		Index:    oldToolCall.Index,
 		ID:       oldToolCall.ID,
