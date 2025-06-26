@@ -61,10 +61,10 @@ func (p *StreamFake) ConvertRequest(
 	}
 
 	// Check if stream fake is enabled
-	// pluginConfig, err := p.getConfig(meta)
-	// if err != nil || !pluginConfig.Enable {
-	// 	return do.ConvertRequest(meta, store, req)
-	// }
+	pluginConfig, err := p.getConfig(meta)
+	if err != nil || !pluginConfig.Enable {
+		return do.ConvertRequest(meta, store, req)
+	}
 
 	body, err := common.GetRequestBodyReusable(req)
 	if err != nil {
@@ -82,10 +82,11 @@ func (p *StreamFake) ConvertRequest(
 		return do.ConvertRequest(meta, store, req)
 	}
 
-	meta.Set(fakeStreamKey, true)
-
 	// Modify request to enable streaming
-	node.Set("stream", ast.NewBool(true))
+	_, err = node.Set("stream", ast.NewBool(true))
+	if err != nil {
+		return do.ConvertRequest(meta, store, req)
+	}
 
 	// Create new request body
 	modifiedBody, err := node.MarshalJSON()
@@ -96,6 +97,8 @@ func (p *StreamFake) ConvertRequest(
 	// Update the request
 	common.SetRequestBody(req, modifiedBody)
 	defer common.SetRequestBody(req, body)
+
+	meta.Set(fakeStreamKey, true)
 
 	return do.ConvertRequest(meta, store, req)
 }
@@ -134,6 +137,7 @@ func (p *StreamFake) handleFakeStreamResponse(
 	resp *http.Response,
 	do adaptor.DoResponse,
 ) (model.Usage, adaptor.Error) {
+	log := common.GetLogger(c)
 	// Create a custom response writer to collect streaming data
 	rw := &fakeStreamResponseWriter{
 		ResponseWriter: c.Writer,
@@ -152,6 +156,7 @@ func (p *StreamFake) handleFakeStreamResponse(
 	// Convert collected streaming chunks to non-streaming response
 	respBody, err := rw.convertToNonStream()
 	if err != nil {
+		log.Errorf("failed to convert to non-streaming response: %v", err)
 		return usage, relayErr
 	}
 
@@ -219,7 +224,7 @@ func (rw *fakeStreamResponseWriter) parseStreamingData(data []byte) error {
 		return err
 	}
 
-	choicesNode.ForEach(func(_ ast.Sequence, choiceNode *ast.Node) bool {
+	return choicesNode.ForEach(func(_ ast.Sequence, choiceNode *ast.Node) bool {
 		deltaNode := choiceNode.Get("delta")
 		if err := deltaNode.Check(); err != nil {
 			return true
@@ -232,18 +237,19 @@ func (rw *fakeStreamResponseWriter) parseStreamingData(data []byte) error {
 		if err == nil {
 			rw.reasoningContent.WriteString(reasoningContent)
 		}
-		deltaNode.Get("tool_calls").ForEach(func(_ ast.Sequence, toolCallNode *ast.Node) bool {
-			toolCallRaw, err := toolCallNode.Raw()
-			if err != nil {
+		_ = deltaNode.Get("tool_calls").
+			ForEach(func(_ ast.Sequence, toolCallNode *ast.Node) bool {
+				toolCallRaw, err := toolCallNode.Raw()
+				if err != nil {
+					return true
+				}
+				var toolCall relaymodel.ToolCall
+				if err := sonic.UnmarshalString(toolCallRaw, &toolCall); err != nil {
+					return true
+				}
+				rw.toolCalls = mergeToolCalls(rw.toolCalls, &toolCall)
 				return true
-			}
-			var toolCall relaymodel.ToolCall
-			if err := sonic.UnmarshalString(toolCallRaw, &toolCall); err != nil {
-				return true
-			}
-			rw.toolCalls = mergeToolCalls(rw.toolCalls, &toolCall)
-			return true
-		})
+			})
 		finishReason, err := choiceNode.Get("finish_reason").String()
 		if err == nil && finishReason != "" {
 			rw.finishReason = finishReason
@@ -255,15 +261,15 @@ func (rw *fakeStreamResponseWriter) parseStreamingData(data []byte) error {
 				return true
 			}
 			rw.logprobsContent = slices.Grow(rw.logprobsContent, l)
-			logprobsContentNode.ForEach(func(_ ast.Sequence, logprobsContentNode *ast.Node) bool {
-				rw.logprobsContent = append(rw.logprobsContent, *logprobsContentNode)
-				return true
-			})
+			_ = logprobsContentNode.ForEach(
+				func(_ ast.Sequence, logprobsContentNode *ast.Node) bool {
+					rw.logprobsContent = append(rw.logprobsContent, *logprobsContentNode)
+					return true
+				},
+			)
 		}
 		return true
 	})
-
-	return nil
 }
 
 func (rw *fakeStreamResponseWriter) convertToNonStream() ([]byte, error) {
@@ -272,9 +278,15 @@ func (rw *fakeStreamResponseWriter) convertToNonStream() ([]byte, error) {
 		return nil, errors.New("last chunk is nil")
 	}
 
-	lastChunk.Set("object", ast.NewString(relaymodel.ChatCompletionObject))
+	_, err := lastChunk.Set("object", ast.NewString(relaymodel.ChatCompletionObject))
+	if err != nil {
+		return nil, err
+	}
 	if rw.usageNode != nil {
-		lastChunk.Set("usage", *rw.usageNode)
+		_, err = lastChunk.Set("usage", *rw.usageNode)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	message := map[string]any{
@@ -299,13 +311,16 @@ func (rw *fakeStreamResponseWriter) convertToNonStream() ([]byte, error) {
 		}
 	}
 
-	lastChunk.SetAny("choices", []any{
+	_, err = lastChunk.SetAny("choices", []any{
 		map[string]any{
 			"index":         0,
 			"message":       message,
 			"finish_reason": rw.finishReason,
 		},
 	})
+	if err != nil {
+		return nil, err
+	}
 
 	return lastChunk.MarshalJSON()
 }
