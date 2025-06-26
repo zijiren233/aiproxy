@@ -49,6 +49,8 @@ AI Proxy 是一个强大的、生产就绪的 AI 网关，提供智能请求路�
 
 - **缓存插件**：高性能缓存，支持 Redis/内存存储，用于相同请求
 - **网络搜索插件**：实时网络搜索功能，支持 Google、Bing 和 Arxiv
+- **思考模式插件**：支持推理模型的内容分割，自动处理 `<think>` 标签
+- **流式伪装插件**：通过内部流式传输避免非流式请求超时问题
 - **可扩展架构**：易于添加自定义插件以实现额外功能
 
 ### 🔧 **高级功能**
@@ -79,6 +81,7 @@ graph TB
     Plugins --> CachePlugin[缓存插件]
     Plugins --> SearchPlugin[网络搜索插件]
     Plugins --> ThinkSplitPlugin[思考模式插件]
+    Plugins --> StreamFakePlugin[流式伪装插件]
     
     Router --> Provider1[OpenAI]
     Router --> Provider2[Anthropic]
@@ -216,6 +219,17 @@ AI Proxy 支持插件系统来扩展其功能。当前可用的插件：
 - **流式支持**：支持流式和非流式响应处理
 
 [查看思考模式插件文档](./core/relay/plugin/thinksplit/README.zh.md)
+
+### 流式伪装插件
+
+流式伪装插件解决非流式请求的超时问题：
+
+- **超时避免**：通过内部流式传输避免长时间等待导致的超时
+- **透明转换**：自动将非流式请求转换为流式格式，客户端无感知
+- **响应重构**：收集所有流式数据块并重构为完整的非流式响应
+- **连接保持**：通过流式传输保持连接活跃，避免网络超时
+
+[查看流式伪装插件文档](./core/relay/plugin/streamfake/README.cn.md)
 
 ## 📚 API 文档
 

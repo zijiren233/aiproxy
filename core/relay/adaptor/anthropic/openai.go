@@ -285,7 +285,7 @@ func StreamResponse2OpenAI(
 	var content string
 	var thinking string
 	var stopReason string
-	tools := make([]*relaymodel.Tool, 0)
+	tools := make([]*relaymodel.ToolCall, 0)
 
 	var claudeResponse StreamResponse
 	err := sonic.Unmarshal(respData, &claudeResponse)
@@ -309,7 +309,7 @@ func StreamResponse2OpenAI(
 		if claudeResponse.ContentBlock != nil {
 			content = claudeResponse.ContentBlock.Text
 			if claudeResponse.ContentBlock.Type == toolUseType {
-				tools = append(tools, &relaymodel.Tool{
+				tools = append(tools, &relaymodel.ToolCall{
 					ID:   claudeResponse.ContentBlock.ID,
 					Type: "function",
 					Function: relaymodel.Function{
@@ -322,7 +322,7 @@ func StreamResponse2OpenAI(
 		if claudeResponse.Delta != nil {
 			switch claudeResponse.Delta.Type {
 			case "input_json_delta":
-				tools = append(tools, &relaymodel.Tool{
+				tools = append(tools, &relaymodel.ToolCall{
 					Type: "function",
 					Function: relaymodel.Function{
 						Arguments: claudeResponse.Delta.PartialJSON,
@@ -396,7 +396,7 @@ func Response2OpenAI(
 
 	var content string
 	var thinking string
-	tools := make([]*relaymodel.Tool, 0)
+	tools := make([]*relaymodel.ToolCall, 0)
 	for _, v := range claudeResponse.Content {
 		switch v.Type {
 		case conetentTypeText:
@@ -405,7 +405,7 @@ func Response2OpenAI(
 			thinking = v.Thinking
 		case toolUseType:
 			args, _ := sonic.MarshalString(v.Input)
-			tools = append(tools, &relaymodel.Tool{
+			tools = append(tools, &relaymodel.ToolCall{
 				ID:   v.ID,
 				Type: "function",
 				Function: relaymodel.Function{

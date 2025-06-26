@@ -428,7 +428,7 @@ type ChatPromptFeedback struct {
 	SafetyRatings []ChatSafetyRating `json:"safetyRatings"`
 }
 
-func getToolCall(item *Part) (*relaymodel.Tool, error) {
+func getToolCall(item *Part) (*relaymodel.ToolCall, error) {
 	if item.FunctionCall == nil {
 		return nil, nil
 	}
@@ -436,7 +436,7 @@ func getToolCall(item *Part) (*relaymodel.Tool, error) {
 	if err != nil {
 		return nil, err
 	}
-	toolCall := relaymodel.Tool{
+	toolCall := relaymodel.ToolCall{
 		ID:   openai.CallID(),
 		Type: "function",
 		Function: relaymodel.Function{

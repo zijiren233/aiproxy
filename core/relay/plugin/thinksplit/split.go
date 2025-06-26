@@ -95,6 +95,9 @@ func (rw *thinkResponseWriter) getThinkSplitter() *splitter.Splitter {
 	return rw.thinkSplitter
 }
 
+// ignore WriteHeaderNow
+func (rw *thinkResponseWriter) WriteHeaderNow() {}
+
 func (rw *thinkResponseWriter) Write(b []byte) (int, error) {
 	if rw.done {
 		return rw.ResponseWriter.Write(b)
