@@ -2,6 +2,7 @@ package controller
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -28,6 +29,7 @@ import (
 	"github.com/labring/aiproxy/core/relay/plugin"
 	"github.com/labring/aiproxy/core/relay/plugin/cache"
 	monitorplugin "github.com/labring/aiproxy/core/relay/plugin/monitor"
+	"github.com/labring/aiproxy/core/relay/plugin/streamfake"
 	"github.com/labring/aiproxy/core/relay/plugin/thinksplit"
 	websearch "github.com/labring/aiproxy/core/relay/plugin/web-search"
 )
@@ -77,6 +79,19 @@ func (s *storeImpl) SaveStore(store adaptor.StoreCache) error {
 	return err
 }
 
+func wrapPlugin(ctx context.Context, mc *model.ModelCaches, a adaptor.Adaptor) adaptor.Adaptor {
+	return plugin.WrapperAdaptor(a,
+		monitorplugin.NewGroupMonitorPlugin(),
+		cache.NewCachePlugin(common.RDB),
+		streamfake.NewStreamFakePlugin(),
+		websearch.NewWebSearchPlugin(func(modelName string) (*model.Channel, error) {
+			return getWebSearchChannel(ctx, mc, modelName)
+		}),
+		thinksplit.NewThinkPlugin(),
+		monitorplugin.NewChannelMonitorPlugin(),
+	)
+}
+
 func relayHandler(c *gin.Context, meta *meta.Meta) *controller.HandleResult {
 	log := common.GetLogger(c)
 	middleware.SetLogFieldsFromMeta(meta, log.Data)
@@ -92,17 +107,9 @@ func relayHandler(c *gin.Context, meta *meta.Meta) *controller.HandleResult {
 		}
 	}
 
-	a := plugin.WrapperAdaptor(adaptor,
-		monitorplugin.NewGroupMonitorPlugin(),
-		cache.NewCachePlugin(common.RDB),
-		websearch.NewWebSearchPlugin(func(modelName string) (*model.Channel, error) {
-			return getWebSearchChannel(c, modelName)
-		}),
-		thinksplit.NewThinkPlugin(),
-		monitorplugin.NewChannelMonitorPlugin(),
-	)
+	adaptor = wrapPlugin(c.Request.Context(), middleware.GetModelCaches(c), adaptor)
 
-	return controller.Handle(a, c, meta, adaptorStore)
+	return controller.Handle(adaptor, c, meta, adaptorStore)
 }
 
 func relayController(m mode.Mode) RelayController {

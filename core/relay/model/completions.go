@@ -105,12 +105,12 @@ type TextResponse struct {
 }
 
 type Message struct {
-	Content          any     `json:"content,omitempty"`
-	ReasoningContent string  `json:"reasoning_content,omitempty"`
-	Name             *string `json:"name,omitempty"`
-	Role             string  `json:"role,omitempty"`
-	ToolCallID       string  `json:"tool_call_id,omitempty"`
-	ToolCalls        []*Tool `json:"tool_calls,omitempty"`
+	Content          any         `json:"content,omitempty"`
+	ReasoningContent string      `json:"reasoning_content,omitempty"`
+	Name             *string     `json:"name,omitempty"`
+	Role             string      `json:"role,omitempty"`
+	ToolCallID       string      `json:"tool_call_id,omitempty"`
+	ToolCalls        []*ToolCall `json:"tool_calls,omitempty"`
 }
 
 func (m *Message) IsStringContent() bool {

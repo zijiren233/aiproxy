@@ -116,17 +116,17 @@ func ConvertRequest(meta *meta.Meta, req *http.Request) (adaptor.ConvertResult, 
 	}, nil
 }
 
-func getToolCalls(ollamaResponse *ChatResponse) []*relaymodel.Tool {
+func getToolCalls(ollamaResponse *ChatResponse) []*relaymodel.ToolCall {
 	if ollamaResponse.Message == nil || len(ollamaResponse.Message.ToolCalls) == 0 {
 		return nil
 	}
-	toolCalls := make([]*relaymodel.Tool, 0, len(ollamaResponse.Message.ToolCalls))
+	toolCalls := make([]*relaymodel.ToolCall, 0, len(ollamaResponse.Message.ToolCalls))
 	for _, tool := range ollamaResponse.Message.ToolCalls {
 		argString, err := sonic.MarshalString(tool.Function.Arguments)
 		if err != nil {
 			continue
 		}
-		toolCalls = append(toolCalls, &relaymodel.Tool{
+		toolCalls = append(toolCalls, &relaymodel.ToolCall{
 			ID:   openai.CallID(),
 			Type: "function",
 			Function: relaymodel.Function{

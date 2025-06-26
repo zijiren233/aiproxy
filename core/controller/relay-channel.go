@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"math/rand/v2"
@@ -343,21 +344,13 @@ func getInitialChannel(c *gin.Context, modelName string, m mode.Mode) (*initialC
 	}, nil
 }
 
-func getWebSearchChannel(c *gin.Context, modelName string) (*model.Channel, error) {
-	log := common.GetLogger(c)
-	mc := middleware.GetModelCaches(c)
-
-	ids, err := monitor.GetBannedChannelsWithModel(c.Request.Context(), modelName)
-	if err != nil {
-		log.Errorf("get %s auto banned channels failed: %+v", modelName, err)
-	}
-	log.Debugf("%s model banned channels: %+v", modelName, ids)
-
-	errorRates, err := monitor.GetModelChannelErrorRate(c.Request.Context(), modelName)
-	if err != nil {
-		log.Errorf("get channel model error rates failed: %+v", err)
-	}
-
+func getWebSearchChannel(
+	ctx context.Context,
+	mc *model.ModelCaches,
+	modelName string,
+) (*model.Channel, error) {
+	ids, _ := monitor.GetBannedChannelsWithModel(ctx, modelName)
+	errorRates, _ := monitor.GetModelChannelErrorRate(ctx, modelName)
 	channel, _, err := getChannelWithFallback(
 		mc,
 		nil,
