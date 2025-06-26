@@ -61,10 +61,10 @@ func (p *StreamFake) ConvertRequest(
 	}
 
 	// Check if stream fake is enabled
-	pluginConfig, err := p.getConfig(meta)
-	if err != nil || !pluginConfig.Enable {
-		return do.ConvertRequest(meta, store, req)
-	}
+	// pluginConfig, err := p.getConfig(meta)
+	// if err != nil || !pluginConfig.Enable {
+	// 	return do.ConvertRequest(meta, store, req)
+	// }
 
 	body, err := common.GetRequestBodyReusable(req)
 	if err != nil {
@@ -180,7 +180,7 @@ type fakeStreamResponseWriter struct {
 	contentBuilder   bytes.Buffer
 	reasoningContent bytes.Buffer
 	finishReason     relaymodel.FinishReason
-	logprobs         []ast.Node
+	logprobsContent  []ast.Node
 	toolCalls        []*relaymodel.ToolCall
 }
 
@@ -248,6 +248,18 @@ func (rw *fakeStreamResponseWriter) parseStreamingData(data []byte) error {
 		if err == nil && finishReason != "" {
 			rw.finishReason = finishReason
 		}
+		logprobsContentNode := choiceNode.Get("logprobs").Get("content")
+		if err := logprobsContentNode.Check(); err == nil {
+			l, err := logprobsContentNode.Len()
+			if err != nil {
+				return true
+			}
+			rw.logprobsContent = slices.Grow(rw.logprobsContent, l)
+			logprobsContentNode.ForEach(func(_ ast.Sequence, logprobsContentNode *ast.Node) bool {
+				rw.logprobsContent = append(rw.logprobsContent, *logprobsContentNode)
+				return true
+			})
+		}
 		return true
 	})
 
@@ -265,16 +277,29 @@ func (rw *fakeStreamResponseWriter) convertToNonStream() ([]byte, error) {
 		lastChunk.Set("usage", *rw.usageNode)
 	}
 
+	message := map[string]any{
+		"role":    "assistant",
+		"content": rw.contentBuilder.String(),
+	}
+
+	reasoningContent := rw.reasoningContent.String()
+	if reasoningContent != "" {
+		message["reasoning_content"] = reasoningContent
+	}
+
+	if len(rw.toolCalls) > 0 {
+		message["tool_calls"] = rw.toolCalls
+	}
+	if len(rw.logprobsContent) > 0 {
+		message["logprobs"] = map[string]any{
+			"content": rw.logprobsContent,
+		}
+	}
+
 	lastChunk.SetAny("choices", []any{
 		map[string]any{
-			"index": 0,
-			"message": map[string]any{
-				"role":              "assistant",
-				"content":           rw.contentBuilder.String(),
-				"reasoning_content": rw.reasoningContent.String(),
-				"tool_calls":        rw.toolCalls,
-				"logprobs":          rw.logprobs,
-			},
+			"index":         0,
+			"message":       message,
 			"finish_reason": rw.finishReason,
 		},
 	})
