@@ -53,6 +53,7 @@ type onlyThinkingRequest struct {
 	Thinking *Thinking `json:"thinking,omitempty"`
 }
 
+//nolint:gocyclo
 func OpenAIConvertRequest(meta *meta.Meta, req *http.Request) (*Request, error) {
 	var textRequest OpenAIRequest
 	err := common.UnmarshalRequestReusable(req, &textRequest)
