@@ -115,14 +115,8 @@ func buildTools(textRequest *relaymodel.GeneralOpenAIRequest) []ChatTools {
 	if textRequest.Tools != nil {
 		functions := make([]relaymodel.Function, 0, len(textRequest.Tools))
 		for _, tool := range textRequest.Tools {
-			if parameters, ok := tool.Function.Parameters.(map[string]any); ok {
-				if properties, ok := parameters["properties"].(map[string]any); ok {
-					if len(properties) == 0 {
-						tool.Function.Parameters = nil
-					}
-				}
-			}
-			functions = append(functions, tool.Function)
+			cleanedFunction := cleanFunctionParameters(tool.Function)
+			functions = append(functions, cleanedFunction)
 		}
 		return []ChatTools{{FunctionDeclarations: functions}}
 	}
@@ -130,6 +124,43 @@ func buildTools(textRequest *relaymodel.GeneralOpenAIRequest) []ChatTools {
 		return []ChatTools{{FunctionDeclarations: textRequest.Functions}}
 	}
 	return nil
+}
+
+func cleanFunctionParameters(function relaymodel.Function) relaymodel.Function {
+	if function.Parameters == nil {
+		return function
+	}
+
+	parameters, ok := function.Parameters.(map[string]any)
+	if !ok {
+		return function
+	}
+
+	cleanJSONSchema(parameters)
+
+	if properties, ok := parameters["properties"].(map[string]any); ok {
+		if len(properties) == 0 {
+			function.Parameters = nil
+			return function
+		}
+	}
+
+	function.Parameters = parameters
+	return function
+}
+
+func cleanJSONSchema(schema map[string]any) {
+	unsupportedFields := []string{
+		"additionalProperties",
+		"$schema",
+		"$id",
+		"$ref",
+		"$defs",
+	}
+
+	for _, field := range unsupportedFields {
+		delete(schema, field)
+	}
 }
 
 func buildToolConfig(textRequest *relaymodel.GeneralOpenAIRequest) *ToolConfig {
@@ -365,21 +396,34 @@ type UsageMetadata struct {
 	TotalTokenCount      int64                `json:"totalTokenCount"`
 	ThoughtsTokenCount   int64                `json:"thoughtsTokenCount,omitempty"`
 	PromptTokensDetails  []PromptTokensDetail `json:"promptTokensDetails"`
+
+	// https://ai.google.dev/gemini-api/docs/caching?lang=rest
+	CachedContentTokenCount int64               `json:"cachedContentTokenCount,omitempty"`
+	CacheTokensDetails      []CacheTokensDetail `json:"cacheTokensDetails,omitempty"`
 }
 
 func (u *UsageMetadata) ToUsage() relaymodel.ChatUsage {
-	return relaymodel.ChatUsage{
+	chatUsage := relaymodel.ChatUsage{
 		PromptTokens: u.PromptTokenCount,
 		CompletionTokens: u.CandidatesTokenCount +
 			u.ThoughtsTokenCount,
 		TotalTokens: u.TotalTokenCount,
+		PromptTokensDetails: &relaymodel.PromptTokensDetails{
+			CachedTokens: u.CachedContentTokenCount,
+		},
 		CompletionTokensDetails: &relaymodel.CompletionTokensDetails{
 			ReasoningTokens: u.ThoughtsTokenCount,
 		},
 	}
+	return chatUsage
 }
 
 type PromptTokensDetail struct {
+	Modality   string `json:"modality"`
+	TokenCount int64  `json:"tokenCount"`
+}
+
+type CacheTokensDetail struct {
 	Modality   string `json:"modality"`
 	TokenCount int64  `json:"tokenCount"`
 }
