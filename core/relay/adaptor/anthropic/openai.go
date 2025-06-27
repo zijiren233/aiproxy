@@ -166,6 +166,8 @@ func OpenAIConvertRequest(meta *meta.Meta, req *http.Request) (*Request, error) 
 
 	var imageTasks []*Content
 
+	hasToolCalls := false
+
 	for _, message := range textRequest.Messages {
 		if message.Role == "system" {
 			claudeRequest.System = append(claudeRequest.System, Content{
@@ -214,6 +216,7 @@ func OpenAIConvertRequest(meta *meta.Meta, req *http.Request) (*Request, error) 
 		}
 
 		for _, toolCall := range message.ToolCalls {
+			hasToolCalls = true
 			inputParam := make(map[string]any)
 			_ = sonic.UnmarshalString(toolCall.Function.Arguments, &inputParam)
 			claudeMessage.Content = append(claudeMessage.Content, &Content{
@@ -231,6 +234,10 @@ func OpenAIConvertRequest(meta *meta.Meta, req *http.Request) (*Request, error) 
 		if err != nil {
 			return nil, err
 		}
+	}
+
+	if hasToolCalls {
+		claudeRequest.Thinking = nil
 	}
 
 	return &claudeRequest, nil
