@@ -149,17 +149,30 @@ func cleanFunctionParameters(function relaymodel.Function) relaymodel.Function {
 	return function
 }
 
-func cleanJSONSchema(schema map[string]any) {
-	unsupportedFields := []string{
-		"additionalProperties",
-		"$schema",
-		"$id",
-		"$ref",
-		"$defs",
-	}
+var unsupportedFields = []string{
+	"additionalProperties",
+	"$schema",
+	"$id",
+	"$ref",
+	"$defs",
+}
 
+func cleanJSONSchema(schema map[string]any) {
 	for _, field := range unsupportedFields {
 		delete(schema, field)
+	}
+
+	for _, field := range schema {
+		switch v := field.(type) {
+		case map[string]any:
+			cleanJSONSchema(v)
+		case []any:
+			for _, item := range v {
+				if itemMap, ok := item.(map[string]any); ok {
+					cleanJSONSchema(itemMap)
+				}
+			}
+		}
 	}
 }
 
