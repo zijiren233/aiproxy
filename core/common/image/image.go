@@ -30,6 +30,12 @@ func IsImageURL(contentType string) bool {
 	return strings.HasPrefix(contentType, "image/")
 }
 
+// TrimImageContentType delete after `;`
+func TrimImageContentType(contentType string) string {
+	before, _, _ := strings.Cut(contentType, ";")
+	return before
+}
+
 func GetImageSizeFromURL(url string) (width, height int, err error) {
 	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, url, nil)
 	if err != nil {
@@ -99,7 +105,7 @@ func GetImageFromURL(ctx context.Context, url string) (string, string, error) {
 			return "", "", errors.New("not an image")
 		}
 	}
-	return contentType, base64.StdEncoding.EncodeToString(buf), nil
+	return TrimImageContentType(contentType), base64.StdEncoding.EncodeToString(buf), nil
 }
 
 var reg = regexp.MustCompile(`^data:image/([^;]+);base64,`)
