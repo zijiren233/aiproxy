@@ -18,7 +18,6 @@ const (
 	PriceUnit = 1000
 )
 
-//nolint:revive
 type ModelConfig struct {
 	CreatedAt        time.Time                  `gorm:"index;autoCreateTime"          json:"created_at"`
 	UpdatedAt        time.Time                  `gorm:"index;autoUpdateTime"          json:"updated_at"`

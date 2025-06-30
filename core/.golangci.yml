@@ -81,6 +81,13 @@ linters:
       - builtin$
       - examples$
   settings:
+    revive:
+      rules:
+        - name: var-naming
+          arguments:
+            - []
+            - []
+            - [{ skipPackageNameChecks: true }]
     copyloopvar:
       check-alias: true
     cyclop:

@@ -5,7 +5,6 @@ import (
 	"strings"
 )
 
-//nolint:revive
 type ModelConfigKey string
 
 const (
@@ -20,7 +19,6 @@ const (
 	ModelConfigImageQualitys       ModelConfigKey = "image_qualitys"
 )
 
-//nolint:revive
 type ModelConfigOption func(config map[ModelConfigKey]any)
 
 func WithModelConfigImageSizes(sizes ...string) ModelConfigOption {
