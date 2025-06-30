@@ -35,8 +35,11 @@ func RerankHandler(
 			http.StatusInternalServerError,
 		)
 	}
+
 	var usage relaymodel.ChatUsage
+
 	usageNode := node.Get("usage")
+
 	usageStr, err := usageNode.Raw()
 	if err != nil {
 		return model.Usage{}, relaymodel.WrapperOpenAIError(
@@ -45,6 +48,7 @@ func RerankHandler(
 			http.StatusInternalServerError,
 		)
 	}
+
 	err = sonic.UnmarshalString(usageStr, &usage)
 	if err != nil {
 		return model.Usage{}, relaymodel.WrapperOpenAIError(
@@ -53,13 +57,16 @@ func RerankHandler(
 			http.StatusInternalServerError,
 		)
 	}
+
 	if usage.PromptTokens == 0 && usage.TotalTokens != 0 {
 		usage.PromptTokens = usage.TotalTokens
 	} else if usage.PromptTokens == 0 {
 		usage.PromptTokens = int64(meta.RequestUsage.InputTokens)
 		usage.TotalTokens = int64(meta.RequestUsage.InputTokens)
 	}
+
 	modelUsage := usage.ToModelUsage()
+
 	_, err = node.SetAny("meta", map[string]any{
 		"tokens": modelUsage,
 	})
@@ -70,6 +77,7 @@ func RerankHandler(
 			http.StatusInternalServerError,
 		)
 	}
+
 	_, err = node.Unset("usage")
 	if err != nil {
 		return modelUsage, relaymodel.WrapperOpenAIError(
@@ -78,6 +86,7 @@ func RerankHandler(
 			http.StatusInternalServerError,
 		)
 	}
+
 	_, err = node.Set("model", ast.NewString(meta.OriginModel))
 	if err != nil {
 		return modelUsage, relaymodel.WrapperOpenAIError(
@@ -86,6 +95,7 @@ func RerankHandler(
 			http.StatusInternalServerError,
 		)
 	}
+
 	respData, err := node.MarshalJSON()
 	if err != nil {
 		return modelUsage, relaymodel.WrapperOpenAIError(
@@ -94,11 +104,14 @@ func RerankHandler(
 			http.StatusInternalServerError,
 		)
 	}
+
 	c.Writer.Header().Set("Content-Type", "application/json")
 	c.Writer.Header().Set("Content-Length", strconv.Itoa(len(respData)))
+
 	_, err = c.Writer.Write(respData)
 	if err != nil {
 		log.Warnf("write response body failed: %v", err)
 	}
+
 	return modelUsage, nil
 }

@@ -20,6 +20,7 @@ type GroupResponse struct {
 
 func (g *GroupResponse) MarshalJSON() ([]byte, error) {
 	type Alias model.Group
+
 	return sonic.Marshal(&struct {
 		*Alias
 		CreatedAt  int64 `json:"created_at,omitempty"`
@@ -45,11 +46,13 @@ func (g *GroupResponse) MarshalJSON() ([]byte, error) {
 func GetGroups(c *gin.Context) {
 	page, perPage := utils.ParsePageParams(c)
 	order := c.DefaultQuery("order", "")
+
 	groups, total, err := model.GetGroups(page, perPage, order, false)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
+
 	groupResponses := make([]*GroupResponse, len(groups))
 	for i, group := range groups {
 		lastRequestAt, _ := model.GetGroupLastRequestTimeMinute(group.ID)
@@ -58,6 +61,7 @@ func GetGroups(c *gin.Context) {
 			AccessedAt: lastRequestAt,
 		}
 	}
+
 	middleware.SuccessResponse(c, gin.H{
 		"groups": groupResponses,
 		"total":  total,
@@ -83,11 +87,13 @@ func SearchGroups(c *gin.Context) {
 	page, perPage := utils.ParsePageParams(c)
 	order := c.DefaultQuery("order", "")
 	status, _ := strconv.Atoi(c.Query("status"))
+
 	groups, total, err := model.SearchGroup(keyword, page, perPage, order, status)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
+
 	groupResponses := make([]*GroupResponse, len(groups))
 	for i, group := range groups {
 		lastRequestAt, _ := model.GetGroupLastRequestTimeMinute(group.ID)
@@ -96,6 +102,7 @@ func SearchGroups(c *gin.Context) {
 			AccessedAt: lastRequestAt,
 		}
 	}
+
 	middleware.SuccessResponse(c, gin.H{
 		"groups": groupResponses,
 		"total":  total,
@@ -118,11 +125,13 @@ func GetGroup(c *gin.Context) {
 		middleware.ErrorResponse(c, http.StatusBadRequest, "group id is empty")
 		return
 	}
+
 	_group, err := model.GetGroupByID(group, false)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
+
 	lastRequestAt, _ := model.GetGroupLastRequestTimeMinute(group)
 	groupResponse := &GroupResponse{
 		Group:      _group,
@@ -153,17 +162,21 @@ func UpdateGroupRPMRatio(c *gin.Context) {
 		middleware.ErrorResponse(c, http.StatusBadRequest, "invalid parameter")
 		return
 	}
+
 	req := UpdateGroupRPMRatioRequest{}
+
 	err := sonic.ConfigDefault.NewDecoder(c.Request.Body).Decode(&req)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusBadRequest, "invalid parameter")
 		return
 	}
+
 	err = model.UpdateGroupRPMRatio(group, req.RPMRatio)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
+
 	middleware.SuccessResponse(c, nil)
 }
 
@@ -189,17 +202,21 @@ func UpdateGroupTPMRatio(c *gin.Context) {
 		middleware.ErrorResponse(c, http.StatusBadRequest, "invalid parameter")
 		return
 	}
+
 	req := UpdateGroupTPMRatioRequest{}
+
 	err := sonic.ConfigDefault.NewDecoder(c.Request.Body).Decode(&req)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusBadRequest, "invalid parameter")
 		return
 	}
+
 	err = model.UpdateGroupTPMRatio(group, req.TPMRatio)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
+
 	middleware.SuccessResponse(c, nil)
 }
 
@@ -225,17 +242,21 @@ func UpdateGroupStatus(c *gin.Context) {
 		middleware.ErrorResponse(c, http.StatusBadRequest, "invalid parameter")
 		return
 	}
+
 	req := UpdateGroupStatusRequest{}
+
 	err := sonic.ConfigDefault.NewDecoder(c.Request.Body).Decode(&req)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusBadRequest, "invalid parameter")
 		return
 	}
+
 	err = model.UpdateGroupStatus(group, req.Status)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
+
 	middleware.SuccessResponse(c, nil)
 }
 
@@ -255,11 +276,13 @@ func DeleteGroup(c *gin.Context) {
 		middleware.ErrorResponse(c, http.StatusBadRequest, "invalid parameter")
 		return
 	}
+
 	err := model.DeleteGroupByID(group)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
+
 	middleware.SuccessResponse(c, nil)
 }
 
@@ -276,16 +299,19 @@ func DeleteGroup(c *gin.Context) {
 //	@Router			/api/groups/batch_delete [post]
 func DeleteGroups(c *gin.Context) {
 	ids := []string{}
+
 	err := c.ShouldBindJSON(&ids)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
 	}
+
 	err = model.DeleteGroupsByIDs(ids)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
+
 	middleware.SuccessResponse(c, nil)
 }
 
@@ -307,16 +333,19 @@ type UpdateGroupsStatusRequest struct {
 //	@Router			/api/groups/batch_status [post]
 func UpdateGroupsStatus(c *gin.Context) {
 	req := UpdateGroupsStatusRequest{}
+
 	err := c.ShouldBindJSON(&req)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
 	}
+
 	_, err = model.UpdateGroupsStatus(req.Groups, req.Status)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
+
 	middleware.SuccessResponse(c, nil)
 }
 
@@ -358,7 +387,9 @@ func CreateGroup(c *gin.Context) {
 		middleware.ErrorResponse(c, http.StatusBadRequest, "invalid parameter")
 		return
 	}
+
 	req := CreateGroupRequest{}
+
 	err := sonic.ConfigDefault.NewDecoder(c.Request.Body).Decode(&req)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusBadRequest, "invalid parameter")
@@ -366,11 +397,13 @@ func CreateGroup(c *gin.Context) {
 	}
 
 	g := req.ToGroup()
+
 	g.ID = group
 	if err := model.CreateGroup(g); err != nil {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
+
 	middleware.SuccessResponse(c, g)
 }
 
@@ -392,7 +425,9 @@ func UpdateGroup(c *gin.Context) {
 		middleware.ErrorResponse(c, http.StatusBadRequest, "invalid parameter")
 		return
 	}
+
 	req := CreateGroupRequest{}
+
 	err := sonic.ConfigDefault.NewDecoder(c.Request.Body).Decode(&req)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusBadRequest, "invalid parameter")
@@ -400,11 +435,13 @@ func UpdateGroup(c *gin.Context) {
 	}
 
 	g := req.ToGroup()
+
 	err = model.UpdateGroup(group, g)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
+
 	middleware.SuccessResponse(c, g)
 }
 
@@ -467,6 +504,7 @@ func SaveGroupModelConfigs(c *gin.Context) {
 	}
 
 	req := []SaveGroupModelConfigRequest{}
+
 	err := c.ShouldBindJSON(&req)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusBadRequest, "invalid parameter")
@@ -477,11 +515,13 @@ func SaveGroupModelConfigs(c *gin.Context) {
 	for i, config := range req {
 		configs[i] = config.ToGroupModelConfig(group)
 	}
+
 	err = model.SaveGroupModelConfigs(group, configs)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
+
 	middleware.SuccessResponse(c, nil)
 }
 
@@ -503,6 +543,7 @@ func SaveGroupModelConfig(c *gin.Context) {
 		middleware.ErrorResponse(c, http.StatusBadRequest, "invalid parameter")
 		return
 	}
+
 	modelName := strings.TrimPrefix(c.Param("model"), "/")
 	if modelName == "" {
 		middleware.ErrorResponse(c, http.StatusBadRequest, "invalid parameter")
@@ -510,18 +551,22 @@ func SaveGroupModelConfig(c *gin.Context) {
 	}
 
 	req := SaveGroupModelConfigRequest{}
+
 	err := c.ShouldBindJSON(&req)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusBadRequest, "invalid parameter")
 		return
 	}
+
 	modelConfig := req.ToGroupModelConfig(group)
 	modelConfig.Model = modelName
+
 	err = model.SaveGroupModelConfig(modelConfig)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
+
 	middleware.SuccessResponse(c, nil)
 }
 
@@ -542,16 +587,19 @@ func DeleteGroupModelConfig(c *gin.Context) {
 		middleware.ErrorResponse(c, http.StatusBadRequest, "invalid parameter")
 		return
 	}
+
 	modelName := strings.TrimPrefix(c.Param("model"), "/")
 	if modelName == "" {
 		middleware.ErrorResponse(c, http.StatusBadRequest, "invalid parameter")
 		return
 	}
+
 	err := model.DeleteGroupModelConfig(group, modelName)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
+
 	middleware.SuccessResponse(c, nil)
 }
 
@@ -572,17 +620,21 @@ func DeleteGroupModelConfigs(c *gin.Context) {
 		middleware.ErrorResponse(c, http.StatusBadRequest, "invalid parameter")
 		return
 	}
+
 	models := []string{}
+
 	err := c.ShouldBindJSON(&models)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusBadRequest, "invalid parameter")
 		return
 	}
+
 	err = model.DeleteGroupModelConfigs(group, models)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
+
 	middleware.SuccessResponse(c, nil)
 }
 
@@ -602,11 +654,13 @@ func GetGroupModelConfigs(c *gin.Context) {
 		middleware.ErrorResponse(c, http.StatusBadRequest, "invalid parameter")
 		return
 	}
+
 	modelConfigs, err := model.GetGroupModelConfigs(group)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
+
 	middleware.SuccessResponse(c, modelConfigs)
 }
 
@@ -627,16 +681,19 @@ func GetGroupModelConfig(c *gin.Context) {
 		middleware.ErrorResponse(c, http.StatusBadRequest, "invalid parameter")
 		return
 	}
+
 	modelName := strings.TrimPrefix(c.Param("model"), "/")
 	if modelName == "" {
 		middleware.ErrorResponse(c, http.StatusBadRequest, "invalid parameter")
 		return
 	}
+
 	modelConfig, err := model.GetGroupModelConfig(group, modelName)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
+
 	middleware.SuccessResponse(c, modelConfig)
 }
 
@@ -659,6 +716,7 @@ func UpdateGroupModelConfig(c *gin.Context) {
 		middleware.ErrorResponse(c, http.StatusBadRequest, "invalid parameter")
 		return
 	}
+
 	modelName := strings.TrimPrefix(c.Param("model"), "/")
 	if modelName == "" {
 		middleware.ErrorResponse(c, http.StatusBadRequest, "invalid parameter")
@@ -666,18 +724,22 @@ func UpdateGroupModelConfig(c *gin.Context) {
 	}
 
 	req := SaveGroupModelConfigRequest{}
+
 	err := c.ShouldBindJSON(&req)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusBadRequest, "invalid parameter")
 		return
 	}
+
 	modelConfig := req.ToGroupModelConfig(group)
 	modelConfig.Model = modelName
+
 	err = model.UpdateGroupModelConfig(modelConfig)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
+
 	middleware.SuccessResponse(c, nil)
 }
 
@@ -701,20 +763,24 @@ func UpdateGroupModelConfigs(c *gin.Context) {
 	}
 
 	req := []SaveGroupModelConfigRequest{}
+
 	err := c.ShouldBindJSON(&req)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusBadRequest, "invalid parameter")
 		return
 	}
+
 	configs := make([]model.GroupModelConfig, len(req))
 	for i, config := range req {
 		configs[i] = config.ToGroupModelConfig(group)
 	}
+
 	err = model.UpdateGroupModelConfigs(group, configs)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
+
 	middleware.SuccessResponse(c, nil)
 }
 
@@ -733,10 +799,12 @@ func UpdateGroupModelConfigs(c *gin.Context) {
 func GetIPGroupList(c *gin.Context) {
 	threshold, _ := strconv.Atoi(c.Query("threshold"))
 	startTime, endTime := utils.ParseTimeRange(c, 0)
+
 	ipGroupList, err := model.GetIPGroups(threshold, startTime, endTime)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
+
 	middleware.SuccessResponse(c, ipGroupList)
 }

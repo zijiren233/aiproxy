@@ -31,9 +31,11 @@ func ConvertImageRequest(
 	if err != nil {
 		return adaptor.ConvertResult{}, err
 	}
+
 	request.Model = meta.ActualModel
 
 	var imageRequest ImageRequest
+
 	imageRequest.Input.Prompt = request.Prompt
 	imageRequest.Model = request.Model
 	imageRequest.Parameters.Size = strings.ReplaceAll(request.Size, "x", "*")
@@ -46,6 +48,7 @@ func ConvertImageRequest(
 	if err != nil {
 		return adaptor.ConvertResult{}, err
 	}
+
 	return adaptor.ConvertResult{
 		Header: http.Header{
 			"X-Dashscope-Async": {"enable"},
@@ -72,6 +75,7 @@ func ImageHandler(
 	responseFormat, _ := meta.MustGet(MetaResponseFormat).(string)
 
 	var aliTaskResponse TaskResponse
+
 	err := common.UnmarshalResponse(resp, &aliTaskResponse)
 	if err != nil {
 		return model.Usage{}, relaymodel.WrapperOpenAIError(
@@ -83,6 +87,7 @@ func ImageHandler(
 
 	if aliTaskResponse.Message != "" {
 		log.Error("aliAsyncTask err: " + aliTaskResponse.Message)
+
 		return model.Usage{}, relaymodel.WrapperOpenAIError(
 			errors.New(aliTaskResponse.Message),
 			"ali_async_task_failed",
@@ -108,6 +113,7 @@ func ImageHandler(
 	}
 
 	fullTextResponse := responseAli2OpenAIImage(c.Request.Context(), aliResponse, responseFormat)
+
 	jsonResponse, err := sonic.Marshal(fullTextResponse)
 	if err != nil {
 		return fullTextResponse.Usage.ToModelUsage(), relaymodel.WrapperOpenAIError(
@@ -116,9 +122,11 @@ func ImageHandler(
 			http.StatusInternalServerError,
 		)
 	}
+
 	c.Writer.Header().Set("Content-Type", "application/json")
 	c.Writer.Header().Set("Content-Length", strconv.Itoa(len(jsonResponse)))
 	_, _ = c.Writer.Write(jsonResponse)
+
 	return fullTextResponse.Usage.ToModelUsage(), nil
 }
 
@@ -135,6 +143,7 @@ func asyncTask(ctx context.Context, taskID, key string) (*TaskResponse, error) {
 	req.Header.Set("Authorization", "Bearer "+key)
 
 	client := &http.Client{}
+
 	resp, err := client.Do(req)
 	if err != nil {
 		return &aliResponse, err
@@ -142,6 +151,7 @@ func asyncTask(ctx context.Context, taskID, key string) (*TaskResponse, error) {
 	defer resp.Body.Close()
 
 	var response TaskResponse
+
 	err = sonic.ConfigDefault.NewDecoder(resp.Body).Decode(&response)
 	if err != nil {
 		return &aliResponse, err
@@ -157,6 +167,7 @@ func asyncTaskWait(ctx context.Context, taskID, key string) (*TaskResponse, erro
 
 	for {
 		step++
+
 		rsp, err := asyncTask(ctx, taskID, key)
 		if err != nil {
 			return nil, err
@@ -176,9 +187,11 @@ func asyncTaskWait(ctx context.Context, taskID, key string) (*TaskResponse, erro
 		case "UNKNOWN":
 			return rsp, nil
 		}
+
 		if step >= maxStep {
 			break
 		}
+
 		time.Sleep(time.Duration(waitSeconds) * time.Second)
 	}
 
@@ -218,9 +231,11 @@ func responseAli2OpenAIImage(
 			RevisedPrompt: "",
 		})
 	}
+
 	imageResponse.Usage = &relaymodel.ImageUsage{
 		OutputTokens: int64(len(imageResponse.Data)),
 		TotalTokens:  int64(len(imageResponse.Data)),
 	}
+
 	return &imageResponse
 }

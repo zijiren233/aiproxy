@@ -92,10 +92,12 @@ func getCacheItem(meta *meta.Meta) *Item {
 	if !ok {
 		return nil
 	}
+
 	item, ok := v.(*Item)
 	if !ok {
 		panic(fmt.Sprintf("cache item type not match: %T", v))
 	}
+
 	return item
 }
 
@@ -110,14 +112,17 @@ func getBuffer() *bytes.Buffer {
 	if !ok {
 		panic(fmt.Sprintf("buffer type error: %T, %v", v, v))
 	}
+
 	return v
 }
 
 func putBuffer(buf *bytes.Buffer) {
 	buf.Reset()
+
 	if buf.Cap() > maxBufferSize {
 		return
 	}
+
 	bufferPool.Put(buf)
 }
 
@@ -129,6 +134,7 @@ func getPluginConfig(meta *meta.Meta) (config *Config, err error) {
 		if !ok {
 			panic(fmt.Sprintf("cache config type not match: %T", v))
 		}
+
 		return config, nil
 	}
 
@@ -136,7 +142,9 @@ func getPluginConfig(meta *meta.Meta) (config *Config, err error) {
 	if err := meta.ModelConfig.LoadPluginConfig("cache", &pluginConfig); err != nil {
 		return nil, err
 	}
+
 	meta.Set(pluginConfigCacheKey, &pluginConfig)
+
 	return &pluginConfig, nil
 }
 
@@ -223,6 +231,7 @@ func (c *Cache) ConvertRequest(
 	if err != nil {
 		return do.ConvertRequest(meta, store, req)
 	}
+
 	if !pluginConfig.Enable {
 		return do.ConvertRequest(meta, store, req)
 	}
@@ -278,12 +287,15 @@ func (rw *responseWriter) Write(b []byte) (int, error) {
 	if rw.overflow {
 		return rw.ResponseWriter.Write(b)
 	}
+
 	if rw.maxSize > 0 && rw.cacheBody.Len()+len(b) > rw.maxSize {
 		rw.overflow = true
 		rw.cacheBody.Reset()
 		return rw.ResponseWriter.Write(b)
 	}
+
 	rw.cacheBody.Write(b)
+
 	return rw.ResponseWriter.Write(b)
 }
 
@@ -291,12 +303,15 @@ func (rw *responseWriter) WriteString(s string) (int, error) {
 	if rw.overflow {
 		return rw.ResponseWriter.WriteString(s)
 	}
+
 	if rw.maxSize > 0 && rw.cacheBody.Len()+len(s) > rw.maxSize {
 		rw.overflow = true
 		rw.cacheBody.Reset()
 		return rw.ResponseWriter.WriteString(s)
 	}
+
 	rw.cacheBody.WriteString(s)
+
 	return rw.ResponseWriter.WriteString(s)
 }
 
@@ -306,6 +321,7 @@ func (c *Cache) writeCacheHeader(ctx *gin.Context, pluginConfig *Config, value s
 		if header == "" {
 			header = cacheHeader
 		}
+
 		ctx.Header(header, value)
 	}
 }
@@ -342,6 +358,7 @@ func (c *Cache) DoResponse(
 		ctx.Header("Content-Length", strconv.Itoa(len(item.Body)))
 		c.writeCacheHeader(ctx, pluginConfig, "hit")
 		_, _ = ctx.Writer.Write(item.Body)
+
 		return item.Usage, nil
 	}
 
@@ -360,6 +377,7 @@ func (c *Cache) DoResponse(
 		maxSize:        pluginConfig.ItemMaxSize,
 		cacheBody:      buf,
 	}
+
 	ctx.Writer = rw
 	defer func() {
 		ctx.Writer = rw.ResponseWriter

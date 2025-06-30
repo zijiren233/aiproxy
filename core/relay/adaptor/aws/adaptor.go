@@ -33,7 +33,9 @@ func (a *Adaptor) ConvertRequest(
 	if aa == nil {
 		return adaptor.ConvertResult{}, errors.New("adaptor not found")
 	}
+
 	meta.Set("awsAdapter", aa)
+
 	return aa.ConvertRequest(meta, store, req)
 }
 
@@ -51,10 +53,12 @@ func (a *Adaptor) DoResponse(
 			http.StatusInternalServerError,
 		)
 	}
+
 	v, ok := adaptor.(utils.AwsAdapter)
 	if !ok {
 		panic(fmt.Sprintf("aws adapter type error: %T, %v", v, v))
 	}
+
 	return v.DoResponse(meta, store, c)
 }
 
@@ -63,6 +67,7 @@ func (a *Adaptor) Metadata() adaptor.Metadata {
 	for _, model := range adaptors {
 		models = append(models, model.config)
 	}
+
 	return adaptor.Metadata{
 		Models:  models,
 		KeyHelp: "region|ak|sk",

@@ -41,5 +41,6 @@ func (u EmbeddingUsage) ToModelUsage() model.Usage {
 	if u.PromptTokensDetails != nil {
 		usage.ImageInputTokens = model.ZeroNullInt64(u.PromptTokensDetails.ImageTokens)
 	}
+
 	return usage
 }

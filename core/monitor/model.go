@@ -84,6 +84,7 @@ func AddRequest(
 			tryBan,
 			maxErrorRate,
 		)
+
 		return beyondThreshold, banExecution, nil
 	}
 
@@ -95,6 +96,7 @@ func AddRequest(
 	}
 
 	now := time.Now().UnixMilli()
+
 	val, err := addRequestScript.Run(
 		ctx,
 		common.RDB,
@@ -109,6 +111,7 @@ func AddRequest(
 	if err != nil {
 		return false, false, err
 	}
+
 	return val == 3, val == 1, nil
 }
 
@@ -126,14 +129,17 @@ func buildStatsKey(model, channelID string) string {
 func getModelChannelID(key string) (string, int64, bool) {
 	content := strings.TrimPrefix(key, modelKeyPrefix())
 	content = strings.TrimSuffix(content, statsKeySuffix)
+
 	model, channelIDStr, ok := strings.Cut(content, channelKeyPart)
 	if !ok {
 		return "", 0, false
 	}
+
 	channelID, err := strconv.ParseInt(channelIDStr, 10, 64)
 	if err != nil {
 		return "", 0, false
 	}
+
 	return model, channelID, true
 }
 
@@ -249,6 +255,7 @@ func ClearChannelModelErrors(ctx context.Context, model string, channelID int) e
 	if !common.RedisEnabled {
 		return memModelMonitor.ClearChannelModelErrors(ctx, model, channelID)
 	}
+
 	return clearChannelModelErrorsScript.Run(
 		ctx,
 		common.RDB,
@@ -262,6 +269,7 @@ func ClearChannelAllModelErrors(ctx context.Context, channelID int) error {
 	if !common.RedisEnabled {
 		return memModelMonitor.ClearChannelAllModelErrors(ctx, channelID)
 	}
+
 	return clearChannelAllModelErrorsScript.Run(
 		ctx,
 		common.RDB,
@@ -306,6 +314,7 @@ func GetAllBannedModelChannels(ctx context.Context) (map[string][]int64, error) 
 		if _, exists := result[model]; !exists {
 			result[model] = []int64{}
 		}
+
 		result[model] = append(result[model], channelID)
 	}
 
@@ -348,6 +357,7 @@ func GetAllChannelModelErrorRates(ctx context.Context) (map[int64]map[string]flo
 		if _, exists := result[channelID]; !exists {
 			result[channelID] = make(map[string]float64)
 		}
+
 		result[channelID][model] = rate
 	}
 

@@ -26,12 +26,15 @@ func (l *GroupSummaryMinute) BeforeCreate(_ *gorm.DB) (err error) {
 	if l.Unique.Model == "" {
 		return errors.New("model is required")
 	}
+
 	if l.Unique.MinuteTimestamp == 0 {
 		return errors.New("minute timestamp is required")
 	}
+
 	if err := validateMinuteTimestamp(l.Unique.MinuteTimestamp); err != nil {
 		return err
 	}
+
 	return
 }
 
@@ -68,10 +71,12 @@ func UpsertGroupSummaryMinute(unique GroupSummaryMinuteUnique, data SummaryData)
 				unique.MinuteTimestamp,
 			).
 			Updates(data.buildUpdateData("group_summary_minutes"))
+
 		err = result.Error
 		if err != nil {
 			return err
 		}
+
 		if result.RowsAffected > 0 {
 			return nil
 		}
@@ -80,6 +85,7 @@ func UpsertGroupSummaryMinute(unique GroupSummaryMinuteUnique, data SummaryData)
 		if err == nil {
 			return nil
 		}
+
 		if !errors.Is(err, gorm.ErrDuplicatedKey) {
 			return err
 		}
@@ -109,7 +115,9 @@ func GetGroupLastRequestTimeMinute(group string) (time.Time, error) {
 	if group == "" {
 		return time.Time{}, errors.New("group is required")
 	}
+
 	var summary GroupSummaryMinute
+
 	err := LogDB.
 		Model(&GroupSummaryMinute{}).
 		Where("group_id = ?", group).
@@ -118,11 +126,13 @@ func GetGroupLastRequestTimeMinute(group string) (time.Time, error) {
 	if summary.Unique.MinuteTimestamp == 0 {
 		return time.Time{}, nil
 	}
+
 	return time.Unix(summary.Unique.MinuteTimestamp, 0), err
 }
 
 func GetGroupTokenLastRequestTimeMinute(group, token string) (time.Time, error) {
 	var summary GroupSummaryMinute
+
 	err := LogDB.
 		Model(&GroupSummaryMinute{}).
 		Where("group_id = ? AND token_name = ?", group, token).
@@ -131,5 +141,6 @@ func GetGroupTokenLastRequestTimeMinute(group, token string) (time.Time, error) 
 	if summary.Unique.MinuteTimestamp == 0 {
 		return time.Time{}, nil
 	}
+
 	return time.Unix(summary.Unique.MinuteTimestamp, 0), err
 }

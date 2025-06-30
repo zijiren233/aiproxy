@@ -17,6 +17,7 @@ func RerankErrorHanlder(resp *http.Response) adaptor.Error {
 	defer resp.Body.Close()
 
 	errResp := RerankErrorResponse{}
+
 	err := sonic.ConfigDefault.NewDecoder(resp.Body).Decode(&errResp)
 	if err != nil {
 		return relaymodel.WrapperOpenAIError(
@@ -42,6 +43,7 @@ func EmbeddingsErrorHanlder(resp *http.Response) adaptor.Error {
 	defer resp.Body.Close()
 
 	errResp := EmbeddingsErrorResponse{}
+
 	err := sonic.ConfigDefault.NewDecoder(resp.Body).Decode(&errResp)
 	if err != nil {
 		return relaymodel.WrapperOpenAIError(

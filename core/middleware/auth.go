@@ -48,6 +48,7 @@ func AdminAuth(c *gin.Context) {
 	if accessToken == "" {
 		accessToken = c.Query("key")
 	}
+
 	accessToken = strings.TrimPrefix(accessToken, "Bearer ")
 	accessToken = strings.TrimPrefix(accessToken, "sk-")
 
@@ -72,17 +73,22 @@ func AdminAuth(c *gin.Context) {
 
 func TokenAuth(c *gin.Context) {
 	log := common.GetLogger(c)
+
 	key := c.Request.Header.Get("Authorization")
 	if key == "" {
 		key = c.Request.Header.Get("X-Api-Key")
 	}
+
 	key = strings.TrimPrefix(
 		strings.TrimPrefix(key, "Bearer "),
 		"sk-",
 	)
 
-	var token model.TokenCache
-	var useInternalToken bool
+	var (
+		token            model.TokenCache
+		useInternalToken bool
+	)
+
 	if config.AdminKey != "" && config.AdminKey == key ||
 		config.InternalToken != "" && config.InternalToken == key {
 		token = model.TokenCache{
@@ -95,6 +101,7 @@ func TokenAuth(c *gin.Context) {
 			AbortLogWithMessage(c, http.StatusUnauthorized, err.Error())
 			return
 		}
+
 		token = *tokenCache
 	}
 
@@ -113,6 +120,7 @@ func TokenAuth(c *gin.Context) {
 					c.ClientIP(),
 				),
 			)
+
 			return
 		}
 	}
@@ -131,9 +139,12 @@ func TokenAuth(c *gin.Context) {
 			AbortLogWithMessage(c, http.StatusInternalServerError, fmt.Sprintf("failed to get group: %v", err))
 			return
 		}
+
 		group = *groupCache
 	}
+
 	SetLogGroupFields(log.Data, group)
+
 	if group.Status != model.GroupStatusEnabled && group.Status != model.GroupStatusInternal {
 		AbortLogWithMessage(c, http.StatusForbidden, "group is disabled")
 		return
@@ -154,6 +165,7 @@ func GetGroup(c *gin.Context) model.GroupCache {
 	if !ok {
 		panic(fmt.Sprintf("group cache type error: %T, %v", v, v))
 	}
+
 	return v
 }
 
@@ -162,6 +174,7 @@ func GetToken(c *gin.Context) model.TokenCache {
 	if !ok {
 		panic(fmt.Sprintf("token cache type error: %T, %v", v, v))
 	}
+
 	return v
 }
 
@@ -170,6 +183,7 @@ func GetModelCaches(c *gin.Context) *model.ModelCaches {
 	if !ok {
 		panic(fmt.Sprintf("model caches type error: %T, %v", v, v))
 	}
+
 	return v
 }
 
@@ -201,9 +215,11 @@ func SetLogChannelFields(fields logrus.Fields, channel meta.ChannelMeta) {
 	if channel.ID > 0 {
 		fields["chid"] = channel.ID
 	}
+
 	if channel.Name != "" {
 		fields["chname"] = channel.Name
 	}
+
 	if channel.Type > 0 {
 		fields["chtype"] = int(channel.Type)
 		fields["chtype_name"] = channel.Type.String()
@@ -224,12 +240,15 @@ func SetLogTokenFields(fields logrus.Fields, token model.TokenCache, internal bo
 	if token.ID > 0 {
 		fields["kid"] = token.ID
 	}
+
 	if token.Name != "" {
 		fields["kname"] = token.Name
 	}
+
 	if token.Key != "" {
 		fields["key"] = maskTokenKey(token.Key)
 	}
+
 	if internal {
 		fields["internal"] = "true"
 	}

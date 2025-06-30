@@ -36,35 +36,46 @@ func GetBalance(baseURL, key string) (float64, error) {
 	if u == "" {
 		u = baseURL
 	}
+
 	url := u + "/v1/dashboard/billing/subscription"
 
 	req1, err := http.NewRequestWithContext(context.Background(), http.MethodGet, url, nil)
 	if err != nil {
 		return 0, err
 	}
+
 	req1.Header.Set("Authorization", "Bearer "+key)
+
 	res1, err := http.DefaultClient.Do(req1)
 	if err != nil {
 		return 0, err
 	}
 	defer res1.Body.Close()
+
 	subscription := SubscriptionResponse{}
+
 	err = sonic.ConfigDefault.NewDecoder(res1.Body).Decode(&subscription)
 	if err != nil {
 		return 0, err
 	}
+
 	now := time.Now()
 	startDate := now.Format("2006-01") + "-01"
+
 	endDate := now.Format(time.DateOnly)
 	if !subscription.HasPaymentMethod {
 		startDate = now.AddDate(0, 0, -100).Format(time.DateOnly)
 	}
+
 	url = u + "/v1/dashboard/billing/usage?start_date=" + startDate + "&end_date=" + endDate
+
 	req2, err := http.NewRequestWithContext(context.Background(), http.MethodGet, url, nil)
 	if err != nil {
 		return 0, err
 	}
+
 	req2.Header.Set("Authorization", "Bearer "+key)
+
 	res2, err := http.DefaultClient.Do(req2)
 	if err != nil {
 		return 0, err
@@ -72,10 +83,13 @@ func GetBalance(baseURL, key string) (float64, error) {
 	defer res2.Body.Close()
 
 	usage := UsageResponse{}
+
 	err = sonic.ConfigDefault.NewDecoder(res2.Body).Decode(&usage)
 	if err != nil {
 		return 0, err
 	}
+
 	balance := subscription.HardLimitUSD - usage.TotalUsage/100
+
 	return balance, nil
 }

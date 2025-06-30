@@ -35,6 +35,7 @@ func ConvertVideoRequest(
 	if err != nil {
 		return adaptor.ConvertResult{}, err
 	}
+
 	return adaptor.ConvertResult{
 		Header: http.Header{
 			"Content-Type":   {"application/json"},
@@ -84,7 +85,9 @@ func VideoHandler(
 			http.StatusInternalServerError,
 		)
 	}
+
 	idNode := node.Get("id")
+
 	id, err := idNode.String()
 	if err != nil {
 		return model.Usage{}, relaymodel.WrapperOpenAIVideoError(
@@ -109,6 +112,7 @@ func VideoHandler(
 	c.Writer.Header().Set("Content-Type", "application/json")
 	c.Writer.Header().Set("Content-Length", strconv.Itoa(len(responseBody)))
 	_, _ = c.Writer.Write(responseBody)
+
 	return model.Usage{}, nil
 }
 
@@ -147,14 +151,18 @@ func VideoGetJobsHandler(
 	}
 
 	generationsNode := node.Get("generations")
+
 	var patchErr error
+
 	err = generationsNode.ForEach(func(_ ast.Sequence, node *ast.Node) bool {
 		idNode := node.Get("id")
+
 		id, err := idNode.String()
 		if err != nil {
 			patchErr = err
 			return false
 		}
+
 		err = store.SaveStore(adaptor.StoreCache{
 			ID:        id,
 			GroupID:   meta.Group.ID,
@@ -167,11 +175,13 @@ func VideoGetJobsHandler(
 			log := common.GetLogger(c)
 			log.Errorf("save store failed: %v", err)
 		}
+
 		return true
 	})
 	if err == nil {
 		err = patchErr
 	}
+
 	if err != nil {
 		return model.Usage{}, relaymodel.WrapperOpenAIVideoError(
 			err,
@@ -182,6 +192,7 @@ func VideoGetJobsHandler(
 	c.Writer.Header().Set("Content-Type", "application/json")
 	c.Writer.Header().Set("Content-Length", strconv.Itoa(len(responseBody)))
 	_, _ = c.Writer.Write(responseBody)
+
 	return model.Usage{}, nil
 }
 
@@ -197,5 +208,6 @@ func VideoGetJobsContentHandler(
 
 	c.Writer.Header().Set("Content-Type", resp.Header.Get("Content-Type"))
 	_, _ = io.Copy(c.Writer, resp.Body)
+
 	return model.Usage{}, nil
 }

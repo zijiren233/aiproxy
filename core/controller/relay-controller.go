@@ -57,6 +57,7 @@ func (s *storeImpl) GetStore(id string) (adaptor.StoreCache, error) {
 	if err != nil {
 		return adaptor.StoreCache{}, err
 	}
+
 	return adaptor.StoreCache{
 		ID:        store.ID,
 		GroupID:   store.GroupID,
@@ -76,6 +77,7 @@ func (s *storeImpl) SaveStore(store adaptor.StoreCache) error {
 		Model:     store.Model,
 		ExpiresAt: store.ExpiresAt,
 	})
+
 	return err
 }
 
@@ -151,6 +153,7 @@ func relayController(m mode.Mode) RelayController {
 		c.GetRequestPrice = controller.GetVideoGenerationJobRequestPrice
 		c.GetRequestUsage = controller.GetVideoGenerationJobRequestUsage
 	}
+
 	return c
 }
 
@@ -163,6 +166,7 @@ func RelayHelper(
 	if result.Error == nil {
 		return result, false
 	}
+
 	return result, monitorplugin.ShouldRetry(result.Error)
 }
 
@@ -193,6 +197,7 @@ func relay(c *gin.Context, mode mode.Mode, relayController RelayController) {
 			http.StatusServiceUnavailable,
 			"the upstream load is saturated, please try again later",
 		)
+
 		return
 	}
 
@@ -204,6 +209,7 @@ func relay(c *gin.Context, mode mode.Mode, relayController RelayController) {
 				http.StatusInternalServerError,
 				"get request price failed: "+err.Error(),
 			)
+
 			return
 		}
 	}
@@ -217,8 +223,10 @@ func relay(c *gin.Context, mode mode.Mode, relayController RelayController) {
 				http.StatusInternalServerError,
 				"get request usage failed: "+err.Error(),
 			)
+
 			return
 		}
+
 		gbc := middleware.GetGroupBalanceConsumerFromContext(c)
 		if !gbc.CheckBalance(consume.CalculateAmount(http.StatusOK, requestUsage, price)) {
 			middleware.AbortLogWithMessageWithMode(mode, c,
@@ -226,6 +234,7 @@ func relay(c *gin.Context, mode mode.Mode, relayController RelayController) {
 				fmt.Sprintf("group (%s) balance not enough", gbc.Group),
 				relaymodel.WithType(middleware.GroupBalanceNotEnough),
 			)
+
 			return
 		}
 
@@ -239,6 +248,7 @@ func relay(c *gin.Context, mode mode.Mode, relayController RelayController) {
 	if mc.RetryTimes > 0 {
 		retryTimes = int(mc.RetryTimes)
 	}
+
 	if handleRelayResult(c, result.Error, retry, retryTimes) {
 		recordResult(
 			c,
@@ -250,6 +260,7 @@ func relay(c *gin.Context, mode mode.Mode, relayController RelayController) {
 			middleware.GetRequestUser(c),
 			middleware.GetRequestMetadata(c),
 		)
+
 		return
 	}
 
@@ -278,6 +289,7 @@ func recordResult(
 	metadata map[string]string,
 ) {
 	code := http.StatusOK
+
 	content := ""
 	if result.Error != nil {
 		code = result.Error.StatusCode()
@@ -286,6 +298,7 @@ func recordResult(
 	}
 
 	var detail *model.RequestDetail
+
 	firstByteAt := result.Detail.FirstByteAt
 	if config.GetSaveAllLogDetail() || meta.ModelConfig.ForceSaveDetail || code != http.StatusOK {
 		detail = &model.RequestDetail{
@@ -346,12 +359,14 @@ func handleRelayResult(
 	if bizErr == nil {
 		return true
 	}
+
 	if !retry ||
 		retryTimes == 0 ||
 		c.Request.Context().Err() != nil {
 		ErrorWithRequestID(c, bizErr)
 		return true
 	}
+
 	return false
 }
 
@@ -395,10 +410,12 @@ func retryLoop(c *gin.Context, mode mode.Mode, state *retryState, relayControlle
 	for {
 		lastStatusCode := state.result.Error.StatusCode()
 		lastChannelID := state.meta.Channel.ID
+
 		newChannel, err := getRetryChannel(state)
 		if err == nil {
 			err = prepareRetry(c)
 		}
+
 		if err != nil {
 			if !errors.Is(err, ErrChannelsExhausted) {
 				log.Errorf("prepare retry failed: %+v", err)
@@ -416,6 +433,7 @@ func retryLoop(c *gin.Context, mode mode.Mode, state *retryState, relayControlle
 					middleware.GetRequestMetadata(c),
 				)
 			}
+
 			break
 		}
 		// when the last request has not recorded the result, record the result
@@ -455,7 +473,9 @@ func retryLoop(c *gin.Context, mode mode.Mode, state *retryState, relayControlle
 			meta.WithRequestUsage(state.requestUsage),
 			meta.WithRetryAt(time.Now()),
 		)
+
 		var retry bool
+
 		state.result, retry = RelayHelper(c, state.meta, relayController)
 
 		done := handleRetryResult(c, retry, newChannel, state)
@@ -470,6 +490,7 @@ func retryLoop(c *gin.Context, mode mode.Mode, state *retryState, relayControlle
 				middleware.GetRequestUser(c),
 				middleware.GetRequestMetadata(c),
 			)
+
 			break
 		}
 
@@ -486,7 +507,9 @@ func prepareRetry(c *gin.Context) error {
 	if err != nil {
 		return fmt.Errorf("get request body failed in prepare retry: %w", err)
 	}
+
 	c.Request.Body = io.NopCloser(bytes.NewBuffer(requestBody))
+
 	return nil
 }
 
@@ -499,6 +522,7 @@ func handleRetryResult(
 	if ctx.Request.Context().Err() != nil {
 		return true
 	}
+
 	if !retry || state.result.Error == nil {
 		return true
 	}
@@ -553,24 +577,29 @@ func ErrorWithRequestID(c *gin.Context, relayErr adaptor.Error) {
 		c.JSON(relayErr.StatusCode(), relayErr)
 		return
 	}
+
 	log := common.GetLogger(c)
+
 	data, err := relayErr.MarshalJSON()
 	if err != nil {
 		log.Errorf("marshal error failed: %+v", err)
 		c.JSON(relayErr.StatusCode(), relayErr)
 		return
 	}
+
 	node, err := sonic.Get(data)
 	if err != nil {
 		log.Errorf("get node failed: %+v", err)
 		c.JSON(relayErr.StatusCode(), relayErr)
 		return
 	}
+
 	_, err = node.Set("aiproxy", ast.NewString(requestID))
 	if err != nil {
 		log.Errorf("set request id failed: %+v", err)
 		c.JSON(relayErr.StatusCode(), relayErr)
 		return
 	}
+
 	c.JSON(relayErr.StatusCode(), &node)
 }

@@ -12,6 +12,7 @@ import (
 
 func OpenAIErrorHandler(resp *http.Response) adaptor.Error {
 	defer resp.Body.Close()
+
 	respBody, err := common.GetResponseBody(resp)
 	if err != nil {
 		return relaymodel.WrapperOpenAIError(
@@ -54,15 +55,19 @@ func GetError(resp *http.Response) (int, relaymodel.AnthropicError) {
 // status 529 {Message:Overloaded Type:overloaded_error Param:}
 func GetErrorWithBody(statusCode int, respBody []byte) (int, relaymodel.AnthropicError) {
 	var e relaymodel.AnthropicErrorResponse
+
 	err := sonic.Unmarshal(respBody, &e)
 	if err != nil {
 		return statusCode, e.Error
 	}
+
 	if strings.Contains(e.Error.Message, "balance is too low") {
 		return http.StatusPaymentRequired, e.Error
 	}
+
 	if strings.Contains(e.Error.Message, "Overloaded") {
 		return http.StatusTooManyRequests, e.Error
 	}
+
 	return statusCode, e.Error
 }

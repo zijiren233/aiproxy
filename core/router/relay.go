@@ -16,11 +16,13 @@ func SetRelayRouter(router *gin.Engine) {
 		modelsRouter.GET("", controller.ListModels)
 		modelsRouter.GET("/:model", controller.RetrieveModel)
 	}
+
 	dashboardRouter := v1Router.Group("/dashboard")
 	{
 		dashboardRouter.GET("/billing/subscription", controller.GetSubscription)
 		dashboardRouter.GET("/billing/usage", controller.GetUsage)
 	}
+
 	relayRouter := v1Router.Group("")
 	{
 		relayRouter.POST(

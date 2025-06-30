@@ -56,6 +56,7 @@ func TestConvertRerankRequestSuccess(t *testing.T) {
 
 	// Parse the body back to verify the transformation
 	var transformedBody map[string]any
+
 	err = sonic.Unmarshal(bodyBytes, &transformedBody)
 	require.NoError(t, err)
 

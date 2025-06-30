@@ -133,5 +133,6 @@ func (a *Adaptor) DoResponse(
 			http.StatusBadRequest,
 		)
 	}
+
 	return
 }

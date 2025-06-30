@@ -58,8 +58,10 @@ func getToolCacheKey(mcpID string, updatedAt int64) string {
 
 func (c *toolMemoryCache) set(key string, tools []mcp.Tool) {
 	c.startCleanupOnStart()
+
 	c.mu.Lock()
 	defer c.mu.Unlock()
+
 	now := time.Now()
 	c.items[key] = toolCacheMemItem{
 		tools:      tools,
@@ -76,6 +78,7 @@ func (c *toolMemoryCache) get(key string) ([]mcp.Tool, bool) {
 	if !exists {
 		return nil, false
 	}
+
 	now := time.Now()
 	if now.After(item.lastUsedAt.Add(time.Minute*10)) ||
 		now.After(item.expiresAt) {
@@ -123,6 +126,7 @@ func CacheSetTools(mcpID string, updatedAt int64, tools []mcp.Tool) error {
 		pipe.HSet(context.Background(), redisKey, tools)
 		pipe.Expire(context.Background(), redisKey, time.Hour)
 		_, err := pipe.Exec(context.Background())
+
 		return err
 	}
 
@@ -136,6 +140,7 @@ func CacheGetTools(mcpID string, updatedAt int64) ([]mcp.Tool, bool) {
 
 	if common.RedisEnabled {
 		tools := redisToolSlice{}
+
 		err := common.RDB.HGetAll(context.Background(), key).Scan(&tools)
 		if err != nil {
 			log.Errorf("failed to get tools cache from redis (%s): %v", key, err)
@@ -157,13 +162,16 @@ func checkParamsIsFull(params model.Params, reusing map[string]model.ReusingPara
 		if !r.Required {
 			continue
 		}
+
 		if params == nil {
 			return false
 		}
+
 		if v, ok := params[key]; !ok || v == "" {
 			return false
 		}
 	}
+
 	return true
 }
 
@@ -183,6 +191,7 @@ func getPublicMCPTools(
 		if err != nil {
 			return
 		}
+
 		if err := CacheSetTools(publicMcp.ID, publicMcp.UpdateAt.Unix(), tools); err != nil {
 			log.Errorf("failed to set tools cache in redis: %v", err)
 		}
@@ -284,6 +293,7 @@ func getProxySSEMCPTools(
 	if err != nil {
 		return nil, err
 	}
+
 	client, err := transport.NewSSE(url, transport.WithHeaders(headers))
 	if err != nil {
 		return nil, err

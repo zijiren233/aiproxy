@@ -38,5 +38,6 @@ func (a *Adaptor) DoResponse(
 			usage, err = gemini.Handler(meta, c, resp)
 		}
 	}
+
 	return
 }

@@ -24,6 +24,7 @@ func stopReasonCohere2OpenAI(reason *string) string {
 	if reason == nil {
 		return ""
 	}
+
 	switch *reason {
 	case "COMPLETE":
 		return relaymodel.FinishReasonStop
@@ -48,10 +49,12 @@ func ConvertRequest(textRequest *relaymodel.GeneralOpenAIRequest) *Request {
 	if cohereRequest.Model == "" {
 		cohereRequest.Model = "command-r"
 	}
+
 	if strings.HasSuffix(cohereRequest.Model, "-internet") {
 		cohereRequest.Model = strings.TrimSuffix(cohereRequest.Model, "-internet")
 		cohereRequest.Connectors = append(cohereRequest.Connectors, WebSearchConnector)
 	}
+
 	for _, message := range textRequest.Messages {
 		messageContent, _ := message.Content.(string)
 		if message.Role == "user" {
@@ -66,12 +69,14 @@ func ConvertRequest(textRequest *relaymodel.GeneralOpenAIRequest) *Request {
 			default:
 				role = "USER"
 			}
+
 			cohereRequest.ChatHistory = append(cohereRequest.ChatHistory, ChatMessage{
 				Role:    role,
 				Message: messageContent,
 			})
 		}
 	}
+
 	return &cohereRequest
 }
 
@@ -79,9 +84,11 @@ func StreamResponse2OpenAI(
 	meta *meta.Meta,
 	cohereResponse *StreamResponse,
 ) *relaymodel.ChatCompletionsStreamResponse {
-	var response *Response
-	var responseText string
-	var finishReason string
+	var (
+		response     *Response
+		responseText string
+		finishReason string
+	)
 
 	switch cohereResponse.EventType {
 	case "stream-start":
@@ -104,11 +111,14 @@ func StreamResponse2OpenAI(
 	}
 
 	var choice relaymodel.ChatCompletionsStreamResponseChoice
+
 	choice.Delta.Content = responseText
+
 	choice.Delta.Role = "assistant"
 	if finishReason != "" {
 		choice.FinishReason = finishReason
 	}
+
 	openaiResponse := relaymodel.ChatCompletionsStreamResponse{
 		ID:      "chatcmpl-" + cohereResponse.GenerationID,
 		Model:   meta.OriginModel,
@@ -123,6 +133,7 @@ func StreamResponse2OpenAI(
 			TotalTokens:      response.Meta.Tokens.InputTokens + response.Meta.Tokens.OutputTokens,
 		}
 	}
+
 	return &openaiResponse
 }
 
@@ -148,6 +159,7 @@ func Response2OpenAI(meta *meta.Meta, cohereResponse *Response) *relaymodel.Text
 			TotalTokens:      cohereResponse.Meta.Tokens.InputTokens + cohereResponse.Meta.Tokens.OutputTokens,
 		},
 	}
+
 	return &fullTextResponse
 }
 
@@ -165,8 +177,10 @@ func StreamHandler(
 	log := common.GetLogger(c)
 
 	scanner := bufio.NewScanner(resp.Body)
+
 	buf := openai.GetScannerBuffer()
 	defer openai.PutScannerBuffer(buf)
+
 	scanner.Buffer(*buf, cap(*buf))
 
 	var usage relaymodel.ChatUsage
@@ -176,6 +190,7 @@ func StreamHandler(
 		data = strings.TrimSuffix(data, "\r")
 
 		var cohereResponse StreamResponse
+
 		err := sonic.Unmarshal(conv.StringToBytes(data), &cohereResponse)
 		if err != nil {
 			log.Error("error unmarshalling stream response: " + err.Error())
@@ -207,6 +222,7 @@ func Handler(meta *meta.Meta, c *gin.Context, resp *http.Response) (model.Usage,
 	defer resp.Body.Close()
 
 	var cohereResponse Response
+
 	err := sonic.ConfigDefault.NewDecoder(resp.Body).Decode(&cohereResponse)
 	if err != nil {
 		return model.Usage{}, relaymodel.WrapperOpenAIError(
@@ -215,6 +231,7 @@ func Handler(meta *meta.Meta, c *gin.Context, resp *http.Response) (model.Usage,
 			http.StatusInternalServerError,
 		)
 	}
+
 	if cohereResponse.ResponseID == "" {
 		return model.Usage{}, relaymodel.WrapperOpenAIErrorWithMessage(
 			cohereResponse.Message,
@@ -222,7 +239,9 @@ func Handler(meta *meta.Meta, c *gin.Context, resp *http.Response) (model.Usage,
 			resp.StatusCode,
 		)
 	}
+
 	fullTextResponse := Response2OpenAI(meta, &cohereResponse)
+
 	jsonResponse, err := sonic.Marshal(fullTextResponse)
 	if err != nil {
 		return fullTextResponse.Usage.ToModelUsage(), relaymodel.WrapperOpenAIError(
@@ -231,8 +250,10 @@ func Handler(meta *meta.Meta, c *gin.Context, resp *http.Response) (model.Usage,
 			http.StatusInternalServerError,
 		)
 	}
+
 	c.Writer.Header().Set("Content-Type", "application/json")
 	c.Writer.Header().Set("Content-Length", strconv.Itoa(len(jsonResponse)))
 	_, _ = c.Writer.Write(jsonResponse)
+
 	return fullTextResponse.Usage.ToModelUsage(), nil
 }

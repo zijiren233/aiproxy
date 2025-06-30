@@ -45,6 +45,7 @@ func (b *BingEngine) Search(ctx context.Context, query SearchQuery) ([]SearchRes
 	querys := url.Values{}
 	querys.Set("q", strings.Join(query.Queries, " "))
 	querys.Set("count", strconv.Itoa(query.MaxResults))
+
 	if query.Language != "" {
 		querys.Set("mkt", query.Language)
 	}
@@ -58,6 +59,7 @@ func (b *BingEngine) Search(ctx context.Context, query SearchQuery) ([]SearchRes
 	if err != nil {
 		return nil, err
 	}
+
 	req.Header.Set("Ocp-Apim-Subscription-Key", b.apiKey)
 
 	resp, err := b.client.Do(req)

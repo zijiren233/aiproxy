@@ -44,11 +44,13 @@ var (
 func getParser() *convert.Parser {
 	parseOnce.Do(func() {
 		parser = convert.NewParser()
+
 		err := parser.Parse([]byte(docs.SwaggerInfo.ReadDoc()))
 		if err != nil {
 			panic(err)
 		}
 	})
+
 	return parser
 }
 
@@ -57,5 +59,6 @@ func NewServer(config, reusingConfig map[string]string) (mcpservers.Server, erro
 		OpenAPIFrom:   config["host"],
 		Authorization: reusingConfig["authorization"],
 	})
+
 	return converter.Convert()
 }

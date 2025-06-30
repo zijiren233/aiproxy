@@ -120,6 +120,7 @@ func (p *StreamableProxy) handleGetRequest(w http.ResponseWriter, r *http.Reques
 
 		w.WriteHeader(resp.StatusCode)
 		_, _ = io.Copy(w, resp.Body)
+
 		return
 	}
 
@@ -140,6 +141,7 @@ func (p *StreamableProxy) handleGetRequest(w http.ResponseWriter, r *http.Reques
 
 	// Stream the SSE events to the client
 	reader := bufio.NewReader(resp.Body)
+
 	flusher, ok := w.(http.Flusher)
 	if !ok {
 		http.Error(w, "Streaming not supported", http.StatusInternalServerError)
@@ -183,6 +185,7 @@ func (p *StreamableProxy) handlePostRequest(w http.ResponseWriter, r *http.Reque
 		http.Error(w, "Invalid or expired session ID", http.StatusNotFound)
 		return
 	}
+
 	backend := parts[0]
 	sessionID := parts[1]
 
@@ -225,6 +228,7 @@ func (p *StreamableProxy) handlePostRequest(w http.ResponseWriter, r *http.Reque
 	if strings.Contains(contentType, "text/event-stream") {
 		// Handle SSE response
 		reader := bufio.NewReader(resp.Body)
+
 		flusher, ok := w.(http.Flusher)
 		if !ok {
 			http.Error(w, "Streaming not supported", http.StatusInternalServerError)
@@ -252,6 +256,7 @@ func (p *StreamableProxy) handlePostRequest(w http.ResponseWriter, r *http.Reque
 
 			// Write the line to the client
 			_, _ = fmt.Fprint(w, line)
+
 			flusher.Flush()
 		}
 	} else {
@@ -371,6 +376,7 @@ func (p *StreamableProxy) proxyInitialOrNoSessionRequest(w http.ResponseWriter, 
 	if strings.Contains(contentType, "text/event-stream") {
 		// Handle SSE response
 		reader := bufio.NewReader(resp.Body)
+
 		flusher, ok := w.(http.Flusher)
 		if !ok {
 			http.Error(w, "Streaming not supported", http.StatusInternalServerError)

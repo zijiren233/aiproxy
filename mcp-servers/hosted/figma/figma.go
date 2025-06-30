@@ -80,6 +80,7 @@ func ListTools(ctx context.Context) ([]mcp.Tool, error) {
 		MCPServer: server.NewMCPServer("figma-mcp", "1.0.0"),
 	}
 	figmaServer.addTools()
+
 	return mcpservers.ListServerTools(ctx, figmaServer)
 }
 
@@ -204,8 +205,10 @@ func (s *Server) handleGetFigmaData(
 		depth = &depthInt
 	}
 
-	var design *SimplifiedDesign
-	var err error
+	var (
+		design *SimplifiedDesign
+		err    error
+	)
 
 	if nodeID != "" {
 		design, err = s.client.GetNode(ctx, fileKey, nodeID, depth)
@@ -268,9 +271,11 @@ func (s *Server) handleDownloadFigmaImages(
 		if ot, ok := so["outlineText"].(bool); ok {
 			svgOptions.OutlineText = ot
 		}
+
 		if ii, ok := so["includeId"].(bool); ok {
 			svgOptions.IncludeID = ii
 		}
+
 		if ss, ok := so["simplifyStroke"].(bool); ok {
 			svgOptions.SimplifyStroke = ss
 		}

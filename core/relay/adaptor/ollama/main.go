@@ -21,6 +21,7 @@ import (
 
 func ConvertRequest(meta *meta.Meta, req *http.Request) (adaptor.ConvertResult, error) {
 	var request relaymodel.GeneralOpenAIRequest
+
 	err := common.UnmarshalRequestReusable(req, &request)
 	if err != nil {
 		return adaptor.ConvertResult{}, err
@@ -53,8 +54,12 @@ func ConvertRequest(meta *meta.Meta, req *http.Request) (adaptor.ConvertResult, 
 
 	for _, message := range request.Messages {
 		openaiContent := message.ParseContent()
-		var imageUrls []string
-		var contentText string
+
+		var (
+			imageUrls   []string
+			contentText string
+		)
+
 		for _, part := range openaiContent {
 			switch part.Type {
 			case relaymodel.ContentTypeText:
@@ -64,9 +69,11 @@ func ConvertRequest(meta *meta.Meta, req *http.Request) (adaptor.ConvertResult, 
 				if err != nil {
 					return adaptor.ConvertResult{}, err
 				}
+
 				imageUrls = append(imageUrls, data)
 			}
 		}
+
 		m := Message{
 			Role:       message.Role,
 			Content:    contentText,
@@ -120,12 +127,14 @@ func getToolCalls(ollamaResponse *ChatResponse) []*relaymodel.ToolCall {
 	if ollamaResponse.Message == nil || len(ollamaResponse.Message.ToolCalls) == 0 {
 		return nil
 	}
+
 	toolCalls := make([]*relaymodel.ToolCall, 0, len(ollamaResponse.Message.ToolCalls))
 	for _, tool := range ollamaResponse.Message.ToolCalls {
 		argString, err := sonic.MarshalString(tool.Function.Arguments)
 		if err != nil {
 			continue
 		}
+
 		toolCalls = append(toolCalls, &relaymodel.ToolCall{
 			ID:   openai.CallID(),
 			Type: "function",
@@ -135,6 +144,7 @@ func getToolCalls(ollamaResponse *ChatResponse) []*relaymodel.ToolCall {
 			},
 		})
 	}
+
 	return toolCalls
 }
 
@@ -149,9 +159,11 @@ func response2OpenAI(meta *meta.Meta, response *ChatResponse) *relaymodel.TextRe
 			ToolCalls: getToolCalls(response),
 		}
 	}
+
 	if response.Done {
 		choice.FinishReason = response.DoneReason
 	}
+
 	fullTextResponse := relaymodel.TextResponse{
 		ID:      openai.ChatCompletionID(),
 		Model:   meta.OriginModel,
@@ -164,6 +176,7 @@ func response2OpenAI(meta *meta.Meta, response *ChatResponse) *relaymodel.TextRe
 			TotalTokens:      response.PromptEvalCount + response.EvalCount,
 		},
 	}
+
 	return &fullTextResponse
 }
 
@@ -181,9 +194,11 @@ func streamResponse2OpenAI(
 			ToolCalls: getToolCalls(ollamaResponse),
 		}
 	}
+
 	if ollamaResponse.Done {
 		choice.FinishReason = ollamaResponse.DoneReason
 	}
+
 	response := relaymodel.ChatCompletionsStreamResponse{
 		ID:      openai.ChatCompletionID(),
 		Object:  relaymodel.ChatCompletionChunkObject,
@@ -217,15 +232,19 @@ func StreamHandler(
 	log := common.GetLogger(c)
 
 	var usage *relaymodel.ChatUsage
+
 	scanner := bufio.NewScanner(resp.Body)
+
 	buf := openai.GetScannerBuffer()
 	defer openai.PutScannerBuffer(buf)
+
 	scanner.Buffer(*buf, cap(*buf))
 
 	for scanner.Scan() {
 		data := scanner.Bytes()
 
 		var ollamaResponse ChatResponse
+
 		err := sonic.Unmarshal(data, &ollamaResponse)
 		if err != nil {
 			log.Error("error unmarshalling stream response: " + err.Error())
@@ -261,7 +280,9 @@ func ConvertEmbeddingRequest(
 	if err != nil {
 		return adaptor.ConvertResult{}, err
 	}
+
 	request.Model = meta.ActualModel
+
 	data, err := sonic.Marshal(&EmbeddingRequest{
 		Model: request.Model,
 		Input: request.ParseInput(),
@@ -276,6 +297,7 @@ func ConvertEmbeddingRequest(
 	if err != nil {
 		return adaptor.ConvertResult{}, err
 	}
+
 	return adaptor.ConvertResult{
 		Header: http.Header{
 			"Content-Type":   {"application/json"},
@@ -297,6 +319,7 @@ func EmbeddingHandler(
 	defer resp.Body.Close()
 
 	var ollamaResponse EmbeddingResponse
+
 	err := sonic.ConfigDefault.NewDecoder(resp.Body).Decode(&ollamaResponse)
 	if err != nil {
 		return model.Usage{}, relaymodel.WrapperOpenAIError(
@@ -315,6 +338,7 @@ func EmbeddingHandler(
 	}
 
 	fullTextResponse := embeddingResponseOllama2OpenAI(meta, &ollamaResponse)
+
 	jsonResponse, err := sonic.Marshal(fullTextResponse)
 	if err != nil {
 		return fullTextResponse.Usage.ToModelUsage(), relaymodel.WrapperOpenAIError(
@@ -323,9 +347,11 @@ func EmbeddingHandler(
 			http.StatusInternalServerError,
 		)
 	}
+
 	c.Writer.Header().Set("Content-Type", "application/json")
 	c.Writer.Header().Set("Content-Length", strconv.Itoa(len(jsonResponse)))
 	_, _ = c.Writer.Write(jsonResponse)
+
 	return fullTextResponse.Usage.ToModelUsage(), nil
 }
 
@@ -352,6 +378,7 @@ func embeddingResponseOllama2OpenAI(
 			},
 		)
 	}
+
 	return &openAIEmbeddingResponse
 }
 
@@ -363,6 +390,7 @@ func Handler(meta *meta.Meta, c *gin.Context, resp *http.Response) (model.Usage,
 	defer resp.Body.Close()
 
 	var ollamaResponse ChatResponse
+
 	err := sonic.ConfigDefault.NewDecoder(resp.Body).Decode(&ollamaResponse)
 	if err != nil {
 		return model.Usage{}, relaymodel.WrapperOpenAIError(
@@ -373,6 +401,7 @@ func Handler(meta *meta.Meta, c *gin.Context, resp *http.Response) (model.Usage,
 	}
 
 	fullTextResponse := response2OpenAI(meta, &ollamaResponse)
+
 	jsonResponse, err := sonic.Marshal(fullTextResponse)
 	if err != nil {
 		return fullTextResponse.Usage.ToModelUsage(), relaymodel.WrapperOpenAIError(
@@ -381,8 +410,10 @@ func Handler(meta *meta.Meta, c *gin.Context, resp *http.Response) (model.Usage,
 			http.StatusInternalServerError,
 		)
 	}
+
 	c.Writer.Header().Set("Content-Type", "application/json")
 	c.Writer.Header().Set("Content-Length", strconv.Itoa(len(jsonResponse)))
 	_, _ = c.Writer.Write(jsonResponse)
+
 	return fullTextResponse.Usage.ToModelUsage(), nil
 }

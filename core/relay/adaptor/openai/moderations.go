@@ -32,6 +32,7 @@ func ConvertModerationsRequest(
 	if err != nil {
 		return adaptor.ConvertResult{}, err
 	}
+
 	return adaptor.ConvertResult{
 		Header: http.Header{
 			"Content-Type":   {"application/json"},
@@ -87,9 +88,11 @@ func ModerationsHandler(
 
 	c.Writer.Header().Set("Content-Type", "application/json")
 	c.Writer.Header().Set("Content-Length", strconv.Itoa(len(newData)))
+
 	_, err = c.Writer.Write(newData)
 	if err != nil {
 		log.Warnf("write response body failed: %v", err)
 	}
+
 	return usage, nil
 }

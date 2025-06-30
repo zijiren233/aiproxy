@@ -68,6 +68,7 @@ func (a *Adaptor) ConvertRequest(
 	if request == nil {
 		return adaptor.ConvertResult{}, errors.New("request is nil")
 	}
+
 	switch meta.Mode {
 	case mode.Embeddings:
 		return ConvertEmbeddingRequest(meta, request)
@@ -109,6 +110,7 @@ func (a *Adaptor) DoResponse(
 			http.StatusBadRequest,
 		)
 	}
+
 	return
 }
 

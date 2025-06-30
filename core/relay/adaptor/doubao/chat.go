@@ -28,25 +28,30 @@ func ConvertChatCompletionsRequest(
 	if err != nil {
 		return adaptor.ConvertResult{}, err
 	}
+
 	if !strings.HasPrefix(meta.OriginModel, "deepseek-reasoner") {
 		return result, nil
 	}
 
 	m := make(map[string]any)
+
 	err = sonic.ConfigDefault.NewDecoder(result.Body).Decode(&m)
 	if err != nil {
 		return adaptor.ConvertResult{}, err
 	}
+
 	messages, _ := m["messages"].([]any)
 	if len(messages) == 0 {
 		return adaptor.ConvertResult{}, errors.New("messages is empty")
 	}
+
 	sysMessage := relaymodel.Message{
 		Role:    "system",
 		Content: "回答前，都先用 <think></think> 输出你的思考过程。",
 	}
 	messages = append([]any{sysMessage}, messages...)
 	m["messages"] = messages
+
 	newBody, err := sonic.Marshal(m)
 	if err != nil {
 		return adaptor.ConvertResult{}, err
@@ -97,11 +102,14 @@ func handlerPreHandler(meta *meta.Meta, node *ast.Node, websearchCount *int64) e
 		if node.Check() != nil {
 			return true
 		}
+
 		count, err := node.Get("count").Int64()
 		if err != nil {
 			return true
 		}
+
 		*websearchCount += count
+
 		return true
 	})
 }

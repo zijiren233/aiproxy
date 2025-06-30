@@ -54,6 +54,7 @@ func SetAPIRouter(router *gin.Engine) {
 			groupsRoute.POST("/batch_status", controller.UpdateGroupsStatus)
 			groupsRoute.GET("/ip_groups", controller.GetIPGroupList)
 		}
+
 		groupRoute := apiRouter.Group("/group")
 		{
 			groupRoute.POST("/:group", controller.CreateGroup)
@@ -109,6 +110,7 @@ func SetAPIRouter(router *gin.Engine) {
 				importRoute.POST("/oneapi", controller.ImportChannelFromOneAPI)
 			}
 		}
+
 		channelRoute := apiRouter.Group("/channel")
 		{
 			channelRoute.GET("/:id", controller.GetChannel)
@@ -132,6 +134,7 @@ func SetAPIRouter(router *gin.Engine) {
 			tokensRoute.GET("/search", controller.SearchTokens)
 			tokensRoute.POST("/batch_delete", controller.DeleteTokens)
 		}
+
 		tokenRoute := apiRouter.Group("/token")
 		{
 			tokenRoute.GET("/:group/search", controller.SearchGroupTokens)
@@ -153,6 +156,7 @@ func SetAPIRouter(router *gin.Engine) {
 			logsRoute.GET("/consume_error", controller.SearchConsumeError)
 			logsRoute.GET("/detail/:log_id", controller.GetLogDetail)
 		}
+
 		logRoute := apiRouter.Group("/log")
 		{
 			logRoute.GET("/:group", controller.GetGroupLogs)
@@ -169,6 +173,7 @@ func SetAPIRouter(router *gin.Engine) {
 			modelConfigsRoute.POST("/", controller.SaveModelConfigs)
 			modelConfigsRoute.POST("/batch_delete", controller.DeleteModelConfigs)
 		}
+
 		modelConfigRoute := apiRouter.Group("/model_config")
 		{
 			modelConfigRoute.GET("/*model", controller.GetModelConfig)
@@ -186,12 +191,14 @@ func SetAPIRouter(router *gin.Engine) {
 			monitorRoute.GET("/models", controller.GetModelsErrorRate)
 			monitorRoute.GET("/banned_channels", controller.GetAllBannedModelChannels)
 		}
+
 		publicsMcpRoute := apiRouter.Group("/mcp/publics")
 		{
 			publicsMcpRoute.GET("/", mcp.GetPublicMCPs)
 			publicsMcpRoute.GET("/all", mcp.GetAllPublicMCPs)
 			publicsMcpRoute.POST("/", mcp.SavePublicMCPs)
 		}
+
 		publicMcpRoute := apiRouter.Group("/mcp/public")
 		{
 			publicMcpRoute.GET("/:id", mcp.GetPublicMCPByID)

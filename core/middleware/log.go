@@ -56,6 +56,7 @@ func NewLog(l *logrus.Logger) gin.HandlerFunc {
 
 func logColor(log *logrus.Entry, p gin.LogFormatterParams) {
 	str := formatter(p)
+
 	code := p.StatusCode
 	switch {
 	case code >= http.StatusBadRequest && code < http.StatusInternalServerError:
@@ -76,6 +77,7 @@ func formatter(param gin.LogFormatterParams) string {
 	if param.Latency > time.Minute {
 		param.Latency = param.Latency.Truncate(time.Second)
 	}
+
 	return fmt.Sprintf("[GIN] |%s %3d %s| %13v | %15s |%s %-7s %s %#v\n%s",
 		statusColor, param.StatusCode, resetColor,
 		param.Latency,

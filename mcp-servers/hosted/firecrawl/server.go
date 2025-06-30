@@ -112,6 +112,7 @@ func ListTools(ctx context.Context) ([]mcp.Tool, error) {
 		MCPServer: server.NewMCPServer("firecrawl-mcp", "1.7.0"),
 	}
 	firecrawlServer.addAllTools()
+
 	return mcpservers.ListServerTools(ctx, firecrawlServer)
 }
 
@@ -169,9 +170,11 @@ func formatResults(data []Document) string {
 		if content == "" {
 			content = doc.HTML
 		}
+
 		if content == "" {
 			content = doc.RawHTML
 		}
+
 		if content == "" {
 			content = "No content"
 		}

@@ -37,11 +37,13 @@ func (rw *responseWriter) Write(b []byte) (int, error) {
 	if rw.firstByteAt.IsZero() {
 		rw.firstByteAt = time.Now()
 	}
+
 	if rw.body.Len()+len(b) <= maxBufferSize {
 		rw.body.Write(b)
 	} else {
 		rw.body.Write(b[:maxBufferSize-rw.body.Len()])
 	}
+
 	return rw.ResponseWriter.Write(b)
 }
 
@@ -60,14 +62,17 @@ func getBuffer() *bytes.Buffer {
 	if !ok {
 		panic(fmt.Sprintf("buffer type error: %T, %v", v, v))
 	}
+
 	return v
 }
 
 func putBuffer(buf *bytes.Buffer) {
 	buf.Reset()
+
 	if buf.Cap() > maxBufferSize {
 		return
 	}
+
 	bufferPool.Put(buf)
 }
 
@@ -103,6 +108,7 @@ func DoHelper(
 	}
 
 	var cancel context.CancelFunc
+
 	ctx, cancel = context.WithTimeout(ctx, time.Duration(timeout)*time.Second)
 	defer cancel()
 
@@ -121,6 +127,7 @@ func DoHelper(
 		)
 		respBody, _ := relayErr.MarshalJSON()
 		detail.ResponseBody = conv.BytesToString(respBody)
+
 		return model.Usage{}, &detail, relayErr
 	}
 
@@ -157,7 +164,9 @@ func getRequestBody(meta *meta.Meta, c *gin.Context, detail *RequestDetail) adap
 				"get request body failed: "+err.Error(),
 			)
 		}
+
 		detail.RequestBody = conv.BytesToString(reqBody)
+
 		return nil
 	}
 }
@@ -181,6 +190,7 @@ func prepareAndDoRequest(
 			"convert request failed: "+err.Error(),
 		)
 	}
+
 	if closer, ok := convertResult.Body.(io.Closer); ok {
 		defer closer.Close()
 	}
@@ -232,6 +242,7 @@ func setupRequestHeader(
 	for key, value := range header {
 		req.Header[key] = value
 	}
+
 	if err := a.SetupRequestHeader(meta, store, c, req); err != nil {
 		return relaymodel.WrapperErrorWithMessage(
 			meta.Mode,
@@ -239,6 +250,7 @@ func setupRequestHeader(
 			"setup request header failed: "+err.Error(),
 		)
 	}
+
 	return nil
 }
 
@@ -258,6 +270,7 @@ func doRequest(
 				"request canceled by client: "+err.Error(),
 			)
 		}
+
 		if errors.Is(err, context.DeadlineExceeded) {
 			return nil, relaymodel.WrapperErrorWithMessage(
 				meta.Mode,
@@ -265,6 +278,7 @@ func doRequest(
 				"request timeout: "+err.Error(),
 			)
 		}
+
 		if errors.Is(err, io.EOF) {
 			return nil, relaymodel.WrapperErrorWithMessage(
 				meta.Mode,
@@ -272,6 +286,7 @@ func doRequest(
 				"request eof: "+err.Error(),
 			)
 		}
+
 		if errors.Is(err, io.ErrUnexpectedEOF) {
 			return nil, relaymodel.WrapperErrorWithMessage(
 				meta.Mode,
@@ -279,12 +294,14 @@ func doRequest(
 				"request unexpected eof: "+err.Error(),
 			)
 		}
+
 		return nil, relaymodel.WrapperErrorWithMessage(
 			meta.Mode,
 			http.StatusInternalServerError,
 			"request error: "+err.Error(),
 		)
 	}
+
 	return resp, nil
 }
 
@@ -303,11 +320,13 @@ func handleResponse(
 		ResponseWriter: c.Writer,
 		body:           buf,
 	}
+
 	rawWriter := c.Writer
 	defer func() {
 		c.Writer = rawWriter
 		detail.FirstByteAt = rw.firstByteAt
 	}()
+
 	c.Writer = rw
 
 	usage, relayErr := a.DoResponse(meta, store, c, resp)
@@ -327,27 +346,35 @@ func updateUsageMetrics(usage model.Usage, log *log.Entry) {
 	if usage.TotalTokens == 0 {
 		usage.TotalTokens = usage.InputTokens + usage.OutputTokens
 	}
+
 	if usage.InputTokens > 0 {
 		log.Data["t_input"] = usage.InputTokens
 	}
+
 	if usage.ImageInputTokens > 0 {
 		log.Data["t_image_input"] = usage.ImageInputTokens
 	}
+
 	if usage.OutputTokens > 0 {
 		log.Data["t_output"] = usage.OutputTokens
 	}
+
 	if usage.TotalTokens > 0 {
 		log.Data["t_total"] = usage.TotalTokens
 	}
+
 	if usage.CachedTokens > 0 {
 		log.Data["t_cached"] = usage.CachedTokens
 	}
+
 	if usage.CacheCreationTokens > 0 {
 		log.Data["t_cache_creation"] = usage.CacheCreationTokens
 	}
+
 	if usage.ReasoningTokens > 0 {
 		log.Data["t_reason"] = usage.ReasoningTokens
 	}
+
 	if usage.WebSearchCount > 0 {
 		log.Data["t_websearch"] = usage.WebSearchCount
 	}

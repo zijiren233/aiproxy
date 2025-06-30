@@ -52,6 +52,7 @@ func guessModelConfig(modelName string) model.ModelConfig {
 	if cachedConfig, ok := modelConfigCache[modelName]; ok {
 		return cachedConfig
 	}
+
 	return model.ModelConfig{}
 }
 
@@ -65,6 +66,7 @@ func testSingleModel(
 	if !ok {
 		return nil, errors.New(modelName + " model config not found")
 	}
+
 	if modelConfig.Type == mode.Unknown {
 		newModelConfig := guessModelConfig(modelName)
 		if newModelConfig.Type != mode.Unknown {
@@ -77,6 +79,7 @@ func testSingleModel(
 		if !ok {
 			return nil, errors.New("adaptor not found")
 		}
+
 		if !a.SupportMode(modelConfig.Type) {
 			return nil, fmt.Errorf("%s not supported by adaptor", modelConfig.Type)
 		}
@@ -119,8 +122,12 @@ func testSingleModel(
 	)
 	result := relayHandler(newc, meta)
 	success := result.Error == nil
-	var respStr string
-	var code int
+
+	var (
+		respStr string
+		code    int
+	)
+
 	if success {
 		switch meta.Mode {
 		case mode.AudioSpeech,
@@ -129,6 +136,7 @@ func testSingleModel(
 		default:
 			respStr = w.Body.String()
 		}
+
 		code = w.Code
 	} else {
 		respBody, _ := result.Error.MarshalJSON()
@@ -168,6 +176,7 @@ func TestChannel(c *gin.Context) {
 			Success: false,
 			Message: err.Error(),
 		})
+
 		return
 	}
 
@@ -177,6 +186,7 @@ func TestChannel(c *gin.Context) {
 			Success: false,
 			Message: "model is required",
 		})
+
 		return
 	}
 
@@ -186,6 +196,7 @@ func TestChannel(c *gin.Context) {
 			Success: false,
 			Message: "channel not found",
 		})
+
 		return
 	}
 
@@ -194,6 +205,7 @@ func TestChannel(c *gin.Context) {
 			Success: false,
 			Message: "model not supported by channel",
 		})
+
 		return
 	}
 
@@ -216,6 +228,7 @@ func TestChannel(c *gin.Context) {
 				err.Error(),
 			),
 		})
+
 		return
 	}
 
@@ -260,6 +273,7 @@ func processTestResult(
 			modelName,
 			err.Error(),
 		)
+
 		return result
 	}
 
@@ -275,7 +289,9 @@ func processTestResult(
 	if !successResponseBody {
 		ct.Response = ""
 	}
+
 	result.Data = ct
+
 	return result
 }
 
@@ -299,6 +315,7 @@ func TestChannelModels(c *gin.Context) {
 			Success: false,
 			Message: err.Error(),
 		})
+
 		return
 	}
 
@@ -308,6 +325,7 @@ func TestChannelModels(c *gin.Context) {
 			Success: false,
 			Message: "channel not found",
 		})
+
 		return
 	}
 
@@ -320,6 +338,7 @@ func TestChannelModels(c *gin.Context) {
 	hasError := atomic.Bool{}
 
 	var wg sync.WaitGroup
+
 	semaphore := make(chan struct{}, 5)
 
 	models := slices.Clone(channel.Models)
@@ -331,6 +350,7 @@ func TestChannelModels(c *gin.Context) {
 
 	for _, modelName := range models {
 		wg.Add(1)
+
 		semaphore <- struct{}{}
 
 		go func(model string) {
@@ -341,10 +361,13 @@ func TestChannelModels(c *gin.Context) {
 			if result == nil {
 				return
 			}
+
 			if !result.Success || (result.Data != nil && !result.Data.Success) {
 				hasError.Store(true)
 			}
+
 			resultsMutex.Lock()
+
 			if isStream {
 				err := openai.ObjectData(c, result)
 				if err != nil {
@@ -353,6 +376,7 @@ func TestChannelModels(c *gin.Context) {
 			} else {
 				results = append(results, result)
 			}
+
 			resultsMutex.Unlock()
 		}(modelName)
 	}
@@ -395,20 +419,27 @@ func TestChannelModels(c *gin.Context) {
 //	@Router			/api/channels/test [get]
 func TestAllChannels(c *gin.Context) {
 	testDisabled := c.Query("test_disabled") == "true"
-	var channels []*model.Channel
-	var err error
+
+	var (
+		channels []*model.Channel
+		err      error
+	)
+
 	if testDisabled {
 		channels, err = model.LoadChannels()
 	} else {
 		channels, err = model.LoadEnabledChannels()
 	}
+
 	if err != nil {
 		c.JSON(http.StatusOK, middleware.APIResponse{
 			Success: false,
 			Message: err.Error(),
 		})
+
 		return
 	}
+
 	returnSuccess := c.Query("return_success") == "true"
 	successResponseBody := c.Query("success_body") == "true"
 	isStream := c.Query("stream") == "true"
@@ -418,6 +449,7 @@ func TestAllChannels(c *gin.Context) {
 	hasErrorMap := make(map[int]*atomic.Bool)
 
 	var wg sync.WaitGroup
+
 	semaphore := make(chan struct{}, 5)
 
 	newChannels := slices.Clone(channels)
@@ -438,6 +470,7 @@ func TestAllChannels(c *gin.Context) {
 
 		for _, modelName := range models {
 			wg.Add(1)
+
 			semaphore <- struct{}{}
 
 			go func(model string, ch *model.Channel, hasError *atomic.Bool) {
@@ -448,10 +481,13 @@ func TestAllChannels(c *gin.Context) {
 				if result == nil {
 					return
 				}
+
 				if !result.Success || (result.Data != nil && !result.Data.Success) {
 					hasError.Store(true)
 				}
+
 				resultsMutex.Lock()
+
 				if isStream {
 					err := openai.ObjectData(c, result)
 					if err != nil {
@@ -460,6 +496,7 @@ func TestAllChannels(c *gin.Context) {
 				} else {
 					results = append(results, result)
 				}
+
 				resultsMutex.Unlock()
 			}(modelName, channel, channelHasError)
 		}
@@ -495,11 +532,13 @@ func AutoTestBannedModels() {
 	log := log.WithFields(log.Fields{
 		"auto_test_banned_models": "true",
 	})
+
 	channels, err := monitor.GetAllBannedModelChannels(context.Background())
 	if err != nil {
 		log.Errorf("failed to get banned channels: %s", err.Error())
 		return
 	}
+
 	if len(channels) == 0 {
 		return
 	}
@@ -511,11 +550,13 @@ func AutoTestBannedModels() {
 			if !tryTestChannel(int(id), modelName) {
 				continue
 			}
+
 			channel, err := model.LoadChannelByID(int(id))
 			if err != nil {
 				log.Errorf("failed to get channel by model %s: %s", modelName, err.Error())
 				continue
 			}
+
 			result, err := testSingleModel(mc, channel, modelName)
 			if err != nil {
 				notify.Error(
@@ -528,8 +569,10 @@ func AutoTestBannedModels() {
 					),
 					err.Error(),
 				)
+
 				continue
 			}
+
 			if result.Success {
 				notify.Info(
 					fmt.Sprintf(
@@ -541,6 +584,7 @@ func AutoTestBannedModels() {
 					),
 					"unban it",
 				)
+
 				err = monitor.ClearChannelModelErrors(context.Background(), modelName, channel.ID)
 				if err != nil {
 					log.Errorf("clear channel errors failed: %+v", err)

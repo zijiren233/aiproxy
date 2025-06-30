@@ -39,6 +39,7 @@ func NewServer(config, reuse map[string]string) (mcpservers.Server, error) {
 	if apiURL == "" {
 		apiURL = reuse["flomo_api_url"]
 	}
+
 	if apiURL == "" {
 		return nil, errors.New(
 			"flomo API URL not set. Please provide flomo_api_url in config or FLOMO_API_URL environment variable",
@@ -70,6 +71,7 @@ func ListTools(ctx context.Context) ([]mcp.Tool, error) {
 		MCPServer: server.NewMCPServer("mcp-server-flomo", "0.0.3"),
 	}
 	flomoServer.addWriteNoteTool()
+
 	return mcpservers.ListServerTools(ctx, flomoServer)
 }
 
@@ -112,6 +114,7 @@ func (s *Server) addWriteNoteTool() {
 				if result.Message != "" {
 					message = result.Message
 				}
+
 				return nil, fmt.Errorf("failed to write note to flomo: %s", message)
 			}
 

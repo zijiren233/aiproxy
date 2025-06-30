@@ -43,7 +43,9 @@ func (a *Adaptor) SetupRequestHeader(
 	if err != nil {
 		return err
 	}
+
 	req.Header.Set("Authorization", "Bearer "+apiKey)
+
 	return nil
 }
 
@@ -52,6 +54,7 @@ func (a *Adaptor) GetRequestURL(meta *meta.Meta, store adaptor.Store) (adaptor.R
 	if err != nil {
 		return adaptor.RequestURL{}, err
 	}
+
 	switch meta.Mode {
 	case mode.ChatCompletions:
 		return adaptor.RequestURL{
@@ -103,6 +106,7 @@ func (a *Adaptor) DoResponse(
 				return model.Usage{}, err
 			}
 		}
+
 		return a.Adaptor.DoResponse(meta, store, c, resp)
 	}
 }

@@ -57,6 +57,7 @@ func getTimezone(timezoneName string) (*time.Location, error) {
 	if err != nil {
 		return nil, fmt.Errorf("invalid timezone: %w", err)
 	}
+
 	return loc, nil
 }
 

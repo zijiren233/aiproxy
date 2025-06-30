@@ -59,10 +59,12 @@ func getRequestDuration(meta *meta.Meta) time.Duration {
 	if !ok {
 		return 0
 	}
+
 	requestAtTime, ok := requestAt.(time.Time)
 	if !ok {
 		return 0
 	}
+
 	return time.Since(requestAtTime)
 }
 
@@ -79,8 +81,10 @@ func (m *ChannelMonitor) DoRequest(
 		meta.OriginModel,
 	)
 	updateChannelModelRequestRate(c, meta, count+overLimitCount, secondCount)
+
 	requestAt := time.Now()
 	meta.Set("requestAt", requestAt)
+
 	resp, err := do.DoRequest(meta, store, c, req)
 	if err == nil {
 		return resp, nil
@@ -98,6 +102,7 @@ func (m *ChannelMonitor) DoRequest(
 		common.GetLogger(c).
 			Errorf("add request failed: %+v", _err)
 	}
+
 	switch {
 	case banExecution:
 		notifyChannelRequestIssue(meta, "autoBanned", "Auto Banned", err)
@@ -186,6 +191,7 @@ func (m *ChannelMonitor) DoResponse(
 		); err != nil {
 			log.Errorf("add request failed: %+v", err)
 		}
+
 		return usage, nil
 	}
 
@@ -194,6 +200,7 @@ func (m *ChannelMonitor) DoResponse(
 	}
 
 	hasPermission := ChannelHasPermission(relayErr)
+
 	beyondThreshold, banExecution, err := monitor.AddRequest(
 		context.Background(),
 		meta.OriginModel,
@@ -205,6 +212,7 @@ func (m *ChannelMonitor) DoResponse(
 	if err != nil {
 		log.Errorf("add request failed: %+v", err)
 	}
+
 	switch {
 	case relayErr.StatusCode() == http.StatusTooManyRequests:
 		notifyChannelResponseIssue(
@@ -273,7 +281,6 @@ func notifyChannelResponseIssue(
 		meta.RequestID,
 		getRequestDuration(meta).String(),
 	)
-
 	if err.StatusCode() == http.StatusTooManyRequests {
 		rate := GetChannelModelRequestRate(c, meta)
 		message += fmt.Sprintf(
@@ -334,6 +341,7 @@ func GetChannelModelRequestRate(c *gin.Context, meta *meta.Meta) RequestRate {
 func updateChannelModelRequestRate(c *gin.Context, meta *meta.Meta, rpm, rps int64) {
 	meta.Set(MetaChannelModelKeyRPM, rpm)
 	meta.Set(MetaChannelModelKeyRPS, rps)
+
 	log := common.GetLogger(c)
 	log.Data["ch_rpm"] = rpm
 	log.Data["ch_rps"] = rps
@@ -342,6 +350,7 @@ func updateChannelModelRequestRate(c *gin.Context, meta *meta.Meta, rpm, rps int
 func updateChannelModelTokensRequestRate(c *gin.Context, meta *meta.Meta, tpm, tps int64) {
 	meta.Set(MetaChannelModelKeyTPM, tpm)
 	meta.Set(MetaChannelModelKeyTPS, tps)
+
 	log := common.GetLogger(c)
 	log.Data["ch_tpm"] = tpm
 	log.Data["ch_tps"] = tps

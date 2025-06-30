@@ -19,10 +19,12 @@ func SetSwaggerRouter(router *gin.Engine) {
 	docs.SwaggerInfo.BasePath = "/"
 	router.GET("/doc.json", func(ctx *gin.Context) {
 		ctx.Header("Content-Type", "application/json; charset=utf-8")
+
 		if ctx.Request.Host == "" {
 			ctx.String(http.StatusOK, docs.SwaggerInfo.ReadDoc())
 			return
 		}
+
 		swagInfo := cloneSwaggerInfo(docs.SwaggerInfo)
 		swagInfo.Host = ctx.Request.Host
 		ctx.String(http.StatusOK, swagInfo.ReadDoc())

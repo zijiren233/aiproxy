@@ -26,6 +26,7 @@ func (s *client2Server) HandleMessage(
 	if err != nil {
 		return CreateMCPErrorResponse(nil, mcp.PARSE_ERROR, err.Error())
 	}
+
 	method, err := methodNode.String()
 	if err != nil {
 		return CreateMCPErrorResponse(nil, mcp.PARSE_ERROR, err.Error())
@@ -34,25 +35,31 @@ func (s *client2Server) HandleMessage(
 	switch method {
 	case "notifications/initialized":
 		req := mcp.JSONRPCNotification{}
+
 		err := sonic.Unmarshal(message, &req)
 		if err != nil {
 			return CreateMCPErrorResponse(nil, mcp.PARSE_ERROR, err.Error())
 		}
+
 		err = s.client.SendNotification(ctx, req)
 		if err != nil {
 			return CreateMCPErrorResponse(nil, mcp.PARSE_ERROR, err.Error())
 		}
+
 		return nil
 	default:
 		req := transport.JSONRPCRequest{}
+
 		err := sonic.Unmarshal(message, &req)
 		if err != nil {
 			return CreateMCPErrorResponse(nil, mcp.PARSE_ERROR, err.Error())
 		}
+
 		resp, err := s.client.SendRequest(ctx, req)
 		if err != nil {
 			return CreateMCPErrorResponse(nil, mcp.INTERNAL_ERROR, err.Error())
 		}
+
 		if resp.Error != nil {
 			return CreateMCPErrorResponse(
 				resp.ID,
@@ -61,6 +68,7 @@ func (s *client2Server) HandleMessage(
 				resp.Error.Data,
 			)
 		}
+
 		return CreateMCPResultResponse(
 			resp.ID,
 			resp.Result,
@@ -77,6 +85,7 @@ func WrapMCPClient2ServerWithCleanup(client transport.Interface) Server {
 	_ = runtime.AddCleanup(server, func(client transport.Interface) {
 		_ = client.Close()
 	}, server.client)
+
 	return server
 }
 
@@ -107,6 +116,7 @@ func CreateMCPErrorResponse(
 	if len(data) > 0 {
 		d = data[0]
 	}
+
 	return mcp.JSONRPCError{
 		JSONRPC: mcp.JSONRPC_VERSION,
 		ID:      mcp.NewRequestId(id),

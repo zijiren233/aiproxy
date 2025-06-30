@@ -100,13 +100,16 @@ func NewServer(config, reuse map[string]string) (mcpservers.Server, error) {
 	if apiKey == "" {
 		apiKey = reuse["hefeng_api_key"]
 	}
+
 	if apiKey == "" {
 		return nil, errors.New("api key is required")
 	}
+
 	apiBase := config["hefeng_api_base"]
 	if apiBase == "" {
 		apiBase = reuse["hefeng_api_base"]
 	}
+
 	if apiBase == "" {
 		return nil, errors.New("api base is required")
 	}
@@ -144,6 +147,7 @@ func ListTools(ctx context.Context) ([]mcp.Tool, error) {
 		MCPServer: server.NewMCPServer("hefeng-weather", "1.0.0"),
 	}
 	weatherServer.addWeatherTool()
+
 	return mcpservers.ListServerTools(ctx, weatherServer)
 }
 
@@ -155,6 +159,7 @@ func validateDays(days string) error {
 			return nil
 		}
 	}
+
 	return fmt.Errorf("无效的预报天数: %s，有效值为: %s", days, strings.Join(validDays, ", "))
 }
 
@@ -257,6 +262,7 @@ func (s *WeatherServer) handleCurrentWeather(
 	)
 
 	var weatherData NowResponse
+
 	err := s.makeHeFengRequest(ctx, weatherURL, &weatherData)
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("获取天气数据失败: %v", err)), nil
@@ -300,6 +306,7 @@ func (s *WeatherServer) handleHourlyWeather(
 	)
 
 	var weatherData HourlyResponse
+
 	err := s.makeHeFengRequest(ctx, weatherURL, &weatherData)
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("获取逐小时天气预报数据失败: %v", err)), nil
@@ -332,6 +339,7 @@ func (s *WeatherServer) handleHourlyWeather(
 	}
 
 	result := fmt.Sprintf("地点: %s\n%s小时预报:\n%s", location, days, hoursText.String())
+
 	return mcp.NewToolResultText(result), nil
 }
 
@@ -349,6 +357,7 @@ func (s *WeatherServer) handleDailyWeather(
 	)
 
 	var weatherData DailyResponse
+
 	err := s.makeHeFengRequest(ctx, weatherURL, &weatherData)
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("获取天气预报数据失败: %v", err)), nil
@@ -392,5 +401,6 @@ func (s *WeatherServer) handleDailyWeather(
 	}
 
 	result := fmt.Sprintf("地点: %s\n%s天预报:\n%s", location, daysNum, forecastText.String())
+
 	return mcp.NewToolResultText(result), nil
 }

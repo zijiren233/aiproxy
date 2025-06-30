@@ -23,6 +23,7 @@ type TokenResponse struct {
 
 func (t *TokenResponse) MarshalJSON() ([]byte, error) {
 	type Alias TokenResponse
+
 	return sonic.Marshal(&struct {
 		*Alias
 		CreatedAt  int64 `json:"created_at"`
@@ -59,6 +60,7 @@ func (at *AddTokenRequest) ToToken() *model.Token {
 	if at.ExpiredAt > 0 {
 		expiredAt = time.UnixMilli(at.ExpiredAt)
 	}
+
 	return &model.Token{
 		Name:      model.EmptyNullString(at.Name),
 		Subnets:   at.Subnets,
@@ -72,12 +74,15 @@ func validateToken(token AddTokenRequest) error {
 	if token.Name == "" {
 		return errors.New("token name cannot be empty")
 	}
+
 	if len(token.Name) > 30 {
 		return errors.New("token name is too long")
 	}
+
 	if err := network.IsValidSubnets(token.Subnets); err != nil {
 		return fmt.Errorf("invalid subnet: %w", err)
 	}
+
 	return nil
 }
 
@@ -90,6 +95,7 @@ func validateTokenUpdate(token AddTokenRequest) error {
 
 func buildTokenResponse(token *model.Token) *TokenResponse {
 	lastRequestAt, _ := model.GetGroupTokenLastRequestTimeMinute(token.GroupID, string(token.Name))
+
 	return &TokenResponse{
 		Token:      token,
 		AccessedAt: lastRequestAt,
@@ -101,6 +107,7 @@ func buildTokenResponses(tokens []*model.Token) []*TokenResponse {
 	for i, token := range tokens {
 		responses[i] = buildTokenResponse(token)
 	}
+
 	return responses
 }
 
@@ -347,6 +354,7 @@ func GetGroupToken(c *gin.Context) {
 //	@Router			/api/token/{group} [post]
 func AddGroupToken(c *gin.Context) {
 	group := c.Param("group")
+
 	var req AddTokenRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		middleware.ErrorResponse(c, http.StatusBadRequest, err.Error())
@@ -433,6 +441,7 @@ func DeleteTokens(c *gin.Context) {
 //	@Router			/api/token/{group}/{id} [delete]
 func DeleteGroupToken(c *gin.Context) {
 	group := c.Param("group")
+
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusBadRequest, err.Error())
@@ -460,6 +469,7 @@ func DeleteGroupToken(c *gin.Context) {
 //	@Router			/api/token/{group}/batch_delete [post]
 func DeleteGroupTokens(c *gin.Context) {
 	group := c.Param("group")
+
 	var ids []int
 	if err := c.ShouldBindJSON(&ids); err != nil {
 		middleware.ErrorResponse(c, http.StatusBadRequest, err.Error())
@@ -529,6 +539,7 @@ func UpdateToken(c *gin.Context) {
 //	@Router			/api/token/{group}/{id} [put]
 func UpdateGroupToken(c *gin.Context) {
 	group := c.Param("group")
+
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusBadRequest, err.Error())
@@ -604,6 +615,7 @@ func UpdateTokenStatus(c *gin.Context) {
 //	@Router			/api/token/{group}/{id}/status [post]
 func UpdateGroupTokenStatus(c *gin.Context) {
 	group := c.Param("group")
+
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusBadRequest, err.Error())
@@ -672,6 +684,7 @@ func UpdateTokenName(c *gin.Context) {
 //	@Router			/api/token/{group}/{id}/name [post]
 func UpdateGroupTokenName(c *gin.Context) {
 	group := c.Param("group")
+
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusBadRequest, err.Error())

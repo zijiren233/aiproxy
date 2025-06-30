@@ -81,10 +81,12 @@ func getRewriteUsage(m *meta.Meta) *model.Usage {
 	if !ok {
 		return nil
 	}
+
 	u, ok := usage.(model.Usage)
 	if !ok {
 		panic(fmt.Sprintf("rewrite usage type %T is not a model.Usage", usage))
 	}
+
 	return &u
 }
 
@@ -93,6 +95,7 @@ func (p *WebSearch) getConfig(meta *meta.Meta) (Config, error) {
 	if err := meta.ModelConfig.LoadPluginConfig("web-search", &pluginConfig); err != nil {
 		return Config{}, err
 	}
+
 	return pluginConfig, nil
 }
 
@@ -146,6 +149,7 @@ func (p *WebSearch) ConvertRequest(
 	if !pluginConfig.ForceSearch && !hasWebSearchOptions {
 		return do.ConvertRequest(meta, store, req)
 	}
+
 	webSearchEnable, ok := webSearchOptions["enable"].(bool)
 	if ok && !webSearchEnable {
 		return do.ConvertRequest(meta, store, req)
@@ -190,6 +194,7 @@ func (p *WebSearch) ConvertRequest(
 	if searchResult.Count == 0 || len(searchResult.Results) == 0 {
 		return do.ConvertRequest(meta, store, req)
 	}
+
 	setSearchCount(meta, searchResult.Count)
 
 	// Format search results and modify request
@@ -263,6 +268,7 @@ func (p *WebSearch) getDefaultPromptTemplate(needReference bool) string {
 # 用户消息为：
 {question}`
 	}
+
 	return `# 以下内容是基于用户发送的消息的搜索结果:
 {search_results}
 在我给你的搜索结果中，每个结果都是[webpage begin]...[webpage end]格式的。
@@ -283,8 +289,10 @@ func (p *WebSearch) getDefaultPromptTemplate(needReference bool) string {
 
 // initializeSearchEngines creates search engine instances based on configuration
 func (p *WebSearch) initializeSearchEngines(configs []EngineConfig) ([]engine.Engine, bool, error) {
-	var engines []engine.Engine
-	var arxivExists bool
+	var (
+		engines     []engine.Engine
+		arxivExists bool
+	)
 
 	for _, e := range configs {
 		switch e.Type {
@@ -293,6 +301,7 @@ func (p *WebSearch) initializeSearchEngines(configs []EngineConfig) ([]engine.En
 			if err := e.LoadSpec(&spec); err != nil {
 				return nil, false, err
 			}
+
 			engines = append(engines, engine.NewBingEngine(spec.APIKey))
 		case "bingcn":
 			engines = append(engines, engine.NewBingCNEngine())
@@ -301,6 +310,7 @@ func (p *WebSearch) initializeSearchEngines(configs []EngineConfig) ([]engine.En
 			if err := e.LoadSpec(&spec); err != nil {
 				return nil, false, err
 			}
+
 			engines = append(engines, engine.NewGoogleEngine(spec.APIKey, spec.CX))
 		case "arxiv":
 			engines = append(engines, engine.NewArxivEngine())
@@ -310,6 +320,7 @@ func (p *WebSearch) initializeSearchEngines(configs []EngineConfig) ([]engine.En
 			if err := e.LoadSpec(&spec); err != nil {
 				return nil, false, err
 			}
+
 			engines = append(engines, engine.NewSearchXNGEngine(spec.BaseURL))
 		default:
 			return nil, false, fmt.Errorf("unsupported engine type: %s", e.Type)
@@ -334,6 +345,7 @@ func (p *WebSearch) extractUserQuery(messages []any) (int, string) {
 			return i, ""
 		}
 	}
+
 	return -1, ""
 }
 
@@ -419,6 +431,7 @@ func (p *WebSearch) generateSearchContexts(
 	if modelName == "" {
 		modelName = m.OriginModel
 	}
+
 	newMeta := meta.NewMeta(
 		nil,
 		mode.ChatCompletions,
@@ -438,6 +451,7 @@ func (p *WebSearch) generateSearchContexts(
 		if err != nil {
 			return nil, err
 		}
+
 		newMeta.SetChannel(channel)
 	}
 
@@ -446,10 +460,12 @@ func (p *WebSearch) generateSearchContexts(
 	if !ok {
 		return nil, errors.New("adaptor not found")
 	}
+
 	result := controller.Handle(adaptor, newc, newMeta, store)
 	if result.Error != nil {
 		return nil, result.Error
 	}
+
 	setRewriteUsage(m, result.Usage)
 
 	// Extract content from response
@@ -489,6 +505,7 @@ func (p *WebSearch) parseSearchContexts(defaultLanguage, content string) []engin
 		queryStr := strings.TrimSpace(parts[1])
 
 		var ctx engine.SearchQuery
+
 		ctx.Language = defaultLanguage
 
 		switch engineType {
@@ -497,6 +514,7 @@ func (p *WebSearch) parseSearchContexts(defaultLanguage, content string) []engin
 		default:
 			// Arxiv category
 			ctx.ArxivCategory = engineType
+
 			ctx.Queries = strings.Split(queryStr, ",")
 			for i := range ctx.Queries {
 				ctx.Queries[i] = strings.TrimSpace(ctx.Queries[i])
@@ -513,6 +531,7 @@ func (p *WebSearch) parseSearchContexts(defaultLanguage, content string) []engin
 			}
 		}
 	}
+
 	return searchContexts
 }
 
@@ -528,8 +547,10 @@ func (p *WebSearch) executeSearches(
 	engines []engine.Engine,
 	searchContexts []engine.SearchQuery,
 ) *searchResult {
-	var allResults []engine.SearchResult
-	var mu sync.Mutex
+	var (
+		allResults []engine.SearchResult
+		mu         sync.Mutex
+	)
 
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
@@ -550,7 +571,9 @@ func (p *WebSearch) executeSearches(
 				}
 
 				mu.Lock()
+
 				allResults = append(allResults, results...)
+
 				mu.Unlock()
 
 				return nil
@@ -561,6 +584,7 @@ func (p *WebSearch) executeSearches(
 	_ = g.Wait()
 
 	seen := make(map[string]bool)
+
 	var uniqueResults []engine.SearchResult
 	for _, result := range allResults {
 		if !seen[result.Link] {
@@ -664,6 +688,7 @@ func (rw *responseWriter) processRewriteUsage(node *ast.Node) {
 		if field == "" {
 			field = "rewrite_usage"
 		}
+
 		_, _ = node.SetAny(field, rw.rewriteUsage)
 		rw.rewriteUsageWritten = true
 	}
@@ -700,6 +725,7 @@ func buildReferenceContent(searchResults []engine.SearchResult) string {
 	for i, result := range searchResults {
 		formattedReferences[i] = fmt.Sprintf("[%d] [%s](%s)", i+1, result.Title, result.Link)
 	}
+
 	return strings.Join(formattedReferences, "\n\n")
 }
 
@@ -708,6 +734,7 @@ func (rw *responseWriter) processReferences(node *ast.Node) {
 	if rw.refWritten || len(rw.references) == 0 {
 		return
 	}
+
 	rw.refWritten = true
 
 	if rw.referencesLocation == "" || rw.referencesLocation == "content" {
@@ -725,6 +752,7 @@ func (rw *responseWriter) processReferences(node *ast.Node) {
 				if format == "" {
 					format = "**References:**\n%s"
 				}
+
 				ref := fmt.Sprintf(format, buildReferenceContent(rw.references))
 				refContent := fmt.Sprintf("%s\n\n%s", ref, content)
 				*contentNode = ast.NewString(refContent)
@@ -737,6 +765,7 @@ func (rw *responseWriter) processReferences(node *ast.Node) {
 		} else {
 			outterLocation = node.GetByPath("choices", 0, "message")
 		}
+
 		if outterLocation != nil && outterLocation.Valid() {
 			_, _ = outterLocation.SetAny(rw.referencesLocation, rw.references)
 		}
@@ -761,6 +790,7 @@ func (p *WebSearch) DoResponse(
 	}
 
 	var references []engine.SearchResult
+
 	referencesI, ok := meta.Get("references")
 	if ok {
 		references, ok = referencesI.([]engine.SearchResult)
@@ -768,8 +798,11 @@ func (p *WebSearch) DoResponse(
 			panic(fmt.Sprintf("references type %T is not a []engine.SearchResult", referencesI))
 		}
 	}
+
 	count := getSearchCount(meta)
+
 	var rewriteUsage *model.Usage
+
 	rewriteUsageField := ""
 	pluginConfig, _ := p.getConfig(meta)
 
@@ -790,6 +823,7 @@ func (p *WebSearch) DoResponse(
 			referencesLocation:  pluginConfig.ReferenceLocation,
 			referenceFormat:     pluginConfig.ReferenceFormat,
 		}
+
 		c.Writer = rw
 		defer func() {
 			c.Writer = rw.ResponseWriter
@@ -812,6 +846,8 @@ func (p *WebSearch) doResponseWithCount(
 	if err != nil {
 		return model.Usage{}, err
 	}
+
 	u.WebSearchCount += model.ZeroNullInt64(int64(count))
+
 	return u, nil
 }

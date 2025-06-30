@@ -38,6 +38,7 @@ func (s *Server) extractPrices(
 		}
 
 		var seatTypeCode string
+
 		priceValue, err := strconv.Atoi(priceStr[6:10])
 		if err != nil {
 			continue
@@ -52,10 +53,12 @@ func (s *Server) extractPrices(
 		}
 
 		seatType := SeatTypes[seatTypeCode]
+
 		price, err := strconv.ParseFloat(priceStr[1:6], 64)
 		if err != nil {
 			continue
 		}
+
 		price /= 10
 
 		var discount *int
@@ -110,14 +113,17 @@ func (s *Server) extractPrices(
 // extractDWFlags extracts DW flags from the flag string
 func (s *Server) extractDWFlags(dwFlagStr string) []string {
 	dwFlagList := strings.Split(dwFlagStr, "#")
+
 	var result []string
 
 	if len(dwFlagList) > 0 && dwFlagList[0] == "5" {
 		result = append(result, DWFlags[0]) // 智能动车组
 	}
+
 	if len(dwFlagList) > 1 && dwFlagList[1] == "1" {
 		result = append(result, DWFlags[1]) // 复兴号
 	}
+
 	if len(dwFlagList) > 2 {
 		if strings.HasPrefix(dwFlagList[2], "Q") {
 			result = append(result, DWFlags[2]) // 静音车厢
@@ -125,12 +131,15 @@ func (s *Server) extractDWFlags(dwFlagStr string) []string {
 			result = append(result, DWFlags[3]) // 温馨动卧
 		}
 	}
+
 	if len(dwFlagList) > 5 && dwFlagList[5] == "D" {
 		result = append(result, DWFlags[4]) // 动感号
 	}
+
 	if len(dwFlagList) > 6 && dwFlagList[6] != "z" {
 		result = append(result, DWFlags[5]) // 支持选铺
 	}
+
 	if len(dwFlagList) > 7 && dwFlagList[7] != "z" {
 		result = append(result, DWFlags[6]) // 老年优惠
 	}
@@ -146,6 +155,7 @@ func (s *Server) formatTicketStatus(num string) string {
 		if count == 0 {
 			return "无票"
 		}
+
 		return fmt.Sprintf("剩余%d张票", count)
 	}
 
@@ -187,6 +197,7 @@ func (s *Server) formatTicketsInfo(ticketsInfo []TicketInfo) string {
 			ticketStatus := s.formatTicketStatus(price.Num)
 			infoStr += fmt.Sprintf("\n- %s: %s %.1f元", price.SeatName, ticketStatus, price.Price)
 		}
+
 		result += infoStr + "\n"
 	}
 
@@ -254,6 +265,7 @@ func (s *Server) matchesTrainFilter(ticketInfo TicketInfo, filter string) bool {
 	case "S":
 		return s.containsFlag(ticketInfo.DwFlag, "智能动车组")
 	}
+
 	return false
 }
 
@@ -264,6 +276,7 @@ func (s *Server) containsFlag(flags []string, flag string) bool {
 			return true
 		}
 	}
+
 	return false
 }
 
@@ -280,6 +293,7 @@ func (s *Server) sortTicketsInfo(
 			if sortReverse {
 				return result > 0
 			}
+
 			return result < 0
 		})
 	case "arriveTime":
@@ -288,6 +302,7 @@ func (s *Server) sortTicketsInfo(
 			if sortReverse {
 				return result > 0
 			}
+
 			return result < 0
 		})
 	case "duration":
@@ -296,6 +311,7 @@ func (s *Server) sortTicketsInfo(
 			if sortReverse {
 				return result > 0
 			}
+
 			return result < 0
 		})
 	}
@@ -502,6 +518,7 @@ func (s *Server) parseInterlinesTicketInfo(
 		if len(lishiParts) != 2 {
 			continue
 		}
+
 		durationHours, _ := strconv.Atoi(lishiParts[0])
 		durationMinutes, _ := strconv.Atoi(lishiParts[1])
 
@@ -565,6 +582,7 @@ func (s *Server) extractInterlinePrices(
 		}
 
 		var seatTypeCode string
+
 		priceValue, err := strconv.Atoi(priceStr[6:10])
 		if err != nil {
 			continue
@@ -579,10 +597,12 @@ func (s *Server) extractInterlinePrices(
 		}
 
 		seatType := SeatTypes[seatTypeCode]
+
 		price, err := strconv.ParseFloat(priceStr[1:6], 64)
 		if err != nil {
 			continue
 		}
+
 		price /= 10
 
 		var discount *int
@@ -637,6 +657,7 @@ func (s *Server) extractInterlinePrices(
 // extractLishi extracts duration in hh:mm format from Chinese format
 func (s *Server) extractLishi(allLishi string) string {
 	re := regexp.MustCompile(`(?:(\d+)小时)?(\d+)分钟`)
+
 	matches := re.FindStringSubmatch(allLishi)
 	if len(matches) < 3 {
 		return "00:00"
@@ -723,6 +744,7 @@ func (s *Server) matchesInterlineTrainFilter(
 		return len(interlineInfo.TicketList) > 0 &&
 			s.containsFlag(interlineInfo.TicketList[0].DwFlag, "智能动车组")
 	}
+
 	return false
 }
 
@@ -739,6 +761,7 @@ func (s *Server) sortInterlineInfo(
 			if sortReverse {
 				return result > 0
 			}
+
 			return result < 0
 		})
 	case "arriveTime":
@@ -747,6 +770,7 @@ func (s *Server) sortInterlineInfo(
 			if sortReverse {
 				return result > 0
 			}
+
 			return result < 0
 		})
 	case "duration":
@@ -755,6 +779,7 @@ func (s *Server) sortInterlineInfo(
 			if sortReverse {
 				return result > 0
 			}
+
 			return result < 0
 		})
 	}

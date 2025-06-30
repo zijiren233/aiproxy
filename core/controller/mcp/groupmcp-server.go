@@ -32,6 +32,7 @@ func GroupMCPSSEServer(c *gin.Context) {
 		http.Error(c.Writer, err.Error(), http.StatusNotFound)
 		return
 	}
+
 	if groupMcp.Status != model.GroupMCPStatusEnabled {
 		http.Error(c.Writer, "mcp is not enabled", http.StatusNotFound)
 		return
@@ -55,12 +56,14 @@ func handleGroupSSEMCPServer(
 			http.Error(c.Writer, err.Error(), http.StatusBadRequest)
 			return
 		}
+
 		err = client.Start(c.Request.Context())
 		if err != nil {
 			http.Error(c.Writer, err.Error(), http.StatusBadRequest)
 			return
 		}
 		defer client.Close()
+
 		handleSSEMCPServer(c,
 			mcpservers.WrapMCPClient2Server(client),
 			string(model.GroupMCPTypeProxySSE),
@@ -75,12 +78,14 @@ func handleGroupSSEMCPServer(
 			http.Error(c.Writer, err.Error(), http.StatusBadRequest)
 			return
 		}
+
 		err = client.Start(c.Request.Context())
 		if err != nil {
 			http.Error(c.Writer, err.Error(), http.StatusBadRequest)
 			return
 		}
 		defer client.Close()
+
 		handleSSEMCPServer(
 			c,
 			mcpservers.WrapMCPClient2Server(client),
@@ -93,6 +98,7 @@ func handleGroupSSEMCPServer(
 			http.Error(c.Writer, err.Error(), http.StatusBadRequest)
 			return
 		}
+
 		handleSSEMCPServer(c, server, string(model.GroupMCPTypeOpenAPI), endpoint)
 	default:
 		http.Error(c.Writer, "unsupported mcp type", http.StatusBadRequest)
@@ -114,6 +120,7 @@ func GroupMCPStreamable(c *gin.Context) {
 			mcp.INVALID_REQUEST,
 			"mcp id is required",
 		))
+
 		return
 	}
 
@@ -126,14 +133,17 @@ func GroupMCPStreamable(c *gin.Context) {
 			mcp.INVALID_REQUEST,
 			err.Error(),
 		))
+
 		return
 	}
+
 	if groupMcp.Status != model.GroupMCPStatusEnabled {
 		c.JSON(http.StatusNotFound, mcpservers.CreateMCPErrorResponse(
 			mcp.NewRequestId(nil),
 			mcp.INVALID_REQUEST,
 			"mcp is not enabled",
 		))
+
 		return
 	}
 
@@ -153,6 +163,7 @@ func handleGroupProxyStreamable(c *gin.Context, config *model.GroupMCPProxyConfi
 			mcp.INVALID_REQUEST,
 			err.Error(),
 		))
+
 		return
 	}
 
@@ -162,6 +173,7 @@ func handleGroupProxyStreamable(c *gin.Context, config *model.GroupMCPProxyConfi
 	for k, v := range config.Headers {
 		headers[k] = v
 	}
+
 	for k, v := range config.Querys {
 		backendQuery.Set(k, v)
 	}

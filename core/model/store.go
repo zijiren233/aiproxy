@@ -32,18 +32,23 @@ func (s *Store) BeforeSave(_ *gorm.DB) error {
 			return errors.New("token id is required")
 		}
 	}
+
 	if s.ChannelID == 0 {
 		return errors.New("channel id is required")
 	}
+
 	if s.ID == "" {
 		s.ID = common.ShortUUID()
 	}
+
 	if s.CreatedAt.IsZero() {
 		s.CreatedAt = time.Now()
 	}
+
 	if s.ExpiresAt.IsZero() {
 		s.ExpiresAt = s.CreatedAt.Add(time.Hour * 24 * 30)
 	}
+
 	return nil
 }
 
@@ -56,6 +61,7 @@ func SaveStore(s *Store) (*Store, error) {
 
 func GetStore(id string) (*Store, error) {
 	var s Store
+
 	err := LogDB.Where("id = ?", id).First(&s).Error
 	return &s, HandleNotFound(err, ErrStoreNotFound)
 }

@@ -36,18 +36,23 @@ func ConvertSTTRequest(
 		if len(values) == 0 {
 			continue
 		}
+
 		value := values[0]
+
 		if key == "model" {
 			err = multipartWriter.WriteField(key, meta.ActualModel)
 			if err != nil {
 				return adaptor.ConvertResult{}, err
 			}
+
 			continue
 		}
+
 		if key == "response_format" {
 			meta.Set(MetaResponseFormat, value)
 			continue
 		}
+
 		err = multipartWriter.WriteField(key, value)
 		if err != nil {
 			return adaptor.ConvertResult{}, err
@@ -58,18 +63,23 @@ func ConvertSTTRequest(
 		if len(files) == 0 {
 			continue
 		}
+
 		fileHeader := files[0]
+
 		file, err := fileHeader.Open()
 		if err != nil {
 			return adaptor.ConvertResult{}, err
 		}
+
 		w, err := multipartWriter.CreateFormFile(key, fileHeader.Filename)
 		if err != nil {
 			file.Close()
 			return adaptor.ConvertResult{}, err
 		}
+
 		_, err = io.Copy(w, file)
 		file.Close()
+
 		if err != nil {
 			return adaptor.ConvertResult{}, err
 		}
@@ -77,6 +87,7 @@ func ConvertSTTRequest(
 
 	multipartWriter.Close()
 	ContentType := multipartWriter.FormDataContentType()
+
 	return adaptor.ConvertResult{
 		Header: http.Header{
 			"Content-Type": {ContentType},
@@ -124,6 +135,7 @@ func STTHandler(
 	default:
 		text, err = getTextFromJSON(responseBody)
 	}
+
 	if err != nil {
 		return model.Usage{}, relaymodel.WrapperOpenAIError(
 			err,
@@ -131,6 +143,7 @@ func STTHandler(
 			http.StatusInternalServerError,
 		)
 	}
+
 	var promptTokens int64
 	if meta.RequestUsage.InputTokens > 0 {
 		promptTokens = int64(meta.RequestUsage.InputTokens)
@@ -155,6 +168,7 @@ func STTHandler(
 				http.StatusInternalServerError,
 			)
 		}
+
 		if node.Get("usage").Exists() {
 			usageStr, err := node.Get("usage").Raw()
 			if err != nil {
@@ -164,6 +178,7 @@ func STTHandler(
 					http.StatusInternalServerError,
 				)
 			}
+
 			err = sonic.UnmarshalString(usageStr, usage)
 			if err != nil {
 				return usage.ToModelUsage(), relaymodel.WrapperOpenAIError(
@@ -172,6 +187,7 @@ func STTHandler(
 					http.StatusInternalServerError,
 				)
 			}
+
 			switch {
 			case usage.PromptTokens != 0 && usage.TotalTokens == 0:
 				usage.TotalTokens = usage.PromptTokens
@@ -191,6 +207,7 @@ func STTHandler(
 				http.StatusInternalServerError,
 			)
 		}
+
 		responseBody, err = node.MarshalJSON()
 		if err != nil {
 			return usage.ToModelUsage(), relaymodel.WrapperOpenAIError(
@@ -203,6 +220,7 @@ func STTHandler(
 
 	c.Writer.Header().Set("Content-Type", "application/json")
 	c.Writer.Header().Set("Content-Length", strconv.Itoa(len(responseBody)))
+
 	_, err = c.Writer.Write(responseBody)
 	if err != nil {
 		log.Warnf("write response body failed: %v", err)
@@ -220,17 +238,23 @@ func getTextFromVerboseJSON(body []byte) (string, error) {
 	if err := sonic.Unmarshal(body, &whisperResponse); err != nil {
 		return "", fmt.Errorf("unmarshal_response_body_failed err :%w", err)
 	}
+
 	return whisperResponse.Text, nil
 }
 
 func getTextFromSRT(body []byte) (string, error) {
 	scanner := bufio.NewScanner(bytes.NewReader(body))
-	var builder strings.Builder
-	var textLine bool
+
+	var (
+		builder  strings.Builder
+		textLine bool
+	)
+
 	for scanner.Scan() {
 		line := scanner.Text()
 		if textLine {
 			builder.WriteString(line)
+
 			textLine = false
 			continue
 		} else if strings.Contains(line, "-->") {
@@ -238,9 +262,11 @@ func getTextFromSRT(body []byte) (string, error) {
 			continue
 		}
 	}
+
 	if err := scanner.Err(); err != nil {
 		return "", err
 	}
+
 	return builder.String(), nil
 }
 
@@ -253,5 +279,6 @@ func getTextFromJSON(body []byte) (string, error) {
 	if err := sonic.Unmarshal(body, &whisperResponse); err != nil {
 		return "", fmt.Errorf("unmarshal_response_body_failed err :%w", err)
 	}
+
 	return whisperResponse.Text, nil
 }

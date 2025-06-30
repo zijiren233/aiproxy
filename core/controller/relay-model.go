@@ -36,6 +36,7 @@ func ListModels(c *gin.Context) {
 				Parent:     nil,
 			})
 		}
+
 		return true
 	})
 
@@ -73,6 +74,7 @@ func RetrieveModel(c *gin.Context) {
 				Code:    "model_not_found",
 			},
 		})
+
 		return
 	}
 

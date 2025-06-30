@@ -99,6 +99,7 @@ var ChannelMetas = map[model.ChannelType]AdaptorMeta{}
 func init() {
 	for i, a := range ChannelAdaptor {
 		adaptorMeta := a.Metadata()
+
 		meta := AdaptorMeta{
 			Name:           i.String(),
 			KeyHelp:        adaptorMeta.KeyHelp,
@@ -110,6 +111,7 @@ func init() {
 			if template.Name == "" {
 				log.Fatalf("config template %s is invalid: name is empty", key)
 			}
+
 			if err := adaptor.ValidateConfigTemplate(template); err != nil {
 				log.Fatalf("config template %s(%s) is invalid: %v", key, template.Name, err)
 			}

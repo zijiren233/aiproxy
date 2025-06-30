@@ -37,8 +37,10 @@ func getToken(ctx context.Context, adcJSON string) (string, error) {
 		if !ok {
 			panic(fmt.Sprintf("invalid cache value type: %T", tokenI))
 		}
+
 		return token, nil
 	}
+
 	adc := &ApplicationDefaultCredentials{}
 	if err := sonic.UnmarshalString(adcJSON, adc); err != nil {
 		return "", fmt.Errorf("failed to decode credentials file: %w", err)
@@ -59,19 +61,25 @@ func getToken(ctx context.Context, adcJSON string) (string, error) {
 		Name:  "projects/-/serviceAccounts/" + adc.ClientEmail,
 		Scope: []string{defaultScope},
 	}
+
 	resp, err := c.GenerateAccessToken(ctx, req)
 	if err != nil {
 		return "", fmt.Errorf("failed to generate access token: %w", err)
 	}
+
 	token := resp.GetAccessToken()
 	if token == "" {
 		return "", fmt.Errorf("failed to generate access token: %w", err)
 	}
+
 	expireTime := resp.GetExpireTime()
+
 	expireTimeTime := time.Minute * 30
 	if expireTime != nil && expireTime.IsValid() {
 		expireTimeTime = time.Until(expireTime.AsTime()) / 2
 	}
+
 	tokenCache.Set(adcJSON, token, expireTimeTime)
+
 	return token, nil
 }

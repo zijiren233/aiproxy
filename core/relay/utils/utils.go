@@ -10,19 +10,23 @@ import (
 
 func UnmarshalAnthropicMessageRequest(req *http.Request) (*model.AnthropicMessageRequest, error) {
 	var request model.AnthropicMessageRequest
+
 	err := common.UnmarshalRequestReusable(req, &request)
 	if err != nil {
 		return nil, err
 	}
+
 	return &request, nil
 }
 
 func UnmarshalGeneralOpenAIRequest(req *http.Request) (*model.GeneralOpenAIRequest, error) {
 	var request model.GeneralOpenAIRequest
+
 	err := common.UnmarshalRequestReusable(req, &request)
 	if err != nil {
 		return nil, err
 	}
+
 	return &request, nil
 }
 
@@ -30,46 +34,56 @@ func UnmarshalVideoGenerationJobRequest(
 	req *http.Request,
 ) (*model.VideoGenerationJobRequest, error) {
 	var request model.VideoGenerationJobRequest
+
 	err := common.UnmarshalRequestReusable(req, &request)
 	if err != nil {
 		return nil, err
 	}
+
 	return &request, nil
 }
 
 func UnmarshalImageRequest(req *http.Request) (*model.ImageRequest, error) {
 	var request model.ImageRequest
+
 	err := common.UnmarshalRequestReusable(req, &request)
 	if err != nil {
 		return nil, err
 	}
+
 	return &request, nil
 }
 
 func UnmarshalRerankRequest(req *http.Request) (*model.RerankRequest, error) {
 	var request model.RerankRequest
+
 	err := common.UnmarshalRequestReusable(req, &request)
 	if err != nil {
 		return nil, err
 	}
+
 	return &request, nil
 }
 
 func UnmarshalTTSRequest(req *http.Request) (*model.TextToSpeechRequest, error) {
 	var request model.TextToSpeechRequest
+
 	err := common.UnmarshalRequestReusable(req, &request)
 	if err != nil {
 		return nil, err
 	}
+
 	return &request, nil
 }
 
 func UnmarshalMap(req *http.Request) (map[string]any, error) {
 	var request map[string]any
+
 	err := common.UnmarshalRequestReusable(req, &request)
 	if err != nil {
 		return nil, err
 	}
+
 	return request, nil
 }
 
@@ -80,6 +94,7 @@ func DoRequest(req *http.Request) (*http.Response, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return resp, nil
 }
 
@@ -92,6 +107,7 @@ func IsStreamResponseWithHeader(header http.Header) bool {
 	if contentType == "" {
 		return false
 	}
+
 	return strings.Contains(contentType, "event-stream") ||
 		strings.Contains(contentType, "x-ndjson")
 }

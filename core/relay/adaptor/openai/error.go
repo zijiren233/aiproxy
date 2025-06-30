@@ -36,6 +36,7 @@ func GetErrorWithBody(statusCode int, respBody []byte) (int, relaymodel.OpenAIEr
 	}
 
 	var errResponse relaymodel.OpenAIErrorResponse
+
 	err := sonic.Unmarshal(respBody, &errResponse)
 	if err != nil {
 		openAIError.Message = conv.BytesToString(respBody)
@@ -92,6 +93,7 @@ func VideoErrorHanlderWithBody(statusCode int, respBody []byte) adaptor.Error {
 
 func GetVideoErrorWithBody(statusCode int, respBody []byte) (int, relaymodel.OpenAIVideoError) {
 	openAIError := relaymodel.OpenAIVideoError{}
+
 	err := sonic.Unmarshal(respBody, &openAIError)
 	if err != nil {
 		openAIError.Detail = string(respBody)

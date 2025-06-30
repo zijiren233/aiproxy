@@ -51,6 +51,7 @@ func ListTools(ctx context.Context) ([]mcp.Tool, error) {
 		MCPServer: server.NewMCPServer("howtocook-mcp", Version),
 	}
 	cookServer.addTools()
+
 	return mcpservers.ListServerTools(ctx, cookServer)
 }
 
@@ -356,12 +357,14 @@ func (s *Server) generateMealPlan(peopleCount int, allergies, avoidItems []strin
 
 		// Weekend meals (more dishes)
 		weekdayMealCount := int(math.Max(2, math.Ceil(float64(peopleCount)/3)))
+
 		var weekendAddition int
 		if peopleCount <= 4 {
 			weekendAddition = 1
 		} else {
 			weekendAddition = 2
 		}
+
 		mealCount := weekdayMealCount + weekendAddition
 
 		dayPlan.Lunch, selectedRecipes = s.selectWeekendMeals(
@@ -404,10 +407,13 @@ func (s *Server) generateDishRecommendation(peopleCount int) DishRecommendation 
 		}
 	}
 
-	var recommendedDishes []Recipe
-	var fishDish *Recipe
+	var (
+		recommendedDishes []Recipe
+		fishDish          *Recipe
+	)
 
 	// Add fish dish for large groups
+
 	if peopleCount > 8 {
 		var fishDishes []Recipe
 		for _, recipe := range s.recipes {
@@ -415,6 +421,7 @@ func (s *Server) generateDishRecommendation(peopleCount int) DishRecommendation 
 				fishDishes = append(fishDishes, recipe)
 			}
 		}
+
 		if len(fishDishes) > 0 {
 			selected := fishDishes[rand.Intn(len(fishDishes))]
 			fishDish = &selected
@@ -490,23 +497,28 @@ func (s *Server) filterRecipes(allergies, avoidItems []string) []Recipe {
 					break
 				}
 			}
+
 			if hasAllergyOrAvoid {
 				break
 			}
+
 			for _, avoid := range avoidItems {
 				if strings.Contains(name, strings.ToLower(avoid)) {
 					hasAllergyOrAvoid = true
 					break
 				}
 			}
+
 			if hasAllergyOrAvoid {
 				break
 			}
 		}
+
 		if !hasAllergyOrAvoid {
 			filtered = append(filtered, recipe)
 		}
 	}
+
 	return filtered
 }
 
@@ -520,7 +532,9 @@ func (s *Server) groupRecipesByCategory(recipes []Recipe) map[string][]Recipe {
 				if recipesByCategory[category] == nil {
 					recipesByCategory[category] = []Recipe{}
 				}
+
 				recipesByCategory[category] = append(recipesByCategory[category], recipe)
+
 				break
 			}
 		}
@@ -561,6 +575,7 @@ func (s *Server) selectVariedMeals(
 	selectedRecipes []Recipe,
 ) ([]SimpleRecipe, []Recipe) {
 	var meals []SimpleRecipe
+
 	categories := []string{"主食", "水产", "荤菜", "素菜", "甜品"}
 
 	for range count {
@@ -578,6 +593,7 @@ func (s *Server) selectVariedMeals(
 				// Remove selected recipe
 				recipes = append(recipes[:index], recipes[index+1:]...)
 				recipesByCategory[selectedCategory] = recipes
+
 				break
 			}
 
@@ -597,6 +613,7 @@ func (s *Server) selectWeekendMeals(
 	selectedRecipes []Recipe,
 ) ([]SimpleRecipe, []Recipe) {
 	var meals []SimpleRecipe
+
 	categories := []string{"荤菜", "水产"}
 
 	for i := range count {
@@ -631,6 +648,7 @@ func (s *Server) selectWeekendMeals(
 func (s *Server) selectMeatDishes(meatDishes []Recipe, count int) []Recipe {
 	//nolint:prealloc
 	var selectedMeatDishes []Recipe
+
 	meatTypes := []string{"猪肉", "鸡肉", "牛肉", "羊肉", "鸭肉", "鱼肉"}
 	availableDishes := make([]Recipe, len(meatDishes))
 	copy(availableDishes, meatDishes)
@@ -641,8 +659,10 @@ func (s *Server) selectMeatDishes(meatDishes []Recipe, count int) []Recipe {
 			break
 		}
 
-		var meatTypeOptions []Recipe
-		var meatTypeIndices []int
+		var (
+			meatTypeOptions []Recipe
+			meatTypeIndices []int
+		)
 
 		for i, dish := range availableDishes {
 			for _, ingredient := range dish.Ingredients {
@@ -687,6 +707,7 @@ func (s *Server) selectMeatDishes(meatDishes []Recipe, count int) []Recipe {
 func (s *Server) selectRandomDishes(dishes []Recipe, count int) []Recipe {
 	//nolint:prealloc
 	var selectedDishes []Recipe
+
 	availableDishes := make([]Recipe, len(dishes))
 	copy(availableDishes, dishes)
 
@@ -766,6 +787,7 @@ func (s *Server) processRecipeIngredients(recipe Recipe, ingredientMap map[strin
 					break
 				}
 			}
+
 			if !found {
 				existingItem.Recipes = append(existingItem.Recipes, recipe.Name)
 			}

@@ -92,6 +92,7 @@ func (f *WebpageFetcher) FetchWebpage(
 	}
 
 	webpageContent.URL = options.URL
+
 	return webpageContent, nil
 }
 

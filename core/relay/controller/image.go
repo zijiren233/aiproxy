@@ -16,12 +16,15 @@ func getImagesRequest(c *gin.Context) (*relaymodel.ImageRequest, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	if imageRequest.Prompt == "" {
 		return nil, errors.New("prompt is required")
 	}
+
 	if imageRequest.N == 0 {
 		imageRequest.N = 1
 	}
+
 	return imageRequest, nil
 }
 

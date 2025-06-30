@@ -26,10 +26,12 @@ func (a *Adaptor) ConvertRequest(
 ) (adaptor.ConvertResult, error) {
 	domain := getXunfeiDomain(meta.ActualModel)
 	model := meta.ActualModel
+
 	meta.ActualModel = domain
 	defer func() {
 		meta.ActualModel = model
 	}()
+
 	return a.Adaptor.ConvertRequest(meta, store, req)
 }
 

@@ -35,7 +35,9 @@ func EmbeddingsHandler(
 			http.StatusInternalServerError,
 		)
 	}
+
 	var baiduResponse EmbeddingsResponse
+
 	err = sonic.Unmarshal(body, &baiduResponse)
 	if err != nil {
 		return model.Usage{}, relaymodel.WrapperOpenAIErrorWithMessage(
@@ -44,11 +46,13 @@ func EmbeddingsHandler(
 			http.StatusInternalServerError,
 		)
 	}
+
 	if baiduResponse.Error != nil && baiduResponse.ErrorCode != 0 {
 		return baiduResponse.Usage.ToModelUsage(), ErrorHandler(baiduResponse.Error)
 	}
 
 	respMap := make(map[string]any)
+
 	err = sonic.Unmarshal(body, &respMap)
 	if err != nil {
 		return baiduResponse.Usage.ToModelUsage(), relaymodel.WrapperOpenAIErrorWithMessage(
@@ -57,6 +61,7 @@ func EmbeddingsHandler(
 			http.StatusInternalServerError,
 		)
 	}
+
 	respMap["model"] = meta.OriginModel
 	respMap["object"] = "list"
 
@@ -68,11 +73,14 @@ func EmbeddingsHandler(
 			http.StatusInternalServerError,
 		)
 	}
+
 	c.Writer.Header().Set("Content-Type", "application/json")
 	c.Writer.Header().Set("Content-Length", strconv.Itoa(len(data)))
+
 	_, err = c.Writer.Write(data)
 	if err != nil {
 		log.Warnf("write response body failed: %v", err)
 	}
+
 	return baiduResponse.Usage.ToModelUsage(), nil
 }

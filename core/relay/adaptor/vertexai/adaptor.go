@@ -59,6 +59,7 @@ func (a *Adaptor) DoResponse(
 			http.StatusInternalServerError,
 		)
 	}
+
 	return adaptor.DoResponse(meta, store, c, resp)
 }
 
@@ -106,6 +107,7 @@ func (a *Adaptor) GetRequestURL(meta *meta.Meta, _ adaptor.Store) (adaptor.Reque
 			),
 		}, nil
 	}
+
 	return adaptor.RequestURL{
 		Method: http.MethodPost,
 		URL: fmt.Sprintf(
@@ -129,11 +131,14 @@ func (a *Adaptor) SetupRequestHeader(
 	if err != nil {
 		return err
 	}
+
 	token, err := getToken(context.Background(), config.ADCJSON)
 	if err != nil {
 		return err
 	}
+
 	req.Header.Set("Authorization", "Bearer "+token)
+
 	return nil
 }
 

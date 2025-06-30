@@ -27,10 +27,12 @@ func ConvertImagesRequest(
 	if err != nil {
 		return adaptor.ConvertResult{}, err
 	}
+
 	responseFormat, err := node.Get("response_format").String()
 	if err != nil && !errors.Is(err, ast.ErrNotExist) {
 		return adaptor.ConvertResult{}, err
 	}
+
 	meta.Set(MetaResponseFormat, responseFormat)
 
 	_, err = node.Set("model", ast.NewString(meta.ActualModel))
@@ -68,18 +70,23 @@ func ConvertImagesEditsRequest(
 		if len(values) == 0 {
 			continue
 		}
+
 		value := values[0]
+
 		if key == "model" {
 			err = multipartWriter.WriteField(key, meta.ActualModel)
 			if err != nil {
 				return adaptor.ConvertResult{}, err
 			}
+
 			continue
 		}
+
 		if key == "response_format" {
 			meta.Set(MetaResponseFormat, value)
 			continue
 		}
+
 		err = multipartWriter.WriteField(key, value)
 		if err != nil {
 			return adaptor.ConvertResult{}, err
@@ -90,18 +97,23 @@ func ConvertImagesEditsRequest(
 		if len(files) == 0 {
 			continue
 		}
+
 		fileHeader := files[0]
+
 		file, err := fileHeader.Open()
 		if err != nil {
 			return adaptor.ConvertResult{}, err
 		}
+
 		w, err := multipartWriter.CreateFormFile(key, fileHeader.Filename)
 		if err != nil {
 			file.Close()
 			return adaptor.ConvertResult{}, err
 		}
+
 		_, err = io.Copy(w, file)
 		file.Close()
+
 		if err != nil {
 			return adaptor.ConvertResult{}, err
 		}
@@ -109,6 +121,7 @@ func ConvertImagesEditsRequest(
 
 	multipartWriter.Close()
 	ContentType := multipartWriter.FormDataContentType()
+
 	return adaptor.ConvertResult{
 		Header: http.Header{
 			"Content-Type": {ContentType},
@@ -131,6 +144,7 @@ func ImagesHandler(
 	log := common.GetLogger(c)
 
 	var imageResponse relaymodel.ImageResponse
+
 	err := common.UnmarshalResponse(resp, &imageResponse)
 	if err != nil {
 		return model.Usage{}, relaymodel.WrapperOpenAIError(
@@ -155,6 +169,7 @@ func ImagesHandler(
 			if len(data.B64Json) > 0 {
 				continue
 			}
+
 			_, data.B64Json, err = image.GetImageFromURL(c.Request.Context(), data.URL)
 			if err != nil {
 				return usage, relaymodel.WrapperOpenAIError(
@@ -177,9 +192,11 @@ func ImagesHandler(
 
 	c.Writer.Header().Set("Content-Type", "application/json")
 	c.Writer.Header().Set("Content-Length", strconv.Itoa(len(data)))
+
 	_, err = c.Writer.Write(data)
 	if err != nil {
 		log.Warnf("write response body failed: %v", err)
 	}
+
 	return usage, nil
 }

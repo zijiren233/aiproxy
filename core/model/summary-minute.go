@@ -28,15 +28,19 @@ func (l *SummaryMinute) BeforeCreate(_ *gorm.DB) (err error) {
 	if l.Unique.ChannelID == 0 {
 		return errors.New("channel id is required")
 	}
+
 	if l.Unique.Model == "" {
 		return errors.New("model is required")
 	}
+
 	if l.Unique.MinuteTimestamp == 0 {
 		return errors.New("minute timestamp is required")
 	}
+
 	if err := validateMinuteTimestamp(l.Unique.MinuteTimestamp); err != nil {
 		return err
 	}
+
 	return
 }
 
@@ -80,10 +84,12 @@ func UpsertSummaryMinute(unique SummaryMinuteUnique, data SummaryData) error {
 				unique.MinuteTimestamp,
 			).
 			Updates(data.buildUpdateData("summary_minutes"))
+
 		err = result.Error
 		if err != nil {
 			return err
 		}
+
 		if result.RowsAffected > 0 {
 			return nil
 		}
@@ -92,6 +98,7 @@ func UpsertSummaryMinute(unique SummaryMinuteUnique, data SummaryData) error {
 		if err == nil {
 			return nil
 		}
+
 		if !errors.Is(err, gorm.ErrDuplicatedKey) {
 			return err
 		}
@@ -156,6 +163,7 @@ func getChartDataMinute(
 		Order("timestamp ASC")
 
 	var chartData []*ChartData
+
 	err := query.Scan(&chartData).Error
 	if err != nil {
 		return nil, err
@@ -179,6 +187,7 @@ func getGroupChartDataMinute(
 	if group != "" {
 		query = query.Where("group_id = ?", group)
 	}
+
 	if tokenName != "" {
 		query = query.Where("token_name = ?", tokenName)
 	}
@@ -210,6 +219,7 @@ func getGroupChartDataMinute(
 		Order("timestamp ASC")
 
 	var chartData []*ChartData
+
 	err := query.Scan(&chartData).Error
 	if err != nil {
 		return nil, err
@@ -248,6 +258,7 @@ func getLogGroupByValuesMinute[T cmp.Ordered](
 		UsedAmount   float64
 		RequestCount int64
 	}
+
 	var results []Result
 
 	var query *gorm.DB
@@ -278,9 +289,11 @@ func getLogGroupByValuesMinute[T cmp.Ordered](
 		if a.UsedAmount != b.UsedAmount {
 			return cmp.Compare(b.UsedAmount, a.UsedAmount)
 		}
+
 		if a.RequestCount != b.RequestCount {
 			return cmp.Compare(b.RequestCount, a.RequestCount)
 		}
+
 		return cmp.Compare(a.Value, b.Value)
 	})
 
@@ -301,6 +314,7 @@ func getGroupLogGroupByValuesMinute[T cmp.Ordered](
 		UsedAmount   float64
 		RequestCount int64
 	}
+
 	var results []Result
 
 	query := LogDB.
@@ -308,6 +322,7 @@ func getGroupLogGroupByValuesMinute[T cmp.Ordered](
 	if group != "" {
 		query = query.Where("group_id = ?", group)
 	}
+
 	if tokenName != "" {
 		query = query.Where("token_name = ?", tokenName)
 	}
@@ -335,9 +350,11 @@ func getGroupLogGroupByValuesMinute[T cmp.Ordered](
 		if a.UsedAmount != b.UsedAmount {
 			return cmp.Compare(b.UsedAmount, a.UsedAmount)
 		}
+
 		if a.RequestCount != b.RequestCount {
 			return cmp.Compare(b.RequestCount, a.RequestCount)
 		}
+
 		return cmp.Compare(a.Value, b.Value)
 	})
 
@@ -373,18 +390,21 @@ func GetDashboardDataMinute(
 
 	g.Go(func() error {
 		var err error
+
 		chartData, err = getChartDataMinute(start, end, channelID, modelName, timeSpan, timezone)
 		return err
 	})
 
 	g.Go(func() error {
 		var err error
+
 		channels, err = GetUsedChannelsMinute(start, end)
 		return err
 	})
 
 	g.Go(func() error {
 		var err error
+
 		models, err = GetUsedModelsMinute(start, end)
 		return err
 	})
@@ -428,6 +448,7 @@ func GetGroupDashboardDataMinute(
 
 	g.Go(func() error {
 		var err error
+
 		chartData, err = getGroupChartDataMinute(
 			group,
 			start,
@@ -437,17 +458,20 @@ func GetGroupDashboardDataMinute(
 			timeSpan,
 			timezone,
 		)
+
 		return err
 	})
 
 	g.Go(func() error {
 		var err error
+
 		tokenNames, err = GetGroupUsedTokenNamesMinute(group, start, end)
 		return err
 	})
 
 	g.Go(func() error {
 		var err error
+
 		models, err = GetGroupUsedModelsMinute(group, tokenName, start, end)
 		return err
 	})
@@ -533,6 +557,7 @@ func GetTimeSeriesModelDataMinute(
 		"sum(web_search_count) as web_search_count, sum(request_count) as max_rpm, sum(total_tokens) as max_tpm"
 
 	var rawData []SummaryDataV2
+
 	err := query.
 		Select(selectFields).
 		Group("timestamp, channel_id, model").
@@ -591,6 +616,7 @@ func GetGroupTimeSeriesModelDataMinute(
 		"sum(web_search_count) as web_search_count, sum(request_count) as max_rpm, sum(total_tokens) as max_tpm"
 
 	var rawData []SummaryDataV2
+
 	err := query.
 		Select(selectFields).
 		Group("timestamp, model").
@@ -620,6 +646,7 @@ func aggregatToSpan(
 		Timestamp int64
 		Model     string
 	}
+
 	dataMap := make(map[AggKey]*SummaryDataV2)
 
 	for _, data := range minuteData {
@@ -679,6 +706,7 @@ func aggregatToSpan(
 		if data.MaxRPM > currentData.MaxRPM {
 			currentData.MaxRPM = data.MaxRPM
 		}
+
 		if data.MaxTPM > currentData.MaxTPM {
 			currentData.MaxTPM = data.MaxTPM
 		}
@@ -723,12 +751,15 @@ func convertToTimeModelData(rawData []SummaryDataV2) []*TimeSummaryDataV2 {
 			if a.UsedAmount != b.UsedAmount {
 				return cmp.Compare(b.UsedAmount, a.UsedAmount)
 			}
+
 			if a.TotalTokens != b.TotalTokens {
 				return cmp.Compare(b.TotalTokens, a.TotalTokens)
 			}
+
 			if a.RequestCount != b.RequestCount {
 				return cmp.Compare(b.RequestCount, a.RequestCount)
 			}
+
 			return cmp.Compare(a.Model, b.Model)
 		})
 

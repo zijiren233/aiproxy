@@ -31,6 +31,7 @@ func PublicMCPSSEServer(c *gin.Context) {
 		http.Error(c.Writer, err.Error(), http.StatusBadRequest)
 		return
 	}
+
 	if publicMcp.Status != model.PublicMCPStatusEnabled {
 		http.Error(c.Writer, "mcp is not enabled", http.StatusBadRequest)
 		return
@@ -65,6 +66,7 @@ func handlePublicSSEMCP(
 			http.Error(c.Writer, err.Error(), http.StatusBadRequest)
 			return
 		}
+
 		handleSSEMCPServer(c, server, string(model.PublicMCPTypeOpenAPI), endpoint)
 	case model.PublicMCPTypeEmbed:
 		handleEmbedSSEMCP(c, publicMcp.ID, publicMcp.EmbedConfig, paramsFunc, endpoint)
@@ -92,6 +94,7 @@ func handlePublicProxySSE(
 		string(model.PublicMCPTypeProxySSE),
 		endpoint,
 	)
+
 	return nil
 }
 
@@ -114,6 +117,7 @@ func handlePublicProxyStreamableSSE(
 		string(model.PublicMCPTypeProxyStreamable),
 		endpoint,
 	)
+
 	return nil
 }
 
@@ -193,6 +197,7 @@ func prepareProxyConfig(
 	}
 
 	url.RawQuery = backendQuery.Encode()
+
 	return url.String(), headers, nil
 }
 
@@ -245,6 +250,7 @@ func processProxyReusingParams(
 //	@Router		/mcp/public/{id} [delete]
 func PublicMCPStreamable(c *gin.Context) {
 	mcpID := c.Param("id")
+
 	publicMcp, err := model.CacheGetPublicMCP(mcpID)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, mcpservers.CreateMCPErrorResponse(
@@ -252,14 +258,17 @@ func PublicMCPStreamable(c *gin.Context) {
 			mcp.INVALID_REQUEST,
 			err.Error(),
 		))
+
 		return
 	}
+
 	if publicMcp.Status != model.PublicMCPStatusEnabled {
 		c.JSON(http.StatusNotFound, mcpservers.CreateMCPErrorResponse(
 			mcp.NewRequestId(nil),
 			mcp.INVALID_REQUEST,
 			"mcp is not enabled",
 		))
+
 		return
 	}
 
@@ -296,8 +305,10 @@ func handlePublicStreamable(
 				mcp.INVALID_REQUEST,
 				err.Error(),
 			))
+
 			return
 		}
+
 		handleStreamableMCPServer(c, server)
 	case model.PublicMCPTypeEmbed:
 		handlePublicEmbedStreamable(c, publicMcp.ID, paramsFunc, publicMcp.EmbedConfig)
@@ -325,10 +336,13 @@ func handlePublicEmbedStreamable(
 				mcp.INVALID_REQUEST,
 				err.Error(),
 			))
+
 			return
 		}
+
 		reusingConfig = params
 	}
+
 	server, err := mcpservers.GetMCPServer(mcpID, config.Init, reusingConfig)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, mcpservers.CreateMCPErrorResponse(
@@ -336,8 +350,10 @@ func handlePublicEmbedStreamable(
 			mcp.INVALID_REQUEST,
 			err.Error(),
 		))
+
 		return
 	}
+
 	handleStreamableMCPServer(c, server)
 }
 
@@ -353,6 +369,7 @@ func handlePublicProxyStreamable(
 			mcp.INVALID_REQUEST,
 			"invalid proxy configuration",
 		))
+
 		return
 	}
 
@@ -363,6 +380,7 @@ func handlePublicProxyStreamable(
 			mcp.INVALID_REQUEST,
 			err.Error(),
 		))
+
 		return
 	}
 
@@ -376,12 +394,14 @@ func handlePublicProxyStreamable(
 			mcp.INVALID_REQUEST,
 			err.Error(),
 		))
+
 		return
 	}
 
 	for k, v := range config.Headers {
 		headers[k] = v
 	}
+
 	for k, v := range config.Querys {
 		backendQuery.Set(k, v)
 	}
@@ -404,6 +424,7 @@ func TestPublicMCPSSEServer(c *gin.Context) {
 		http.Error(c.Writer, "mcp id is required", http.StatusBadRequest)
 		return
 	}
+
 	groupID := c.Param("group")
 	if groupID == "" {
 		http.Error(c.Writer, "group id is required", http.StatusBadRequest)
@@ -415,6 +436,7 @@ func TestPublicMCPSSEServer(c *gin.Context) {
 		http.Error(c.Writer, err.Error(), http.StatusBadRequest)
 		return
 	}
+
 	if publicMcp.Status != model.PublicMCPStatusEnabled {
 		http.Error(c.Writer, "mcp is not enabled", http.StatusBadRequest)
 		return

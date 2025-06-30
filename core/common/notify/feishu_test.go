@@ -12,6 +12,7 @@ func TestPostToFeiShuv2(t *testing.T) {
 	if fshook == "" {
 		return
 	}
+
 	err := notify.PostToFeiShuv2(
 		t.Context(),
 		notify.FeishuColorRed,

@@ -14,17 +14,22 @@ import (
 
 func MCPAuth(c *gin.Context) {
 	log := common.GetLogger(c)
+
 	key := c.Request.Header.Get("Authorization")
 	if key == "" {
 		key, _ = c.GetQuery("key")
 	}
+
 	key = strings.TrimPrefix(
 		strings.TrimPrefix(key, "Bearer "),
 		"sk-",
 	)
 
-	var token model.TokenCache
-	var useInternalToken bool
+	var (
+		token            model.TokenCache
+		useInternalToken bool
+	)
+
 	if config.AdminKey != "" && config.AdminKey == key ||
 		config.InternalToken != "" && config.InternalToken == key {
 		token = model.TokenCache{
@@ -37,6 +42,7 @@ func MCPAuth(c *gin.Context) {
 			AbortLogWithMessage(c, http.StatusUnauthorized, err.Error())
 			return
 		}
+
 		token = *tokenCache
 	}
 
@@ -55,6 +61,7 @@ func MCPAuth(c *gin.Context) {
 					c.ClientIP(),
 				),
 			)
+
 			return
 		}
 	}
@@ -70,9 +77,12 @@ func MCPAuth(c *gin.Context) {
 			AbortLogWithMessage(c, http.StatusInternalServerError, fmt.Sprintf("failed to get group: %v", err))
 			return
 		}
+
 		group = *groupCache
 	}
+
 	SetLogGroupFields(log.Data, group)
+
 	if group.Status != model.GroupStatusEnabled && group.Status != model.GroupStatusInternal {
 		AbortLogWithMessage(c, http.StatusForbidden, "group is disabled")
 		return

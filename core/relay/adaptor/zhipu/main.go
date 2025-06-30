@@ -25,6 +25,7 @@ func EmbeddingsHandler(c *gin.Context, resp *http.Response) (model.Usage, adapto
 	defer resp.Body.Close()
 
 	var zhipuResponse EmbeddingResponse
+
 	err := sonic.ConfigDefault.NewDecoder(resp.Body).Decode(&zhipuResponse)
 	if err != nil {
 		return model.Usage{}, relaymodel.WrapperOpenAIError(
@@ -33,7 +34,9 @@ func EmbeddingsHandler(c *gin.Context, resp *http.Response) (model.Usage, adapto
 			http.StatusInternalServerError,
 		)
 	}
+
 	fullTextResponse := embeddingResponseZhipu2OpenAI(&zhipuResponse)
+
 	jsonResponse, err := sonic.Marshal(fullTextResponse)
 	if err != nil {
 		return fullTextResponse.Usage.ToModelUsage(), relaymodel.WrapperOpenAIError(
@@ -42,9 +45,11 @@ func EmbeddingsHandler(c *gin.Context, resp *http.Response) (model.Usage, adapto
 			http.StatusInternalServerError,
 		)
 	}
+
 	c.Writer.Header().Set("Content-Type", "application/json")
 	c.Writer.Header().Set("Content-Length", strconv.Itoa(len(jsonResponse)))
 	_, _ = c.Writer.Write(jsonResponse)
+
 	return fullTextResponse.Usage.ToModelUsage(), nil
 }
 
@@ -66,5 +71,6 @@ func embeddingResponseZhipu2OpenAI(response *EmbeddingResponse) *relaymodel.Embe
 			},
 		)
 	}
+
 	return &openAIEmbeddingResponse
 }

@@ -10,6 +10,7 @@ func IsValidSubnet(subnet string) error {
 	if err != nil {
 		return fmt.Errorf("failed to parse subnet: %w", err)
 	}
+
 	return nil
 }
 
@@ -18,6 +19,7 @@ func IsIPInSubnet(ip, subnet string) (bool, error) {
 	if err != nil {
 		return false, fmt.Errorf("failed to parse subnet: %w", err)
 	}
+
 	return ipNet.Contains(net.ParseIP(ip)), nil
 }
 
@@ -27,6 +29,7 @@ func IsValidSubnets(subnets []string) error {
 			return err
 		}
 	}
+
 	return nil
 }
 
@@ -38,5 +41,6 @@ func IsIPInSubnets(ip string, subnets []string) (bool, error) {
 			return true, nil
 		}
 	}
+
 	return false, nil
 }

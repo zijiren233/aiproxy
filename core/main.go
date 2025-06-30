@@ -64,6 +64,7 @@ func initializeBalance() error {
 	}
 
 	log.Info("SEALOS_JWT_KEY is set, balance will be enabled")
+
 	return balance.InitSealos(sealosJwtKey, os.Getenv("SEALOS_ACCOUNT_URL"))
 }
 
@@ -81,6 +82,7 @@ var logCallerIgnoreFuncs = map[string]struct{}{
 
 func setLog(l *log.Logger) {
 	gin.ForceConsoleColor()
+
 	if config.DebugEnabled {
 		l.SetLevel(log.DebugLevel)
 		l.SetReportCaller(true)
@@ -90,6 +92,7 @@ func setLog(l *log.Logger) {
 		l.SetReportCaller(false)
 		gin.SetMode(gin.ReleaseMode)
 	}
+
 	l.SetOutput(os.Stdout)
 	stdlog.SetOutput(l.Writer())
 
@@ -130,6 +133,7 @@ func initializeCaches() error {
 
 func startSyncServices(ctx context.Context, wg *sync.WaitGroup) {
 	wg.Add(2)
+
 	go model.SyncOptions(ctx, wg, time.Second*5)
 	go model.SyncModelConfigAndChannelCache(ctx, wg, time.Second*10)
 }
@@ -157,6 +161,7 @@ func setupHTTPServer() (*http.Server, *gin.Engine) {
 
 func autoTestBannedModels(ctx context.Context) {
 	log.Info("auto test banned models start")
+
 	ticker := time.NewTicker(time.Second * 30)
 	defer ticker.Stop()
 
@@ -172,6 +177,7 @@ func autoTestBannedModels(ctx context.Context) {
 
 func detectIPGroupsTask(ctx context.Context) {
 	log.Info("detect IP groups start")
+
 	ticker := time.NewTicker(time.Minute)
 	defer ticker.Stop()
 
@@ -183,6 +189,7 @@ func detectIPGroupsTask(ctx context.Context) {
 			if !trylock.Lock("detectIPGroups", time.Minute) {
 				continue
 			}
+
 			detectIPGroups()
 		}
 	}
@@ -193,16 +200,20 @@ func detectIPGroups() {
 	if threshold < 1 {
 		return
 	}
+
 	ipGroupList, err := model.GetIPGroups(int(threshold), time.Now().Add(-time.Hour), time.Now())
 	if err != nil {
 		notify.ErrorThrottle("detectIPGroups", time.Minute, "detect IP groups failed", err.Error())
 	}
+
 	if len(ipGroupList) == 0 {
 		return
 	}
+
 	banThreshold := config.GetIPGroupsBanThreshold()
 	for ip, groups := range ipGroupList {
 		slices.Sort(groups)
+
 		groupsJSON, err := sonic.MarshalString(groups)
 		if err != nil {
 			notify.ErrorThrottle(
@@ -211,6 +222,7 @@ func detectIPGroups() {
 				"marshal IP groups failed",
 				err.Error(),
 			)
+
 			continue
 		}
 
@@ -224,6 +236,7 @@ func detectIPGroups() {
 					err.Error(),
 				)
 			}
+
 			if rowsAffected > 0 {
 				notify.Warn(
 					fmt.Sprintf(
@@ -236,6 +249,7 @@ func detectIPGroups() {
 				)
 				ipblack.SetIPBlackAnyWay(ip, time.Hour*48)
 			}
+
 			continue
 		}
 
@@ -272,7 +286,9 @@ func cleanLog(ctx context.Context) {
 			if !trylock.Lock("cleanLog", time.Minute) {
 				continue
 			}
+
 			optimize := trylock.Lock("optimizeLog", time.Hour*24)
+
 			err := model.CleanLog(int(config.GetCleanLogBatchSize()), optimize)
 			if err != nil {
 				notify.ErrorThrottle("cleanLog", time.Minute, "clean log failed", err.Error())
@@ -299,16 +315,20 @@ func loadEnv() {
 				),
 			)
 		}
+
 		file, err := os.Stat(absPath)
 		if err != nil {
 			continue
 		}
+
 		if file.IsDir() {
 			continue
 		}
+
 		if err := godotenv.Overload(absPath); err != nil {
 			panic(fmt.Sprintf("failed to load env file: %s, error: %s", absPath, err.Error()))
 		}
+
 		loadedEnvFiles = append(loadedEnvFiles, absPath)
 	}
 }
@@ -358,6 +378,7 @@ func main() {
 	go func() {
 		log.Infof("server started on %s", srv.Addr)
 		log.Infof("swagger server started on %s/swagger/index.html", srv.Addr)
+
 		if err := srv.ListenAndServe(); err != nil &&
 			!errors.Is(err, http.ErrServerClosed) {
 			log.Fatal("failed to start HTTP server: " + err.Error())
@@ -370,7 +391,9 @@ func main() {
 	go controller.UpdateChannelsBalance(time.Minute * 10)
 
 	batchProcessorCtx, batchProcessorCancel := context.WithCancel(context.Background())
+
 	wg.Add(1)
+
 	go model.StartBatchProcessorSummary(batchProcessorCtx, &wg)
 
 	<-ctx.Done()
@@ -380,6 +403,7 @@ func main() {
 
 	log.Info("shutting down http server...")
 	log.Info("max wait time: 600s")
+
 	if err := srv.Shutdown(shutdownSrvCtx); err != nil {
 		log.Error("server forced to shutdown: " + err.Error())
 	} else {
@@ -396,8 +420,10 @@ func main() {
 
 	log.Info("shutting down batch summary...")
 	log.Info("max wait time: 600s")
+
 	cleanCtx, cleanCancel := context.WithTimeout(context.Background(), 600*time.Second)
 	defer cleanCancel()
+
 	model.CleanBatchUpdatesSummary(cleanCtx)
 
 	log.Info("server exiting")

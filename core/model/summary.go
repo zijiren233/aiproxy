@@ -40,18 +40,22 @@ func (d *SummaryData) buildUpdateData(tableName string) map[string]any {
 	if d.RequestCount > 0 {
 		data["request_count"] = gorm.Expr(tableName+".request_count + ?", d.RequestCount)
 	}
+
 	if d.UsedAmount > 0 {
 		data["used_amount"] = gorm.Expr(tableName+".used_amount + ?", d.UsedAmount)
 	}
+
 	if d.ExceptionCount > 0 {
 		data["exception_count"] = gorm.Expr(tableName+".exception_count + ?", d.ExceptionCount)
 	}
+
 	if d.TotalTimeMilliseconds > 0 {
 		data["total_time_milliseconds"] = gorm.Expr(
 			tableName+".total_time_milliseconds + ?",
 			d.TotalTimeMilliseconds,
 		)
 	}
+
 	if d.TotalTTFBMilliseconds > 0 {
 		data["total_ttfb_milliseconds"] = gorm.Expr(
 			tableName+".total_ttfb_milliseconds + ?",
@@ -66,42 +70,49 @@ func (d *SummaryData) buildUpdateData(tableName string) map[string]any {
 			d.Usage.InputTokens,
 		)
 	}
+
 	if d.Usage.ImageInputTokens > 0 {
 		data["image_input_tokens"] = gorm.Expr(
 			fmt.Sprintf("COALESCE(%s.image_input_tokens, 0) + ?", tableName),
 			d.Usage.ImageInputTokens,
 		)
 	}
+
 	if d.Usage.OutputTokens > 0 {
 		data["output_tokens"] = gorm.Expr(
 			fmt.Sprintf("COALESCE(%s.output_tokens, 0) + ?", tableName),
 			d.Usage.OutputTokens,
 		)
 	}
+
 	if d.Usage.TotalTokens > 0 {
 		data["total_tokens"] = gorm.Expr(
 			fmt.Sprintf("COALESCE(%s.total_tokens, 0) + ?", tableName),
 			d.Usage.TotalTokens,
 		)
 	}
+
 	if d.Usage.CachedTokens > 0 {
 		data["cached_tokens"] = gorm.Expr(
 			fmt.Sprintf("COALESCE(%s.cached_tokens, 0) + ?", tableName),
 			d.Usage.CachedTokens,
 		)
 	}
+
 	if d.Usage.CacheCreationTokens > 0 {
 		data["cache_creation_tokens"] = gorm.Expr(
 			fmt.Sprintf("COALESCE(%s.cache_creation_tokens, 0) + ?", tableName),
 			d.Usage.CacheCreationTokens,
 		)
 	}
+
 	if d.Usage.WebSearchCount > 0 {
 		data["web_search_count"] = gorm.Expr(
 			fmt.Sprintf("COALESCE(%s.web_search_count, 0) + ?", tableName),
 			d.Usage.WebSearchCount,
 		)
 	}
+
 	return data
 }
 
@@ -109,15 +120,19 @@ func (l *Summary) BeforeCreate(_ *gorm.DB) (err error) {
 	if l.Unique.ChannelID == 0 {
 		return errors.New("channel id is required")
 	}
+
 	if l.Unique.Model == "" {
 		return errors.New("model is required")
 	}
+
 	if l.Unique.HourTimestamp == 0 {
 		return errors.New("hour timestamp is required")
 	}
+
 	if err := validateHourTimestamp(l.Unique.HourTimestamp); err != nil {
 		return err
 	}
+
 	return
 }
 
@@ -161,10 +176,12 @@ func UpsertSummary(unique SummaryUnique, data SummaryData) error {
 				unique.HourTimestamp,
 			).
 			Updates(data.buildUpdateData("summaries"))
+
 		err = result.Error
 		if err != nil {
 			return err
 		}
+
 		if result.RowsAffected > 0 {
 			return nil
 		}
@@ -173,6 +190,7 @@ func UpsertSummary(unique SummaryUnique, data SummaryData) error {
 		if err == nil {
 			return nil
 		}
+
 		if !errors.Is(err, gorm.ErrDuplicatedKey) {
 			return err
 		}
@@ -236,6 +254,7 @@ func getChartData(
 		Order("timestamp ASC")
 
 	var chartData []*ChartData
+
 	err := query.Scan(&chartData).Error
 	if err != nil {
 		return nil, err
@@ -260,6 +279,7 @@ func getGroupChartData(
 	if group != "" {
 		query = query.Where("group_id = ?", group)
 	}
+
 	if tokenName != "" {
 		query = query.Where("token_name = ?", tokenName)
 	}
@@ -290,6 +310,7 @@ func getGroupChartData(
 		Order("timestamp ASC")
 
 	var chartData []*ChartData
+
 	err := query.Scan(&chartData).Error
 	if err != nil {
 		return nil, err
@@ -328,6 +349,7 @@ func getLogGroupByValues[T cmp.Ordered](
 		UsedAmount   float64
 		RequestCount int64
 	}
+
 	var results []Result
 
 	var query *gorm.DB
@@ -358,9 +380,11 @@ func getLogGroupByValues[T cmp.Ordered](
 		if a.UsedAmount != b.UsedAmount {
 			return cmp.Compare(b.UsedAmount, a.UsedAmount)
 		}
+
 		if a.RequestCount != b.RequestCount {
 			return cmp.Compare(b.RequestCount, a.RequestCount)
 		}
+
 		return cmp.Compare(a.Value, b.Value)
 	})
 
@@ -381,6 +405,7 @@ func getGroupLogGroupByValues[T cmp.Ordered](
 		UsedAmount   float64
 		RequestCount int64
 	}
+
 	var results []Result
 
 	query := LogDB.
@@ -388,6 +413,7 @@ func getGroupLogGroupByValues[T cmp.Ordered](
 	if group != "" {
 		query = query.Where("group_id = ?", group)
 	}
+
 	if tokenName != "" {
 		query = query.Where("token_name = ?", tokenName)
 	}
@@ -415,9 +441,11 @@ func getGroupLogGroupByValues[T cmp.Ordered](
 		if a.UsedAmount != b.UsedAmount {
 			return cmp.Compare(b.UsedAmount, a.UsedAmount)
 		}
+
 		if a.RequestCount != b.RequestCount {
 			return cmp.Compare(b.RequestCount, a.RequestCount)
 		}
+
 		return cmp.Compare(a.Value, b.Value)
 	})
 
@@ -493,6 +521,7 @@ func aggregateDataToSpan(
 	timezone *time.Location,
 ) []*ChartData {
 	dataMap := make(map[int64]*ChartData)
+
 	if timezone == nil {
 		timezone = time.Local
 	}
@@ -538,6 +567,7 @@ func aggregateDataToSpan(
 		if data.MaxRPM > currentData.MaxRPM {
 			currentData.MaxRPM = data.MaxRPM
 		}
+
 		if data.MaxTPM > currentData.MaxTPM {
 			currentData.MaxTPM = data.MaxTPM
 		}
@@ -559,6 +589,7 @@ func sumDashboardResponse(chartData []*ChartData) DashboardResponse {
 	dashboardResponse := DashboardResponse{
 		ChartData: chartData,
 	}
+
 	usedAmount := decimal.NewFromFloat(0)
 	for _, data := range chartData {
 		dashboardResponse.TotalCount += data.RequestCount
@@ -580,11 +611,14 @@ func sumDashboardResponse(chartData []*ChartData) DashboardResponse {
 		if data.MaxRPM > dashboardResponse.MaxRPM {
 			dashboardResponse.MaxRPM = data.MaxRPM
 		}
+
 		if data.MaxTPM > dashboardResponse.MaxTPM {
 			dashboardResponse.MaxTPM = data.MaxTPM
 		}
 	}
+
 	dashboardResponse.UsedAmount = usedAmount.InexactFloat64()
+
 	return dashboardResponse
 }
 
@@ -612,18 +646,21 @@ func GetDashboardData(
 
 	g.Go(func() error {
 		var err error
+
 		chartData, err = getChartData(start, end, channelID, modelName, timeSpan, timezone)
 		return err
 	})
 
 	g.Go(func() error {
 		var err error
+
 		channels, err = GetUsedChannels(start, end)
 		return err
 	})
 
 	g.Go(func() error {
 		var err error
+
 		models, err = GetUsedModels(start, end)
 		return err
 	})
@@ -667,6 +704,7 @@ func GetGroupDashboardData(
 
 	g.Go(func() error {
 		var err error
+
 		chartData, err = getGroupChartData(
 			group,
 			start,
@@ -676,17 +714,20 @@ func GetGroupDashboardData(
 			timeSpan,
 			timezone,
 		)
+
 		return err
 	})
 
 	g.Go(func() error {
 		var err error
+
 		tokenNames, err = GetGroupUsedTokenNames(group, start, end)
 		return err
 	})
 
 	g.Go(func() error {
 		var err error
+
 		models, err = GetGroupUsedModels(group, tokenName, start, end)
 		return err
 	})

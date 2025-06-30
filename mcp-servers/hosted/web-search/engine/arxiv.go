@@ -42,6 +42,7 @@ func (a *ArxivEngine) Search(ctx context.Context, query SearchQuery) ([]SearchRe
 	for _, q := range query.Queries {
 		searchQueryItems = append(searchQueryItems, "all:"+url.QueryEscape(q))
 	}
+
 	searchQuery := strings.Join(searchQueryItems, "+AND+")
 	if query.ArxivCategory != "" {
 		searchQuery = fmt.Sprintf("%s+AND+cat:%s", searchQuery, query.ArxivCategory)

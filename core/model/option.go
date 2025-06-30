@@ -24,6 +24,7 @@ type Option struct {
 
 func GetAllOption() ([]*Option, error) {
 	var options []*Option
+
 	err := DB.Where("key IN (?)", optionKeys).Find(&options).Error
 	return options, err
 }
@@ -32,8 +33,11 @@ func GetOption(key string) (*Option, error) {
 	if !slices.Contains(optionKeys, key) {
 		return nil, ErrUnknownOptionKey
 	}
+
 	var option Option
+
 	err := DB.Where("key = ?", key).First(&option).Error
+
 	return &option, err
 }
 
@@ -53,6 +57,7 @@ func InitOption2DB() error {
 	if err != nil {
 		return err
 	}
+
 	return storeOptionMap()
 }
 
@@ -74,21 +79,27 @@ func initOptionMap() error {
 	)
 	optionMap["DisableServe"] = strconv.FormatBool(config.GetDisableServe())
 	optionMap["RetryTimes"] = strconv.FormatInt(config.GetRetryTimes(), 10)
+
 	defaultChannelModelsJSON, err := sonic.Marshal(config.GetDefaultChannelModels())
 	if err != nil {
 		return err
 	}
+
 	optionMap["DefaultChannelModels"] = conv.BytesToString(defaultChannelModelsJSON)
+
 	defaultChannelModelMappingJSON, err := sonic.Marshal(config.GetDefaultChannelModelMapping())
 	if err != nil {
 		return err
 	}
+
 	optionMap["DefaultChannelModelMapping"] = conv.BytesToString(defaultChannelModelMappingJSON)
 	optionMap["GroupMaxTokenNum"] = strconv.FormatInt(config.GetGroupMaxTokenNum(), 10)
+
 	groupConsumeLevelRatioJSON, err := sonic.Marshal(config.GetGroupConsumeLevelRatioStringKeyMap())
 	if err != nil {
 		return err
 	}
+
 	optionMap["GroupConsumeLevelRatio"] = conv.BytesToString(groupConsumeLevelRatioJSON)
 	optionMap["NotifyNote"] = config.GetNotifyNote()
 	optionMap["DefaultMCPHost"] = config.GetDefaultMCPHost()
@@ -99,6 +110,7 @@ func initOptionMap() error {
 	for key := range optionMap {
 		optionKeys = append(optionKeys, key)
 	}
+
 	return nil
 }
 
@@ -109,6 +121,7 @@ func storeOptionMap() error {
 			return err
 		}
 	}
+
 	return nil
 }
 
@@ -117,6 +130,7 @@ func loadOptionsFromDatabase(isInit bool) error {
 	if err != nil {
 		return err
 	}
+
 	for _, option := range options {
 		err := updateOption(option.Key, option.Value, isInit)
 		if err != nil {
@@ -128,15 +142,19 @@ func loadOptionsFromDatabase(isInit bool) error {
 					err,
 				)
 			}
+
 			if isInit {
 				log.Warnf("unknown option: %s, value: %s", option.Key, option.Value)
 			}
+
 			continue
 		}
+
 		if isInit {
 			delete(optionMap, option.Key)
 		}
 	}
+
 	return nil
 }
 
@@ -145,6 +163,7 @@ func SyncOptions(ctx context.Context, wg *sync.WaitGroup, frequency time.Duratio
 
 	ticker := time.NewTicker(frequency)
 	defer ticker.Stop()
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -168,6 +187,7 @@ func saveOption(key, value string) error {
 		Value: value,
 	}
 	result := DB.Save(&option)
+
 	return HandleUpdateResult(result, "option:"+key)
 }
 
@@ -176,6 +196,7 @@ func UpdateOption(key, value string) error {
 	if err != nil {
 		return err
 	}
+
 	return saveOption(key, value)
 }
 
@@ -187,9 +208,11 @@ func UpdateOptions(options map[string]string) error {
 			errs = append(errs, err)
 		}
 	}
+
 	if len(errs) > 0 {
 		return errors.Join(errs...)
 	}
+
 	return nil
 }
 
@@ -208,30 +231,35 @@ func updateOption(key, value string, isInit bool) (err error) {
 		if err != nil {
 			return err
 		}
+
 		config.SetLogStorageHours(logStorageHours)
 	case "RetryLogStorageHours":
 		retryLogStorageHours, err := strconv.ParseInt(value, 10, 64)
 		if err != nil {
 			return err
 		}
+
 		config.SetRetryLogStorageHours(retryLogStorageHours)
 	case "LogDetailStorageHours":
 		logDetailStorageHours, err := strconv.ParseInt(value, 10, 64)
 		if err != nil {
 			return err
 		}
+
 		config.SetLogDetailStorageHours(logDetailStorageHours)
 	case "IPGroupsThreshold":
 		ipGroupsThreshold, err := strconv.ParseInt(value, 10, 64)
 		if err != nil {
 			return err
 		}
+
 		config.SetIPGroupsThreshold(ipGroupsThreshold)
 	case "IPGroupsBanThreshold":
 		ipGroupsBanThreshold, err := strconv.ParseInt(value, 10, 64)
 		if err != nil {
 			return err
 		}
+
 		config.SetIPGroupsBanThreshold(ipGroupsBanThreshold)
 	case "SaveAllLogDetail":
 		config.SetSaveAllLogDetail(toBool(value))
@@ -240,18 +268,21 @@ func updateOption(key, value string, isInit bool) (err error) {
 		if err != nil {
 			return err
 		}
+
 		config.SetLogDetailRequestBodyMaxSize(logDetailRequestBodyMaxSize)
 	case "LogDetailResponseBodyMaxSize":
 		logDetailResponseBodyMaxSize, err := strconv.ParseInt(value, 10, 64)
 		if err != nil {
 			return err
 		}
+
 		config.SetLogDetailResponseBodyMaxSize(logDetailResponseBodyMaxSize)
 	case "CleanLogBatchSize":
 		cleanLogBatchSize, err := strconv.ParseInt(value, 10, 64)
 		if err != nil {
 			return err
 		}
+
 		config.SetCleanLogBatchSize(cleanLogBatchSize)
 	case "DisableServe":
 		config.SetDisableServe(toBool(value))
@@ -260,12 +291,15 @@ func updateOption(key, value string, isInit bool) (err error) {
 		if err != nil {
 			return err
 		}
+
 		if groupMaxTokenNum < 0 {
 			return errors.New("group max token num must be greater than 0")
 		}
+
 		config.SetGroupMaxTokenNum(groupMaxTokenNum)
 	case "DefaultChannelModels":
 		var newModels map[int][]string
+
 		err := sonic.Unmarshal(conv.StringToBytes(value), &newModels)
 		if err != nil {
 			return err
@@ -277,22 +311,27 @@ func updateOption(key, value string, isInit bool) (err error) {
 				allModelsMap[model] = struct{}{}
 			}
 		}
+
 		allModels := make([]string, 0, len(allModelsMap))
 		for model := range allModelsMap {
 			allModels = append(allModels, model)
 		}
+
 		foundModels, missingModels, err := GetModelConfigWithModels(allModels)
 		if err != nil {
 			return err
 		}
+
 		if !isInit && len(missingModels) > 0 {
 			sort.Strings(missingModels)
 			return fmt.Errorf("model config not found: %v", missingModels)
 		}
+
 		if len(missingModels) > 0 {
 			sort.Strings(missingModels)
 			log.Errorf("model config not found: %v", missingModels)
 		}
+
 		allowedNewModels := make(map[int][]string)
 		for t, ms := range newModels {
 			for _, m := range ms {
@@ -301,43 +340,54 @@ func updateOption(key, value string, isInit bool) (err error) {
 				}
 			}
 		}
+
 		config.SetDefaultChannelModels(allowedNewModels)
 	case "DefaultChannelModelMapping":
 		var newMapping map[int]map[string]string
+
 		err := sonic.Unmarshal(conv.StringToBytes(value), &newMapping)
 		if err != nil {
 			return err
 		}
+
 		config.SetDefaultChannelModelMapping(newMapping)
 	case "RetryTimes":
 		retryTimes, err := strconv.ParseInt(value, 10, 32)
 		if err != nil {
 			return err
 		}
+
 		if retryTimes < 0 {
 			return errors.New("retry times must be greater than 0")
 		}
+
 		config.SetRetryTimes(retryTimes)
 	case "GroupConsumeLevelRatio":
 		var newGroupRpmRatio map[string]float64
+
 		err := sonic.Unmarshal(conv.StringToBytes(value), &newGroupRpmRatio)
 		if err != nil {
 			return err
 		}
+
 		newGroupRpmRatioMap := make(map[float64]float64)
 		for k, v := range newGroupRpmRatio {
 			consumeLevel, err := strconv.ParseFloat(k, 64)
 			if err != nil {
 				return err
 			}
+
 			if consumeLevel < 0 {
 				return errors.New("consume level must be greater than 0")
 			}
+
 			if v < 0 {
 				return errors.New("rpm ratio must be greater than 0")
 			}
+
 			newGroupRpmRatioMap[consumeLevel] = v
 		}
+
 		config.SetGroupConsumeLevelRatio(newGroupRpmRatioMap)
 	case "NotifyNote":
 		config.SetNotifyNote(value)
@@ -350,5 +400,6 @@ func updateOption(key, value string, isInit bool) (err error) {
 	default:
 		return ErrUnknownOptionKey
 	}
+
 	return err
 }

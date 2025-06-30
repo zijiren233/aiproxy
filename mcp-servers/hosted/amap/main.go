@@ -31,9 +31,11 @@ func NewServer(config, reusingConfig map[string]string) (mcpservers.Server, erro
 	if key == "" {
 		key = reusingConfig["key"]
 	}
+
 	if key == "" {
 		return nil, errors.New("key is required")
 	}
+
 	u := config["url"]
 	if u == "" {
 		u = "https://mcp.amap.com/sse"
@@ -43,6 +45,7 @@ func NewServer(config, reusingConfig map[string]string) (mcpservers.Server, erro
 	if err != nil {
 		return nil, fmt.Errorf("invalid url: %w", err)
 	}
+
 	query := parsedURL.Query()
 	query.Set("key", key)
 	parsedURL.RawQuery = query.Encode()

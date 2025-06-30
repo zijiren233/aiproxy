@@ -58,6 +58,7 @@ func GetChannels(c *gin.Context) {
 	channelType, _ := strconv.Atoi(c.Query("channel_type"))
 	baseURL := c.Query("base_url")
 	order := c.Query("order")
+
 	channels, total, err := model.GetChannels(
 		page,
 		perPage,
@@ -72,6 +73,7 @@ func GetChannels(c *gin.Context) {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
+
 	middleware.SuccessResponse(c, gin.H{
 		"channels": channels,
 		"total":    total,
@@ -93,6 +95,7 @@ func GetAllChannels(c *gin.Context) {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
+
 	middleware.SuccessResponse(c, channels)
 }
 
@@ -109,11 +112,13 @@ func GetAllChannels(c *gin.Context) {
 //	@Router			/api/channels/ [post]
 func AddChannels(c *gin.Context) {
 	channels := make([]*AddChannelRequest, 0)
+
 	err := c.ShouldBindJSON(&channels)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
 	}
+
 	_channels := make([]*model.Channel, 0, len(channels))
 	for _, channel := range channels {
 		channels, err := channel.ToChannels()
@@ -121,13 +126,16 @@ func AddChannels(c *gin.Context) {
 			middleware.ErrorResponse(c, http.StatusBadRequest, err.Error())
 			return
 		}
+
 		_channels = append(_channels, channels...)
 	}
+
 	err = model.BatchInsertChannels(_channels)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
+
 	middleware.SuccessResponse(c, nil)
 }
 
@@ -158,6 +166,7 @@ func SearchChannels(c *gin.Context) {
 	channelType, _ := strconv.Atoi(c.Query("channel_type"))
 	baseURL := c.Query("base_url")
 	order := c.Query("order")
+
 	channels, total, err := model.SearchChannels(
 		keyword,
 		page,
@@ -173,6 +182,7 @@ func SearchChannels(c *gin.Context) {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
+
 	middleware.SuccessResponse(c, gin.H{
 		"channels": channels,
 		"total":    total,
@@ -195,11 +205,13 @@ func GetChannel(c *gin.Context) {
 		middleware.ErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
 	}
+
 	channel, err := model.GetChannelByID(id)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
+
 	middleware.SuccessResponse(c, channel)
 }
 
@@ -222,6 +234,7 @@ func (r *AddChannelRequest) ToChannel() (*model.Channel, error) {
 	if !ok {
 		return nil, fmt.Errorf("invalid channel type: %d", r.Type)
 	}
+
 	metadata := a.Metadata()
 	if validator := adaptors.GetKeyValidator(a); validator != nil {
 		err := validator.ValidateKey(r.Key)
@@ -236,6 +249,7 @@ func (r *AddChannelRequest) ToChannel() (*model.Channel, error) {
 					err,
 				)
 			}
+
 			return nil, fmt.Errorf(
 				"%s [%s(%d)] invalid key: %w, %s",
 				r.Name,
@@ -246,6 +260,7 @@ func (r *AddChannelRequest) ToChannel() (*model.Channel, error) {
 			)
 		}
 	}
+
 	if r.Config != nil {
 		for key, template := range metadata.Config {
 			v, err := r.Config.Get(key)
@@ -256,19 +271,23 @@ func (r *AddChannelRequest) ToChannel() (*model.Channel, error) {
 					}
 					continue
 				}
+
 				return nil, fmt.Errorf("config %s is invalid: %w", key, err)
 			}
+
 			if !v.Exists() {
 				if template.Required {
 					return nil, fmt.Errorf("config %s is required: %w", key, err)
 				}
 				continue
 			}
+
 			if template.Validator != nil {
 				i, err := v.Interface()
 				if err != nil {
 					return nil, fmt.Errorf("config %s is invalid: %w", key, err)
 				}
+
 				err = adaptor.ValidateConfigTemplateValue(template, i)
 				if err != nil {
 					return nil, fmt.Errorf("config %s is invalid: %w", key, err)
@@ -293,25 +312,31 @@ func (r *AddChannelRequest) ToChannel() (*model.Channel, error) {
 
 func (r *AddChannelRequest) ToChannels() ([]*model.Channel, error) {
 	keys := strings.Split(r.Key, "\n")
+
 	channels := make([]*model.Channel, 0, len(keys))
 	for _, key := range keys {
 		if key == "" {
 			continue
 		}
+
 		c, err := r.ToChannel()
 		if err != nil {
 			return nil, err
 		}
+
 		c.Key = key
 		channels = append(channels, c)
 	}
+
 	if len(channels) == 0 {
 		ch, err := r.ToChannel()
 		if err != nil {
 			return nil, err
 		}
+
 		return []*model.Channel{ch}, nil
 	}
+
 	return channels, nil
 }
 
@@ -328,21 +353,25 @@ func (r *AddChannelRequest) ToChannels() ([]*model.Channel, error) {
 //	@Router			/api/channel/ [post]
 func AddChannel(c *gin.Context) {
 	channel := AddChannelRequest{}
+
 	err := c.ShouldBindJSON(&channel)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
 	}
+
 	channels, err := channel.ToChannels()
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
 	}
+
 	err = model.BatchInsertChannels(channels)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
+
 	middleware.SuccessResponse(c, nil)
 }
 
@@ -358,11 +387,13 @@ func AddChannel(c *gin.Context) {
 //	@Router			/api/channel/{id} [delete]
 func DeleteChannel(c *gin.Context) {
 	id, _ := strconv.Atoi(c.Param("id"))
+
 	err := model.DeleteChannelByID(id)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
+
 	middleware.SuccessResponse(c, nil)
 }
 
@@ -379,16 +410,19 @@ func DeleteChannel(c *gin.Context) {
 //	@Router			/api/channels/batch_delete [post]
 func DeleteChannels(c *gin.Context) {
 	ids := []int{}
+
 	err := c.ShouldBindJSON(&ids)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
 	}
+
 	err = model.DeleteChannelsByIDs(ids)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
+
 	middleware.SuccessResponse(c, nil)
 }
 
@@ -410,32 +444,40 @@ func UpdateChannel(c *gin.Context) {
 		middleware.ErrorResponse(c, http.StatusBadRequest, "id is required")
 		return
 	}
+
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
 	}
+
 	channel := AddChannelRequest{}
+
 	err = c.ShouldBindJSON(&channel)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
 	}
+
 	ch, err := channel.ToChannel()
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
 	}
+
 	ch.ID = id
+
 	err = model.UpdateChannel(ch)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
+
 	err = monitor.ClearChannelAllModelErrors(c.Request.Context(), id)
 	if err != nil {
 		log.Errorf("failed to clear channel all model errors: %+v", err)
 	}
+
 	middleware.SuccessResponse(c, ch)
 }
 
@@ -459,19 +501,23 @@ type UpdateChannelStatusRequest struct {
 func UpdateChannelStatus(c *gin.Context) {
 	id, _ := strconv.Atoi(c.Param("id"))
 	status := UpdateChannelStatusRequest{}
+
 	err := c.ShouldBindJSON(&status)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
 	}
+
 	err = model.UpdateChannelStatusByID(id, status.Status)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
+
 	err = monitor.ClearChannelAllModelErrors(c.Request.Context(), id)
 	if err != nil {
 		log.Errorf("failed to clear channel all model errors: %+v", err)
 	}
+
 	middleware.SuccessResponse(c, nil)
 }

@@ -12,8 +12,10 @@ func ParsePageParams(c *gin.Context) (page, perPage int) {
 	if pageStr == "" {
 		pageStr = c.Query("p")
 	}
+
 	page, _ = strconv.Atoi(pageStr)
 	perPage, _ = strconv.Atoi(c.Query("per_page"))
+
 	return
 }
 
@@ -25,12 +27,14 @@ func ParseTimeRange(c *gin.Context, maxSpan time.Duration) (startTime, endTime t
 	if maxSpan == 0 {
 		maxSpan = defaultMaxSpan
 	}
+
 	startTime, _ = smartParseTimestamp(c.Query("start_timestamp"))
 	endTime, _ = smartParseTimestamp(c.Query("end_timestamp"))
 
 	if endTime.IsZero() {
 		endTime = time.Now()
 	}
+
 	if maxSpan > 0 {
 		sevenDaysAgo := endTime.Add(-maxSpan)
 		if startTime.IsZero() || startTime.Before(sevenDaysAgo) {
@@ -46,6 +50,7 @@ func smartParseTimestamp(timestampStr string) (time.Time, error) {
 	if err != nil {
 		return time.Time{}, err
 	}
+
 	digits := len(timestampStr)
 
 	switch {

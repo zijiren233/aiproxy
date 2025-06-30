@@ -141,6 +141,7 @@ func ConvertRequest(
 	if req == nil {
 		return adaptor.ConvertResult{}, errors.New("request is nil")
 	}
+
 	switch meta.Mode {
 	case mode.Moderations:
 		return ConvertModerationsRequest(meta, req)
@@ -209,6 +210,7 @@ func DoResponse(
 			http.StatusBadRequest,
 		)
 	}
+
 	return usage, err
 }
 

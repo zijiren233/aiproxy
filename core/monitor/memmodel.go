@@ -103,8 +103,11 @@ func (m *MemModelMonitor) AddRequest(
 
 	now := time.Now()
 
-	var modelData *ModelData
-	var exists bool
+	var (
+		modelData *ModelData
+		exists    bool
+	)
+
 	if modelData, exists = m.models[model]; !exists {
 		modelData = &ModelData{
 			channels:   make(map[int64]*ChannelStats),
@@ -138,7 +141,9 @@ func (m *MemModelMonitor) checkAndBan(
 		if channel.bannedUntil.After(now) {
 			return false, false
 		}
+
 		channel.bannedUntil = now.Add(banDuration)
+
 		return false, true
 	}
 
@@ -151,9 +156,12 @@ func (m *MemModelMonitor) checkAndBan(
 		if !canBan || channel.bannedUntil.After(now) {
 			return true, false
 		}
+
 		channel.bannedUntil = now.Add(banDuration)
+
 		return false, true
 	}
+
 	return false, false
 }
 
@@ -162,6 +170,7 @@ func getErrorRateFromStats(stats *TimeWindowStats) float64 {
 	if req < minRequestCount {
 		return 0
 	}
+
 	return float64(err) / float64(req)
 }
 
@@ -173,6 +182,7 @@ func (m *MemModelMonitor) GetModelsErrorRate(_ context.Context) (map[string]floa
 	for model, data := range m.models {
 		result[model] = getErrorRateFromStats(data.totalStats)
 	}
+
 	return result, nil
 }
 
@@ -189,6 +199,7 @@ func (m *MemModelMonitor) GetModelChannelErrorRate(
 			result[channelID] = getErrorRateFromStats(channel.timeWindows)
 		}
 	}
+
 	return result, nil
 }
 
@@ -205,6 +216,7 @@ func (m *MemModelMonitor) GetChannelModelErrorRates(
 			result[model] = getErrorRateFromStats(channel.timeWindows)
 		}
 	}
+
 	return result, nil
 }
 
@@ -220,9 +232,11 @@ func (m *MemModelMonitor) GetAllChannelModelErrorRates(
 			if _, exists := result[channelID]; !exists {
 				result[channelID] = make(map[string]float64)
 			}
+
 			result[channelID][model] = getErrorRateFromStats(channel.timeWindows)
 		}
 	}
+
 	return result, nil
 }
 
@@ -242,6 +256,7 @@ func (m *MemModelMonitor) GetBannedChannelsWithModel(
 			}
 		}
 	}
+
 	return banned, nil
 }
 
@@ -258,10 +273,12 @@ func (m *MemModelMonitor) GetAllBannedModelChannels(_ context.Context) (map[stri
 				if _, exists := result[model]; !exists {
 					result[model] = []int64{}
 				}
+
 				result[model] = append(result[model], channelID)
 			}
 		}
 	}
+
 	return result, nil
 }
 
@@ -276,6 +293,7 @@ func (m *MemModelMonitor) ClearChannelModelErrors(
 	if data, exists := m.models[model]; exists {
 		delete(data.channels, int64(channelID))
 	}
+
 	return nil
 }
 
@@ -286,6 +304,7 @@ func (m *MemModelMonitor) ClearChannelAllModelErrors(_ context.Context, channelI
 	for _, data := range m.models {
 		delete(data.channels, int64(channelID))
 	}
+
 	return nil
 }
 
@@ -294,11 +313,13 @@ func (m *MemModelMonitor) ClearAllModelErrors(_ context.Context) error {
 	defer m.mu.Unlock()
 
 	m.models = make(map[string]*ModelData)
+
 	return nil
 }
 
 func (t *TimeWindowStats) cleanupLocked(callback func(slice *timeSlice)) {
 	cutoff := time.Now().Add(-timeWindow * time.Duration(maxSliceCount))
+
 	validSlices := t.slices[:0]
 	for _, s := range t.slices {
 		if s.windowStart.After(cutoff) || s.windowStart.Equal(cutoff) {
@@ -308,6 +329,7 @@ func (t *TimeWindowStats) cleanupLocked(callback func(slice *timeSlice)) {
 			}
 		}
 	}
+
 	t.slices = validSlices
 }
 
@@ -318,6 +340,7 @@ func (t *TimeWindowStats) AddRequest(now time.Time, isError bool) {
 	t.cleanupLocked(nil)
 
 	currentWindow := now.Truncate(timeWindow)
+
 	var slice *timeSlice
 	for i := range t.slices {
 		if t.slices[i].windowStart.Equal(currentWindow) {
@@ -325,6 +348,7 @@ func (t *TimeWindowStats) AddRequest(now time.Time, isError bool) {
 			break
 		}
 	}
+
 	if slice == nil {
 		slice = &timeSlice{windowStart: currentWindow}
 		t.slices = append(t.slices, slice)
@@ -344,6 +368,7 @@ func (t *TimeWindowStats) GetStats() (totalReq, totalErr int) {
 		totalReq += slice.requests
 		totalErr += slice.errors
 	})
+
 	return
 }
 
@@ -352,5 +377,6 @@ func (t *TimeWindowStats) HasValidSlices() bool {
 	defer t.mu.Unlock()
 
 	t.cleanupLocked(nil)
+
 	return len(t.slices) > 0
 }

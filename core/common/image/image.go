@@ -41,15 +41,17 @@ func GetImageSizeFromURL(url string) (width, height int, err error) {
 	if err != nil {
 		return 0, 0, err
 	}
+
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return
+		return width, height, err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
 		return 0, 0, fmt.Errorf("status code: %d", resp.StatusCode)
 	}
+
 	if resp.ContentLength > MaxImageSize {
 		return 0, 0, fmt.Errorf("image too large: %d, max: %d", resp.ContentLength, MaxImageSize)
 	}
@@ -60,10 +62,12 @@ func GetImageSizeFromURL(url string) (width, height int, err error) {
 	} else {
 		reader = resp.Body
 	}
+
 	img, _, err := image.DecodeConfig(reader)
 	if err != nil {
-		return
+		return width, height, err
 	}
+
 	return img.Width, img.Height, nil
 }
 
@@ -79,6 +83,7 @@ func GetImageFromURL(ctx context.Context, url string) (string, string, error) {
 		if len(matches) == 3 {
 			return "image/" + matches[1], matches[2], nil
 		}
+
 		return "", "", errors.New("not an image url")
 	}
 
@@ -86,18 +91,22 @@ func GetImageFromURL(ctx context.Context, url string) (string, string, error) {
 	if err != nil {
 		return "", "", err
 	}
+
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return "", "", err
 	}
 	defer resp.Body.Close()
+
 	if resp.StatusCode != http.StatusOK {
 		return "", "", fmt.Errorf("status code: %d", resp.StatusCode)
 	}
+
 	buf, err := common.GetResponseBodyLimit(resp, MaxImageSize)
 	if err != nil {
 		return "", "", err
 	}
+
 	contentType := resp.Header.Get("Content-Type")
 	if !IsImageURL(contentType) {
 		contentType = http.DetectContentType(buf)
@@ -105,6 +114,7 @@ func GetImageFromURL(ctx context.Context, url string) (string, string, error) {
 			return "", "", errors.New("not an image")
 		}
 	}
+
 	return TrimImageContentType(contentType), base64.StdEncoding.EncodeToString(buf), nil
 }
 

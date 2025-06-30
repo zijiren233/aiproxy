@@ -46,6 +46,7 @@ func ConvertEmbeddingsRequest(
 			if err != nil {
 				return adaptor.ConvertResult{}, err
 			}
+
 			_, err = node.SetAny("input", []string{inputString})
 			if err != nil {
 				return adaptor.ConvertResult{}, err
@@ -57,6 +58,7 @@ func ConvertEmbeddingsRequest(
 	if err != nil {
 		return adaptor.ConvertResult{}, err
 	}
+
 	return adaptor.ConvertResult{
 		Header: http.Header{
 			"Content-Type":   {"application/json"},
@@ -76,11 +78,14 @@ func GetEmbeddingsUsageFromNode(
 		}
 		return nil, nil
 	}
+
 	var usage relaymodel.EmbeddingUsage
+
 	err = sonic.UnmarshalString(usageNode, &usage)
 	if err != nil {
 		return nil, err
 	}
+
 	return &usage, nil
 }
 
@@ -106,6 +111,7 @@ func EmbeddingsHandler(
 			http.StatusInternalServerError,
 		)
 	}
+
 	if preHandler != nil {
 		err := preHandler(meta, &node)
 		if err != nil {
@@ -137,6 +143,7 @@ func EmbeddingsHandler(
 				ImageTokens: int64(meta.RequestUsage.ImageInputTokens),
 			}
 		}
+
 		_, err = node.Set("usage", ast.NewAny(usage))
 		if err != nil {
 			return usage.ToModelUsage(), relaymodel.WrapperOpenAIError(
@@ -147,6 +154,7 @@ func EmbeddingsHandler(
 		}
 	} else if usage.TotalTokens != 0 && usage.PromptTokens == 0 { // some channels don't return prompt tokens
 		usage.PromptTokens = usage.TotalTokens
+
 		_, err = node.Set("usage", ast.NewAny(usage))
 		if err != nil {
 			return usage.ToModelUsage(), relaymodel.WrapperOpenAIError(err, "set_usage_failed", http.StatusInternalServerError)
@@ -173,9 +181,11 @@ func EmbeddingsHandler(
 
 	c.Writer.Header().Set("Content-Type", "application/json")
 	c.Writer.Header().Set("Content-Length", strconv.Itoa(len(newData)))
+
 	_, err = c.Writer.Write(newData)
 	if err != nil {
 		log.Warnf("write response body failed: %v", err)
 	}
+
 	return usage.ToModelUsage(), nil
 }

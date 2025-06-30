@@ -121,6 +121,7 @@ func (e *SearchEngine) GetSearchResult(resultID string) (*SearchResult, bool) {
 	}
 
 	result, ok := value.(*SearchResult)
+
 	return result, ok
 }
 
@@ -181,10 +182,12 @@ func (e *SearchEngine) decodeGBK(data []byte) (string, error) {
 		strings.NewReader(string(data)),
 		simplifiedchinese.GBK.NewDecoder(),
 	)
+
 	decoded, err := io.ReadAll(reader)
 	if err != nil {
 		return "", err
 	}
+
 	return string(decoded), nil
 }
 
@@ -324,6 +327,7 @@ func (e *SearchEngine) fixIncompleteLink(link string) string {
 // createFallbackResult creates a fallback result when no results are found
 func (e *SearchEngine) createFallbackResult(query string) *SearchResult {
 	id := fmt.Sprintf("result_%d_fallback", time.Now().UnixNano())
+
 	return &SearchResult{
 		ID:      id,
 		Title:   "搜索结果: " + query,

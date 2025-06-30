@@ -27,9 +27,11 @@ func (u ChatUsage) ToModelUsage() model.Usage {
 		usage.CachedTokens = model.ZeroNullInt64(u.PromptTokensDetails.CachedTokens)
 		usage.CacheCreationTokens = model.ZeroNullInt64(u.PromptTokensDetails.CacheCreationTokens)
 	}
+
 	if u.CompletionTokensDetails != nil {
 		usage.ReasoningTokens = model.ZeroNullInt64(u.CompletionTokensDetails.ReasoningTokens)
 	}
+
 	return usage
 }
 
@@ -37,13 +39,16 @@ func (u *ChatUsage) Add(other *ChatUsage) {
 	if other == nil {
 		return
 	}
+
 	u.PromptTokens += other.PromptTokens
 	u.CompletionTokens += other.CompletionTokens
+
 	u.TotalTokens += other.TotalTokens
 	if other.PromptTokensDetails != nil {
 		if u.PromptTokensDetails == nil {
 			u.PromptTokensDetails = &PromptTokensDetails{}
 		}
+
 		u.PromptTokensDetails.Add(other.PromptTokensDetails)
 	}
 }
@@ -58,6 +63,7 @@ func (d *PromptTokensDetails) Add(other *PromptTokensDetails) {
 	if other == nil {
 		return
 	}
+
 	d.CachedTokens += other.CachedTokens
 	d.AudioTokens += other.AudioTokens
 	d.CacheCreationTokens += other.CacheCreationTokens
@@ -101,6 +107,7 @@ func WrapperOpenAIErrorWithMessage(
 	if len(_type) > 0 {
 		errType = _type[0]
 	}
+
 	return NewOpenAIError(statusCode, OpenAIError{
 		Message: message,
 		Type:    errType,

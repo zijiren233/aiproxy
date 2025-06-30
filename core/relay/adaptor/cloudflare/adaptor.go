@@ -32,6 +32,7 @@ func isAIGateWay(baseURL string) bool {
 func (a *Adaptor) GetRequestURL(meta *meta.Meta, _ adaptor.Store) (adaptor.RequestURL, error) {
 	u := meta.Channel.BaseURL
 	isAIGateWay := isAIGateWay(u)
+
 	var urlPrefix string
 	if isAIGateWay {
 		urlPrefix = u
@@ -57,6 +58,7 @@ func (a *Adaptor) GetRequestURL(meta *meta.Meta, _ adaptor.Store) (adaptor.Reque
 				URL:    fmt.Sprintf("%s/%s", urlPrefix, meta.ActualModel),
 			}, nil
 		}
+
 		return adaptor.RequestURL{
 			Method: http.MethodPost,
 			URL:    fmt.Sprintf("%s/run/%s", urlPrefix, meta.ActualModel),

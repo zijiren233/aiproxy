@@ -94,5 +94,6 @@ func AllChannelTypes() []ChannelType {
 	for t := range channelTypeNames {
 		types = append(types, t)
 	}
+
 	return types
 }

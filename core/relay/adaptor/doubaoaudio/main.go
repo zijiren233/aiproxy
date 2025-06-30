@@ -77,7 +77,9 @@ func (a *Adaptor) SetupRequestHeader(
 		if err != nil {
 			return err
 		}
+
 		req.Header.Set("Authorization", "Bearer;"+token)
+
 		return nil
 	default:
 		return fmt.Errorf("unsupported mode: %s", meta.Mode)

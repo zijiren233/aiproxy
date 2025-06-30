@@ -248,6 +248,7 @@ func (c *Client) makeRequest(
 		if err != nil {
 			return fmt.Errorf("failed to marshal request body: %w", err)
 		}
+
 		reqBody = bytes.NewBuffer(jsonData)
 	}
 
@@ -257,6 +258,7 @@ func (c *Client) makeRequest(
 	}
 
 	req.Header.Set("Content-Type", "application/json")
+
 	if c.apiKey != "" {
 		req.Header.Set("Authorization", "Bearer "+c.apiKey)
 	}
@@ -281,6 +283,7 @@ func (c *Client) ScrapeURL(
 	params *ScrapeParams,
 ) (*ScrapeResponse, error) {
 	var response ScrapeResponse
+
 	err := c.makeRequest(ctx, http.MethodPost, "/v1/scrape", params, &response)
 	if err != nil {
 		return nil, err
@@ -292,6 +295,7 @@ func (c *Client) ScrapeURL(
 // MapURL maps a website to discover URLs
 func (c *Client) MapURL(ctx context.Context, params MapParams) (*MapResponse, error) {
 	var response MapResponse
+
 	err := c.makeRequest(ctx, http.MethodPost, "/v1/map", params, &response)
 	if err != nil {
 		return nil, err
@@ -306,6 +310,7 @@ func (c *Client) AsyncCrawlURL(
 	params CrawlParams,
 ) (*CrawlResponse, error) {
 	var response CrawlResponse
+
 	err := c.makeRequest(ctx, http.MethodPost, "/v1/crawl", params, &response)
 	if err != nil {
 		return nil, err
@@ -320,6 +325,7 @@ func (c *Client) CheckCrawlStatus(
 	id string,
 ) (*CrawlStatusResponse, error) {
 	var response CrawlStatusResponse
+
 	err := c.makeRequest(ctx, http.MethodGet, "/v1/crawl/"+id, nil, &response)
 	if err != nil {
 		return nil, err
@@ -334,6 +340,7 @@ func (c *Client) Search(
 	params SearchParams,
 ) (*SearchResponse, error) {
 	var response SearchResponse
+
 	err := c.makeRequest(ctx, http.MethodPost, "/v1/search", params, &response)
 	if err != nil {
 		return nil, err
@@ -348,6 +355,7 @@ func (c *Client) Extract(
 	params ExtractParams,
 ) (*ExtractResponse, error) {
 	var response ExtractResponse
+
 	err := c.makeRequest(ctx, http.MethodPost, "/v1/extract", params, &response)
 	if err != nil {
 		return nil, err
@@ -362,6 +370,7 @@ func (c *Client) DeepResearch(
 	params DeepResearchParams,
 ) (*DeepResearchResponse, error) {
 	var response DeepResearchResponse
+
 	err := c.makeRequest(ctx, http.MethodPost, "/v1/research", params, &response)
 	if err != nil {
 		return nil, err
@@ -376,6 +385,7 @@ func (c *Client) GenerateLLMsText(
 	params GenerateLLMsTextParams,
 ) (*GenerateLLMsTextResponse, error) {
 	var response GenerateLLMsTextResponse
+
 	err := c.makeRequest(ctx, http.MethodPost, "/v1/llmstxt", params, &response)
 	if err != nil {
 		return nil, err

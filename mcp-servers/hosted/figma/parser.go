@@ -59,6 +59,7 @@ func parseNodes(figmaNodes []FigmaNode, globalVars *GlobalVars, parent *FigmaNod
 			}
 		}
 	}
+
 	return nodes
 }
 
@@ -188,15 +189,19 @@ func parseTextStyle(style TextStyle) map[string]any {
 	if style.FontFamily != "" {
 		result["fontFamily"] = style.FontFamily
 	}
+
 	if style.FontWeight != nil {
 		result["fontWeight"] = *style.FontWeight
 	}
+
 	if style.FontSize != nil {
 		result["fontSize"] = *style.FontSize
 	}
+
 	if style.LineHeightPx != nil && style.FontSize != nil && *style.FontSize > 0 {
 		result["lineHeight"] = fmt.Sprintf("%.2fem", *style.LineHeightPx / *style.FontSize)
 	}
+
 	if style.LetterSpacing != nil && *style.LetterSpacing != 0 && style.FontSize != nil &&
 		*style.FontSize > 0 {
 		result["letterSpacing"] = fmt.Sprintf(
@@ -204,12 +209,15 @@ func parseTextStyle(style TextStyle) map[string]any {
 			(*style.LetterSpacing / *style.FontSize)*100,
 		)
 	}
+
 	if style.TextCase != "" {
 		result["textCase"] = style.TextCase
 	}
+
 	if style.TextAlignHorizontal != "" {
 		result["textAlignHorizontal"] = style.TextAlignHorizontal
 	}
+
 	if style.TextAlignVertical != "" {
 		result["textAlignVertical"] = style.TextAlignVertical
 	}
@@ -224,6 +232,7 @@ func parseFills(fills []Paint) []any {
 			result = append(result, parsePaint(fill))
 		}
 	}
+
 	return result
 }
 
@@ -238,6 +247,7 @@ func parseStrokes(strokes []Paint, strokeWeight *float64) map[string]any {
 			colors = append(colors, parsePaint(stroke))
 		}
 	}
+
 	result["colors"] = colors
 
 	if strokeWeight != nil && *strokeWeight > 0 {
@@ -250,9 +260,11 @@ func parseStrokes(strokes []Paint, strokeWeight *float64) map[string]any {
 func parseEffects(effects []Effect) map[string]any {
 	result := make(map[string]any)
 
-	var boxShadows []string
-	var filters []string
-	var backdropFilters []string
+	var (
+		boxShadows      []string
+		filters         []string
+		backdropFilters []string
+	)
 
 	for _, effect := range effects {
 		if !isVisible(FigmaNode{Visible: effect.Visible}) {
@@ -266,6 +278,7 @@ func parseEffects(effects []Effect) map[string]any {
 				if effect.Spread != nil {
 					spread = *effect.Spread
 				}
+
 				shadow := fmt.Sprintf("%.1fpx %.1fpx %.1fpx %.1fpx %s",
 					effect.Offset.X, effect.Offset.Y, *effect.Radius, spread,
 					formatRGBAColor(*effect.Color))
@@ -277,6 +290,7 @@ func parseEffects(effects []Effect) map[string]any {
 				if effect.Spread != nil {
 					spread = *effect.Spread
 				}
+
 				shadow := fmt.Sprintf("inset %.1fpx %.1fpx %.1fpx %.1fpx %s",
 					effect.Offset.X, effect.Offset.Y, *effect.Radius, spread,
 					formatRGBAColor(*effect.Color))
@@ -299,9 +313,11 @@ func parseEffects(effects []Effect) map[string]any {
 	if len(boxShadows) > 0 {
 		result["boxShadow"] = strings.Join(boxShadows, ", ")
 	}
+
 	if len(filters) > 0 {
 		result["filter"] = strings.Join(filters, " ")
 	}
+
 	if len(backdropFilters) > 0 {
 		result["backdropFilter"] = strings.Join(backdropFilters, " ")
 	}
@@ -317,9 +333,11 @@ func parsePaint(paint Paint) any {
 			if paint.Opacity != nil {
 				opacity = *paint.Opacity
 			}
+
 			if opacity == 1.0 {
 				return convertColorToHex(*paint.Color)
 			}
+
 			return formatRGBAColor(*paint.Color)
 		}
 	case "IMAGE":
@@ -329,9 +347,11 @@ func parsePaint(paint Paint) any {
 		if paint.ImageRef != "" {
 			result["imageRef"] = paint.ImageRef
 		}
+
 		if paint.ScaleMode != "" {
 			result["scaleMode"] = paint.ScaleMode
 		}
+
 		return result
 	case "GRADIENT_LINEAR", "GRADIENT_RADIAL", "GRADIENT_ANGULAR", "GRADIENT_DIAMOND":
 		result := map[string]any{
@@ -340,6 +360,7 @@ func parsePaint(paint Paint) any {
 		if len(paint.GradientHandlePositions) > 0 {
 			result["gradientHandlePositions"] = paint.GradientHandlePositions
 		}
+
 		if len(paint.GradientStops) > 0 {
 			var stops []map[string]any
 			for _, stop := range paint.GradientStops {
@@ -351,10 +372,13 @@ func parsePaint(paint Paint) any {
 					},
 				})
 			}
+
 			result["gradientStops"] = stops
 		}
+
 		return result
 	}
+
 	return nil
 }
 
@@ -377,9 +401,11 @@ func parseLayout(node FigmaNode, parent *FigmaNode) map[string]any {
 		if node.PrimaryAxisAlignItems != "" {
 			layout["justifyContent"] = convertAlign(node.PrimaryAxisAlignItems)
 		}
+
 		if node.CounterAxisAlignItems != "" {
 			layout["alignItems"] = convertAlign(node.CounterAxisAlignItems)
 		}
+
 		if node.ItemSpacing != nil {
 			layout["gap"] = fmt.Sprintf("%.1fpx", *node.ItemSpacing)
 		}
@@ -404,9 +430,11 @@ func parseLayout(node FigmaNode, parent *FigmaNode) map[string]any {
 	if node.LayoutSizingHorizontal != "" {
 		sizing["horizontal"] = convertSizing(node.LayoutSizingHorizontal)
 	}
+
 	if node.LayoutSizingVertical != "" {
 		sizing["vertical"] = convertSizing(node.LayoutSizingVertical)
 	}
+
 	if len(sizing) > 0 {
 		layout["sizing"] = sizing
 	}
@@ -433,6 +461,7 @@ func parseLayout(node FigmaNode, parent *FigmaNode) map[string]any {
 			if node.LayoutSizingHorizontal == "FIXED" {
 				dimensions["width"] = node.AbsoluteBoundingBox.Width
 			}
+
 			if node.LayoutAlign != "STRETCH" && node.LayoutSizingVertical == "FIXED" {
 				dimensions["height"] = node.AbsoluteBoundingBox.Height
 			}
@@ -440,6 +469,7 @@ func parseLayout(node FigmaNode, parent *FigmaNode) map[string]any {
 			if node.LayoutAlign != "STRETCH" && node.LayoutSizingHorizontal == "FIXED" {
 				dimensions["width"] = node.AbsoluteBoundingBox.Width
 			}
+
 			if node.LayoutSizingVertical == "FIXED" {
 				dimensions["height"] = node.AbsoluteBoundingBox.Height
 			}
@@ -448,6 +478,7 @@ func parseLayout(node FigmaNode, parent *FigmaNode) map[string]any {
 			if node.LayoutSizingHorizontal == "" || node.LayoutSizingHorizontal == "FIXED" {
 				dimensions["width"] = node.AbsoluteBoundingBox.Width
 			}
+
 			if node.LayoutSizingVertical == "" || node.LayoutSizingVertical == "FIXED" {
 				dimensions["height"] = node.AbsoluteBoundingBox.Height
 			}
@@ -504,15 +535,18 @@ func generateCSSShorthand(top, right, bottom, left float64) string {
 	if top == 0 && right == 0 && bottom == 0 && left == 0 {
 		return ""
 	}
+
 	if top == right && right == bottom && bottom == left {
 		return fmt.Sprintf("%.1fpx", top)
 	}
+
 	if right == left {
 		if top == bottom {
 			return fmt.Sprintf("%.1fpx %.1fpx", top, right)
 		}
 		return fmt.Sprintf("%.1fpx %.1fpx %.1fpx", top, right, bottom)
 	}
+
 	return fmt.Sprintf("%.1fpx %.1fpx %.1fpx %.1fpx", top, right, bottom, left)
 }
 
@@ -528,6 +562,7 @@ func formatRGBAColor(color RGBA) string {
 	g := int(color.G * 255)
 	b := int(color.B * 255)
 	a := color.A
+
 	return fmt.Sprintf("rgba(%d, %d, %d, %.2f)", r, g, b, a)
 }
 

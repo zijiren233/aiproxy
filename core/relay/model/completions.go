@@ -57,6 +57,7 @@ func (r GeneralOpenAIRequest) ParseInput() []string {
 	if r.Input == nil {
 		return nil
 	}
+
 	var input []string
 	switch v := r.Input.(type) {
 	case string:
@@ -69,6 +70,7 @@ func (r GeneralOpenAIRequest) ParseInput() []string {
 			}
 		}
 	}
+
 	return input
 }
 
@@ -122,6 +124,7 @@ func (m *Message) ToStringContentMessage() {
 	if m.IsStringContent() {
 		return
 	}
+
 	m.Content = m.StringContent()
 }
 
@@ -134,6 +137,7 @@ func (m *Message) StringContent() string {
 	if ok {
 		return content
 	}
+
 	contentList, ok := m.Content.([]any)
 	if !ok {
 		return ""
@@ -145,6 +149,7 @@ func (m *Message) StringContent() string {
 		if !ok {
 			continue
 		}
+
 		if contentMap["type"] == ContentTypeText {
 			if subStr, ok := contentMap["text"].(string); ok {
 				strBuilder.WriteString(subStr)
@@ -152,19 +157,23 @@ func (m *Message) StringContent() string {
 			}
 		}
 	}
+
 	return strBuilder.String()
 }
 
 func (m *Message) ParseContent() []MessageContent {
 	var contentList []MessageContent
+
 	content, ok := m.Content.(string)
 	if ok {
 		contentList = append(contentList, MessageContent{
 			Type: ContentTypeText,
 			Text: content,
 		})
+
 		return contentList
 	}
+
 	anyList, ok := m.Content.([]any)
 	if ok {
 		for _, contentItem := range anyList {
@@ -172,6 +181,7 @@ func (m *Message) ParseContent() []MessageContent {
 			if !ok {
 				continue
 			}
+
 			switch contentMap["type"] {
 			case ContentTypeText:
 				if subStr, ok := contentMap["text"].(string); ok {
@@ -186,6 +196,7 @@ func (m *Message) ParseContent() []MessageContent {
 					if !ok {
 						continue
 					}
+
 					contentList = append(contentList, MessageContent{
 						Type: ContentTypeImageURL,
 						ImageURL: &ImageURL{
@@ -195,8 +206,10 @@ func (m *Message) ParseContent() []MessageContent {
 				}
 			}
 		}
+
 		return contentList
 	}
+
 	return nil
 }
 

@@ -44,6 +44,7 @@ func (g *Group) BeforeDelete(tx *gorm.DB) (err error) {
 	if err != nil {
 		return err
 	}
+
 	err = tx.Model(&PublicMCPReusingParam{}).
 		Where("group_id = ?", g.ID).
 		Delete(&PublicMCPReusingParam{}).
@@ -51,10 +52,12 @@ func (g *Group) BeforeDelete(tx *gorm.DB) (err error) {
 	if err != nil {
 		return err
 	}
+
 	err = tx.Model(&GroupMCP{}).Where("group_id = ?", g.ID).Delete(&GroupMCP{}).Error
 	if err != nil {
 		return err
 	}
+
 	return tx.Model(&GroupModelConfig{}).
 		Where("group_id = ?", g.ID).
 		Delete(&GroupModelConfig{}).
@@ -94,6 +97,7 @@ func GetGroups(
 	if total <= 0 {
 		return nil, 0, nil
 	}
+
 	limit, offset := toLimitOffset(page, perPage)
 	err = tx.
 		Order(getGroupOrder(order)).
@@ -101,6 +105,7 @@ func GetGroups(
 		Offset(offset).
 		Find(&groups).
 		Error
+
 	return groups, total, err
 }
 
@@ -108,12 +113,16 @@ func GetGroupByID(id string, preloadGroupModelConfigs bool) (*Group, error) {
 	if id == "" {
 		return nil, errors.New("group id is empty")
 	}
+
 	group := Group{}
+
 	tx := DB.Where("id = ?", id)
 	if preloadGroupModelConfigs {
 		tx = tx.Preload("GroupModelConfigs")
 	}
+
 	err := tx.First(&group).Error
+
 	return &group, HandleNotFound(err, ErrGroupNotFound)
 }
 
@@ -126,12 +135,15 @@ func DeleteGroupByID(id string) (err error) {
 			if err := CacheDeleteGroup(id); err != nil {
 				log.Error("cache delete group failed: " + err.Error())
 			}
+
 			if _, err := DeleteGroupLogs(id); err != nil {
 				log.Error("delete group logs failed: " + err.Error())
 			}
 		}
 	}()
+
 	result := DB.Delete(&Group{ID: id})
+
 	return HandleUpdateResult(result, ErrGroupNotFound)
 }
 
@@ -139,6 +151,7 @@ func DeleteGroupsByIDs(ids []string) (err error) {
 	if len(ids) == 0 {
 		return nil
 	}
+
 	groups := make([]Group, len(ids))
 	defer func() {
 		if err == nil {
@@ -146,12 +159,14 @@ func DeleteGroupsByIDs(ids []string) (err error) {
 				if err := CacheDeleteGroup(group.ID); err != nil {
 					log.Error("cache delete group failed: " + err.Error())
 				}
+
 				if _, err := DeleteGroupLogs(group.ID); err != nil {
 					log.Error("delete group logs failed: " + err.Error())
 				}
 			}
 		}
 	}()
+
 	return DB.Transaction(func(tx *gorm.DB) error {
 		return tx.
 			Clauses(clause.Returning{
@@ -176,6 +191,7 @@ func UpdateGroup(id string, group *Group) (err error) {
 			}
 		}
 	}()
+
 	selects := []string{
 		"rpm_ratio",
 		"tpm_ratio",
@@ -186,11 +202,13 @@ func UpdateGroup(id string, group *Group) (err error) {
 	if group.Status != 0 {
 		selects = append(selects, "status")
 	}
+
 	result := DB.
 		Clauses(clause.Returning{}).
 		Where("id = ?", id).
 		Select(selects).
 		Updates(group)
+
 	return HandleUpdateResult(result, ErrGroupNotFound)
 }
 
@@ -203,6 +221,7 @@ func UpdateGroupUsedAmountAndRequestCount(id string, amount float64, count int) 
 			}
 		}
 	}()
+
 	result := DB.
 		Model(group).
 		Clauses(clause.Returning{
@@ -215,6 +234,7 @@ func UpdateGroupUsedAmountAndRequestCount(id string, amount float64, count int) 
 			"used_amount":   gorm.Expr("used_amount + ?", amount),
 			"request_count": gorm.Expr("request_count + ?", count),
 		})
+
 	return HandleUpdateResult(result, ErrGroupNotFound)
 }
 
@@ -226,7 +246,9 @@ func UpdateGroupRPMRatio(id string, rpmRatio float64) (err error) {
 			}
 		}
 	}()
+
 	result := DB.Model(&Group{}).Where("id = ?", id).Update("rpm_ratio", rpmRatio)
+
 	return HandleUpdateResult(result, ErrGroupNotFound)
 }
 
@@ -238,7 +260,9 @@ func UpdateGroupTPMRatio(id string, tpmRatio float64) (err error) {
 			}
 		}
 	}()
+
 	result := DB.Model(&Group{}).Where("id = ?", id).Update("tpm_ratio", tpmRatio)
+
 	return HandleUpdateResult(result, ErrGroupNotFound)
 }
 
@@ -250,7 +274,9 @@ func UpdateGroupStatus(id string, status int) (err error) {
 			}
 		}
 	}()
+
 	result := DB.Model(&Group{}).Where("id = ?", id).Update("status", status)
+
 	return HandleUpdateResult(result, ErrGroupNotFound)
 }
 
@@ -268,6 +294,7 @@ func UpdateGroupsStatus(ids []string, status int) (rowsAffected int64, err error
 	result := DB.Model(&Group{}).
 		Where("id IN (?) AND status != ?", ids, status).
 		Update("status", status)
+
 	return result.RowsAffected, result.Error
 }
 
@@ -281,18 +308,22 @@ func SearchGroup(
 	if status != 0 {
 		tx = tx.Where("status = ?", status)
 	}
+
 	if common.UsingPostgreSQL {
 		tx = tx.Where("id ILIKE ? OR available_sets ILIKE ?", "%"+keyword+"%", "%"+keyword+"%")
 	} else {
 		tx = tx.Where("id LIKE ? OR available_sets LIKE ?", "%"+keyword+"%", "%"+keyword+"%")
 	}
+
 	err = tx.Count(&total).Error
 	if err != nil {
 		return nil, 0, err
 	}
+
 	if total <= 0 {
 		return nil, 0, nil
 	}
+
 	limit, offset := toLimitOffset(page, perPage)
 	err = tx.
 		Order(getGroupOrder(order)).
@@ -300,6 +331,7 @@ func SearchGroup(
 		Offset(offset).
 		Find(&groups).
 		Error
+
 	return groups, total, err
 }
 

@@ -54,9 +54,11 @@ func (g *GroupMCP) BeforeSave(_ *gorm.DB) (err error) {
 	if g.GroupID == "" {
 		return errors.New("group id is empty")
 	}
+
 	if err := validateMCPID(g.ID); err != nil {
 		return err
 	}
+
 	if g.UpdateAt.IsZero() {
 		g.UpdateAt = time.Now()
 	}
@@ -70,9 +72,11 @@ func (g *GroupMCP) BeforeSave(_ *gorm.DB) (err error) {
 		if config.OpenAPISpec != "" {
 			return validateHTTPURL(config.OpenAPISpec)
 		}
+
 		if config.OpenAPIContent != "" {
 			return nil
 		}
+
 		return errors.New("openapi spec and content is empty")
 	}
 
@@ -90,6 +94,7 @@ func CreateGroupMCP(mcp *GroupMCP) error {
 	if err != nil && errors.Is(err, gorm.ErrDuplicatedKey) {
 		return errors.New("group mcp already exists")
 	}
+
 	return err
 }
 
@@ -112,13 +117,16 @@ func UpdateGroupMCP(mcp *GroupMCP) (err error) {
 	if mcp.Type != "" {
 		selects = append(selects, "type")
 	}
+
 	if mcp.Status != 0 {
 		selects = append(selects, "status")
 	}
+
 	result := DB.
 		Select(selects).
 		Where("id = ? AND group_id = ?", mcp.ID, mcp.GroupID).
 		Updates(mcp)
+
 	return HandleUpdateResult(result, ErrGroupMCPNotFound)
 }
 
@@ -134,16 +142,20 @@ func UpdateGroupMCPStatus(id, groupID string, status GroupMCPStatus) (err error)
 	result := DB.Model(&GroupMCP{}).
 		Where("id = ? AND group_id = ?", id, groupID).
 		Update("status", status)
+
 	return HandleUpdateResult(result, ErrGroupMCPNotFound)
 }
 
 func GetAllGroupMCPs(status GroupMCPStatus) ([]GroupMCP, error) {
 	var mcps []GroupMCP
+
 	tx := DB.Model(&GroupMCP{})
 	if status != 0 {
 		tx = tx.Where("status = ?", status)
 	}
+
 	err := tx.Find(&mcps).Error
+
 	return mcps, err
 }
 
@@ -160,7 +172,9 @@ func DeleteGroupMCP(id, groupID string) (err error) {
 	if id == "" || groupID == "" {
 		return errors.New("group mcp id or group id is empty")
 	}
+
 	result := DB.Where("id = ? AND group_id = ?", id, groupID).Delete(&GroupMCP{})
+
 	return HandleUpdateResult(result, ErrGroupMCPNotFound)
 }
 
@@ -170,7 +184,9 @@ func GetGroupMCPByID(id, groupID string) (GroupMCP, error) {
 	if id == "" || groupID == "" {
 		return mcp, errors.New("group mcp id or group id is empty")
 	}
+
 	err := DB.Where("id = ? AND group_id = ?", id, groupID).First(&mcp).Error
+
 	return mcp, HandleNotFound(err, ErrGroupMCPNotFound)
 }
 
@@ -202,8 +218,10 @@ func GetGroupMCPs(
 	}
 
 	if keyword != "" {
-		var conditions []string
-		var values []any
+		var (
+			conditions []string
+			values     []any
+		)
 
 		if id == "" {
 			if common.UsingPostgreSQL {
@@ -222,6 +240,7 @@ func GetGroupMCPs(
 			conditions = append(conditions, "name LIKE ?")
 			values = append(values, "%"+keyword+"%")
 		}
+
 		if common.UsingPostgreSQL {
 			conditions = append(conditions, "description ILIKE ?")
 			values = append(values, "%"+keyword+"%")

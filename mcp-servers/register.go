@@ -58,9 +58,11 @@ func Register(mcp McpServer) {
 	if mcp.ID == "" {
 		panic("mcp id is required")
 	}
+
 	if mcp.Name == "" {
 		panic("mcp name is required")
 	}
+
 	if mcp.Description == "" &&
 		mcp.DescriptionCN == "" &&
 		mcp.Readme == "" &&
@@ -74,6 +76,7 @@ func Register(mcp McpServer) {
 			),
 		)
 	}
+
 	switch mcp.Type {
 	case model.PublicMCPTypeEmbed:
 		if mcp.newServer == nil {
@@ -92,6 +95,7 @@ func Register(mcp McpServer) {
 			panic(fmt.Sprintf("mcp %s config templates example is invalid: %v", mcp.ID, err))
 		}
 	}
+
 	if len(mcp.ProxyConfigTemplates) != 0 {
 		if err := CheckProxyConfigTemplatesValidate(mcp.ProxyConfigTemplates); err != nil {
 			panic(fmt.Sprintf("mcp %s config templates example is invalid: %v", mcp.ID, err))
@@ -101,6 +105,7 @@ func Register(mcp McpServer) {
 	if _, ok := servers[mcp.ID]; ok {
 		panic(fmt.Sprintf("mcp %s already registered", mcp.ID))
 	}
+
 	servers[mcp.ID] = mcp
 }
 
@@ -109,10 +114,12 @@ func ListTools(ctx context.Context, id string) ([]mcp.Tool, error) {
 	if !ok {
 		return nil, fmt.Errorf("mcp %s not found", id)
 	}
+
 	tools, err := embedServer.ListTools(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("mcp %s list tools error: %w", id, err)
 	}
+
 	return tools, nil
 }
 
@@ -121,6 +128,7 @@ func GetMCPServer(id string, config, reusingConfig map[string]string) (Server, e
 	if !ok {
 		return nil, fmt.Errorf("mcp %s not found", id)
 	}
+
 	if len(embedServer.ConfigTemplates) == 0 {
 		if embedServer.disableCache {
 			return embedServer.NewServer(config, reusingConfig)
@@ -157,7 +165,9 @@ func buildNoReusingConfigCacheKey(config map[string]string) string {
 	for key, value := range config {
 		keys = append(keys, fmt.Sprintf("%s:%s", key, value))
 	}
+
 	sort.Strings(keys)
+
 	return strings.Join(keys, ":")
 }
 
@@ -166,9 +176,13 @@ func loadCacheServer(embedServer McpServer, config map[string]string) (Server, e
 	if len(config) > 0 {
 		cacheKey = fmt.Sprintf("%s:%s", embedServer.ID, buildNoReusingConfigCacheKey(config))
 	}
+
 	mcpServerCacheLock.RLock()
+
 	server, ok := mcpServerCache[cacheKey]
+
 	mcpServerCacheLock.RUnlock()
+
 	if ok {
 		server.LastUsedTimestamp.Store(time.Now().Unix())
 		return server.MCPServer, nil
@@ -176,6 +190,7 @@ func loadCacheServer(embedServer McpServer, config map[string]string) (Server, e
 
 	mcpServerCacheLock.Lock()
 	defer mcpServerCacheLock.Unlock()
+
 	server, ok = mcpServerCache[cacheKey]
 	if ok {
 		server.LastUsedTimestamp.Store(time.Now().Unix())
@@ -186,12 +201,14 @@ func loadCacheServer(embedServer McpServer, config map[string]string) (Server, e
 	if err != nil {
 		return nil, fmt.Errorf("mcp %s new server is invalid: %w", embedServer.ID, err)
 	}
+
 	mcpServerCacheItem := &mcpServerCacheItem{
 		MCPServer:         mcpServer,
 		LastUsedTimestamp: atomic.Int64{},
 	}
 	mcpServerCacheItem.LastUsedTimestamp.Store(time.Now().Unix())
 	mcpServerCache[cacheKey] = mcpServerCacheItem
+
 	return mcpServer, nil
 }
 

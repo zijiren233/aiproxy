@@ -12,5 +12,6 @@ func (a *Adaptor) ValidateKey(key string) error {
 	if err != nil {
 		return err
 	}
+
 	return nil
 }

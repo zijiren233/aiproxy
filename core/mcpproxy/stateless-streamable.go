@@ -29,6 +29,7 @@ func NewStatelessStreamableHTTPServer(
 	for _, opt := range opts {
 		opt(s)
 	}
+
 	return s
 }
 
@@ -65,8 +66,10 @@ func (s *StreamableHTTPServer) handlePost(w http.ResponseWriter, r *http.Request
 			mcp.PARSE_ERROR,
 			fmt.Sprintf("read request body error: %v", err),
 		)
+
 		return
 	}
+
 	var baseMessage struct {
 		Method mcp.MCPMethod `json:"method"`
 	}
@@ -91,6 +94,7 @@ func (s *StreamableHTTPServer) handlePost(w http.ResponseWriter, r *http.Request
 			mcp.INTERNAL_ERROR,
 			fmt.Sprintf("marshal response body error: %v", err),
 		)
+
 		return
 	}
 
@@ -115,11 +119,13 @@ func (s *StreamableHTTPServer) writeJSONRPCError(
 	message string,
 ) {
 	response := mcpservers.CreateMCPErrorResponse(id, code, message)
+
 	jsonBody, err := sonic.Marshal(response)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Content-Length", strconv.Itoa(len(jsonBody)))
 	w.WriteHeader(http.StatusBadRequest)

@@ -36,6 +36,7 @@ func (r *Anthropic) Render(w http.ResponseWriter) error {
 		if err != nil {
 			return err
 		}
+
 		event, err = eventNode.String()
 		if err != nil {
 			return err
@@ -56,6 +57,7 @@ func (r *Anthropic) Render(w http.ResponseWriter) error {
 			return err
 		}
 	}
+
 	return nil
 }
 

@@ -53,15 +53,19 @@ func (a *Adaptor) ConvertRequest(
 	if err != nil {
 		return adaptor.ConvertResult{}, err
 	}
+
 	request.Model = meta.ActualModel
+
 	requestBody := ConvertRequest(request)
 	if requestBody == nil {
 		return adaptor.ConvertResult{}, errors.New("request body is nil")
 	}
+
 	data, err := sonic.Marshal(requestBody)
 	if err != nil {
 		return adaptor.ConvertResult{}, err
 	}
+
 	return adaptor.ConvertResult{
 		Header: http.Header{
 			"Content-Type":   {"application/json"},
@@ -91,6 +95,7 @@ func (a *Adaptor) DoResponse(
 	} else {
 		usage, err = Handler(meta, c, resp)
 	}
+
 	return
 }
 

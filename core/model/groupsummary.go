@@ -25,12 +25,15 @@ func (l *GroupSummary) BeforeCreate(_ *gorm.DB) (err error) {
 	if l.Unique.Model == "" {
 		return errors.New("model is required")
 	}
+
 	if l.Unique.HourTimestamp == 0 {
 		return errors.New("hour timestamp is required")
 	}
+
 	if err := validateHourTimestamp(l.Unique.HourTimestamp); err != nil {
 		return err
 	}
+
 	return
 }
 
@@ -67,10 +70,12 @@ func UpsertGroupSummary(unique GroupSummaryUnique, data SummaryData) error {
 				unique.HourTimestamp,
 			).
 			Updates(data.buildUpdateData("group_summaries"))
+
 		err = result.Error
 		if err != nil {
 			return err
 		}
+
 		if result.RowsAffected > 0 {
 			return nil
 		}
@@ -79,6 +84,7 @@ func UpsertGroupSummary(unique GroupSummaryUnique, data SummaryData) error {
 		if err == nil {
 			return nil
 		}
+
 		if !errors.Is(err, gorm.ErrDuplicatedKey) {
 			return err
 		}

@@ -14,6 +14,7 @@ func (a *Adaptor) ValidateKey(key string) error {
 	if err != nil {
 		return err
 	}
+
 	return nil
 }
 
@@ -22,5 +23,6 @@ func GetAPIKeyAndGroupID(key string) (string, string, error) {
 	if len(keys) != 2 {
 		return "", "", errors.New("invalid key format")
 	}
+
 	return keys[0], keys[1], nil
 }

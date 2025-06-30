@@ -42,6 +42,7 @@ func TestHTMLTable2Md(t *testing.T) {
 	for _, tc := range tables {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
+
 			result := doc2x.HTMLTable2Md(tc.html)
 
 			if result != tc.expected {

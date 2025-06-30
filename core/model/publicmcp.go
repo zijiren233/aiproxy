@@ -82,14 +82,17 @@ func (p *PublicMCPReusingParam) BeforeCreate(_ *gorm.DB) (err error) {
 	if p.MCPID == "" {
 		return errors.New("mcp id is empty")
 	}
+
 	if p.GroupID == "" {
 		return errors.New("group is empty")
 	}
+
 	return
 }
 
 func (p *PublicMCPReusingParam) MarshalJSON() ([]byte, error) {
 	type Alias PublicMCPReusingParam
+
 	a := &struct {
 		*Alias
 		CreatedAt int64 `json:"created_at"`
@@ -99,6 +102,7 @@ func (p *PublicMCPReusingParam) MarshalJSON() ([]byte, error) {
 		CreatedAt: p.CreatedAt.UnixMilli(),
 		UpdateAt:  p.UpdateAt.UnixMilli(),
 	}
+
 	return sonic.Marshal(a)
 }
 
@@ -121,9 +125,11 @@ func validateMCPID(id string) error {
 	if id == "" {
 		return errors.New("mcp id is empty")
 	}
+
 	if !validateMCPIDRegex.MatchString(id) {
 		return errors.New("mcp id is invalid")
 	}
+
 	return nil
 }
 
@@ -168,6 +174,7 @@ func (p *PublicMCP) BeforeCreate(_ *gorm.DB) error {
 	if p.Status == 0 {
 		p.Status = PublicMCPStatusEnabled
 	}
+
 	return nil
 }
 
@@ -177,9 +184,11 @@ func (p *PublicMCP) BeforeSave(_ *gorm.DB) error {
 		if config.OpenAPISpec != "" {
 			return validateHTTPURL(config.OpenAPISpec)
 		}
+
 		if config.OpenAPIContent != "" {
 			return nil
 		}
+
 		return errors.New("openapi spec and content is empty")
 	}
 
@@ -187,6 +196,7 @@ func (p *PublicMCP) BeforeSave(_ *gorm.DB) error {
 		config := p.ProxyConfig
 		return validateHTTPURL(config.URL)
 	}
+
 	return nil
 }
 
@@ -194,13 +204,16 @@ func validateHTTPURL(str string) error {
 	if str == "" {
 		return errors.New("url is empty")
 	}
+
 	u, err := url.Parse(str)
 	if err != nil {
 		return err
 	}
+
 	if u.Scheme != "http" && u.Scheme != "https" {
 		return errors.New("url scheme not support")
 	}
+
 	return nil
 }
 
@@ -217,6 +230,7 @@ func CreatePublicMCP(mcp *PublicMCP) error {
 	if err != nil && errors.Is(err, gorm.ErrDuplicatedKey) {
 		return errors.New("mcp server already exist")
 	}
+
 	return err
 }
 
@@ -284,23 +298,29 @@ func UpdatePublicMCP(mcp *PublicMCP) (err error) {
 	if mcp.Status != 0 {
 		selects = append(selects, "status")
 	}
+
 	if mcp.Name != "" {
 		selects = append(selects, "name")
 	}
+
 	if mcp.NameCN != "" {
 		selects = append(selects, "name_cn")
 	}
+
 	if mcp.Type != "" {
 		selects = append(selects, "type")
 	}
+
 	if mcp.Price.DefaultToolsCallPrice != 0 ||
 		len(mcp.Price.ToolsCallPrices) != 0 {
 		selects = append(selects, "price")
 	}
+
 	result := DB.
 		Select(selects).
 		Where("id = ?", mcp.ID).
 		Updates(mcp)
+
 	return HandleUpdateResult(result, ErrPublicMCPNotFound)
 }
 
@@ -314,6 +334,7 @@ func UpdatePublicMCPStatus(id string, status PublicMCPStatus) (err error) {
 	}()
 
 	result := DB.Model(&PublicMCP{}).Where("id = ?", id).Update("status", status)
+
 	return HandleUpdateResult(result, ErrPublicMCPNotFound)
 }
 
@@ -330,7 +351,9 @@ func DeletePublicMCP(id string) (err error) {
 	if id == "" {
 		return errors.New("MCP id is empty")
 	}
+
 	result := DB.Delete(&PublicMCP{ID: id})
+
 	return HandleUpdateResult(result, ErrPublicMCPNotFound)
 }
 
@@ -340,7 +363,9 @@ func GetPublicMCPByID(id string) (PublicMCP, error) {
 	if id == "" {
 		return mcp, errors.New("MCP id is empty")
 	}
+
 	err := DB.Where("id = ?", id).First(&mcp).Error
+
 	return mcp, HandleNotFound(err, ErrPublicMCPNotFound)
 }
 
@@ -367,8 +392,10 @@ func GetPublicMCPs(
 	}
 
 	if keyword != "" {
-		var conditions []string
-		var values []any
+		var (
+			conditions []string
+			values     []any
+		)
 
 		if id == "" {
 			if common.UsingPostgreSQL {
@@ -387,6 +414,7 @@ func GetPublicMCPs(
 			conditions = append(conditions, "name LIKE ?")
 			values = append(values, "%"+keyword+"%")
 		}
+
 		if common.UsingPostgreSQL {
 			conditions = append(conditions, "name_cn ILIKE ?")
 			values = append(values, "%"+keyword+"%")
@@ -402,6 +430,7 @@ func GetPublicMCPs(
 			conditions = append(conditions, "description LIKE ?")
 			values = append(values, "%"+keyword+"%")
 		}
+
 		if common.UsingPostgreSQL {
 			conditions = append(conditions, "description_cn ILIKE ?")
 			values = append(values, "%"+keyword+"%")
@@ -417,6 +446,7 @@ func GetPublicMCPs(
 			conditions = append(conditions, "readme LIKE ?")
 			values = append(values, "%"+keyword+"%")
 		}
+
 		if common.UsingPostgreSQL {
 			conditions = append(conditions, "readme_cn ILIKE ?")
 			values = append(values, "%"+keyword+"%")
@@ -451,16 +481,20 @@ func GetPublicMCPs(
 
 func GetAllPublicMCPs(status PublicMCPStatus) ([]PublicMCP, error) {
 	var mcps []PublicMCP
+
 	tx := DB.Model(&PublicMCP{})
 	if status != 0 {
 		tx = tx.Where("status = ?", status)
 	}
+
 	err := tx.Find(&mcps).Error
+
 	return mcps, err
 }
 
 func GetPublicMCPsEnabled(ids []string) ([]string, error) {
 	var mcpIDs []string
+
 	err := DB.Model(&PublicMCP{}).
 		Select("id").
 		Where("id IN (?) AND status = ?", ids, PublicMCPStatusEnabled).
@@ -469,6 +503,7 @@ func GetPublicMCPsEnabled(ids []string) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return mcpIDs, nil
 }
 
@@ -477,6 +512,7 @@ func GetPublicMCPsEmbedConfig(ids []string) (map[string]MCPEmbeddingConfig, erro
 		ID          string
 		EmbedConfig MCPEmbeddingConfig `gorm:"serializer:fastjson;type:text"`
 	}
+
 	err := DB.Model(&PublicMCP{}).
 		Select("id, embed_config").
 		Where("id IN (?)", ids).
@@ -484,10 +520,12 @@ func GetPublicMCPsEmbedConfig(ids []string) (map[string]MCPEmbeddingConfig, erro
 	if err != nil {
 		return nil, err
 	}
+
 	configsMap := make(map[string]MCPEmbeddingConfig)
 	for _, config := range configs {
 		configsMap[config.ID] = config.EmbedConfig
 	}
+
 	return configsMap, nil
 }
 
@@ -519,6 +557,7 @@ func UpdatePublicMCPReusingParam(param *PublicMCPReusingParam) (err error) {
 		}).
 		Where("mcp_id = ? AND group_id = ?", param.MCPID, param.GroupID).
 		Updates(param)
+
 	return HandleUpdateResult(result, ErrMCPReusingParamNotFound)
 }
 
@@ -535,9 +574,11 @@ func DeletePublicMCPReusingParam(mcpID, groupID string) (err error) {
 	if mcpID == "" || groupID == "" {
 		return errors.New("MCP ID or Group ID is empty")
 	}
+
 	result := DB.
 		Where("mcp_id = ? AND group_id = ?", mcpID, groupID).
 		Delete(&PublicMCPReusingParam{})
+
 	return HandleUpdateResult(result, ErrMCPReusingParamNotFound)
 }
 
@@ -546,7 +587,10 @@ func GetPublicMCPReusingParam(mcpID, groupID string) (PublicMCPReusingParam, err
 	if mcpID == "" || groupID == "" {
 		return PublicMCPReusingParam{}, errors.New("MCP ID or Group ID is empty")
 	}
+
 	var param PublicMCPReusingParam
+
 	err := DB.Where("mcp_id = ? AND group_id = ?", mcpID, groupID).First(&param).Error
+
 	return param, HandleNotFound(err, ErrMCPReusingParamNotFound)
 }

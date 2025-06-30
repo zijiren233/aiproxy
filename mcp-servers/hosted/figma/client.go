@@ -120,8 +120,10 @@ func (c *Client) DownloadImages(
 	svgOptions SVGOptions,
 ) ([][]byte, error) {
 	// Separate image fills and render requests
-	var imageFills []ImageNode
-	var renderRequests []ImageNode
+	var (
+		imageFills     []ImageNode
+		renderRequests []ImageNode
+	)
 
 	for _, node := range nodes {
 		if node.ImageRef != "" {
@@ -139,6 +141,7 @@ func (c *Client) DownloadImages(
 		if err != nil {
 			return nil, err
 		}
+
 		results = append(results, fillResults...)
 	}
 
@@ -154,6 +157,7 @@ func (c *Client) DownloadImages(
 		if err != nil {
 			return nil, err
 		}
+
 		results = append(results, renderResults...)
 	}
 
@@ -184,6 +188,7 @@ func (c *Client) downloadImageFills(
 		if err != nil {
 			continue
 		}
+
 		results[i] = image
 	}
 
@@ -216,6 +221,7 @@ func (c *Client) downloadRenderedImages(
 		if err != nil {
 			return nil, err
 		}
+
 		allResults = append(allResults, pngResults...)
 	}
 
@@ -225,6 +231,7 @@ func (c *Client) downloadRenderedImages(
 		if err != nil {
 			return nil, err
 		}
+
 		allResults = append(allResults, svgResults...)
 	}
 
@@ -268,6 +275,7 @@ func (c *Client) downloadPNGImages(
 		if err != nil {
 			continue
 		}
+
 		results[i] = image
 	}
 
@@ -314,6 +322,7 @@ func (c *Client) downloadSVGImages(
 			results[i] = nil
 			continue
 		}
+
 		results[i] = image
 	}
 

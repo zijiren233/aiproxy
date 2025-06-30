@@ -43,6 +43,7 @@ func AsyncConsume(
 	consumeWaitGroup.Add(1)
 	defer func() {
 		consumeWaitGroup.Done()
+
 		if r := recover(); r != nil {
 			log.Errorf("panic in consume: %v", r)
 		}
@@ -153,15 +154,18 @@ func CalculateAmount(
 	if modelPrice.ImageInputPrice > 0 {
 		inputTokens -= usage.ImageInputTokens
 	}
+
 	if modelPrice.CachedPrice > 0 {
 		inputTokens -= usage.CachedTokens
 	}
+
 	if modelPrice.CacheCreationPrice > 0 {
 		inputTokens -= usage.CacheCreationTokens
 	}
 
 	outputTokens := usage.OutputTokens
 	outputPrice := float64(modelPrice.OutputPrice)
+
 	outputPriceUnit := modelPrice.GetOutputPriceUnit()
 	if usage.ReasoningTokens != 0 && modelPrice.ThinkingModeOutputPrice != 0 {
 		outputPrice = float64(modelPrice.ThinkingModeOutputPrice)
@@ -212,6 +216,7 @@ func processGroupConsume(
 	consumedAmount, err := postGroupConsumer.PostGroupConsume(ctx, meta.Token.Name, amount)
 	if err != nil {
 		log.Error("error consuming token remain amount: " + err.Error())
+
 		if err := model.CreateConsumeError(
 			meta.RequestID,
 			meta.RequestAt,
@@ -224,7 +229,9 @@ func processGroupConsume(
 		); err != nil {
 			log.Error("failed to create consume error: " + err.Error())
 		}
+
 		return amount
 	}
+
 	return consumedAmount
 }

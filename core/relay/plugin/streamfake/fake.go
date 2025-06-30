@@ -45,6 +45,7 @@ func (p *StreamFake) getConfig(meta *meta.Meta) (*Config, error) {
 	if err := meta.ModelConfig.LoadPluginConfig("stream-fake", pluginConfig); err != nil {
 		return nil, err
 	}
+
 	return pluginConfig, nil
 }
 
@@ -121,6 +122,7 @@ func (p *StreamFake) DoResponse(
 	if !ok {
 		return do.DoResponse(meta, store, c, resp)
 	}
+
 	isFakeStreamBool, ok := isFakeStream.(bool)
 	if !ok || !isFakeStreamBool {
 		return do.DoResponse(meta, store, c, resp)
@@ -142,6 +144,7 @@ func (p *StreamFake) handleFakeStreamResponse(
 	rw := &fakeStreamResponseWriter{
 		ResponseWriter: c.Writer,
 	}
+
 	c.Writer = rw
 	defer func() {
 		c.Writer = rw.ResponseWriter
@@ -212,7 +215,9 @@ func (rw *fakeStreamResponseWriter) parseStreamingData(data []byte) error {
 	if err != nil {
 		return err
 	}
+
 	rw.lastChunk = &node
+
 	usageNode := node.Get("usage")
 	if err := usageNode.Check(); err != nil {
 		if !errors.Is(err, ast.ErrNotExist) {
@@ -232,37 +237,46 @@ func (rw *fakeStreamResponseWriter) parseStreamingData(data []byte) error {
 		if err := deltaNode.Check(); err != nil {
 			return true
 		}
+
 		content, err := deltaNode.Get("content").String()
 		if err == nil {
 			rw.contentBuilder.WriteString(content)
 		}
+
 		reasoningContent, err := deltaNode.Get("reasoning_content").String()
 		if err == nil {
 			rw.reasoningContent.WriteString(reasoningContent)
 		}
+
 		_ = deltaNode.Get("tool_calls").
 			ForEach(func(_ ast.Sequence, toolCallNode *ast.Node) bool {
 				toolCallRaw, err := toolCallNode.Raw()
 				if err != nil {
 					return true
 				}
+
 				var toolCall relaymodel.ToolCall
 				if err := sonic.UnmarshalString(toolCallRaw, &toolCall); err != nil {
 					return true
 				}
+
 				rw.toolCalls = mergeToolCalls(rw.toolCalls, &toolCall)
+
 				return true
 			})
+
 		finishReason, err := choiceNode.Get("finish_reason").String()
 		if err == nil && finishReason != "" {
 			rw.finishReason = finishReason
 		}
+
 		logprobsContentNode := choiceNode.Get("logprobs").Get("content")
 		if err := logprobsContentNode.Check(); err == nil {
 			l, err := logprobsContentNode.Len()
 			if err != nil {
 				return true
 			}
+
 			rw.logprobsContent = slices.Grow(rw.logprobsContent, l)
 			_ = logprobsContentNode.ForEach(
 				func(_ ast.Sequence, logprobsContentNode *ast.Node) bool {
@@ -271,6 +285,7 @@ func (rw *fakeStreamResponseWriter) parseStreamingData(data []byte) error {
 				},
 			)
 		}
+
 		return true
 	})
 }
@@ -285,6 +300,7 @@ func (rw *fakeStreamResponseWriter) convertToNonStream() ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	if rw.usageNode != nil {
 		_, err = lastChunk.Set("usage", *rw.usageNode)
 		if err != nil {
@@ -308,6 +324,7 @@ func (rw *fakeStreamResponseWriter) convertToNonStream() ([]byte, error) {
 		})
 		message["tool_calls"] = rw.toolCalls
 	}
+
 	if len(rw.logprobsContent) > 0 {
 		message["logprobs"] = map[string]any{
 			"content": rw.logprobsContent,
@@ -341,6 +358,7 @@ func mergeToolCalls(
 	} else {
 		oldToolCalls = append(oldToolCalls, newToolCall)
 	}
+
 	return oldToolCalls
 }
 

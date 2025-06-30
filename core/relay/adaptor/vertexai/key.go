@@ -15,6 +15,7 @@ func (a *Adaptor) ValidateKey(key string) error {
 	if err != nil {
 		return err
 	}
+
 	return nil
 }
 
@@ -24,14 +25,17 @@ func getConfigFromKey(key string) (Config, error) {
 	if !ok {
 		return Config{}, errors.New("invalid key format")
 	}
+
 	node, err := sonic.GetFromString(adcJSON, "project_id")
 	if err != nil {
 		return Config{}, err
 	}
+
 	projectID, err := node.String()
 	if err != nil {
 		return Config{}, err
 	}
+
 	return Config{
 		Region:    region,
 		ProjectID: projectID,

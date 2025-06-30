@@ -131,10 +131,12 @@ func (m *Meta) SetChannel(channel *model.Channel) {
 	m.Channel.Key = channel.Key
 	m.Channel.ID = channel.ID
 	m.Channel.Type = channel.Type
+
 	m.Channel.ModelMapping = channel.ModelMapping
 	if channel.Config != nil {
 		m.ChannelConfig = *channel.Config
 	}
+
 	m.ActualModel, _ = GetMappedModelName(m.OriginModel, channel.ModelMapping)
 }
 
@@ -166,6 +168,7 @@ func (m *Meta) MustGet(key string) any {
 	if !ok {
 		panic(fmt.Sprintf("meta key %s not found", key))
 	}
+
 	return v
 }
 
@@ -174,7 +177,9 @@ func (m *Meta) GetString(key string) string {
 	if !ok {
 		return ""
 	}
+
 	s, _ := v.(string)
+
 	return s
 }
 
@@ -183,7 +188,9 @@ func (m *Meta) GetBool(key string) bool {
 	if !ok {
 		return false
 	}
+
 	b, _ := v.(bool)
+
 	return b
 }
 
@@ -192,7 +199,9 @@ func (m *Meta) GetInt64(key string) int64 {
 	if !ok {
 		return 0
 	}
+
 	i, _ := v.(int64)
+
 	return i
 }
 
@@ -201,7 +210,9 @@ func (m *Meta) GetInt(key string) int {
 	if !ok {
 		return 0
 	}
+
 	i, _ := v.(int)
+
 	return i
 }
 
@@ -209,9 +220,11 @@ func GetMappedModelName(modelName string, mapping map[string]string) (string, bo
 	if len(modelName) == 0 {
 		return modelName, false
 	}
+
 	mappedModelName := mapping[modelName]
 	if mappedModelName != "" {
 		return mappedModelName, true
 	}
+
 	return modelName, false
 }

@@ -156,8 +156,10 @@ func (s *Server) handleSearch(
 	}
 
 	var response *SearchResponse
+
 	err := s.withRetry(ctx, func() error {
 		var err error
+
 		response, err = s.client.Search(ctx, params)
 		return err
 	})
@@ -320,8 +322,10 @@ func (s *Server) handleExtract(
 	}
 
 	var response *ExtractResponse
+
 	err := s.withRetry(ctx, func() error {
 		var err error
+
 		response, err = s.client.Extract(ctx, params)
 		return err
 	})
@@ -332,6 +336,7 @@ func (s *Server) handleExtract(
 				"Extraction is not supported by this self-hosted instance. Please ensure LLM support is configured.",
 			), nil
 		}
+
 		return mcp.NewToolResultError(fmt.Sprintf("Extraction failed: %v", err)), nil
 	}
 
@@ -433,8 +438,10 @@ func (s *Server) handleDeepResearch(
 	}
 
 	var response *DeepResearchResponse
+
 	err := s.withRetry(ctx, func() error {
 		var err error
+
 		response, err = s.client.DeepResearch(ctx, params)
 		return err
 	})
@@ -523,8 +530,10 @@ func (s *Server) handleGenerateLLMsText(
 	}
 
 	var response *GenerateLLMsTextResponse
+
 	err := s.withRetry(ctx, func() error {
 		var err error
+
 		response, err = s.client.GenerateLLMsText(ctx, params)
 		return err
 	})
@@ -705,8 +714,10 @@ func (s *Server) handleScrape(
 	}
 
 	var response *ScrapeResponse
+
 	err = s.withRetry(ctx, func() error {
 		var err error
+
 		response, err = s.client.ScrapeURL(ctx, params)
 		return err
 	})
@@ -856,8 +867,10 @@ func (s *Server) handleMap(
 	}
 
 	var response *MapResponse
+
 	err := s.withRetry(ctx, func() error {
 		var err error
+
 		response, err = s.client.MapURL(ctx, params)
 		return err
 	})
@@ -1045,8 +1058,10 @@ func (s *Server) handleCrawl(
 	}
 
 	var response *CrawlResponse
+
 	err := s.withRetry(ctx, func() error {
 		var err error
+
 		response, err = s.client.AsyncCrawlURL(ctx, params)
 		return err
 	})
@@ -1063,6 +1078,7 @@ func (s *Server) handleCrawl(
 		url,
 		response.ID,
 	)
+
 	return mcp.NewToolResultText(trimResponseText(message)), nil
 }
 

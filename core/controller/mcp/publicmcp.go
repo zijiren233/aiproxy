@@ -27,6 +27,7 @@ type PublicMCPResponse struct {
 
 func (mcp *PublicMCPResponse) MarshalJSON() ([]byte, error) {
 	type Alias PublicMCPResponse
+
 	a := &struct {
 		*Alias
 		CreatedAt int64 `json:"created_at"`
@@ -37,9 +38,11 @@ func (mcp *PublicMCPResponse) MarshalJSON() ([]byte, error) {
 	if !mcp.CreatedAt.IsZero() {
 		a.CreatedAt = mcp.CreatedAt.UnixMilli()
 	}
+
 	if !mcp.UpdateAt.IsZero() {
 		a.UpdateAt = mcp.UpdateAt.UnixMilli()
 	}
+
 	return sonic.Marshal(a)
 }
 
@@ -56,6 +59,7 @@ func NewPublicMCPEndpoint(host string, mcp model.PublicMCP) MCPEndpoint {
 			if defaultHost := config.GetDefaultMCPHost(); defaultHost != "" {
 				ep.Host = defaultHost
 			}
+
 			ep.SSE = fmt.Sprintf("/mcp/public/%s/sse", mcp.ID)
 			ep.StreamableHTTP = "/mcp/public/" + mcp.ID
 		} else {
@@ -65,6 +69,7 @@ func NewPublicMCPEndpoint(host string, mcp model.PublicMCP) MCPEndpoint {
 		}
 	case model.PublicMCPTypeDocs:
 	}
+
 	return ep
 }
 
@@ -80,6 +85,7 @@ func NewPublicMCPResponses(host string, mcps []model.PublicMCP) []PublicMCPRespo
 	for i, mcp := range mcps {
 		responses[i] = NewPublicMCPResponse(host, mcp)
 	}
+
 	return responses
 }
 
@@ -157,11 +163,13 @@ func GetPublicMCPs(c *gin.Context) {
 //	@Router			/api/mcp/publics/all [get]
 func GetAllPublicMCPs(c *gin.Context) {
 	status, _ := strconv.Atoi(c.Query("status"))
+
 	mcps, err := model.GetAllPublicMCPs(model.PublicMCPStatus(status))
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
+
 	middleware.SuccessResponse(c, NewPublicMCPResponses(c.Request.Host, mcps))
 }
 

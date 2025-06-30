@@ -25,6 +25,7 @@ func GetAllChannelModelErrorRates(c *gin.Context) {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
+
 	middleware.SuccessResponse(c, rates)
 }
 
@@ -44,11 +45,13 @@ func GetChannelModelErrorRates(c *gin.Context) {
 		middleware.ErrorResponse(c, http.StatusBadRequest, "Invalid channel ID")
 		return
 	}
+
 	rates, err := monitor.GetChannelModelErrorRates(c.Request.Context(), channelID)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
+
 	middleware.SuccessResponse(c, rates)
 }
 
@@ -67,6 +70,7 @@ func ClearAllModelErrors(c *gin.Context) {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
+
 	middleware.SuccessResponse(c, nil)
 }
 
@@ -86,11 +90,13 @@ func ClearChannelAllModelErrors(c *gin.Context) {
 		middleware.ErrorResponse(c, http.StatusBadRequest, "Invalid channel ID")
 		return
 	}
+
 	err = monitor.ClearChannelAllModelErrors(c.Request.Context(), int(channelID))
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
+
 	middleware.SuccessResponse(c, nil)
 }
 
@@ -107,16 +113,19 @@ func ClearChannelAllModelErrors(c *gin.Context) {
 //	@Router			/api/monitor/{id}/{model} [delete]
 func ClearChannelModelErrors(c *gin.Context) {
 	model := strings.TrimPrefix(c.Param("model"), "/")
+
 	channelID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusBadRequest, "Invalid channel ID")
 		return
 	}
+
 	err = monitor.ClearChannelModelErrors(c.Request.Context(), model, int(channelID))
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
+
 	middleware.SuccessResponse(c, nil)
 }
 
@@ -135,6 +144,7 @@ func GetModelsErrorRate(c *gin.Context) {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
+
 	middleware.SuccessResponse(c, rates)
 }
 
@@ -153,5 +163,6 @@ func GetAllBannedModelChannels(c *gin.Context) {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
+
 	middleware.SuccessResponse(c, channels)
 }

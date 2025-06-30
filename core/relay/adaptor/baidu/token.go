@@ -28,18 +28,22 @@ func GetAccessToken(ctx context.Context, apiKey string) (string, error) {
 		if !ok {
 			panic(fmt.Sprintf("invalid cache value type: %T", val))
 		}
+
 		return accessToken, nil
 	}
+
 	accessToken, err := getBaiduAccessTokenHelper(ctx, apiKey)
 	if err != nil {
 		log.Errorf("get baidu access token failed: %v", err)
 		return "", errors.New("get baidu access token failed")
 	}
+
 	tokenCache.Set(
 		apiKey,
 		accessToken.AccessToken,
 		time.Duration(accessToken.ExpiresIn)*time.Second-time.Minute*10,
 	)
+
 	return accessToken.AccessToken, nil
 }
 
@@ -48,6 +52,7 @@ func getBaiduAccessTokenHelper(ctx context.Context, apiKey string) (*AccessToken
 	if err != nil {
 		return nil, err
 	}
+
 	req, err := http.NewRequestWithContext(
 		ctx,
 		http.MethodPost,
@@ -61,8 +66,10 @@ func getBaiduAccessTokenHelper(ctx context.Context, apiKey string) (*AccessToken
 	if err != nil {
 		return nil, err
 	}
+
 	req.Header.Add("Content-Type", "application/json")
 	req.Header.Add("Accept", "application/json")
+
 	res, err := utils.DoRequest(req)
 	if err != nil {
 		return nil, err
@@ -70,10 +77,12 @@ func getBaiduAccessTokenHelper(ctx context.Context, apiKey string) (*AccessToken
 	defer res.Body.Close()
 
 	var accessToken AccessToken
+
 	err = sonic.ConfigDefault.NewDecoder(res.Body).Decode(&accessToken)
 	if err != nil {
 		return nil, err
 	}
+
 	if accessToken.Error != "" {
 		return nil, fmt.Errorf(
 			"get baidu access token failed: %s: %s",
@@ -81,8 +90,10 @@ func getBaiduAccessTokenHelper(ctx context.Context, apiKey string) (*AccessToken
 			accessToken.ErrorDescription,
 		)
 	}
+
 	if accessToken.AccessToken == "" {
 		return nil, errors.New("get baidu access token return empty access token")
 	}
+
 	return &accessToken, nil
 }

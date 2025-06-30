@@ -342,6 +342,7 @@ func TestPrice_ValidateConditionalPrices(t *testing.T) {
 				}
 				return
 			}
+
 			if err != nil {
 				t.Errorf("%s: ValidateConditionalPrices() unexpected error = %v", tt.name, err)
 			}

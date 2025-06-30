@@ -43,6 +43,7 @@ func ConvertRequest(meta *meta.Meta, req *http.Request) (adaptor.ConvertResult, 
 	if err != nil {
 		return adaptor.ConvertResult{}, err
 	}
+
 	request.Model = meta.ActualModel
 	baiduRequest := ChatRequest{
 		Messages:        request.Messages,
@@ -60,6 +61,7 @@ func ConvertRequest(meta *meta.Meta, req *http.Request) (adaptor.ConvertResult, 
 		if penaltyScore < -2.0 {
 			penaltyScore = -2.0
 		}
+
 		if penaltyScore > 2.0 {
 			penaltyScore = 2.0
 		}
@@ -71,6 +73,7 @@ func ConvertRequest(meta *meta.Meta, req *http.Request) (adaptor.ConvertResult, 
 	for i, message := range request.Messages {
 		if message.Role == "system" {
 			baiduRequest.System = message.StringContent()
+
 			request.Messages = append(request.Messages[:i], request.Messages[i+1:]...)
 			break
 		}
@@ -80,6 +83,7 @@ func ConvertRequest(meta *meta.Meta, req *http.Request) (adaptor.ConvertResult, 
 	if err != nil {
 		return adaptor.ConvertResult{}, err
 	}
+
 	return adaptor.ConvertResult{
 		Header: http.Header{
 			"Content-Type":   {"application/json"},
@@ -98,6 +102,7 @@ func response2OpenAI(meta *meta.Meta, response *ChatResponse) *relaymodel.TextRe
 		},
 		FinishReason: relaymodel.FinishReasonStop,
 	}
+
 	fullTextResponse := relaymodel.TextResponse{
 		ID:      response.ID,
 		Object:  relaymodel.ChatCompletionObject,
@@ -108,6 +113,7 @@ func response2OpenAI(meta *meta.Meta, response *ChatResponse) *relaymodel.TextRe
 	if response.Usage != nil {
 		fullTextResponse.Usage = *response.Usage
 	}
+
 	return &fullTextResponse
 }
 
@@ -116,10 +122,12 @@ func streamResponse2OpenAI(
 	baiduResponse *ChatStreamResponse,
 ) *relaymodel.ChatCompletionsStreamResponse {
 	var choice relaymodel.ChatCompletionsStreamResponseChoice
+
 	choice.Delta.Content = baiduResponse.Result
 	if baiduResponse.IsEnd {
 		choice.FinishReason = relaymodel.FinishReasonStop
 	}
+
 	response := relaymodel.ChatCompletionsStreamResponse{
 		ID:      baiduResponse.ID,
 		Object:  relaymodel.ChatCompletionChunkObject,
@@ -128,6 +136,7 @@ func streamResponse2OpenAI(
 		Choices: []*relaymodel.ChatCompletionsStreamResponseChoice{&choice},
 		Usage:   baiduResponse.Usage,
 	}
+
 	return &response
 }
 
@@ -141,9 +150,12 @@ func StreamHandler(
 	log := common.GetLogger(c)
 
 	var usage relaymodel.ChatUsage
+
 	scanner := bufio.NewScanner(resp.Body)
+
 	buf := openai.GetScannerBuffer()
 	defer openai.PutScannerBuffer(buf)
+
 	scanner.Buffer(*buf, cap(*buf))
 
 	for scanner.Scan() {
@@ -151,24 +163,29 @@ func StreamHandler(
 		if len(data) < openai.DataPrefixLength {
 			continue
 		}
+
 		if !slices.Equal(data[:openai.DataPrefixLength], openai.DataPrefixBytes) {
 			continue
 		}
+
 		data = bytes.TrimSpace(data[openai.DataPrefixLength:])
 		if slices.Equal(data, openai.DoneBytes) {
 			break
 		}
 
 		var baiduResponse ChatStreamResponse
+
 		err := sonic.Unmarshal(data, &baiduResponse)
 		if err != nil {
 			log.Error("error unmarshalling stream response: " + err.Error())
 			continue
 		}
+
 		response := streamResponse2OpenAI(meta, &baiduResponse)
 		if response.Usage != nil {
 			usage = *response.Usage
 		}
+
 		_ = openai.ObjectData(c, response)
 	}
 
@@ -185,6 +202,7 @@ func Handler(meta *meta.Meta, c *gin.Context, resp *http.Response) (model.Usage,
 	defer resp.Body.Close()
 
 	var baiduResponse ChatResponse
+
 	err := sonic.ConfigDefault.NewDecoder(resp.Body).Decode(&baiduResponse)
 	if err != nil {
 		return model.Usage{}, relaymodel.WrapperOpenAIError(
@@ -193,10 +211,13 @@ func Handler(meta *meta.Meta, c *gin.Context, resp *http.Response) (model.Usage,
 			http.StatusInternalServerError,
 		)
 	}
+
 	if baiduResponse.Error != nil && baiduResponse.ErrorCode != 0 {
 		return model.Usage{}, ErrorHandler(baiduResponse.Error)
 	}
+
 	fullTextResponse := response2OpenAI(meta, &baiduResponse)
+
 	jsonResponse, err := sonic.Marshal(fullTextResponse)
 	if err != nil {
 		return fullTextResponse.Usage.ToModelUsage(), relaymodel.WrapperOpenAIError(
@@ -205,8 +226,10 @@ func Handler(meta *meta.Meta, c *gin.Context, resp *http.Response) (model.Usage,
 			http.StatusInternalServerError,
 		)
 	}
+
 	c.Writer.Header().Set("Content-Type", "application/json")
 	c.Writer.Header().Set("Content-Length", strconv.Itoa(len(jsonResponse)))
 	_, _ = c.Writer.Write(jsonResponse)
+
 	return fullTextResponse.Usage.ToModelUsage(), nil
 }

@@ -32,10 +32,12 @@ func getRequestURL(meta *meta.Meta, action string) adaptor.RequestURL {
 	if u == "" {
 		u = baseURL
 	}
+
 	version := "v1beta"
 	if _, ok := v1ModelMap[meta.ActualModel]; ok {
 		version = "v1"
 	}
+
 	return adaptor.RequestURL{
 		Method: http.MethodPost,
 		URL:    fmt.Sprintf("%s/%s/models/%s:%s", u, version, meta.ActualModel, action),
@@ -54,6 +56,7 @@ func (a *Adaptor) GetRequestURL(meta *meta.Meta, _ adaptor.Store) (adaptor.Reque
 	if meta.GetBool("stream") {
 		action = "streamGenerateContent?alt=sse"
 	}
+
 	return getRequestURL(meta, action), nil
 }
 
@@ -113,6 +116,7 @@ func (a *Adaptor) DoResponse(
 			http.StatusBadRequest,
 		)
 	}
+
 	return
 }
 
