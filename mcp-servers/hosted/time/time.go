@@ -71,7 +71,7 @@ func getCurrentTime(timezoneName string) (*Result, error) {
 
 	// Check if DST is in effect
 	_, offset := currentTime.Zone()
-	stdTime := time.Date(currentTime.Year(), 1, 1, 12, 0, 0, 0, timezone)
+	stdTime := time.Date(currentTime.Year(), time.January, 1, 12, 0, 0, 0, timezone)
 	_, stdOffset := stdTime.Zone()
 	isDST := offset != stdOffset
 
@@ -130,11 +130,13 @@ func convertTime(sourceTimezone, timeStr, targetTimezone string) (*ConversionRes
 	}
 
 	// Check DST for source
-	_, sourceStdOffset := time.Date(sourceTime.Year(), 1, 1, 12, 0, 0, 0, sourceTZ).Zone()
+	_, sourceStdOffset := time.Date(sourceTime.Year(), time.January, 1, 12, 0, 0, 0, sourceTZ).
+		Zone()
 	sourceIsDST := sourceOffset != sourceStdOffset
 
 	// Check DST for target
-	_, targetStdOffset := time.Date(targetTime.Year(), 1, 1, 12, 0, 0, 0, targetTZ).Zone()
+	_, targetStdOffset := time.Date(targetTime.Year(), time.January, 1, 12, 0, 0, 0, targetTZ).
+		Zone()
 	targetIsDST := targetOffset != targetStdOffset
 
 	return &ConversionResult{

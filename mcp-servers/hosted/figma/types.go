@@ -91,7 +91,6 @@ type NodeData struct {
 	ComponentSets map[string]ComponentSet `json:"componentSets"`
 }
 
-//nolint:revive
 type FigmaNode struct {
 	ID                   string                            `json:"id"`
 	Name                 string                            `json:"name"`

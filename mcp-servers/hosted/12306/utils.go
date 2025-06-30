@@ -33,8 +33,8 @@ func (s *Server) checkDate(date string) bool {
 }
 
 // getCookie gets cookies from the specified URL
-func (s *Server) getCookie(urlStr string) (map[string]string, error) {
-	req, err := http.NewRequest(http.MethodGet, urlStr, nil)
+func (s *Server) getCookie(ctx context.Context, urlStr string) (map[string]string, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, urlStr, nil)
 	if err != nil {
 		return nil, err
 	}

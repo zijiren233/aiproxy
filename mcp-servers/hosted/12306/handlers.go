@@ -66,7 +66,7 @@ func (s *Server) handleGetTickets(
 	}
 
 	// Get cookies
-	cookies, err := s.getCookie(APIBase)
+	cookies, err := s.getCookie(ctx, APIBase)
 	if err != nil {
 		return nil, err
 	}
@@ -241,7 +241,7 @@ func (s *Server) handleGetInterlineTickets(
 	}
 
 	// Get cookies
-	cookies, err := s.getCookie(APIBase)
+	cookies, err := s.getCookie(ctx, APIBase)
 	if err != nil {
 		return nil, err
 	}
@@ -375,7 +375,7 @@ func (s *Server) handleGetTrainRouteStations(
 	}
 
 	// Get cookies
-	cookies, err := s.getCookie(APIBase)
+	cookies, err := s.getCookie(ctx, APIBase)
 	if err != nil {
 		return nil, err
 	}

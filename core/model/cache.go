@@ -749,14 +749,13 @@ func CacheGetStore(id string) (*StoreCache, error) {
 	return sc, nil
 }
 
-//nolint:revive
 type ModelConfigCache interface {
 	GetModelConfig(model string) (ModelConfig, bool)
 }
 
 // read-only cache
 //
-//nolint:revive
+
 type ModelCaches struct {
 	ModelConfig ModelConfigCache
 

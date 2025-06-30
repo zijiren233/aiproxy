@@ -81,6 +81,13 @@ linters:
       - builtin$
       - examples$
   settings:
+    revive:
+      rules:
+        - name: var-naming
+          arguments:
+            - []
+            - []
+            - [{ skipPackageNameChecks: true }]
     copyloopvar:
       check-alias: true
     cyclop:
@@ -95,6 +102,7 @@ linters:
       dot-import-whitelist: []
       http-status-code-whitelist: []
     usestdlibvars:
+      time-date-month: true
       time-month: true
       time-layout: true
       crypto-hash: true
