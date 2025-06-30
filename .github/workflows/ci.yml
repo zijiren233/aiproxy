@@ -54,8 +54,12 @@ jobs:
       - name: Auto Fix Diff Content
         if: ${{ failure() }}
         run: |
-          git diff --color=always
-          exit 1
+          if git diff --exit-code --color=always; then
+            echo "No changes detected after auto-fix"
+          else
+            git diff --color=always
+            exit 1
+          fi
 
   golangci-lint-mcpservers:
     name: Lint MCP Servers
@@ -92,8 +96,12 @@ jobs:
       - name: Auto Fix Diff Content
         if: ${{ failure() }}
         run: |
-          git diff --color=always
-          exit 1
+          if git diff --exit-code --color=always; then
+            echo "No changes detected after auto-fix"
+          else
+            git diff --color=always
+            exit 1
+          fi
 
   golangci-lint-openapimcp:
     name: Lint OpneAPI MCP
@@ -125,5 +133,9 @@ jobs:
       - name: Auto Fix Diff Content
         if: ${{ failure() }}
         run: |
-          git diff --color=always
-          exit 1
+          if git diff --exit-code --color=always; then
+            echo "No changes detected after auto-fix"
+          else
+            git diff --color=always
+            exit 1
+          fi
