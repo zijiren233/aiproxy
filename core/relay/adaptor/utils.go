@@ -36,14 +36,17 @@ func ValidateConfigTemplate(template ConfigTemplate) error {
 	if template.Name == "" {
 		return errors.New("config template is invalid: name is empty")
 	}
+
 	if template.Type == "" {
 		return fmt.Errorf("config template %s is invalid: type is empty", template.Name)
 	}
+
 	if template.Example != nil {
 		if err := ValidateConfigTemplateValue(template, template.Example); err != nil {
 			return fmt.Errorf("config template %s is invalid: %w", template.Name, err)
 		}
 	}
+
 	return nil
 }
 
@@ -51,6 +54,7 @@ func ValidateConfigTemplateValue(template ConfigTemplate, value any) error {
 	if template.Validator == nil {
 		return nil
 	}
+
 	switch template.Type {
 	case ConfigTypeString:
 		_, ok := value.(string)
@@ -75,6 +79,7 @@ func ValidateConfigTemplateValue(template ConfigTemplate, value any) error {
 			return fmt.Errorf("config template %s is invalid: value is not a object", template.Name)
 		}
 	}
+
 	if err := template.Validator(value); err != nil {
 		return fmt.Errorf(
 			"config template %s(%s) is invalid: %w",
@@ -83,5 +88,6 @@ func ValidateConfigTemplateValue(template ConfigTemplate, value any) error {
 			err,
 		)
 	}
+
 	return nil
 }

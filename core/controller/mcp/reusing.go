@@ -105,6 +105,7 @@ func (p *ReusingParamProcessor) ProcessEmbedReusingParams(
 			}
 			continue
 		}
+
 		reusingConfig[key] = value
 	}
 
@@ -128,5 +129,6 @@ func (p *ReusingParamProcessor) applyProxyParam(
 	default:
 		return fmt.Errorf("unknown param type: %s", paramType)
 	}
+
 	return nil
 }

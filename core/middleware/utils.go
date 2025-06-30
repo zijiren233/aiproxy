@@ -60,9 +60,11 @@ func GetMode(c *gin.Context) mode.Mode {
 	if !exists {
 		return mode.Unknown
 	}
+
 	v, ok := m.(mode.Mode)
 	if !ok {
 		panic(fmt.Sprintf("mode type error: %T, %v", v, v))
 	}
+
 	return v
 }

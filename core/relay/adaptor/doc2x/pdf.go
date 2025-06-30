@@ -64,6 +64,7 @@ func HandleParsePdfResponse(
 	resp *http.Response,
 ) (model.Usage, adaptor.Error) {
 	var response ParsePdfResponse
+
 	err := sonic.ConfigDefault.NewDecoder(resp.Body).Decode(&response)
 	if err != nil {
 		return model.Usage{}, relaymodel.WrapperOpenAIErrorWithMessage(
@@ -126,39 +127,49 @@ var (
 func HTMLTable2Md(content string) string {
 	return tableRegex.ReplaceAllStringFunc(content, func(htmlTable string) string {
 		cleanHTML := whitespaceRegex.ReplaceAllString(htmlTable, "")
+
 		rows := rowRegex.FindAllString(cleanHTML, -1)
 		if len(rows) == 0 {
 			return htmlTable
 		}
+
 		var tableData [][]string
+
 		maxColumns := 0
 		for rowIndex, row := range rows {
 			for len(tableData) <= rowIndex {
 				tableData = append(tableData, []string{})
 			}
+
 			colIndex := 0
+
 			cells := cellRegex.FindAllString(row, -1)
 			if len(cells) > maxColumns {
 				maxColumns = len(cells)
 			}
+
 			for _, cell := range cells {
 				colspan := 1
 				if matches := colspanRegex.FindStringSubmatch(cell); len(matches) > 1 {
 					colspan, _ = strconv.Atoi(matches[1])
 				}
+
 				rowspan := 1
 				if matches := rowspanRegex.FindStringSubmatch(cell); len(matches) > 1 {
 					rowspan, _ = strconv.Atoi(matches[1])
 				}
+
 				content := strings.TrimSpace(tdCleanRegex.ReplaceAllString(cell, ""))
 				for i := range rowspan {
 					for j := range colspan {
 						for len(tableData) <= rowIndex+i {
 							tableData = append(tableData, []string{})
 						}
+
 						for len(tableData[rowIndex+i]) <= colIndex+j {
 							tableData[rowIndex+i] = append(tableData[rowIndex+i], "")
 						}
+
 						if i == 0 && j == 0 {
 							tableData[rowIndex+i][colIndex+j] = content
 						} else {
@@ -166,15 +177,19 @@ func HTMLTable2Md(content string) string {
 						}
 					}
 				}
+
 				colIndex += colspan
 			}
 		}
+
 		for i := range tableData {
 			for len(tableData[i]) < maxColumns {
 				tableData[i] = append(tableData[i], " ")
 			}
 		}
+
 		var chunks []string
+
 		headerCells := make([]string, maxColumns)
 		for i := range maxColumns {
 			if i < len(tableData[0]) {
@@ -183,15 +198,19 @@ func HTMLTable2Md(content string) string {
 				headerCells[i] = " "
 			}
 		}
+
 		chunks = append(chunks, fmt.Sprintf("| %s |", strings.Join(headerCells, " | ")))
+
 		separatorCells := make([]string, maxColumns)
 		for i := range maxColumns {
 			separatorCells[i] = "---"
 		}
+
 		chunks = append(chunks, fmt.Sprintf("| %s |", strings.Join(separatorCells, " | ")))
 		for _, row := range tableData[1:] {
 			chunks = append(chunks, fmt.Sprintf("| %s |", strings.Join(row, " | ")))
 		}
+
 		return strings.Join(chunks, "\n")
 	})
 }
@@ -208,9 +227,11 @@ func InlineMdImage(ctx context.Context, text string) string {
 		return text
 	}
 
-	var resultText strings.Builder
-	var wg sync.WaitGroup
-	var mutex sync.Mutex
+	var (
+		resultText strings.Builder
+		wg         sync.WaitGroup
+		mutex      sync.Mutex
+	)
 
 	type imageInfo struct {
 		startPos    int
@@ -236,8 +257,10 @@ func InlineMdImage(ctx context.Context, text string) string {
 
 	for i := range imageInfos {
 		wg.Add(1)
+
 		go func(index int) {
 			defer wg.Done()
+
 			info := &imageInfos[index]
 
 			replacement, err := imageURL2MdBase64(ctx, info.url, info.altText)
@@ -245,13 +268,18 @@ func InlineMdImage(ctx context.Context, text string) string {
 				log.Printf("failed to process image %s: %v", info.url, err)
 				// when the image is not found, keep the original link
 				mutex.Lock()
+
 				info.replacement = text[info.startPos:info.endPos]
+
 				mutex.Unlock()
+
 				return
 			}
 
 			mutex.Lock()
+
 			info.replacement = replacement
+
 			mutex.Unlock()
 		}(i)
 	}
@@ -264,6 +292,7 @@ func InlineMdImage(ctx context.Context, text string) string {
 		resultText.WriteString(info.replacement)
 		lastPos = info.endPos
 	}
+
 	resultText.WriteString(text[lastPos:])
 
 	return resultText.String()
@@ -275,8 +304,11 @@ func imageURL2MdBase64(ctx context.Context, url, altText string) (string, error)
 		return "", fmt.Errorf("failed to create request: %w", err)
 	}
 
-	var resp *http.Response
-	var downloadErr error
+	var (
+		resp        *http.Response
+		downloadErr error
+	)
+
 	retries := 0
 	maxRetries := 3
 
@@ -285,8 +317,10 @@ func imageURL2MdBase64(ctx context.Context, url, altText string) (string, error)
 		if downloadErr != nil {
 			return "", fmt.Errorf("failed to download image: %w", downloadErr)
 		}
+
 		if resp.StatusCode == http.StatusNotFound {
 			resp.Body.Close()
+
 			if retries == maxRetries {
 				return "", fmt.Errorf(
 					"failed to download image, status code: %d after %d retries",
@@ -294,27 +328,36 @@ func imageURL2MdBase64(ctx context.Context, url, altText string) (string, error)
 					retries,
 				)
 			}
+
 			retries++
+
 			time.Sleep(1 * time.Second)
+
 			continue
 		}
+
 		if resp.StatusCode != http.StatusOK {
 			resp.Body.Close()
 			return "", fmt.Errorf("failed to download image, status code: %d", resp.StatusCode)
 		}
+
 		break
 	}
+
 	defer resp.Body.Close()
 
 	data, err := common.GetResponseBody(resp)
 	if err != nil {
 		return "", fmt.Errorf("failed to read image data: %w", err)
 	}
+
 	mime := resp.Header.Get("Content-Type")
 	if mime == "" {
 		mime = inferMimeType(url)
 	}
+
 	base64Data := base64.StdEncoding.EncodeToString(data)
+
 	return fmt.Sprintf("![%s](data:%s;base64,%s)", altText, mime, base64Data), nil
 }
 
@@ -355,11 +398,13 @@ func handleParsePdfResponse(
 	response *StatusResponseDataResult,
 ) (model.Usage, adaptor.Error) {
 	mds := make([]string, 0, len(response.Pages))
+
 	totalLength := 0
 	for _, page := range response.Pages {
 		mds = append(mds, page.MD)
 		totalLength += len(page.MD)
 	}
+
 	pages := int64(len(response.Pages))
 
 	switch meta.GetString("response_format") {
@@ -368,15 +413,18 @@ func handleParsePdfResponse(
 			result := handleConvertPdfToMd(c.Request.Context(), md)
 			mds[i] = result
 		}
+
 		c.JSON(http.StatusOK, relaymodel.ParsePdfListResponse{
 			Markdowns: mds,
 		})
 	default:
 		builder := strings.Builder{}
 		builder.Grow(totalLength)
+
 		for _, md := range mds {
 			builder.WriteString(md)
 		}
+
 		result := handleConvertPdfToMd(c.Request.Context(), builder.String())
 		c.JSON(http.StatusOK, relaymodel.ParsePdfResponse{
 			Pages:    pages,
@@ -424,12 +472,14 @@ type StatusResponseDataResultPage struct {
 
 func GetStatus(ctx context.Context, meta *meta.Meta, uid string) (*StatusResponseData, error) {
 	url := fmt.Sprintf("%s/api/v2/parse/status?uid=%s", meta.Channel.BaseURL, uid)
+
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, err
 	}
 
 	req.Header.Set("Authorization", "Bearer "+meta.Channel.Key)
+
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, err
@@ -437,6 +487,7 @@ func GetStatus(ctx context.Context, meta *meta.Meta, uid string) (*StatusRespons
 	defer resp.Body.Close()
 
 	var response StatusResponse
+
 	err = sonic.ConfigDefault.NewDecoder(resp.Body).Decode(&response)
 	if err != nil {
 		return nil, err

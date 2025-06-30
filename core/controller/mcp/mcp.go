@@ -68,6 +68,7 @@ func processMCPSSEMpscMessages(
 			if err != nil {
 				return
 			}
+
 			if err := server.HandleMessage(ctx, data); err != nil {
 				continue
 			}
@@ -117,17 +118,21 @@ func sendMCPSSEMessage(c *gin.Context, sessionID string) {
 		http.Error(c.Writer, "invalid session", http.StatusBadRequest)
 		return
 	}
+
 	mpscInstance := getMCPMpsc()
+
 	body, err := common.GetRequestBody(c.Request)
 	if err != nil {
 		http.Error(c.Writer, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
 	err = mpscInstance.send(c.Request.Context(), sessionID, body)
 	if err != nil {
 		http.Error(c.Writer, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
 	c.Writer.WriteHeader(http.StatusAccepted)
 }
 
@@ -139,8 +144,10 @@ func handleStreamableMCPServer(c *gin.Context, s mcpservers.Server) {
 			mcp.METHOD_NOT_FOUND,
 			"method not allowed",
 		))
+
 		return
 	}
+
 	reqBody, err := common.GetRequestBody(c.Request)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, mcpservers.CreateMCPErrorResponse(
@@ -148,14 +155,17 @@ func handleStreamableMCPServer(c *gin.Context, s mcpservers.Server) {
 			mcp.PARSE_ERROR,
 			err.Error(),
 		))
+
 		return
 	}
+
 	respMessage := s.HandleMessage(c.Request.Context(), reqBody)
 	if respMessage == nil {
 		// For notifications, just send 202 Accepted with no body
 		c.Status(http.StatusAccepted)
 		return
 	}
+
 	c.JSON(http.StatusOK, respMessage)
 }
 
@@ -171,8 +181,10 @@ func handleGroupStreamable(c *gin.Context, groupMcp *model.GroupMCPCache) {
 				mcp.INVALID_REQUEST,
 				err.Error(),
 			))
+
 			return
 		}
+
 		handleStreamableMCPServer(c, server)
 	default:
 		c.JSON(http.StatusBadRequest, mcpservers.CreateMCPErrorResponse(
@@ -191,8 +203,11 @@ func newOpenAPIMCPServer(config *model.MCPOpenAPIConfig) (mcpservers.Server, err
 
 	// Parse OpenAPI specification
 	parser := convert.NewParser()
-	var err error
-	var openAPIFrom string
+
+	var (
+		err         error
+		openAPIFrom string
+	)
 
 	if config.OpenAPISpec != "" {
 		openAPIFrom, err = parseOpenAPIFromURL(config, parser)
@@ -210,6 +225,7 @@ func newOpenAPIMCPServer(config *model.MCPOpenAPIConfig) (mcpservers.Server, err
 		ServerAddr:    config.ServerAddr,
 		Authorization: config.Authorization,
 	})
+
 	s, err := converter.Convert()
 	if err != nil {
 		return nil, err
@@ -258,6 +274,7 @@ func (m *sseEndpointProvider) LoadEndpoint(endpoint string) (session string) {
 	if err != nil {
 		return ""
 	}
+
 	return parsedURL.Query().Get("sessionId")
 }
 
@@ -271,5 +288,6 @@ func MCPMessage(c *gin.Context) {
 		http.Error(c.Writer, "missing sessionId", http.StatusBadRequest)
 		return
 	}
+
 	sendMCPSSEMessage(c, sessionID)
 }

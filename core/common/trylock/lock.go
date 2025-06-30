@@ -25,6 +25,7 @@ func cleanMemLock() {
 			if !ok || now.After(exp) {
 				memRecord.CompareAndDelete(key, value)
 			}
+
 			return true
 		})
 	}
@@ -39,17 +40,20 @@ func MemLock(key string, expiration time.Duration) bool {
 		if !loaded {
 			return true
 		}
+
 		oldExpiration, ok := actual.(time.Time)
 		if !ok {
 			memRecord.CompareAndDelete(key, actual)
 			continue
 		}
+
 		if now.After(oldExpiration) {
 			if memRecord.CompareAndSwap(key, actual, newExpiration) {
 				return true
 			}
 			continue
 		}
+
 		return false
 	}
 }
@@ -58,8 +62,10 @@ func Lock(key string, expiration time.Duration) bool {
 	if !common.RedisEnabled {
 		return MemLock(key, expiration)
 	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
+
 	result, err := common.RDB.SetNX(ctx, common.RedisKey(key), true, expiration).Result()
 	if err != nil {
 		if MemLock("lockerror", time.Second*3) {
@@ -67,5 +73,6 @@ func Lock(key string, expiration time.Duration) bool {
 		}
 		return MemLock(key, expiration)
 	}
+
 	return result
 }

@@ -30,30 +30,35 @@ func BuildRequest(modelConfig model.ModelConfig) (io.Reader, mode.Mode, error) {
 		if err != nil {
 			return nil, mode.Unknown, err
 		}
+
 		return body, mode.ChatCompletions, nil
 	case mode.Completions:
 		body, err := BuildCompletionsRequest(modelConfig.Model)
 		if err != nil {
 			return nil, mode.Unknown, err
 		}
+
 		return body, mode.Completions, nil
 	case mode.Embeddings:
 		body, err := BuildEmbeddingsRequest(modelConfig.Model)
 		if err != nil {
 			return nil, mode.Unknown, err
 		}
+
 		return body, mode.Embeddings, nil
 	case mode.Moderations:
 		body, err := BuildModerationsRequest(modelConfig.Model)
 		if err != nil {
 			return nil, mode.Unknown, err
 		}
+
 		return body, mode.Moderations, nil
 	case mode.ImagesGenerations:
 		body, err := BuildImagesGenerationsRequest(modelConfig)
 		if err != nil {
 			return nil, mode.Unknown, err
 		}
+
 		return body, mode.ImagesGenerations, nil
 	case mode.ImagesEdits:
 		return nil, mode.Unknown, NewErrUnsupportedModelType("edits")
@@ -62,6 +67,7 @@ func BuildRequest(modelConfig model.ModelConfig) (io.Reader, mode.Mode, error) {
 		if err != nil {
 			return nil, mode.Unknown, err
 		}
+
 		return body, mode.AudioSpeech, nil
 	case mode.AudioTranscription:
 		return nil, mode.Unknown, NewErrUnsupportedModelType("audio transcription")
@@ -72,6 +78,7 @@ func BuildRequest(modelConfig model.ModelConfig) (io.Reader, mode.Mode, error) {
 		if err != nil {
 			return nil, mode.Unknown, err
 		}
+
 		return body, mode.Rerank, nil
 	case mode.ParsePdf:
 		return nil, mode.Unknown, NewErrUnsupportedModelType("parse pdf")
@@ -90,10 +97,12 @@ func BuildChatCompletionRequest(model string) (io.Reader, error) {
 			},
 		},
 	}
+
 	jsonBytes, err := sonic.Marshal(testRequest)
 	if err != nil {
 		return nil, err
 	}
+
 	return bytes.NewReader(jsonBytes), nil
 }
 
@@ -102,10 +111,12 @@ func BuildCompletionsRequest(model string) (io.Reader, error) {
 		Model:  model,
 		Prompt: "hi",
 	}
+
 	jsonBytes, err := sonic.Marshal(completionsRequest)
 	if err != nil {
 		return nil, err
 	}
+
 	return bytes.NewReader(jsonBytes), nil
 }
 
@@ -114,10 +125,12 @@ func BuildEmbeddingsRequest(model string) (io.Reader, error) {
 		Model: model,
 		Input: "hi",
 	}
+
 	jsonBytes, err := sonic.Marshal(embeddingsRequest)
 	if err != nil {
 		return nil, err
 	}
+
 	return bytes.NewReader(jsonBytes), nil
 }
 
@@ -126,10 +139,12 @@ func BuildModerationsRequest(model string) (io.Reader, error) {
 		Model: model,
 		Input: "hi",
 	}
+
 	jsonBytes, err := sonic.Marshal(moderationsRequest)
 	if err != nil {
 		return nil, err
 	}
+
 	return bytes.NewReader(jsonBytes), nil
 }
 
@@ -143,10 +158,12 @@ func BuildImagesGenerationsRequest(modelConfig model.ModelConfig) (io.Reader, er
 		imagesGenerationsRequest.Size = size
 		break
 	}
+
 	jsonBytes, err := sonic.Marshal(imagesGenerationsRequest)
 	if err != nil {
 		return nil, err
 	}
+
 	return bytes.NewReader(jsonBytes), nil
 }
 
@@ -155,10 +172,12 @@ func BuildAudioSpeechRequest(model string) (io.Reader, error) {
 		Model: model,
 		Input: "hi",
 	}
+
 	jsonBytes, err := sonic.Marshal(audioSpeechRequest)
 	if err != nil {
 		return nil, err
 	}
+
 	return bytes.NewReader(jsonBytes), nil
 }
 
@@ -168,9 +187,11 @@ func BuildRerankRequest(model string) (io.Reader, error) {
 		Query:     "hi",
 		Documents: []string{"hi"},
 	}
+
 	jsonBytes, err := sonic.Marshal(rerankRequest)
 	if err != nil {
 		return nil, err
 	}
+
 	return bytes.NewReader(jsonBytes), nil
 }

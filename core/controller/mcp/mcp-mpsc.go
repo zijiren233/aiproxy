@@ -32,6 +32,7 @@ func getMCPMpsc() mpsc {
 		})
 		return redisMCPMpsc
 	}
+
 	return memMCPMpsc
 }
 
@@ -63,6 +64,7 @@ func (c *channelMCPMpsc) cleanupExpiredChannels() {
 
 	for range ticker.C {
 		c.channelMutex.Lock()
+
 		now := time.Now()
 		for id, lastAccess := range c.lastAccess {
 			if now.Sub(lastAccess) > 15*time.Second {
@@ -71,9 +73,11 @@ func (c *channelMCPMpsc) cleanupExpiredChannels() {
 					close(ch)
 					delete(c.channels, id)
 				}
+
 				delete(c.lastAccess, id)
 			}
 		}
+
 		c.channelMutex.Unlock()
 	}
 }
@@ -86,10 +90,12 @@ func (c *channelMCPMpsc) getOrCreateChannel(id string) chan []byte {
 
 	if !exists {
 		c.channelMutex.Lock()
+
 		if ch, exists = c.channels[id]; !exists {
 			ch = make(chan []byte, 10)
 			c.channels[id] = ch
 		}
+
 		c.lastAccess[id] = time.Now()
 		c.channelMutex.Unlock()
 	} else {
@@ -147,6 +153,7 @@ func (r *redisMCPMPSC) send(ctx context.Context, id string, data []byte) error {
 	pipe.LPush(ctx, id, data)
 	pipe.Expire(ctx, id, 15*time.Second)
 	_, err := pipe.Exec(ctx)
+
 	return err
 }
 
@@ -163,11 +170,14 @@ func (r *redisMCPMPSC) recv(ctx context.Context, id string) ([]byte, error) {
 					runtime.Gosched()
 					continue
 				}
+
 				return nil, err
 			}
+
 			if len(result) != 2 {
 				return nil, errors.New("invalid BRPop result")
 			}
+
 			return []byte(result[1]), nil
 		}
 	}

@@ -33,8 +33,10 @@ func NewMemStore() *MemStore {
 
 func (s *MemStore) New() string {
 	var buf [32]byte
+
 	bytes := uuid.New()
 	hex.Encode(buf[:], bytes[:])
+
 	return string(buf[:])
 }
 
@@ -42,6 +44,7 @@ func (s *MemStore) New() string {
 func (s *MemStore) Set(sessionID, endpoint string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+
 	s.sessions[sessionID] = endpoint
 }
 
@@ -49,7 +52,9 @@ func (s *MemStore) Set(sessionID, endpoint string) {
 func (s *MemStore) Get(sessionID string) (string, bool) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
+
 	endpoint, ok := s.sessions[sessionID]
+
 	return endpoint, ok
 }
 
@@ -57,5 +62,6 @@ func (s *MemStore) Get(sessionID string) (string, bool) {
 func (s *MemStore) Delete(sessionID string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+
 	delete(s.sessions, sessionID)
 }

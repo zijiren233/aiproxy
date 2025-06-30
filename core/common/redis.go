@@ -36,9 +36,11 @@ func RedisKey(keys ...string) string {
 	if len(keys) == 0 {
 		panic("redis keys is empty")
 	}
+
 	if len(keys) == 1 {
 		return RedisKeyPrefix() + ":" + keys[0]
 	}
+
 	return RedisKeyPrefix() + ":" + strings.Join(keys, ":")
 }
 
@@ -49,12 +51,16 @@ func InitRedisClient() (err error) {
 		log.Info("REDIS not set, redis is not enabled")
 		return nil
 	}
+
 	RedisEnabled = true
+
 	log.Info("redis is enabled")
+
 	opt, err := redis.ParseURL(redisConn)
 	if err != nil {
 		log.Fatal("failed to parse redis connection string: " + err.Error())
 	}
+
 	RDB = redis.NewClient(opt)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)

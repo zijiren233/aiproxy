@@ -129,6 +129,7 @@ func ListTools(ctx context.Context) ([]mcp.Tool, error) {
 	jinaServer.addJinaReaderTool()
 	jinaServer.addJinaSearchTool()
 	jinaServer.addJinaFactCheckTool()
+
 	return mcpservers.ListServerTools(ctx, jinaServer)
 }
 
@@ -424,8 +425,10 @@ func (s *JinaServer) handleJinaSearch(
 			if result.Date != "" {
 				part += "\n   Date: " + result.Date
 			}
+
 			parts = append(parts, part)
 		}
+
 		formattedOutput = strings.Join(parts, "\n\n")
 
 	case "html":
@@ -447,6 +450,7 @@ func (s *JinaServer) handleJinaSearch(
 				}())
 			parts = append(parts, part)
 		}
+
 		formattedOutput = fmt.Sprintf("<ol>%s</ol>", strings.Join(parts, ""))
 
 	default: // text
@@ -460,8 +464,10 @@ func (s *JinaServer) handleJinaSearch(
 			if result.Date != "" {
 				part += "\n   Date: " + result.Date
 			}
+
 			parts = append(parts, part)
 		}
+
 		formattedOutput = strings.Join(parts, "\n\n")
 	}
 

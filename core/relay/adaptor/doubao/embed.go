@@ -10,6 +10,7 @@ func patchEmbeddingsVisionInput(node *ast.Node) error {
 	if !inputNode.Exists() {
 		return nil
 	}
+
 	switch inputNode.TypeSafe() {
 	case ast.V_ARRAY:
 		return inputNode.ForEach(func(_ ast.Sequence, item *ast.Node) bool {
@@ -19,10 +20,12 @@ func patchEmbeddingsVisionInput(node *ast.Node) error {
 				if err != nil {
 					return false
 				}
+
 				*item = ast.NewObject([]ast.Pair{
 					ast.NewPair("type", ast.NewString("text")),
 					ast.NewPair("text", ast.NewString(text)),
 				})
+
 				return true
 			case ast.V_OBJECT:
 				textNode := item.Get("text")
@@ -37,14 +40,17 @@ func patchEmbeddingsVisionInput(node *ast.Node) error {
 					if err != nil {
 						return false
 					}
+
 					_, err = item.Unset("image")
 					if err != nil {
 						return false
 					}
+
 					_, err = item.Set("type", ast.NewString("image_url"))
 					if err != nil {
 						return false
 					}
+
 					_, err = item.SetAny("image_url", map[string]string{
 						"url": imageURL,
 					})
@@ -52,6 +58,7 @@ func patchEmbeddingsVisionInput(node *ast.Node) error {
 						return false
 					}
 				}
+
 				return true
 			default:
 				return false
@@ -62,12 +69,14 @@ func patchEmbeddingsVisionInput(node *ast.Node) error {
 		if err != nil {
 			return err
 		}
+
 		_, err = node.SetAny("input", []map[string]string{
 			{
 				"type": "text",
 				"text": inputText,
 			},
 		})
+
 		return err
 	default:
 		return nil
@@ -83,6 +92,7 @@ func patchEmbeddingsVisionResponse(node *ast.Node) error {
 	if !dataNode.Exists() {
 		return nil
 	}
+
 	switch dataNode.TypeSafe() {
 	case ast.V_ARRAY:
 		return nil
@@ -91,10 +101,12 @@ func patchEmbeddingsVisionResponse(node *ast.Node) error {
 		if !embeddingNode.Exists() {
 			return nil
 		}
+
 		_, err := node.Unset("data")
 		if err != nil {
 			return err
 		}
+
 		_, err = node.SetAny("data", []map[string]any{
 			{
 				"embedding": embeddingNode,
@@ -102,6 +114,7 @@ func patchEmbeddingsVisionResponse(node *ast.Node) error {
 				"index":     0,
 			},
 		})
+
 		return err
 	default:
 		return nil

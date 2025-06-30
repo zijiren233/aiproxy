@@ -34,10 +34,12 @@ func GetImagesEditsRequestUsage(c *gin.Context, mc model.ModelConfig) (model.Usa
 	if err != nil {
 		return model.Usage{}, err
 	}
+
 	images := int64(len(mutliForms.File["image"]))
 
 	prompt := c.PostForm("prompt")
 	nStr := c.PostForm("n")
+
 	n := 1
 	if nStr != "" {
 		n, err = strconv.Atoi(nStr)

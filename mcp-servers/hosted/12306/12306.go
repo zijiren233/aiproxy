@@ -99,6 +99,7 @@ func (s *Server) initialize(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to load stations: %w", err)
 	}
+
 	s.stations = stations
 
 	// Build station lookup maps
@@ -109,6 +110,7 @@ func (s *Server) initialize(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to get LC query path: %w", err)
 	}
+
 	s.lcQueryPath = lcQueryPath
 
 	return nil
@@ -131,6 +133,7 @@ func (s *Server) buildStationMaps() {
 		if s.cityStations[city] == nil {
 			s.cityStations[city] = []StationInfo{}
 		}
+
 		s.cityStations[city] = append(s.cityStations[city], stationInfo)
 
 		// Build name stations map

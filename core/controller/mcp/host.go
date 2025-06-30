@@ -49,6 +49,7 @@ func HostMCPSSEServer(c *gin.Context) {
 			http.Error(c.Writer, err.Error(), http.StatusBadRequest)
 			return
 		}
+
 		if publicMcp.Status != model.PublicMCPStatusEnabled {
 			http.Error(c.Writer, "mcp is not enabled", http.StatusBadRequest)
 			return
@@ -66,6 +67,7 @@ func HostMCPSSEServer(c *gin.Context) {
 			http.Error(c.Writer, err.Error(), http.StatusNotFound)
 			return
 		}
+
 		if groupMcp.Status != model.GroupMCPStatusEnabled {
 			http.Error(c.Writer, "mcp is not enabled", http.StatusNotFound)
 			return
@@ -91,14 +93,17 @@ func HostMCPStreamable(c *gin.Context) {
 				mcp.INVALID_REQUEST,
 				err.Error(),
 			))
+
 			return
 		}
+
 		if publicMcp.Status != model.PublicMCPStatusEnabled {
 			c.JSON(http.StatusNotFound, mcpservers.CreateMCPErrorResponse(
 				mcp.NewRequestId(nil),
 				mcp.INVALID_REQUEST,
 				"mcp is not enabled",
 			))
+
 			return
 		}
 
@@ -116,14 +121,17 @@ func HostMCPStreamable(c *gin.Context) {
 				mcp.INVALID_REQUEST,
 				err.Error(),
 			))
+
 			return
 		}
+
 		if groupMcp.Status != model.GroupMCPStatusEnabled {
 			c.JSON(http.StatusNotFound, mcpservers.CreateMCPErrorResponse(
 				mcp.NewRequestId(nil),
 				mcp.INVALID_REQUEST,
 				"mcp is not enabled",
 			))
+
 			return
 		}
 

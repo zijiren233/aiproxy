@@ -92,6 +92,7 @@ func NewServer(config, reuse map[string]string) (mcpservers.Server, error) {
 	if apiKey == "" {
 		apiKey = reuse["tavily_api_key"]
 	}
+
 	if apiKey == "" {
 		return nil, errors.New("tavily_api_key is required")
 	}
@@ -138,6 +139,7 @@ func ListTools(ctx context.Context) ([]mcp.Tool, error) {
 		MCPServer: server.NewMCPServer("tavily-mcp", "0.2.2"),
 	}
 	tavilyServer.addTools()
+
 	return mcpservers.ListServerTools(ctx, tavilyServer)
 }
 
@@ -438,6 +440,7 @@ func (s *Server) handleSearch(
 	if searchDepth, ok := args["search_depth"].(string); ok {
 		params["search_depth"] = searchDepth
 	}
+
 	if topic, ok := args["topic"].(string); ok {
 		params["topic"] = topic
 		// If country is set, ensure topic is general
@@ -446,24 +449,31 @@ func (s *Server) handleSearch(
 			params["country"] = country
 		}
 	}
+
 	if days, ok := args["days"].(float64); ok {
 		params["days"] = int(days)
 	}
+
 	if timeRange, ok := args["time_range"].(string); ok {
 		params["time_range"] = timeRange
 	}
+
 	if maxResults, ok := args["max_results"].(float64); ok {
 		params["max_results"] = int(maxResults)
 	}
+
 	if includeImages, ok := args["include_images"].(bool); ok {
 		params["include_images"] = includeImages
 	}
+
 	if includeImageDescriptions, ok := args["include_image_descriptions"].(bool); ok {
 		params["include_image_descriptions"] = includeImageDescriptions
 	}
+
 	if includeRawContent, ok := args["include_raw_content"].(bool); ok {
 		params["include_raw_content"] = includeRawContent
 	}
+
 	if includeDomains, ok := args["include_domains"].([]any); ok {
 		domains := make([]string, 0, len(includeDomains))
 		for _, domain := range includeDomains {
@@ -471,8 +481,10 @@ func (s *Server) handleSearch(
 				domains = append(domains, domainStr)
 			}
 		}
+
 		params["include_domains"] = domains
 	}
+
 	if excludeDomains, ok := args["exclude_domains"].([]any); ok {
 		domains := make([]string, 0, len(excludeDomains))
 		for _, domain := range excludeDomains {
@@ -480,10 +492,12 @@ func (s *Server) handleSearch(
 				domains = append(domains, domainStr)
 			}
 		}
+
 		params["exclude_domains"] = domains
 	}
 
 	var searchResponse Response
+
 	err := s.makeRequest(ctx, "search", params, &searchResponse)
 	if err != nil {
 		return nil, fmt.Errorf("tavily search failed: %w", err)
@@ -525,14 +539,17 @@ func (s *Server) handleExtract(
 	if extractDepth, ok := args["extract_depth"].(string); ok {
 		params["extract_depth"] = extractDepth
 	}
+
 	if includeImages, ok := args["include_images"].(bool); ok {
 		params["include_images"] = includeImages
 	}
+
 	if format, ok := args["format"].(string); ok {
 		params["format"] = format
 	}
 
 	var extractResponse Response
+
 	err := s.makeRequest(ctx, "extract", params, &extractResponse)
 	if err != nil {
 		return nil, fmt.Errorf("tavily extract failed: %w", err)
@@ -563,15 +580,19 @@ func (s *Server) handleCrawl(
 	if maxDepth, ok := args["max_depth"].(float64); ok {
 		params["max_depth"] = int(maxDepth)
 	}
+
 	if maxBreadth, ok := args["max_breadth"].(float64); ok {
 		params["max_breadth"] = int(maxBreadth)
 	}
+
 	if limit, ok := args["limit"].(float64); ok {
 		params["limit"] = int(limit)
 	}
+
 	if instructions, ok := args["instructions"].(string); ok {
 		params["instructions"] = instructions
 	}
+
 	if selectPaths, ok := args["select_paths"].([]any); ok {
 		paths := make([]string, 0, len(selectPaths))
 		for _, path := range selectPaths {
@@ -579,8 +600,10 @@ func (s *Server) handleCrawl(
 				paths = append(paths, pathStr)
 			}
 		}
+
 		params["select_paths"] = paths
 	}
+
 	if selectDomains, ok := args["select_domains"].([]any); ok {
 		domains := make([]string, 0, len(selectDomains))
 		for _, domain := range selectDomains {
@@ -588,11 +611,14 @@ func (s *Server) handleCrawl(
 				domains = append(domains, domainStr)
 			}
 		}
+
 		params["select_domains"] = domains
 	}
+
 	if allowExternal, ok := args["allow_external"].(bool); ok {
 		params["allow_external"] = allowExternal
 	}
+
 	if categories, ok := args["categories"].([]any); ok {
 		cats := make([]string, 0, len(categories))
 		for _, category := range categories {
@@ -600,16 +626,20 @@ func (s *Server) handleCrawl(
 				cats = append(cats, catStr)
 			}
 		}
+
 		params["categories"] = cats
 	}
+
 	if extractDepth, ok := args["extract_depth"].(string); ok {
 		params["extract_depth"] = extractDepth
 	}
+
 	if format, ok := args["format"].(string); ok {
 		params["format"] = format
 	}
 
 	var crawlResponse CrawlResponse
+
 	err := s.makeRequest(ctx, "crawl", params, &crawlResponse)
 	if err != nil {
 		return nil, fmt.Errorf("tavily crawl failed: %w", err)
@@ -640,15 +670,19 @@ func (s *Server) handleMap(
 	if maxDepth, ok := args["max_depth"].(float64); ok {
 		params["max_depth"] = int(maxDepth)
 	}
+
 	if maxBreadth, ok := args["max_breadth"].(float64); ok {
 		params["max_breadth"] = int(maxBreadth)
 	}
+
 	if limit, ok := args["limit"].(float64); ok {
 		params["limit"] = int(limit)
 	}
+
 	if instructions, ok := args["instructions"].(string); ok {
 		params["instructions"] = instructions
 	}
+
 	if selectPaths, ok := args["select_paths"].([]any); ok {
 		paths := make([]string, 0, len(selectPaths))
 		for _, path := range selectPaths {
@@ -656,8 +690,10 @@ func (s *Server) handleMap(
 				paths = append(paths, pathStr)
 			}
 		}
+
 		params["select_paths"] = paths
 	}
+
 	if selectDomains, ok := args["select_domains"].([]any); ok {
 		domains := make([]string, 0, len(selectDomains))
 		for _, domain := range selectDomains {
@@ -665,11 +701,14 @@ func (s *Server) handleMap(
 				domains = append(domains, domainStr)
 			}
 		}
+
 		params["select_domains"] = domains
 	}
+
 	if allowExternal, ok := args["allow_external"].(bool); ok {
 		params["allow_external"] = allowExternal
 	}
+
 	if categories, ok := args["categories"].([]any); ok {
 		cats := make([]string, 0, len(categories))
 		for _, category := range categories {
@@ -677,10 +716,12 @@ func (s *Server) handleMap(
 				cats = append(cats, catStr)
 			}
 		}
+
 		params["categories"] = cats
 	}
 
 	var mapResponse MapResponse
+
 	err := s.makeRequest(ctx, "map", params, &mapResponse)
 	if err != nil {
 		return nil, fmt.Errorf("tavily map failed: %w", err)
@@ -748,6 +789,7 @@ func (s *Server) formatSearchResults(response Response) string {
 	for _, result := range response.Results {
 		output = append(output, "\nTitle: "+result.Title)
 		output = append(output, "URL: "+result.URL)
+
 		output = append(output, "Content: "+result.Content)
 		if result.RawContent != "" {
 			output = append(output, "Raw Content: "+result.RawContent)
@@ -790,6 +832,7 @@ func (s *Server) formatCrawlResults(response CrawlResponse) string {
 			if len(contentPreview) > 200 {
 				contentPreview = contentPreview[:200] + "..."
 			}
+
 			output = append(output, "Content: "+contentPreview)
 		}
 	}

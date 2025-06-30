@@ -37,6 +37,7 @@ func ConvertTTSRequest(
 	if err != nil && !errors.Is(err, ast.ErrNotExist) {
 		return adaptor.ConvertResult{}, err
 	}
+
 	if voice == "" && defaultVoice != "" {
 		_, err = node.Set("voice", ast.NewString(defaultVoice))
 		if err != nil {
@@ -53,6 +54,7 @@ func ConvertTTSRequest(
 	if err != nil {
 		return adaptor.ConvertResult{}, err
 	}
+
 	return adaptor.ConvertResult{
 		Header: http.Header{
 			"Content-Type":   {"application/json"},
@@ -91,11 +93,14 @@ func TTSHandler(
 		if err != nil {
 			log.Warnf("write response body failed: %v", err)
 		}
+
 		AudioDone(c, usage)
+
 		return usage.ToModelUsage(), nil
 	}
 
 	c.Writer.Header().Set("Content-Type", resp.Header.Get("Content-Type"))
+
 	if contentLength := resp.Header.Get("Content-Length"); contentLength != "" {
 		c.Writer.Header().Set("Content-Length", contentLength)
 	}
@@ -104,6 +109,7 @@ func TTSHandler(
 	if err != nil {
 		log.Warnf("write response body failed: %v", err)
 	}
+
 	return usage.ToModelUsage(), nil
 }
 
@@ -117,8 +123,10 @@ func ttsStreamHandler(
 	log := common.GetLogger(c)
 
 	scanner := bufio.NewScanner(resp.Body)
+
 	buf := GetScannerBuffer()
 	defer PutScannerBuffer(buf)
+
 	scanner.Buffer(*buf, cap(*buf))
 
 	var totalUsage *relaymodel.TextToSpeechUsage
@@ -128,15 +136,18 @@ func ttsStreamHandler(
 		if len(data) < DataPrefixLength { // ignore blank line or wrong format
 			continue
 		}
+
 		if !slices.Equal(data[:DataPrefixLength], DataPrefixBytes) {
 			continue
 		}
+
 		data = bytes.TrimSpace(data[DataPrefixLength:])
 		if slices.Equal(data, DoneBytes) {
 			break
 		}
 
 		var sseResponse relaymodel.TextToSpeechSSEResponse
+
 		err := sonic.Unmarshal(data, &sseResponse)
 		if err != nil {
 			log.Error("error unmarshalling TTS stream response: " + err.Error())

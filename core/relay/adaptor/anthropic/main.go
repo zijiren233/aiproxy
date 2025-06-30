@@ -65,6 +65,7 @@ func ConvertImage2Base64(ctx context.Context, node *ast.Node) error {
 	}
 
 	var imageItems []*ast.Node
+
 	err := messagesNode.ForEach(func(_ ast.Sequence, msgNode *ast.Node) bool {
 		contentNode := msgNode.Get("content")
 		if contentNode == nil || contentNode.TypeSafe() != ast.V_ARRAY {
@@ -82,8 +83,10 @@ func ConvertImage2Base64(ctx context.Context, node *ast.Node) error {
 					}
 				}
 			}
+
 			return true
 		})
+
 		return err == nil
 	})
 	if err != nil {
@@ -95,21 +98,28 @@ func ConvertImage2Base64(ctx context.Context, node *ast.Node) error {
 	}
 
 	sem := semaphore.NewWeighted(3)
-	var wg sync.WaitGroup
-	var mu sync.Mutex
-	var processErrs []error
+
+	var (
+		wg          sync.WaitGroup
+		mu          sync.Mutex
+		processErrs []error
+	)
 
 	for _, item := range imageItems {
 		wg.Add(1)
+
 		go func(contentItem *ast.Node) {
 			defer wg.Done()
+
 			_ = sem.Acquire(ctx, 1)
 			defer sem.Release(1)
 
 			err := convertImageURLToBase64(ctx, contentItem)
 			if err != nil {
 				mu.Lock()
+
 				processErrs = append(processErrs, err)
+
 				mu.Unlock()
 			}
 		}(item)
@@ -120,6 +130,7 @@ func ConvertImage2Base64(ctx context.Context, node *ast.Node) error {
 	if len(processErrs) != 0 {
 		return errors.Join(processErrs...)
 	}
+
 	return nil
 }
 
@@ -170,23 +181,29 @@ func StreamHandler(
 	log := common.GetLogger(c)
 
 	scanner := bufio.NewScanner(resp.Body)
+
 	buf := openai.GetScannerBuffer()
 	defer openai.PutScannerBuffer(buf)
+
 	scanner.Buffer(*buf, cap(*buf))
 
 	responseText := strings.Builder{}
 
-	var usage *relaymodel.ChatUsage
-	var writed bool
+	var (
+		usage  *relaymodel.ChatUsage
+		writed bool
+	)
 
 	for scanner.Scan() {
 		data := scanner.Bytes()
 		if len(data) < openai.DataPrefixLength {
 			continue
 		}
+
 		if !slices.Equal(data[:openai.DataPrefixLength], openai.DataPrefixBytes) {
 			continue
 		}
+
 		data = bytes.TrimSpace(data[openai.DataPrefixLength:])
 		if slices.Equal(data, openai.DoneBytes) {
 			break
@@ -200,24 +217,31 @@ func StreamHandler(
 				if usage == nil {
 					usage = &relaymodel.ChatUsage{}
 				}
+
 				if response != nil && response.Usage != nil {
 					usage.Add(response.Usage)
 				}
+
 				return usage.ToModelUsage(), err
 			}
 		}
+
 		if response != nil {
 			switch {
 			case response.Usage != nil:
 				if usage == nil {
 					usage = &relaymodel.ChatUsage{}
 				}
+
 				usage.Add(response.Usage)
+
 				if usage.PromptTokens == 0 {
 					usage.PromptTokens = int64(m.RequestUsage.InputTokens)
 					usage.TotalTokens += int64(m.RequestUsage.InputTokens)
 				}
+
 				response.Usage = usage
+
 				responseText.Reset()
 			case usage == nil:
 				for _, choice := range response.Choices {
@@ -229,6 +253,7 @@ func StreamHandler(
 		}
 
 		Data(c, data)
+
 		writed = true
 	}
 
@@ -272,8 +297,10 @@ func Handler(meta *meta.Meta, c *gin.Context, resp *http.Response) (model.Usage,
 	if adaptorErr != nil {
 		return model.Usage{}, adaptorErr
 	}
+
 	c.Writer.Header().Set("Content-Type", "application/json")
 	c.Writer.Header().Set("Content-Length", strconv.Itoa(len(respBody)))
 	_, _ = c.Writer.Write(respBody)
+
 	return fullTextResponse.Usage.ToModelUsage(), nil
 }

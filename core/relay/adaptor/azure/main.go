@@ -31,10 +31,12 @@ func GetRequestURL(meta *meta.Meta, replaceDot bool) (adaptor.RequestURL, error)
 	if err != nil {
 		return adaptor.RequestURL{}, err
 	}
+
 	model := meta.ActualModel
 	if replaceDot {
 		model = strings.ReplaceAll(model, ".", "")
 	}
+
 	switch meta.Mode {
 	case mode.ImagesGenerations:
 		// https://learn.microsoft.com/en-us/azure/ai-services/openai/dall-e-quickstart?tabs=dalle3%2Ccommand-line&pivots=rest-api
@@ -145,7 +147,9 @@ func (a *Adaptor) SetupRequestHeader(
 	if err != nil {
 		return err
 	}
+
 	req.Header.Set("Api-Key", token)
+
 	return nil
 }
 

@@ -23,11 +23,13 @@ import (
 func GetModelConfigs(c *gin.Context) {
 	page, perPage := utils.ParsePageParams(c)
 	_model := c.Query("model")
+
 	configs, total, err := model.GetModelConfigs(page, perPage, _model)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
+
 	middleware.SuccessResponse(c, gin.H{
 		"configs": configs,
 		"total":   total,
@@ -49,6 +51,7 @@ func GetAllModelConfigs(c *gin.Context) {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
+
 	middleware.SuccessResponse(c, configs)
 }
 
@@ -68,16 +71,19 @@ type GetModelConfigsByModelsContainsRequest struct {
 //	@Router			/api/model_configs/contains [post]
 func GetModelConfigsByModelsContains(c *gin.Context) {
 	request := GetModelConfigsByModelsContainsRequest{}
+
 	err := c.ShouldBindJSON(&request)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
 	}
+
 	configs, err := model.GetModelConfigsByModels(request.Models)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
+
 	middleware.SuccessResponse(c, configs)
 }
 
@@ -100,6 +106,7 @@ func SearchModelConfigs(c *gin.Context) {
 	page, perPage := utils.ParsePageParams(c)
 	_model := c.Query("model")
 	owner := c.Query("owner")
+
 	configs, total, err := model.SearchModelConfigs(
 		keyword,
 		page,
@@ -111,6 +118,7 @@ func SearchModelConfigs(c *gin.Context) {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
+
 	middleware.SuccessResponse(c, gin.H{
 		"configs": configs,
 		"total":   total,
@@ -135,11 +143,13 @@ func SaveModelConfigs(c *gin.Context) {
 		middleware.ErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
 	}
+
 	err := model.SaveModelConfigs(configs)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
+
 	middleware.SuccessResponse(c, nil)
 }
 
@@ -159,11 +169,13 @@ func SaveModelConfig(c *gin.Context) {
 		middleware.ErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
 	}
+
 	err := model.SaveModelConfig(config)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
+
 	middleware.SuccessResponse(c, nil)
 }
 
@@ -179,11 +191,13 @@ func SaveModelConfig(c *gin.Context) {
 //	@Router			/api/model_config/{model} [delete]
 func DeleteModelConfig(c *gin.Context) {
 	_model := strings.TrimPrefix(c.Param("model"), "/")
+
 	err := model.DeleteModelConfig(_model)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
+
 	middleware.SuccessResponse(c, nil)
 }
 
@@ -199,16 +213,19 @@ func DeleteModelConfig(c *gin.Context) {
 //	@Router			/api/model_configs/batch_delete [post]
 func DeleteModelConfigs(c *gin.Context) {
 	models := []string{}
+
 	err := c.ShouldBindJSON(&models)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
 	}
+
 	err = model.DeleteModelConfigsByModels(models)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
+
 	middleware.SuccessResponse(c, nil)
 }
 
@@ -224,10 +241,12 @@ func DeleteModelConfigs(c *gin.Context) {
 //	@Router			/api/model_config/{model} [get]
 func GetModelConfig(c *gin.Context) {
 	_model := strings.TrimPrefix(c.Param("model"), "/")
+
 	config, err := model.GetModelConfig(_model)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
+
 	middleware.SuccessResponse(c, config)
 }

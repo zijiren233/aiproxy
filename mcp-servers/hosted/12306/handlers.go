@@ -61,6 +61,7 @@ func (s *Server) handleGetTickets(
 	if _, exists := s.stations[fromStation]; !exists {
 		return nil, errors.New("from station not found")
 	}
+
 	if _, exists := s.stations[toStation]; !exists {
 		return nil, errors.New("to station not found")
 	}
@@ -112,6 +113,7 @@ func (s *Server) handleGetTickets(
 
 	// Format response
 	result := s.formatTicketsInfo(filteredTicketsInfo)
+
 	return mcp.NewToolResultText(result), nil
 }
 
@@ -236,6 +238,7 @@ func (s *Server) handleGetInterlineTickets(
 	if _, exists := s.stations[fromStation]; !exists {
 		return nil, errors.New("from station not found")
 	}
+
 	if _, exists := s.stations[toStation]; !exists {
 		return nil, errors.New("to station not found")
 	}
@@ -306,6 +309,7 @@ func (s *Server) handleGetInterlineTickets(
 
 	// Format response
 	result := s.formatInterlinesInfo(filteredInterlineInfo)
+
 	return mcp.NewToolResultText(result), nil
 }
 

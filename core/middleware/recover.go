@@ -32,8 +32,10 @@ func GinRecoveryHandler(c *gin.Context) {
 					}
 				}
 			}
+
 			fileLine, stack := stack(3)
 			httpRequest, _ := httputil.DumpRequest(c.Request, false)
+
 			headers := strings.Split(string(httpRequest), "\r\n")
 			for idx, header := range headers {
 				current := strings.Split(header, ":")
@@ -41,6 +43,7 @@ func GinRecoveryHandler(c *gin.Context) {
 					headers[idx] = current[0] + ": *"
 				}
 			}
+
 			headersToStr := strings.Join(headers, "\r\n")
 			switch {
 			case brokenPipe:
@@ -60,6 +63,7 @@ func GinRecoveryHandler(c *gin.Context) {
 						err, stack),
 				)
 			}
+
 			if brokenPipe {
 				// If the connection is dead, we can't write a status to it.
 				c.Error(err.(error)) //nolint: errcheck
@@ -69,6 +73,7 @@ func GinRecoveryHandler(c *gin.Context) {
 			}
 		}
 	}()
+
 	c.Next()
 }
 
@@ -77,8 +82,11 @@ func stack(skip int) (fileLine string, stack []byte) {
 	buf := new(bytes.Buffer) // the returned data
 	// As we loop, we open files and read them. These variables record the currently
 	// loaded file.
-	var lines [][]byte
-	var lastFile string
+	var (
+		lines    [][]byte
+		lastFile string
+	)
+
 	for i := skip; ; i++ { // Skip the expected number of frames
 		pc, file, line, ok := runtime.Caller(i)
 		if !ok {
@@ -86,19 +94,24 @@ func stack(skip int) (fileLine string, stack []byte) {
 		}
 		// Print this much at least.  If we can't find the source, it won't show.
 		fmt.Fprintf(buf, "%s:%d (0x%x)\n", file, line, pc)
+
 		if fileLine == "" {
 			fileLine = fmt.Sprintf("%s:%d", file, line)
 		}
+
 		if file != lastFile {
 			data, err := os.ReadFile(file)
 			if err != nil {
 				continue
 			}
+
 			lines = bytes.Split(data, []byte{'\n'})
 			lastFile = file
 		}
+
 		fmt.Fprintf(buf, "\t%s: %s\n", function(pc), source(lines, line))
 	}
+
 	return fileLine, buf.Bytes()
 }
 
@@ -108,6 +121,7 @@ func source(lines [][]byte, n int) []byte {
 	if n < 0 || n >= len(lines) {
 		return dunno
 	}
+
 	return bytes.TrimSpace(lines[n])
 }
 
@@ -124,6 +138,7 @@ func function(pc uintptr) []byte {
 	if fn == nil {
 		return dunno
 	}
+
 	name := []byte(fn.Name())
 	// The name includes the path name to the package, which is unnecessary
 	// since the file name is already included.  Plus, it has center dots.
@@ -136,9 +151,12 @@ func function(pc uintptr) []byte {
 	if lastSlash := bytes.LastIndex(name, slash); lastSlash >= 0 {
 		name = name[lastSlash+1:]
 	}
+
 	if period := bytes.Index(name, dot); period >= 0 {
 		name = name[period+1:]
 	}
+
 	name = bytes.ReplaceAll(name, centerDot, dot)
+
 	return name
 }

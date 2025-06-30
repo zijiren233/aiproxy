@@ -45,6 +45,7 @@ func (r *SSE) Render(w http.ResponseWriter) error {
 			return err
 		}
 	}
+
 	return nil
 }
 
@@ -60,9 +61,11 @@ func StringData(c *gin.Context, str string) {
 	if len(c.Errors) > 0 {
 		return
 	}
+
 	if c.IsAborted() {
 		return
 	}
+
 	c.Render(-1, &SSE{Data: conv.StringToBytes(str)})
 	c.Writer.Flush()
 }
@@ -71,15 +74,19 @@ func ObjectData(c *gin.Context, object any) error {
 	if len(c.Errors) > 0 {
 		return c.Errors.Last()
 	}
+
 	if c.IsAborted() {
 		return errors.New("context aborted")
 	}
+
 	jsonData, err := sonic.Marshal(object)
 	if err != nil {
 		return fmt.Errorf("error marshalling object: %w", err)
 	}
+
 	c.Render(-1, &SSE{Data: jsonData})
 	c.Writer.Flush()
+
 	return nil
 }
 
@@ -121,6 +128,7 @@ func (r *TtsSSE) Render(w http.ResponseWriter) error {
 			return err
 		}
 	}
+
 	return nil
 }
 
@@ -136,9 +144,11 @@ func AudioData(c *gin.Context, audio string) {
 	if len(c.Errors) > 0 {
 		return
 	}
+
 	if c.IsAborted() {
 		return
 	}
+
 	c.Render(-1, &TtsSSE{Audio: audio})
 	c.Writer.Flush()
 }
@@ -160,9 +170,11 @@ func AudioDone(c *gin.Context, usage model.TextToSpeechUsage) {
 	if len(c.Errors) > 0 {
 		return
 	}
+
 	if c.IsAborted() {
 		return
 	}
+
 	c.Render(-1, &TtsSSE{Usage: &usage})
 	c.Writer.Flush()
 }

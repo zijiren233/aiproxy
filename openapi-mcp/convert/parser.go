@@ -28,11 +28,13 @@ func getFronHTTP(u string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
 	defer resp.Body.Close()
+
 	return io.ReadAll(resp.Body)
 }
 
@@ -43,8 +45,10 @@ func (p *Parser) ParseFile(filePath string) error {
 		if err != nil {
 			return err
 		}
+
 		return p.Parse(data)
 	}
+
 	data, err := os.ReadFile(filePath)
 	if err != nil {
 		return fmt.Errorf("failed to read OpenAPI file: %w", err)
@@ -59,8 +63,10 @@ func (p *Parser) ParseFileV2(filePath string) error {
 		if err != nil {
 			return err
 		}
+
 		return p.Parse(data)
 	}
+
 	data, err := os.ReadFile(filePath)
 	if err != nil {
 		return fmt.Errorf("failed to read OpenAPI file: %w", err)
@@ -80,11 +86,13 @@ func (p *Parser) Parse(data []byte) error {
 	}
 
 	p.doc = doc
+
 	return nil
 }
 
 func (p *Parser) ParseV2(data []byte) error {
 	var doc2 openapi2.T
+
 	err := doc2.UnmarshalJSON(data)
 	if err != nil {
 		return fmt.Errorf("failed to parse OpenAPI document: %w", err)
@@ -96,6 +104,7 @@ func (p *Parser) ParseV2(data []byte) error {
 	}
 
 	p.doc = doc3
+
 	return nil
 }
 
@@ -136,6 +145,7 @@ func (p *Parser) GetOperationID(path, method string, operation *openapi3.Operati
 
 	// Generate an operation ID based on the path and method
 	pathParts := strings.Split(strings.Trim(path, "/"), "/")
+
 	var pathName string
 	if len(pathParts) > 0 {
 		pathName = strings.Join(pathParts, "_")

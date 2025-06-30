@@ -26,6 +26,7 @@ func stopReasonCoze2OpenAI(reason *string) relaymodel.FinishReason {
 	if reason == nil {
 		return ""
 	}
+
 	switch *reason {
 	case "end_turn":
 		return relaymodel.FinishReasonLength
@@ -42,20 +43,26 @@ func StreamResponse2OpenAI(
 	meta *meta.Meta,
 	cozeResponse *StreamResponse,
 ) *relaymodel.ChatCompletionsStreamResponse {
-	var stopReason string
-	var choice relaymodel.ChatCompletionsStreamResponseChoice
+	var (
+		stopReason string
+		choice     relaymodel.ChatCompletionsStreamResponseChoice
+	)
 
 	if cozeResponse.Message != nil {
 		if cozeResponse.Message.Type != messagetype.Answer {
 			return nil
 		}
+
 		choice.Delta.Content = cozeResponse.Message.Content
 	}
+
 	choice.Delta.Role = "assistant"
+
 	finishReason := stopReasonCoze2OpenAI(&stopReason)
 	if finishReason != "null" {
 		choice.FinishReason = finishReason
 	}
+
 	openaiResponse := relaymodel.ChatCompletionsStreamResponse{
 		ID:      cozeResponse.ConversationID,
 		Model:   meta.OriginModel,
@@ -63,6 +70,7 @@ func StreamResponse2OpenAI(
 		Object:  relaymodel.ChatCompletionChunkObject,
 		Choices: []*relaymodel.ChatCompletionsStreamResponseChoice{&choice},
 	}
+
 	return &openaiResponse
 }
 
@@ -74,6 +82,7 @@ func Response2OpenAI(meta *meta.Meta, cozeResponse *Response) *relaymodel.TextRe
 			break
 		}
 	}
+
 	choice := relaymodel.TextResponseChoice{
 		Index: 0,
 		Message: relaymodel.Message{
@@ -90,6 +99,7 @@ func Response2OpenAI(meta *meta.Meta, cozeResponse *Response) *relaymodel.TextRe
 		Created: time.Now().Unix(),
 		Choices: []*relaymodel.TextResponseChoice{&choice},
 	}
+
 	return &fullTextResponse
 }
 
@@ -110,8 +120,10 @@ func StreamHandler(
 	createdTime := time.Now().Unix()
 
 	scanner := bufio.NewScanner(resp.Body)
+
 	buf := openai.GetScannerBuffer()
 	defer openai.PutScannerBuffer(buf)
+
 	scanner.Buffer(*buf, cap(*buf))
 
 	for scanner.Scan() {
@@ -119,15 +131,18 @@ func StreamHandler(
 		if len(data) < openai.DataPrefixLength {
 			continue
 		}
+
 		if !slices.Equal(data[:openai.DataPrefixLength], openai.DataPrefixBytes) {
 			continue
 		}
+
 		data = bytes.TrimSpace(data[openai.DataPrefixLength:])
 		if slices.Equal(data, openai.DoneBytes) {
 			break
 		}
 
 		var cozeResponse StreamResponse
+
 		err := sonic.Unmarshal(data, &cozeResponse)
 		if err != nil {
 			log.Error("error unmarshalling stream response: " + err.Error())
@@ -142,6 +157,7 @@ func StreamHandler(
 		for _, choice := range response.Choices {
 			responseText.WriteString(choice.Delta.StringContent())
 		}
+
 		response.Model = meta.OriginModel
 		response.Created = createdTime
 
@@ -171,6 +187,7 @@ func Handler(meta *meta.Meta, c *gin.Context, resp *http.Response) (model.Usage,
 	log := common.GetLogger(c)
 
 	var cozeResponse Response
+
 	err := sonic.ConfigDefault.NewDecoder(resp.Body).Decode(&cozeResponse)
 	if err != nil {
 		return model.Usage{}, relaymodel.WrapperOpenAIError(
@@ -179,6 +196,7 @@ func Handler(meta *meta.Meta, c *gin.Context, resp *http.Response) (model.Usage,
 			http.StatusInternalServerError,
 		)
 	}
+
 	if cozeResponse.Code != 0 {
 		return model.Usage{}, relaymodel.WrapperOpenAIErrorWithMessage(
 			cozeResponse.Msg,
@@ -186,7 +204,9 @@ func Handler(meta *meta.Meta, c *gin.Context, resp *http.Response) (model.Usage,
 			resp.StatusCode,
 		)
 	}
+
 	fullTextResponse := Response2OpenAI(meta, &cozeResponse)
+
 	jsonResponse, err := sonic.Marshal(fullTextResponse)
 	if err != nil {
 		return model.Usage{}, relaymodel.WrapperOpenAIError(
@@ -195,16 +215,20 @@ func Handler(meta *meta.Meta, c *gin.Context, resp *http.Response) (model.Usage,
 			http.StatusInternalServerError,
 		)
 	}
+
 	c.Writer.Header().Set("Content-Type", "application/json")
 	c.Writer.Header().Set("Content-Length", strconv.Itoa(len(jsonResponse)))
+
 	_, err = c.Writer.Write(jsonResponse)
 	if err != nil {
 		log.Warnf("write response body failed: %v", err)
 	}
+
 	var responseText string
 	if len(fullTextResponse.Choices) > 0 {
 		responseText = fullTextResponse.Choices[0].Message.StringContent()
 	}
+
 	return openai.ResponseText2Usage(responseText, meta.ActualModel, int64(meta.RequestUsage.InputTokens)).
 			ToModelUsage(),
 		nil

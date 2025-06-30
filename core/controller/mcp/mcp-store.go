@@ -24,6 +24,7 @@ func getStore() mcpproxy.SessionManager {
 		})
 		return redisStore
 	}
+
 	return memStore
 }
 
@@ -62,6 +63,7 @@ func (r *redisStoreManager) Get(sessionID string) (string, bool) {
 	}
 
 	res, ok := result.(string)
+
 	return res, ok
 }
 

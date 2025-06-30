@@ -58,8 +58,10 @@ func InitSealos(jwtKey, accountURL string) error {
 	if err != nil {
 		return fmt.Errorf("failed to generate sealos jwt token: %w", err)
 	}
+
 	jwtToken = token
 	Default = NewSealos(accountURL)
+
 	return nil
 }
 
@@ -82,6 +84,7 @@ func newSealosToken(key string) (string, error) {
 			NotBefore: jwt.NewNumericDate(time.Now()),
 		},
 	}
+
 	return jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString(conv.StringToBytes(key))
 }
 
@@ -112,16 +115,20 @@ func cacheSetGroupBalance(ctx context.Context, group string, balance int64, user
 	if !common.RedisEnabled || !sealosRedisCacheEnable {
 		return nil
 	}
+
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
+
 	pipe := common.RDB.Pipeline()
 	pipe.HSet(ctx, common.RedisKeyf(sealosGroupBalanceKey, group), sealosCache{
 		Balance: balance,
 		UserUID: userUID,
 	})
+
 	expireTime := sealosCacheExpire + time.Duration(rand.Int64N(10)-5)*time.Second
 	pipe.Expire(ctx, common.RedisKeyf(sealosGroupBalanceKey, group), expireTime)
 	_, err := pipe.Exec(ctx)
+
 	return err
 }
 
@@ -129,12 +136,15 @@ func cacheGetGroupBalance(ctx context.Context, group string) (*sealosCache, erro
 	if !common.RedisEnabled || !sealosRedisCacheEnable {
 		return nil, redis.Nil
 	}
+
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
+
 	var cache sealosCache
 	if err := common.RDB.HGetAll(ctx, common.RedisKeyf(sealosGroupBalanceKey, group)).Scan(&cache); err != nil {
 		return nil, err
 	}
+
 	return &cache, nil
 }
 
@@ -150,6 +160,7 @@ func cacheDecreaseGroupBalance(ctx context.Context, group string, amount int64) 
 	if !common.RedisEnabled || !sealosRedisCacheEnable {
 		return nil
 	}
+
 	return decreaseGroupBalanceScript.Run(ctx, common.RDB, []string{common.RedisKeyf(sealosGroupBalanceKey, group)}, amount).
 		Err()
 }
@@ -168,12 +179,15 @@ func (s *Sealos) GetGroupRemainBalance(
 				!s.checkRealName(ctx, userUID) {
 				return 0, nil, ErrNoRealNameUsedAmountLimit
 			}
+
 			return decimal.NewFromInt(balance).Div(decimalBalancePrecision).InexactFloat64(),
 				newSealosPostGroupConsumer(s.accountURL, group.ID, userUID), nil
 		}
+
 		if i == getBalanceRetry-1 {
 			return 0, nil, err
 		}
+
 		time.Sleep(time.Second)
 	}
 }
@@ -182,12 +196,15 @@ func cacheGetUserRealName(ctx context.Context, userUID string) (bool, error) {
 	if !common.RedisEnabled || !sealosRedisCacheEnable {
 		return true, redis.Nil
 	}
+
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
+
 	realName, err := common.RDB.Get(ctx, common.RedisKeyf(sealosUserRealNameKey, userUID)).Bool()
 	if err != nil {
 		return false, err
 	}
+
 	return realName, nil
 }
 
@@ -195,14 +212,17 @@ func cacheSetUserRealName(ctx context.Context, userUID string, realName bool) er
 	if !common.RedisEnabled || !sealosRedisCacheEnable {
 		return nil
 	}
+
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
+
 	var expireTime time.Duration
 	if realName {
 		expireTime = time.Hour * 12
 	} else {
 		expireTime = time.Minute * 1
 	}
+
 	return common.RDB.Set(ctx, common.RedisKeyf(sealosUserRealNameKey, userUID), realName, expireTime).
 		Err()
 }
@@ -235,6 +255,7 @@ type sealosGetRealNameInfoResp struct {
 func (s *Sealos) fetchRealNameFromAPI(ctx context.Context, userUID string) (bool, error) {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
+
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet,
 		fmt.Sprintf("%s/admin/v1alpha1/real-name-info?userUID=%s", s.accountURL, userUID), nil)
 	if err != nil {
@@ -242,6 +263,7 @@ func (s *Sealos) fetchRealNameFromAPI(ctx context.Context, userUID string) (bool
 	}
 
 	req.Header.Set("Authorization", "Bearer "+jwtToken)
+
 	resp, err := sealosHTTPClient.Do(req)
 	if err != nil {
 		return false, err
@@ -291,6 +313,7 @@ func (s *Sealos) fetchBalanceFromAPI(
 ) (balance int64, userUID string, err error) {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
+
 	req, err := http.NewRequestWithContext(
 		ctx,
 		http.MethodGet,
@@ -306,6 +329,7 @@ func (s *Sealos) fetchBalanceFromAPI(
 	}
 
 	req.Header.Set("Authorization", "Bearer "+jwtToken)
+
 	resp, err := sealosHTTPClient.Do(req)
 	if err != nil {
 		return 0, "", err
@@ -369,6 +393,7 @@ func (s *SealosPostGroupConsumer) calculateAmount(usage float64) decimal.Decimal
 	if amount.LessThan(minConsumeAmount) {
 		amount = minConsumeAmount
 	}
+
 	return amount
 }
 
@@ -397,6 +422,7 @@ func (s *SealosPostGroupConsumer) postConsume(
 	}
 
 	req.Header.Set("Authorization", "Bearer "+jwtToken)
+
 	resp, err := sealosHTTPClient.Do(req)
 	if err != nil {
 		return err

@@ -36,24 +36,28 @@ func ConvertToMarkdown(response any) (string, error) {
 		if err := sonic.Unmarshal(jsonData, &page); err != nil {
 			return "", err
 		}
+
 		return convertPageToMarkdown(&page), nil
 	case "database":
 		var database DatabaseResponse
 		if err := sonic.Unmarshal(jsonData, &database); err != nil {
 			return "", err
 		}
+
 		return convertDatabaseToMarkdown(&database), nil
 	case "block":
 		var block BlockResponse
 		if err := sonic.Unmarshal(jsonData, &block); err != nil {
 			return "", err
 		}
+
 		return convertBlockToMarkdown(&block), nil
 	case "list":
 		var list ListResponse
 		if err := sonic.Unmarshal(jsonData, &list); err != nil {
 			return "", err
 		}
+
 		return convertListToMarkdown(&list), nil
 	default:
 		return fmt.Sprintf("```json\n%s\n```", string(jsonData)), nil
@@ -114,6 +118,7 @@ func convertDatabaseToMarkdown(database *DatabaseResponse) string {
 			if propName == "" {
 				propName = key
 			}
+
 			propType := prop.Type
 			if propType == "" {
 				propType = "unknown"
@@ -185,10 +190,12 @@ func convertListToMarkdown(list *ListResponse) string {
 					if title == "" {
 						title = "Untitled"
 					}
+
 					url := page.URL
 					if url == "" {
 						url = "#"
 					}
+
 					markdown.WriteString(fmt.Sprintf("## [%s](%s)\n\n", title, url))
 					markdown.WriteString(fmt.Sprintf("ID: `%s`\n\n", page.ID))
 					markdown.WriteString("---\n\n")
@@ -209,10 +216,12 @@ func convertListToMarkdown(list *ListResponse) string {
 					if dbTitle == "" {
 						dbTitle = "Untitled Database"
 					}
+
 					url := db.URL
 					if url == "" {
 						url = "#"
 					}
+
 					markdown.WriteString(fmt.Sprintf("## [%s](%s)\n\n", dbTitle, url))
 					markdown.WriteString(fmt.Sprintf("ID: `%s`\n\n", db.ID))
 					markdown.WriteString("---\n\n")
@@ -242,6 +251,7 @@ func convertListToMarkdown(list *ListResponse) string {
 		markdown.WriteString(
 			"\n> More results available. Use `start_cursor` parameter with the next request.\n",
 		)
+
 		if list.NextCursor != nil {
 			markdown.WriteString(fmt.Sprintf("> Next cursor: `%s`\n", *list.NextCursor))
 		}
@@ -305,12 +315,15 @@ func extractRichText(richTextArray []RichTextItemResponse) string {
 			if item.Annotations.Code {
 				text = fmt.Sprintf("`%s`", text)
 			}
+
 			if item.Annotations.Bold {
 				text = fmt.Sprintf("**%s**", text)
 			}
+
 			if item.Annotations.Italic {
 				text = fmt.Sprintf("*%s*", text)
 			}
+
 			if item.Annotations.Strikethrough {
 				text = fmt.Sprintf("~~%s~~", text)
 			}
@@ -366,6 +379,7 @@ func renderBlock(block *BlockResponse) string {
 			if block.ToDo.Checked {
 				checked = "x"
 			}
+
 			return fmt.Sprintf("- [%s] %s", checked, extractRichText(block.ToDo.RichText))
 		}
 	case BlockTypeToggle:
@@ -387,10 +401,12 @@ func renderBlock(block *BlockResponse) string {
 			} else if block.Image.File != nil {
 				imageURL = block.Image.File.URL
 			}
+
 			imageCaption := extractRichText(block.Image.Caption)
 			if imageCaption == "" {
 				imageCaption = "image"
 			}
+
 			return fmt.Sprintf("![%s](%s)", imageCaption, imageURL)
 		}
 	case BlockTypeDivider:
@@ -405,7 +421,9 @@ func renderBlock(block *BlockResponse) string {
 			if language == "" {
 				language = "plaintext"
 			}
+
 			codeContent := extractRichText(block.Code.RichText)
+
 			return fmt.Sprintf("```%s\n%s\n```", language, codeContent)
 		}
 	case BlockTypeCallout:
@@ -414,7 +432,9 @@ func renderBlock(block *BlockResponse) string {
 			if block.Callout.Icon != nil && block.Callout.Icon.Emoji != "" {
 				icon = block.Callout.Icon.Emoji + " "
 			}
+
 			text := extractRichText(block.Callout.RichText)
+
 			return fmt.Sprintf("> %s%s", icon, text)
 		}
 	case BlockTypeBookmark:
@@ -423,6 +443,7 @@ func renderBlock(block *BlockResponse) string {
 			if caption == "" {
 				caption = block.Bookmark.URL
 			}
+
 			return fmt.Sprintf("[%s](%s)", caption, block.Bookmark.URL)
 		}
 	case BlockTypeChildDatabase:
@@ -448,9 +469,11 @@ func escapeTableCell(text string) string {
 	if text == "" {
 		return ""
 	}
+
 	text = strings.ReplaceAll(text, "|", "\\|")
 	text = strings.ReplaceAll(text, "\n", " ")
 	text = strings.ReplaceAll(text, "+", "\\+")
+
 	return text
 }
 
@@ -462,6 +485,7 @@ func getObjectType(obj any) string {
 			return objectType
 		}
 	}
+
 	return "unknown"
 }
 
@@ -470,10 +494,12 @@ func convertToPageResponse(obj any) *PageResponse {
 	if err != nil {
 		return nil
 	}
+
 	var page PageResponse
 	if err := sonic.Unmarshal(jsonData, &page); err != nil {
 		return nil
 	}
+
 	return &page
 }
 
@@ -482,10 +508,12 @@ func convertToDatabaseResponse(obj any) *DatabaseResponse {
 	if err != nil {
 		return nil
 	}
+
 	var database DatabaseResponse
 	if err := sonic.Unmarshal(jsonData, &database); err != nil {
 		return nil
 	}
+
 	return &database
 }
 
@@ -494,10 +522,12 @@ func convertToBlockResponse(obj any) *BlockResponse {
 	if err != nil {
 		return nil
 	}
+
 	var block BlockResponse
 	if err := sonic.Unmarshal(jsonData, &block); err != nil {
 		return nil
 	}
+
 	return &block
 }
 
@@ -509,13 +539,16 @@ func getPropertyDetails(prop DatabasePropertyConfig) string {
 			for _, option := range prop.Select.Options {
 				options = append(options, option.Name)
 			}
+
 			return "Options: " + strings.Join(options, ", ")
 		}
+
 		if prop.MultiSelect != nil {
 			var options []string
 			for _, option := range prop.MultiSelect.Options {
 				options = append(options, option.Name)
 			}
+
 			return "Options: " + strings.Join(options, ", ")
 		}
 	case "relation":
@@ -540,6 +573,7 @@ func getPropertyDetails(prop DatabasePropertyConfig) string {
 			for _, option := range prop.Status.Options {
 				options = append(options, option.Name)
 			}
+
 			return "Options: " + strings.Join(options, ", ")
 		}
 	}
@@ -593,6 +627,7 @@ func getPropertyValue(prop PageProperty) string {
 		for _, item := range prop.MultiSelect {
 			names = append(names, item.Name)
 		}
+
 		return strings.Join(names, ", ")
 	case "date":
 		if prop.Date != nil {
@@ -600,6 +635,7 @@ func getPropertyValue(prop PageProperty) string {
 			if prop.Date.End != nil {
 				result += " → " + *prop.Date.End
 			}
+
 			return result
 		}
 	case "people":
@@ -609,6 +645,7 @@ func getPropertyValue(prop PageProperty) string {
 				names = append(names, person.ID)
 			}
 		}
+
 		return strings.Join(names, ", ")
 	case "files":
 		var fileNames []string
@@ -619,8 +656,10 @@ func getPropertyValue(prop PageProperty) string {
 			} else if file.File != nil {
 				url = file.File.URL
 			}
+
 			fileNames = append(fileNames, fmt.Sprintf("[%s](%s)", file.Name, url))
 		}
+
 		return strings.Join(fileNames, ", ")
 	case "checkbox":
 		if prop.Checkbox {
@@ -644,9 +683,11 @@ func getPropertyValue(prop PageProperty) string {
 			if prop.Formula.String != nil {
 				return *prop.Formula.String
 			}
+
 			if prop.Formula.Number != nil {
 				return fmt.Sprintf("%.2f", *prop.Formula.Number)
 			}
+
 			if prop.Formula.Boolean != nil {
 				if *prop.Formula.Boolean {
 					return "true"
@@ -663,18 +704,22 @@ func getPropertyValue(prop PageProperty) string {
 		for _, relation := range prop.Relation {
 			ids = append(ids, fmt.Sprintf("`%s`", relation.ID))
 		}
+
 		return strings.Join(ids, ", ")
 	case "rollup":
 		if prop.Rollup != nil {
 			if prop.Rollup.Number != nil {
 				return fmt.Sprintf("%.2f", *prop.Rollup.Number)
 			}
+
 			if prop.Rollup.String != nil {
 				return *prop.Rollup.String
 			}
+
 			if prop.Rollup.Date != nil {
 				return prop.Rollup.Date.Start
 			}
+
 			if prop.Rollup.Array != nil {
 				jsonData, _ := sonic.Marshal(prop.Rollup.Array)
 				return string(jsonData)

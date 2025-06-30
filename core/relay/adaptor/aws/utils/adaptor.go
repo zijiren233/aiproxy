@@ -39,6 +39,7 @@ func GetAwsConfigFromKey(key string) (*AwsConfig, error) {
 	if len(split) != 3 {
 		return nil, errors.New("invalid key format")
 	}
+
 	return &AwsConfig{
 		Region: split[0],
 		AK:     split[1],
@@ -60,6 +61,7 @@ func awsClientFromKey(key string) (*bedrockruntime.Client, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return AwsClient(config), nil
 }
 
@@ -72,12 +74,16 @@ func AwsClientFromMeta(meta *meta.Meta) (*bedrockruntime.Client, error) {
 		if !ok {
 			panic(fmt.Sprintf("aws client type error: %T, %v", v, v))
 		}
+
 		return v, nil
 	}
+
 	awsClient, err := awsClientFromKey(meta.Channel.Key)
 	if err != nil {
 		return nil, err
 	}
+
 	meta.Set(AwsClientKey, awsClient)
+
 	return awsClient, nil
 }

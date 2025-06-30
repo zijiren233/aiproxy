@@ -26,6 +26,7 @@ func NewServer(config, reusingConfig map[string]string) (mcpservers.Server, erro
 	if notionToken == "" {
 		notionToken = reusingConfig["notion-api-token"]
 	}
+
 	if notionToken == "" {
 		return nil, errors.New("NOTION_API_TOKEN is required")
 	}
@@ -59,6 +60,7 @@ func ListTools(ctx context.Context) ([]mcp.Tool, error) {
 		MCPServer: server.NewMCPServer("notion-mcp", "1.0.0"),
 	}
 	notionServer.addTools(nil)
+
 	return mcpservers.ListServerTools(ctx, notionServer)
 }
 
@@ -91,8 +93,10 @@ func (s *Server) createToolHandler(
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		args := request.GetArguments()
 
-		var response any
-		var err error
+		var (
+			response any
+			err      error
+		)
 
 		switch toolName {
 		case "notion_append_block_children":
@@ -133,6 +137,7 @@ func (s *Server) createToolHandler(
 			if err != nil {
 				return nil, fmt.Errorf("failed to convert to markdown: %w", err)
 			}
+
 			return mcp.NewToolResultText(markdown), nil
 		}
 
@@ -285,6 +290,7 @@ func (s *Server) handleQueryDatabase(ctx context.Context, args map[string]any) (
 		if err != nil {
 			return nil, fmt.Errorf("failed to marshal sorts: %w", err)
 		}
+
 		if err := json.Unmarshal(sortsJSON, &sorts); err != nil {
 			return nil, fmt.Errorf("failed to unmarshal sorts: %w", err)
 		}
@@ -316,10 +322,12 @@ func (s *Server) handleSearch(ctx context.Context, args map[string]any) (any, er
 		if err != nil {
 			return nil, fmt.Errorf("failed to marshal filter: %w", err)
 		}
+
 		var searchFilter SearchFilter
 		if err := json.Unmarshal(filterJSON, &searchFilter); err != nil {
 			return nil, fmt.Errorf("failed to unmarshal filter: %w", err)
 		}
+
 		filter = &searchFilter
 	}
 
@@ -329,10 +337,12 @@ func (s *Server) handleSearch(ctx context.Context, args map[string]any) (any, er
 		if err != nil {
 			return nil, fmt.Errorf("failed to marshal sort: %w", err)
 		}
+
 		var searchSort SearchSort
 		if err := json.Unmarshal(sortJSON, &searchSort); err != nil {
 			return nil, fmt.Errorf("failed to unmarshal sort: %w", err)
 		}
+
 		sort = &searchSort
 	}
 

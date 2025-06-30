@@ -151,6 +151,7 @@ func SetDefaultChannelModels(models map[int][]string) {
 		slices.Sort(ms)
 		models[key] = slices.Compact(ms)
 	}
+
 	defaultChannelModels.Store(models)
 }
 
@@ -171,10 +172,12 @@ func GetGroupConsumeLevelRatio() map[float64]float64 {
 
 func GetGroupConsumeLevelRatioStringKeyMap() map[string]float64 {
 	ratio := GetGroupConsumeLevelRatio()
+
 	stringMap := make(map[string]float64)
 	for k, v := range ratio {
 		stringMap[strconv.FormatFloat(k, 'f', -1, 64)] = v
 	}
+
 	return stringMap
 }
 

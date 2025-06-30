@@ -39,16 +39,19 @@ type ChannelConfig struct {
 // validate spec json is map[string]any
 func (c *ChannelConfig) UnmarshalJSON(data []byte) error {
 	type Alias ChannelConfig
+
 	alias := (*Alias)(c)
 	if err := sonic.Unmarshal(data, alias); err != nil {
 		return err
 	}
+
 	if len(alias.Spec) > 0 {
 		var spec map[string]any
 		if err := sonic.Unmarshal(alias.Spec, &spec); err != nil {
 			return fmt.Errorf("invalid spec json: %w", err)
 		}
 	}
+
 	return nil
 }
 
@@ -125,13 +128,16 @@ func GetModelConfigWithModels(models []string) ([]string, []string, error) {
 	}
 
 	where := DB.Model(&ModelConfig{}).Where("model IN ?", models)
+
 	var count int64
 	if err := where.Count(&count).Error; err != nil {
 		return nil, nil, err
 	}
+
 	if count == 0 {
 		return nil, models, nil
 	}
+
 	if count == int64(len(models)) {
 		return models, nil, nil
 	}
@@ -140,13 +146,16 @@ func GetModelConfigWithModels(models []string) ([]string, []string, error) {
 	if err := where.Pluck("model", &foundModels).Error; err != nil {
 		return nil, nil, err
 	}
+
 	if len(foundModels) == len(models) {
 		return models, nil, nil
 	}
+
 	foundModelsMap := make(map[string]struct{}, len(foundModels))
 	for _, model := range foundModels {
 		foundModelsMap[model] = struct{}{}
 	}
+
 	if len(models)-len(foundModels) > 0 {
 		missingModels := make([]string, 0, len(models)-len(foundModels))
 		for _, model := range models {
@@ -154,8 +163,10 @@ func GetModelConfigWithModels(models []string) ([]string, []string, error) {
 				missingModels = append(missingModels, model)
 			}
 		}
+
 		return foundModels, missingModels, nil
 	}
+
 	return foundModels, nil, nil
 }
 
@@ -164,15 +175,18 @@ func CheckModelConfigExist(models []string) error {
 	if err != nil {
 		return err
 	}
+
 	if len(missingModels) > 0 {
 		slices.Sort(missingModels)
 		return fmt.Errorf("model config not found: %v", missingModels)
 	}
+
 	return nil
 }
 
 func (c *Channel) MarshalJSON() ([]byte, error) {
 	type Alias Channel
+
 	return sonic.Marshal(&struct {
 		*Alias
 		CreatedAt        int64 `json:"created_at"`
@@ -227,27 +241,35 @@ func GetChannels(
 	if id != 0 {
 		tx = tx.Where("id = ?", id)
 	}
+
 	if name != "" {
 		tx = tx.Where("name = ?", name)
 	}
+
 	if key != "" {
 		tx = tx.Where("key = ?", key)
 	}
+
 	if channelType != 0 {
 		tx = tx.Where("type = ?", channelType)
 	}
+
 	if baseURL != "" {
 		tx = tx.Where("base_url = ?", baseURL)
 	}
+
 	err = tx.Count(&total).Error
 	if err != nil {
 		return nil, 0, err
 	}
+
 	if total <= 0 {
 		return nil, 0, nil
 	}
+
 	limit, offset := toLimitOffset(page, perPage)
 	err = tx.Order(getChannelOrder(order)).Limit(limit).Offset(offset).Find(&channels).Error
+
 	return channels, total, err
 }
 
@@ -264,23 +286,29 @@ func SearchChannels(
 	if id != 0 {
 		tx = tx.Where("id = ?", id)
 	}
+
 	if name != "" {
 		tx = tx.Where("name = ?", name)
 	}
+
 	if key != "" {
 		tx = tx.Where("key = ?", key)
 	}
+
 	if channelType != 0 {
 		tx = tx.Where("type = ?", channelType)
 	}
+
 	if baseURL != "" {
 		tx = tx.Where("base_url = ?", baseURL)
 	}
 
 	// Handle keyword search for zero value fields
 	if keyword != "" {
-		var conditions []string
-		var values []any
+		var (
+			conditions []string
+			values     []any
+		)
 
 		keywordInt := String2Int(keyword)
 
@@ -290,28 +318,34 @@ func SearchChannels(
 				values = append(values, keywordInt)
 			}
 		}
+
 		if name == "" {
 			if common.UsingPostgreSQL {
 				conditions = append(conditions, "name ILIKE ?")
 			} else {
 				conditions = append(conditions, "name LIKE ?")
 			}
+
 			values = append(values, "%"+keyword+"%")
 		}
+
 		if key == "" {
 			if common.UsingPostgreSQL {
 				conditions = append(conditions, "key ILIKE ?")
 			} else {
 				conditions = append(conditions, "key LIKE ?")
 			}
+
 			values = append(values, "%"+keyword+"%")
 		}
+
 		if baseURL == "" {
 			if common.UsingPostgreSQL {
 				conditions = append(conditions, "base_url ILIKE ?")
 			} else {
 				conditions = append(conditions, "base_url LIKE ?")
 			}
+
 			values = append(values, "%"+keyword+"%")
 		}
 
@@ -320,6 +354,7 @@ func SearchChannels(
 		} else {
 			conditions = append(conditions, "models LIKE ?")
 		}
+
 		values = append(values, "%"+keyword+"%")
 
 		if common.UsingPostgreSQL {
@@ -327,6 +362,7 @@ func SearchChannels(
 		} else {
 			conditions = append(conditions, "sets LIKE ?")
 		}
+
 		values = append(values, "%"+keyword+"%")
 
 		if len(conditions) > 0 {
@@ -338,11 +374,14 @@ func SearchChannels(
 	if err != nil {
 		return nil, 0, err
 	}
+
 	if total <= 0 {
 		return nil, 0, nil
 	}
+
 	limit, offset := toLimitOffset(page, perPage)
 	err = tx.Order(getChannelOrder(order)).Limit(limit).Offset(offset).Find(&channels).Error
+
 	return channels, total, err
 }
 
@@ -358,11 +397,13 @@ func BatchInsertChannels(channels []*Channel) (err error) {
 			_ = InitModelConfigAndChannelCache()
 		}
 	}()
+
 	for _, channel := range channels {
 		if err := CheckModelConfigExist(channel.Models); err != nil {
 			return err
 		}
 	}
+
 	return DB.Transaction(func(tx *gorm.DB) error {
 		return tx.Create(&channels).Error
 	})
@@ -375,9 +416,11 @@ func UpdateChannel(channel *Channel) (err error) {
 			_ = monitor.ClearChannelAllModelErrors(context.Background(), channel.ID)
 		}
 	}()
+
 	if err := CheckModelConfigExist(channel.Models); err != nil {
 		return err
 	}
+
 	selects := []string{
 		"model_mapping",
 		"key",
@@ -392,14 +435,17 @@ func UpdateChannel(channel *Channel) (err error) {
 	if channel.Type != 0 {
 		selects = append(selects, "type")
 	}
+
 	if channel.Name != "" {
 		selects = append(selects, "name")
 	}
+
 	result := DB.
 		Select(selects).
 		Clauses(clause.Returning{}).
 		Where("id = ?", channel.ID).
 		Updates(channel)
+
 	return HandleUpdateResult(result, ErrChannelNotFound)
 }
 
@@ -420,6 +466,7 @@ func (c *Channel) UpdateModelTest(
 	code int,
 ) (*ChannelTest, error) {
 	var ct *ChannelTest
+
 	err := DB.Transaction(func(tx *gorm.DB) error {
 		if !success {
 			result := tx.Model(&Channel{}).
@@ -434,6 +481,7 @@ func (c *Channel) UpdateModelTest(
 				return err
 			}
 		}
+
 		ct = &ChannelTest{
 			ChannelID:   c.ID,
 			ChannelType: c.Type,
@@ -448,11 +496,13 @@ func (c *Channel) UpdateModelTest(
 			Code:        code,
 		}
 		result := tx.Save(ct)
+
 		return HandleUpdateResult(result, ErrChannelNotFound)
 	})
 	if err != nil {
 		return nil, err
 	}
+
 	return ct, nil
 }
 
@@ -464,6 +514,7 @@ func (c *Channel) UpdateBalance(balance float64) error {
 			BalanceUpdatedAt: time.Now(),
 			Balance:          balance,
 		})
+
 	return HandleUpdateResult(result, ErrChannelNotFound)
 }
 
@@ -474,7 +525,9 @@ func DeleteChannelByID(id int) (err error) {
 			_ = monitor.ClearChannelAllModelErrors(context.Background(), id)
 		}
 	}()
+
 	result := DB.Delete(&Channel{ID: id})
+
 	return HandleUpdateResult(result, ErrChannelNotFound)
 }
 
@@ -487,6 +540,7 @@ func DeleteChannelsByIDs(ids []int) (err error) {
 			}
 		}
 	}()
+
 	return DB.Transaction(func(tx *gorm.DB) error {
 		return tx.
 			Where("id IN (?)", ids).
@@ -509,5 +563,6 @@ func UpdateChannelUsedAmount(id int, amount float64, requestCount int) error {
 			"used_amount":   gorm.Expr("used_amount + ?", amount),
 			"request_count": gorm.Expr("request_count + ?", requestCount),
 		})
+
 	return HandleUpdateResult(result, ErrChannelNotFound)
 }

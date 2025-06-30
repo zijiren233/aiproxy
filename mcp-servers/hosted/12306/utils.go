@@ -38,6 +38,7 @@ func (s *Server) getCookie(ctx context.Context, urlStr string) (map[string]strin
 	if err != nil {
 		return nil, err
 	}
+
 	req.Header.Set("User-Agent", s.userAgent)
 
 	resp, err := s.client.Do(req)
@@ -60,6 +61,7 @@ func (s *Server) formatCookies(cookies map[string]string) string {
 	for name, value := range cookies {
 		parts = append(parts, fmt.Sprintf("%s=%s", name, value))
 	}
+
 	return strings.Join(parts, "; ")
 }
 
@@ -76,6 +78,7 @@ func (s *Server) make12306Request(
 	}
 
 	req.Header.Set("User-Agent", s.userAgent)
+
 	for key, value := range headers {
 		req.Header.Set(key, value)
 	}
@@ -106,6 +109,7 @@ func (s *Server) getStations(ctx context.Context) (map[string]StationData, error
 	if err != nil {
 		return nil, err
 	}
+
 	req.Header.Set("User-Agent", s.userAgent)
 
 	resp, err := s.client.Do(req)
@@ -132,6 +136,7 @@ func (s *Server) getStations(ctx context.Context) (map[string]StationData, error
 	if err != nil {
 		return nil, err
 	}
+
 	req.Header.Set("User-Agent", s.userAgent)
 
 	resp, err = s.client.Do(req)
@@ -147,6 +152,7 @@ func (s *Server) getStations(ctx context.Context) (map[string]StationData, error
 
 	// Extract station data from JS
 	jsContent := string(jsBody)
+
 	matches = stationDataJSRegex.FindStringSubmatch(jsContent)
 	if len(matches) < 2 {
 		return nil, errors.New("station data not found in JS file")
@@ -170,6 +176,7 @@ func (s *Server) getLCQueryPath(ctx context.Context) (string, error) {
 	if err != nil {
 		return "", err
 	}
+
 	req.Header.Set("User-Agent", s.userAgent)
 
 	resp, err := s.client.Do(req)
@@ -326,6 +333,7 @@ func (s *Server) parseTicketsInfo(
 		if len(lishiParts) != 2 {
 			continue
 		}
+
 		durationHours, _ := strconv.Atoi(lishiParts[0])
 		durationMinutes, _ := strconv.Atoi(lishiParts[1])
 

@@ -28,6 +28,7 @@ type GroupPublicMCPResponse struct {
 
 func (r *GroupPublicMCPResponse) MarshalJSON() ([]byte, error) {
 	type Alias GroupPublicMCPResponse
+
 	a := &struct {
 		*Alias
 		CreatedAt int64 `json:"created_at,omitempty"`
@@ -38,9 +39,11 @@ func (r *GroupPublicMCPResponse) MarshalJSON() ([]byte, error) {
 	if !r.CreatedAt.IsZero() {
 		a.CreatedAt = r.CreatedAt.UnixMilli()
 	}
+
 	if !r.UpdateAt.IsZero() {
 		a.UpdateAt = r.UpdateAt.UnixMilli()
 	}
+
 	return sonic.Marshal(a)
 }
 
@@ -58,6 +61,7 @@ func NewGroupPublicMCPResponse(mcp model.PublicMCP) GroupPublicMCPResponse {
 	r.EmbedConfig = nil
 	r.OpenAPIConfig = nil
 	r.TestConfig = nil
+
 	return r
 }
 
@@ -66,6 +70,7 @@ func NewGroupPublicMCPResponses(mcps []model.PublicMCP) []GroupPublicMCPResponse
 	for i, mcp := range mcps {
 		responses[i] = NewGroupPublicMCPResponse(mcp)
 	}
+
 	return responses
 }
 
@@ -80,6 +85,7 @@ type GroupPublicMCPDetailResponse struct {
 
 func (r *GroupPublicMCPDetailResponse) MarshalJSON() ([]byte, error) {
 	type Alias GroupPublicMCPDetailResponse
+
 	a := &struct {
 		*Alias
 		CreatedAt int64 `json:"created_at,omitempty"`
@@ -90,9 +96,11 @@ func (r *GroupPublicMCPDetailResponse) MarshalJSON() ([]byte, error) {
 	if !r.CreatedAt.IsZero() {
 		a.CreatedAt = r.CreatedAt.UnixMilli()
 	}
+
 	if !r.UpdateAt.IsZero() {
 		a.UpdateAt = r.UpdateAt.UnixMilli()
 	}
+
 	return sonic.Marshal(a)
 }
 
@@ -136,6 +144,7 @@ func NewGroupPublicMCPDetailResponse(
 			return r, err
 		}
 	}
+
 	r.Params = reusingParams.Params
 
 	tools, err := getPublicMCPTools(ctx.Request.Context(), mcp, testConfig, r.Params, r.Reusing)
@@ -173,6 +182,7 @@ func GetGroupPublicMCPs(c *gin.Context) {
 	page, perPage := utils.ParsePageParams(c)
 	id := c.Query("id")
 	mcpType := c.Query("type")
+
 	var mcpTypes []model.PublicMCPType
 	switch mcpType {
 	case "hosted":
@@ -180,6 +190,7 @@ func GetGroupPublicMCPs(c *gin.Context) {
 	case "local":
 		mcpTypes = getLocalMCPTypes()
 	}
+
 	keyword := c.Query("keyword")
 
 	mcps, total, err := model.GetPublicMCPs(
@@ -217,6 +228,7 @@ func GetGroupPublicMCPs(c *gin.Context) {
 //	@Router			/api/group/{group}/mcp/{id} [get]
 func GetGroupPublicMCPByID(c *gin.Context) {
 	groupID := c.Param("group")
+
 	id := c.Param("id")
 	if id == "" {
 		middleware.ErrorResponse(c, http.StatusBadRequest, "MCP ID is required")

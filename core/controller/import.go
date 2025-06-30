@@ -147,13 +147,16 @@ func AddOneAPIChannel(ch OneAPIChannel) error {
 	} else {
 		add.Type = 1
 	}
+
 	if add.Type == 1 && add.BaseURL != "" {
 		add.BaseURL += "/v1"
 	}
+
 	chs, err := add.ToChannels()
 	if err != nil {
 		return err
 	}
+
 	return model.BatchInsertChannels(chs)
 }
 
@@ -179,8 +182,10 @@ func ImportChannelFromOneAPI(c *gin.Context) {
 		return
 	}
 
-	var db *gorm.DB
-	var err error
+	var (
+		db  *gorm.DB
+		err error
+	)
 
 	switch {
 	case strings.HasPrefix(req.DSN, "mysql"):
@@ -193,6 +198,7 @@ func ImportChannelFromOneAPI(c *gin.Context) {
 			http.StatusBadRequest,
 			"invalid dsn, only mysql and postgres are supported",
 		)
+
 		return
 	}
 
@@ -200,6 +206,7 @@ func ImportChannelFromOneAPI(c *gin.Context) {
 		middleware.ErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
 	}
+
 	sqlDB, err := db.DB()
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusBadRequest, err.Error())
@@ -208,6 +215,7 @@ func ImportChannelFromOneAPI(c *gin.Context) {
 	defer sqlDB.Close()
 
 	allChannels := make([]*OneAPIChannel, 0)
+
 	err = db.Model(&OneAPIChannel{}).Find(&allChannels).Error
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusBadRequest, err.Error())

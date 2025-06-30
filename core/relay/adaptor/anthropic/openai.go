@@ -56,12 +56,14 @@ type onlyThinkingRequest struct {
 //nolint:gocyclo
 func OpenAIConvertRequest(meta *meta.Meta, req *http.Request) (*Request, error) {
 	var textRequest OpenAIRequest
+
 	err := common.UnmarshalRequestReusable(req, &textRequest)
 	if err != nil {
 		return nil, err
 	}
 
 	var onlyThinking onlyThinkingRequest
+
 	err = common.UnmarshalRequestReusable(req, &onlyThinking)
 	if err != nil {
 		return nil, err
@@ -91,6 +93,7 @@ func OpenAIConvertRequest(meta *meta.Meta, req *http.Request) (*Request, error) 
 				if t == "" {
 					t = "object"
 				}
+
 				claudeTools = append(claudeTools, Tool{
 					Name:        tool.Function.Name,
 					Description: tool.Function.Description,
@@ -140,9 +143,11 @@ func OpenAIConvertRequest(meta *meta.Meta, req *http.Request) (*Request, error) 
 			claudeRequest.Thinking.BudgetTokens >= claudeRequest.MaxTokens {
 			claudeRequest.Thinking.BudgetTokens = claudeRequest.MaxTokens / 2
 		}
+
 		if claudeRequest.Thinking.BudgetTokens < 1024 {
 			claudeRequest.Thinking.BudgetTokens = 1024
 		}
+
 		claudeRequest.Temperature = nil
 	}
 
@@ -162,6 +167,7 @@ func OpenAIConvertRequest(meta *meta.Meta, req *http.Request) (*Request, error) 
 				claudeToolChoice.Type = toolChoiceType
 			}
 		}
+
 		claudeRequest.ToolChoice = claudeToolChoice
 	}
 
@@ -176,15 +182,20 @@ func OpenAIConvertRequest(meta *meta.Meta, req *http.Request) (*Request, error) 
 				Text:         message.StringContent(),
 				CacheControl: message.CacheControl.ResetTTL(),
 			})
+
 			continue
 		}
+
 		claudeMessage := Message{
 			Role: message.Role,
 		}
+
 		var content Content
+
 		content.CacheControl = message.CacheControl.ResetTTL()
 		if message.IsStringContent() {
 			content.Type = conetentTypeText
+
 			content.Text = message.StringContent()
 			if message.Role == "tool" {
 				claudeMessage.Role = "user"
@@ -193,9 +204,11 @@ func OpenAIConvertRequest(meta *meta.Meta, req *http.Request) (*Request, error) 
 				content.Text = ""
 				content.ToolUseID = message.ToolCallID
 			}
+
 			claudeMessage.Content = append(claudeMessage.Content, &content)
 		} else {
 			var contents []*Content
+
 			openaiContent := message.ParseContent()
 			for _, part := range openaiContent {
 				var content Content
@@ -211,8 +224,10 @@ func OpenAIConvertRequest(meta *meta.Meta, req *http.Request) (*Request, error) 
 					}
 					imageTasks = append(imageTasks, &content)
 				}
+
 				contents = append(contents, &content)
 			}
+
 			claudeMessage.Content = contents
 		}
 
@@ -227,6 +242,7 @@ func OpenAIConvertRequest(meta *meta.Meta, req *http.Request) (*Request, error) 
 				Input: inputParam,
 			})
 		}
+
 		claudeRequest.Messages = append(claudeRequest.Messages, claudeMessage)
 	}
 
@@ -246,15 +262,20 @@ func OpenAIConvertRequest(meta *meta.Meta, req *http.Request) (*Request, error) 
 
 func batchPatchImage2Base64(ctx context.Context, imageTasks []*Content) error {
 	sem := semaphore.NewWeighted(3)
-	var wg sync.WaitGroup
-	var mu sync.Mutex
-	var processErrs []error
+
+	var (
+		wg          sync.WaitGroup
+		mu          sync.Mutex
+		processErrs []error
+	)
 
 	for _, task := range imageTasks {
 		if task.Source.URL == "" {
 			continue
 		}
+
 		wg.Add(1)
+
 		go func() {
 			defer wg.Done()
 
@@ -264,8 +285,11 @@ func batchPatchImage2Base64(ctx context.Context, imageTasks []*Content) error {
 			mimeType, data, err := image.GetImageFromURL(ctx, task.Source.URL)
 			if err != nil {
 				mu.Lock()
+
 				processErrs = append(processErrs, err)
+
 				mu.Unlock()
+
 				return
 			}
 
@@ -281,6 +305,7 @@ func batchPatchImage2Base64(ctx context.Context, imageTasks []*Content) error {
 	if len(processErrs) != 0 {
 		return errors.Join(processErrs...)
 	}
+
 	return nil
 }
 
@@ -289,13 +314,17 @@ func StreamResponse2OpenAI(
 	meta *meta.Meta,
 	respData []byte,
 ) (*relaymodel.ChatCompletionsStreamResponse, adaptor.Error) {
-	var usage *relaymodel.ChatUsage
-	var content string
-	var thinking string
-	var stopReason string
+	var (
+		usage      *relaymodel.ChatUsage
+		content    string
+		thinking   string
+		stopReason string
+	)
+
 	tools := make([]*relaymodel.ToolCall, 0)
 
 	var claudeResponse StreamResponse
+
 	err := sonic.Unmarshal(respData, &claudeResponse)
 	if err != nil {
 		return nil, relaymodel.WrapperOpenAIError(
@@ -347,6 +376,7 @@ func StreamResponse2OpenAI(
 		if claudeResponse.Message == nil {
 			return nil, nil
 		}
+
 		openAIUsage := claudeResponse.Message.Usage.ToOpenAIUsage()
 		usage = &openAIUsage
 	case "message_delta":
@@ -354,6 +384,7 @@ func StreamResponse2OpenAI(
 			openAIUsage := claudeResponse.Usage.ToOpenAIUsage()
 			usage = &openAIUsage
 		}
+
 		if claudeResponse.Delta != nil && claudeResponse.Delta.StopReason != nil {
 			stopReason = *claudeResponse.Delta.StopReason
 		}
@@ -386,6 +417,7 @@ func Response2OpenAI(
 	respData []byte,
 ) (*relaymodel.TextResponse, adaptor.Error) {
 	var claudeResponse Response
+
 	err := sonic.Unmarshal(respData, &claudeResponse)
 	if err != nil {
 		return nil, relaymodel.WrapperOpenAIError(
@@ -402,8 +434,11 @@ func Response2OpenAI(
 		)
 	}
 
-	var content string
-	var thinking string
+	var (
+		content  string
+		thinking string
+	)
+
 	tools := make([]*relaymodel.ToolCall, 0)
 	for _, v := range claudeResponse.Content {
 		switch v.Type {
@@ -450,7 +485,9 @@ func Response2OpenAI(
 	if fullTextResponse.Usage.PromptTokens == 0 {
 		fullTextResponse.Usage.PromptTokens = int64(meta.RequestUsage.InputTokens)
 	}
+
 	fullTextResponse.Usage.TotalTokens = fullTextResponse.Usage.PromptTokens + fullTextResponse.Usage.CompletionTokens
+
 	return &fullTextResponse, nil
 }
 
@@ -468,23 +505,29 @@ func OpenAIStreamHandler(
 	log := common.GetLogger(c)
 
 	scanner := bufio.NewScanner(resp.Body)
+
 	buf := openai.GetScannerBuffer()
 	defer openai.PutScannerBuffer(buf)
+
 	scanner.Buffer(*buf, cap(*buf))
 
 	responseText := strings.Builder{}
 
-	var usage *relaymodel.ChatUsage
-	var writed bool
+	var (
+		usage  *relaymodel.ChatUsage
+		writed bool
+	)
 
 	for scanner.Scan() {
 		data := scanner.Bytes()
 		if len(data) < openai.DataPrefixLength {
 			continue
 		}
+
 		if !slices.Equal(data[:openai.DataPrefixLength], openai.DataPrefixBytes) {
 			continue
 		}
+
 		data = bytes.TrimSpace(data[openai.DataPrefixLength:])
 		if slices.Equal(data, openai.DoneBytes) {
 			break
@@ -496,14 +539,18 @@ func OpenAIStreamHandler(
 				log.Errorf("response error: %+v", err)
 				continue
 			}
+
 			if usage == nil {
 				usage = &relaymodel.ChatUsage{}
 			}
+
 			if response != nil && response.Usage != nil {
 				usage.Add(response.Usage)
 			}
+
 			return usage.ToModelUsage(), err
 		}
+
 		if response == nil {
 			continue
 		}
@@ -513,12 +560,16 @@ func OpenAIStreamHandler(
 			if usage == nil {
 				usage = &relaymodel.ChatUsage{}
 			}
+
 			usage.Add(response.Usage)
+
 			if usage.PromptTokens == 0 {
 				usage.PromptTokens = int64(m.RequestUsage.InputTokens)
 				usage.TotalTokens += int64(m.RequestUsage.InputTokens)
 			}
+
 			response.Usage = usage
+
 			responseText.Reset()
 		case usage == nil:
 			for _, choice := range response.Choices {
@@ -581,6 +632,7 @@ func OpenAIHandler(
 			http.StatusInternalServerError,
 		)
 	}
+
 	fullTextResponse, adaptorErr := Response2OpenAI(meta, body)
 	if adaptorErr != nil {
 		return model.Usage{}, adaptorErr
@@ -594,8 +646,10 @@ func OpenAIHandler(
 			http.StatusInternalServerError,
 		)
 	}
+
 	c.Writer.Header().Set("Content-Type", "application/json")
 	c.Writer.Header().Set("Content-Length", strconv.Itoa(len(jsonResponse)))
 	_, _ = c.Writer.Write(jsonResponse)
+
 	return fullTextResponse.Usage.ToModelUsage(), nil
 }

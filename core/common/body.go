@@ -33,17 +33,23 @@ func (l *LimitedReader) Read(p []byte) (n int, err error) {
 	if l.N <= 0 {
 		return 0, ErrLimitedReaderExceeded
 	}
+
 	if int64(len(p)) > l.N {
 		p = p[0:l.N]
 	}
+
 	n, err = l.R.Read(p)
 	l.N -= int64(n)
+
 	return
 }
 
 func GetBodyLimit(body io.Reader, contentLength, n int64) ([]byte, error) {
-	var buf []byte
-	var err error
+	var (
+		buf []byte
+		err error
+	)
+
 	if contentLength <= 0 {
 		buf, err = io.ReadAll(LimitReader(body, n))
 		if err != nil {
@@ -56,12 +62,15 @@ func GetBodyLimit(body io.Reader, contentLength, n int64) ([]byte, error) {
 		if contentLength > n {
 			return nil, fmt.Errorf("body too large: %d, max: %d", contentLength, n)
 		}
+
 		buf = make([]byte, contentLength)
 		_, err = io.ReadFull(body, buf)
 	}
+
 	if err != nil {
 		return nil, fmt.Errorf("body read failed: %w", err)
 	}
+
 	return buf, nil
 }
 
@@ -91,14 +100,20 @@ func GetRequestBodyReusable(req *http.Request) ([]byte, error) {
 		b, _ := requestBody.([]byte)
 		return b, nil
 	}
-	var buf []byte
-	var err error
+
+	var (
+		buf []byte
+		err error
+	)
+
 	defer func() {
 		req.Body.Close()
+
 		if err == nil {
 			req.Body = io.NopCloser(bytes.NewBuffer(buf))
 		}
 	}()
+
 	if req.ContentLength <= 0 ||
 		strings.HasPrefix(contentType, "application/json") {
 		buf, err = io.ReadAll(LimitReader(req.Body, MaxRequestBodySize))
@@ -112,13 +127,17 @@ func GetRequestBodyReusable(req *http.Request) ([]byte, error) {
 		if req.ContentLength > MaxRequestBodySize {
 			return nil, fmt.Errorf("request body too large: %d, max: %d", req.ContentLength, MaxRequestBodySize)
 		}
+
 		buf = make([]byte, req.ContentLength)
 		_, err = io.ReadFull(req.Body, buf)
 	}
+
 	if err != nil {
 		return nil, fmt.Errorf("request body read failed: %w", err)
 	}
+
 	SetRequestBody(req, buf)
+
 	return buf, nil
 }
 
@@ -127,6 +146,7 @@ func UnmarshalRequestReusable(req *http.Request, v any) error {
 	if err != nil {
 		return err
 	}
+
 	return sonic.Unmarshal(requestBody, &v)
 }
 
@@ -135,6 +155,7 @@ func UnmarshalRequest2NodeReusable(req *http.Request, path ...any) (ast.Node, er
 	if err != nil {
 		return ast.Node{}, err
 	}
+
 	return sonic.Get(requestBody, path...)
 }
 
@@ -151,6 +172,7 @@ func UnmarshalResponse(resp *http.Response, v any) error {
 	if err != nil {
 		return err
 	}
+
 	return sonic.Unmarshal(responseBody, &v)
 }
 
@@ -159,5 +181,6 @@ func UnmarshalResponse2Node(resp *http.Response, path ...any) (ast.Node, error) 
 	if err != nil {
 		return ast.Node{}, err
 	}
+
 	return sonic.Get(responseBody, path...)
 }

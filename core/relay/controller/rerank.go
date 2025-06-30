@@ -15,12 +15,15 @@ func getRerankRequest(c *gin.Context) (*relaymodel.RerankRequest, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	if rerankRequest.Model == "" {
 		return nil, errors.New("model parameter must be provided")
 	}
+
 	if rerankRequest.Query == "" {
 		return nil, errors.New("query must not be empty")
 	}
+
 	if len(rerankRequest.Documents) == 0 {
 		return nil, errors.New("document list must not be empty")
 	}
@@ -33,6 +36,7 @@ func rerankPromptTokens(rerankRequest *relaymodel.RerankRequest) int64 {
 	for _, d := range rerankRequest.Documents {
 		tokens += openai.CountTokenInput(d, rerankRequest.Model)
 	}
+
 	return tokens
 }
 
@@ -45,6 +49,7 @@ func GetRerankRequestUsage(c *gin.Context, _ model.ModelConfig) (model.Usage, er
 	if err != nil {
 		return model.Usage{}, err
 	}
+
 	return model.Usage{
 		InputTokens: model.ZeroNullInt64(rerankPromptTokens(rerankRequest)),
 	}, nil

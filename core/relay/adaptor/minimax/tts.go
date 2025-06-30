@@ -35,6 +35,7 @@ func ConvertTTSRequest(meta *meta.Meta, req *http.Request) (adaptor.ConvertResul
 
 	voice, _ := reqMap["voice"].(string)
 	delete(reqMap, "voice")
+
 	if voice == "" {
 		voice = "male-qn-qingse"
 	}
@@ -44,6 +45,7 @@ func ConvertTTSRequest(meta *meta.Meta, req *http.Request) (adaptor.ConvertResul
 		voiceSetting = map[string]any{}
 		reqMap["voice_setting"] = voiceSetting
 	}
+
 	if timberWeights, ok := reqMap["timber_weights"].([]any); !ok || len(timberWeights) == 0 {
 		voiceSetting["voice_id"] = voice
 	}
@@ -52,6 +54,7 @@ func ConvertTTSRequest(meta *meta.Meta, req *http.Request) (adaptor.ConvertResul
 	if ok {
 		voiceSetting["speed"] = int(speed)
 	}
+
 	delete(reqMap, "speed")
 
 	audioSetting, ok := reqMap["audio_setting"].(map[string]any)
@@ -64,10 +67,13 @@ func ConvertTTSRequest(meta *meta.Meta, req *http.Request) (adaptor.ConvertResul
 	if responseFormat == "" {
 		responseFormat, _ = reqMap["format"].(string)
 	}
+
 	if responseFormat == "" {
 		responseFormat = "mp3"
 	}
+
 	audioSetting["format"] = responseFormat
+
 	delete(reqMap, "response_format")
 	meta.Set("audio_format", responseFormat)
 
@@ -75,6 +81,7 @@ func ConvertTTSRequest(meta *meta.Meta, req *http.Request) (adaptor.ConvertResul
 	if ok {
 		audioSetting["sample_rate"] = int(sampleRate)
 	}
+
 	delete(reqMap, "sample_rate")
 
 	if responseFormat == "wav" {
@@ -167,6 +174,7 @@ func TTSHandler(
 	if result.ExtraInfo.AudioFormat != "" {
 		audioFormat = result.ExtraInfo.AudioFormat
 	}
+
 	if audioFormat == "" {
 		c.Writer.Header().Set("Content-Type", http.DetectContentType(audioBytes))
 	} else {
@@ -174,6 +182,7 @@ func TTSHandler(
 	}
 
 	c.Writer.Header().Set("Content-Length", strconv.Itoa(len(audioBytes)))
+
 	_, err = c.Writer.Write(audioBytes)
 	if err != nil {
 		log.Warnf("write response body failed: %v", err)
@@ -196,14 +205,17 @@ func ttsStreamHandler(
 
 	if !sseFormat && audioFormat != "" {
 		c.Writer.Header().Set("Content-Type", "audio/"+audioFormat)
+
 		contextTypeWritten = true
 	}
 
 	log := common.GetLogger(c)
 
 	scanner := bufio.NewScanner(resp.Body)
+
 	buf := openai.GetScannerBuffer()
 	defer openai.PutScannerBuffer(buf)
+
 	scanner.Buffer(*buf, cap(*buf))
 
 	usageCharacters := meta.RequestUsage.InputTokens
@@ -213,9 +225,11 @@ func ttsStreamHandler(
 		if len(data) < openai.DataPrefixLength {
 			continue
 		}
+
 		if !slices.Equal(data[:openai.DataPrefixLength], openai.DataPrefixBytes) {
 			continue
 		}
+
 		data = bytes.TrimSpace(data[openai.DataPrefixLength:])
 		if slices.Equal(data, openai.DoneBytes) {
 			break
@@ -249,6 +263,7 @@ func ttsStreamHandler(
 		// do not write content type for sse format
 		if !contextTypeWritten {
 			c.Writer.Header().Set("Content-Type", http.DetectContentType(audioBytes))
+
 			contextTypeWritten = true
 		}
 
@@ -256,6 +271,7 @@ func ttsStreamHandler(
 		if err != nil {
 			log.Warnf("write response body failed: %v", err)
 		}
+
 		c.Writer.Flush()
 	}
 

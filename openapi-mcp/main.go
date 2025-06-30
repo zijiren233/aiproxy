@@ -31,12 +31,15 @@ func newServer() (*server.MCPServer, error) {
 	} else {
 		err = parser.ParseFile(file)
 	}
+
 	if err != nil {
 		return nil, err
 	}
+
 	converter := convert.NewConverter(parser, convert.Options{
 		OpenAPIFrom: file,
 	})
+
 	return converter.Convert()
 }
 
@@ -54,10 +57,12 @@ func main() {
 
 	if sse != "" {
 		log.Printf("SSE MCP Server Starting")
+
 		err = server.NewSSEServer(s).Start(sse)
 	} else {
 		err = server.ServeStdio(s)
 	}
+
 	if err != nil && !errors.Is(err, context.Canceled) {
 		log.Fatalf("Failed to serve MCP: %v", err)
 	}

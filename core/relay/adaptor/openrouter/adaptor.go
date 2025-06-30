@@ -27,12 +27,15 @@ func (a *Adaptor) DefaultBaseURL() string {
 // choices.[*].delta.reasoning -> choices.[*].delta.reasoning_content
 func streamPreHandler(_ *meta.Meta, node *ast.Node) error {
 	choicesNode := node.Get("choices")
+
 	nodes, err := choicesNode.ArrayUseNode()
 	if err != nil {
 		return err
 	}
+
 	for index, choice := range nodes {
 		deltaNode := choice.Get("delta")
+
 		reasoningString, err := deltaNode.Get("reasoning").String()
 		if err != nil {
 			if errors.Is(err, ast.ErrNotExist) {
@@ -40,31 +43,38 @@ func streamPreHandler(_ *meta.Meta, node *ast.Node) error {
 			}
 			return err
 		}
+
 		_, err = deltaNode.Set("reasoning_content", ast.NewString(reasoningString))
 		if err != nil {
 			return err
 		}
+
 		_, err = deltaNode.Unset("reasoning")
 		if err != nil {
 			return err
 		}
+
 		_, err = choicesNode.SetByIndex(index, choice)
 		if err != nil {
 			return err
 		}
 	}
+
 	return nil
 }
 
 // choices.[*].message.reasoning -> choices.[*].message.reasoning_content
 func handlerPreHandler(_ *meta.Meta, node *ast.Node) error {
 	choicesNode := node.Get("choices")
+
 	nodes, err := choicesNode.ArrayUseNode()
 	if err != nil {
 		return err
 	}
+
 	for index, choice := range nodes {
 		messageNode := choice.Get("message")
+
 		reasoningString, err := messageNode.Get("reasoning").String()
 		if err != nil {
 			if errors.Is(err, ast.ErrNotExist) {
@@ -72,19 +82,23 @@ func handlerPreHandler(_ *meta.Meta, node *ast.Node) error {
 			}
 			return err
 		}
+
 		_, err = messageNode.Set("reasoning_content", ast.NewString(reasoningString))
 		if err != nil {
 			return err
 		}
+
 		_, err = messageNode.Unset("reasoning")
 		if err != nil {
 			return err
 		}
+
 		_, err = choicesNode.SetByIndex(index, choice)
 		if err != nil {
 			return err
 		}
 	}
+
 	return nil
 }
 

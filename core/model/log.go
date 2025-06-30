@@ -29,11 +29,13 @@ func (d *RequestDetail) BeforeSave(_ *gorm.DB) (err error) {
 		d.RequestBody = common.TruncateByRune(d.RequestBody, int(reqMax)) + "..."
 		d.RequestBodyTruncated = true
 	}
+
 	if respMax := config.GetLogDetailResponseBodyMaxSize(); respMax > 0 &&
 		int64(len(d.ResponseBody)) > respMax {
 		d.ResponseBody = common.TruncateByRune(d.ResponseBody, int(respMax)) + "..."
 		d.ResponseBodyTruncated = true
 	}
+
 	return
 }
 
@@ -122,17 +124,21 @@ func (l *Log) BeforeCreate(_ *gorm.DB) (err error) {
 	if len(l.Content) > contentMaxSize {
 		l.Content = common.TruncateByRune(l.Content, contentMaxSize) + "..."
 	}
+
 	if l.CreatedAt.IsZero() {
 		l.CreatedAt = time.Now()
 	}
+
 	if l.RequestAt.IsZero() {
 		l.RequestAt = l.CreatedAt
 	}
+
 	return
 }
 
 func (l *Log) MarshalJSON() ([]byte, error) {
 	type Alias Log
+
 	a := &struct {
 		*Alias
 		CreatedAt int64 `json:"created_at"`
@@ -146,11 +152,13 @@ func (l *Log) MarshalJSON() ([]byte, error) {
 	if !l.RetryAt.IsZero() {
 		a.RetryAt = l.RetryAt.UnixMilli()
 	}
+
 	return sonic.Marshal(a)
 }
 
 func GetLogDetail(logID int) (*RequestDetail, error) {
 	var detail RequestDetail
+
 	err := LogDB.
 		Model(&RequestDetail{}).
 		Where("log_id = ?", logID).
@@ -158,6 +166,7 @@ func GetLogDetail(logID int) (*RequestDetail, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return &detail, nil
 }
 
@@ -165,7 +174,9 @@ func GetGroupLogDetail(logID int, group string) (*RequestDetail, error) {
 	if group == "" {
 		return nil, errors.New("invalid group parameter")
 	}
+
 	var detail RequestDetail
+
 	err := LogDB.
 		Model(&RequestDetail{}).
 		Joins("JOIN logs ON logs.id = request_details.log_id").
@@ -175,6 +186,7 @@ func GetGroupLogDetail(logID int, group string) (*RequestDetail, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return &detail, nil
 }
 
@@ -185,6 +197,7 @@ func CleanLog(batchSize int, optimize bool) (err error) {
 	if err != nil {
 		return err
 	}
+
 	err = cleanLogDetail(batchSize)
 	if err != nil {
 		return err
@@ -193,6 +206,7 @@ func CleanLog(batchSize int, optimize bool) (err error) {
 	if optimize {
 		return optimizeLog()
 	}
+
 	return nil
 }
 
@@ -257,6 +271,7 @@ func optimizeLog() error {
 	case common.UsingSQLite:
 		return LogDB.Exec("VACUUM").Error
 	}
+
 	return nil
 }
 
@@ -265,6 +280,7 @@ func cleanLogDetail(batchSize int) error {
 	if detailStorageHours <= 0 {
 		return nil
 	}
+
 	if batchSize <= 0 {
 		batchSize = defaultCleanLogBatchSize
 	}
@@ -316,12 +332,15 @@ func RecordConsumeLog(
 	if createAt.IsZero() {
 		createAt = time.Now()
 	}
+
 	if requestAt.IsZero() {
 		requestAt = createAt
 	}
+
 	if firstByteAt.IsZero() || firstByteAt.Before(requestAt) {
 		firstByteAt = requestAt
 	}
+
 	log := &Log{
 		RequestID:        EmptyNullString(requestID),
 		RequestAt:        requestAt,
@@ -346,6 +365,7 @@ func RecordConsumeLog(
 		User:             EmptyNullString(user),
 		Metadata:         metadata,
 	}
+
 	return LogDB.Create(log).Error
 }
 
@@ -403,6 +423,7 @@ func buildGetLogsQuery(
 	if requestID != "" {
 		tx = tx.Where("request_id = ?", requestID)
 	}
+
 	if ip != "" {
 		tx = tx.Where("ip = ?", ip)
 	}
@@ -410,12 +431,15 @@ func buildGetLogsQuery(
 	if group != "" {
 		tx = tx.Where("group_id = ?", group)
 	}
+
 	if modelName != "" {
 		tx = tx.Where("model = ?", modelName)
 	}
+
 	if tokenName != "" {
 		tx = tx.Where("token_name = ?", tokenName)
 	}
+
 	if channelID != 0 {
 		tx = tx.Where("channel_id = ?", channelID)
 	}
@@ -469,8 +493,10 @@ func getLogs(
 	page int,
 	perPage int,
 ) (int64, []*Log, error) {
-	var total int64
-	var logs []*Log
+	var (
+		total int64
+		logs  []*Log
+	)
 
 	g := new(errgroup.Group)
 
@@ -515,6 +541,7 @@ func getLogs(
 		}
 
 		limit, offset := toLimitOffset(page, perPage)
+
 		return query.
 			Order(getLogOrder(order)).
 			Limit(limit).
@@ -544,20 +571,24 @@ func GetLogs(
 	page int,
 	perPage int,
 ) (*GetLogsResult, error) {
-	var total int64
-	var logs []*Log
-	var channels []int
+	var (
+		total    int64
+		logs     []*Log
+		channels []int
+	)
 
 	g := new(errgroup.Group)
 
 	g.Go(func() error {
 		var err error
+
 		channels, err = GetUsedChannels(startTimestamp, endTimestamp)
 		return err
 	})
 
 	g.Go(func() error {
 		var err error
+
 		total, logs, err = getLogs(
 			"",
 			startTimestamp,
@@ -576,6 +607,7 @@ func GetLogs(
 			page,
 			perPage,
 		)
+
 		return err
 	})
 
@@ -624,6 +656,7 @@ func GetGroupLogs(
 
 	g.Go(func() error {
 		var err error
+
 		total, logs, err = getLogs(
 			group,
 			startTimestamp,
@@ -642,17 +675,20 @@ func GetGroupLogs(
 			page,
 			perPage,
 		)
+
 		return err
 	})
 
 	g.Go(func() error {
 		var err error
+
 		tokenNames, err = GetGroupUsedTokenNames(group, startTimestamp, endTimestamp)
 		return err
 	})
 
 	g.Go(func() error {
 		var err error
+
 		models, err = GetGroupUsedModels(group, tokenName, startTimestamp, endTimestamp)
 		return err
 	})
@@ -691,6 +727,7 @@ func buildSearchLogsQuery(
 	if requestID != "" {
 		tx = tx.Where("request_id = ?", requestID)
 	}
+
 	if ip != "" {
 		tx = tx.Where("ip = ?", ip)
 	}
@@ -698,12 +735,15 @@ func buildSearchLogsQuery(
 	if group != "" {
 		tx = tx.Where("group_id = ?", group)
 	}
+
 	if modelName != "" {
 		tx = tx.Where("model = ?", modelName)
 	}
+
 	if tokenName != "" {
 		tx = tx.Where("token_name = ?", tokenName)
 	}
+
 	if channelID != 0 {
 		tx = tx.Where("channel_id = ?", channelID)
 	}
@@ -738,21 +778,26 @@ func buildSearchLogsQuery(
 
 	// Handle keyword search for zero value fields
 	if keyword != "" {
-		var conditions []string
-		var values []any
+		var (
+			conditions []string
+			values     []any
+		)
 
 		if requestID == "" {
 			conditions = append(conditions, "request_id = ?")
 			values = append(values, keyword)
 		}
+
 		if group == "" {
 			conditions = append(conditions, "group_id = ?")
 			values = append(values, keyword)
 		}
+
 		if modelName == "" {
 			conditions = append(conditions, "model = ?")
 			values = append(values, keyword)
 		}
+
 		if tokenName == "" {
 			conditions = append(conditions, "token_name = ?")
 			values = append(values, keyword)
@@ -805,8 +850,10 @@ func searchLogs(
 	page int,
 	perPage int,
 ) (int64, []*Log, error) {
-	var total int64
-	var logs []*Log
+	var (
+		total int64
+		logs  []*Log
+	)
 
 	g := new(errgroup.Group)
 
@@ -854,6 +901,7 @@ func searchLogs(
 		}
 
 		limit, offset := toLimitOffset(page, perPage)
+
 		return query.
 			Order(getLogOrder(order)).
 			Limit(limit).
@@ -885,14 +933,17 @@ func SearchLogs(
 	page int,
 	perPage int,
 ) (*GetLogsResult, error) {
-	var total int64
-	var logs []*Log
-	var channels []int
+	var (
+		total    int64
+		logs     []*Log
+		channels []int
+	)
 
 	g := new(errgroup.Group)
 
 	g.Go(func() error {
 		var err error
+
 		total, logs, err = searchLogs(
 			"",
 			keyword,
@@ -912,11 +963,13 @@ func SearchLogs(
 			page,
 			perPage,
 		)
+
 		return err
 	})
 
 	g.Go(func() error {
 		var err error
+
 		channels, err = GetUsedChannels(startTimestamp, endTimestamp)
 		return err
 	})
@@ -967,6 +1020,7 @@ func SearchGroupLogs(
 
 	g.Go(func() error {
 		var err error
+
 		total, logs, err = searchLogs(group,
 			keyword,
 			requestID,
@@ -985,17 +1039,20 @@ func SearchGroupLogs(
 			page,
 			perPage,
 		)
+
 		return err
 	})
 
 	g.Go(func() error {
 		var err error
+
 		tokenNames, err = GetGroupUsedTokenNames(group, startTimestamp, endTimestamp)
 		return err
 	})
 
 	g.Go(func() error {
 		var err error
+
 		models, err = GetGroupUsedModels(group, tokenName, startTimestamp, endTimestamp)
 		return err
 	})
@@ -1025,7 +1082,9 @@ func DeleteGroupLogs(groupID string) (int64, error) {
 	if groupID == "" {
 		return 0, errors.New("group is required")
 	}
+
 	result := LogDB.Where("group_id = ?", groupID).Delete(&Log{})
+
 	return result.RowsAffected, result.Error
 }
 
@@ -1054,22 +1113,30 @@ func GetIPGroups(threshold int, start, end time.Time) (map[string][]string, erro
 	case !end.IsZero():
 		db = db.Where("created_at <= ?", end)
 	}
+
 	db.Where("ip IS NOT NULL AND ip != '' AND group_id != ''")
 
 	result := make(map[string][]string)
+
 	rows, err := db.Rows()
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
+
 	for rows.Next() {
-		var ip string
-		var groups string
+		var (
+			ip     string
+			groups string
+		)
+
 		err = rows.Scan(&ip, &groups)
 		if err != nil {
 			return nil, err
 		}
+
 		result[ip] = strings.Split(groups, ",")
 	}
+
 	return result, nil
 }

@@ -24,18 +24,21 @@ func (n *StdNotifier) Notify(level Level, title, message string) {
 		if note != "" {
 			logrus = logrus.WithField("note", note)
 		}
+
 		logrus.Info(message)
 	case LevelWarn:
 		logrus := warnLogrus.WithField("title", title)
 		if note != "" {
 			logrus = logrus.WithField("note", note)
 		}
+
 		logrus.Warn(message)
 	case LevelError:
 		logrus := errorLogrus.WithField("title", title)
 		if note != "" {
 			logrus = logrus.WithField("note", note)
 		}
+
 		logrus.Error(message)
 	}
 }
@@ -49,5 +52,6 @@ func (n *StdNotifier) NotifyThrottle(
 	if !trylock.MemLock(key, expiration) {
 		return
 	}
+
 	n.Notify(level, title, message)
 }

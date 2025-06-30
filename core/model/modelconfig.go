@@ -44,9 +44,11 @@ func (c *ModelConfig) BeforeSave(_ *gorm.DB) (err error) {
 	if c.Model == "" {
 		return errors.New("model is required")
 	}
+
 	if err := c.Price.ValidateConditionalPrices(); err != nil {
 		return err
 	}
+
 	return nil
 }
 
@@ -60,10 +62,12 @@ func (c *ModelConfig) LoadPluginConfig(pluginName string, config any) error {
 	if len(c.Plugin) == 0 {
 		return nil
 	}
+
 	pluginConfig, ok := c.Plugin[pluginName]
 	if !ok || len(pluginConfig) == 0 {
 		return nil
 	}
+
 	return sonic.Unmarshal(pluginConfig, config)
 }
 
@@ -73,21 +77,26 @@ func (c *ModelConfig) LoadFromGroupModelConfig(groupModelConfig GroupModelConfig
 		newC.RPM = groupModelConfig.RPM
 		newC.TPM = groupModelConfig.TPM
 	}
+
 	if groupModelConfig.OverridePrice {
 		newC.ImagePrices = groupModelConfig.ImagePrices
 		newC.Price = groupModelConfig.Price
 	}
+
 	if groupModelConfig.OverrideRetryTimes {
 		newC.RetryTimes = groupModelConfig.RetryTimes
 	}
+
 	if groupModelConfig.OverrideForceSaveDetail {
 		newC.ForceSaveDetail = groupModelConfig.ForceSaveDetail
 	}
+
 	return newC
 }
 
 func (c *ModelConfig) MarshalJSON() ([]byte, error) {
 	type Alias ModelConfig
+
 	a := &struct {
 		*Alias
 		CreatedAt int64 `json:"created_at,omitempty"`
@@ -98,9 +107,11 @@ func (c *ModelConfig) MarshalJSON() ([]byte, error) {
 	if !c.CreatedAt.IsZero() {
 		a.CreatedAt = c.CreatedAt.UnixMilli()
 	}
+
 	if !c.UpdatedAt.IsZero() {
 		a.UpdatedAt = c.UpdatedAt.UnixMilli()
 	}
+
 	return sonic.Marshal(a)
 }
 
@@ -140,13 +151,16 @@ func GetModelConfigs(
 	if model != "" {
 		tx = tx.Where("model = ?", model)
 	}
+
 	err = tx.Count(&total).Error
 	if err != nil {
 		return nil, 0, err
 	}
+
 	if total <= 0 {
 		return nil, 0, nil
 	}
+
 	limit, offset := toLimitOffset(page, perPage)
 	err = tx.
 		Order("created_at desc").
@@ -155,6 +169,7 @@ func GetModelConfigs(
 		Offset(offset).
 		Find(&configs).
 		Error
+
 	return configs, total, err
 }
 
@@ -164,6 +179,7 @@ func GetAllModelConfigs() (configs []ModelConfig, err error) {
 		Omit("created_at", "updated_at").
 		Find(&configs).
 		Error
+
 	return configs, err
 }
 
@@ -173,6 +189,7 @@ func GetModelConfigsByModels(models []string) (configs []ModelConfig, err error)
 		Omit("created_at", "updated_at").
 		Find(&configs).
 		Error
+
 	return configs, err
 }
 
@@ -183,6 +200,7 @@ func GetModelConfig(model string) (ModelConfig, error) {
 		Omit("created_at", "updated_at").
 		First(config).
 		Error
+
 	return config, HandleNotFound(err, ErrModelConfigNotFound)
 }
 
@@ -196,12 +214,16 @@ func SearchModelConfigs(
 	if model != "" {
 		tx = tx.Where("model = ?", model)
 	}
+
 	if owner != "" {
 		tx = tx.Where("owner = ?", owner)
 	}
+
 	if keyword != "" {
-		var conditions []string
-		var values []any
+		var (
+			conditions []string
+			values     []any
+		)
 
 		if model == "" {
 			if common.UsingPostgreSQL {
@@ -209,6 +231,7 @@ func SearchModelConfigs(
 			} else {
 				conditions = append(conditions, "model LIKE ?")
 			}
+
 			values = append(values, "%"+keyword+"%")
 		}
 
@@ -218,6 +241,7 @@ func SearchModelConfigs(
 			} else {
 				conditions = append(conditions, "owner LIKE ?")
 			}
+
 			values = append(values, "%"+string(owner)+"%")
 		}
 
@@ -225,13 +249,16 @@ func SearchModelConfigs(
 			tx = tx.Where(fmt.Sprintf("(%s)", strings.Join(conditions, " OR ")), values...)
 		}
 	}
+
 	err = tx.Count(&total).Error
 	if err != nil {
 		return nil, 0, err
 	}
+
 	if total <= 0 {
 		return nil, 0, nil
 	}
+
 	limit, offset := toLimitOffset(page, perPage)
 	err = tx.Order("created_at desc").
 		Omit("created_at", "updated_at").
@@ -239,6 +266,7 @@ func SearchModelConfigs(
 		Offset(offset).
 		Find(&configs).
 		Error
+
 	return configs, total, err
 }
 
@@ -248,6 +276,7 @@ func SaveModelConfig(config ModelConfig) (err error) {
 			_ = InitModelConfigAndChannelCache()
 		}
 	}()
+
 	return DB.Save(&config).Error
 }
 
@@ -257,12 +286,14 @@ func SaveModelConfigs(configs []ModelConfig) (err error) {
 			_ = InitModelConfigAndChannelCache()
 		}
 	}()
+
 	return DB.Transaction(func(tx *gorm.DB) error {
 		for _, config := range configs {
 			if err := tx.Save(&config).Error; err != nil {
 				return err
 			}
 		}
+
 		return nil
 	})
 }

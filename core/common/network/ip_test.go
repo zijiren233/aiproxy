@@ -17,6 +17,7 @@ func TestIsIpInSubnet(t *testing.T) {
 		} else {
 			convey.So(ok, convey.ShouldBeTrue)
 		}
+
 		if ok, err := network.IsIPInSubnet(ip2, subnet); err != nil {
 			t.Errorf("failed to check ip in subnet: %s", err)
 		} else {

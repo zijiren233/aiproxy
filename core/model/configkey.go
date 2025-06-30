@@ -27,6 +27,7 @@ func WithModelConfigImageSizes(sizes ...string) ModelConfigOption {
 			panic("image size format error")
 		}
 	}
+
 	return func(config map[ModelConfigKey]any) {
 		config[ModelConfigImageSizes] = sizes
 	}
@@ -85,6 +86,7 @@ func NewModelConfig(opts ...ModelConfigOption) map[ModelConfigKey]any {
 	for _, opt := range opts {
 		opt(config)
 	}
+
 	return config
 }
 
@@ -94,10 +96,12 @@ func GetModelConfigInt(config map[ModelConfigKey]any, key ModelConfigKey) (int, 
 		if value.CanInt() {
 			return int(value.Int()), true
 		}
+
 		if value.CanFloat() {
 			return int(value.Float()), true
 		}
 	}
+
 	return 0, false
 }
 
@@ -107,10 +111,12 @@ func GetModelConfigUint(config map[ModelConfigKey]any, key ModelConfigKey) (uint
 		if value.CanUint() {
 			return value.Uint(), true
 		}
+
 		if value.CanFloat() {
 			return uint64(value.Float()), true
 		}
 	}
+
 	return 0, false
 }
 
@@ -120,13 +126,16 @@ func GetModelConfigFloat(config map[ModelConfigKey]any, key ModelConfigKey) (flo
 		if value.CanFloat() {
 			return value.Float(), true
 		}
+
 		if value.CanInt() {
 			return float64(value.Int()), true
 		}
+
 		if value.CanUint() {
 			return float64(value.Uint()), true
 		}
 	}
+
 	return 0, false
 }
 
@@ -135,9 +144,11 @@ func GetModelConfigStringSlice(config map[ModelConfigKey]any, key ModelConfigKey
 	if !ok {
 		return nil, false
 	}
+
 	if slice, ok := v.([]string); ok {
 		return slice, true
 	}
+
 	if slice, ok := v.([]any); ok {
 		result := make([]string, len(slice))
 		for i, v := range slice {
@@ -145,10 +156,13 @@ func GetModelConfigStringSlice(config map[ModelConfigKey]any, key ModelConfigKey
 				result[i] = s
 				continue
 			}
+
 			return nil, false
 		}
+
 		return result, true
 	}
+
 	return nil, false
 }
 

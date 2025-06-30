@@ -42,9 +42,11 @@ func GetChannelFromHeader(
 					if !ok {
 						return nil, fmt.Errorf("adaptor not found for channel %d", channel.ID)
 					}
+
 					if !a.SupportMode(m) {
 						return nil, fmt.Errorf("channel %d not supported by adaptor", channel.ID)
 					}
+
 					return channel, nil
 				}
 			}
@@ -58,9 +60,11 @@ func GetChannelFromHeader(
 					if !ok {
 						return nil, fmt.Errorf("adaptor not found for channel %d", channel.ID)
 					}
+
 					if !a.SupportMode(m) {
 						return nil, fmt.Errorf("channel %d not supported by adaptor", channel.ID)
 					}
+
 					return channel, nil
 				}
 			}
@@ -84,6 +88,7 @@ func GetChannelFromRequest(
 		if channelID == 0 {
 			return nil, errors.New("channel id is required")
 		}
+
 		for _, set := range availableSet {
 			enabledChannels := mc.EnabledModel2ChannelsBySet[set][modelName]
 			if len(enabledChannels) > 0 {
@@ -93,23 +98,27 @@ func GetChannelFromRequest(
 						if !ok {
 							return nil, fmt.Errorf("adaptor not found for channel %d", channel.ID)
 						}
+
 						if !a.SupportMode(m) {
 							return nil, fmt.Errorf(
 								"channel %d not supported by adaptor",
 								channel.ID,
 							)
 						}
+
 						return channel, nil
 					}
 				}
 			}
 		}
+
 		return nil, fmt.Errorf("channel %d not found for model `%s`", channelID, modelName)
 	default:
 		channelID := middleware.GetChannelID(c)
 		if channelID == 0 {
 			return nil, nil
 		}
+
 		for _, set := range availableSet {
 			enabledChannels := mc.EnabledModel2ChannelsBySet[set][modelName]
 			if len(enabledChannels) > 0 {
@@ -119,18 +128,21 @@ func GetChannelFromRequest(
 						if !ok {
 							return nil, fmt.Errorf("adaptor not found for channel %d", channel.ID)
 						}
+
 						if !a.SupportMode(m) {
 							return nil, fmt.Errorf(
 								"channel %d not supported by adaptor",
 								channel.ID,
 							)
 						}
+
 						return channel, nil
 					}
 				}
 			}
 		}
 	}
+
 	return nil, nil
 }
 
@@ -155,9 +167,11 @@ func GetRandomChannel(
 				if !ok {
 					continue
 				}
+
 				if !a.SupportMode(mode) {
 					continue
 				}
+
 				channelMap[channel.ID] = channel
 			}
 		}
@@ -168,28 +182,35 @@ func GetRandomChannel(
 				if !ok {
 					continue
 				}
+
 				if !a.SupportMode(mode) {
 					continue
 				}
+
 				channelMap[channel.ID] = channel
 			}
 		}
 	}
+
 	migratedChannels := make([]*model.Channel, 0, len(channelMap))
 	for _, channel := range channelMap {
 		migratedChannels = append(migratedChannels, channel)
 	}
+
 	channel, err := getRandomChannel(migratedChannels, mode, errorRates, ignoreChannel...)
+
 	return channel, migratedChannels, err
 }
 
 func getPriority(channel *model.Channel, errorRate float64) int32 {
 	priority := channel.GetPriority()
+
 	if errorRate > 1 {
 		errorRate = 1
 	} else if errorRate < 0.1 {
 		errorRate = 0.1
 	}
+
 	return int32(float64(priority) / errorRate)
 }
 
@@ -213,6 +234,7 @@ func getRandomChannel(
 	}
 
 	var totalWeight int32
+
 	cachedPrioritys := make([]int32, len(channels))
 	for i, ch := range channels {
 		priority := getPriority(ch, errorRates[int64(ch.ID)])
@@ -253,9 +275,11 @@ func getChannelWithFallback(
 	if err == nil {
 		return channel, migratedChannels, nil
 	}
+
 	if !errors.Is(err, ErrChannelsExhausted) {
 		return nil, migratedChannels, err
 	}
+
 	channel, migratedChannels, err = GetRandomChannel(
 		cache,
 		availableSet,
@@ -263,6 +287,7 @@ func getChannelWithFallback(
 		mode,
 		errorRates,
 	)
+
 	return channel, migratedChannels, err
 }
 
@@ -284,6 +309,7 @@ func getInitialChannel(c *gin.Context, modelName string, m mode.Mode) (*initialC
 		if group.Status != model.GroupStatusInternal {
 			return nil, errors.New("channel header is not allowed in non-internal group")
 		}
+
 		channel, err := GetChannelFromHeader(
 			channelHeader,
 			middleware.GetModelCaches(c),
@@ -294,7 +320,9 @@ func getInitialChannel(c *gin.Context, modelName string, m mode.Mode) (*initialC
 		if err != nil {
 			return nil, err
 		}
+
 		log.Data["designated_channel"] = "true"
+
 		return &initialChannel{channel: channel, designatedChannel: true}, nil
 	}
 
@@ -308,6 +336,7 @@ func getInitialChannel(c *gin.Context, modelName string, m mode.Mode) (*initialC
 	if err != nil {
 		return nil, err
 	}
+
 	if channel != nil {
 		return &initialChannel{channel: channel, designatedChannel: true}, nil
 	}
@@ -318,6 +347,7 @@ func getInitialChannel(c *gin.Context, modelName string, m mode.Mode) (*initialC
 	if err != nil {
 		log.Errorf("get %s auto banned channels failed: %+v", modelName, err)
 	}
+
 	log.Debugf("%s model banned channels: %+v", modelName, ids)
 
 	errorRates, err := monitor.GetModelChannelErrorRate(c.Request.Context(), modelName)
@@ -351,6 +381,7 @@ func getWebSearchChannel(
 ) (*model.Channel, error) {
 	ids, _ := monitor.GetBannedChannelsWithModel(ctx, modelName)
 	errorRates, _ := monitor.GetModelChannelErrorRate(ctx, modelName)
+
 	channel, _, err := getChannelWithFallback(
 		mc,
 		nil,
@@ -382,7 +413,9 @@ func getRetryChannel(state *retryState) (*model.Channel, error) {
 		if !errors.Is(err, ErrChannelsExhausted) || state.lastHasPermissionChannel == nil {
 			return nil, err
 		}
+
 		state.exhausted = true
+
 		return state.lastHasPermissionChannel, nil
 	}
 
@@ -399,17 +432,22 @@ func filterChannels(
 		if channel.Status != model.ChannelStatusEnabled {
 			continue
 		}
+
 		a, ok := adaptors.GetAdaptor(channel.Type)
 		if !ok {
 			continue
 		}
+
 		if !a.SupportMode(mode) {
 			continue
 		}
+
 		if slices.Contains(ignoreChannel, int64(channel.ID)) {
 			continue
 		}
+
 		filtered = append(filtered, channel)
 	}
+
 	return filtered
 }

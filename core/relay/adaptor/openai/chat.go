@@ -37,6 +37,7 @@ func GetScannerBuffer() *[]byte {
 	if !ok {
 		panic(fmt.Sprintf("scanner buffer type error: %T, %v", v, v))
 	}
+
 	return v
 }
 
@@ -44,6 +45,7 @@ func PutScannerBuffer(buf *[]byte) {
 	if cap(*buf) != scannerBufferSize {
 		return
 	}
+
 	scannerBufferPool.Put(buf)
 }
 
@@ -72,6 +74,7 @@ func ConvertCompletionsRequest(
 	if err != nil {
 		return adaptor.ConvertResult{}, err
 	}
+
 	return adaptor.ConvertResult{
 		Header: http.Header{
 			"Content-Type":   {"application/json"},
@@ -113,6 +116,7 @@ func ConvertChatCompletionsRequest(
 	if err != nil {
 		return adaptor.ConvertResult{}, err
 	}
+
 	return adaptor.ConvertResult{
 		Header: http.Header{
 			"Content-Type":   {"application/json"},
@@ -127,10 +131,12 @@ func patchStreamOptions(node *ast.Node) error {
 	if !streamNode.Exists() {
 		return nil
 	}
+
 	streamBool, err := streamNode.Bool()
 	if err != nil {
 		return errors.New("stream is not a boolean")
 	}
+
 	if !streamBool {
 		return nil
 	}
@@ -148,6 +154,7 @@ func patchStreamOptions(node *ast.Node) error {
 	}
 
 	_, err = streamOptionsNode.Set("include_usage", ast.NewBool(true))
+
 	return err
 }
 
@@ -161,14 +168,17 @@ func GetUsageOrChatChoicesResponseFromNode(
 		}
 	} else {
 		var usage relaymodel.ChatUsage
+
 		err = sonic.UnmarshalString(usageNode, &usage)
 		if err != nil {
 			return nil, nil, err
 		}
+
 		return &usage, nil, nil
 	}
 
 	var choices []*relaymodel.ChatCompletionsStreamResponseChoice
+
 	choicesNode, err := node.Get("choices").Raw()
 	if err != nil {
 		if !errors.Is(err, ast.ErrNotExist) {
@@ -180,6 +190,7 @@ func GetUsageOrChatChoicesResponseFromNode(
 			return nil, nil, err
 		}
 	}
+
 	return nil, choices, nil
 }
 
@@ -202,8 +213,10 @@ func StreamHandler(
 	responseText := strings.Builder{}
 
 	scanner := bufio.NewScanner(resp.Body)
+
 	buf := GetScannerBuffer()
 	defer PutScannerBuffer(buf)
+
 	scanner.Buffer(*buf, cap(*buf))
 
 	var usage relaymodel.ChatUsage
@@ -213,9 +226,11 @@ func StreamHandler(
 		if len(data) < DataPrefixLength { // ignore blank line or wrong format
 			continue
 		}
+
 		if !slices.Equal(data[:DataPrefixLength], DataPrefixBytes) {
 			continue
 		}
+
 		data = bytes.TrimSpace(data[DataPrefixLength:])
 		if slices.Equal(data, DoneBytes) {
 			break
@@ -226,6 +241,7 @@ func StreamHandler(
 			log.Error("error unmarshalling stream response: " + err.Error())
 			continue
 		}
+
 		if preHandler != nil {
 			err := preHandler(meta, &node)
 			if err != nil {
@@ -233,15 +249,19 @@ func StreamHandler(
 				continue
 			}
 		}
+
 		u, ch, err := GetUsageOrChatChoicesResponseFromNode(&node)
 		if err != nil {
 			log.Error("error unmarshalling stream response: " + err.Error())
 			continue
 		}
+
 		if u != nil {
 			usage = *u
+
 			responseText.Reset()
 		}
+
 		for _, choice := range ch {
 			if usage.TotalTokens == 0 {
 				if choice.Text != "" {
@@ -298,14 +318,17 @@ func GetUsageOrChoicesResponseFromNode(
 		}
 	} else {
 		var usage relaymodel.ChatUsage
+
 		err = sonic.UnmarshalString(usageNode, &usage)
 		if err != nil {
 			return nil, nil, err
 		}
+
 		return &usage, nil, nil
 	}
 
 	var choices []*relaymodel.TextResponseChoice
+
 	choicesNode, err := node.Get("choices").Raw()
 	if err != nil {
 		if !errors.Is(err, ast.ErrNotExist) {
@@ -317,6 +340,7 @@ func GetUsageOrChoicesResponseFromNode(
 			return nil, nil, err
 		}
 	}
+
 	return nil, choices, nil
 }
 
@@ -342,6 +366,7 @@ func Handler(
 			http.StatusInternalServerError,
 		)
 	}
+
 	if preHandler != nil {
 		err := preHandler(meta, &node)
 		if err != nil {
@@ -371,13 +396,16 @@ func Handler(
 				completionTokens += CountTokenText(choice.Text, meta.ActualModel)
 				continue
 			}
+
 			completionTokens += CountTokenText(choice.Message.StringContent(), meta.ActualModel)
 		}
+
 		usage = &relaymodel.ChatUsage{
 			PromptTokens:     int64(meta.RequestUsage.InputTokens),
 			CompletionTokens: completionTokens,
 			TotalTokens:      int64(meta.RequestUsage.InputTokens) + completionTokens,
 		}
+
 		_, err = node.Set("usage", ast.NewAny(usage))
 		if err != nil {
 			return usage.ToModelUsage(), relaymodel.WrapperOpenAIError(
@@ -389,6 +417,7 @@ func Handler(
 	} else if usage.TotalTokens != 0 && usage.PromptTokens == 0 { // some channels don't return prompt tokens & completion tokens
 		usage.PromptTokens = int64(meta.RequestUsage.InputTokens)
 		usage.CompletionTokens = usage.TotalTokens - int64(meta.RequestUsage.InputTokens)
+
 		_, err = node.Set("usage", ast.NewAny(usage))
 		if err != nil {
 			return usage.ToModelUsage(), relaymodel.WrapperOpenAIError(err, "set_usage_failed", http.StatusInternalServerError)
@@ -415,9 +444,11 @@ func Handler(
 
 	c.Writer.Header().Set("Content-Type", "application/json")
 	c.Writer.Header().Set("Content-Length", strconv.Itoa(len(newData)))
+
 	_, err = c.Writer.Write(newData)
 	if err != nil {
 		log.Warnf("write response body failed: %v", err)
 	}
+
 	return usage.ToModelUsage(), nil
 }

@@ -25,6 +25,7 @@ func init() {
 	for _, model := range claude.AwsModelIDMap {
 		adaptors[model.Model] = Model{config: model.ModelConfig, _type: AwsClaude}
 	}
+
 	for _, model := range llama3.AwsModelIDMap {
 		adaptors[model.Model] = Model{config: model.ModelConfig, _type: AwsLlama3}
 	}

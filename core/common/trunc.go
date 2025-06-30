@@ -13,8 +13,10 @@ func TruncateByRune[T ~string](s T, length int) T {
 		if runeLen == -1 || total+runeLen > length {
 			return s[:total]
 		}
+
 		total += runeLen
 	}
+
 	return s[:total]
 }
 
@@ -25,7 +27,9 @@ func TruncateBytesByRune(b []byte, length int) []byte {
 		if runeLen == -1 || total+runeLen > length {
 			return b[:total]
 		}
+
 		total += runeLen
 	}
+
 	return b[:total]
 }

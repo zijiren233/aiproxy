@@ -88,6 +88,7 @@ func (s *SSEServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		go func() {
 			ticker := time.NewTicker(s.keepAliveInterval)
 			defer ticker.Stop()
+
 			id := 0
 			for {
 				id++
@@ -101,6 +102,7 @@ func (s *SSEServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 						},
 					}
 					messageBytes, _ := sonic.Marshal(message)
+
 					pingMsg := fmt.Sprintf("event: message\ndata:%s\n\n", messageBytes)
 					select {
 					case s.eventQueue <- pingMsg:
@@ -140,6 +142,7 @@ func (s *SSEServer) HandleMessage(ctx context.Context, req []byte) error {
 	// Only send response if there is one (not for notifications)
 	if response != nil {
 		var message string
+
 		eventData, err := sonic.Marshal(response)
 		if err != nil {
 			message = "event: message\ndata: {\"error\": \"internal error\",\"jsonrpc\": \"2.0\", \"id\": null}\n\n"

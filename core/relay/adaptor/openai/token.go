@@ -23,8 +23,11 @@ func CountTokenMessages(messages []*model.Message, model string) int64 {
 	// https://github.com/pkoukk/tiktoken-go/issues/6
 	//
 	// Every message follows <|start|>{role/name}\n{content}<|end|>\n
-	var tokensPerMessage int64
-	var tokensPerName int64
+	var (
+		tokensPerMessage int64
+		tokensPerName    int64
+	)
+
 	if model == "gpt-3.5-turbo-0301" {
 		tokensPerMessage = 4
 		tokensPerName = -1 // If there's a name, the role is omitted
@@ -32,6 +35,7 @@ func CountTokenMessages(messages []*model.Message, model string) int64 {
 		tokensPerMessage = 3
 		tokensPerName = 1
 	}
+
 	var tokenNum int64
 	for _, message := range messages {
 		tokenNum += tokensPerMessage
@@ -44,6 +48,7 @@ func CountTokenMessages(messages []*model.Message, model string) int64 {
 				if !ok {
 					continue
 				}
+
 				switch m["type"] {
 				case "text":
 					if textValue, ok := m["text"]; ok {
@@ -58,6 +63,7 @@ func CountTokenMessages(messages []*model.Message, model string) int64 {
 						if !ok {
 							continue
 						}
+
 						detail := ""
 						if imageURL["detail"] != nil {
 							detail, ok = imageURL["detail"].(string)
@@ -65,6 +71,7 @@ func CountTokenMessages(messages []*model.Message, model string) int64 {
 								continue
 							}
 						}
+
 						imageTokens, err := countImageTokens(url, detail, model)
 						if err != nil {
 							log.Error("error counting image tokens: " + err.Error())
@@ -75,13 +82,16 @@ func CountTokenMessages(messages []*model.Message, model string) int64 {
 				}
 			}
 		}
+
 		tokenNum += getTokenNum(tokenEncoder, message.Role)
 		if message.Name != nil {
 			tokenNum += tokensPerName
 			tokenNum += getTokenNum(tokenEncoder, *message.Name)
 		}
 	}
+
 	tokenNum += 3 // Every reply is primed with <|start|>assistant<|message|>
+
 	return tokenNum
 }
 
@@ -99,6 +109,7 @@ const (
 // https://github.com/openai/openai-cookbook/blob/05e3f9be4c7a2ae7ecf029a7c32065b024730ebe/examples/How_to_count_tokens_with_tiktoken.ipynb
 func countImageTokens(url, detail, model string) (_ int64, err error) {
 	fetchSize := true
+
 	var width, height int
 	// Reference:
 	// https://platform.openai.com/docs/guides/vision/low-or-high-fidelity-image-understanding
@@ -132,6 +143,7 @@ func countImageTokens(url, detail, model string) (_ int64, err error) {
 		// assume by test, not sure if this is correct
 		detail = "high"
 	}
+
 	switch detail {
 	case "low":
 		if strings.HasPrefix(model, "gpt-4o-mini") {
@@ -145,21 +157,26 @@ func countImageTokens(url, detail, model string) (_ int64, err error) {
 				return 0, err
 			}
 		}
+
 		if width > 2048 || height > 2048 { // max(width, height) > 2048
 			ratio := float64(2048) / math.Max(float64(width), float64(height))
 			width = int(float64(width) * ratio)
 			height = int(float64(height) * ratio)
 		}
+
 		if width > 768 && height > 768 { // min(width, height) > 768
 			ratio := float64(768) / math.Min(float64(width), float64(height))
 			width = int(float64(width) * ratio)
 			height = int(float64(height) * ratio)
 		}
+
 		numSquares := int64(math.Ceil(float64(width)/512) * math.Ceil(float64(height)/512))
 		if strings.HasPrefix(model, "gpt-4o-mini") {
 			return numSquares*gpt4oMiniHighDetailCost + gpt4oMiniAdditionalCost, nil
 		}
+
 		result := numSquares*highDetailCostPerTile + additionalCost
+
 		return result, nil
 	default:
 		return 0, errors.New("invalid detail option")
@@ -175,14 +192,17 @@ func CountTokenInput(input any, model string) int64 {
 		for _, s := range v {
 			num += CountTokenInput(s, model)
 		}
+
 		return num
 	case []string:
 		builder := strings.Builder{}
 		for _, s := range v {
 			builder.WriteString(s)
 		}
+
 		return CountTokenText(builder.String(), model)
 	}
+
 	return 0
 }
 

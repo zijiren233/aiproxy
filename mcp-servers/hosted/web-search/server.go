@@ -122,6 +122,7 @@ func ListTools(ctx context.Context) ([]mcp.Tool, error) {
 	addWebSearchTool(mcpServer, nil, "", 0)
 	addMultiSearchTool(mcpServer, nil, 0)
 	addSmartSearchTool(mcpServer, nil)
+
 	return mcpservers.ListServerTools(ctx, mcpServer)
 }
 
@@ -373,6 +374,7 @@ func addMultiSearchTool(
 						"snippet": result.Content,
 					})
 				}
+
 				allResults[engineName] = engineResults
 			}
 
@@ -457,16 +459,19 @@ func addSmartSearchTool(mcpServer *server.MCPServer, engines map[string]engine.E
 				}
 
 				searchEngine := engines[engineName]
+
 				results, err := searchEngine.Search(ctx, engine.SearchQuery{
 					Queries:    []string{q.Query},
 					MaxResults: q.MaxResults,
 				})
 				if err == nil {
 					allResults = append(allResults, results...)
+
 					enginesUsed, ok := searchSummary["engines_used"].([]string)
 					if !ok {
 						continue
 					}
+
 					if !slices.Contains(enginesUsed, engineName) {
 						searchSummary["engines_used"] = append(
 							enginesUsed,
@@ -513,6 +518,7 @@ func getAvailableEngines(engines map[string]engine.Engine) []string {
 	for name := range engines {
 		names = append(names, name)
 	}
+
 	return names
 }
 

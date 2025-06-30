@@ -33,16 +33,19 @@ func (r *RetryLog) BeforeSave(_ *gorm.DB) (err error) {
 		r.RequestBody = common.TruncateByRune(r.RequestBody, int(reqMax)) + "..."
 		r.RequestBodyTruncated = true
 	}
+
 	if respMax := config.GetLogDetailResponseBodyMaxSize(); respMax > 0 &&
 		int64(len(r.ResponseBody)) > respMax {
 		r.ResponseBody = common.TruncateByRune(r.ResponseBody, int(respMax)) + "..."
 		r.ResponseBodyTruncated = true
 	}
+
 	return
 }
 
 func (r *RetryLog) MarshalJSON() ([]byte, error) {
 	type Alias RetryLog
+
 	a := &struct {
 		*Alias
 		CreatedAt int64 `json:"created_at"`
@@ -56,6 +59,7 @@ func (r *RetryLog) MarshalJSON() ([]byte, error) {
 	if !r.RetryAt.IsZero() {
 		a.RetryAt = r.RetryAt.UnixMilli()
 	}
+
 	return sonic.Marshal(a)
 }
 
@@ -75,12 +79,15 @@ func RecordRetryLog(
 	if createAt.IsZero() {
 		createAt = time.Now()
 	}
+
 	if requestAt.IsZero() {
 		requestAt = createAt
 	}
+
 	if firstByteAt.IsZero() || firstByteAt.Before(requestAt) {
 		firstByteAt = requestAt
 	}
+
 	log := &RetryLog{
 		RequestID:        EmptyNullString(requestID),
 		RequestAt:        requestAt,
@@ -95,5 +102,6 @@ func RecordRetryLog(
 		RequestBody:      requestDetail.RequestBody,
 		ResponseBody:     requestDetail.ResponseBody,
 	}
+
 	return LogDB.Create(log).Error
 }

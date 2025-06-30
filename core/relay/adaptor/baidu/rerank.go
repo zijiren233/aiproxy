@@ -35,7 +35,9 @@ func RerankHandler(
 			http.StatusInternalServerError,
 		)
 	}
+
 	reRankResp := RerankResponse{}
+
 	err = sonic.Unmarshal(respBody, &reRankResp)
 	if err != nil {
 		return model.Usage{}, relaymodel.WrapperOpenAIError(
@@ -44,10 +46,13 @@ func RerankHandler(
 			http.StatusInternalServerError,
 		)
 	}
+
 	if reRankResp.Error != nil && reRankResp.Error.ErrorCode != 0 {
 		return model.Usage{}, ErrorHandler(reRankResp.Error)
 	}
+
 	respMap := make(map[string]any)
+
 	err = sonic.Unmarshal(respBody, &respMap)
 	if err != nil {
 		return reRankResp.Usage.ToModelUsage(), relaymodel.WrapperOpenAIError(
@@ -56,6 +61,7 @@ func RerankHandler(
 			http.StatusInternalServerError,
 		)
 	}
+
 	delete(respMap, "model")
 	delete(respMap, "usage")
 	respMap["meta"] = &relaymodel.RerankMeta{
@@ -66,6 +72,7 @@ func RerankHandler(
 	}
 	respMap["result"] = respMap["results"]
 	delete(respMap, "results")
+
 	jsonData, err := sonic.Marshal(respMap)
 	if err != nil {
 		return reRankResp.Usage.ToModelUsage(), relaymodel.WrapperOpenAIError(
@@ -74,11 +81,14 @@ func RerankHandler(
 			http.StatusInternalServerError,
 		)
 	}
+
 	c.Writer.Header().Set("Content-Type", "application/json")
 	c.Writer.Header().Set("Content-Length", strconv.Itoa(len(jsonData)))
+
 	_, err = c.Writer.Write(jsonData)
 	if err != nil {
 		log.Warnf("write response body failed: %v", err)
 	}
+
 	return reRankResp.Usage.ToModelUsage(), nil
 }

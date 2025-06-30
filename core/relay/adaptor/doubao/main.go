@@ -24,6 +24,7 @@ func GetRequestURL(meta *meta.Meta) (adaptor.RequestURL, error) {
 				URL:    u + "/api/v3/bots/chat/completions",
 			}, nil
 		}
+
 		return adaptor.RequestURL{
 			Method: http.MethodPost,
 			URL:    u + "/api/v3/chat/completions",
@@ -35,6 +36,7 @@ func GetRequestURL(meta *meta.Meta) (adaptor.RequestURL, error) {
 				URL:    u + "/api/v3/embeddings/multimodal",
 			}, nil
 		}
+
 		return adaptor.RequestURL{
 			Method: http.MethodPost,
 			URL:    u + "/api/v3/embeddings",
@@ -100,6 +102,7 @@ func (a *Adaptor) DoResponse(
 		} else {
 			usage, err = openai.Handler(meta, c, resp, newHandlerPreHandler(&websearchCount))
 		}
+
 		usage.WebSearchCount += model.ZeroNullInt64(websearchCount)
 	case mode.Embeddings:
 		usage, err = openai.EmbeddingsHandler(
@@ -111,6 +114,7 @@ func (a *Adaptor) DoResponse(
 	default:
 		return openai.DoResponse(meta, store, c, resp)
 	}
+
 	return usage, err
 }
 

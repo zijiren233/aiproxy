@@ -43,6 +43,7 @@ func (a *Adaptor) GetRequestURL(meta *meta.Meta, _ adaptor.Store) (adaptor.Reque
 	if u == "" {
 		u = baseURL
 	}
+
 	switch meta.Mode {
 	case mode.ImagesGenerations:
 		return adaptor.RequestURL{
@@ -101,6 +102,7 @@ func patchQwen3EnableThinking(node *ast.Node) error {
 		if err != nil {
 			return errors.New("stream is not a boolean")
 		}
+
 		isStreaming = streamBool
 	}
 
@@ -133,17 +135,21 @@ func (a *Adaptor) ConvertRequest(
 		if strings.HasPrefix(meta.ActualModel, "qwen3-") {
 			return openai.ConvertChatCompletionsRequest(meta, req, patchQwen3EnableThinking, false)
 		}
+
 		if strings.HasPrefix(meta.ActualModel, "qwq-") {
 			return openai.ConvertChatCompletionsRequest(meta, req, patchQwqOnlySupportStream, false)
 		}
+
 		return openai.ConvertChatCompletionsRequest(meta, req, nil, false)
 	case mode.Completions:
 		if strings.HasPrefix(meta.ActualModel, "qwen3-") {
 			return openai.ConvertCompletionsRequest(meta, req, patchQwen3EnableThinking)
 		}
+
 		if strings.HasPrefix(meta.ActualModel, "qwq-") {
 			return openai.ConvertCompletionsRequest(meta, req, patchQwqOnlySupportStream)
 		}
+
 		return openai.ConvertCompletionsRequest(meta, req, nil)
 	case mode.Embeddings:
 		return openai.ConvertRequest(meta, store, req)

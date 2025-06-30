@@ -26,9 +26,11 @@ func HandleUpdateResult(result *gorm.DB, entityName string) error {
 	if result.Error != nil {
 		return HandleNotFound(result.Error, entityName)
 	}
+
 	if result.RowsAffected == 0 {
 		return NotFoundError(entityName)
 	}
+
 	return nil
 }
 
@@ -59,12 +61,14 @@ func (znf *ZeroNullFloat64) Scan(value any) error {
 		*znf = 0
 		return nil
 	}
+
 	switch v := value.(type) {
 	case string:
 		vf, err := strconv.ParseFloat(v, 64)
 		if err != nil {
 			return err
 		}
+
 		*znf = ZeroNullFloat64(vf)
 	case int:
 		*znf = ZeroNullFloat64(v)
@@ -77,6 +81,7 @@ func (znf *ZeroNullFloat64) Scan(value any) error {
 	default:
 		return fmt.Errorf("unsupported type: %T", v)
 	}
+
 	return nil
 }
 
@@ -94,6 +99,7 @@ func (zni *ZeroNullInt64) Scan(value any) error {
 		*zni = 0
 		return nil
 	}
+
 	switch v := value.(type) {
 	case int:
 		*zni = ZeroNullInt64(v)
@@ -102,6 +108,7 @@ func (zni *ZeroNullInt64) Scan(value any) error {
 	default:
 		return fmt.Errorf("unsupported type: %T", v)
 	}
+
 	return nil
 }
 
@@ -117,6 +124,7 @@ func (ns *EmptyNullString) Scan(value any) error {
 		*ns = ""
 		return nil
 	}
+
 	switch v := value.(type) {
 	case []byte:
 		*ns = EmptyNullString(v)
@@ -125,6 +133,7 @@ func (ns *EmptyNullString) Scan(value any) error {
 	default:
 		return fmt.Errorf("unsupported type: %T", v)
 	}
+
 	return nil
 }
 
@@ -140,10 +149,12 @@ func String2Int(keyword string) int {
 	if keyword == "" {
 		return 0
 	}
+
 	i, err := strconv.Atoi(keyword)
 	if err != nil {
 		return 0
 	}
+
 	return i
 }
 
@@ -152,10 +163,12 @@ func toLimitOffset(page, perPage int) (limit, offset int) {
 	if page < 0 {
 		page = 0
 	}
+
 	if perPage <= 0 {
 		perPage = 10
 	} else if perPage > 100 {
 		perPage = 100
 	}
+
 	return perPage, page * perPage
 }

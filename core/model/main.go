@@ -33,11 +33,13 @@ func chooseDB(envName string) (*gorm.DB, error) {
 	case strings.HasPrefix(dsn, "postgres"):
 		// Use PostgreSQL
 		log.Info("using PostgreSQL as database")
+
 		common.UsingPostgreSQL = true
 		return OpenPostgreSQL(dsn)
 	case strings.HasPrefix(dsn, "mysql"):
 		// Use MySQL
 		log.Info("using MySQL as database")
+
 		common.UsingMySQL = true
 		return OpenMySQL(dsn)
 	default:
@@ -46,8 +48,11 @@ func chooseDB(envName string) (*gorm.DB, error) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to get absolute path of SQLite database: %w", err)
 		}
+
 		log.Info("SQL_DSN not set, using SQLite as database: ", absPath)
+
 		common.UsingSQLite = true
+
 		return OpenSQLite(absPath)
 	}
 }
@@ -59,6 +64,7 @@ func newDBLogger() gormLogger.Interface {
 	} else {
 		logLevel = gormLogger.Warn
 	}
+
 	return gormLogger.New(
 		log.StandardLogger(),
 		gormLogger.Config{
@@ -101,6 +107,7 @@ func OpenSQLite(sqlitePath string) (*gorm.DB, error) {
 	}
 
 	dsn := fmt.Sprintf("%s?_busy_timeout=%d", sqlitePath, common.SQLiteBusyTimeout)
+
 	return gorm.Open(sqlite.Open(dsn), &gorm.Config{
 		PrepareStmt:                              true, // precompile SQL
 		TranslateError:                           true,
@@ -112,6 +119,7 @@ func OpenSQLite(sqlitePath string) (*gorm.DB, error) {
 
 func InitDB() {
 	var err error
+
 	DB, err = chooseDB("SQL_DSN")
 	if err != nil {
 		log.Fatal("failed to initialize database: " + err.Error())
@@ -125,10 +133,12 @@ func InitDB() {
 	}
 
 	log.Info("database migration started")
+
 	if err = migrateDB(); err != nil {
 		log.Fatal("failed to migrate database: " + err.Error())
 		return
 	}
+
 	log.Info("database migrated")
 }
 
@@ -148,26 +158,33 @@ func migrateDB() error {
 	if err != nil {
 		return err
 	}
+
 	return nil
 }
 
 func InitLogDB() {
 	if os.Getenv("LOG_SQL_DSN") == "" {
 		LogDB = DB
+
 		if config.DisableAutoMigrateDB {
 			return
 		}
+
 		err := migrateLOGDB()
 		if err != nil {
 			log.Fatal("failed to migrate secondary database: " + err.Error())
 			return
 		}
+
 		log.Info("secondary database migrated")
+
 		return
 	}
 
 	log.Info("using secondary database for table logs")
+
 	var err error
+
 	LogDB, err = chooseDB("LOG_SQL_DSN")
 	if err != nil {
 		log.Fatal("failed to initialize secondary database: " + err.Error())
@@ -181,11 +198,13 @@ func InitLogDB() {
 	}
 
 	log.Info("secondary database migration started")
+
 	err = migrateLOGDB()
 	if err != nil {
 		log.Fatal("failed to migrate secondary database: " + err.Error())
 		return
 	}
+
 	log.Info("secondary database migrated")
 }
 
@@ -215,6 +234,7 @@ func migrateLOGDB() error {
 				err.Error(),
 			)
 		}
+
 		err = CreateSummaryIndexs(LogDB)
 		if err != nil {
 			notify.ErrorThrottle(
@@ -224,6 +244,7 @@ func migrateLOGDB() error {
 				err.Error(),
 			)
 		}
+
 		err = CreateGroupSummaryIndexs(LogDB)
 		if err != nil {
 			notify.ErrorThrottle(
@@ -233,6 +254,7 @@ func migrateLOGDB() error {
 				err.Error(),
 			)
 		}
+
 		err = CreateSummaryMinuteIndexs(LogDB)
 		if err != nil {
 			notify.ErrorThrottle(
@@ -242,6 +264,7 @@ func migrateLOGDB() error {
 				err.Error(),
 			)
 		}
+
 		err = CreateGroupSummaryMinuteIndexs(LogDB)
 		if err != nil {
 			notify.ErrorThrottle(
@@ -252,6 +275,7 @@ func migrateLOGDB() error {
 			)
 		}
 	}()
+
 	return nil
 }
 
@@ -276,7 +300,9 @@ func closeDB(db *gorm.DB) error {
 	if err != nil {
 		return err
 	}
+
 	err = sqlDB.Close()
+
 	return err
 }
 
@@ -287,5 +313,6 @@ func CloseDB() error {
 			return err
 		}
 	}
+
 	return closeDB(DB)
 }

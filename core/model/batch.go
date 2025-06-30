@@ -145,6 +145,7 @@ func CleanBatchUpdatesSummary(ctx context.Context) {
 				return
 			}
 		}
+
 		ProcessBatchUpdatesSummary()
 		time.Sleep(time.Second * 1)
 	}
@@ -157,24 +158,31 @@ func ProcessBatchUpdatesSummary() {
 	var wg sync.WaitGroup
 
 	wg.Add(1)
+
 	go processGroupUpdates(&wg)
 
 	wg.Add(1)
+
 	go processTokenUpdates(&wg)
 
 	wg.Add(1)
+
 	go processChannelUpdates(&wg)
 
 	wg.Add(1)
+
 	go processGroupSummaryUpdates(&wg)
 
 	wg.Add(1)
+
 	go processSummaryUpdates(&wg)
 
 	wg.Add(1)
+
 	go processSummaryMinuteUpdates(&wg)
 
 	wg.Add(1)
+
 	go processGroupSummaryMinuteUpdates(&wg)
 
 	wg.Wait()
@@ -182,6 +190,7 @@ func ProcessBatchUpdatesSummary() {
 
 func processGroupUpdates(wg *sync.WaitGroup) {
 	defer wg.Done()
+
 	for groupID, data := range batchData.Groups {
 		err := UpdateGroupUsedAmountAndRequestCount(
 			groupID,
@@ -203,6 +212,7 @@ func processGroupUpdates(wg *sync.WaitGroup) {
 
 func processTokenUpdates(wg *sync.WaitGroup) {
 	defer wg.Done()
+
 	for tokenID, data := range batchData.Tokens {
 		err := UpdateTokenUsedAmount(tokenID, data.Amount.InexactFloat64(), data.Count)
 		if IgnoreNotFound(err) != nil {
@@ -220,6 +230,7 @@ func processTokenUpdates(wg *sync.WaitGroup) {
 
 func processChannelUpdates(wg *sync.WaitGroup) {
 	defer wg.Done()
+
 	for channelID, data := range batchData.Channels {
 		err := UpdateChannelUsedAmount(channelID, data.Amount.InexactFloat64(), data.Count)
 		if IgnoreNotFound(err) != nil {
@@ -237,6 +248,7 @@ func processChannelUpdates(wg *sync.WaitGroup) {
 
 func processGroupSummaryUpdates(wg *sync.WaitGroup) {
 	defer wg.Done()
+
 	for key, data := range batchData.GroupSummaries {
 		err := UpsertGroupSummary(data.GroupSummaryUnique, data.SummaryData)
 		if err != nil {
@@ -254,6 +266,7 @@ func processGroupSummaryUpdates(wg *sync.WaitGroup) {
 
 func processGroupSummaryMinuteUpdates(wg *sync.WaitGroup) {
 	defer wg.Done()
+
 	for key, data := range batchData.GroupSummariesMinute {
 		err := UpsertGroupSummaryMinute(data.GroupSummaryMinuteUnique, data.SummaryData)
 		if err != nil {
@@ -271,6 +284,7 @@ func processGroupSummaryMinuteUpdates(wg *sync.WaitGroup) {
 
 func processSummaryUpdates(wg *sync.WaitGroup) {
 	defer wg.Done()
+
 	for key, data := range batchData.Summaries {
 		err := UpsertSummary(data.SummaryUnique, data.SummaryData)
 		if err != nil {
@@ -288,6 +302,7 @@ func processSummaryUpdates(wg *sync.WaitGroup) {
 
 func processSummaryMinuteUpdates(wg *sync.WaitGroup) {
 	defer wg.Done()
+
 	for key, data := range batchData.SummariesMinute {
 		err := UpsertSummaryMinute(data.SummaryMinuteUnique, data.SummaryData)
 		if err != nil {
@@ -452,6 +467,7 @@ func updateChannelData(channelID int, amount float64, amountDecimal decimal.Deci
 			batchData.Channels[channelID].Amount = amountDecimal.
 				Add(batchData.Channels[channelID].Amount)
 		}
+
 		batchData.Channels[channelID].Count++
 	}
 }
@@ -466,6 +482,7 @@ func updateGroupData(group string, amount float64, amountDecimal decimal.Decimal
 			batchData.Groups[group].Amount = amountDecimal.
 				Add(batchData.Groups[group].Amount)
 		}
+
 		batchData.Groups[group].Count++
 	}
 }
@@ -480,6 +497,7 @@ func updateTokenData(tokenID int, amount float64, amountDecimal decimal.Decimal)
 			batchData.Tokens[tokenID].Amount = amountDecimal.
 				Add(batchData.Tokens[tokenID].Amount)
 		}
+
 		batchData.Tokens[tokenID].Count++
 	}
 }
@@ -496,9 +514,11 @@ func updateGroupSummaryData(
 	if createAt.IsZero() {
 		createAt = time.Now()
 	}
+
 	if requestAt.IsZero() {
 		requestAt = createAt
 	}
+
 	if firstByteAt.IsZero() || firstByteAt.Before(requestAt) {
 		firstByteAt = requestAt
 	}
@@ -511,6 +531,7 @@ func updateGroupSummaryData(
 	}
 
 	groupSummaryKey := groupSummaryUniqueKey(groupUnique)
+
 	groupSummary, ok := batchData.GroupSummaries[groupSummaryKey]
 	if !ok {
 		groupSummary = &GroupSummaryUpdate{
@@ -528,6 +549,7 @@ func updateGroupSummaryData(
 	groupSummary.TotalTTFBMilliseconds += firstByteAt.Sub(requestAt).Milliseconds()
 
 	groupSummary.Usage.Add(usage)
+
 	if code != http.StatusOK {
 		groupSummary.ExceptionCount++
 	}
@@ -545,9 +567,11 @@ func updateGroupSummaryDataMinute(
 	if createAt.IsZero() {
 		createAt = time.Now()
 	}
+
 	if requestAt.IsZero() {
 		requestAt = createAt
 	}
+
 	if firstByteAt.IsZero() || firstByteAt.Before(requestAt) {
 		firstByteAt = requestAt
 	}
@@ -560,6 +584,7 @@ func updateGroupSummaryDataMinute(
 	}
 
 	groupSummaryKey := groupSummaryMinuteUniqueKey(groupUnique)
+
 	groupSummary, ok := batchData.GroupSummariesMinute[groupSummaryKey]
 	if !ok {
 		groupSummary = &GroupSummaryMinuteUpdate{
@@ -577,6 +602,7 @@ func updateGroupSummaryDataMinute(
 	groupSummary.TotalTTFBMilliseconds += firstByteAt.Sub(requestAt).Milliseconds()
 
 	groupSummary.Usage.Add(usage)
+
 	if code != http.StatusOK {
 		groupSummary.ExceptionCount++
 	}
@@ -595,9 +621,11 @@ func updateSummaryData(
 	if createAt.IsZero() {
 		createAt = time.Now()
 	}
+
 	if requestAt.IsZero() {
 		requestAt = createAt
 	}
+
 	if firstByteAt.IsZero() || firstByteAt.Before(requestAt) {
 		firstByteAt = requestAt
 	}
@@ -609,6 +637,7 @@ func updateSummaryData(
 	}
 
 	summaryKey := summaryUniqueKey(summaryUnique)
+
 	summary, ok := batchData.Summaries[summaryKey]
 	if !ok {
 		summary = &SummaryUpdate{
@@ -626,6 +655,7 @@ func updateSummaryData(
 	summary.TotalTTFBMilliseconds += firstByteAt.Sub(requestAt).Milliseconds()
 
 	summary.Usage.Add(usage)
+
 	if code != http.StatusOK {
 		summary.ExceptionCount++
 	}
@@ -644,9 +674,11 @@ func updateSummaryDataMinute(
 	if createAt.IsZero() {
 		createAt = time.Now()
 	}
+
 	if requestAt.IsZero() {
 		requestAt = createAt
 	}
+
 	if firstByteAt.IsZero() || firstByteAt.Before(requestAt) {
 		firstByteAt = requestAt
 	}
@@ -658,6 +690,7 @@ func updateSummaryDataMinute(
 	}
 
 	summaryKey := summaryMinuteUniqueKey(summaryUnique)
+
 	summary, ok := batchData.SummariesMinute[summaryKey]
 	if !ok {
 		summary = &SummaryMinuteUpdate{
@@ -675,6 +708,7 @@ func updateSummaryDataMinute(
 	summary.TotalTTFBMilliseconds += firstByteAt.Sub(requestAt).Milliseconds()
 
 	summary.Usage.Add(usage)
+
 	if code != http.StatusOK {
 		summary.ExceptionCount++
 	}

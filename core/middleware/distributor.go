@@ -29,20 +29,27 @@ func calculateGroupConsumeLevelRatio(usedAmount float64) float64 {
 	if len(v) == 0 {
 		return 1
 	}
-	var maxConsumeLevel float64 = -1
-	var groupConsumeLevelRatio float64
+
+	var (
+		maxConsumeLevel        float64 = -1
+		groupConsumeLevelRatio float64
+	)
+
 	for consumeLevel, ratio := range v {
 		if usedAmount < consumeLevel {
 			continue
 		}
+
 		if consumeLevel > maxConsumeLevel {
 			maxConsumeLevel = consumeLevel
 			groupConsumeLevelRatio = ratio
 		}
 	}
+
 	if groupConsumeLevelRatio <= 0 {
 		groupConsumeLevelRatio = 1
 	}
+
 	return groupConsumeLevelRatio
 }
 
@@ -51,10 +58,12 @@ func getGroupPMRatio(group model.GroupCache) (float64, float64) {
 	if groupRPMRatio <= 0 {
 		groupRPMRatio = 1
 	}
+
 	groupTPMRatio := group.TPMRatio
 	if groupTPMRatio <= 0 {
 		groupTPMRatio = 1
 	}
+
 	return groupRPMRatio, groupTPMRatio
 }
 
@@ -62,10 +71,12 @@ func GetGroupAdjustedModelConfig(group model.GroupCache, mc model.ModelConfig) m
 	if groupModelConfig, ok := group.ModelConfigs[mc.Model]; ok {
 		mc = mc.LoadFromGroupModelConfig(groupModelConfig)
 	}
+
 	rpmRatio, tpmRatio := getGroupPMRatio(group)
 	groupConsumeLevelRatio := calculateGroupConsumeLevelRatio(group.UsedAmount)
 	mc.RPM = int64(float64(mc.RPM) * rpmRatio * groupConsumeLevelRatio)
 	mc.TPM = int64(float64(mc.TPM) * tpmRatio * groupConsumeLevelRatio)
+
 	return mc
 }
 
@@ -140,6 +151,7 @@ func checkGroupModelRPMAndTPM(
 			setRpmHeaders(c, adjustedModelConfig.RPM, 0)
 			return ErrRequestRateLimitExceeded
 		}
+
 		setRpmHeaders(c, adjustedModelConfig.RPM, adjustedModelConfig.RPM-groupModelCount)
 	}
 
@@ -169,6 +181,7 @@ func checkGroupModelRPMAndTPM(
 			setTpmHeaders(c, adjustedModelConfig.TPM, 0)
 			return ErrRequestTpmLimitExceeded
 		}
+
 		setTpmHeaders(c, adjustedModelConfig.TPM, adjustedModelConfig.TPM-groupModelCountTPM)
 	}
 
@@ -189,8 +202,10 @@ func GetGroupBalanceConsumerFromContext(c *gin.Context) *GroupBalanceConsumer {
 		if !ok {
 			panic("internal error: group balance consumer unavailable")
 		}
+
 		return groupBalanceConsumer
 	}
+
 	return nil
 }
 
@@ -213,10 +228,12 @@ func GetGroupBalanceConsumer(
 		}
 	} else {
 		log := common.GetLogger(c)
+
 		groupBalance, consumer, err := balance.GetGroupRemainBalance(c.Request.Context(), group)
 		if err != nil {
 			return nil, err
 		}
+
 		log.Data["balance"] = strconv.FormatFloat(groupBalance, 'f', -1, 64)
 
 		gbc = &GroupBalanceConsumer{
@@ -230,6 +247,7 @@ func GetGroupBalanceConsumer(
 	}
 
 	c.Set(GroupBalance, gbc)
+
 	return gbc, nil
 }
 
@@ -246,8 +264,10 @@ func checkGroupBalance(c *gin.Context, group model.GroupCache) bool {
 				http.StatusForbidden,
 				err.Error(),
 			)
+
 			return false
 		}
+
 		notify.ErrorThrottle(
 			"getGroupBalanceError",
 			time.Minute,
@@ -259,6 +279,7 @@ func checkGroupBalance(c *gin.Context, group model.GroupCache) bool {
 			http.StatusInternalServerError,
 			fmt.Sprintf("get group `%s` balance error", group.ID),
 		)
+
 		return false
 	}
 
@@ -284,8 +305,10 @@ func checkGroupBalance(c *gin.Context, group model.GroupCache) bool {
 			fmt.Sprintf("group `%s` balance not enough", group.ID),
 			relaymodel.WithType(GroupBalanceNotEnough),
 		)
+
 		return false
 	}
+
 	return true
 }
 
@@ -299,6 +322,7 @@ func CheckRelayMode(requestMode, modelMode mode.Mode) bool {
 	if modelMode == mode.Unknown {
 		return true
 	}
+
 	switch requestMode {
 	case mode.ChatCompletions, mode.Completions, mode.Anthropic:
 		return modelMode == mode.ChatCompletions ||
@@ -340,8 +364,10 @@ func distribute(c *gin.Context, mode mode.Mode) {
 			http.StatusInternalServerError,
 			err.Error(),
 		)
+
 		return
 	}
+
 	if requestModel == "" {
 		AbortLogWithMessage(c, http.StatusBadRequest, "no model provided")
 		return
@@ -361,8 +387,10 @@ func distribute(c *gin.Context, mode mode.Mode) {
 				requestModel,
 			),
 		)
+
 		return
 	}
+
 	c.Set(ModelConfig, mc)
 
 	if !token.ContainsModel(requestModel) {
@@ -374,6 +402,7 @@ func distribute(c *gin.Context, mode mode.Mode) {
 				requestModel,
 			),
 		)
+
 		return
 	}
 
@@ -384,8 +413,10 @@ func distribute(c *gin.Context, mode mode.Mode) {
 			http.StatusInternalServerError,
 			err.Error(),
 		)
+
 		return
 	}
+
 	c.Set(RequestUser, user)
 
 	metadata, err := getRequestMetadata(c, mode)
@@ -395,8 +426,10 @@ func distribute(c *gin.Context, mode mode.Mode) {
 			http.StatusInternalServerError,
 			err.Error(),
 		)
+
 		return
 	}
+
 	c.Set(RequestMetadata, metadata)
 
 	if err := checkGroupModelRPMAndTPM(c, group, mc, token.Name); err != nil {
@@ -417,6 +450,7 @@ func distribute(c *gin.Context, mode mode.Mode) {
 			metadata,
 		)
 		AbortLogWithMessage(c, http.StatusTooManyRequests, errMsg)
+
 		return
 	}
 
@@ -452,6 +486,7 @@ func GetModelConfig(c *gin.Context) model.ModelConfig {
 	if !ok {
 		panic(fmt.Sprintf("model config type error: %T, %v", v, v))
 	}
+
 	return v
 }
 
@@ -495,6 +530,7 @@ func getRequestModel(c *gin.Context, m mode.Mode, groupID string, tokenID int) (
 	switch {
 	case m == mode.ParsePdf:
 		query := c.Request.URL.Query()
+
 		model := query.Get("model")
 		if model != "" {
 			return model, nil
@@ -512,33 +548,42 @@ func getRequestModel(c *gin.Context, m mode.Mode, groupID string, tokenID int) (
 
 	case m == mode.VideoGenerationsGetJobs:
 		jobID := c.Param("id")
+
 		store, err := model.CacheGetStore(jobID)
 		if err != nil {
 			return "", fmt.Errorf("get request model failed: %w", err)
 		}
+
 		if err := validateStoreGroupAndToken(store, groupID, tokenID); err != nil {
 			return "", fmt.Errorf("validate store group and token failed: %w", err)
 		}
+
 		c.Set(JobID, store.ID)
 		c.Set(ChannelID, store.ChannelID)
+
 		return store.Model, nil
 	case m == mode.VideoGenerationsContent:
 		generationID := c.Param("id")
+
 		store, err := model.CacheGetStore(generationID)
 		if err != nil {
 			return "", fmt.Errorf("get request model failed: %w", err)
 		}
+
 		if err := validateStoreGroupAndToken(store, groupID, tokenID); err != nil {
 			return "", fmt.Errorf("validate store group and token failed: %w", err)
 		}
+
 		c.Set(GenerationID, store.ID)
 		c.Set(ChannelID, store.ChannelID)
+
 		return store.Model, nil
 	default:
 		body, err := common.GetRequestBodyReusable(c.Request)
 		if err != nil {
 			return "", fmt.Errorf("get request model failed: %w", err)
 		}
+
 		return GetModelFromJSON(body)
 	}
 }
@@ -547,9 +592,11 @@ func validateStoreGroupAndToken(store *model.StoreCache, groupID string, tokenID
 	if store.GroupID != groupID {
 		return fmt.Errorf("store group id mismatch: %s != %s", store.GroupID, groupID)
 	}
+
 	if store.TokenID != tokenID {
 		return fmt.Errorf("store token id mismatch: %d != %d", store.TokenID, tokenID)
 	}
+
 	return nil
 }
 
@@ -561,6 +608,7 @@ func GetModelFromJSON(body []byte) (string, error) {
 		}
 		return "", fmt.Errorf("get request model failed: %w", err)
 	}
+
 	return node.String()
 }
 
@@ -578,6 +626,7 @@ func getRequestUser(c *gin.Context, m mode.Mode) (string, error) {
 		if err != nil {
 			return "", fmt.Errorf("get request model failed: %w", err)
 		}
+
 		return GetRequestUserFromJSON(body)
 	default:
 		return "", nil
@@ -592,9 +641,11 @@ func GetRequestUserFromJSON(body []byte) (string, error) {
 		}
 		return "", fmt.Errorf("get request user failed: %w", err)
 	}
+
 	if node.Exists() {
 		return node.String()
 	}
+
 	return "", nil
 }
 
@@ -611,6 +662,7 @@ func getRequestMetadata(c *gin.Context, m mode.Mode) (map[string]string, error) 
 		if err != nil {
 			return nil, fmt.Errorf("get request metadata failed: %w", err)
 		}
+
 		return GetRequestMetadataFromJSON(body)
 	default:
 		return nil, nil
@@ -626,5 +678,6 @@ func GetRequestMetadataFromJSON(body []byte) (map[string]string, error) {
 	if err := sonic.Unmarshal(body, &requestWithMetadata); err != nil {
 		return nil, fmt.Errorf("get request metadata failed: %w", err)
 	}
+
 	return requestWithMetadata.Metadata, nil
 }

@@ -51,6 +51,7 @@ func getAudioDuration(audioFile *multipart.FileHeader) (float64, error) {
 		if err != nil {
 			return 0, fmt.Errorf("failed to get audio duration from temp file: %w", err)
 		}
+
 		return duration, nil
 	}
 

@@ -32,6 +32,7 @@ func GetAudioDuration(audio io.Reader) (float64, error) {
 		"-i", "-",
 	)
 	ffprobeCmd.Stdin = audio
+
 	output, err := ffprobeCmd.Output()
 	if err != nil {
 		return 0, err
@@ -44,10 +45,12 @@ func GetAudioDuration(audio io.Reader) (float64, error) {
 		if !ok {
 			return 0, ErrAudioDurationNAN
 		}
+
 		_, err := seeker.Seek(0, io.SeekStart)
 		if err != nil {
 			return 0, ErrAudioDurationNAN
 		}
+
 		return getAudioDurationFallback(audio)
 	}
 
@@ -55,6 +58,7 @@ func GetAudioDuration(audio io.Reader) (float64, error) {
 	if err != nil {
 		return 0, err
 	}
+
 	return duration, nil
 }
 
@@ -69,8 +73,11 @@ func getAudioDurationFallback(audio io.Reader) (float64, error) {
 		"-f", "null", "-",
 	)
 	ffmpegCmd.Stdin = audio
+
 	var stderr bytes.Buffer
+
 	ffmpegCmd.Stderr = &stderr
+
 	err := ffmpegCmd.Run()
 	if err != nil {
 		return 0, err
@@ -96,6 +103,7 @@ func GetAudioDurationFromFilePath(filePath string) (float64, error) {
 		"-of", "default=noprint_wrappers=1:nokey=1",
 		"-i", filePath,
 	)
+
 	output, err := ffprobeCmd.Output()
 	if err != nil {
 		return 0, err
@@ -111,6 +119,7 @@ func GetAudioDurationFromFilePath(filePath string) (float64, error) {
 	if err != nil {
 		return 0, err
 	}
+
 	return duration, nil
 }
 
@@ -126,7 +135,9 @@ func getAudioDurationFromFilePathFallback(filePath string) (float64, error) {
 	)
 
 	var stderr bytes.Buffer
+
 	ffmpegCmd.Stderr = &stderr
+
 	err := ffmpegCmd.Run()
 	if err != nil {
 		return 0, err
@@ -154,6 +165,7 @@ func parseTimeFromFfmpegOutput(output string) (float64, error) {
 
 	// Convert time format HH:MM:SS.MS to seconds
 	timeStr := match[1]
+
 	parts := strings.Split(timeStr, ":")
 	if len(parts) != 3 {
 		return 0, errors.New("invalid time format")
@@ -175,5 +187,6 @@ func parseTimeFromFfmpegOutput(output string) (float64, error) {
 	}
 
 	duration := hours*3600 + minutes*60 + seconds
+
 	return duration, nil
 }

@@ -53,6 +53,7 @@ func (c *Converter) Convert() (*server.MCPServer, error) {
 	if c.options.ServerName == "" {
 		c.options.ServerName = info.Title
 	}
+
 	if c.options.Version == "" {
 		c.options.Version = info.Version
 	}
@@ -72,6 +73,7 @@ func (c *Converter) Convert() (*server.MCPServer, error) {
 			if err != nil {
 				return nil, err
 			}
+
 			defaultServer = server
 		} else if len(servers) == 0 {
 			defaultServer, _ = getServerURL(c.options.OpenAPIFrom, "")
@@ -95,20 +97,25 @@ func getServerURL(from, dir string) (string, error) {
 	if from == "" {
 		return dir, nil
 	}
+
 	if strings.HasPrefix(dir, "http://") ||
 		strings.HasPrefix(dir, "https://") {
 		return dir, nil
 	}
+
 	if !strings.HasPrefix(from, "http://") &&
 		!strings.HasPrefix(from, "https://") {
 		return dir, nil
 	}
+
 	result, err := url.Parse(from)
 	if err != nil {
 		return "", err
 	}
+
 	result.Path = dir
 	result.RawQuery = ""
+
 	return result.String(), nil
 }
 
@@ -141,6 +148,7 @@ func newHandler(
 		if err != nil {
 			return nil, fmt.Errorf("failed to join URL path %s: %w", fullURL, err)
 		}
+
 		parsedURL, err := url.Parse(fullURL)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse URL %s: %w", fullURL, err)
@@ -152,6 +160,7 @@ func newHandler(
 			for key, value := range arg.Query {
 				q.Add(key, fmt.Sprintf("%v", value))
 			}
+
 			parsedURL.RawQuery = q.Encode()
 		}
 
@@ -162,6 +171,7 @@ func newHandler(
 			if err != nil {
 				return nil, fmt.Errorf("failed to marshal request body: %w", err)
 			}
+
 			reqBody = bytes.NewBuffer(bodyBytes)
 		}
 
@@ -210,11 +220,13 @@ func newHandler(
 					if err != nil {
 						return nil, err
 					}
+
 					formData.Add(key, string(jsonStr))
 				default:
 					formData.Add(key, fmt.Sprintf("%v", value))
 				}
 			}
+
 			httpReq.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 			httpReq.Body = io.NopCloser(strings.NewReader(formData.Encode()))
 		}
@@ -224,11 +236,14 @@ func newHandler(
 			return nil, fmt.Errorf("request failed: %w", err)
 		}
 		defer resp.Body.Close()
+
 		buf := bytes.NewBuffer(nil)
+
 		err = resp.Write(buf)
 		if err != nil {
 			return nil, fmt.Errorf("read response error: %w", err)
 		}
+
 		return mcp.NewToolResultText(buf.String()), nil
 	}
 }
@@ -284,6 +299,7 @@ func getArgs(args map[string]any) Args {
 			arg.Forms[strings.TrimPrefix(k, "formData|")] = v
 		}
 	}
+
 	return arg
 }
 
@@ -294,24 +310,31 @@ func getOperations(pathItem *openapi3.PathItem) map[string]*openapi3.Operation {
 	if pathItem.Get != nil {
 		operations[http.MethodGet] = pathItem.Get
 	}
+
 	if pathItem.Post != nil {
 		operations[http.MethodPost] = pathItem.Post
 	}
+
 	if pathItem.Put != nil {
 		operations[http.MethodPut] = pathItem.Put
 	}
+
 	if pathItem.Delete != nil {
 		operations[http.MethodDelete] = pathItem.Delete
 	}
+
 	if pathItem.Options != nil {
 		operations[http.MethodOptions] = pathItem.Options
 	}
+
 	if pathItem.Head != nil {
 		operations[http.MethodHead] = pathItem.Head
 	}
+
 	if pathItem.Patch != nil {
 		operations[http.MethodPatch] = pathItem.Patch
 	}
+
 	if pathItem.Trace != nil {
 		operations[http.MethodTrace] = pathItem.Trace
 	}
@@ -349,6 +372,7 @@ func (c *Converter) convertOperation(path, method string, operation *openapi3.Op
 			if err != nil {
 				u = c.options.OpenAPIFrom
 			}
+
 			args = append(args, mcp.WithString("openapi|server_addr",
 				mcp.Description("Server address to connect to, example: "+u),
 				mcp.Required()))
@@ -362,6 +386,7 @@ func (c *Converter) convertOperation(path, method string, operation *openapi3.Op
 		if err != nil {
 			u = servers[0].URL
 		}
+
 		args = append(args, mcp.WithString("openapi|server_addr",
 			mcp.Description("Server address to connect to"),
 			mcp.DefaultString(u)))
@@ -372,8 +397,10 @@ func (c *Converter) convertOperation(path, method string, operation *openapi3.Op
 			if err != nil {
 				u = server.URL
 			}
+
 			serverUrls = append(serverUrls, u)
 		}
+
 		args = append(args, mcp.WithString("openapi|server_addr",
 			mcp.Description("Server address to connect to"),
 			mcp.Required(),
@@ -432,17 +459,21 @@ func (c *Converter) generateResponseDescription(responses openapi3.Responses) st
 			if err != nil {
 				continue
 			}
+
 			schema := openapi3.Schema{}
+
 			err = schema.UnmarshalJSON(jsonStr)
 			if err != nil {
 				continue
 			}
 
 			property := c.processSchemaProperty(&schema, make(map[string]bool))
+
 			str, err := sonic.Marshal(property)
 			if err != nil {
 				continue
 			}
+
 			desc += fmt.Sprintf(", schema: %s", str)
 		}
 
@@ -453,10 +484,12 @@ func (c *Converter) generateResponseDescription(responses openapi3.Responses) st
 						mediaType.Schema.Value,
 						make(map[string]bool),
 					)
+
 					str, err := sonic.Marshal(property)
 					if err != nil {
 						continue
 					}
+
 					desc += fmt.Sprintf(", content type: %s, schema: %s", contentType, str)
 				}
 			}
@@ -495,6 +528,7 @@ func (c *Converter) convertSecurityRequirements(
 						schemeName)),
 					mcp.Required()))
 			}
+
 			if schemeRef == nil || schemeRef.Value == nil {
 				continue
 			}
@@ -648,6 +682,7 @@ func (c *Converter) convertParameters(parameters openapi3.Parameters) []mcp.Tool
 						enumValues = append(enumValues, fmt.Sprintf("%v", val))
 					}
 				}
+
 				if len(enumValues) > 0 {
 					propertyOptions = append(propertyOptions, mcp.Enum(enumValues...))
 				}
@@ -696,6 +731,7 @@ func (c *Converter) processSchemaItems(
 				properties[propName] = c.processSchemaProperty(propRef.Value, visited)
 			}
 		}
+
 		item["properties"] = properties
 	}
 
@@ -740,12 +776,14 @@ func (c *Converter) processSchemaProperty(
 				"title":       refKey,
 			}
 		}
+
 		visited[refKey] = true
 		// Create a copy of the visited map to avoid cross-contamination between different branches
 		visitedCopy := make(map[string]bool)
 		for k, v := range visited {
 			visitedCopy[k] = v
 		}
+
 		visited = visitedCopy
 	}
 
@@ -791,18 +829,23 @@ func (c *Converter) addBasicSchemaInfo(schema *openapi3.Schema, property map[str
 	if schema.Title != "" {
 		property["title"] = schema.Title
 	}
+
 	if schema.Description != "" {
 		property["description"] = schema.Description
 	}
+
 	if schema.Default != nil {
 		property["default"] = schema.Default
 	}
+
 	if schema.Example != nil {
 		property["example"] = schema.Example
 	}
+
 	if len(schema.Enum) > 0 {
 		property["enum"] = schema.Enum
 	}
+
 	if schema.Format != "" {
 		property["format"] = schema.Format
 	}
@@ -814,24 +857,31 @@ func (c *Converter) addSchemaValidations(schema *openapi3.Schema, property map[s
 	if schema.Nullable {
 		property["nullable"] = schema.Nullable
 	}
+
 	if schema.ReadOnly {
 		property["readOnly"] = schema.ReadOnly
 	}
+
 	if schema.WriteOnly {
 		property["writeOnly"] = schema.WriteOnly
 	}
+
 	if schema.Deprecated {
 		property["deprecated"] = schema.Deprecated
 	}
+
 	if schema.AllowEmptyValue {
 		property["allowEmptyValue"] = schema.AllowEmptyValue
 	}
+
 	if schema.UniqueItems {
 		property["uniqueItems"] = schema.UniqueItems
 	}
+
 	if schema.ExclusiveMin {
 		property["exclusiveMinimum"] = schema.ExclusiveMin
 	}
+
 	if schema.ExclusiveMax {
 		property["exclusiveMaximum"] = schema.ExclusiveMax
 	}
@@ -840,9 +890,11 @@ func (c *Converter) addSchemaValidations(schema *openapi3.Schema, property map[s
 	if schema.Min != nil {
 		property["minimum"] = *schema.Min
 	}
+
 	if schema.Max != nil {
 		property["maximum"] = *schema.Max
 	}
+
 	if schema.MultipleOf != nil {
 		property["multipleOf"] = *schema.MultipleOf
 	}
@@ -851,9 +903,11 @@ func (c *Converter) addSchemaValidations(schema *openapi3.Schema, property map[s
 	if schema.MinLength != 0 {
 		property["minLength"] = schema.MinLength
 	}
+
 	if schema.MaxLength != nil {
 		property["maxLength"] = *schema.MaxLength
 	}
+
 	if schema.Pattern != "" {
 		property["pattern"] = schema.Pattern
 	}
@@ -862,6 +916,7 @@ func (c *Converter) addSchemaValidations(schema *openapi3.Schema, property map[s
 	if schema.MinItems != 0 {
 		property["minItems"] = schema.MinItems
 	}
+
 	if schema.MaxItems != nil {
 		property["maxItems"] = *schema.MaxItems
 	}
@@ -870,9 +925,11 @@ func (c *Converter) addSchemaValidations(schema *openapi3.Schema, property map[s
 	if schema.MinProps != 0 {
 		property["minProperties"] = schema.MinProps
 	}
+
 	if schema.MaxProps != nil {
 		property["maxProperties"] = *schema.MaxProps
 	}
+
 	if len(schema.Required) > 0 {
 		property["required"] = schema.Required
 	}
@@ -892,6 +949,7 @@ func (c *Converter) addSchemaComposition(
 				oneOf = append(oneOf, c.processSchemaProperty(schemaRef.Value, visited))
 			}
 		}
+
 		if len(oneOf) > 0 {
 			property["oneOf"] = oneOf
 		}
@@ -904,6 +962,7 @@ func (c *Converter) addSchemaComposition(
 				anyOf = append(anyOf, c.processSchemaProperty(schemaRef.Value, visited))
 			}
 		}
+
 		if len(anyOf) > 0 {
 			property["anyOf"] = anyOf
 		}
@@ -916,6 +975,7 @@ func (c *Converter) addSchemaComposition(
 				allOf = append(allOf, c.processSchemaProperty(schemaRef.Value, visited))
 			}
 		}
+
 		if len(allOf) > 0 {
 			property["allOf"] = allOf
 		}
@@ -942,10 +1002,12 @@ func (c *Converter) addObjectProperties(
 	// Handle discriminator
 	if schema.Discriminator != nil {
 		discriminator := make(map[string]any)
+
 		discriminator["propertyName"] = schema.Discriminator.PropertyName
 		if len(schema.Discriminator.Mapping) > 0 {
 			discriminator["mapping"] = schema.Discriminator.Mapping
 		}
+
 		property["discriminator"] = discriminator
 	}
 
@@ -957,6 +1019,7 @@ func (c *Converter) addObjectProperties(
 				nestedProps[propName] = c.processSchemaProperty(propRef.Value, visited)
 			}
 		}
+
 		property["properties"] = nestedProps
 	}
 }
@@ -980,9 +1043,11 @@ func (c *Converter) addAdditionalMetadata(schema *openapi3.Schema, property map[
 		if schema.ExternalDocs.Description != "" {
 			externalDocs["description"] = schema.ExternalDocs.Description
 		}
+
 		if schema.ExternalDocs.URL != "" {
 			externalDocs["url"] = schema.ExternalDocs.URL
 		}
+
 		property["externalDocs"] = externalDocs
 	}
 
@@ -992,12 +1057,15 @@ func (c *Converter) addAdditionalMetadata(schema *openapi3.Schema, property map[
 		if schema.XML.Name != "" {
 			xml["name"] = schema.XML.Name
 		}
+
 		if schema.XML.Namespace != "" {
 			xml["namespace"] = schema.XML.Namespace
 		}
+
 		if schema.XML.Prefix != "" {
 			xml["prefix"] = schema.XML.Prefix
 		}
+
 		xml["attribute"] = schema.XML.Attribute
 		xml["wrapped"] = schema.XML.Wrapped
 		property["xml"] = xml

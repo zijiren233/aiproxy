@@ -37,12 +37,15 @@ func ChatHandler(
 			http.StatusInternalServerError,
 		)
 	}
+
 	u, e := openai.DoResponse(meta, store, c, resp)
 	if e != nil {
 		return model.Usage{}, e
 	}
+
 	if getEnableSearch(&node) {
 		u.WebSearchCount++
 	}
+
 	return u, nil
 }

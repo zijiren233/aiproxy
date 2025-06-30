@@ -25,10 +25,12 @@ func (a *Adaptor) ConvertRequest(
 	if err != nil {
 		return adaptor.ConvertResult{}, err
 	}
+
 	request.Model = meta.ActualModel
 	meta.Set("stream", request.Stream)
 	llamaReq := ConvertRequest(request)
 	meta.Set(ConvertedRequest, llamaReq)
+
 	return adaptor.ConvertResult{
 		Header: nil,
 		Body:   nil,
@@ -45,5 +47,6 @@ func (a *Adaptor) DoResponse(
 	} else {
 		usage, err = Handler(meta, c)
 	}
+
 	return
 }

@@ -31,10 +31,12 @@ func ConvertRerankRequest(
 	req *http.Request,
 ) (adaptor.ConvertResult, error) {
 	reqMap := make(map[string]any)
+
 	err := common.UnmarshalRequestReusable(req, &reqMap)
 	if err != nil {
 		return adaptor.ConvertResult{}, err
 	}
+
 	reqMap["model"] = meta.ActualModel
 	reqMap["input"] = map[string]any{
 		"query":     reqMap["query"],
@@ -42,19 +44,24 @@ func ConvertRerankRequest(
 	}
 	delete(reqMap, "query")
 	delete(reqMap, "documents")
+
 	parameters := make(map[string]any)
 	for k, v := range reqMap {
 		if k == "model" || k == "input" {
 			continue
 		}
+
 		parameters[k] = v
 		delete(reqMap, k)
 	}
+
 	reqMap["parameters"] = parameters
+
 	jsonData, err := sonic.Marshal(reqMap)
 	if err != nil {
 		return adaptor.ConvertResult{}, err
 	}
+
 	return adaptor.ConvertResult{
 		Header: http.Header{
 			"Content-Type":   {"application/json"},
@@ -78,6 +85,7 @@ func RerankHandler(
 	log := common.GetLogger(c)
 
 	var rerankResponse RerankResponse
+
 	err := common.UnmarshalResponse(resp, &rerankResponse)
 	if err != nil {
 		return model.Usage{}, relaymodel.WrapperOpenAIError(
@@ -119,11 +127,14 @@ func RerankHandler(
 			http.StatusInternalServerError,
 		)
 	}
+
 	c.Writer.Header().Set("Content-Type", "application/json")
 	c.Writer.Header().Set("Content-Length", strconv.Itoa(len(jsonResponse)))
+
 	_, err = c.Writer.Write(jsonResponse)
 	if err != nil {
 		log.Warnf("write response body failed: %v", err)
 	}
+
 	return usage, nil
 }

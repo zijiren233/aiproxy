@@ -46,6 +46,7 @@ type BuiltinModelConfig model.ModelConfig
 
 func (c *BuiltinModelConfig) MarshalJSON() ([]byte, error) {
 	type Alias BuiltinModelConfig
+
 	return sonic.Marshal(&struct {
 		*Alias
 		CreatedAt int64 `json:"created_at,omitempty"`
@@ -88,11 +89,13 @@ func init() {
 	// https://platform.openai.com/docs/models/model-endpoint-compatibility
 	for i, adaptor := range adaptors.ChannelAdaptor {
 		modelNames := adaptor.Metadata().Models
+
 		builtinChannelType2Models[i] = make([]BuiltinModelConfig, len(modelNames))
 		for idx, _model := range modelNames {
 			if _model.Owner == "" {
 				_model.Owner = model.ModelOwner(i.String())
 			}
+
 			if v, ok := builtinModelsMap[_model.Model]; !ok {
 				builtinModelsMap[_model.Model] = &OpenAIModels{
 					ID:         _model.Model,
@@ -107,15 +110,18 @@ func init() {
 			} else if v.OwnedBy != string(_model.Owner) {
 				log.Fatalf("model %s owner mismatch, expect %s, actual %s", _model.Model, string(_model.Owner), v.OwnedBy)
 			}
+
 			builtinChannelType2Models[i][idx] = (BuiltinModelConfig)(_model)
 		}
 	}
+
 	for _, models := range builtinChannelType2Models {
 		sort.Slice(models, func(i, j int) bool {
 			return models[i].Model < models[j].Model
 		})
 		slices.SortStableFunc(models, SortBuiltinModelConfigsFunc)
 	}
+
 	slices.SortStableFunc(builtinModels, SortBuiltinModelConfigsFunc)
 }
 
@@ -161,11 +167,13 @@ func ChannelBuiltinModelsByType(c *gin.Context) {
 		middleware.ErrorResponse(c, http.StatusBadRequest, "type is required")
 		return
 	}
+
 	channelTypeInt, err := strconv.Atoi(channelType)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusBadRequest, "invalid type")
 		return
 	}
+
 	middleware.SuccessResponse(c, builtinChannelType2Models[model.ChannelType(channelTypeInt)])
 }
 
@@ -201,11 +209,13 @@ func ChannelDefaultModelsAndMappingByType(c *gin.Context) {
 		middleware.ErrorResponse(c, http.StatusBadRequest, "type is required")
 		return
 	}
+
 	channelTypeInt, err := strconv.Atoi(channelType)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusBadRequest, "invalid type")
 		return
 	}
+
 	middleware.SuccessResponse(c, gin.H{
 		"models":  config.GetDefaultChannelModels()[channelTypeInt],
 		"mapping": config.GetDefaultChannelModelMapping()[channelTypeInt],
@@ -241,6 +251,7 @@ func EnabledModelsSet(c *gin.Context) {
 		middleware.ErrorResponse(c, http.StatusBadRequest, "set is required")
 		return
 	}
+
 	middleware.SuccessResponse(c, model.LoadModelCaches().EnabledModelConfigsBySet[set])
 }
 
@@ -287,6 +298,7 @@ func EnabledModelSets(c *gin.Context) {
 			for i, channel := range channels {
 				chs[i] = newEnabledModelChannel(channel)
 			}
+
 			result[model][set] = chs
 		}
 	}

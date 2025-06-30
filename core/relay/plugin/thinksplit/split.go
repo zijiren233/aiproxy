@@ -35,6 +35,7 @@ func (p *ThinkPlugin) getConfig(meta *meta.Meta) (*Config, error) {
 	if err := meta.ModelConfig.LoadPluginConfig("think-split", pluginConfig); err != nil {
 		return nil, err
 	}
+
 	return pluginConfig, nil
 }
 
@@ -72,6 +73,7 @@ func (p *ThinkPlugin) handleResponse(
 	rw := &thinkResponseWriter{
 		ResponseWriter: c.Writer,
 	}
+
 	c.Writer = rw
 	defer func() {
 		c.Writer = rw.ResponseWriter
@@ -119,22 +121,27 @@ func (rw *thinkResponseWriter) Write(b []byte) (int, error) {
 		rw.isStream = true
 
 		rw.done = StreamSplitThink(respMap, rw.getThinkSplitter())
+
 		jsonData, err := sonic.Marshal(respMap)
 		if err != nil {
 			return rw.ResponseWriter.Write(b)
 		}
+
 		return rw.ResponseWriter.Write(jsonData)
 	}
 
 	rw.done = true
 	SplitThink(respMap, rw.getThinkSplitter())
+
 	jsonData, err := sonic.Marshal(respMap)
 	if err != nil {
 		return rw.ResponseWriter.Write(b)
 	}
+
 	if rw.ResponseWriter.Header().Get("Content-Length") != "" {
 		rw.ResponseWriter.Header().Set("Content-Length", strconv.Itoa(len(jsonData)))
 	}
+
 	return rw.ResponseWriter.Write(jsonData)
 }
 
@@ -149,43 +156,53 @@ func StreamSplitThink(data map[string]any, thinkSplitter *splitter.Splitter) (do
 	if !ok || len(choices) != 1 {
 		return false
 	}
+
 	choice := choices[0]
+
 	choiceMap, ok := choice.(map[string]any)
 	if !ok {
 		return false
 	}
+
 	delta, ok := choiceMap["delta"].(map[string]any)
 	if !ok {
 		return false
 	}
+
 	content, ok := delta["content"].(string)
 	if !ok {
 		return false
 	}
+
 	if _, ok := delta["reasoning_content"].(string); ok {
 		return true
 	}
+
 	think, remaining := thinkSplitter.Process(conv.StringToBytes(content))
 	if len(think) == 0 && len(remaining) == 0 {
 		delta["content"] = ""
 		delete(delta, "reasoning_content")
 		return false
 	}
+
 	if len(think) != 0 && len(remaining) != 0 {
 		delta["content"] = conv.BytesToString(remaining)
 		delta["reasoning_content"] = conv.BytesToString(think)
 		return false
 	}
+
 	if len(think) > 0 {
 		delta["content"] = ""
 		delta["reasoning_content"] = conv.BytesToString(think)
 		return false
 	}
+
 	if len(remaining) > 0 {
 		delta["content"] = conv.BytesToString(remaining)
 		delete(delta, "reasoning_content")
 		return true
 	}
+
 	return false
 }
 
@@ -194,22 +211,27 @@ func SplitThink(data map[string]any, thinkSplitter *splitter.Splitter) {
 	if !ok {
 		return
 	}
+
 	for _, choice := range choices {
 		choiceMap, ok := choice.(map[string]any)
 		if !ok {
 			continue
 		}
+
 		message, ok := choiceMap["message"].(map[string]any)
 		if !ok {
 			continue
 		}
+
 		content, ok := message["content"].(string)
 		if !ok {
 			continue
 		}
+
 		if _, ok := message["reasoning_content"].(string); ok {
 			continue
 		}
+
 		think, remaining := thinkSplitter.Process(conv.StringToBytes(content))
 		message["reasoning_content"] = conv.BytesToString(think)
 		message["content"] = conv.BytesToString(remaining)

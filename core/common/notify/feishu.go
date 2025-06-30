@@ -31,6 +31,7 @@ func level2Color(level Level) string {
 
 func (f *FeishuNotifier) Notify(level Level, title, message string) {
 	stdNotifier.Notify(level, title, message)
+
 	go func() {
 		_ = PostToFeiShuv2(context.Background(), level2Color(level), title, message, f.wh)
 	}()
@@ -44,6 +45,7 @@ func (f *FeishuNotifier) NotifyThrottle(
 ) {
 	if trylock.Lock(key, expiration) {
 		stdNotifier.Notify(level, title, message)
+
 		go func() {
 			_ = PostToFeiShuv2(context.Background(), level2Color(level), title, message, f.wh)
 		}()
@@ -124,10 +126,12 @@ func PostToFeiShuv2(ctx context.Context, color, title, text, wh string) error {
 	if wh == "" {
 		return errors.New("feishu webhook url is empty")
 	}
+
 	note := config.GetNotifyNote()
 	if note == "" {
 		note = "AI Proxy"
 	}
+
 	u := FSMessagev2{
 		MsgType: "interactive",
 		Card: Cards{
@@ -170,21 +174,26 @@ func PostToFeiShuv2(ctx context.Context, color, title, text, wh string) error {
 	if err != nil {
 		return err
 	}
+
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, wh, bytes.NewReader(data))
 	if err != nil {
 		return err
 	}
+
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return err
 	}
 	defer resp.Body.Close()
+
 	feishuResp := FeiShuv2Resp{}
 	if err := sonic.ConfigDefault.NewDecoder(resp.Body).Decode(&feishuResp); err != nil {
 		return err
 	}
+
 	if feishuResp.Code != 0 {
 		return errors.New(feishuResp.Msg)
 	}
+
 	return nil
 }

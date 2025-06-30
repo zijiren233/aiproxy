@@ -23,6 +23,7 @@ type ChannelTest struct {
 
 func (ct *ChannelTest) MarshalJSON() ([]byte, error) {
 	type Alias ChannelTest
+
 	return sonic.Marshal(&struct {
 		*Alias
 		TestAt int64 `json:"test_at"`

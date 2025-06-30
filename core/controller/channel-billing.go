@@ -26,6 +26,7 @@ func updateChannelBalance(channel *model.Channel) (float64, error) {
 			channel.ID,
 		)
 	}
+
 	if getBalance, ok := adaptorI.(adaptor.Balancer); ok {
 		balance, err := getBalance.GetBalance(channel)
 		if err != nil && !errors.Is(err, adaptor.ErrGetBalanceNotImplemented) {
@@ -37,6 +38,7 @@ func updateChannelBalance(channel *model.Channel) (float64, error) {
 				err.Error(),
 			)
 		}
+
 		if err := channel.UpdateBalance(balance); err != nil {
 			return 0, fmt.Errorf(
 				"failed to update channel %s (type: %d, id: %d) balance: %s",
@@ -46,6 +48,7 @@ func updateChannelBalance(channel *model.Channel) (float64, error) {
 				err.Error(),
 			)
 		}
+
 		if !errors.Is(err, adaptor.ErrGetBalanceNotImplemented) &&
 			balance < channel.GetBalanceThreshold() {
 			return 0, fmt.Errorf(
@@ -56,8 +59,10 @@ func updateChannelBalance(channel *model.Channel) (float64, error) {
 				balance,
 			)
 		}
+
 		return balance, nil
 	}
+
 	return 0, nil
 }
 
@@ -78,16 +83,20 @@ func UpdateChannelBalance(c *gin.Context) {
 			Success: false,
 			Message: err.Error(),
 		})
+
 		return
 	}
+
 	channel, err := model.GetChannelByID(id)
 	if err != nil {
 		c.JSON(http.StatusOK, middleware.APIResponse{
 			Success: false,
 			Message: err.Error(),
 		})
+
 		return
 	}
+
 	balance, err := updateChannelBalance(channel)
 	if err != nil {
 		notify.Error(
@@ -103,8 +112,10 @@ func UpdateChannelBalance(c *gin.Context) {
 			Success: false,
 			Message: err.Error(),
 		})
+
 		return
 	}
+
 	middleware.SuccessResponse(c, balance)
 }
 
@@ -115,17 +126,22 @@ func updateAllChannelsBalance() error {
 	}
 
 	var wg sync.WaitGroup
+
 	semaphore := make(chan struct{}, 10)
 
 	for _, channel := range channels {
 		if !channel.EnabledAutoBalanceCheck {
 			continue
 		}
+
 		wg.Add(1)
+
 		semaphore <- struct{}{}
+
 		go func(ch *model.Channel) {
 			defer wg.Done()
 			defer func() { <-semaphore }()
+
 			_, err := updateChannelBalance(ch)
 			if err != nil {
 				notify.Error(
@@ -142,6 +158,7 @@ func updateAllChannelsBalance() error {
 	}
 
 	wg.Wait()
+
 	return nil
 }
 
@@ -160,12 +177,14 @@ func UpdateAllChannelsBalance(c *gin.Context) {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
+
 	middleware.SuccessResponse(c, nil)
 }
 
 func UpdateChannelsBalance(frequency time.Duration) {
 	for {
 		time.Sleep(frequency)
+
 		_ = updateAllChannelsBalance()
 	}
 }

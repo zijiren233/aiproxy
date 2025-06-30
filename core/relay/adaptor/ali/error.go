@@ -22,5 +22,6 @@ func ErrorHanlder(resp *http.Response) adaptor.Error {
 		statusCode = http.StatusGatewayTimeout
 		openAIError.Type = relaymodel.ErrorTypeUpstream
 	}
+
 	return relaymodel.NewOpenAIError(statusCode, openAIError)
 }

@@ -15,10 +15,12 @@ type ModelRequest struct {
 
 func StdGetModelFromJSON(body []byte) (string, error) {
 	var modelRequest ModelRequest
+
 	err := json.Unmarshal(body, &modelRequest)
 	if err != nil {
 		return "", err
 	}
+
 	return modelRequest.Model, nil
 }
 
@@ -78,6 +80,7 @@ func BenchmarkCompareGetModelFromJSON(b *testing.B) {
 
 		b.Run(tt.name+"/Std", func(b *testing.B) {
 			b.ResetTimer()
+
 			for range b.N {
 				_, _ = StdGetModelFromJSON(jsonBytes)
 			}
@@ -85,6 +88,7 @@ func BenchmarkCompareGetModelFromJSON(b *testing.B) {
 
 		b.Run(tt.name+"/JSONIter", func(b *testing.B) {
 			b.ResetTimer()
+
 			for range b.N {
 				_, _ = JSONIterGetModelFromJSON(jsonBytes)
 			}
@@ -92,6 +96,7 @@ func BenchmarkCompareGetModelFromJSON(b *testing.B) {
 
 		b.Run(tt.name+"/Sonic", func(b *testing.B) {
 			b.ResetTimer()
+
 			for range b.N {
 				_, _ = middleware.GetModelFromJSON(jsonBytes)
 			}

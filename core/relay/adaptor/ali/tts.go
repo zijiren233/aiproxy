@@ -101,15 +101,19 @@ func ConvertTTSRequest(meta *meta.Meta, req *http.Request) (adaptor.ConvertResul
 	if err != nil {
 		return adaptor.ConvertResult{}, err
 	}
+
 	reqMap, err := utils.UnmarshalMap(req)
 	if err != nil {
 		return adaptor.ConvertResult{}, err
 	}
+
 	var sampleRate int
+
 	sampleRateI, ok := reqMap["sample_rate"].(float64)
 	if ok {
 		sampleRate = int(sampleRateI)
 	}
+
 	request.Model = meta.ActualModel
 
 	meta.Set("stream_format", request.StreamFormat)
@@ -119,6 +123,7 @@ func ConvertTTSRequest(meta *meta.Meta, req *http.Request) (adaptor.ConvertResul
 		if voice == "" {
 			voice = "zhinan"
 		}
+
 		request.Model = fmt.Sprintf(
 			"sambert-%s-v%s",
 			voice,
@@ -167,6 +172,7 @@ func ConvertTTSRequest(meta *meta.Meta, req *http.Request) (adaptor.ConvertResul
 	if err != nil {
 		return adaptor.ConvertResult{}, err
 	}
+
 	return adaptor.ConvertResult{
 		Header: http.Header{
 			"X-DashScope-DataInspection": {"enable"},
@@ -183,6 +189,7 @@ func TTSDoRequest(meta *meta.Meta, req *http.Request) (*http.Response, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	meta.Set("ws_conn", conn)
 
 	writer, err := conn.NextWriter(websocket.TextMessage)
@@ -240,6 +247,7 @@ func TTSDoResponse(
 					http.StatusInternalServerError,
 				)
 			}
+
 			switch msg.Header.Event {
 			case "task-started":
 				continue
@@ -256,8 +264,10 @@ func TTSDoResponse(
 						OutputTokens: int64(usage.OutputTokens),
 						TotalTokens:  int64(usage.TotalTokens),
 					})
+
 					return usage, nil
 				}
+
 				return usage, relaymodel.WrapperOpenAIErrorWithMessage(
 					msg.Header.ErrorMessage,
 					msg.Header.ErrorCode,
@@ -269,6 +279,7 @@ func TTSDoResponse(
 				openai.AudioData(c, base64.StdEncoding.EncodeToString(data))
 				continue
 			}
+
 			_, writeErr := c.Writer.Write(data)
 			if writeErr != nil {
 				log.Error("write tts response chunk failed: " + writeErr.Error())

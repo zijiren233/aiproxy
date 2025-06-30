@@ -20,6 +20,7 @@ type GroupMCPResponse struct {
 
 func (mcp *GroupMCPResponse) MarshalJSON() ([]byte, error) {
 	type Alias GroupMCPResponse
+
 	a := &struct {
 		*Alias
 		CreatedAt int64 `json:"created_at"`
@@ -29,6 +30,7 @@ func (mcp *GroupMCPResponse) MarshalJSON() ([]byte, error) {
 		CreatedAt: mcp.CreatedAt.UnixMilli(),
 		UpdateAt:  mcp.UpdateAt.UnixMilli(),
 	}
+
 	return sonic.Marshal(a)
 }
 
@@ -49,6 +51,7 @@ func NewGroupMCPResponse(host string, mcp model.GroupMCP) GroupMCPResponse {
 			ep.StreamableHTTP = "/mcp"
 		}
 	}
+
 	return GroupMCPResponse{
 		GroupMCP:  mcp,
 		Endpoints: ep,
@@ -60,6 +63,7 @@ func NewGroupMCPResponses(host string, mcps []model.GroupMCP) []GroupMCPResponse
 	for i, mcp := range mcps {
 		responses[i] = NewGroupMCPResponse(host, mcp)
 	}
+
 	return responses
 }
 
@@ -132,11 +136,13 @@ func GetAllGroupMCPs(c *gin.Context) {
 	if status == 0 {
 		status = int(model.GroupMCPStatusEnabled)
 	}
+
 	mcps, err := model.GetAllGroupMCPs(model.GroupMCPStatus(status))
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
+
 	middleware.SuccessResponse(c, NewGroupMCPResponses(c.Request.Host, mcps))
 }
 

@@ -45,10 +45,12 @@ func (a *Adaptor) SetupRequestHeader(
 	req *http.Request,
 ) error {
 	req.Header.Set("X-Api-Key", meta.Channel.Key)
+
 	anthropicVersion := c.Request.Header.Get("Anthropic-Version")
 	if anthropicVersion == "" {
 		anthropicVersion = AnthropicVersion
 	}
+
 	req.Header.Set("Anthropic-Version", anthropicVersion)
 
 	// https://docs.anthropic.com/en/api/beta-headers
@@ -86,6 +88,7 @@ func (a *Adaptor) ConvertRequest(
 		if err != nil {
 			return adaptor.ConvertResult{}, err
 		}
+
 		return adaptor.ConvertResult{
 			Header: http.Header{
 				"Content-Type":   {"application/json"},
@@ -135,6 +138,7 @@ func (a *Adaptor) DoResponse(
 			http.StatusBadRequest,
 		)
 	}
+
 	return
 }
 

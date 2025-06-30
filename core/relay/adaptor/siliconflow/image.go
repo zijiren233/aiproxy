@@ -25,6 +25,7 @@ type ImageRequest struct {
 
 func ConvertImageRequest(meta *meta.Meta, request *http.Request) (http.Header, io.Reader, error) {
 	var reqMap map[string]any
+
 	err := common.UnmarshalRequestReusable(request, &reqMap)
 	if err != nil {
 		return nil, nil, err
@@ -35,14 +36,17 @@ func ConvertImageRequest(meta *meta.Meta, request *http.Request) (http.Header, i
 	reqMap["model"] = meta.ActualModel
 	reqMap["batch_size"] = reqMap["n"]
 	delete(reqMap, "n")
+
 	if _, ok := reqMap["steps"]; ok {
 		reqMap["num_inference_steps"] = reqMap["steps"]
 		delete(reqMap, "steps")
 	}
+
 	if _, ok := reqMap["scale"]; ok {
 		reqMap["guidance_scale"] = reqMap["scale"]
 		delete(reqMap, "scale")
 	}
+
 	reqMap["image_size"] = reqMap["size"]
 	delete(reqMap, "size")
 
@@ -50,5 +54,6 @@ func ConvertImageRequest(meta *meta.Meta, request *http.Request) (http.Header, i
 	if err != nil {
 		return nil, nil, err
 	}
+
 	return http.Header{}, bytes.NewReader(data), nil
 }

@@ -62,6 +62,7 @@ func ConvertRerankRequest(
 				err,
 			)
 		}
+
 		_, err = node.Unset("return_documents")
 		if err != nil {
 			return adaptor.ConvertResult{}, fmt.Errorf(
@@ -69,6 +70,7 @@ func ConvertRerankRequest(
 				err,
 			)
 		}
+
 		_, err = node.Set("return_text", ast.NewBool(returnDocuments))
 		if err != nil {
 			return adaptor.ConvertResult{}, fmt.Errorf(
@@ -108,6 +110,7 @@ func (rri *RerankResponseItem) ToRerankModel() *relaymodel.RerankResult {
 			Text: rri.Text,
 		}
 	}
+
 	return &relaymodel.RerankResult{
 		Index:          rri.Index,
 		RelevanceScore: rri.Score,
@@ -129,6 +132,7 @@ func RerankHandler(
 	log := common.GetLogger(c)
 
 	respSlice := RerankResponse{}
+
 	err := sonic.ConfigDefault.NewDecoder(resp.Body).Decode(&respSlice)
 	if err != nil {
 		return model.Usage{}, relaymodel.WrapperOpenAIError(
@@ -169,9 +173,11 @@ func RerankHandler(
 
 	c.Writer.Header().Set("Content-Type", "application/json")
 	c.Writer.Header().Set("Content-Length", strconv.Itoa(len(jsonResponse)))
+
 	_, err = c.Writer.Write(jsonResponse)
 	if err != nil {
 		log.Warnf("write response body failed: %v", err)
 	}
+
 	return usage, nil
 }

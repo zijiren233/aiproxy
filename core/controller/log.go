@@ -36,6 +36,7 @@ func parseCommonParams(c *gin.Context) (params struct {
 	params.withBody, _ = strconv.ParseBool(c.Query("with_body"))
 	params.ip = c.Query("ip")
 	params.user = c.Query("user")
+
 	return
 }
 
@@ -85,6 +86,7 @@ func GetLogs(c *gin.Context) {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
+
 	middleware.SuccessResponse(c, result)
 }
 
@@ -145,6 +147,7 @@ func GetGroupLogs(c *gin.Context) {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
+
 	middleware.SuccessResponse(c, result)
 }
 
@@ -200,6 +203,7 @@ func SearchLogs(c *gin.Context) {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
+
 	middleware.SuccessResponse(c, result)
 }
 
@@ -262,6 +266,7 @@ func SearchGroupLogs(c *gin.Context) {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
+
 	middleware.SuccessResponse(c, result)
 }
 
@@ -277,11 +282,13 @@ func SearchGroupLogs(c *gin.Context) {
 //	@Router			/api/logs/detail/{log_id} [get]
 func GetLogDetail(c *gin.Context) {
 	logID, _ := strconv.Atoi(c.Param("log_id"))
+
 	log, err := model.GetLogDetail(logID)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
+
 	middleware.SuccessResponse(c, log)
 }
 
@@ -302,12 +309,15 @@ func GetGroupLogDetail(c *gin.Context) {
 		middleware.ErrorResponse(c, http.StatusBadRequest, "invalid group parameter")
 		return
 	}
+
 	logID, _ := strconv.Atoi(c.Param("log_id"))
+
 	log, err := model.GetGroupLogDetail(logID, group)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
+
 	middleware.SuccessResponse(c, log)
 }
 
@@ -327,11 +337,13 @@ func DeleteHistoryLogs(c *gin.Context) {
 		middleware.ErrorResponse(c, http.StatusBadRequest, "timestamp is required")
 		return
 	}
+
 	count, err := model.DeleteOldLog(time.UnixMilli(timestamp))
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
+
 	middleware.SuccessResponse(c, count)
 }
 
@@ -381,6 +393,7 @@ func SearchConsumeError(c *gin.Context) {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
+
 	middleware.SuccessResponse(c, gin.H{
 		"logs":  logs,
 		"total": total,

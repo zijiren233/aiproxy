@@ -44,6 +44,7 @@ func (c *Client) makeRequest(
 		if err != nil {
 			return fmt.Errorf("failed to marshal request body: %w", err)
 		}
+
 		reqBody = bytes.NewReader(jsonBody)
 	}
 
@@ -80,6 +81,7 @@ func (c *Client) AppendBlockChildren(
 	}
 
 	var result BlockResponse
+
 	err := c.makeRequest(ctx, http.MethodPatch, "/blocks/"+blockID+"/children", body, &result)
 	if err != nil {
 		return nil, err
@@ -91,6 +93,7 @@ func (c *Client) AppendBlockChildren(
 // RetrieveBlock retrieves a block
 func (c *Client) RetrieveBlock(ctx context.Context, blockID string) (*BlockResponse, error) {
 	var result BlockResponse
+
 	err := c.makeRequest(ctx, http.MethodGet, "/blocks/"+blockID, nil, &result)
 	if err != nil {
 		return nil, err
@@ -110,6 +113,7 @@ func (c *Client) RetrieveBlockChildren(
 	if startCursor != nil {
 		params.Set("start_cursor", *startCursor)
 	}
+
 	if pageSize != nil {
 		params.Set("page_size", strconv.Itoa(*pageSize))
 	}
@@ -120,6 +124,7 @@ func (c *Client) RetrieveBlockChildren(
 	}
 
 	var result ListResponse
+
 	err := c.makeRequest(ctx, http.MethodGet, endpoint, nil, &result)
 	if err != nil {
 		return nil, err
@@ -131,6 +136,7 @@ func (c *Client) RetrieveBlockChildren(
 // DeleteBlock deletes a block
 func (c *Client) DeleteBlock(ctx context.Context, blockID string) (*BlockResponse, error) {
 	var result BlockResponse
+
 	err := c.makeRequest(ctx, http.MethodDelete, "/blocks/"+blockID, nil, &result)
 	if err != nil {
 		return nil, err
@@ -146,6 +152,7 @@ func (c *Client) UpdateBlock(
 	block BlockResponse,
 ) (*BlockResponse, error) {
 	var result BlockResponse
+
 	err := c.makeRequest(ctx, http.MethodPatch, "/blocks/"+blockID, block, &result)
 	if err != nil {
 		return nil, err
@@ -157,6 +164,7 @@ func (c *Client) UpdateBlock(
 // RetrievePage retrieves a page
 func (c *Client) RetrievePage(ctx context.Context, pageID string) (*PageResponse, error) {
 	var result PageResponse
+
 	err := c.makeRequest(ctx, http.MethodGet, "/pages/"+pageID, nil, &result)
 	if err != nil {
 		return nil, err
@@ -176,6 +184,7 @@ func (c *Client) UpdatePageProperties(
 	}
 
 	var result PageResponse
+
 	err := c.makeRequest(ctx, http.MethodPatch, "/pages/"+pageID, body, &result)
 	if err != nil {
 		return nil, err
@@ -194,6 +203,7 @@ func (c *Client) ListAllUsers(
 	if startCursor != nil {
 		params.Set("start_cursor", *startCursor)
 	}
+
 	if pageSize != nil {
 		params.Set("page_size", strconv.Itoa(*pageSize))
 	}
@@ -204,6 +214,7 @@ func (c *Client) ListAllUsers(
 	}
 
 	var result ListResponse
+
 	err := c.makeRequest(ctx, http.MethodGet, endpoint, nil, &result)
 	if err != nil {
 		return nil, err
@@ -215,6 +226,7 @@ func (c *Client) ListAllUsers(
 // RetrieveUser retrieves a user
 func (c *Client) RetrieveUser(ctx context.Context, userID string) (*UserResponse, error) {
 	var result UserResponse
+
 	err := c.makeRequest(ctx, http.MethodGet, "/users/"+userID, nil, &result)
 	if err != nil {
 		return nil, err
@@ -226,6 +238,7 @@ func (c *Client) RetrieveUser(ctx context.Context, userID string) (*UserResponse
 // RetrieveBotUser retrieves the bot user
 func (c *Client) RetrieveBotUser(ctx context.Context) (*UserResponse, error) {
 	var result UserResponse
+
 	err := c.makeRequest(ctx, http.MethodGet, "/users/me", nil, &result)
 	if err != nil {
 		return nil, err
@@ -250,6 +263,7 @@ func (c *Client) CreateDatabase(
 	}
 
 	var result DatabaseResponse
+
 	err := c.makeRequest(ctx, http.MethodPost, "/databases", body, &result)
 	if err != nil {
 		return nil, err
@@ -271,17 +285,21 @@ func (c *Client) QueryDatabase(
 	if filter != nil {
 		body["filter"] = filter
 	}
+
 	if sorts != nil {
 		body["sorts"] = sorts
 	}
+
 	if startCursor != nil {
 		body["start_cursor"] = *startCursor
 	}
+
 	if pageSize != nil {
 		body["page_size"] = *pageSize
 	}
 
 	var result ListResponse
+
 	err := c.makeRequest(ctx, http.MethodPost, "/databases/"+databaseID+"/query", body, &result)
 	if err != nil {
 		return nil, err
@@ -296,6 +314,7 @@ func (c *Client) RetrieveDatabase(
 	databaseID string,
 ) (*DatabaseResponse, error) {
 	var result DatabaseResponse
+
 	err := c.makeRequest(ctx, http.MethodGet, "/databases/"+databaseID, nil, &result)
 	if err != nil {
 		return nil, err
@@ -315,14 +334,17 @@ func (c *Client) UpdateDatabase(
 	if title != nil {
 		body["title"] = title
 	}
+
 	if description != nil {
 		body["description"] = description
 	}
+
 	if properties != nil {
 		body["properties"] = properties
 	}
 
 	var result DatabaseResponse
+
 	err := c.makeRequest(ctx, http.MethodPatch, "/databases/"+databaseID, body, &result)
 	if err != nil {
 		return nil, err
@@ -345,6 +367,7 @@ func (c *Client) CreateDatabaseItem(
 	}
 
 	var result PageResponse
+
 	err := c.makeRequest(ctx, http.MethodPost, "/pages", body, &result)
 	if err != nil {
 		return nil, err
@@ -366,11 +389,13 @@ func (c *Client) CreateComment(
 	if parent != nil {
 		body["parent"] = parent
 	}
+
 	if discussionID != nil {
 		body["discussion_id"] = *discussionID
 	}
 
 	var result CommentResponse
+
 	err := c.makeRequest(ctx, http.MethodPost, "/comments", body, &result)
 	if err != nil {
 		return nil, err
@@ -388,9 +413,11 @@ func (c *Client) RetrieveComments(
 ) (*ListResponse, error) {
 	params := url.Values{}
 	params.Set("block_id", blockID)
+
 	if startCursor != nil {
 		params.Set("start_cursor", *startCursor)
 	}
+
 	if pageSize != nil {
 		params.Set("page_size", strconv.Itoa(*pageSize))
 	}
@@ -398,6 +425,7 @@ func (c *Client) RetrieveComments(
 	endpoint := "/comments?" + params.Encode()
 
 	var result ListResponse
+
 	err := c.makeRequest(ctx, http.MethodGet, endpoint, nil, &result)
 	if err != nil {
 		return nil, err
@@ -419,20 +447,25 @@ func (c *Client) Search(
 	if query != nil {
 		body["query"] = *query
 	}
+
 	if filter != nil {
 		body["filter"] = filter
 	}
+
 	if sort != nil {
 		body["sort"] = sort
 	}
+
 	if startCursor != nil {
 		body["start_cursor"] = *startCursor
 	}
+
 	if pageSize != nil {
 		body["page_size"] = *pageSize
 	}
 
 	var result ListResponse
+
 	err := c.makeRequest(ctx, http.MethodPost, "/search", body, &result)
 	if err != nil {
 		return nil, err

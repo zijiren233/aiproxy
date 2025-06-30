@@ -30,6 +30,7 @@ func ErrorHanlder(resp *http.Response) adaptor.Error {
 		errorMessage = detailStr
 	} else {
 		var details []Detail
+
 		detailsData, _ := detailValue.Raw()
 		if err := sonic.Unmarshal([]byte(detailsData), &details); err == nil && len(details) > 0 {
 			errorMessage = details[0].Msg

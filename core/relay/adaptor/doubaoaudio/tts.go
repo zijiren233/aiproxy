@@ -86,6 +86,7 @@ func ConvertTTSRequest(meta *meta.Meta, req *http.Request) (adaptor.ConvertResul
 	}
 
 	cluster := "volcano_tts"
+
 	textType := "ssml"
 	if strings.HasPrefix(request.Voice, "S_") {
 		cluster = "volcano_mega"
@@ -115,17 +116,20 @@ func ConvertTTSRequest(meta *meta.Meta, req *http.Request) (adaptor.ConvertResul
 	if request.Voice == "" {
 		request.Voice = "zh_female_cancan_mars_bigtts"
 	}
+
 	doubaoRequest.Audio.VoiceType = request.Voice
 
 	if request.ResponseFormat == "" {
 		request.ResponseFormat = "pcm"
 	}
+
 	doubaoRequest.Audio.Encoding = request.ResponseFormat
 
 	volumeRatio, ok := reqMap["volume_ratio"].(float64)
 	if ok {
 		doubaoRequest.Audio.VolumeRatio = volumeRatio
 	}
+
 	pitchRatio, ok := reqMap["pitch_ratio"].(float64)
 	if ok {
 		doubaoRequest.Audio.PitchRatio = pitchRatio
@@ -161,6 +165,7 @@ func TTSDoRequest(meta *meta.Meta, req *http.Request) (*http.Response, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	meta.Set("ws_conn", conn)
 
 	writer, err := conn.NextWriter(websocket.BinaryMessage)
@@ -246,30 +251,37 @@ func TTSDoResponse(
 
 func gzipCompress(input []byte) ([]byte, error) {
 	var b bytes.Buffer
+
 	w := gzip.NewWriter(&b)
+
 	_, err := w.Write(input)
 	if err != nil {
 		_ = w.Close()
 		return nil, err
 	}
+
 	err = w.Close()
 	if err != nil {
 		return nil, err
 	}
+
 	return b.Bytes(), nil
 }
 
 func gzipDecompress(input []byte) ([]byte, error) {
 	b := bytes.NewBuffer(input)
+
 	r, err := gzip.NewReader(b)
 	if err != nil {
 		return nil, err
 	}
 	defer r.Close()
+
 	out, err := io.ReadAll(r)
 	if err != nil {
 		return nil, err
 	}
+
 	return out, nil
 }
 
@@ -298,11 +310,13 @@ func parseResponse(res []byte) (resp synResp, err error) {
 			sequenceNumber := int32(binary.BigEndian.Uint32(payload[0:4]))
 			// payloadSize := int32(binary.BigEndian.Uint32(payload[4:8]))
 			payload = payload[8:]
+
 			resp.Audio = payload
 			if sequenceNumber < 0 {
 				resp.IsLast = true
 			}
 		}
+
 		return resp, err
 	case 0xf:
 		// code := int32(binary.BigEndian.Uint32(payload[0:4]))
@@ -313,7 +327,9 @@ func parseResponse(res []byte) (resp synResp, err error) {
 				return resp, err
 			}
 		}
+
 		err = errors.New(conv.BytesToString(errMsg))
+
 		return resp, err
 	case 0xc:
 		// msgSize = int32(binary.BigEndian.Uint32(payload[0:4]))

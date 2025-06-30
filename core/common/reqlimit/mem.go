@@ -27,6 +27,7 @@ func NewInMemoryRecord() *InMemoryRecord {
 		entries: sync.Map{},
 	}
 	go rl.cleanupInactiveEntries(2*time.Minute, 1*time.Minute)
+
 	return rl
 }
 
@@ -35,15 +36,18 @@ func (m *InMemoryRecord) getEntry(keys []string) *entry {
 	actual, _ := m.entries.LoadOrStore(key, &entry{
 		windows: make(map[int64]*windowCounts),
 	})
+
 	e, _ := actual.(*entry)
 	if e.lastAccess.Load() == nil {
 		e.lastAccess.CompareAndSwap(nil, time.Now())
 	}
+
 	return e
 }
 
 func (m *InMemoryRecord) cleanupAndCount(e *entry, cutoff int64) (int64, int64) {
 	normalCount := int64(0)
+
 	overCount := int64(0)
 	for ts, wc := range e.windows {
 		if ts < cutoff {
@@ -53,6 +57,7 @@ func (m *InMemoryRecord) cleanupAndCount(e *entry, cutoff int64) (int64, int64) 
 			overCount += wc.over
 		}
 	}
+
 	return normalCount, overCount
 }
 
@@ -109,11 +114,14 @@ func (m *InMemoryRecord) GetRequest(
 			normalCount, overCount := m.cleanupAndCount(e, cutoff)
 			nowWindow := e.windows[nowSecond]
 			e.Unlock()
+
 			totalCount += normalCount + overCount
+
 			if nowWindow != nil {
 				secondCount += nowWindow.normal + nowWindow.over
 			}
 		}
+
 		return true
 	})
 
@@ -123,17 +131,21 @@ func (m *InMemoryRecord) GetRequest(
 func (m *InMemoryRecord) cleanupInactiveEntries(interval, maxInactivity time.Duration) {
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
+
 	for range ticker.C {
 		m.entries.Range(func(key, value any) bool {
 			e, _ := value.(*entry)
+
 			la := e.lastAccess.Load()
 			if la == nil {
 				return true
 			}
+
 			lastAccess, _ := la.(time.Time)
 			if time.Since(lastAccess) > maxInactivity {
 				m.entries.CompareAndDelete(key, e)
 			}
+
 			return true
 		})
 	}
@@ -153,5 +165,6 @@ func matchKeys(pattern, keys []string) bool {
 			return false
 		}
 	}
+
 	return true
 }

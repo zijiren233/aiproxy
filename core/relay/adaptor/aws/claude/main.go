@@ -117,10 +117,12 @@ func Handler(meta *meta.Meta, c *gin.Context) (model.Usage, adaptor.Error) {
 			http.StatusInternalServerError,
 		)
 	}
+
 	claudeReq, ok := convReq.(*anthropic.Request)
 	if !ok {
 		panic(fmt.Sprintf("claude request type error: %T, %v", claudeReq, claudeReq))
 	}
+
 	awsClaudeReq := &Request{
 		AnthropicVersion: "bedrock-2023-05-31",
 	}
@@ -176,11 +178,13 @@ func Handler(meta *meta.Meta, c *gin.Context) (model.Usage, adaptor.Error) {
 	c.Writer.Header().Set("Content-Type", "application/json")
 	c.Writer.Header().Set("Content-Length", strconv.Itoa(len(jsonBody)))
 	_, _ = c.Writer.Write(jsonBody)
+
 	return openaiResp.Usage.ToModelUsage(), nil
 }
 
 func StreamHandler(m *meta.Meta, c *gin.Context) (model.Usage, adaptor.Error) {
 	log := common.GetLogger(c)
+
 	awsModelID, err := awsModelID(m.ActualModel)
 	if err != nil {
 		return model.Usage{}, relaymodel.WrapperOpenAIErrorWithMessage(
@@ -204,10 +208,12 @@ func StreamHandler(m *meta.Meta, c *gin.Context) (model.Usage, adaptor.Error) {
 			http.StatusInternalServerError,
 		)
 	}
+
 	claudeReq, ok := convReq.(*anthropic.Request)
 	if !ok {
 		panic(fmt.Sprintf("claude request type error: %T, %v", claudeReq, claudeReq))
 	}
+
 	awsClaudeReq := &Request{
 		AnthropicVersion: "bedrock-2023-05-31",
 	}
@@ -218,6 +224,7 @@ func StreamHandler(m *meta.Meta, c *gin.Context) (model.Usage, adaptor.Error) {
 			http.StatusInternalServerError,
 		)
 	}
+
 	awsReq.Body, err = sonic.Marshal(awsClaudeReq)
 	if err != nil {
 		return model.Usage{}, relaymodel.WrapperOpenAIErrorWithMessage(
@@ -244,11 +251,14 @@ func StreamHandler(m *meta.Meta, c *gin.Context) (model.Usage, adaptor.Error) {
 			http.StatusInternalServerError,
 		)
 	}
+
 	stream := awsResp.GetStream()
 	defer stream.Close()
 
 	var usage *relaymodel.ChatUsage
+
 	responseText := strings.Builder{}
+
 	var writed bool
 
 	for event := range stream.Events() {
@@ -260,20 +270,26 @@ func StreamHandler(m *meta.Meta, c *gin.Context) (model.Usage, adaptor.Error) {
 					log.Errorf("response error: %+v", err)
 					continue
 				}
+
 				return usage.ToModelUsage(), err
 			}
+
 			if response != nil {
 				switch {
 				case response.Usage != nil:
 					if usage == nil {
 						usage = &relaymodel.ChatUsage{}
 					}
+
 					usage.Add(response.Usage)
+
 					if usage.PromptTokens == 0 {
 						usage.PromptTokens = int64(m.RequestUsage.InputTokens)
 						usage.TotalTokens += int64(m.RequestUsage.InputTokens)
 					}
+
 					response.Usage = usage
+
 					responseText.Reset()
 				case usage == nil:
 					for _, choice := range response.Choices {

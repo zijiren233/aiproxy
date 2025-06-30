@@ -91,11 +91,14 @@ func (a *Adaptor) SetupRequestHeader(
 	req *http.Request,
 ) error {
 	req.Header.Set("Authorization", "Bearer "+meta.Channel.Key)
+
 	accessToken, err := GetAccessToken(context.Background(), meta.Channel.Key)
 	if err != nil {
 		return err
 	}
+
 	req.URL.RawQuery = "access_token=" + accessToken
+
 	return nil
 }
 
@@ -153,6 +156,7 @@ func (a *Adaptor) DoResponse(
 			http.StatusBadRequest,
 		)
 	}
+
 	return
 }
 

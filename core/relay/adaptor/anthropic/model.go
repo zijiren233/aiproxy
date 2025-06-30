@@ -104,7 +104,9 @@ func (cc *CacheControl) ResetTTL() *CacheControl {
 	if cc == nil {
 		return nil
 	}
+
 	cc.TTL = ""
+
 	return cc
 }
 
@@ -160,10 +162,12 @@ func (u *Usage) ToOpenAIUsage() relaymodel.ChatUsage {
 			CacheCreationTokens: u.CacheCreationInputTokens,
 		},
 	}
+
 	usage.TotalTokens = usage.PromptTokens + usage.CompletionTokens
 	if u.ServerToolUse != nil {
 		usage.WebSearchCount = u.ServerToolUse.WebSearchRequests
 	}
+
 	return usage
 }
 

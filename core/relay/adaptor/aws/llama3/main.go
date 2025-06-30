@@ -69,10 +69,12 @@ var promptTpl = template.Must(template.New("llama3-chat").Parse(promptTemplate))
 
 func RenderPrompt(messages []*relaymodel.Message) string {
 	var buf bytes.Buffer
+
 	err := promptTpl.Execute(&buf, struct{ Messages []*relaymodel.Message }{messages})
 	if err != nil {
 		log.Error("error rendering prompt messages: " + err.Error())
 	}
+
 	return buf.String()
 }
 
@@ -85,8 +87,10 @@ func ConvertRequest(textRequest *relaymodel.GeneralOpenAIRequest) *Request {
 	if llamaRequest.MaxGenLen == 0 {
 		llamaRequest.MaxGenLen = 2048
 	}
+
 	prompt := RenderPrompt(textRequest.Messages)
 	llamaRequest.Prompt = prompt
+
 	return &llamaRequest
 }
 
@@ -143,6 +147,7 @@ func Handler(meta *meta.Meta, c *gin.Context) (model.Usage, adaptor.Error) {
 	}
 
 	var llamaResponse Response
+
 	err = sonic.Unmarshal(awsResp.Body, &llamaResponse)
 	if err != nil {
 		return model.Usage{}, relaymodel.WrapperOpenAIErrorWithMessage(
@@ -166,6 +171,7 @@ func Handler(meta *meta.Meta, c *gin.Context) (model.Usage, adaptor.Error) {
 	c.Writer.Header().Set("Content-Type", "application/json")
 	c.Writer.Header().Set("Content-Length", strconv.Itoa(len(jsonData)))
 	_, _ = c.Writer.Write(jsonData)
+
 	return openaiResp.Usage.ToModelUsage(), nil
 }
 
@@ -174,6 +180,7 @@ func ResponseLlama2OpenAI(meta *meta.Meta, llamaResponse Response) relaymodel.Te
 	if len(llamaResponse.Generation) > 0 {
 		responseText = llamaResponse.Generation
 	}
+
 	choice := relaymodel.TextResponseChoice{
 		Index: 0,
 		Message: relaymodel.Message{
@@ -195,6 +202,7 @@ func ResponseLlama2OpenAI(meta *meta.Meta, llamaResponse Response) relaymodel.Te
 			TotalTokens:      llamaResponse.PromptTokenCount + llamaResponse.GenerationTokenCount,
 		},
 	}
+
 	return fullTextResponse
 }
 
@@ -202,6 +210,7 @@ func StreamHandler(meta *meta.Meta, c *gin.Context) (model.Usage, adaptor.Error)
 	log := common.GetLogger(c)
 
 	createdTime := time.Now().Unix()
+
 	awsModelID, err := awsModelID(meta.ActualModel)
 	if err != nil {
 		return model.Usage{}, relaymodel.WrapperOpenAIErrorWithMessage(
@@ -252,10 +261,12 @@ func StreamHandler(meta *meta.Meta, c *gin.Context) (model.Usage, adaptor.Error)
 			http.StatusInternalServerError,
 		)
 	}
+
 	stream := awsResp.GetStream()
 	defer stream.Close()
 
 	c.Writer.Header().Set("Content-Type", "text/event-stream")
+
 	var usage relaymodel.ChatUsage
 	c.Stream(func(_ io.Writer) bool {
 		event, ok := <-stream.Events()
@@ -267,6 +278,7 @@ func StreamHandler(meta *meta.Meta, c *gin.Context) (model.Usage, adaptor.Error)
 		switch v := event.(type) {
 		case *types.ResponseStreamMemberChunk:
 			var llamaResp StreamResponse
+
 			err := sonic.Unmarshal(v.Value.Bytes, &llamaResp)
 			if err != nil {
 				log.Error("error unmarshalling stream response: " + err.Error())
@@ -276,19 +288,23 @@ func StreamHandler(meta *meta.Meta, c *gin.Context) (model.Usage, adaptor.Error)
 			if llamaResp.PromptTokenCount > 0 {
 				usage.PromptTokens = llamaResp.PromptTokenCount
 			}
+
 			if llamaResp.StopReason == relaymodel.FinishReasonStop {
 				usage.CompletionTokens = llamaResp.GenerationTokenCount
 				usage.TotalTokens = usage.PromptTokens + usage.CompletionTokens
 			}
+
 			response := StreamResponseLlama2OpenAI(&llamaResp)
 			response.ID = openai.ChatCompletionID()
 			response.Model = meta.OriginModel
 			response.Created = createdTime
+
 			err = openai.ObjectData(c, response)
 			if err != nil {
 				log.Error("error stream response: " + err.Error())
 				return true
 			}
+
 			return true
 		case *types.UnknownUnionMember:
 			log.Error("unknown tag: " + v.Tag)
@@ -306,14 +322,19 @@ func StreamResponseLlama2OpenAI(
 	llamaResponse *StreamResponse,
 ) *relaymodel.ChatCompletionsStreamResponse {
 	var choice relaymodel.ChatCompletionsStreamResponseChoice
+
 	choice.Delta.Content = llamaResponse.Generation
 	choice.Delta.Role = "assistant"
+
 	finishReason := llamaResponse.StopReason
 	if finishReason != "null" {
 		choice.FinishReason = finishReason
 	}
+
 	var openaiResponse relaymodel.ChatCompletionsStreamResponse
+
 	openaiResponse.Object = relaymodel.ChatCompletionChunkObject
 	openaiResponse.Choices = []*relaymodel.ChatCompletionsStreamResponseChoice{&choice}
+
 	return &openaiResponse
 }

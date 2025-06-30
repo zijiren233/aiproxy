@@ -11,6 +11,7 @@ func ResponseText2Usage(responseText, modeName string, promptTokens int64) model
 		CompletionTokens: CountTokenText(responseText, modeName),
 	}
 	usage.TotalTokens = usage.PromptTokens + usage.CompletionTokens
+
 	return usage
 }
 

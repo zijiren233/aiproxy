@@ -17,23 +17,29 @@ var (
 
 func init() {
 	tiktoken.SetBpeLoader(&embedBpeLoader{})
+
 	gpt35TokenEncoder, err := tiktoken.EncodingForModel("gpt-3.5-turbo")
 	if err != nil {
 		log.Fatal("failed to get gpt-3.5-turbo token encoder: " + err.Error())
 	}
+
 	defaultTokenEncoder = gpt35TokenEncoder
 }
 
 func GetTokenEncoder(model string) *tiktoken.Tiktoken {
 	tokenEncoderLock.RLock()
+
 	tokenEncoder, ok := tokenEncoderMap[model]
+
 	tokenEncoderLock.RUnlock()
+
 	if ok {
 		return tokenEncoder
 	}
 
 	tokenEncoderLock.Lock()
 	defer tokenEncoderLock.Unlock()
+
 	if tokenEncoder, ok := tokenEncoderMap[model]; ok {
 		return tokenEncoder
 	}
@@ -46,9 +52,11 @@ func GetTokenEncoder(model string) *tiktoken.Tiktoken {
 		} else {
 			log.Errorf("failed to get token encoder for model %s: %v", model, err)
 		}
+
 		return defaultTokenEncoder
 	}
 
 	tokenEncoderMap[model] = tokenEncoder
+
 	return tokenEncoder
 }

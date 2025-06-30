@@ -121,12 +121,15 @@ func hasRangeOverlap(min1, max1, min2, max2 int64) bool {
 	if actualMin1 == 0 {
 		actualMin1 = 0
 	}
+
 	if actualMax1 == 0 {
 		actualMax1 = math.MaxInt64
 	}
+
 	if actualMin2 == 0 {
 		actualMin2 = 0
 	}
+
 	if actualMax2 == 0 {
 		actualMax2 = math.MaxInt64
 	}
@@ -166,6 +169,7 @@ func (p *Price) validateConditionalPriceOrdering() error {
 			if currentInputMax == 0 {
 				currentInputMax = math.MaxInt64
 			}
+
 			if nextInputMax == 0 {
 				nextInputMax = math.MaxInt64
 			}
@@ -195,6 +199,7 @@ func (p *Price) SelectConditionalPrice(usage Usage) Price {
 		if condition.InputTokenMin > 0 && inputTokens < condition.InputTokenMin {
 			continue
 		}
+
 		if condition.InputTokenMax > 0 && inputTokens > condition.InputTokenMax {
 			continue
 		}
@@ -202,6 +207,7 @@ func (p *Price) SelectConditionalPrice(usage Usage) Price {
 		if condition.OutputTokenMin > 0 && outputTokens < condition.OutputTokenMin {
 			continue
 		}
+
 		if condition.OutputTokenMax > 0 && outputTokens > condition.OutputTokenMax {
 			continue
 		}

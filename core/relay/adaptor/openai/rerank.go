@@ -33,6 +33,7 @@ func ConvertRerankRequest(
 	if err != nil {
 		return adaptor.ConvertResult{}, err
 	}
+
 	return adaptor.ConvertResult{
 		Header: http.Header{
 			"Content-Type":   {"application/json"},
@@ -63,7 +64,9 @@ func RerankHandler(
 			http.StatusInternalServerError,
 		)
 	}
+
 	var rerankResponse relaymodel.SlimRerankResponse
+
 	err = sonic.Unmarshal(responseBody, &rerankResponse)
 	if err != nil {
 		return model.Usage{}, relaymodel.WrapperOpenAIError(
@@ -75,6 +78,7 @@ func RerankHandler(
 
 	c.Writer.Header().Set("Content-Type", "application/json")
 	c.Writer.Header().Set("Content-Length", strconv.Itoa(len(responseBody)))
+
 	_, err = c.Writer.Write(responseBody)
 	if err != nil {
 		log.Warnf("write response body failed: %v", err)
@@ -86,9 +90,11 @@ func RerankHandler(
 			TotalTokens: meta.RequestUsage.InputTokens,
 		}, nil
 	}
+
 	if rerankResponse.Meta.Tokens.InputTokens <= 0 {
 		rerankResponse.Meta.Tokens.InputTokens = int64(meta.RequestUsage.InputTokens)
 	}
+
 	return model.Usage{
 		InputTokens:  model.ZeroNullInt64(rerankResponse.Meta.Tokens.InputTokens),
 		OutputTokens: model.ZeroNullInt64(rerankResponse.Meta.Tokens.OutputTokens),

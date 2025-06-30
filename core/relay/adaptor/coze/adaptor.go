@@ -45,7 +45,9 @@ func (a *Adaptor) SetupRequestHeader(
 	if err != nil {
 		return err
 	}
+
 	req.Header.Set("Authorization", "Bearer "+token)
+
 	return nil
 }
 
@@ -57,16 +59,20 @@ func (a *Adaptor) ConvertRequest(
 	if meta.Mode != mode.ChatCompletions {
 		return adaptor.ConvertResult{}, errors.New("coze only support chat completions")
 	}
+
 	request, err := utils.UnmarshalGeneralOpenAIRequest(req)
 	if err != nil {
 		return adaptor.ConvertResult{}, err
 	}
+
 	_, userID, err := getTokenAndUserID(meta.Channel.Key)
 	if err != nil {
 		return adaptor.ConvertResult{}, err
 	}
+
 	request.User = userID
 	request.Model = meta.ActualModel
+
 	cozeRequest := Request{
 		Stream: request.Stream,
 		User:   request.User,
@@ -77,16 +83,19 @@ func (a *Adaptor) ConvertRequest(
 			cozeRequest.Query = message.StringContent()
 			continue
 		}
+
 		cozeMessage := Message{
 			Role:    message.Role,
 			Content: message.StringContent(),
 		}
 		cozeRequest.ChatHistory = append(cozeRequest.ChatHistory, cozeMessage)
 	}
+
 	data, err := sonic.Marshal(cozeRequest)
 	if err != nil {
 		return adaptor.ConvertResult{}, err
 	}
+
 	return adaptor.ConvertResult{
 		Header: http.Header{
 			"Content-Type":   {"application/json"},
@@ -116,6 +125,7 @@ func (a *Adaptor) DoResponse(
 	} else {
 		usage, err = Handler(meta, c, resp)
 	}
+
 	return
 }
 

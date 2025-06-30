@@ -43,6 +43,7 @@ func (a *Adaptor) DoResponse(
 		if err != nil {
 			return model.Usage{}, err
 		}
+
 		size := c.Writer.Size()
 		usage = model.Usage{
 			OutputTokens: model.ZeroNullInt64(size),
@@ -52,6 +53,7 @@ func (a *Adaptor) DoResponse(
 		if resp.StatusCode != http.StatusOK {
 			return model.Usage{}, ErrorHandler(resp)
 		}
+
 		usage, err = a.Adaptor.DoResponse(meta, store, c, resp)
 		if err != nil {
 			return model.Usage{}, err
@@ -62,5 +64,6 @@ func (a *Adaptor) DoResponse(
 			return model.Usage{}, err
 		}
 	}
+
 	return usage, nil
 }

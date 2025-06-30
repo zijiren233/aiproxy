@@ -18,21 +18,27 @@ func (a *Adaptor) GetBalance(channel *model.Channel) (float64, error) {
 	if u == "" {
 		u = baseURL
 	}
+
 	url := u + "/user/balance"
+
 	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, url, nil)
 	if err != nil {
 		return 0, err
 	}
+
 	req.Header.Set("Authorization", "Bearer "+channel.Key)
+
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return 0, err
 	}
 	defer resp.Body.Close()
+
 	var usage UsageResponse
 	if err := sonic.ConfigDefault.NewDecoder(resp.Body).Decode(&usage); err != nil {
 		return 0, err
 	}
+
 	index := -1
 	for i, balanceInfo := range usage.BalanceInfos {
 		if balanceInfo.Currency == "CNY" {
@@ -40,13 +46,16 @@ func (a *Adaptor) GetBalance(channel *model.Channel) (float64, error) {
 			break
 		}
 	}
+
 	if index == -1 {
 		return 0, errors.New("currency CNY not found")
 	}
+
 	balance, err := strconv.ParseFloat(usage.BalanceInfos[index].TotalBalance, 64)
 	if err != nil {
 		return 0, err
 	}
+
 	return balance, nil
 }
 

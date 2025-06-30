@@ -30,6 +30,7 @@ func ImageHandler(_ *meta.Meta, c *gin.Context, resp *http.Response) (model.Usag
 	log := common.GetLogger(c)
 
 	var imageResponse ImageResponse
+
 	err := common.UnmarshalResponse(resp, &imageResponse)
 	if err != nil {
 		return model.Usage{}, relaymodel.WrapperOpenAIErrorWithMessage(
@@ -49,6 +50,7 @@ func ImageHandler(_ *meta.Meta, c *gin.Context, resp *http.Response) (model.Usag
 	}
 
 	openaiResponse := ToOpenAIImageResponse(&imageResponse)
+
 	data, err := sonic.Marshal(openaiResponse)
 	if err != nil {
 		return usage, relaymodel.WrapperOpenAIErrorWithMessage(
@@ -57,12 +59,15 @@ func ImageHandler(_ *meta.Meta, c *gin.Context, resp *http.Response) (model.Usag
 			http.StatusInternalServerError,
 		)
 	}
+
 	c.Writer.Header().Set("Content-Type", "application/json")
 	c.Writer.Header().Set("Content-Length", strconv.Itoa(len(data)))
+
 	_, err = c.Writer.Write(data)
 	if err != nil {
 		log.Warnf("write response body failed: %v", err)
 	}
+
 	return usage, nil
 }
 
@@ -75,5 +80,6 @@ func ToOpenAIImageResponse(imageResponse *ImageResponse) *relaymodel.ImageRespon
 			B64Json: data.B64Image,
 		})
 	}
+
 	return response
 }

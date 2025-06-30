@@ -70,7 +70,9 @@ func (a *Adaptor) SetupRequestHeader(
 	if err != nil {
 		return err
 	}
+
 	req.Header.Set("Authorization", "Bearer "+token)
+
 	return nil
 }
 
@@ -82,11 +84,13 @@ func (a *Adaptor) ConvertRequest(
 	switch meta.Mode {
 	case mode.ChatCompletions, mode.Rerank:
 		actModel := meta.ActualModel
+
 		v2Model := toV2ModelName(actModel)
 		if v2Model != actModel {
 			meta.ActualModel = v2Model
 			defer func() { meta.ActualModel = actModel }()
 		}
+
 		return openai.ConvertRequest(meta, store, req)
 	default:
 		return adaptor.ConvertResult{}, fmt.Errorf("unsupported mode: %s", meta.Mode)

@@ -42,21 +42,26 @@ func NewSplitter(heads, tails [][]byte) *Splitter {
 
 func computeKMPNext(pattern []byte) []int {
 	n := len(pattern)
+
 	next := make([]int, n)
 	if n == 0 {
 		return next
 	}
+
 	next[0] = 0
 	for i := 1; i < n; i++ {
 		j := next[i-1]
 		for j > 0 && pattern[i] != pattern[j] {
 			j = next[j-1]
 		}
+
 		if pattern[i] == pattern[j] {
 			j++
 		}
+
 		next[i] = j
 	}
+
 	return next
 }
 
@@ -107,10 +112,12 @@ func (s *Splitter) Process(data []byte) ([]byte, []byte) {
 		if headMatched {
 			// Head found, move to seeking tail
 			s.state = 1
+
 			s.buffer = s.buffer[headMatchLen:]
 			if len(s.buffer) == 0 {
 				return nil, nil
 			}
+
 			return s.processSeekTail()
 		}
 
@@ -123,6 +130,7 @@ func (s *Splitter) Process(data []byte) ([]byte, []byte) {
 		s.state = 2
 		remaining := s.buffer
 		s.buffer = nil
+
 		return nil, remaining
 
 	case 1:
@@ -147,6 +155,7 @@ func (s *Splitter) processSeekTail() ([]byte, []byte) {
 			for j > 0 && data[i] != tail[j] {
 				j = kmpNext[j-1]
 			}
+
 			if data[i] == tail[j] {
 				j++
 				if j == tailLen {
@@ -154,10 +163,12 @@ func (s *Splitter) processSeekTail() ([]byte, []byte) {
 					if end < 0 {
 						end = 0
 					}
+
 					result := data[:end]
 					remaining := data[i+1:]
 					s.buffer = nil
 					s.state = 2
+
 					return result, remaining
 				}
 			}
@@ -173,6 +184,7 @@ func (s *Splitter) processSeekTail() ([]byte, []byte) {
 		if pos > 0 {
 			// We have a partial match for this tail
 			tailMatchLen := pos
+
 			safePos := len(data) - tailMatchLen
 			if safePos < minSafePos {
 				minSafePos = safePos
@@ -187,5 +199,6 @@ func (s *Splitter) processSeekTail() ([]byte, []byte) {
 
 	result := data[:minSafePos]
 	s.buffer = data[minSafePos:]
+
 	return result, nil
 }

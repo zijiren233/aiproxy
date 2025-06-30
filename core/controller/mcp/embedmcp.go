@@ -42,6 +42,7 @@ func newEmbedMCPConfigTemplates(templates mcpservers.ConfigTemplates) EmbedMCPCo
 	for key, template := range templates {
 		emcpTemplates[key] = newEmbedMCPConfigTemplate(template)
 	}
+
 	return emcpTemplates
 }
 
@@ -52,6 +53,7 @@ func newEmbedMCPProxyConfigTemplates(
 	for key, template := range templates {
 		emcpTemplates[key] = newEmbedMCPConfigTemplate(template.ConfigTemplate)
 	}
+
 	return emcpTemplates
 }
 
@@ -91,12 +93,15 @@ func newEmbedMCP(
 	if len(mcp.ConfigTemplates) != 0 {
 		emcp.ConfigTemplates = newEmbedMCPConfigTemplates(mcp.ConfigTemplates)
 	}
+
 	if len(mcp.ProxyConfigTemplates) != 0 {
 		emcp.ConfigTemplates = newEmbedMCPProxyConfigTemplates(mcp.ProxyConfigTemplates)
 	}
+
 	if emcp.ConfigTemplates == nil {
 		emcp.ConfigTemplates = make(EmbedMCPConfigTemplates)
 	}
+
 	return emcp
 }
 
@@ -113,11 +118,13 @@ func newEmbedMCP(
 func GetEmbedMCPs(c *gin.Context) {
 	embeds := mcpservers.Servers()
 	embedIDs := slices.Collect(maps.Keys(embeds))
+
 	enabledMCPs, err := model.GetPublicMCPsEnabled(embedIDs)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
+
 	embedConfigs, err := model.GetPublicMCPsEmbedConfig(embedIDs)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
@@ -127,10 +134,12 @@ func GetEmbedMCPs(c *gin.Context) {
 	emcps := make([]*EmbedMCP, 0, len(embeds))
 	for _, mcp := range embeds {
 		enabled := slices.Contains(enabledMCPs, mcp.ID)
+
 		var embedConfig *model.MCPEmbeddingConfig
 		if c, ok := embedConfigs[mcp.ID]; ok {
 			embedConfig = &c
 		}
+
 		emcps = append(
 			emcps,
 			newEmbedMCP(
@@ -145,12 +154,14 @@ func GetEmbedMCPs(c *gin.Context) {
 		if a.Name != b.Name {
 			return strings.Compare(a.Name, b.Name)
 		}
+
 		if a.Enabled != b.Enabled {
 			if a.Enabled {
 				return -1
 			}
 			return 1
 		}
+
 		return strings.Compare(a.ID, b.ID)
 	})
 
@@ -168,6 +179,7 @@ func GetEmbedConfig(
 	initConfig map[string]string,
 ) (*model.MCPEmbeddingConfig, error) {
 	reusingConfig := make(map[string]model.ReusingParam)
+
 	embedConfig := &model.MCPEmbeddingConfig{
 		Init: initConfig,
 	}
@@ -181,6 +193,7 @@ func GetEmbedConfig(
 			if _, ok := initConfig[key]; ok {
 				return nil, fmt.Errorf("config %s is provided, but it is not allowed", key)
 			}
+
 			reusingConfig[key] = model.ReusingParam{
 				Name:        value.Name,
 				Description: value.Description,
@@ -190,6 +203,7 @@ func GetEmbedConfig(
 			if v, ok := initConfig[key]; ok && v != "" {
 				continue
 			}
+
 			reusingConfig[key] = model.ReusingParam{
 				Name:        value.Name,
 				Description: value.Description,
@@ -197,7 +211,9 @@ func GetEmbedConfig(
 			}
 		}
 	}
+
 	embedConfig.Reusing = reusingConfig
+
 	return embedConfig, nil
 }
 
@@ -227,6 +243,7 @@ func GetProxyConfig(
 			if value == "" {
 				return nil, fmt.Errorf("parameter %s is required", key)
 			}
+
 			applyParamToConfig(config, key, value, param.Type)
 		case mcpservers.ConfigRequiredTypeReusingOnly:
 			// 只能通过 reusing 提供，不能在初始化时提供
@@ -236,6 +253,7 @@ func GetProxyConfig(
 					key,
 				)
 			}
+
 			config.Reusing[key] = model.PublicMCPProxyReusingParam{
 				ReusingParam: model.ReusingParam{
 					Name:        param.Name,
@@ -301,20 +319,24 @@ func ToPublicMCP(
 		if err != nil {
 			return nil, err
 		}
+
 		pmcp.EmbedConfig = embedConfig
 	case model.PublicMCPTypeProxySSE, model.PublicMCPTypeProxyStreamable:
 		proxyConfig, err := GetProxyConfig(e.ProxyConfigTemplates, initConfig)
 		if err != nil {
 			return nil, err
 		}
+
 		pmcp.ProxyConfig = proxyConfig
 	default:
 	}
+
 	if enabled {
 		pmcp.Status = model.PublicMCPStatusEnabled
 	} else {
 		pmcp.Status = model.PublicMCPStatusDisabled
 	}
+
 	return &pmcp, nil
 }
 
@@ -409,6 +431,7 @@ func TestEmbedMCPSseServer(c *gin.Context) {
 	}
 
 	initConfig, reusingConfig := getConfigFromQuery(c)
+
 	emcp, err := mcpservers.GetMCPServer(id, initConfig, reusingConfig)
 	if err != nil {
 		http.Error(c.Writer, err.Error(), http.StatusBadRequest)
@@ -472,10 +495,12 @@ func TestEmbedMCPStreamable(c *gin.Context) {
 			mcp.INVALID_REQUEST,
 			"mcp id is required",
 		))
+
 		return
 	}
 
 	initConfig, reusingConfig := getConfigFromQuery(c)
+
 	server, err := mcpservers.GetMCPServer(id, initConfig, reusingConfig)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, mcpservers.CreateMCPErrorResponse(
@@ -483,7 +508,9 @@ func TestEmbedMCPStreamable(c *gin.Context) {
 			mcp.INVALID_REQUEST,
 			err.Error(),
 		))
+
 		return
 	}
+
 	handleStreamableMCPServer(c, server)
 }

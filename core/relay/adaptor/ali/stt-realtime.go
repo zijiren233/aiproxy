@@ -74,18 +74,22 @@ func ConvertSTTRequest(
 	if err != nil {
 		return adaptor.ConvertResult{}, err
 	}
+
 	audioFile, _, err := request.FormFile("file")
 	if err != nil {
 		return adaptor.ConvertResult{}, err
 	}
+
 	audioData, err := io.ReadAll(audioFile)
 	if err != nil {
 		return adaptor.ConvertResult{}, err
 	}
+
 	format := "mp3"
 	if request.FormValue("format") != "" {
 		format = request.FormValue("format")
 	}
+
 	sampleRate := 24000
 	if request.FormValue("sample_rate") != "" {
 		sampleRate, err = strconv.Atoi(request.FormValue("sample_rate"))
@@ -117,8 +121,10 @@ func ConvertSTTRequest(
 	if err != nil {
 		return adaptor.ConvertResult{}, err
 	}
+
 	meta.Set("audio_data", audioData)
 	meta.Set("task_id", sttRequest.Header.TaskID)
+
 	return adaptor.ConvertResult{
 		Header: http.Header{
 			"X-DashScope-DataInspection": {"enable"},
@@ -135,6 +141,7 @@ func STTDoRequest(meta *meta.Meta, req *http.Request) (*http.Response, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	meta.Set("ws_conn", conn)
 
 	jsonWriter, err := conn.NextWriter(websocket.TextMessage)
@@ -142,6 +149,7 @@ func STTDoRequest(meta *meta.Meta, req *http.Request) (*http.Response, error) {
 		return nil, err
 	}
 	defer jsonWriter.Close()
+
 	_, err = io.Copy(jsonWriter, req.Body)
 	if err != nil {
 		return nil, err
@@ -162,10 +170,12 @@ func STTDoResponse(
 	if !ok {
 		panic(fmt.Sprintf("audio data type error: %T, %v", audioData, audioData))
 	}
+
 	taskID, ok := meta.MustGet("task_id").(string)
 	if !ok {
 		panic(fmt.Sprintf("task id type error: %T, %v", taskID, taskID))
 	}
+
 	conn, ok := meta.MustGet("ws_conn").(*websocket.Conn)
 	if !ok {
 		panic(fmt.Sprintf("ws conn type error: %T, %v", conn, conn))
@@ -195,6 +205,7 @@ func STTDoResponse(
 		}
 
 		var msg STTMessage
+
 		err = sonic.Unmarshal(data, &msg)
 		if err != nil {
 			return usage, relaymodel.WrapperOpenAIErrorWithMessage(
@@ -203,6 +214,7 @@ func STTDoResponse(
 				http.StatusInternalServerError,
 			)
 		}
+
 		switch msg.Header.Event {
 		case "task-started":
 			chunkSize := 3 * 1024
@@ -211,7 +223,9 @@ func STTDoResponse(
 				if end > len(audioData) {
 					end = len(audioData)
 				}
+
 				chunk := audioData[i:end]
+
 				err = conn.WriteMessage(websocket.BinaryMessage, chunk)
 				if err != nil {
 					return usage, relaymodel.WrapperOpenAIErrorWithMessage(
@@ -221,6 +235,7 @@ func STTDoResponse(
 					)
 				}
 			}
+
 			finishMsg := STTMessage{
 				Header: STTHeader{
 					Action:    "finish-task",
@@ -231,6 +246,7 @@ func STTDoResponse(
 					Input: STTInput{},
 				},
 			}
+
 			finishData, err := sonic.Marshal(finishMsg)
 			if err != nil {
 				return usage, relaymodel.WrapperOpenAIErrorWithMessage(
@@ -239,6 +255,7 @@ func STTDoResponse(
 					http.StatusInternalServerError,
 				)
 			}
+
 			err = conn.WriteMessage(websocket.TextMessage, finishData)
 			if err != nil {
 				return usage, relaymodel.WrapperOpenAIErrorWithMessage(
@@ -252,6 +269,7 @@ func STTDoResponse(
 				msg.Payload.Output.STTSentence.Text != "" {
 				output.WriteString(msg.Payload.Output.STTSentence.Text)
 			}
+
 			continue
 		case "task-finished":
 			usage.InputTokens = model.ZeroNullInt64(msg.Payload.Usage.Characters)
@@ -263,6 +281,7 @@ func STTDoResponse(
 					TotalTokens:  int64(usage.TotalTokens),
 				},
 			})
+
 			return usage, nil
 		case "task-failed":
 			return usage, relaymodel.WrapperOpenAIErrorWithMessage(

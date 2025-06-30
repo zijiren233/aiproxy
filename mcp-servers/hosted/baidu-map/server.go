@@ -56,6 +56,7 @@ func NewServer(config, reuse map[string]string) (mcpservers.Server, error) {
 	if apiKey == "" {
 		apiKey = reuse["baidu_map_api_key"]
 	}
+
 	if apiKey == "" {
 		return nil, errors.New("baidu_map_api_key is required")
 	}
@@ -99,6 +100,7 @@ func ListTools(ctx context.Context) ([]mcp.Tool, error) {
 		),
 	}
 	baiduServer.addTools()
+
 	return mcpservers.ListServerTools(ctx, baiduServer)
 }
 
@@ -438,6 +440,7 @@ func (s *Server) handleGeocode(
 	}
 
 	resultJSON, _ := sonic.MarshalIndent(result, "", "  ")
+
 	return mcp.NewToolResultText(string(resultJSON)), nil
 }
 
@@ -513,6 +516,7 @@ func (s *Server) handleReverseGeocode(
 	}
 
 	resultJSON, _ := sonic.MarshalIndent(result, "", "  ")
+
 	return mcp.NewToolResultText(string(resultJSON)), nil
 }
 
@@ -538,9 +542,11 @@ func (s *Server) handlePlaceSearch(
 	if region, ok := args["region"].(string); ok && region != "" {
 		params.Add("region", region)
 	}
+
 	if bounds, ok := args["bounds"].(string); ok && bounds != "" {
 		params.Add("bounds", bounds)
 	}
+
 	if location, ok := args["location"].(string); ok && location != "" {
 		params.Add("location", location)
 	}
@@ -598,6 +604,7 @@ func (s *Server) handlePlaceSearch(
 	}
 
 	resultJSON, _ := sonic.MarshalIndent(result, "", "  ")
+
 	return mcp.NewToolResultText(string(resultJSON)), nil
 }
 
@@ -665,6 +672,7 @@ func (s *Server) handlePlaceDetails(
 	}
 
 	resultJSON, _ := sonic.MarshalIndent(result, "", "  ")
+
 	return mcp.NewToolResultText(string(resultJSON)), nil
 }
 
@@ -697,6 +705,7 @@ func (s *Server) handleDistanceMatrix(
 			origins = append(origins, s)
 		}
 	}
+
 	for _, d := range destinationsRaw {
 		if s, ok := d.(string); ok {
 			destinations = append(destinations, s)
@@ -750,6 +759,7 @@ func (s *Server) handleDistanceMatrix(
 	}
 
 	resultJSON, _ := sonic.MarshalIndent(result, "", "  ")
+
 	return mcp.NewToolResultText(string(resultJSON)), nil
 }
 
@@ -827,6 +837,7 @@ func (s *Server) handleDirections(
 	}
 
 	resultJSON, _ := sonic.MarshalIndent(result, "", "  ")
+
 	return mcp.NewToolResultText(string(resultJSON)), nil
 }
 
@@ -847,6 +858,7 @@ func (s *Server) handleWeather(
 	if location, ok := args["location"].(string); ok && location != "" {
 		params.Add("location", location)
 	}
+
 	if districtID, ok := args["districtId"].(string); ok && districtID != "" {
 		params.Add("district_id", districtID)
 	}
@@ -885,6 +897,7 @@ func (s *Server) handleWeather(
 	}
 
 	resultJSON, _ := sonic.MarshalIndent(result, "", "  ")
+
 	return mcp.NewToolResultText(string(resultJSON)), nil
 }
 
@@ -938,6 +951,7 @@ func (s *Server) handleIPLocation(
 	}
 
 	resultJSON, _ := sonic.MarshalIndent(result, "", "  ")
+
 	return mcp.NewToolResultText(string(resultJSON)), nil
 }
 
@@ -959,18 +973,22 @@ func (s *Server) handleRoadTraffic(
 	if roadName, ok := args["roadName"].(string); ok && roadName != "" {
 		if city, ok := args["city"].(string); ok && city != "" {
 			apiURL = baseURL + "/traffic/v1/road"
+
 			params.Add("road_name", roadName)
 			params.Add("city", city)
 		}
 	} else if bounds, ok := args["bounds"].(string); ok && bounds != "" {
 		apiURL = baseURL + "/traffic/v1/bound"
+
 		params.Add("bounds", bounds)
 	} else if vertexes, ok := args["vertexes"].(string); ok && vertexes != "" {
 		apiURL = baseURL + "/traffic/v1/polygon"
+
 		params.Add("vertexes", vertexes)
 	} else if center, ok := args["center"].(string); ok && center != "" {
 		if radius, ok := args["radius"].(float64); ok {
 			apiURL = baseURL + "/traffic/v1/around"
+
 			params.Add("center", center)
 			params.Add("radius", strconv.FormatFloat(radius, 'f', -1, 64))
 		}
@@ -1011,6 +1029,7 @@ func (s *Server) handleRoadTraffic(
 	}
 
 	resultJSON, _ := sonic.MarshalIndent(result, "", "  ")
+
 	return mcp.NewToolResultText(string(resultJSON)), nil
 }
 
@@ -1044,6 +1063,7 @@ func (s *Server) handlePOIExtract(
 	if err != nil {
 		return nil, fmt.Errorf("submit request failed: %w", err)
 	}
+
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
 	submitResp, err := s.httpClient.Do(req)
@@ -1087,6 +1107,7 @@ func (s *Server) handlePOIExtract(
 		if err != nil {
 			return nil, fmt.Errorf("failed to create request: %w", err)
 		}
+
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
 		resultResp, err := s.httpClient.Do(req)
@@ -1112,6 +1133,7 @@ func (s *Server) handlePOIExtract(
 			}
 
 			resultJSON, _ := sonic.MarshalIndent(result, "", "  ")
+
 			return mcp.NewToolResultText(string(resultJSON)), nil
 		}
 
@@ -1128,8 +1150,10 @@ func getErrorMessage(resp Response) string {
 	if resp.Message != "" {
 		return resp.Message
 	}
+
 	if resp.Msg != "" {
 		return resp.Msg
 	}
+
 	return strconv.Itoa(resp.Status)
 }

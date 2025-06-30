@@ -20,5 +20,6 @@ func getAKAndSK(key string) (string, string, error) {
 	if len(parts) != 2 {
 		return "", "", errors.New("invalid key format")
 	}
+
 	return parts[0], parts[1], nil
 }

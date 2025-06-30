@@ -14,6 +14,7 @@ func (a *Adaptor) ValidateKey(key string) error {
 	if err != nil {
 		return err
 	}
+
 	return nil
 }
 
@@ -22,5 +23,6 @@ func getTokenAndUserID(key string) (string, string, error) {
 	if len(split) != 2 {
 		return "", "", errors.New("invalid key format")
 	}
+
 	return split[0], split[1], nil
 }

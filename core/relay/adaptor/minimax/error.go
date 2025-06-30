@@ -41,6 +41,7 @@ func TryErrorHanlder(resp *http.Response) adaptor.Error {
 			http.StatusInternalServerError,
 		)
 	}
+
 	if result.BaseResp != nil && result.BaseResp.StatusCode != 0 {
 		statusCode := http.StatusInternalServerError
 		switch result.BaseResp.StatusCode {
@@ -57,6 +58,7 @@ func TryErrorHanlder(resp *http.Response) adaptor.Error {
 		case 1000, 1013:
 			statusCode = http.StatusInternalServerError
 		}
+
 		return relaymodel.WrapperOpenAIErrorWithMessage(
 			result.BaseResp.StatusMsg,
 			strconv.Itoa(result.BaseResp.StatusCode),

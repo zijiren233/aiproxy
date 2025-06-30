@@ -35,9 +35,11 @@ func (g *GroupModelConfig) BeforeSave(_ *gorm.DB) (err error) {
 	if g.Model == "" {
 		return errors.New("model is required")
 	}
+
 	if err := g.Price.ValidateConditionalPrices(); err != nil {
 		return err
 	}
+
 	return nil
 }
 
@@ -49,6 +51,7 @@ func SaveGroupModelConfig(groupModelConfig GroupModelConfig) (err error) {
 			}
 		}
 	}()
+
 	return DB.Save(&groupModelConfig).Error
 }
 
@@ -60,6 +63,7 @@ func UpdateGroupModelConfig(groupModelConfig GroupModelConfig) (err error) {
 			}
 		}
 	}()
+
 	return HandleNotFound(
 		DB.Model(&groupModelConfig).Updates(groupModelConfig).Error,
 		GroupModelConfigCacheKey,
@@ -74,6 +78,7 @@ func SaveGroupModelConfigs(groupID string, groupModelConfigs []GroupModelConfig)
 			}
 		}
 	}()
+
 	return DB.Transaction(func(tx *gorm.DB) error {
 		for _, groupModelConfig := range groupModelConfigs {
 			groupModelConfig.GroupID = groupID
@@ -81,6 +86,7 @@ func SaveGroupModelConfigs(groupID string, groupModelConfigs []GroupModelConfig)
 				return err
 			}
 		}
+
 		return nil
 	})
 }
@@ -93,6 +99,7 @@ func UpdateGroupModelConfigs(groupID string, groupModelConfigs []GroupModelConfi
 			}
 		}
 	}()
+
 	return DB.Transaction(func(tx *gorm.DB) error {
 		for _, groupModelConfig := range groupModelConfigs {
 			groupModelConfig.GroupID = groupID
@@ -103,6 +110,7 @@ func UpdateGroupModelConfigs(groupID string, groupModelConfigs []GroupModelConfi
 				return err
 			}
 		}
+
 		return nil
 	})
 }
@@ -112,6 +120,7 @@ func DeleteGroupModelConfig(groupID, model string) error {
 		Where("group_id = ? AND model = ?", groupID, model).
 		Delete(&GroupModelConfig{}).
 		Error
+
 	return HandleNotFound(err, GroupModelConfigCacheKey)
 }
 
@@ -123,12 +132,14 @@ func DeleteGroupModelConfigs(groupID string, models []string) error {
 
 func GetGroupModelConfigs(groupID string) ([]GroupModelConfig, error) {
 	var groupModelConfigs []GroupModelConfig
+
 	err := DB.Where("group_id = ?", groupID).Find(&groupModelConfigs).Error
 	return groupModelConfigs, HandleNotFound(err, GroupModelConfigCacheKey)
 }
 
 func GetGroupModelConfig(groupID, model string) (*GroupModelConfig, error) {
 	var groupModelConfig GroupModelConfig
+
 	err := DB.Where("group_id = ? AND model = ?", groupID, model).First(&groupModelConfig).Error
 	return &groupModelConfig, HandleNotFound(err, GroupModelConfigCacheKey)
 }

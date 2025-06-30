@@ -99,6 +99,7 @@ func ListTools(ctx context.Context) ([]mcp.Tool, error) {
 		MCPServer: server.NewMCPServer("mcp-server-chart", "0.0.1"),
 	}
 	chartServer.addAllChartTools()
+
 	return mcpservers.ListServerTools(ctx, chartServer)
 }
 

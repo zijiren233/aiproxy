@@ -33,6 +33,7 @@ func (a *Adaptor) DoResponse(
 	default:
 		usage, err = openai.DoResponse(meta, store, c, resp)
 	}
+
 	return
 }
 

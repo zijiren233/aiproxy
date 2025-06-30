@@ -18,6 +18,7 @@ func ErrorHandler(resp *http.Response) adaptor.Error {
 	defer resp.Body.Close()
 
 	var er errorResponse
+
 	err := common.UnmarshalResponse(resp, &er)
 	if err != nil {
 		return relaymodel.WrapperOpenAIErrorWithMessage(

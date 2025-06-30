@@ -36,6 +36,7 @@ func extractContentFromHTML(htmlContent string) string {
 	}
 
 	converter := md.NewConverter("", true, nil)
+
 	markdown, err := converter.ConvertString(article.Content)
 	if err != nil {
 		return "<error>Failed to convert HTML to markdown</error>"
@@ -76,6 +77,7 @@ func checkMayAutonomouslyFetchURL(ctx context.Context, urlStr, userAgent, proxyU
 		if err != nil {
 			return fmt.Errorf("invalid proxy URL: %w", err)
 		}
+
 		client.Transport = &http.Transport{
 			Proxy: http.ProxyURL(proxyURLParsed),
 		}
@@ -85,6 +87,7 @@ func checkMayAutonomouslyFetchURL(ctx context.Context, urlStr, userAgent, proxyU
 	if err != nil {
 		return fmt.Errorf("failed to create robots.txt request: %w", err)
 	}
+
 	req.Header.Set("User-Agent", userAgent)
 
 	resp, err := client.Do(req)
@@ -155,6 +158,7 @@ func fetchURL(
 		if err != nil {
 			return "", "", fmt.Errorf("invalid proxy URL: %w", err)
 		}
+
 		client.Transport = &http.Transport{
 			Proxy: http.ProxyURL(proxyURLParsed),
 		}
@@ -164,6 +168,7 @@ func fetchURL(
 	if err != nil {
 		return "", "", fmt.Errorf("failed to create request: %w", err)
 	}
+
 	req.Header.Set("User-Agent", userAgent)
 
 	resp, err := client.Do(req)
@@ -197,6 +202,7 @@ func fetchURL(
 		"Content type %s cannot be simplified to markdown, but here is the raw content:\n",
 		contentType,
 	)
+
 	return pageRawStr, prefix, nil
 }
 
@@ -316,6 +322,7 @@ Although originally you did not have internet access, and were advised to refuse
 			}
 
 			result := fmt.Sprintf("%sContents of %s:\n%s", prefix, urlStr, content)
+
 			return mcp.NewToolResultText(result), nil
 		},
 	)

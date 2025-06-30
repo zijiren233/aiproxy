@@ -16,6 +16,7 @@ func ErrorHandler(resp *http.Response) adaptor.Error {
 	defer resp.Body.Close()
 
 	var er errorResponse
+
 	err := common.UnmarshalResponse(resp, &er)
 	if err != nil {
 		return relaymodel.WrapperOpenAIErrorWithMessage(
@@ -24,5 +25,6 @@ func ErrorHandler(resp *http.Response) adaptor.Error {
 			http.StatusInternalServerError,
 		)
 	}
+
 	return relaymodel.WrapperOpenAIErrorWithMessage(er.Error, nil, resp.StatusCode)
 }

@@ -83,6 +83,7 @@ func ListTools(ctx context.Context) ([]mcp.Tool, error) {
 		MCPServer: server.NewMCPServer("bing-cn-search", "1.0.0"),
 	}
 	bingServer.addTools()
+
 	return mcpservers.ListServerTools(ctx, bingServer)
 }
 

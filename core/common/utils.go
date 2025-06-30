@@ -9,7 +9,9 @@ import (
 
 func ShortUUID() string {
 	var buf [32]byte
+
 	bytes := uuid.New()
 	hex.Encode(buf[:], bytes[:])
+
 	return conv.BytesToString(buf[:])
 }

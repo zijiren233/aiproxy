@@ -24,10 +24,12 @@ func GetOptions(c *gin.Context) {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
+
 	options := make(map[string]string, len(dbOptions))
 	for _, option := range dbOptions {
 		options[option.Key] = option.Value
 	}
+
 	middleware.SuccessResponse(c, options)
 }
 
@@ -47,11 +49,13 @@ func GetOption(c *gin.Context) {
 		middleware.ErrorResponse(c, http.StatusBadRequest, "key is required")
 		return
 	}
+
 	option, err := model.GetOption(key)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
+
 	middleware.SuccessResponse(c, option)
 }
 
@@ -68,16 +72,19 @@ func GetOption(c *gin.Context) {
 //	@Router			/api/option/ [post]
 func UpdateOption(c *gin.Context) {
 	var option model.Option
+
 	err := c.BindJSON(&option)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
 	}
+
 	err = model.UpdateOption(option.Key, option.Value)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
+
 	middleware.SuccessResponse(c, nil)
 }
 
@@ -94,16 +101,19 @@ func UpdateOption(c *gin.Context) {
 //	@Router			/api/option/{key} [put]
 func UpdateOptionByKey(c *gin.Context) {
 	key := c.Param("key")
+
 	body, err := common.GetRequestBody(c.Request)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
 	}
+
 	err = model.UpdateOption(key, string(body))
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
+
 	middleware.SuccessResponse(c, nil)
 }
 
@@ -119,15 +129,18 @@ func UpdateOptionByKey(c *gin.Context) {
 //	@Router			/api/option/batch [post]
 func UpdateOptions(c *gin.Context) {
 	var options map[string]string
+
 	err := c.BindJSON(&options)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
 	}
+
 	err = model.UpdateOptions(options)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
+
 	middleware.SuccessResponse(c, nil)
 }

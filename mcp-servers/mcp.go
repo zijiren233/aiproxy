@@ -35,12 +35,14 @@ func (c ConfigRequiredType) Validate(config, reusingConfig string) error {
 		if config == "" && reusingConfig == "" {
 			return errors.New("config or reusing config is required")
 		}
+
 		if config != "" && reusingConfig != "" {
 			return errors.New(
 				"config and reusing config are both provided, but only one is allowed",
 			)
 		}
 	}
+
 	return nil
 }
 
@@ -72,10 +74,12 @@ func ValidateConfigTemplatesConfig(
 
 	for key, template := range ct {
 		c := config[key]
+
 		rc := reusingConfig[key]
 		if err := template.Required.Validate(c, rc); err != nil {
 			return fmt.Errorf("config required %s is invalid: %w", key, err)
 		}
+
 		if template.Validator != nil {
 			if c != "" {
 				if err := template.Validator(c); err != nil {
@@ -99,6 +103,7 @@ func CheckConfigTemplatesValidate(ct ConfigTemplates) error {
 			return fmt.Errorf("config %s validate error: %w", key, err)
 		}
 	}
+
 	return nil
 }
 
@@ -109,6 +114,7 @@ func CheckProxyConfigTemplatesValidate(ct ProxyConfigTemplates) error {
 			return fmt.Errorf("config %s validate error: %w", key, err)
 		}
 	}
+
 	return nil
 }
 
@@ -116,19 +122,23 @@ func CheckConfigTemplateValidate(value ConfigTemplate) error {
 	if value.Name == "" {
 		return errors.New("name is required")
 	}
+
 	if value.Description == "" {
 		return errors.New("description is required")
 	}
+
 	if value.Example != "" && value.Validator != nil {
 		if err := value.Validator(value.Example); err != nil {
 			return fmt.Errorf("example is invalid: %w", err)
 		}
 	}
+
 	if value.Default != "" && value.Validator != nil {
 		if err := value.Validator(value.Default); err != nil {
 			return fmt.Errorf("default is invalid: %w", err)
 		}
 	}
+
 	return nil
 }
 
@@ -255,6 +265,7 @@ func NewMcp(id, name string, mcpType model.PublicMCPType, opts ...McpConfig) Mcp
 	for _, opt := range opts {
 		opt(&e)
 	}
+
 	return e
 }
 
@@ -267,9 +278,11 @@ func (e *McpServer) NewServer(config, reusingConfig map[string]string) (Server, 
 	if e.newServer == nil {
 		return nil, ErrNotImplNewServer
 	}
+
 	if err := ValidateConfigTemplatesConfig(e.ConfigTemplates, config, reusingConfig); err != nil {
 		return nil, fmt.Errorf("mcp %s config is invalid: %w", e.ID, err)
 	}
+
 	return e.newServer(config, reusingConfig)
 }
 

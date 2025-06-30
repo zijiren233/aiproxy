@@ -50,6 +50,7 @@ func buildSafetySettings(safetySetting string) []ChatSafetySettings {
 	if safetySetting == "" {
 		safetySetting = "BLOCK_NONE"
 	}
+
 	return []ChatSafetySettings{
 		{Category: "HARM_CATEGORY_HARASSMENT", Threshold: safetySetting},
 		{Category: "HARM_CATEGORY_HATE_SPEECH", Threshold: safetySetting},
@@ -85,6 +86,7 @@ func buildGenerationConfig(
 		if mimeType, ok := mimeTypeMap[textRequest.ResponseFormat.Type]; ok {
 			config.ResponseMimeType = mimeType
 		}
+
 		if textRequest.ResponseFormat.JSONSchema != nil {
 			config.ResponseSchema = textRequest.ResponseFormat.JSONSchema.Schema
 			config.ResponseMimeType = mimeTypeMap["json_object"]
@@ -92,10 +94,12 @@ func buildGenerationConfig(
 	}
 
 	var thinkingConfigOnly thinkingConfigOnly
+
 	err := common.UnmarshalRequestReusable(req, &thinkingConfigOnly)
 	if err != nil {
 		return nil, err
 	}
+
 	if thinkingConfigOnly.ThinkingConfig != nil {
 		config.ThinkingConfig = thinkingConfigOnly.ThinkingConfig
 	}
@@ -105,6 +109,7 @@ func buildGenerationConfig(
 		if config.ThinkingConfig == nil {
 			config.ThinkingConfig = &ThinkingConfig{}
 		}
+
 		config.ThinkingConfig.IncludeThoughts = true
 	}
 
@@ -118,11 +123,14 @@ func buildTools(textRequest *relaymodel.GeneralOpenAIRequest) []ChatTools {
 			cleanedFunction := cleanFunctionParameters(tool.Function)
 			functions = append(functions, cleanedFunction)
 		}
+
 		return []ChatTools{{FunctionDeclarations: functions}}
 	}
+
 	if textRequest.Functions != nil {
 		return []ChatTools{{FunctionDeclarations: textRequest.Functions}}
 	}
+
 	return nil
 }
 
@@ -146,6 +154,7 @@ func cleanFunctionParameters(function relaymodel.Function) relaymodel.Function {
 	}
 
 	function.Parameters = parameters
+
 	return function
 }
 
@@ -193,6 +202,7 @@ func buildToolConfig(textRequest *relaymodel.GeneralOpenAIRequest) *ToolConfig {
 	if textRequest.ToolChoice == nil {
 		return nil
 	}
+
 	toolConfig := ToolConfig{
 		FunctionCallingConfig: FunctionCallingConfig{
 			Mode: "auto",
@@ -211,6 +221,7 @@ func buildToolConfig(textRequest *relaymodel.GeneralOpenAIRequest) *ToolConfig {
 			}
 		}
 	}
+
 	return &toolConfig
 }
 
@@ -223,6 +234,7 @@ func buildMessageParts(message relaymodel.MessageContent) *Part {
 			Data: message.ImageURL.URL,
 		}
 	}
+
 	return part
 }
 
@@ -230,6 +242,7 @@ func buildContents(
 	textRequest *relaymodel.GeneralOpenAIRequest,
 ) (*ChatContent, []*ChatContent, []*Part) {
 	contents := make([]*ChatContent, 0, len(textRequest.Messages))
+
 	var imageTasks []*Part
 
 	var systemContent *ChatContent
@@ -250,6 +263,7 @@ func buildContents(
 				} else {
 					args = make(map[string]any)
 				}
+
 				content.Parts = append(content.Parts, &Part{
 					FunctionCall: &FunctionCall{
 						Name: toolCall.Function.Name,
@@ -296,6 +310,7 @@ func buildContents(
 				if part.InlineData != nil {
 					imageTasks = append(imageTasks, part)
 				}
+
 				content.Parts = append(content.Parts, part)
 			}
 		}
@@ -309,6 +324,7 @@ func buildContents(
 			systemContent = &content
 			continue
 		}
+
 		contents = append(contents, &content)
 	}
 
@@ -321,25 +337,34 @@ func processImageTasks(ctx context.Context, imageTasks []*Part) error {
 	}
 
 	sem := semaphore.NewWeighted(3)
-	var wg sync.WaitGroup
-	var mu sync.Mutex
-	var processErrs []error
+
+	var (
+		wg          sync.WaitGroup
+		mu          sync.Mutex
+		processErrs []error
+	)
 
 	for _, task := range imageTasks {
 		if task.InlineData == nil || task.InlineData.Data == "" {
 			continue
 		}
+
 		wg.Add(1)
+
 		go func() {
 			defer wg.Done()
+
 			_ = sem.Acquire(ctx, 1)
 			defer sem.Release(1)
 
 			mimeType, data, err := image.GetImageFromURL(ctx, task.InlineData.Data)
 			if err != nil {
 				mu.Lock()
+
 				processErrs = append(processErrs, err)
+
 				mu.Unlock()
+
 				return
 			}
 
@@ -353,12 +378,14 @@ func processImageTasks(ctx context.Context, imageTasks []*Part) error {
 	if len(processErrs) != 0 {
 		return errors.Join(processErrs...)
 	}
+
 	return nil
 }
 
 // Setting safety to the lowest possible values since Gemini is already powerless enough
 func ConvertRequest(meta *meta.Meta, req *http.Request) (adaptor.ConvertResult, error) {
 	adaptorConfig := Config{}
+
 	err := meta.ChannelConfig.SpecConfig(&adaptorConfig)
 	if err != nil {
 		return adaptor.ConvertResult{}, err
@@ -442,6 +469,7 @@ func (u *UsageMetadata) ToUsage() relaymodel.ChatUsage {
 			ReasoningTokens: u.ThoughtsTokenCount,
 		},
 	}
+
 	return chatUsage
 }
 
@@ -459,15 +487,18 @@ func (g *ChatResponse) GetResponseText() string {
 	if g == nil {
 		return ""
 	}
+
 	builder := strings.Builder{}
 	for _, candidate := range g.Candidates {
 		for i, part := range candidate.Content.Parts {
 			if i > 0 {
 				builder.WriteString("\n")
 			}
+
 			builder.WriteString(part.Text)
 		}
 	}
+
 	return builder.String()
 }
 
@@ -503,10 +534,12 @@ func getToolCall(item *Part) (*relaymodel.ToolCall, error) {
 	if item.FunctionCall == nil {
 		return nil, nil
 	}
+
 	argsBytes, err := sonic.Marshal(item.FunctionCall.Args)
 	if err != nil {
 		return nil, err
 	}
+
 	toolCall := relaymodel.ToolCall{
 		ID:   openai.CallID(),
 		Type: "function",
@@ -515,6 +548,7 @@ func getToolCall(item *Part) (*relaymodel.ToolCall, error) {
 			Name:      item.FunctionCall.Name,
 		},
 	}
+
 	return &toolCall, nil
 }
 
@@ -529,6 +563,7 @@ func responseChat2OpenAI(meta *meta.Meta, response *ChatResponse) *relaymodel.Te
 	if response.UsageMetadata != nil {
 		fullTextResponse.Usage = response.UsageMetadata.ToUsage()
 	}
+
 	for i, candidate := range response.Candidates {
 		choice := relaymodel.TextResponseChoice{
 			Index: i,
@@ -538,9 +573,12 @@ func responseChat2OpenAI(meta *meta.Meta, response *ChatResponse) *relaymodel.Te
 			FinishReason: FinishReason2OpenAI(candidate.FinishReason),
 		}
 		if len(candidate.Content.Parts) > 0 {
-			var contents []relaymodel.MessageContent
-			var reasoningContent strings.Builder
-			var builder strings.Builder
+			var (
+				contents         []relaymodel.MessageContent
+				reasoningContent strings.Builder
+				builder          strings.Builder
+			)
+
 			hasImage := false
 			for _, part := range candidate.Content.Parts {
 				if part.InlineData != nil {
@@ -548,16 +586,19 @@ func responseChat2OpenAI(meta *meta.Meta, response *ChatResponse) *relaymodel.Te
 					break
 				}
 			}
+
 			for _, part := range candidate.Content.Parts {
 				if part.FunctionCall != nil {
 					toolCall, err := getToolCall(part)
 					if err != nil {
 						log.Error("get tool call failed: " + err.Error())
 					}
+
 					if toolCall != nil {
 						choice.Message.ToolCalls = append(choice.Message.ToolCalls, toolCall)
 					}
 				}
+
 				if part.Text != "" {
 					if hasImage {
 						contents = append(contents, relaymodel.MessageContent{
@@ -572,6 +613,7 @@ func responseChat2OpenAI(meta *meta.Meta, response *ChatResponse) *relaymodel.Te
 						}
 					}
 				}
+
 				if part.InlineData != nil {
 					contents = append(contents, relaymodel.MessageContent{
 						Type: relaymodel.ContentTypeImageURL,
@@ -585,6 +627,7 @@ func responseChat2OpenAI(meta *meta.Meta, response *ChatResponse) *relaymodel.Te
 					})
 				}
 			}
+
 			if hasImage {
 				choice.Message.Content = contents
 			} else {
@@ -592,8 +635,10 @@ func responseChat2OpenAI(meta *meta.Meta, response *ChatResponse) *relaymodel.Te
 				choice.Message.ReasoningContent = reasoningContent.String()
 			}
 		}
+
 		fullTextResponse.Choices = append(fullTextResponse.Choices, &choice)
 	}
+
 	return &fullTextResponse
 }
 
@@ -616,6 +661,7 @@ func streamResponseChat2OpenAI(
 		usage := geminiResponse.UsageMetadata.ToUsage()
 		response.Usage = &usage
 	}
+
 	for i, candidate := range geminiResponse.Candidates {
 		choice := relaymodel.ChatCompletionsStreamResponseChoice{
 			Index: i,
@@ -625,9 +671,12 @@ func streamResponseChat2OpenAI(
 			FinishReason: FinishReason2OpenAI(candidate.FinishReason),
 		}
 		if len(candidate.Content.Parts) > 0 {
-			var contents []relaymodel.MessageContent
-			var reasoningContent strings.Builder
-			var builder strings.Builder
+			var (
+				contents         []relaymodel.MessageContent
+				reasoningContent strings.Builder
+				builder          strings.Builder
+			)
+
 			hasImage := false
 			for _, part := range candidate.Content.Parts {
 				if part.InlineData != nil {
@@ -635,16 +684,19 @@ func streamResponseChat2OpenAI(
 					break
 				}
 			}
+
 			for _, part := range candidate.Content.Parts {
 				if part.FunctionCall != nil {
 					toolCall, err := getToolCall(part)
 					if err != nil {
 						log.Error("get tool call failed: " + err.Error())
 					}
+
 					if toolCall != nil {
 						choice.Delta.ToolCalls = append(choice.Delta.ToolCalls, toolCall)
 					}
 				}
+
 				if part.Text != "" {
 					if hasImage {
 						contents = append(contents, relaymodel.MessageContent{
@@ -659,6 +711,7 @@ func streamResponseChat2OpenAI(
 						}
 					}
 				}
+
 				if part.InlineData != nil {
 					contents = append(contents, relaymodel.MessageContent{
 						Type: relaymodel.ContentTypeImageURL,
@@ -672,6 +725,7 @@ func streamResponseChat2OpenAI(
 					})
 				}
 			}
+
 			if hasImage {
 				choice.Delta.Content = contents
 			} else {
@@ -679,8 +733,10 @@ func streamResponseChat2OpenAI(
 				choice.Delta.ReasoningContent = reasoningContent.String()
 			}
 		}
+
 		response.Choices = append(response.Choices, &choice)
 	}
+
 	return response
 }
 
@@ -699,6 +755,7 @@ func GetImageScannerBuffer() *[]byte {
 	if !ok {
 		panic(fmt.Sprintf("scanner buffer type error: %T, %v", v, v))
 	}
+
 	return v
 }
 
@@ -706,6 +763,7 @@ func PutImageScannerBuffer(buf *[]byte) {
 	if cap(*buf) != imageScannerBufferSize {
 		return
 	}
+
 	scannerBufferPool.Put(buf)
 }
 
@@ -728,10 +786,12 @@ func StreamHandler(
 	if strings.Contains(meta.ActualModel, "image") {
 		buf := GetImageScannerBuffer()
 		defer PutImageScannerBuffer(buf)
+
 		scanner.Buffer(*buf, cap(*buf))
 	} else {
 		buf := openai.GetScannerBuffer()
 		defer openai.PutScannerBuffer(buf)
+
 		scanner.Buffer(*buf, cap(*buf))
 	}
 
@@ -744,20 +804,24 @@ func StreamHandler(
 		if len(data) < openai.DataPrefixLength {
 			continue
 		}
+
 		if !slices.Equal(data[:openai.DataPrefixLength], openai.DataPrefixBytes) {
 			continue
 		}
+
 		data = bytes.TrimSpace(data[openai.DataPrefixLength:])
 		if slices.Equal(data, openai.DoneBytes) {
 			break
 		}
 
 		var geminiResponse ChatResponse
+
 		err := sonic.Unmarshal(data, &geminiResponse)
 		if err != nil {
 			log.Error("error unmarshalling stream response: " + err.Error())
 			continue
 		}
+
 		response := streamResponseChat2OpenAI(meta, &geminiResponse)
 		if response.Usage != nil {
 			usage = *response.Usage
@@ -785,6 +849,7 @@ func Handler(meta *meta.Meta, c *gin.Context, resp *http.Response) (model.Usage,
 	defer resp.Body.Close()
 
 	var geminiResponse ChatResponse
+
 	err := sonic.ConfigDefault.NewDecoder(resp.Body).Decode(&geminiResponse)
 	if err != nil {
 		return model.Usage{}, relaymodel.WrapperOpenAIError(
@@ -793,7 +858,9 @@ func Handler(meta *meta.Meta, c *gin.Context, resp *http.Response) (model.Usage,
 			http.StatusInternalServerError,
 		)
 	}
+
 	fullTextResponse := responseChat2OpenAI(meta, &geminiResponse)
+
 	jsonResponse, err := sonic.Marshal(fullTextResponse)
 	if err != nil {
 		return fullTextResponse.Usage.ToModelUsage(), relaymodel.WrapperOpenAIError(
@@ -802,8 +869,10 @@ func Handler(meta *meta.Meta, c *gin.Context, resp *http.Response) (model.Usage,
 			http.StatusInternalServerError,
 		)
 	}
+
 	c.Writer.Header().Set("Content-Type", "application/json")
 	c.Writer.Header().Set("Content-Length", strconv.Itoa(len(jsonResponse)))
 	_, _ = c.Writer.Write(jsonResponse)
+
 	return fullTextResponse.Usage.ToModelUsage(), nil
 }

@@ -23,6 +23,7 @@ func ConvertEmbeddingRequest(
 	if err != nil {
 		return adaptor.ConvertResult{}, err
 	}
+
 	request.Model = meta.ActualModel
 
 	inputs := request.ParseInput()
@@ -48,6 +49,7 @@ func ConvertEmbeddingRequest(
 	if err != nil {
 		return adaptor.ConvertResult{}, err
 	}
+
 	return adaptor.ConvertResult{
 		Header: http.Header{
 			"Content-Type":   {"application/json"},
@@ -69,6 +71,7 @@ func EmbeddingHandler(
 	defer resp.Body.Close()
 
 	var geminiEmbeddingResponse EmbeddingResponse
+
 	err := sonic.ConfigDefault.NewDecoder(resp.Body).Decode(&geminiEmbeddingResponse)
 	if err != nil {
 		return model.Usage{}, relaymodel.WrapperOpenAIError(
@@ -79,6 +82,7 @@ func EmbeddingHandler(
 	}
 
 	fullTextResponse := embeddingResponse2OpenAI(meta, &geminiEmbeddingResponse)
+
 	jsonResponse, err := sonic.Marshal(fullTextResponse)
 	if err != nil {
 		return fullTextResponse.Usage.ToModelUsage(), relaymodel.WrapperOpenAIError(
@@ -87,9 +91,11 @@ func EmbeddingHandler(
 			http.StatusInternalServerError,
 		)
 	}
+
 	c.Writer.Header().Set("Content-Type", "application/json")
 	c.Writer.Header().Set("Content-Length", strconv.Itoa(len(jsonResponse)))
 	_, _ = c.Writer.Write(jsonResponse)
+
 	return fullTextResponse.Usage.ToModelUsage(), nil
 }
 
@@ -116,5 +122,6 @@ func embeddingResponse2OpenAI(
 			},
 		)
 	}
+
 	return &openAIEmbeddingResponse
 }

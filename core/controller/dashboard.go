@@ -28,11 +28,16 @@ func getDashboardTime(
 	if endTimestamp != 0 {
 		end = time.Unix(endTimestamp, 0)
 	}
+
 	if timezoneLocation == nil {
 		timezoneLocation = time.Local
 	}
-	var start time.Time
-	var timeSpan model.TimeSpanType
+
+	var (
+		start    time.Time
+		timeSpan model.TimeSpanType
+	)
+
 	switch t {
 	case "month":
 		start = end.AddDate(0, 0, -30)
@@ -53,13 +58,16 @@ func getDashboardTime(
 		start = end.AddDate(0, 0, -7)
 		timeSpan = model.TimeSpanHour
 	}
+
 	if startTimestamp != 0 {
 		start = time.Unix(startTimestamp, 0)
 	}
+
 	switch model.TimeSpanType(timespan) {
 	case model.TimeSpanDay, model.TimeSpanHour:
 		timeSpan = model.TimeSpanType(timespan)
 	}
+
 	return start, end, timeSpan
 }
 
@@ -82,10 +90,12 @@ func fillGaps(
 
 	// Handle first point
 	firstPoint := time.Unix(data[0].Timestamp, 0)
+
 	firstAlignedTime := firstPoint
 	for !firstAlignedTime.Add(-timeSpan).Before(start) {
 		firstAlignedTime = firstAlignedTime.Add(-timeSpan)
 	}
+
 	var firstIsZero bool
 	if !firstAlignedTime.Equal(firstPoint) {
 		data = append([]*model.ChartData{
@@ -98,10 +108,12 @@ func fillGaps(
 
 	// Handle last point
 	lastPoint := time.Unix(data[len(data)-1].Timestamp, 0)
+
 	lastAlignedTime := lastPoint
 	for !lastAlignedTime.Add(timeSpan).After(end) {
 		lastAlignedTime = lastAlignedTime.Add(timeSpan)
 	}
+
 	var lastIsZero bool
 	if !lastAlignedTime.Equal(lastPoint) {
 		data = append(data, &model.ChartData{
@@ -138,7 +150,9 @@ func fillGaps(
 					Timestamp: curr.Timestamp - int64(timeSpan.Seconds()),
 				})
 			}
+
 			result = append(result, curr)
+
 			continue
 		}
 
@@ -148,6 +162,7 @@ func fillGaps(
 				Timestamp: j,
 			})
 		}
+
 		result = append(result, curr)
 	}
 
@@ -203,6 +218,7 @@ func GetDashboard(c *gin.Context) {
 	if channelID == 0 {
 		channelStr = "*"
 	}
+
 	rpm, _ := reqlimit.GetChannelModelRequest(c.Request.Context(), channelStr, modelName)
 	dashboards.RPM = rpm
 	tpm, _ := reqlimit.GetChannelModelTokensRequest(c.Request.Context(), channelStr, modelName)
@@ -306,10 +322,12 @@ func getEnabledPlugins(plugin map[string]json.RawMessage) []string {
 		if err != nil {
 			continue
 		}
+
 		if enable, err := pluginConfigNode.Get("enable").Bool(); err == nil && enable {
 			enabledPlugins = append(enabledPlugins, pluginName)
 		}
 	}
+
 	return enabledPlugins
 }
 
@@ -329,9 +347,11 @@ func NewGroupModel(mc model.ModelConfig) GroupModel {
 	if !mc.CreatedAt.IsZero() {
 		gm.CreatedAt = mc.CreatedAt.Unix()
 	}
+
 	if !mc.UpdatedAt.IsZero() {
 		gm.UpdatedAt = mc.UpdatedAt.Unix()
 	}
+
 	return gm
 }
 
@@ -351,6 +371,7 @@ func GetGroupDashboardModels(c *gin.Context) {
 		middleware.ErrorResponse(c, http.StatusBadRequest, "invalid group parameter")
 		return
 	}
+
 	groupCache, err := model.CacheGetGroup(group)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -361,11 +382,13 @@ func GetGroupDashboardModels(c *gin.Context) {
 		} else {
 			middleware.ErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("failed to get group: %v", err))
 		}
+
 		return
 	}
 
 	availableSet := groupCache.GetAvailableSets()
 	enabledModelConfigs := model.LoadModelCaches().EnabledModelConfigsBySet
+
 	newEnabledModelConfigs := make([]GroupModel, 0)
 	for _, set := range availableSet {
 		for _, mc := range enabledModelConfigs[set] {
@@ -374,6 +397,7 @@ func GetGroupDashboardModels(c *gin.Context) {
 			}) {
 				continue
 			}
+
 			newEnabledModelConfigs = append(
 				newEnabledModelConfigs,
 				NewGroupModel(
@@ -382,6 +406,7 @@ func GetGroupDashboardModels(c *gin.Context) {
 			)
 		}
 	}
+
 	middleware.SuccessResponse(c, newEnabledModelConfigs)
 }
 
@@ -405,6 +430,7 @@ func GetTimeSeriesModelData(c *gin.Context) {
 	modelName := c.Query("model")
 	startTime, endTime := utils.ParseTimeRange(c, -1)
 	timezoneLocation, _ := time.LoadLocation(c.DefaultQuery("timezone", "Local"))
+
 	models, err := model.GetTimeSeriesModelDataMinute(
 		channelID,
 		modelName,
@@ -417,6 +443,7 @@ func GetTimeSeriesModelData(c *gin.Context) {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
+
 	middleware.SuccessResponse(c, models)
 }
 
@@ -442,10 +469,12 @@ func GetGroupTimeSeriesModelData(c *gin.Context) {
 		middleware.ErrorResponse(c, http.StatusBadRequest, "invalid group parameter")
 		return
 	}
+
 	tokenName := c.Query("token_name")
 	modelName := c.Query("model")
 	startTime, endTime := utils.ParseTimeRange(c, -1)
 	timezoneLocation, _ := time.LoadLocation(c.DefaultQuery("timezone", "Local"))
+
 	models, err := model.GetGroupTimeSeriesModelDataMinute(
 		group,
 		tokenName,
@@ -459,5 +488,6 @@ func GetGroupTimeSeriesModelData(c *gin.Context) {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
+
 	middleware.SuccessResponse(c, models)
 }
