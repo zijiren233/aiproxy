@@ -36,6 +36,7 @@ import (
 	_ "github.com/labring/aiproxy/mcp-servers/local/redis"
 	_ "github.com/labring/aiproxy/mcp-servers/local/sqlite"
 	_ "github.com/labring/aiproxy/mcp-servers/local/stock-analysis"
+	_ "github.com/labring/aiproxy/mcp-servers/local/terraform"
 	_ "github.com/labring/aiproxy/mcp-servers/local/unionpay"
 	_ "github.com/labring/aiproxy/mcp-servers/local/weather"
 	_ "github.com/labring/aiproxy/mcp-servers/local/wecom-bot"
