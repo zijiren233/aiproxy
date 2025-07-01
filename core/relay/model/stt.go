@@ -79,6 +79,7 @@ func (u *SttUsage) ToModelUsage() model.Usage {
 		if u.InputTokenDetails != nil {
 			modelUsage.AudioInputTokens = model.ZeroNullInt64(u.InputTokenDetails.AudioTokens)
 		}
+
 		return modelUsage
 	}
 }

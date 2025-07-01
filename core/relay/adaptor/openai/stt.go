@@ -240,8 +240,10 @@ func sttStreamHandler(
 
 	scanner.Buffer(*buf, cap(*buf))
 
-	var totalUsage *relaymodel.SttUsage
-	var fullText strings.Builder
+	var (
+		totalUsage *relaymodel.SttUsage
+		fullText   strings.Builder
+	)
 
 	for scanner.Scan() {
 		data := scanner.Bytes()
@@ -274,6 +276,7 @@ func sttStreamHandler(
 		case relaymodel.SttSSEResponseTypeTranscriptTextDone:
 			if sseResponse.Usage != nil {
 				fullText.Reset()
+
 				totalUsage = sseResponse.Usage
 			} else if sseResponse.Text != "" {
 				fullText.Reset()
