@@ -23,6 +23,7 @@ import (
 	_ "github.com/labring/aiproxy/mcp-servers/hosted/kuaidi100"
 	_ "github.com/labring/aiproxy/mcp-servers/hosted/microsoftdocs"
 	_ "github.com/labring/aiproxy/mcp-servers/hosted/nothon"
+	_ "github.com/labring/aiproxy/mcp-servers/hosted/screenshotone"
 	_ "github.com/labring/aiproxy/mcp-servers/hosted/tavily"
 	_ "github.com/labring/aiproxy/mcp-servers/hosted/time"
 	_ "github.com/labring/aiproxy/mcp-servers/hosted/web-search"
