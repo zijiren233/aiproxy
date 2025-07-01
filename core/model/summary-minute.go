@@ -152,7 +152,7 @@ func getChartDataMinute(
 	// Only include max metrics when we have specific channel and model
 	selectFields := "minute_timestamp as timestamp, sum(request_count) as request_count, sum(used_amount) as used_amount, " +
 		"sum(exception_count) as exception_count, sum(total_time_milliseconds) as total_time_milliseconds, sum(total_ttfb_milliseconds) as total_ttfb_milliseconds, " +
-		"sum(input_tokens) as input_tokens, sum(output_tokens) as output_tokens, " +
+		"sum(input_tokens) as input_tokens, sum(image_input_tokens) as image_input_tokens, sum(audio_input_tokens) as audio_input_tokens, sum(output_tokens) as output_tokens, " +
 		"sum(cached_tokens) as cached_tokens, sum(cache_creation_tokens) as cache_creation_tokens, " +
 		"sum(total_tokens) as total_tokens, sum(web_search_count) as web_search_count, " +
 		"sum(request_count) as max_rpm, sum(total_tokens) as max_tpm"
@@ -208,7 +208,7 @@ func getGroupChartDataMinute(
 	// Only include max metrics when we have specific channel and model
 	selectFields := "minute_timestamp as timestamp, sum(request_count) as request_count, sum(used_amount) as used_amount, " +
 		"sum(exception_count) as exception_count, sum(total_time_milliseconds) as total_time_milliseconds, sum(total_ttfb_milliseconds) as total_ttfb_milliseconds, " +
-		"sum(input_tokens) as input_tokens, sum(output_tokens) as output_tokens, " +
+		"sum(input_tokens) as input_tokens, sum(image_input_tokens) as image_input_tokens, sum(audio_input_tokens) as audio_input_tokens, sum(output_tokens) as output_tokens, " +
 		"sum(cached_tokens) as cached_tokens, sum(cache_creation_tokens) as cache_creation_tokens, " +
 		"sum(total_tokens) as total_tokens, sum(web_search_count) as web_search_count, " +
 		"sum(request_count) as max_rpm, sum(total_tokens) as max_tpm"
@@ -501,6 +501,8 @@ type SummaryDataV2 struct {
 	TotalTTFBMilliseconds int64 `json:"total_ttfb_milliseconds,omitempty"`
 
 	InputTokens         int64 `json:"input_tokens,omitempty"`
+	ImageInputTokens    int64 `json:"image_input_tokens,omitempty"`
+	AudioInputTokens    int64 `json:"audio_input_tokens,omitempty"`
 	OutputTokens        int64 `json:"output_tokens,omitempty"`
 	CachedTokens        int64 `json:"cached_tokens,omitempty"`
 	CacheCreationTokens int64 `json:"cache_creation_tokens,omitempty"`
@@ -551,7 +553,7 @@ func GetTimeSeriesModelDataMinute(
 	selectFields := "minute_timestamp as timestamp, channel_id, model, " +
 		"sum(request_count) as request_count, sum(used_amount) as used_amount, " +
 		"sum(exception_count) as exception_count, sum(total_time_milliseconds) as total_time_milliseconds, sum(total_ttfb_milliseconds) as total_ttfb_milliseconds, " +
-		"sum(input_tokens) as input_tokens, " +
+		"sum(input_tokens) as input_tokens, sum(image_input_tokens) as image_input_tokens, sum(audio_input_tokens) as audio_input_tokens, " +
 		"sum(output_tokens) as output_tokens, sum(cached_tokens) as cached_tokens, " +
 		"sum(cache_creation_tokens) as cache_creation_tokens, sum(total_tokens) as total_tokens, " +
 		"sum(web_search_count) as web_search_count, sum(request_count) as max_rpm, sum(total_tokens) as max_tpm"
@@ -610,7 +612,7 @@ func GetGroupTimeSeriesModelDataMinute(
 	selectFields := "minute_timestamp as timestamp, model, " +
 		"sum(request_count) as request_count, sum(used_amount) as used_amount, " +
 		"sum(exception_count) as exception_count, sum(total_time_milliseconds) as total_time_milliseconds, sum(total_ttfb_milliseconds) as total_ttfb_milliseconds, " +
-		"sum(input_tokens) as input_tokens, " +
+		"sum(input_tokens) as input_tokens, sum(image_input_tokens) as image_input_tokens, sum(audio_input_tokens) as audio_input_tokens, " +
 		"sum(output_tokens) as output_tokens, sum(cached_tokens) as cached_tokens, " +
 		"sum(cache_creation_tokens) as cache_creation_tokens, sum(total_tokens) as total_tokens, " +
 		"sum(web_search_count) as web_search_count, sum(request_count) as max_rpm, sum(total_tokens) as max_tpm"
@@ -697,6 +699,8 @@ func aggregatToSpan(
 		currentData.TotalTimeMilliseconds += data.TotalTimeMilliseconds
 		currentData.TotalTTFBMilliseconds += data.TotalTTFBMilliseconds
 		currentData.InputTokens += data.InputTokens
+		currentData.ImageInputTokens += data.ImageInputTokens
+		currentData.AudioInputTokens += data.AudioInputTokens
 		currentData.OutputTokens += data.OutputTokens
 		currentData.CachedTokens += data.CachedTokens
 		currentData.CacheCreationTokens += data.CacheCreationTokens
@@ -733,6 +737,8 @@ func convertToTimeModelData(rawData []SummaryDataV2) []*TimeSummaryDataV2 {
 			TotalTimeMilliseconds: data.TotalTimeMilliseconds,
 			TotalTTFBMilliseconds: data.TotalTTFBMilliseconds,
 			InputTokens:           data.InputTokens,
+			ImageInputTokens:      data.ImageInputTokens,
+			AudioInputTokens:      data.AudioInputTokens,
 			OutputTokens:          data.OutputTokens,
 			CachedTokens:          data.CachedTokens,
 			CacheCreationTokens:   data.CacheCreationTokens,

@@ -169,6 +169,8 @@ func ttsStreamHandler(
 		}
 	}
 
+	Done(c)
+
 	if err := scanner.Err(); err != nil {
 		log.Error("error reading TTS stream: " + err.Error())
 	}

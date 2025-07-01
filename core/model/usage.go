@@ -26,6 +26,9 @@ type Price struct {
 	ImageInputPrice     ZeroNullFloat64 `json:"image_input_price,omitempty"`
 	ImageInputPriceUnit ZeroNullInt64   `json:"image_input_price_unit,omitempty"`
 
+	AudioInputPrice     ZeroNullFloat64 `json:"audio_input_price,omitempty"`
+	AudioInputPriceUnit ZeroNullInt64   `json:"audio_input_price_unit,omitempty"`
+
 	OutputPrice     ZeroNullFloat64 `json:"output_price,omitempty"`
 	OutputPriceUnit ZeroNullInt64   `json:"output_price_unit,omitempty"`
 
@@ -232,6 +235,13 @@ func (p *Price) GetImageInputPriceUnit() int64 {
 	return PriceUnit
 }
 
+func (p *Price) GetAudioInputPriceUnit() int64 {
+	if p.AudioInputPriceUnit > 0 {
+		return int64(p.AudioInputPriceUnit)
+	}
+	return PriceUnit
+}
+
 func (p *Price) GetOutputPriceUnit() int64 {
 	if p.OutputPriceUnit > 0 {
 		return int64(p.OutputPriceUnit)
@@ -263,6 +273,7 @@ func (p *Price) GetWebSearchPriceUnit() int64 {
 type Usage struct {
 	InputTokens         ZeroNullInt64 `json:"input_tokens,omitempty"`
 	ImageInputTokens    ZeroNullInt64 `json:"image_input_tokens,omitempty"`
+	AudioInputTokens    ZeroNullInt64 `json:"audio_input_tokens,omitempty"`
 	OutputTokens        ZeroNullInt64 `json:"output_tokens,omitempty"`
 	CachedTokens        ZeroNullInt64 `json:"cached_tokens,omitempty"`
 	CacheCreationTokens ZeroNullInt64 `json:"cache_creation_tokens,omitempty"`
@@ -274,6 +285,7 @@ type Usage struct {
 func (u *Usage) Add(other Usage) {
 	u.InputTokens += other.InputTokens
 	u.ImageInputTokens += other.ImageInputTokens
+	u.AudioInputTokens += other.AudioInputTokens
 	u.OutputTokens += other.OutputTokens
 	u.CachedTokens += other.CachedTokens
 	u.CacheCreationTokens += other.CacheCreationTokens

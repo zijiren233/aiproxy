@@ -7,6 +7,7 @@ import (
 	"io"
 	"mime/multipart"
 	"net/http"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -18,6 +19,7 @@ import (
 	"github.com/labring/aiproxy/core/relay/adaptor"
 	"github.com/labring/aiproxy/core/relay/meta"
 	relaymodel "github.com/labring/aiproxy/core/relay/model"
+	"github.com/labring/aiproxy/core/relay/utils"
 )
 
 func ConvertSTTRequest(
@@ -105,6 +107,10 @@ func STTHandler(
 		return model.Usage{}, ErrorHanlder(resp)
 	}
 
+	if utils.IsStreamResponse(resp) {
+		return sttStreamHandler(meta, c, resp)
+	}
+
 	defer resp.Body.Close()
 
 	log := common.GetLogger(c)
@@ -144,22 +150,20 @@ func STTHandler(
 		)
 	}
 
-	var promptTokens int64
-	if meta.RequestUsage.InputTokens > 0 {
-		promptTokens = int64(meta.RequestUsage.InputTokens)
-	} else {
-		promptTokens = CountTokenText(text, meta.ActualModel)
+	outputTokens := CountTokenText(text, meta.ActualModel)
+	usage := relaymodel.SttUsage{
+		Type:         relaymodel.SttUsageTypeTokens,
+		Seconds:      int64(meta.RequestUsage.AudioInputTokens),
+		InputTokens:  int64(meta.RequestUsage.InputTokens),
+		OutputTokens: outputTokens,
+		InputTokenDetails: &relaymodel.SttUsageInputTokenDetails{
+			TextTokens:  int64(meta.RequestUsage.InputTokens - meta.RequestUsage.AudioInputTokens),
+			AudioTokens: int64(meta.RequestUsage.AudioInputTokens),
+		},
+		TotalTokens: int64(meta.RequestUsage.InputTokens) + outputTokens,
 	}
 
-	usage := relaymodel.ChatUsage{
-		PromptTokens: promptTokens,
-		TotalTokens:  promptTokens,
-	}
-
-	switch {
-	case responseFormat == "text",
-		responseFormat == "json",
-		strings.Contains(resp.Header.Get("Content-Type"), "json"):
+	if strings.Contains(resp.Header.Get("Content-Type"), "json") {
 		node, err := sonic.Get(responseBody)
 		if err != nil {
 			return usage.ToModelUsage(), relaymodel.WrapperOpenAIError(
@@ -187,38 +191,29 @@ func STTHandler(
 					http.StatusInternalServerError,
 				)
 			}
+		} else {
+			_, err = node.SetAny("usage", usage)
+			if err != nil {
+				return usage.ToModelUsage(), relaymodel.WrapperOpenAIError(
+					err,
+					"marshal_response_err",
+					http.StatusInternalServerError,
+				)
+			}
 
-			switch {
-			case usage.PromptTokens != 0 && usage.TotalTokens == 0:
-				usage.TotalTokens = usage.PromptTokens
-			case usage.PromptTokens == 0 && usage.TotalTokens != 0:
-				usage.PromptTokens = usage.TotalTokens
-			default:
-				usage.PromptTokens = promptTokens
-				usage.TotalTokens = promptTokens
+			responseBody, err = node.MarshalJSON()
+			if err != nil {
+				return usage.ToModelUsage(), relaymodel.WrapperOpenAIError(
+					err,
+					"marshal_response_err",
+					http.StatusInternalServerError,
+				)
 			}
 		}
 
-		_, err = node.SetAny("usage", usage)
-		if err != nil {
-			return usage.ToModelUsage(), relaymodel.WrapperOpenAIError(
-				err,
-				"marshal_response_err",
-				http.StatusInternalServerError,
-			)
-		}
-
-		responseBody, err = node.MarshalJSON()
-		if err != nil {
-			return usage.ToModelUsage(), relaymodel.WrapperOpenAIError(
-				err,
-				"marshal_response_err",
-				http.StatusInternalServerError,
-			)
-		}
+		c.Writer.Header().Set("Content-Type", "application/json")
 	}
 
-	c.Writer.Header().Set("Content-Type", "application/json")
 	c.Writer.Header().Set("Content-Length", strconv.Itoa(len(responseBody)))
 
 	_, err = c.Writer.Write(responseBody)
@@ -227,6 +222,94 @@ func STTHandler(
 	}
 
 	return usage.ToModelUsage(), nil
+}
+
+func sttStreamHandler(
+	meta *meta.Meta,
+	c *gin.Context,
+	resp *http.Response,
+) (model.Usage, adaptor.Error) {
+	defer resp.Body.Close()
+
+	log := common.GetLogger(c)
+
+	scanner := bufio.NewScanner(resp.Body)
+
+	buf := GetScannerBuffer()
+	defer PutScannerBuffer(buf)
+
+	scanner.Buffer(*buf, cap(*buf))
+
+	var totalUsage *relaymodel.SttUsage
+	var fullText strings.Builder
+
+	for scanner.Scan() {
+		data := scanner.Bytes()
+		if len(data) < DataPrefixLength { // ignore blank line or wrong format
+			continue
+		}
+
+		if !slices.Equal(data[:DataPrefixLength], DataPrefixBytes) {
+			continue
+		}
+
+		data = bytes.TrimSpace(data[DataPrefixLength:])
+		if slices.Equal(data, DoneBytes) {
+			break
+		}
+
+		var sseResponse relaymodel.SttSSEResponse
+
+		err := sonic.Unmarshal(data, &sseResponse)
+		if err != nil {
+			log.Error("error unmarshalling STT stream response: " + err.Error())
+			continue
+		}
+
+		switch sseResponse.Type {
+		case relaymodel.SttSSEResponseTypeTranscriptTextDelta:
+			if sseResponse.Delta != "" {
+				fullText.WriteString(sseResponse.Delta)
+			}
+		case relaymodel.SttSSEResponseTypeTranscriptTextDone:
+			if sseResponse.Usage != nil {
+				fullText.Reset()
+				totalUsage = sseResponse.Usage
+			} else if sseResponse.Text != "" {
+				fullText.Reset()
+				fullText.WriteString(sseResponse.Text)
+			}
+		}
+
+		BytesData(c, data)
+	}
+
+	Done(c)
+
+	if err := scanner.Err(); err != nil {
+		log.Error("error reading STT stream: " + err.Error())
+	}
+
+	// If no usage was provided, calculate based on text
+	if totalUsage == nil {
+		text := fullText.String()
+		outputTokens := CountTokenText(text, meta.ActualModel)
+		totalUsage = &relaymodel.SttUsage{
+			Type:         relaymodel.SttUsageTypeTokens,
+			Seconds:      int64(meta.RequestUsage.AudioInputTokens),
+			InputTokens:  int64(meta.RequestUsage.InputTokens),
+			OutputTokens: outputTokens,
+			InputTokenDetails: &relaymodel.SttUsageInputTokenDetails{
+				TextTokens: int64(
+					meta.RequestUsage.InputTokens - meta.RequestUsage.AudioInputTokens,
+				),
+				AudioTokens: int64(meta.RequestUsage.AudioInputTokens),
+			},
+			TotalTokens: int64(meta.RequestUsage.InputTokens) + outputTokens,
+		}
+	}
+
+	return totalUsage.ToModelUsage(), nil
 }
 
 func getTextFromVTT(body []byte) (string, error) {

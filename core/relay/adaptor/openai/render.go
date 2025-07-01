@@ -58,6 +58,10 @@ func (r *SSE) WriteContentType(w http.ResponseWriter) {
 }
 
 func StringData(c *gin.Context, str string) {
+	BytesData(c, conv.StringToBytes(str))
+}
+
+func BytesData(c *gin.Context, data []byte) {
 	if len(c.Errors) > 0 {
 		return
 	}
@@ -66,7 +70,7 @@ func StringData(c *gin.Context, str string) {
 		return
 	}
 
-	c.Render(-1, &SSE{Data: conv.StringToBytes(str)})
+	c.Render(-1, &SSE{Data: data})
 	c.Writer.Flush()
 }
 
