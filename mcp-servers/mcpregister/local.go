@@ -14,6 +14,7 @@ import (
 	_ "github.com/labring/aiproxy/mcp-servers/local/browserbase"
 	_ "github.com/labring/aiproxy/mcp-servers/local/cfworker"
 	_ "github.com/labring/aiproxy/mcp-servers/local/chatsum"
+	_ "github.com/labring/aiproxy/mcp-servers/local/code-sandbox"
 	_ "github.com/labring/aiproxy/mcp-servers/local/elasticsearch"
 	_ "github.com/labring/aiproxy/mcp-servers/local/everything-search"
 	_ "github.com/labring/aiproxy/mcp-servers/local/excel"
