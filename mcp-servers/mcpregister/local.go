@@ -27,6 +27,7 @@ import (
 	_ "github.com/labring/aiproxy/mcp-servers/local/homeassistant"
 	_ "github.com/labring/aiproxy/mcp-servers/local/ical"
 	_ "github.com/labring/aiproxy/mcp-servers/local/knowledge-graph-memory"
+	_ "github.com/labring/aiproxy/mcp-servers/local/kubernetes"
 	_ "github.com/labring/aiproxy/mcp-servers/local/magic"
 	_ "github.com/labring/aiproxy/mcp-servers/local/markdownify"
 	_ "github.com/labring/aiproxy/mcp-servers/local/milvus"
