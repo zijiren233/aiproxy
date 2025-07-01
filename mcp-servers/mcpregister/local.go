@@ -23,6 +23,7 @@ import (
 	_ "github.com/labring/aiproxy/mcp-servers/local/genai-toolbox"
 	_ "github.com/labring/aiproxy/mcp-servers/local/git"
 	_ "github.com/labring/aiproxy/mcp-servers/local/grafana"
+	_ "github.com/labring/aiproxy/mcp-servers/local/hfspace"
 	_ "github.com/labring/aiproxy/mcp-servers/local/homeassistant"
 	_ "github.com/labring/aiproxy/mcp-servers/local/ical"
 	_ "github.com/labring/aiproxy/mcp-servers/local/knowledge-graph-memory"
