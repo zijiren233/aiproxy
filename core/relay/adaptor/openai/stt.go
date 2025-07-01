@@ -280,7 +280,44 @@ func sttStreamHandler(
 				totalUsage = sseResponse.Usage
 			} else if sseResponse.Text != "" {
 				fullText.Reset()
-				fullText.WriteString(sseResponse.Text)
+				outputTokens := CountTokenText(sseResponse.Text, meta.ActualModel)
+				totalUsage = &relaymodel.SttUsage{
+					Type:         relaymodel.SttUsageTypeTokens,
+					Seconds:      int64(meta.RequestUsage.AudioInputTokens),
+					InputTokens:  int64(meta.RequestUsage.InputTokens),
+					OutputTokens: outputTokens,
+					InputTokenDetails: &relaymodel.SttUsageInputTokenDetails{
+						TextTokens: int64(
+							meta.RequestUsage.InputTokens - meta.RequestUsage.AudioInputTokens,
+						),
+						AudioTokens: int64(meta.RequestUsage.AudioInputTokens),
+					},
+					TotalTokens: int64(meta.RequestUsage.InputTokens) + outputTokens,
+				}
+				node, err := sonic.Get(data)
+				if err != nil {
+					return totalUsage.ToModelUsage(), relaymodel.WrapperOpenAIError(
+						err,
+						"get_node_from_body_err",
+						http.StatusInternalServerError,
+					)
+				}
+				_, err = node.SetAny("usage", totalUsage)
+				if err != nil {
+					return totalUsage.ToModelUsage(), relaymodel.WrapperOpenAIError(
+						err,
+						"marshal_response_err",
+						http.StatusInternalServerError,
+					)
+				}
+				data, err = node.MarshalJSON()
+				if err != nil {
+					return totalUsage.ToModelUsage(), relaymodel.WrapperOpenAIError(
+						err,
+						"marshal_response_err",
+						http.StatusInternalServerError,
+					)
+				}
 			}
 		}
 
