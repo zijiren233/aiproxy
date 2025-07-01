@@ -1,4 +1,4 @@
-package gezhe
+package onepanel
 
 import (
 	_ "embed"
@@ -17,17 +17,19 @@ var readmeCN string
 func init() {
 	mcpservers.Register(
 		mcpservers.NewMcp(
-			"gezhe",
-			"Gezhe",
-			model.PublicMCPTypeProxyStreamable,
-			mcpservers.WithNameCN("歌者"),
-			mcpservers.WithProxyConfigTemplates(configTemplates),
-			mcpservers.WithTags([]string{"map"}),
+			"1panel",
+			"1Panel",
+			model.PublicMCPTypeDocs,
+			mcpservers.WithNameCN("1Panel"),
+			mcpservers.WithTags([]string{"1panel", "panel", "server", "management"}),
+			mcpservers.WithGitHubURL(
+				"https://github.com/1Panel-dev/mcp-1panel",
+			),
 			mcpservers.WithDescription(
-				"Gezhe MCP Server provides comprehensive Gezhe services including topic generation, PPT generation, and more through Gezhe's APIs.",
+				"1Panel's Model Context Protocol (MCP) server implementation.",
 			),
 			mcpservers.WithDescriptionCN(
-				"歌者 MCP 服务器通过歌者 API 提供全面的歌者服务，包括话题生成 PPT 等。",
+				"1Panel 的 Model Context Protocol (MCP) 协议服务端实现。",
 			),
 			mcpservers.WithReadme(readme),
 			mcpservers.WithReadmeCN(readmeCN),

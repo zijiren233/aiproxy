@@ -1,4 +1,4 @@
-package gezhe
+package homeassistant
 
 import (
 	_ "embed"
@@ -17,17 +17,19 @@ var readmeCN string
 func init() {
 	mcpservers.Register(
 		mcpservers.NewMcp(
-			"gezhe",
-			"Gezhe",
-			model.PublicMCPTypeProxyStreamable,
-			mcpservers.WithNameCN("歌者"),
-			mcpservers.WithProxyConfigTemplates(configTemplates),
-			mcpservers.WithTags([]string{"map"}),
+			"homeassistant",
+			"Home Assistant",
+			model.PublicMCPTypeDocs,
+			mcpservers.WithNameCN("Home Assistant"),
+			mcpservers.WithTags([]string{"homeassistant", "home", "assistant"}),
+			mcpservers.WithGitHubURL(
+				"https://github.com/tevonsb/homeassistant-mcp",
+			),
 			mcpservers.WithDescription(
-				"Gezhe MCP Server provides comprehensive Gezhe services including topic generation, PPT generation, and more through Gezhe's APIs.",
+				"A MCP server for Home Assistant",
 			),
 			mcpservers.WithDescriptionCN(
-				"歌者 MCP 服务器通过歌者 API 提供全面的歌者服务，包括话题生成 PPT 等。",
+				"Home Assistant 的 MCP 服务器",
 			),
 			mcpservers.WithReadme(readme),
 			mcpservers.WithReadmeCN(readmeCN),

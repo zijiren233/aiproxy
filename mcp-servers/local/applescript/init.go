@@ -1,4 +1,4 @@
-package gezhe
+package applescript
 
 import (
 	_ "embed"
@@ -17,17 +17,19 @@ var readmeCN string
 func init() {
 	mcpservers.Register(
 		mcpservers.NewMcp(
-			"gezhe",
-			"Gezhe",
-			model.PublicMCPTypeProxyStreamable,
-			mcpservers.WithNameCN("歌者"),
-			mcpservers.WithProxyConfigTemplates(configTemplates),
-			mcpservers.WithTags([]string{"map"}),
+			"applescript",
+			"Apple Script",
+			model.PublicMCPTypeDocs,
+			mcpservers.WithNameCN("Apple Script"),
+			mcpservers.WithTags([]string{"applescript", "apple", "script"}),
+			mcpservers.WithGitHubURL(
+				"https://github.com/peakmojo/applescript-mcp",
+			),
 			mcpservers.WithDescription(
-				"Gezhe MCP Server provides comprehensive Gezhe services including topic generation, PPT generation, and more through Gezhe's APIs.",
+				"MCP server that execute applescript giving you full control of your Mac",
 			),
 			mcpservers.WithDescriptionCN(
-				"歌者 MCP 服务器通过歌者 API 提供全面的歌者服务，包括话题生成 PPT 等。",
+				"执行 AppleScript 的 MCP 服务器，让您完全掌控您的 Mac",
 			),
 			mcpservers.WithReadme(readme),
 			mcpservers.WithReadmeCN(readmeCN),

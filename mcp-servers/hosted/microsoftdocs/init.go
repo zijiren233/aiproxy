@@ -1,4 +1,4 @@
-package github
+package microsoftdocs
 
 import (
 	_ "embed"
@@ -17,18 +17,20 @@ var readmeCN string
 func init() {
 	mcpservers.Register(
 		mcpservers.NewMcp(
-			"github",
-			"GitHub",
+			"microsoft-docs",
+			"Microsoft Docs",
 			model.PublicMCPTypeProxyStreamable,
-			mcpservers.WithNameCN("GitHub"),
-			mcpservers.WithGitHubURL("https://github.com/github/github-mcp-server"),
+			mcpservers.WithNameCN("Microsoft 文档"),
 			mcpservers.WithProxyConfigTemplates(configTemplates),
-			mcpservers.WithTags([]string{"git", "github", "copilot"}),
+			mcpservers.WithTags([]string{"documentation", "microsoft"}),
+			mcpservers.WithGitHubURL(
+				"https://github.com/MicrosoftDocs/mcp",
+			),
 			mcpservers.WithDescription(
-				"GitHub MCP Server provides comprehensive GitHub services including repository search, issue tracking, and more through GitHub's APIs.",
+				"A cloud-hosted MCP server that provides AI assistants with real-time access to official Microsoft documentation through semantic search and content retrieval.",
 			),
 			mcpservers.WithDescriptionCN(
-				"GitHub MCP 服务器通过 GitHub API 提供全面的 GitHub 服务，包括仓库搜索、问题跟踪等。",
+				"一个云托管的MCP服务器，通过语义搜索和内容检索为AI助手提供对官方Microsoft文档的实时访问。",
 			),
 			mcpservers.WithReadme(readme),
 			mcpservers.WithReadmeCN(readmeCN),

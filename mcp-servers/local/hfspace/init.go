@@ -1,4 +1,4 @@
-package gezhe
+package hfspace
 
 import (
 	_ "embed"
@@ -17,17 +17,19 @@ var readmeCN string
 func init() {
 	mcpservers.Register(
 		mcpservers.NewMcp(
-			"gezhe",
-			"Gezhe",
-			model.PublicMCPTypeProxyStreamable,
-			mcpservers.WithNameCN("歌者"),
-			mcpservers.WithProxyConfigTemplates(configTemplates),
-			mcpservers.WithTags([]string{"map"}),
+			"hfspace",
+			"HuggingFace Space",
+			model.PublicMCPTypeDocs,
+			mcpservers.WithNameCN("HuggingFace Space"),
+			mcpservers.WithTags([]string{"huggingface"}),
+			mcpservers.WithGitHubURL(
+				"https://github.com/evalstate/mcp-hfspace",
+			),
 			mcpservers.WithDescription(
-				"Gezhe MCP Server provides comprehensive Gezhe services including topic generation, PPT generation, and more through Gezhe's APIs.",
+				"MCP Server to Use HuggingFace spaces, easy configuration and Claude Desktop mode.",
 			),
 			mcpservers.WithDescriptionCN(
-				"歌者 MCP 服务器通过歌者 API 提供全面的歌者服务，包括话题生成 PPT 等。",
+				"MCP 服务器支持使用 HuggingFace 空间，配置简单且具备 Claude 桌面模式。",
 			),
 			mcpservers.WithReadme(readme),
 			mcpservers.WithReadmeCN(readmeCN),

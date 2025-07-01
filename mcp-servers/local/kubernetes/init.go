@@ -1,4 +1,4 @@
-package gezhe
+package kubernetes
 
 import (
 	_ "embed"
@@ -17,17 +17,19 @@ var readmeCN string
 func init() {
 	mcpservers.Register(
 		mcpservers.NewMcp(
-			"gezhe",
-			"Gezhe",
-			model.PublicMCPTypeProxyStreamable,
-			mcpservers.WithNameCN("歌者"),
-			mcpservers.WithProxyConfigTemplates(configTemplates),
-			mcpservers.WithTags([]string{"map"}),
+			"kubernetes",
+			"Kubernetes",
+			model.PublicMCPTypeDocs,
+			mcpservers.WithNameCN("Kubernetes"),
+			mcpservers.WithTags([]string{"kubernetes"}),
+			mcpservers.WithGitHubURL(
+				"https://github.com/Flux159/mcp-server-kubernetes",
+			),
 			mcpservers.WithDescription(
-				"Gezhe MCP Server provides comprehensive Gezhe services including topic generation, PPT generation, and more through Gezhe's APIs.",
+				"MCP Server for kubernetes management commands",
 			),
 			mcpservers.WithDescriptionCN(
-				"歌者 MCP 服务器通过歌者 API 提供全面的歌者服务，包括话题生成 PPT 等。",
+				"用于 Kubernetes 管理命令的 MCP 服务器",
 			),
 			mcpservers.WithReadme(readme),
 			mcpservers.WithReadmeCN(readmeCN),

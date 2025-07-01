@@ -1,4 +1,4 @@
-package github
+package semgrep
 
 import (
 	_ "embed"
@@ -17,18 +17,18 @@ var readmeCN string
 func init() {
 	mcpservers.Register(
 		mcpservers.NewMcp(
-			"github",
-			"GitHub",
+			"semgrep",
+			"Semgrep",
 			model.PublicMCPTypeProxyStreamable,
-			mcpservers.WithNameCN("GitHub"),
-			mcpservers.WithGitHubURL("https://github.com/github/github-mcp-server"),
+			mcpservers.WithNameCN("Semgrep"),
+			mcpservers.WithGitHubURL("https://github.com/semgrep/semgrep-mcp"),
 			mcpservers.WithProxyConfigTemplates(configTemplates),
-			mcpservers.WithTags([]string{"git", "github", "copilot"}),
+			mcpservers.WithTags([]string{"semgrep", "security", "code", "scan"}),
 			mcpservers.WithDescription(
-				"GitHub MCP Server provides comprehensive GitHub services including repository search, issue tracking, and more through GitHub's APIs.",
+				"A Model Context Protocol (MCP) server for using Semgrep to scan code for security vulnerabilities.",
 			),
 			mcpservers.WithDescriptionCN(
-				"GitHub MCP 服务器通过 GitHub API 提供全面的 GitHub 服务，包括仓库搜索、问题跟踪等。",
+				"一个用于使用 Semgrep 扫描代码安全漏洞的模型上下文协议 (MCP) 服务器",
 			),
 			mcpservers.WithReadme(readme),
 			mcpservers.WithReadmeCN(readmeCN),

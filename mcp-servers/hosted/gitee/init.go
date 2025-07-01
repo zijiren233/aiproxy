@@ -1,4 +1,4 @@
-package github
+package gitee
 
 import (
 	_ "embed"
@@ -17,18 +17,18 @@ var readmeCN string
 func init() {
 	mcpservers.Register(
 		mcpservers.NewMcp(
-			"github",
-			"GitHub",
+			"gitee",
+			"Gitee",
 			model.PublicMCPTypeProxyStreamable,
-			mcpservers.WithNameCN("GitHub"),
-			mcpservers.WithGitHubURL("https://github.com/github/github-mcp-server"),
+			mcpservers.WithNameCN("Gitee"),
+			mcpservers.WithGitHubURL("https://github.com/oschina/mcp-gitee"),
 			mcpservers.WithProxyConfigTemplates(configTemplates),
-			mcpservers.WithTags([]string{"git", "github", "copilot"}),
+			mcpservers.WithTags([]string{"git", "gitee", "copilot"}),
 			mcpservers.WithDescription(
-				"GitHub MCP Server provides comprehensive GitHub services including repository search, issue tracking, and more through GitHub's APIs.",
+				"Gitee MCP Server provides comprehensive Gitee services including repository search, issue tracking, and more through Gitee's APIs.",
 			),
 			mcpservers.WithDescriptionCN(
-				"GitHub MCP 服务器通过 GitHub API 提供全面的 GitHub 服务，包括仓库搜索、问题跟踪等。",
+				"Gitee MCP 服务器通过 Gitee API 提供全面的 Gitee 服务，包括仓库搜索、问题跟踪等。",
 			),
 			mcpservers.WithReadme(readme),
 			mcpservers.WithReadmeCN(readmeCN),
