@@ -278,6 +278,7 @@ func STTDoResponse(
 		case "task-finished":
 			sttUsage := relaymodel.SttUsage{
 				Type:         relaymodel.SttUsageTypeTokens,
+				Seconds:      int64(meta.RequestUsage.AudioInputTokens),
 				InputTokens:  int64(meta.RequestUsage.AudioInputTokens),
 				OutputTokens: msg.Payload.Usage.Characters,
 				InputTokenDetails: &relaymodel.SttUsageInputTokenDetails{
