@@ -8,6 +8,7 @@ import (
 	_ "github.com/labring/aiproxy/mcp-servers/local/alibabacloud-dms"
 	_ "github.com/labring/aiproxy/mcp-servers/local/alipay"
 	_ "github.com/labring/aiproxy/mcp-servers/local/allvoicelab"
+	_ "github.com/labring/aiproxy/mcp-servers/local/applescript"
 	_ "github.com/labring/aiproxy/mcp-servers/local/blender"
 	_ "github.com/labring/aiproxy/mcp-servers/local/brightdata"
 	_ "github.com/labring/aiproxy/mcp-servers/local/browserbase"
