@@ -19,8 +19,9 @@ func init() {
 		mcpservers.NewMcp(
 			"microsoft-docs",
 			"Microsoft Docs",
-			model.PublicMCPTypeDocs,
+			model.PublicMCPTypeProxyStreamable,
 			mcpservers.WithNameCN("Microsoft 文档"),
+			mcpservers.WithProxyConfigTemplates(configTemplates),
 			mcpservers.WithTags([]string{"documentation", "microsoft"}),
 			mcpservers.WithGitHubURL(
 				"https://github.com/MicrosoftDocs/mcp",

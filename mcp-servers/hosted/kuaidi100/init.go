@@ -21,7 +21,7 @@ func init() {
 			"Kuaidi100",
 			model.PublicMCPTypeProxyStreamable,
 			mcpservers.WithNameCN("快递100"),
-			mcpservers.WithProxyConfigType(configTemplates),
+			mcpservers.WithProxyConfigTemplates(configTemplates),
 			mcpservers.WithTags([]string{"kuaidi", "快递"}),
 			mcpservers.WithDescription(
 				"Kuaidi100 MCP Server provides comprehensive Kuaidi100 services including tracking, and more through Kuaidi100's APIs.",

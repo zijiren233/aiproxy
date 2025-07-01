@@ -22,7 +22,7 @@ func init() {
 			model.PublicMCPTypeProxyStreamable,
 			mcpservers.WithNameCN("GitHub"),
 			mcpservers.WithGitHubURL("https://github.com/github/github-mcp-server"),
-			mcpservers.WithProxyConfigType(configTemplates),
+			mcpservers.WithProxyConfigTemplates(configTemplates),
 			mcpservers.WithTags([]string{"git", "github", "copilot"}),
 			mcpservers.WithDescription(
 				"GitHub MCP Server provides comprehensive GitHub services including repository search, issue tracking, and more through GitHub's APIs.",

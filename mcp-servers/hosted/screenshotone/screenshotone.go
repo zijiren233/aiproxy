@@ -356,5 +356,6 @@ func ListTools(ctx context.Context) ([]mcp.Tool, error) {
 		MCPServer: mcpServer,
 	}
 	screenshotServer.addTools()
+
 	return mcpservers.ListServerTools(ctx, screenshotServer.MCPServer)
 }

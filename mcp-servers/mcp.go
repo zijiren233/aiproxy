@@ -230,7 +230,7 @@ func WithConfigTemplates(configTemplates ConfigTemplates) McpConfig {
 	}
 }
 
-func WithProxyConfigType(proxyConfigTemplates ProxyConfigTemplates) McpConfig {
+func WithProxyConfigTemplates(proxyConfigTemplates ProxyConfigTemplates) McpConfig {
 	return func(e *McpServer) {
 		e.ProxyConfigTemplates = proxyConfigTemplates
 	}

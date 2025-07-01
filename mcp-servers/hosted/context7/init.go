@@ -22,7 +22,7 @@ func init() {
 			model.PublicMCPTypeProxyStreamable,
 			mcpservers.WithNameCN("Context7"),
 			mcpservers.WithGitHubURL("https://github.com/upstash/context7"),
-			mcpservers.WithProxyConfigType(configTemplates),
+			mcpservers.WithProxyConfigTemplates(configTemplates),
 			mcpservers.WithTags([]string{"context7", "document", "code", "copilot"}),
 			mcpservers.WithDescription(
 				"Context7 is a tool that can help you find the latest documents and fight against code hallucinations.",

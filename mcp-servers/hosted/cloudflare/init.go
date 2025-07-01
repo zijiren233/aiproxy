@@ -21,7 +21,7 @@ func init() {
 			"Cloudflare Docs",
 			model.PublicMCPTypeProxySSE,
 			mcpservers.WithNameCN("Cloudflare 文档"),
-			mcpservers.WithProxyConfigType(mcpservers.ProxyConfigTemplates{
+			mcpservers.WithProxyConfigTemplates(mcpservers.ProxyConfigTemplates{
 				"url": {
 					ConfigTemplate: mcpservers.ConfigTemplate{
 						Name:        "URL",
@@ -53,7 +53,7 @@ func init() {
 			"Cloudflare Bindings",
 			model.PublicMCPTypeProxySSE,
 			mcpservers.WithNameCN("Cloudflare Bindings"),
-			mcpservers.WithProxyConfigType(mcpservers.ProxyConfigTemplates{
+			mcpservers.WithProxyConfigTemplates(mcpservers.ProxyConfigTemplates{
 				"url": {
 					ConfigTemplate: mcpservers.ConfigTemplate{
 						Name:        "URL",
@@ -85,7 +85,7 @@ func init() {
 			"Cloudflare Builds",
 			model.PublicMCPTypeProxySSE,
 			mcpservers.WithNameCN("Cloudflare 构建"),
-			mcpservers.WithProxyConfigType(mcpservers.ProxyConfigTemplates{
+			mcpservers.WithProxyConfigTemplates(mcpservers.ProxyConfigTemplates{
 				"url": {
 					ConfigTemplate: mcpservers.ConfigTemplate{
 						Name:        "URL",
@@ -117,7 +117,7 @@ func init() {
 			"Cloudflare Observability",
 			model.PublicMCPTypeProxySSE,
 			mcpservers.WithNameCN("Cloudflare 可观测性"),
-			mcpservers.WithProxyConfigType(mcpservers.ProxyConfigTemplates{
+			mcpservers.WithProxyConfigTemplates(mcpservers.ProxyConfigTemplates{
 				"url": {
 					ConfigTemplate: mcpservers.ConfigTemplate{
 						Name:        "URL",
@@ -149,7 +149,7 @@ func init() {
 			"Cloudflare Radar",
 			model.PublicMCPTypeProxySSE,
 			mcpservers.WithNameCN("Cloudflare Radar"),
-			mcpservers.WithProxyConfigType(mcpservers.ProxyConfigTemplates{
+			mcpservers.WithProxyConfigTemplates(mcpservers.ProxyConfigTemplates{
 				"url": {
 					ConfigTemplate: mcpservers.ConfigTemplate{
 						Name:        "URL",
@@ -181,7 +181,7 @@ func init() {
 			"Cloudflare Container",
 			model.PublicMCPTypeProxySSE,
 			mcpservers.WithNameCN("Cloudflare 容器"),
-			mcpservers.WithProxyConfigType(mcpservers.ProxyConfigTemplates{
+			mcpservers.WithProxyConfigTemplates(mcpservers.ProxyConfigTemplates{
 				"url": {
 					ConfigTemplate: mcpservers.ConfigTemplate{
 						Name:        "URL",
@@ -213,7 +213,7 @@ func init() {
 			"Cloudflare Browser",
 			model.PublicMCPTypeProxySSE,
 			mcpservers.WithNameCN("Cloudflare 浏览器"),
-			mcpservers.WithProxyConfigType(mcpservers.ProxyConfigTemplates{
+			mcpservers.WithProxyConfigTemplates(mcpservers.ProxyConfigTemplates{
 				"url": {
 					ConfigTemplate: mcpservers.ConfigTemplate{
 						Name:        "URL",
@@ -245,7 +245,7 @@ func init() {
 			"Cloudflare Logpush",
 			model.PublicMCPTypeProxySSE,
 			mcpservers.WithNameCN("Cloudflare Logpush"),
-			mcpservers.WithProxyConfigType(mcpservers.ProxyConfigTemplates{
+			mcpservers.WithProxyConfigTemplates(mcpservers.ProxyConfigTemplates{
 				"url": {
 					ConfigTemplate: mcpservers.ConfigTemplate{
 						Name:        "URL",
@@ -277,7 +277,7 @@ func init() {
 			"Cloudflare AI Gateway",
 			model.PublicMCPTypeProxySSE,
 			mcpservers.WithNameCN("Cloudflare AI Gateway"),
-			mcpservers.WithProxyConfigType(mcpservers.ProxyConfigTemplates{
+			mcpservers.WithProxyConfigTemplates(mcpservers.ProxyConfigTemplates{
 				"url": {
 					ConfigTemplate: mcpservers.ConfigTemplate{
 						Name:        "URL",
@@ -309,7 +309,7 @@ func init() {
 			"Cloudflare AutoRAG",
 			model.PublicMCPTypeProxySSE,
 			mcpservers.WithNameCN("Cloudflare AutoRAG"),
-			mcpservers.WithProxyConfigType(mcpservers.ProxyConfigTemplates{
+			mcpservers.WithProxyConfigTemplates(mcpservers.ProxyConfigTemplates{
 				"url": {
 					ConfigTemplate: mcpservers.ConfigTemplate{
 						Name:        "URL",
@@ -341,7 +341,7 @@ func init() {
 			"Cloudflare Audit Logs",
 			model.PublicMCPTypeProxySSE,
 			mcpservers.WithNameCN("Cloudflare 审计日志"),
-			mcpservers.WithProxyConfigType(mcpservers.ProxyConfigTemplates{
+			mcpservers.WithProxyConfigTemplates(mcpservers.ProxyConfigTemplates{
 				"url": {
 					ConfigTemplate: mcpservers.ConfigTemplate{
 						Name:        "URL",
@@ -373,7 +373,7 @@ func init() {
 			"Cloudflare DNS Analytics",
 			model.PublicMCPTypeProxySSE,
 			mcpservers.WithNameCN("Cloudflare DNS 分析"),
-			mcpservers.WithProxyConfigType(mcpservers.ProxyConfigTemplates{
+			mcpservers.WithProxyConfigTemplates(mcpservers.ProxyConfigTemplates{
 				"url": {
 					ConfigTemplate: mcpservers.ConfigTemplate{
 						Name:        "URL",
@@ -405,7 +405,7 @@ func init() {
 			"Cloudflare DEX",
 			model.PublicMCPTypeProxySSE,
 			mcpservers.WithNameCN("Cloudflare DEX"),
-			mcpservers.WithProxyConfigType(mcpservers.ProxyConfigTemplates{
+			mcpservers.WithProxyConfigTemplates(mcpservers.ProxyConfigTemplates{
 				"url": {
 					ConfigTemplate: mcpservers.ConfigTemplate{
 						Name:        "URL",
@@ -437,7 +437,7 @@ func init() {
 			"Cloudflare CASB",
 			model.PublicMCPTypeProxySSE,
 			mcpservers.WithNameCN("Cloudflare CASB"),
-			mcpservers.WithProxyConfigType(mcpservers.ProxyConfigTemplates{
+			mcpservers.WithProxyConfigTemplates(mcpservers.ProxyConfigTemplates{
 				"url": {
 					ConfigTemplate: mcpservers.ConfigTemplate{
 						Name:        "URL",
@@ -469,7 +469,7 @@ func init() {
 			"Cloudflare GraphQL",
 			model.PublicMCPTypeProxySSE,
 			mcpservers.WithNameCN("Cloudflare GraphQL"),
-			mcpservers.WithProxyConfigType(mcpservers.ProxyConfigTemplates{
+			mcpservers.WithProxyConfigTemplates(mcpservers.ProxyConfigTemplates{
 				"url": {
 					ConfigTemplate: mcpservers.ConfigTemplate{
 						Name:        "URL",

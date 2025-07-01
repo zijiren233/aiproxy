@@ -22,7 +22,7 @@ func init() {
 			model.PublicMCPTypeProxyStreamable,
 			mcpservers.WithNameCN("Gitee"),
 			mcpservers.WithGitHubURL("https://github.com/oschina/mcp-gitee"),
-			mcpservers.WithProxyConfigType(configTemplates),
+			mcpservers.WithProxyConfigTemplates(configTemplates),
 			mcpservers.WithTags([]string{"git", "gitee", "copilot"}),
 			mcpservers.WithDescription(
 				"Gitee MCP Server provides comprehensive Gitee services including repository search, issue tracking, and more through Gitee's APIs.",

@@ -22,7 +22,7 @@ func init() {
 			model.PublicMCPTypeProxyStreamable,
 			mcpservers.WithNameCN("Semgrep"),
 			mcpservers.WithGitHubURL("https://github.com/semgrep/semgrep-mcp"),
-			mcpservers.WithProxyConfigType(configTemplates),
+			mcpservers.WithProxyConfigTemplates(configTemplates),
 			mcpservers.WithTags([]string{"semgrep", "security", "code", "scan"}),
 			mcpservers.WithDescription(
 				"A Model Context Protocol (MCP) server for using Semgrep to scan code for security vulnerabilities.",
