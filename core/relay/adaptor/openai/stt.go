@@ -278,10 +278,15 @@ func sttStreamHandler(
 				fullText.Reset()
 
 				totalUsage = sseResponse.Usage
-			} else if sseResponse.Text != "" {
+			} else {
+				text := fullText.String()
 				fullText.Reset()
 
-				outputTokens := CountTokenText(sseResponse.Text, meta.ActualModel)
+				if sseResponse.Text != "" {
+					text = sseResponse.Text
+				}
+
+				outputTokens := CountTokenText(text, meta.ActualModel)
 				totalUsage = &relaymodel.SttUsage{
 					Type:         relaymodel.SttUsageTypeTokens,
 					Seconds:      int64(meta.RequestUsage.AudioInputTokens),
