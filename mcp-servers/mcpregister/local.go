@@ -21,6 +21,7 @@ import (
 	_ "github.com/labring/aiproxy/mcp-servers/local/genai-toolbox"
 	_ "github.com/labring/aiproxy/mcp-servers/local/git"
 	_ "github.com/labring/aiproxy/mcp-servers/local/grafana"
+	_ "github.com/labring/aiproxy/mcp-servers/local/ical"
 	_ "github.com/labring/aiproxy/mcp-servers/local/knowledge-graph-memory"
 	_ "github.com/labring/aiproxy/mcp-servers/local/magic"
 	_ "github.com/labring/aiproxy/mcp-servers/local/markdownify"
