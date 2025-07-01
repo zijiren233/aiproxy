@@ -280,6 +280,7 @@ func sttStreamHandler(
 				totalUsage = sseResponse.Usage
 			} else if sseResponse.Text != "" {
 				fullText.Reset()
+
 				outputTokens := CountTokenText(sseResponse.Text, meta.ActualModel)
 				totalUsage = &relaymodel.SttUsage{
 					Type:         relaymodel.SttUsageTypeTokens,
@@ -294,6 +295,7 @@ func sttStreamHandler(
 					},
 					TotalTokens: int64(meta.RequestUsage.InputTokens) + outputTokens,
 				}
+
 				node, err := sonic.Get(data)
 				if err != nil {
 					return totalUsage.ToModelUsage(), relaymodel.WrapperOpenAIError(
@@ -302,6 +304,7 @@ func sttStreamHandler(
 						http.StatusInternalServerError,
 					)
 				}
+
 				_, err = node.SetAny("usage", totalUsage)
 				if err != nil {
 					return totalUsage.ToModelUsage(), relaymodel.WrapperOpenAIError(
@@ -310,6 +313,7 @@ func sttStreamHandler(
 						http.StatusInternalServerError,
 					)
 				}
+
 				data, err = node.MarshalJSON()
 				if err != nil {
 					return totalUsage.ToModelUsage(), relaymodel.WrapperOpenAIError(
