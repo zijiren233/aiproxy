@@ -3,6 +3,7 @@ package azure
 import (
 	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -41,96 +42,139 @@ func GetRequestURL(meta *meta.Meta, replaceDot bool) (adaptor.RequestURL, error)
 	case mode.ImagesGenerations:
 		// https://learn.microsoft.com/en-us/azure/ai-services/openai/dall-e-quickstart?tabs=dalle3%2Ccommand-line&pivots=rest-api
 		// https://{resource_name}.openai.azure.com/openai/deployments/dall-e-3/images/generations?api-version=2024-03-01-preview
+		url, err := url.JoinPath(
+			meta.Channel.BaseURL,
+			"/openai/deployments",
+			model,
+			"/images/generations",
+		)
+		if err != nil {
+			return adaptor.RequestURL{}, err
+		}
+
 		return adaptor.RequestURL{
 			Method: http.MethodPost,
-			URL: fmt.Sprintf(
-				"%s/openai/deployments/%s/images/generations?api-version=%s",
-				meta.Channel.BaseURL,
-				model,
-				apiVersion,
-			),
+			URL:    fmt.Sprintf("%s?api-version=%s", url, apiVersion),
 		}, nil
 	case mode.AudioTranscription:
 		// https://learn.microsoft.com/en-us/azure/ai-services/openai/whisper-quickstart?tabs=command-line#rest-api
+		url, err := url.JoinPath(
+			meta.Channel.BaseURL,
+			"/openai/deployments",
+			model,
+			"/audio/transcriptions",
+		)
+		if err != nil {
+			return adaptor.RequestURL{}, err
+		}
+
 		return adaptor.RequestURL{
 			Method: http.MethodPost,
-			URL: fmt.Sprintf(
-				"%s/openai/deployments/%s/audio/transcriptions?api-version=%s",
-				meta.Channel.BaseURL,
-				model,
-				apiVersion,
-			),
+			URL:    fmt.Sprintf("%s?api-version=%s", url, apiVersion),
 		}, nil
 	case mode.AudioSpeech:
 		// https://learn.microsoft.com/en-us/azure/ai-services/openai/text-to-speech-quickstart?tabs=command-line#rest-api
+		url, err := url.JoinPath(
+			meta.Channel.BaseURL,
+			"/openai/deployments",
+			model,
+			"/audio/speech",
+		)
+		if err != nil {
+			return adaptor.RequestURL{}, err
+		}
+
 		return adaptor.RequestURL{
 			Method: http.MethodPost,
-			URL: fmt.Sprintf(
-				"%s/openai/deployments/%s/audio/speech?api-version=%s",
-				meta.Channel.BaseURL,
-				model,
-				apiVersion,
-			),
+			URL:    fmt.Sprintf("%s?api-version=%s", url, apiVersion),
 		}, nil
 	case mode.ChatCompletions:
 		// https://learn.microsoft.com/en-us/azure/cognitive-services/openai/chatgpt-quickstart?pivots=rest-api&tabs=command-line#rest-api
+		url, err := url.JoinPath(
+			meta.Channel.BaseURL,
+			"/openai/deployments",
+			model,
+			"/chat/completions",
+		)
+		if err != nil {
+			return adaptor.RequestURL{}, err
+		}
+
 		return adaptor.RequestURL{
 			Method: http.MethodPost,
-			URL: fmt.Sprintf(
-				"%s/openai/deployments/%s/chat/completions?api-version=%s",
-				meta.Channel.BaseURL,
-				model,
-				apiVersion,
-			),
+			URL:    fmt.Sprintf("%s?api-version=%s", url, apiVersion),
 		}, nil
 	case mode.Completions:
+		url, err := url.JoinPath(
+			meta.Channel.BaseURL,
+			"/openai/deployments",
+			model,
+			"/completions",
+		)
+		if err != nil {
+			return adaptor.RequestURL{}, err
+		}
+
 		return adaptor.RequestURL{
 			Method: http.MethodPost,
-			URL: fmt.Sprintf(
-				"%s/openai/deployments/%s/completions?api-version=%s",
-				meta.Channel.BaseURL,
-				model,
-				apiVersion,
-			),
+			URL:    fmt.Sprintf("%s?api-version=%s", url, apiVersion),
 		}, nil
 	case mode.Embeddings:
+		url, err := url.JoinPath(
+			meta.Channel.BaseURL,
+			"/openai/deployments",
+			model,
+			"/embeddings",
+		)
+		if err != nil {
+			return adaptor.RequestURL{}, err
+		}
+
 		return adaptor.RequestURL{
 			Method: http.MethodPost,
-			URL: fmt.Sprintf(
-				"%s/openai/deployments/%s/embeddings?api-version=%s",
-				meta.Channel.BaseURL,
-				model,
-				apiVersion,
-			),
+			URL:    fmt.Sprintf("%s?api-version=%s", url, apiVersion),
 		}, nil
 	case mode.VideoGenerationsJobs:
+		url, err := url.JoinPath(
+			meta.Channel.BaseURL,
+			"/openai/v1/video/generations/jobs",
+		)
+		if err != nil {
+			return adaptor.RequestURL{}, err
+		}
+
 		return adaptor.RequestURL{
 			Method: http.MethodPost,
-			URL: fmt.Sprintf(
-				"%s/openai/v1/video/generations/jobs?api-version=%s",
-				meta.Channel.BaseURL,
-				apiVersion,
-			),
+			URL:    fmt.Sprintf("%s?api-version=%s", url, apiVersion),
 		}, nil
 	case mode.VideoGenerationsGetJobs:
+		url, err := url.JoinPath(
+			meta.Channel.BaseURL,
+			"/openai/v1/video/generations/jobs",
+			meta.JobID,
+		)
+		if err != nil {
+			return adaptor.RequestURL{}, err
+		}
+
 		return adaptor.RequestURL{
 			Method: http.MethodPost,
-			URL: fmt.Sprintf(
-				"%s/openai/v1/video/generations/jobs/%s?api-version=%s",
-				meta.Channel.BaseURL,
-				meta.JobID,
-				apiVersion,
-			),
+			URL:    fmt.Sprintf("%s?api-version=%s", url, apiVersion),
 		}, nil
 	case mode.VideoGenerationsContent:
+		url, err := url.JoinPath(
+			meta.Channel.BaseURL,
+			"/openai/v1/video/generations",
+			meta.GenerationID,
+			"/content/video",
+		)
+		if err != nil {
+			return adaptor.RequestURL{}, err
+		}
+
 		return adaptor.RequestURL{
 			Method: http.MethodPost,
-			URL: fmt.Sprintf(
-				"%s/openai/v1/video/generations/%s/content/video?api-version=%s",
-				meta.Channel.BaseURL,
-				meta.GenerationID,
-				apiVersion,
-			),
+			URL:    fmt.Sprintf("%s?api-version=%s", url, apiVersion),
 		}, nil
 	default:
 		return adaptor.RequestURL{}, fmt.Errorf("unsupported mode: %s", meta.Mode)

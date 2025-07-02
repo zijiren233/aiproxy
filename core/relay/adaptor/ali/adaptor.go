@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"github.com/bytedance/sonic/ast"
@@ -40,40 +41,67 @@ func (a *Adaptor) SupportMode(m mode.Mode) bool {
 
 func (a *Adaptor) GetRequestURL(meta *meta.Meta, _ adaptor.Store) (adaptor.RequestURL, error) {
 	u := meta.Channel.BaseURL
-	if u == "" {
-		u = baseURL
-	}
 
 	switch meta.Mode {
 	case mode.ImagesGenerations:
+		url, err := url.JoinPath(u, "/api/v1/services/aigc/text2image/image-synthesis")
+		if err != nil {
+			return adaptor.RequestURL{}, err
+		}
+
 		return adaptor.RequestURL{
 			Method: http.MethodPost,
-			URL:    u + "/api/v1/services/aigc/text2image/image-synthesis",
+			URL:    url,
 		}, nil
 	case mode.ChatCompletions:
+		url, err := url.JoinPath(u, "/compatible-mode/v1/chat/completions")
+		if err != nil {
+			return adaptor.RequestURL{}, err
+		}
+
 		return adaptor.RequestURL{
 			Method: http.MethodPost,
-			URL:    u + "/compatible-mode/v1/chat/completions",
+			URL:    url,
 		}, nil
 	case mode.Completions:
+		url, err := url.JoinPath(u, "/compatible-mode/v1/completions")
+		if err != nil {
+			return adaptor.RequestURL{}, err
+		}
+
 		return adaptor.RequestURL{
 			Method: http.MethodPost,
-			URL:    u + "/compatible-mode/v1/completions",
+			URL:    url,
 		}, nil
 	case mode.Embeddings:
+		url, err := url.JoinPath(u, "/compatible-mode/v1/embeddings")
+		if err != nil {
+			return adaptor.RequestURL{}, err
+		}
+
 		return adaptor.RequestURL{
 			Method: http.MethodPost,
-			URL:    u + "/compatible-mode/v1/embeddings",
+			URL:    url,
 		}, nil
 	case mode.AudioSpeech, mode.AudioTranscription:
+		url, err := url.JoinPath(u, "/api-ws/v1/inference")
+		if err != nil {
+			return adaptor.RequestURL{}, err
+		}
+
 		return adaptor.RequestURL{
 			Method: http.MethodPost,
-			URL:    u + "/api-ws/v1/inference",
+			URL:    url,
 		}, nil
 	case mode.Rerank:
+		url, err := url.JoinPath(u, "/api/v1/services/rerank/text-rerank/text-rerank")
+		if err != nil {
+			return adaptor.RequestURL{}, err
+		}
+
 		return adaptor.RequestURL{
 			Method: http.MethodPost,
-			URL:    u + "/api/v1/services/rerank/text-rerank/text-rerank",
+			URL:    url,
 		}, nil
 	default:
 		return adaptor.RequestURL{}, fmt.Errorf("unsupported mode: %s", meta.Mode)

@@ -3,6 +3,7 @@ package minimax
 import (
 	"fmt"
 	"net/http"
+	"net/url"
 
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/core/model"
@@ -57,19 +58,34 @@ func (a *Adaptor) GetRequestURL(meta *meta.Meta, store adaptor.Store) (adaptor.R
 
 	switch meta.Mode {
 	case mode.ChatCompletions:
+		url, err := url.JoinPath(meta.Channel.BaseURL, "/text/chatcompletion_v2")
+		if err != nil {
+			return adaptor.RequestURL{}, err
+		}
+
 		return adaptor.RequestURL{
 			Method: http.MethodPost,
-			URL:    meta.Channel.BaseURL + "/text/chatcompletion_v2",
+			URL:    url,
 		}, nil
 	case mode.Embeddings:
+		url, err := url.JoinPath(meta.Channel.BaseURL, "/embeddings")
+		if err != nil {
+			return adaptor.RequestURL{}, err
+		}
+
 		return adaptor.RequestURL{
 			Method: http.MethodPost,
-			URL:    fmt.Sprintf("%s/embeddings?GroupId=%s", meta.Channel.BaseURL, groupID),
+			URL:    fmt.Sprintf("%s?GroupId=%s", url, groupID),
 		}, nil
 	case mode.AudioSpeech:
+		url, err := url.JoinPath(meta.Channel.BaseURL, "/t2a_v2")
+		if err != nil {
+			return adaptor.RequestURL{}, err
+		}
+
 		return adaptor.RequestURL{
 			Method: http.MethodPost,
-			URL:    fmt.Sprintf("%s/t2a_v2?GroupId=%s", meta.Channel.BaseURL, groupID),
+			URL:    fmt.Sprintf("%s?GroupId=%s", url, groupID),
 		}, nil
 	default:
 		return a.Adaptor.GetRequestURL(meta, store)

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 
@@ -29,9 +30,14 @@ func (a *Adaptor) SupportMode(m mode.Mode) bool {
 }
 
 func (a *Adaptor) GetRequestURL(meta *meta.Meta, _ adaptor.Store) (adaptor.RequestURL, error) {
+	url, err := url.JoinPath(meta.Channel.BaseURL, "/open_api/v2/chat")
+	if err != nil {
+		return adaptor.RequestURL{}, err
+	}
+
 	return adaptor.RequestURL{
 		Method: http.MethodPost,
-		URL:    meta.Channel.BaseURL + "/open_api/v2/chat",
+		URL:    url,
 	}, nil
 }
 

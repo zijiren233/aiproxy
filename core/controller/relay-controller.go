@@ -94,7 +94,7 @@ func wrapPlugin(ctx context.Context, mc *model.ModelCaches, a adaptor.Adaptor) a
 	)
 }
 
-func relayHandler(c *gin.Context, meta *meta.Meta) *controller.HandleResult {
+func relayHandler(c *gin.Context, meta *meta.Meta, mc *model.ModelCaches) *controller.HandleResult {
 	log := common.GetLogger(c)
 	middleware.SetLogFieldsFromMeta(meta, log.Data)
 
@@ -109,14 +109,16 @@ func relayHandler(c *gin.Context, meta *meta.Meta) *controller.HandleResult {
 		}
 	}
 
-	adaptor = wrapPlugin(c.Request.Context(), middleware.GetModelCaches(c), adaptor)
+	adaptor = wrapPlugin(c.Request.Context(), mc, adaptor)
 
 	return controller.Handle(adaptor, c, meta, adaptorStore)
 }
 
 func relayController(m mode.Mode) RelayController {
 	c := RelayController{
-		Handler: relayHandler,
+		Handler: func(c *gin.Context, meta *meta.Meta) *controller.HandleResult {
+			return relayHandler(c, meta, middleware.GetModelCaches(c))
+		},
 	}
 	switch m {
 	case mode.ImagesGenerations:

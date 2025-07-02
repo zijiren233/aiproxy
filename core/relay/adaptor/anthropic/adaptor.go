@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 
@@ -30,9 +31,16 @@ func (a *Adaptor) SupportMode(m mode.Mode) bool {
 }
 
 func (a *Adaptor) GetRequestURL(meta *meta.Meta, _ adaptor.Store) (adaptor.RequestURL, error) {
+	u := meta.Channel.BaseURL
+
+	url, err := url.JoinPath(u, "/messages")
+	if err != nil {
+		return adaptor.RequestURL{}, err
+	}
+
 	return adaptor.RequestURL{
 		Method: http.MethodPost,
-		URL:    meta.Channel.BaseURL + "/messages",
+		URL:    url,
 	}, nil
 }
 
