@@ -1,10 +1,12 @@
 package openai
 
 import (
+	"bytes"
 	"encoding/base64"
 	"errors"
 	"fmt"
 	"net/http"
+	"slices"
 
 	"github.com/bytedance/sonic"
 	"github.com/gin-gonic/gin"
@@ -26,6 +28,22 @@ var (
 	nnBytes         = conv.StringToBytes(nn)
 	dataSpaceBytes  = conv.StringToBytes(dataSpace)
 )
+
+// IsValidSSEData checks if data is valid SSE format
+func IsValidSSEData(data []byte) bool {
+	return len(data) >= DataPrefixLength &&
+		slices.Equal(data[:DataPrefixLength], DataPrefixBytes)
+}
+
+// ExtractSSEData extracts data from SSE format
+func ExtractSSEData(data []byte) []byte {
+	return bytes.TrimSpace(data[DataPrefixLength:])
+}
+
+// IsSSEDone checks if SSE data indicates completion
+func IsSSEDone(data []byte) bool {
+	return slices.Equal(data, DoneBytes)
+}
 
 type SSE struct {
 	Data []byte

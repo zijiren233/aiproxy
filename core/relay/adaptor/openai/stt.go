@@ -7,7 +7,6 @@ import (
 	"io"
 	"mime/multipart"
 	"net/http"
-	"slices"
 	"strconv"
 	"strings"
 
@@ -253,12 +252,12 @@ func processSTTStreamChunks(
 
 	for scanner.Scan() {
 		data := scanner.Bytes()
-		if !isValidSSEData(data) {
+		if !IsValidSSEData(data) {
 			continue
 		}
 
-		data = extractSSEData(data)
-		if isSSEDone(data) {
+		data = ExtractSSEData(data)
+		if IsSSEDone(data) {
 			break
 		}
 
@@ -287,22 +286,6 @@ func processSTTStreamChunks(
 	}
 
 	return usage.ToModelUsage(), nil
-}
-
-// isValidSSEData checks if data is valid SSE format
-func isValidSSEData(data []byte) bool {
-	return len(data) >= DataPrefixLength &&
-		slices.Equal(data[:DataPrefixLength], DataPrefixBytes)
-}
-
-// extractSSEData extracts data from SSE format
-func extractSSEData(data []byte) []byte {
-	return bytes.TrimSpace(data[DataPrefixLength:])
-}
-
-// isSSEDone checks if SSE data indicates completion
-func isSSEDone(data []byte) bool {
-	return slices.Equal(data, DoneBytes)
 }
 
 // processSSEResponse processes individual SSE response and returns usage if complete
