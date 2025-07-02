@@ -142,6 +142,7 @@ func GetRequestURL(meta *meta.Meta, replaceDot bool) (adaptor.RequestURL, error)
 		if err != nil {
 			return adaptor.RequestURL{}, err
 		}
+
 		return adaptor.RequestURL{
 			Method: http.MethodPost,
 			URL:    fmt.Sprintf("%s?api-version=%s", url, apiVersion),
@@ -155,6 +156,7 @@ func GetRequestURL(meta *meta.Meta, replaceDot bool) (adaptor.RequestURL, error)
 		if err != nil {
 			return adaptor.RequestURL{}, err
 		}
+
 		return adaptor.RequestURL{
 			Method: http.MethodPost,
 			URL:    fmt.Sprintf("%s?api-version=%s", url, apiVersion),
@@ -169,6 +171,7 @@ func GetRequestURL(meta *meta.Meta, replaceDot bool) (adaptor.RequestURL, error)
 		if err != nil {
 			return adaptor.RequestURL{}, err
 		}
+
 		return adaptor.RequestURL{
 			Method: http.MethodPost,
 			URL:    fmt.Sprintf("%s?api-version=%s", url, apiVersion),
