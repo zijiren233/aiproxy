@@ -3,6 +3,7 @@ package textembeddingsinference
 import (
 	"fmt"
 	"net/http"
+	"net/url"
 
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/core/model"
@@ -42,14 +43,24 @@ func (a *Adaptor) Metadata() adaptor.Metadata {
 func (a *Adaptor) GetRequestURL(meta *meta.Meta, _ adaptor.Store) (adaptor.RequestURL, error) {
 	switch meta.Mode {
 	case mode.Rerank:
+		url, err := url.JoinPath(meta.Channel.BaseURL, "/rerank")
+		if err != nil {
+			return adaptor.RequestURL{}, err
+		}
+
 		return adaptor.RequestURL{
 			Method: http.MethodPost,
-			URL:    meta.Channel.BaseURL + "/rerank",
+			URL:    url,
 		}, nil
 	case mode.Embeddings:
+		url, err := url.JoinPath(meta.Channel.BaseURL, "/v1/embeddings")
+		if err != nil {
+			return adaptor.RequestURL{}, err
+		}
+
 		return adaptor.RequestURL{
 			Method: http.MethodPost,
-			URL:    meta.Channel.BaseURL + "/v1/embeddings",
+			URL:    url,
 		}, nil
 	default:
 		return adaptor.RequestURL{}, fmt.Errorf("unsupported mode: %s", meta.Mode)

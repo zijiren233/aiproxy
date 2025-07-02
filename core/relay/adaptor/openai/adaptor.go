@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/core/model"
@@ -46,69 +47,134 @@ func (a *Adaptor) GetRequestURL(meta *meta.Meta, _ adaptor.Store) (adaptor.Reque
 
 	switch meta.Mode {
 	case mode.ChatCompletions:
+		url, err := url.JoinPath(u, "/chat/completions")
+		if err != nil {
+			return adaptor.RequestURL{}, err
+		}
+
 		return adaptor.RequestURL{
 			Method: http.MethodPost,
-			URL:    u + "/chat/completions",
+			URL:    url,
 		}, nil
 	case mode.Completions:
+		url, err := url.JoinPath(u, "/completions")
+		if err != nil {
+			return adaptor.RequestURL{}, err
+		}
+
 		return adaptor.RequestURL{
 			Method: http.MethodPost,
-			URL:    u + "/completions",
+			URL:    url,
 		}, nil
 	case mode.Embeddings:
+		url, err := url.JoinPath(u, "/embeddings")
+		if err != nil {
+			return adaptor.RequestURL{}, err
+		}
+
 		return adaptor.RequestURL{
 			Method: http.MethodPost,
-			URL:    u + "/embeddings",
+			URL:    url,
 		}, nil
 	case mode.Moderations:
+		url, err := url.JoinPath(u, "/moderations")
+		if err != nil {
+			return adaptor.RequestURL{}, err
+		}
+
 		return adaptor.RequestURL{
 			Method: http.MethodPost,
-			URL:    u + "/moderations",
+			URL:    url,
 		}, nil
 	case mode.ImagesGenerations:
+		url, err := url.JoinPath(u, "/images/generations")
+		if err != nil {
+			return adaptor.RequestURL{}, err
+		}
+
 		return adaptor.RequestURL{
 			Method: http.MethodPost,
-			URL:    u + "/images/generations",
+			URL:    url,
 		}, nil
 	case mode.ImagesEdits:
+		url, err := url.JoinPath(u, "/images/edits")
+		if err != nil {
+			return adaptor.RequestURL{}, err
+		}
+
 		return adaptor.RequestURL{
 			Method: http.MethodPost,
-			URL:    u + "/images/edits",
+			URL:    url,
 		}, nil
 	case mode.AudioSpeech:
+		url, err := url.JoinPath(u, "/audio/speech")
+		if err != nil {
+			return adaptor.RequestURL{}, err
+		}
+
 		return adaptor.RequestURL{
 			Method: http.MethodPost,
-			URL:    u + "/audio/speech",
+			URL:    url,
 		}, nil
 	case mode.AudioTranscription:
+		url, err := url.JoinPath(u, "/audio/transcriptions")
+		if err != nil {
+			return adaptor.RequestURL{}, err
+		}
+
 		return adaptor.RequestURL{
 			Method: http.MethodPost,
-			URL:    u + "/audio/transcriptions",
+			URL:    url,
 		}, nil
 	case mode.AudioTranslation:
+		url, err := url.JoinPath(u, "/audio/translations")
+		if err != nil {
+			return adaptor.RequestURL{}, err
+		}
+
 		return adaptor.RequestURL{
 			Method: http.MethodPost,
-			URL:    u + "/audio/translations",
+			URL:    url,
 		}, nil
 	case mode.Rerank:
+		url, err := url.JoinPath(u, "/rerank")
+		if err != nil {
+			return adaptor.RequestURL{}, err
+		}
+
 		return adaptor.RequestURL{
 			Method: http.MethodPost,
-			URL:    u + "/rerank",
+			URL:    url,
 		}, nil
 	case mode.VideoGenerationsJobs:
+		url, err := url.JoinPath(u, "/video/generations/jobs")
+		if err != nil {
+			return adaptor.RequestURL{}, err
+		}
+
 		return adaptor.RequestURL{
 			Method: http.MethodPost,
-			URL:    u + "/video/generations/jobs",
+			URL:    url,
 		}, nil
 	case mode.VideoGenerationsGetJobs:
+		url, err := url.JoinPath(u, "/video/generations/jobs", meta.JobID)
+		if err != nil {
+			return adaptor.RequestURL{}, err
+		}
+
 		return adaptor.RequestURL{
 			Method: http.MethodGet,
-			URL:    fmt.Sprintf("%s/video/generations/jobs/%s", u, meta.JobID),
+			URL:    url,
 		}, nil
 	case mode.VideoGenerationsContent:
+		url, err := url.JoinPath(u, "/video/generations", meta.GenerationID, "/content/video")
+		if err != nil {
+			return adaptor.RequestURL{}, err
+		}
+
 		return adaptor.RequestURL{
 			Method: http.MethodGet,
-			URL:    fmt.Sprintf("%s/video/generations/%s/content/video", u, meta.GenerationID),
+			URL:    url,
 		}, nil
 	default:
 		return adaptor.RequestURL{}, fmt.Errorf("unsupported mode: %s", meta.Mode)

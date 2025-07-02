@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -46,14 +47,24 @@ func toV2ModelName(modelName string) string {
 func (a *Adaptor) GetRequestURL(meta *meta.Meta, _ adaptor.Store) (adaptor.RequestURL, error) {
 	switch meta.Mode {
 	case mode.ChatCompletions:
+		url, err := url.JoinPath(meta.Channel.BaseURL, "/chat/completions")
+		if err != nil {
+			return adaptor.RequestURL{}, err
+		}
+
 		return adaptor.RequestURL{
 			Method: http.MethodPost,
-			URL:    meta.Channel.BaseURL + "/chat/completions",
+			URL:    url,
 		}, nil
 	case mode.Rerank:
+		url, err := url.JoinPath(meta.Channel.BaseURL, "/rerankers")
+		if err != nil {
+			return adaptor.RequestURL{}, err
+		}
+
 		return adaptor.RequestURL{
 			Method: http.MethodPost,
-			URL:    meta.Channel.BaseURL + "/rerankers",
+			URL:    url,
 		}, nil
 	default:
 		return adaptor.RequestURL{}, fmt.Errorf("unsupported mode: %s", meta.Mode)

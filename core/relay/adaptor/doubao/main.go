@@ -3,6 +3,7 @@ package doubao
 import (
 	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -19,27 +20,47 @@ func GetRequestURL(meta *meta.Meta) (adaptor.RequestURL, error) {
 	switch meta.Mode {
 	case mode.ChatCompletions:
 		if strings.HasPrefix(meta.ActualModel, "bot-") {
+			url, err := url.JoinPath(u, "/api/v3/bots/chat/completions")
+			if err != nil {
+				return adaptor.RequestURL{}, err
+			}
+
 			return adaptor.RequestURL{
 				Method: http.MethodPost,
-				URL:    u + "/api/v3/bots/chat/completions",
+				URL:    url,
 			}, nil
+		}
+
+		url, err := url.JoinPath(u, "/api/v3/chat/completions")
+		if err != nil {
+			return adaptor.RequestURL{}, err
 		}
 
 		return adaptor.RequestURL{
 			Method: http.MethodPost,
-			URL:    u + "/api/v3/chat/completions",
+			URL:    url,
 		}, nil
 	case mode.Embeddings:
 		if strings.Contains(meta.ActualModel, "vision") {
+			url, err := url.JoinPath(u, "/api/v3/embeddings/multimodal")
+			if err != nil {
+				return adaptor.RequestURL{}, err
+			}
+
 			return adaptor.RequestURL{
 				Method: http.MethodPost,
-				URL:    u + "/api/v3/embeddings/multimodal",
+				URL:    url,
 			}, nil
+		}
+
+		url, err := url.JoinPath(u, "/api/v3/embeddings")
+		if err != nil {
+			return adaptor.RequestURL{}, err
 		}
 
 		return adaptor.RequestURL{
 			Method: http.MethodPost,
-			URL:    u + "/api/v3/embeddings",
+			URL:    url,
 		}, nil
 	default:
 		return adaptor.RequestURL{}, fmt.Errorf("unsupported relay mode %d for doubao", meta.Mode)

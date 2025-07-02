@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -75,8 +76,15 @@ func (a *Adaptor) GetRequestURL(meta *meta.Meta, _ adaptor.Store) (adaptor.Reque
 	}
 
 	// Construct full URL
-	fullURL := fmt.Sprintf("%s/rpc/2.0/ai_custom/v1/wenxinworkshop/%s/%s",
-		meta.Channel.BaseURL, pathSuffix, modelEndpoint)
+	fullURL, err := url.JoinPath(
+		meta.Channel.BaseURL,
+		"/rpc/2.0/ai_custom/v1/wenxinworkshop",
+		pathSuffix,
+		modelEndpoint,
+	)
+	if err != nil {
+		return adaptor.RequestURL{}, err
+	}
 
 	return adaptor.RequestURL{
 		Method: http.MethodPost,

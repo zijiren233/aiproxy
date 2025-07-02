@@ -3,6 +3,7 @@ package cloudflare
 import (
 	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"github.com/labring/aiproxy/core/relay/adaptor"
@@ -42,26 +43,46 @@ func (a *Adaptor) GetRequestURL(meta *meta.Meta, _ adaptor.Store) (adaptor.Reque
 
 	switch meta.Mode {
 	case mode.ChatCompletions:
-		return adaptor.RequestURL{
-			Method: http.MethodPost,
-			URL:    urlPrefix + "/v1/chat/completions",
-		}, nil
-	case mode.Embeddings:
-		return adaptor.RequestURL{
-			Method: http.MethodPost,
-			URL:    urlPrefix + "/v1/embeddings",
-		}, nil
-	default:
-		if isAIGateWay {
-			return adaptor.RequestURL{
-				Method: http.MethodPost,
-				URL:    fmt.Sprintf("%s/%s", urlPrefix, meta.ActualModel),
-			}, nil
+		url, err := url.JoinPath(urlPrefix, "/v1/chat/completions")
+		if err != nil {
+			return adaptor.RequestURL{}, err
 		}
 
 		return adaptor.RequestURL{
 			Method: http.MethodPost,
-			URL:    fmt.Sprintf("%s/run/%s", urlPrefix, meta.ActualModel),
+			URL:    url,
+		}, nil
+	case mode.Embeddings:
+		url, err := url.JoinPath(urlPrefix, "/v1/embeddings")
+		if err != nil {
+			return adaptor.RequestURL{}, err
+		}
+
+		return adaptor.RequestURL{
+			Method: http.MethodPost,
+			URL:    url,
+		}, nil
+	default:
+		if isAIGateWay {
+			url, err := url.JoinPath(urlPrefix, meta.ActualModel)
+			if err != nil {
+				return adaptor.RequestURL{}, err
+			}
+
+			return adaptor.RequestURL{
+				Method: http.MethodPost,
+				URL:    url,
+			}, nil
+		}
+
+		url, err := url.JoinPath(urlPrefix, "/run", meta.ActualModel)
+		if err != nil {
+			return adaptor.RequestURL{}, err
+		}
+
+		return adaptor.RequestURL{
+			Method: http.MethodPost,
+			URL:    url,
 		}, nil
 	}
 }

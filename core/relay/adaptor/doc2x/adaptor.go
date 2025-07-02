@@ -3,6 +3,7 @@ package doc2x
 import (
 	"fmt"
 	"net/http"
+	"net/url"
 
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/core/model"
@@ -30,9 +31,14 @@ func (a *Adaptor) SupportMode(m mode.Mode) bool {
 func (a *Adaptor) GetRequestURL(meta *meta.Meta, _ adaptor.Store) (adaptor.RequestURL, error) {
 	switch meta.Mode {
 	case mode.ParsePdf:
+		url, err := url.JoinPath(meta.Channel.BaseURL, "/api/v2/parse/pdf")
+		if err != nil {
+			return adaptor.RequestURL{}, err
+		}
+
 		return adaptor.RequestURL{
 			Method: http.MethodPost,
-			URL:    meta.Channel.BaseURL + "/api/v2/parse/pdf",
+			URL:    url,
 		}, nil
 	default:
 		return adaptor.RequestURL{}, fmt.Errorf("unsupported mode: %s", meta.Mode)

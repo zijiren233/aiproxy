@@ -120,7 +120,7 @@ func testSingleModel(
 		modelConfig,
 		meta.WithRequestID(channelTestRequestID),
 	)
-	result := relayHandler(newc, meta)
+	result := relayHandler(newc, meta, mc)
 	success := result.Error == nil
 
 	var (

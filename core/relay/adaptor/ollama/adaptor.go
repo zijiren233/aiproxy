@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/core/model"
@@ -31,19 +32,34 @@ func (a *Adaptor) GetRequestURL(meta *meta.Meta, _ adaptor.Store) (adaptor.Reque
 	u := meta.Channel.BaseURL
 	switch meta.Mode {
 	case mode.Embeddings:
+		url, err := url.JoinPath(u, "/api/embed")
+		if err != nil {
+			return adaptor.RequestURL{}, err
+		}
+
 		return adaptor.RequestURL{
 			Method: http.MethodPost,
-			URL:    u + "/api/embed",
+			URL:    url,
 		}, nil
 	case mode.ChatCompletions:
+		url, err := url.JoinPath(u, "/api/chat")
+		if err != nil {
+			return adaptor.RequestURL{}, err
+		}
+
 		return adaptor.RequestURL{
 			Method: http.MethodPost,
-			URL:    u + "/api/chat",
+			URL:    url,
 		}, nil
 	case mode.Completions:
+		url, err := url.JoinPath(u, "/api/generate")
+		if err != nil {
+			return adaptor.RequestURL{}, err
+		}
+
 		return adaptor.RequestURL{
 			Method: http.MethodPost,
-			URL:    u + "/api/generate",
+			URL:    url,
 		}, nil
 	default:
 		return adaptor.RequestURL{}, fmt.Errorf("unsupported mode: %s", meta.Mode)

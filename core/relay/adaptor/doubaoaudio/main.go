@@ -3,6 +3,7 @@ package doubaoaudio
 import (
 	"fmt"
 	"net/http"
+	"net/url"
 
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/core/model"
@@ -16,9 +17,14 @@ func GetRequestURL(meta *meta.Meta) (adaptor.RequestURL, error) {
 	u := meta.Channel.BaseURL
 	switch meta.Mode {
 	case mode.AudioSpeech:
+		url, err := url.JoinPath(u, "/api/v1/tts/ws_binary")
+		if err != nil {
+			return adaptor.RequestURL{}, err
+		}
+
 		return adaptor.RequestURL{
 			Method: http.MethodPost,
-			URL:    u + "/api/v1/tts/ws_binary",
+			URL:    url,
 		}, nil
 	default:
 		return adaptor.RequestURL{}, fmt.Errorf("unsupported mode: %s", meta.Mode)
