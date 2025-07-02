@@ -9537,6 +9537,9 @@
         "model.ChartData": {
             "type": "object",
             "properties": {
+                "audio_input_tokens": {
+                    "type": "integer"
+                },
                 "cache_creation_tokens": {
                     "type": "integer"
                 },
@@ -9544,6 +9547,9 @@
                     "type": "integer"
                 },
                 "exception_count": {
+                    "type": "integer"
+                },
+                "image_input_tokens": {
                     "type": "integer"
                 },
                 "input_tokens": {
@@ -9635,6 +9641,9 @@
         "model.DashboardResponse": {
             "type": "object",
             "properties": {
+                "audio_input_tokens": {
+                    "type": "integer"
+                },
                 "cache_creation_tokens": {
                     "type": "integer"
                 },
@@ -9654,6 +9663,9 @@
                     }
                 },
                 "exception_count": {
+                    "type": "integer"
+                },
+                "image_input_tokens": {
                     "type": "integer"
                 },
                 "input_tokens": {
@@ -9988,6 +10000,9 @@
         "model.GroupDashboardResponse": {
             "type": "object",
             "properties": {
+                "audio_input_tokens": {
+                    "type": "integer"
+                },
                 "cache_creation_tokens": {
                     "type": "integer"
                 },
@@ -10007,6 +10022,9 @@
                     }
                 },
                 "exception_count": {
+                    "type": "integer"
+                },
+                "image_input_tokens": {
                     "type": "integer"
                 },
                 "input_tokens": {
@@ -10468,7 +10486,7 @@
                 "tool_calls": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/model.Tool"
+                        "$ref": "#/definitions/model.ToolCall"
                     }
                 }
             }
@@ -10649,6 +10667,12 @@
         "model.Price": {
             "type": "object",
             "properties": {
+                "audio_input_price": {
+                    "type": "number"
+                },
+                "audio_input_price_unit": {
+                    "type": "integer"
+                },
                 "cache_creation_price": {
                     "type": "number"
                 },
@@ -11066,6 +11090,9 @@
         "model.SummaryDataV2": {
             "type": "object",
             "properties": {
+                "audio_input_tokens": {
+                    "type": "integer"
+                },
                 "cache_creation_tokens": {
                     "type": "integer"
                 },
@@ -11076,6 +11103,9 @@
                     "type": "integer"
                 },
                 "exception_count": {
+                    "type": "integer"
+                },
+                "image_input_tokens": {
                     "type": "integer"
                 },
                 "input_tokens": {
@@ -11218,8 +11248,22 @@
                 "function": {
                     "$ref": "#/definitions/model.Function"
                 },
+                "type": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.ToolCall": {
+            "type": "object",
+            "properties": {
+                "function": {
+                    "$ref": "#/definitions/model.Function"
+                },
                 "id": {
                     "type": "string"
+                },
+                "index": {
+                    "type": "integer"
                 },
                 "type": {
                     "type": "string"
@@ -11229,6 +11273,9 @@
         "model.Usage": {
             "type": "object",
             "properties": {
+                "audio_input_tokens": {
+                    "type": "integer"
+                },
                 "cache_creation_tokens": {
                     "type": "integer"
                 },

@@ -80,6 +80,7 @@ func processFormValues(
 			}
 		}
 	}
+
 	return nil
 }
 
@@ -98,6 +99,7 @@ func processFormFiles(
 			return fmt.Errorf("copy file %s: %w", key, err)
 		}
 	}
+
 	return nil
 }
 
@@ -209,14 +211,17 @@ func handleSTTNonStream(
 				)
 			}
 		}
+
 		c.Writer.Header().Set("Content-Type", "application/json")
 	}
 
 	log := common.GetLogger(c)
 	c.Writer.Header().Set("Content-Length", strconv.Itoa(len(responseBody)))
+
 	if _, err := c.Writer.Write(responseBody); err != nil {
 		log.Warnf("write response body failed: %v", err)
 	}
+
 	return usage.ToModelUsage(), nil
 }
 
@@ -235,7 +240,7 @@ func handleSTTStream(
 
 	scanner.Buffer(*buf, cap(*buf))
 
-	return processSTTStreamChunks(scanner, c, meta)
+	return processSTTStreamChunks(scanner, c, meta), nil
 }
 
 // processSTTStreamChunks processes streaming chunks and returns final usage
@@ -243,8 +248,9 @@ func processSTTStreamChunks(
 	scanner *bufio.Scanner,
 	c *gin.Context,
 	meta *meta.Meta,
-) (model.Usage, adaptor.Error) {
+) model.Usage {
 	log := common.GetLogger(c)
+
 	var (
 		usage    *relaymodel.SttUsage
 		fullText strings.Builder
@@ -262,6 +268,7 @@ func processSTTStreamChunks(
 		}
 
 		var sseResponse relaymodel.SttSSEResponse
+
 		err := sonic.Unmarshal(data, &sseResponse)
 		if err != nil {
 			log.Error("error unmarshalling STT stream response: " + err.Error())
@@ -272,6 +279,7 @@ func processSTTStreamChunks(
 		if totalUsage != nil {
 			usage = totalUsage
 		}
+
 		BytesData(c, data)
 	}
 
@@ -285,7 +293,7 @@ func processSTTStreamChunks(
 		log.Error("error reading STT stream: " + err.Error())
 	}
 
-	return usage.ToModelUsage(), nil
+	return usage.ToModelUsage()
 }
 
 // processSSEResponse processes individual SSE response and returns usage if complete
@@ -323,14 +331,17 @@ func getTextFromResponse(sseResponse relaymodel.SttSSEResponse, fullText *string
 	if sseResponse.Text != "" {
 		return sseResponse.Text
 	}
+
 	text := fullText.String()
 	fullText.Reset()
+
 	return text
 }
 
 // calculateSTTUsage calculates usage for STT
 func calculateSTTUsage(text string, meta *meta.Meta) *relaymodel.SttUsage {
 	outputTokens := CountTokenText(text, meta.ActualModel)
+
 	return &relaymodel.SttUsage{
 		Type:         relaymodel.SttUsageTypeTokens,
 		Seconds:      int64(meta.RequestUsage.AudioInputTokens),
@@ -402,11 +413,13 @@ func getTextFromVerboseJSON(body []byte) (string, error) {
 	if err := sonic.Unmarshal(body, &whisperResponse); err != nil {
 		return "", fmt.Errorf("unmarshal verbose JSON: %w", err)
 	}
+
 	return whisperResponse.Text, nil
 }
 
 func getTextFromSRT(body []byte) (string, error) {
 	scanner := bufio.NewScanner(bytes.NewReader(body))
+
 	var (
 		builder  strings.Builder
 		textLine bool
@@ -416,6 +429,7 @@ func getTextFromSRT(body []byte) (string, error) {
 		line := scanner.Text()
 		if textLine {
 			builder.WriteString(line)
+
 			textLine = false
 		} else if strings.Contains(line, "-->") {
 			textLine = true
@@ -434,5 +448,6 @@ func getTextFromJSON(body []byte) (string, error) {
 	if err := sonic.Unmarshal(body, &whisperResponse); err != nil {
 		return "", fmt.Errorf("unmarshal JSON: %w", err)
 	}
+
 	return whisperResponse.Text, nil
 }

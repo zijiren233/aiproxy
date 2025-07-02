@@ -976,11 +976,15 @@ definitions:
     - ChannelTypeTextEmbeddingsInference
   model.ChartData:
     properties:
+      audio_input_tokens:
+        type: integer
       cache_creation_tokens:
         type: integer
       cached_tokens:
         type: integer
       exception_count:
+        type: integer
+      image_input_tokens:
         type: integer
       input_tokens:
         type: integer
@@ -1040,6 +1044,8 @@ definitions:
     type: object
   model.DashboardResponse:
     properties:
+      audio_input_tokens:
+        type: integer
       cache_creation_tokens:
         type: integer
       cached_tokens:
@@ -1053,6 +1059,8 @@ definitions:
           $ref: '#/definitions/model.ChartData'
         type: array
       exception_count:
+        type: integer
+      image_input_tokens:
         type: integer
       input_tokens:
         type: integer
@@ -1277,6 +1285,8 @@ definitions:
     type: object
   model.GroupDashboardResponse:
     properties:
+      audio_input_tokens:
+        type: integer
       cache_creation_tokens:
         type: integer
       cached_tokens:
@@ -1290,6 +1300,8 @@ definitions:
           $ref: '#/definitions/model.ChartData'
         type: array
       exception_count:
+        type: integer
+      image_input_tokens:
         type: integer
       input_tokens:
         type: integer
@@ -1599,7 +1611,7 @@ definitions:
         type: string
       tool_calls:
         items:
-          $ref: '#/definitions/model.Tool'
+          $ref: '#/definitions/model.ToolCall'
         type: array
     type: object
   model.ModelConfig:
@@ -1740,6 +1752,10 @@ definitions:
     type: object
   model.Price:
     properties:
+      audio_input_price:
+        type: number
+      audio_input_price_unit:
+        type: integer
       cache_creation_price:
         type: number
       cache_creation_price_unit:
@@ -2018,6 +2034,8 @@ definitions:
     type: object
   model.SummaryDataV2:
     properties:
+      audio_input_tokens:
+        type: integer
       cache_creation_tokens:
         type: integer
       cached_tokens:
@@ -2025,6 +2043,8 @@ definitions:
       channel_id:
         type: integer
       exception_count:
+        type: integer
+      image_input_tokens:
         type: integer
       input_tokens:
         type: integer
@@ -2118,13 +2138,24 @@ definitions:
     properties:
       function:
         $ref: '#/definitions/model.Function'
+      type:
+        type: string
+    type: object
+  model.ToolCall:
+    properties:
+      function:
+        $ref: '#/definitions/model.Function'
       id:
         type: string
+      index:
+        type: integer
       type:
         type: string
     type: object
   model.Usage:
     properties:
+      audio_input_tokens:
+        type: integer
       cache_creation_tokens:
         type: integer
       cached_tokens:
