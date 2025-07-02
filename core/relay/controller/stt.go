@@ -8,16 +8,16 @@ import (
 	"os"
 
 	"github.com/gin-gonic/gin"
-	"github.com/labring/aiproxy/core/common"
 	"github.com/labring/aiproxy/core/common/audio"
 	"github.com/labring/aiproxy/core/model"
+	"github.com/labring/aiproxy/core/relay/adaptor/openai"
 )
 
 func GetSTTRequestPrice(_ *gin.Context, mc model.ModelConfig) (model.Price, error) {
 	return mc.Price, nil
 }
 
-func GetSTTRequestUsage(c *gin.Context, _ model.ModelConfig) (model.Usage, error) {
+func GetSTTRequestUsage(c *gin.Context, mc model.ModelConfig) (model.Usage, error) {
 	audioFile, err := c.FormFile("file")
 	if err != nil {
 		return model.Usage{}, fmt.Errorf("failed to get audio file: %w", err)
@@ -29,11 +29,12 @@ func GetSTTRequestUsage(c *gin.Context, _ model.ModelConfig) (model.Usage, error
 	}
 
 	durationInt := int64(math.Ceil(duration))
-	log := common.GetLogger(c)
-	log.Data["duration"] = durationInt
 
 	return model.Usage{
-		InputTokens: model.ZeroNullInt64(durationInt),
+		InputTokens: model.ZeroNullInt64(
+			openai.CountTokenInput(c.PostForm("prompt"), mc.Model) + durationInt,
+		),
+		AudioInputTokens: model.ZeroNullInt64(durationInt),
 	}, nil
 }
 

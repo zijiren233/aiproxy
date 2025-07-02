@@ -78,6 +78,13 @@ func (d *SummaryData) buildUpdateData(tableName string) map[string]any {
 		)
 	}
 
+	if d.Usage.AudioInputTokens > 0 {
+		data["audio_input_tokens"] = gorm.Expr(
+			fmt.Sprintf("COALESCE(%s.audio_input_tokens, 0) + ?", tableName),
+			d.Usage.AudioInputTokens,
+		)
+	}
+
 	if d.Usage.OutputTokens > 0 {
 		data["output_tokens"] = gorm.Expr(
 			fmt.Sprintf("COALESCE(%s.output_tokens, 0) + ?", tableName),
@@ -244,7 +251,7 @@ func getChartData(
 	// Only include max metrics when we have specific channel and model
 	selectFields := "hour_timestamp as timestamp, sum(request_count) as request_count, sum(used_amount) as used_amount, " +
 		"sum(exception_count) as exception_count, sum(total_time_milliseconds) as total_time_milliseconds, sum(total_ttfb_milliseconds) as total_ttfb_milliseconds, " +
-		"sum(input_tokens) as input_tokens, sum(output_tokens) as output_tokens, " +
+		"sum(input_tokens) as input_tokens, sum(image_input_tokens) as image_input_tokens, sum(audio_input_tokens) as audio_input_tokens, sum(output_tokens) as output_tokens, " +
 		"sum(cached_tokens) as cached_tokens, sum(cache_creation_tokens) as cache_creation_tokens, " +
 		"sum(total_tokens) as total_tokens, sum(web_search_count) as web_search_count"
 
@@ -300,7 +307,7 @@ func getGroupChartData(
 	// Only include max metrics when we have specific channel and model
 	selectFields := "hour_timestamp as timestamp, sum(request_count) as request_count, sum(used_amount) as used_amount, " +
 		"sum(exception_count) as exception_count, sum(total_time_milliseconds) as total_time_milliseconds, sum(total_ttfb_milliseconds) as total_ttfb_milliseconds, " +
-		"sum(input_tokens) as input_tokens, sum(output_tokens) as output_tokens, " +
+		"sum(input_tokens) as input_tokens, sum(image_input_tokens) as image_input_tokens, sum(audio_input_tokens) as audio_input_tokens, sum(output_tokens) as output_tokens, " +
 		"sum(cached_tokens) as cached_tokens, sum(cache_creation_tokens) as cache_creation_tokens, " +
 		"sum(total_tokens) as total_tokens, sum(web_search_count) as web_search_count"
 
@@ -466,6 +473,8 @@ type ChartData struct {
 	TotalTTFBMilliseconds int64 `json:"total_ttfb_milliseconds,omitempty"`
 
 	InputTokens         int64 `json:"input_tokens,omitempty"`
+	ImageInputTokens    int64 `json:"image_input_tokens,omitempty"`
+	AudioInputTokens    int64 `json:"audio_input_tokens,omitempty"`
 	OutputTokens        int64 `json:"output_tokens,omitempty"`
 	CachedTokens        int64 `json:"cached_tokens,omitempty"`
 	CacheCreationTokens int64 `json:"cache_creation_tokens,omitempty"`
@@ -492,6 +501,8 @@ type DashboardResponse struct {
 
 	UsedAmount          float64 `json:"used_amount"`
 	InputTokens         int64   `json:"input_tokens,omitempty"`
+	ImageInputTokens    int64   `json:"image_input_tokens,omitempty"`
+	AudioInputTokens    int64   `json:"audio_input_tokens,omitempty"`
 	OutputTokens        int64   `json:"output_tokens,omitempty"`
 	TotalTokens         int64   `json:"total_tokens,omitempty"`
 	CachedTokens        int64   `json:"cached_tokens,omitempty"`
@@ -558,6 +569,8 @@ func aggregateDataToSpan(
 			InexactFloat64()
 		currentData.ExceptionCount += data.ExceptionCount
 		currentData.InputTokens += data.InputTokens
+		currentData.ImageInputTokens += data.ImageInputTokens
+		currentData.AudioInputTokens += data.AudioInputTokens
 		currentData.OutputTokens += data.OutputTokens
 		currentData.CachedTokens += data.CachedTokens
 		currentData.CacheCreationTokens += data.CacheCreationTokens
@@ -602,6 +615,8 @@ func sumDashboardResponse(chartData []*ChartData) DashboardResponse {
 			Add(decimal.NewFromFloat(data.UsedAmount)).
 			InexactFloat64()
 		dashboardResponse.InputTokens += data.InputTokens
+		dashboardResponse.ImageInputTokens += data.ImageInputTokens
+		dashboardResponse.AudioInputTokens += data.AudioInputTokens
 		dashboardResponse.OutputTokens += data.OutputTokens
 		dashboardResponse.TotalTokens += data.TotalTokens
 		dashboardResponse.CachedTokens += data.CachedTokens

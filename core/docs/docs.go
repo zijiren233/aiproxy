@@ -9546,6 +9546,9 @@ const docTemplate = `{
         "model.ChartData": {
             "type": "object",
             "properties": {
+                "audio_input_tokens": {
+                    "type": "integer"
+                },
                 "cache_creation_tokens": {
                     "type": "integer"
                 },
@@ -9553,6 +9556,9 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "exception_count": {
+                    "type": "integer"
+                },
+                "image_input_tokens": {
                     "type": "integer"
                 },
                 "input_tokens": {
@@ -9644,6 +9650,9 @@ const docTemplate = `{
         "model.DashboardResponse": {
             "type": "object",
             "properties": {
+                "audio_input_tokens": {
+                    "type": "integer"
+                },
                 "cache_creation_tokens": {
                     "type": "integer"
                 },
@@ -9663,6 +9672,9 @@ const docTemplate = `{
                     }
                 },
                 "exception_count": {
+                    "type": "integer"
+                },
+                "image_input_tokens": {
                     "type": "integer"
                 },
                 "input_tokens": {
@@ -9997,6 +10009,9 @@ const docTemplate = `{
         "model.GroupDashboardResponse": {
             "type": "object",
             "properties": {
+                "audio_input_tokens": {
+                    "type": "integer"
+                },
                 "cache_creation_tokens": {
                     "type": "integer"
                 },
@@ -10016,6 +10031,9 @@ const docTemplate = `{
                     }
                 },
                 "exception_count": {
+                    "type": "integer"
+                },
+                "image_input_tokens": {
                     "type": "integer"
                 },
                 "input_tokens": {
@@ -10477,7 +10495,7 @@ const docTemplate = `{
                 "tool_calls": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/model.Tool"
+                        "$ref": "#/definitions/model.ToolCall"
                     }
                 }
             }
@@ -10658,6 +10676,12 @@ const docTemplate = `{
         "model.Price": {
             "type": "object",
             "properties": {
+                "audio_input_price": {
+                    "type": "number"
+                },
+                "audio_input_price_unit": {
+                    "type": "integer"
+                },
                 "cache_creation_price": {
                     "type": "number"
                 },
@@ -11075,6 +11099,9 @@ const docTemplate = `{
         "model.SummaryDataV2": {
             "type": "object",
             "properties": {
+                "audio_input_tokens": {
+                    "type": "integer"
+                },
                 "cache_creation_tokens": {
                     "type": "integer"
                 },
@@ -11085,6 +11112,9 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "exception_count": {
+                    "type": "integer"
+                },
+                "image_input_tokens": {
                     "type": "integer"
                 },
                 "input_tokens": {
@@ -11227,8 +11257,22 @@ const docTemplate = `{
                 "function": {
                     "$ref": "#/definitions/model.Function"
                 },
+                "type": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.ToolCall": {
+            "type": "object",
+            "properties": {
+                "function": {
+                    "$ref": "#/definitions/model.Function"
+                },
                 "id": {
                     "type": "string"
+                },
+                "index": {
+                    "type": "integer"
                 },
                 "type": {
                     "type": "string"
@@ -11238,6 +11282,9 @@ const docTemplate = `{
         "model.Usage": {
             "type": "object",
             "properties": {
+                "audio_input_tokens": {
+                    "type": "integer"
+                },
                 "cache_creation_tokens": {
                     "type": "integer"
                 },

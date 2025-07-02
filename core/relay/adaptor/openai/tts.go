@@ -6,7 +6,6 @@ import (
 	"errors"
 	"io"
 	"net/http"
-	"slices"
 	"strconv"
 
 	"github.com/bytedance/sonic"
@@ -133,16 +132,12 @@ func ttsStreamHandler(
 
 	for scanner.Scan() {
 		data := scanner.Bytes()
-		if len(data) < DataPrefixLength { // ignore blank line or wrong format
+		if !IsValidSSEData(data) {
 			continue
 		}
 
-		if !slices.Equal(data[:DataPrefixLength], DataPrefixBytes) {
-			continue
-		}
-
-		data = bytes.TrimSpace(data[DataPrefixLength:])
-		if slices.Equal(data, DoneBytes) {
+		data = ExtractSSEData(data)
+		if IsSSEDone(data) {
 			break
 		}
 
@@ -168,6 +163,8 @@ func ttsStreamHandler(
 			}
 		}
 	}
+
+	Done(c)
 
 	if err := scanner.Err(); err != nil {
 		log.Error("error reading TTS stream: " + err.Error())

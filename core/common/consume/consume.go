@@ -155,6 +155,10 @@ func CalculateAmount(
 		inputTokens -= usage.ImageInputTokens
 	}
 
+	if modelPrice.AudioInputPrice > 0 {
+		inputTokens -= usage.AudioInputTokens
+	}
+
 	if modelPrice.CachedPrice > 0 {
 		inputTokens -= usage.CachedTokens
 	}
@@ -182,6 +186,10 @@ func CalculateAmount(
 		Mul(decimal.NewFromFloat(float64(modelPrice.ImageInputPrice))).
 		Div(decimal.NewFromInt(modelPrice.GetImageInputPriceUnit()))
 
+	audioInputAmount := decimal.NewFromInt(int64(usage.AudioInputTokens)).
+		Mul(decimal.NewFromFloat(float64(modelPrice.AudioInputPrice))).
+		Div(decimal.NewFromInt(modelPrice.GetAudioInputPriceUnit()))
+
 	cachedAmount := decimal.NewFromInt(int64(usage.CachedTokens)).
 		Mul(decimal.NewFromFloat(float64(modelPrice.CachedPrice))).
 		Div(decimal.NewFromInt(modelPrice.GetCachedPriceUnit()))
@@ -200,6 +208,7 @@ func CalculateAmount(
 
 	return inputAmount.
 		Add(imageInputAmount).
+		Add(audioInputAmount).
 		Add(cachedAmount).
 		Add(cacheCreationAmount).
 		Add(webSearchAmount).

@@ -355,6 +355,10 @@ func updateUsageMetrics(usage model.Usage, log *log.Entry) {
 		log.Data["t_image_input"] = usage.ImageInputTokens
 	}
 
+	if usage.AudioInputTokens > 0 {
+		log.Data["t_audio_input"] = usage.AudioInputTokens
+	}
+
 	if usage.OutputTokens > 0 {
 		log.Data["t_output"] = usage.OutputTokens
 	}

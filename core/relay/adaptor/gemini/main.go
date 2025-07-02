@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -801,16 +800,12 @@ func StreamHandler(
 
 	for scanner.Scan() {
 		data := scanner.Bytes()
-		if len(data) < openai.DataPrefixLength {
+		if !openai.IsValidSSEData(data) {
 			continue
 		}
 
-		if !slices.Equal(data[:openai.DataPrefixLength], openai.DataPrefixBytes) {
-			continue
-		}
-
-		data = bytes.TrimSpace(data[openai.DataPrefixLength:])
-		if slices.Equal(data, openai.DoneBytes) {
+		data = openai.ExtractSSEData(data)
+		if openai.IsSSEDone(data) {
 			break
 		}
 

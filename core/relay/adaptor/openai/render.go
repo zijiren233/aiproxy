@@ -1,10 +1,12 @@
 package openai
 
 import (
+	"bytes"
 	"encoding/base64"
 	"errors"
 	"fmt"
 	"net/http"
+	"slices"
 
 	"github.com/bytedance/sonic"
 	"github.com/gin-gonic/gin"
@@ -26,6 +28,22 @@ var (
 	nnBytes         = conv.StringToBytes(nn)
 	dataSpaceBytes  = conv.StringToBytes(dataSpace)
 )
+
+// IsValidSSEData checks if data is valid SSE format
+func IsValidSSEData(data []byte) bool {
+	return len(data) >= DataPrefixLength &&
+		slices.Equal(data[:DataPrefixLength], DataPrefixBytes)
+}
+
+// ExtractSSEData extracts data from SSE format
+func ExtractSSEData(data []byte) []byte {
+	return bytes.TrimSpace(data[DataPrefixLength:])
+}
+
+// IsSSEDone checks if SSE data indicates completion
+func IsSSEDone(data []byte) bool {
+	return slices.Equal(data, DoneBytes)
+}
 
 type SSE struct {
 	Data []byte
@@ -58,6 +76,10 @@ func (r *SSE) WriteContentType(w http.ResponseWriter) {
 }
 
 func StringData(c *gin.Context, str string) {
+	BytesData(c, conv.StringToBytes(str))
+}
+
+func BytesData(c *gin.Context, data []byte) {
 	if len(c.Errors) > 0 {
 		return
 	}
@@ -66,7 +88,7 @@ func StringData(c *gin.Context, str string) {
 		return
 	}
 
-	c.Render(-1, &SSE{Data: conv.StringToBytes(str)})
+	c.Render(-1, &SSE{Data: data})
 	c.Writer.Flush()
 }
 

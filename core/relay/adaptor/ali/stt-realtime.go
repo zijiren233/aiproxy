@@ -184,7 +184,11 @@ func STTDoResponse(
 
 	output := strings.Builder{}
 
-	usage = model.Usage{}
+	usage = model.Usage{
+		InputTokens:      meta.RequestUsage.InputTokens,
+		AudioInputTokens: meta.RequestUsage.AudioInputTokens,
+		TotalTokens:      meta.RequestUsage.TotalTokens,
+	}
 
 	for {
 		messageType, data, err := conn.ReadMessage()
@@ -272,15 +276,24 @@ func STTDoResponse(
 
 			continue
 		case "task-finished":
-			usage.InputTokens = model.ZeroNullInt64(msg.Payload.Usage.Characters)
-			usage.TotalTokens = model.ZeroNullInt64(msg.Payload.Usage.Characters)
-			c.JSON(http.StatusOK, gin.H{
-				"text": output.String(),
-				"usage": relaymodel.ChatUsage{
-					PromptTokens: int64(usage.InputTokens),
-					TotalTokens:  int64(usage.TotalTokens),
+			sttUsage := relaymodel.SttUsage{
+				Type:         relaymodel.SttUsageTypeTokens,
+				Seconds:      int64(meta.RequestUsage.AudioInputTokens),
+				InputTokens:  int64(meta.RequestUsage.AudioInputTokens),
+				OutputTokens: msg.Payload.Usage.Characters,
+				InputTokenDetails: &relaymodel.SttUsageInputTokenDetails{
+					AudioTokens: int64(meta.RequestUsage.AudioInputTokens),
 				},
+				TotalTokens: int64(
+					meta.RequestUsage.AudioInputTokens,
+				) + msg.Payload.Usage.Characters,
+			}
+			c.JSON(http.StatusOK, gin.H{
+				"text":  output.String(),
+				"usage": sttUsage,
 			})
+
+			usage = sttUsage.ToModelUsage()
 
 			return usage, nil
 		case "task-failed":
