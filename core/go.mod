@@ -18,8 +18,8 @@ require (
 	github.com/jinzhu/copier v0.4.0
 	github.com/joho/godotenv v1.5.1
 	github.com/json-iterator/go v1.1.12
-	github.com/labring/aiproxy/mcp-servers v0.0.0-20250702073615-7c212a257584
-	github.com/labring/aiproxy/openapi-mcp v0.0.0-20250702073615-7c212a257584
+	github.com/labring/aiproxy/mcp-servers v0.0.0-20250702081524-86eafe33e13b
+	github.com/labring/aiproxy/openapi-mcp v0.0.0-20250702081524-86eafe33e13b
 	github.com/mark3labs/mcp-go v0.32.0
 	github.com/maruel/natural v1.1.1
 	github.com/mattn/go-isatty v0.0.20
@@ -38,7 +38,7 @@ require (
 	github.com/swaggo/swag v1.16.4
 	golang.org/x/image v0.28.0
 	golang.org/x/sync v0.15.0
-	google.golang.org/api v0.239.0
+	google.golang.org/api v0.240.0
 	gorm.io/driver/mysql v1.6.0
 	gorm.io/driver/postgres v1.6.0
 	gorm.io/gorm v1.30.0

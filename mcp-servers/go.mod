@@ -11,8 +11,8 @@ require (
 	github.com/PuerkitoBio/goquery v1.10.3
 	github.com/bytedance/sonic v1.13.3
 	github.com/go-shiori/go-readability v0.0.0-20250217085726-9f5bf5ca7612
-	github.com/labring/aiproxy/core v0.0.0-20250702073615-7c212a257584
-	github.com/labring/aiproxy/openapi-mcp v0.0.0-20250702073615-7c212a257584
+	github.com/labring/aiproxy/core v0.0.0-20250702081524-86eafe33e13b
+	github.com/labring/aiproxy/openapi-mcp v0.0.0-20250702081524-86eafe33e13b
 	github.com/mark3labs/mcp-go v0.32.0
 	github.com/temoto/robotstxt v1.1.2
 	golang.org/x/text v0.26.0
