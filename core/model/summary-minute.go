@@ -502,6 +502,8 @@ func GetGroupDashboardDataMinute(
 type SummaryDataV2 struct {
 	Timestamp  int64   `json:"timestamp,omitempty"`
 	ChannelID  int     `json:"channel_id,omitempty"`
+	GroupID    string  `json:"group_id,omitempty"`
+	TokenName  string  `json:"token_name,omitempty"`
 	Model      string  `json:"model"`
 	UsedAmount float64 `json:"used_amount"`
 
@@ -617,7 +619,7 @@ func GetGroupTimeSeriesModelDataMinute(
 		query = query.Where("minute_timestamp <= ?", end.Unix())
 	}
 
-	const selectFields = "minute_timestamp as timestamp, model, " +
+	const selectFields = "minute_timestamp as timestamp, group_id, token_name, model, " +
 		"sum(used_amount) as used_amount, " +
 		"sum(request_count) as request_count, sum(exception_count) as exception_count, sum(status4xx_count) as status4xx_count, sum(status5xx_count) as status5xx_count, sum(status400_count) as status400_count, sum(status429_count) as status429_count, sum(status500_count) as status500_count, " +
 		"sum(total_time_milliseconds) as total_time_milliseconds, sum(total_ttfb_milliseconds) as total_ttfb_milliseconds, " +
@@ -630,7 +632,7 @@ func GetGroupTimeSeriesModelDataMinute(
 
 	err := query.
 		Select(selectFields).
-		Group("timestamp, model").
+		Group("timestamp, group_id, token_name, model").
 		Order("timestamp ASC").
 		Scan(&rawData).Error
 	if err != nil {
@@ -643,7 +645,7 @@ func GetGroupTimeSeriesModelDataMinute(
 	}
 
 	if len(rawData) > 0 {
-		rawData = aggregatToSpan(rawData, timeSpan, timezone)
+		rawData = aggregatToSpanGroup(rawData, timeSpan, timezone)
 	}
 
 	return convertToTimeModelData(rawData), nil
@@ -660,6 +662,7 @@ func aggregatToSpan(
 
 	type AggKey struct {
 		Timestamp int64
+		ChannelID int
 		Model     string
 	}
 
@@ -669,7 +672,8 @@ func aggregatToSpan(
 		t := time.Unix(data.Timestamp, 0).In(timezone)
 
 		key := AggKey{
-			Model: data.Model,
+			ChannelID: data.ChannelID,
+			Model:     data.Model,
 		}
 
 		switch timeSpan {
@@ -703,6 +707,98 @@ func aggregatToSpan(
 			currentData = SummaryDataV2{
 				Timestamp: key.Timestamp,
 				ChannelID: data.ChannelID,
+				Model:     data.Model,
+			}
+		}
+
+		currentData.Count.Add(data.Count)
+		currentData.Usage.Add(data.Usage)
+
+		currentData.UsedAmount = decimal.
+			NewFromFloat(currentData.UsedAmount).
+			Add(decimal.NewFromFloat(data.UsedAmount)).
+			InexactFloat64()
+		currentData.TotalTimeMilliseconds += data.TotalTimeMilliseconds
+		currentData.TotalTTFBMilliseconds += data.TotalTTFBMilliseconds
+
+		if data.MaxRPM > currentData.MaxRPM {
+			currentData.MaxRPM = data.MaxRPM
+		}
+
+		if data.MaxTPM > currentData.MaxTPM {
+			currentData.MaxTPM = data.MaxTPM
+		}
+
+		dataMap[key] = currentData
+	}
+
+	result := make([]SummaryDataV2, 0, len(dataMap))
+	for _, data := range dataMap {
+		result = append(result, data)
+	}
+
+	return result
+}
+
+func aggregatToSpanGroup(
+	minuteData []SummaryDataV2,
+	timeSpan TimeSpanType,
+	timezone *time.Location,
+) []SummaryDataV2 {
+	if timezone == nil {
+		timezone = time.Local
+	}
+
+	type AggKey struct {
+		Timestamp int64
+		GroupID   string
+		TokenName string
+		Model     string
+	}
+
+	dataMap := make(map[AggKey]SummaryDataV2)
+
+	for _, data := range minuteData {
+		t := time.Unix(data.Timestamp, 0).In(timezone)
+
+		key := AggKey{
+			GroupID:   data.GroupID,
+			TokenName: data.TokenName,
+			Model:     data.Model,
+		}
+
+		switch timeSpan {
+		case TimeSpanMonth:
+			startOfMonth := time.Date(t.Year(), t.Month(), 1, 0, 0, 0, 0, timezone)
+			key.Timestamp = startOfMonth.Unix()
+		case TimeSpanDay:
+			startOfDay := time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, timezone)
+			key.Timestamp = startOfDay.Unix()
+		case TimeSpanHour:
+			startOfHour := time.Date(t.Year(), t.Month(), t.Day(), t.Hour(), 0, 0, 0, timezone)
+			key.Timestamp = startOfHour.Unix()
+		case TimeSpanMinute:
+			fallthrough
+		default:
+			startOfMinute := time.Date(
+				t.Year(),
+				t.Month(),
+				t.Day(),
+				t.Hour(),
+				t.Minute(),
+				0,
+				0,
+				timezone,
+			)
+			key.Timestamp = startOfMinute.Unix()
+		}
+
+		currentData, exists := dataMap[key]
+		if !exists {
+			currentData = SummaryDataV2{
+				Timestamp: key.Timestamp,
+				GroupID:   data.GroupID,
+				TokenName: data.TokenName,
 				Model:     data.Model,
 			}
 		}

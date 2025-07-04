@@ -11176,6 +11176,9 @@ const docTemplate = `{
                 "exception_count": {
                     "type": "integer"
                 },
+                "group_id": {
+                    "type": "string"
+                },
                 "image_input_tokens": {
                     "type": "integer"
                 },
@@ -11217,6 +11220,9 @@ const docTemplate = `{
                 },
                 "timestamp": {
                     "type": "integer"
+                },
+                "token_name": {
+                    "type": "string"
                 },
                 "total_time_milliseconds": {
                     "type": "integer"

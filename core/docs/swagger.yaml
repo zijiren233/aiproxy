@@ -1092,15 +1092,15 @@ definitions:
         type: integer
       rpm:
         type: integer
-      status_4xx_count:
-        type: integer
-      status_500_count:
-        type: integer
       status_5xx_count:
         type: integer
       status_400_count:
         type: integer
       status_429_count:
+        type: integer
+      status_4xx_count:
+        type: integer
+      status_500_count:
         type: integer
       total_count:
         description: use Count.RequestCount instead
@@ -1348,6 +1348,8 @@ definitions:
         type: integer
       rpm:
         type: integer
+      status_5xx_count:
+        type: integer
       status_400_count:
         type: integer
       status_429_count:
@@ -1355,8 +1357,6 @@ definitions:
       status_4xx_count:
         type: integer
       status_500_count:
-        type: integer
-      status_5xx_count:
         type: integer
       token_names:
         items:
@@ -2086,6 +2086,8 @@ definitions:
         type: integer
       exception_count:
         type: integer
+      group_id:
+        type: string
       image_input_tokens:
         type: integer
       input_tokens:
@@ -2102,8 +2104,6 @@ definitions:
         type: integer
       request_count:
         type: integer
-      status_5xx_count:
-        type: integer
       status_400_count:
         type: integer
       status_429_count:
@@ -2112,8 +2112,12 @@ definitions:
         type: integer
       status_500_count:
         type: integer
+      status_5xx_count:
+        type: integer
       timestamp:
         type: integer
+      token_name:
+        type: string
       total_time_milliseconds:
         type: integer
       total_tokens:
