@@ -159,8 +159,7 @@ func getChartDataMinute(
 
 	query = query.
 		Select(selectFields).
-		Group("timestamp").
-		Order("timestamp ASC")
+		Group("timestamp")
 
 	var chartData []ChartData
 
@@ -174,9 +173,13 @@ func getChartDataMinute(
 		chartData[i].MaxTPM = int64(data.TotalTokens)
 	}
 
-	if len(chartData) > 0 {
-		return aggregateDataToSpan(chartData, timeSpan, timezone), nil
+	if len(chartData) > 0 && timeSpan != TimeSpanMinute {
+		chartData = aggregateDataToSpan(chartData, timeSpan, timezone)
 	}
+
+	slices.SortFunc(chartData, func(a, b ChartData) int {
+		return cmp.Compare(a.Timestamp, b.Timestamp)
+	})
 
 	return chartData, nil
 }
@@ -220,8 +223,7 @@ func getGroupChartDataMinute(
 
 	query = query.
 		Select(selectFields).
-		Group("timestamp").
-		Order("timestamp ASC")
+		Group("timestamp")
 
 	var chartData []ChartData
 
@@ -235,10 +237,13 @@ func getGroupChartDataMinute(
 		chartData[i].MaxTPM = int64(data.TotalTokens)
 	}
 
-	// If timeSpan is day, aggregate hour data into day data
-	if (timeSpan == TimeSpanDay || timeSpan == TimeSpanMonth) && len(chartData) > 0 {
-		return aggregateDataToSpan(chartData, timeSpan, timezone), nil
+	if len(chartData) > 0 && timeSpan != TimeSpanMinute {
+		chartData = aggregateDataToSpan(chartData, timeSpan, timezone)
 	}
+
+	slices.SortFunc(chartData, func(a, b ChartData) int {
+		return cmp.Compare(a.Timestamp, b.Timestamp)
+	})
 
 	return chartData, nil
 }
@@ -568,7 +573,6 @@ func GetTimeSeriesModelDataMinute(
 	err := query.
 		Select(selectFields).
 		Group("timestamp, channel_id, model").
-		Order("timestamp ASC").
 		Scan(&rawData).Error
 	if err != nil {
 		return nil, err
@@ -579,11 +583,17 @@ func GetTimeSeriesModelDataMinute(
 		rawData[i].MaxTPM = int64(data.TotalTokens)
 	}
 
-	if len(rawData) > 0 {
+	if len(rawData) > 0 && timeSpan != TimeSpanMinute {
 		rawData = aggregatToSpan(rawData, timeSpan, timezone)
 	}
 
-	return convertToTimeModelData(rawData), nil
+	result := convertToTimeModelData(rawData)
+
+	slices.SortFunc(result, func(a, b TimeSummaryDataV2) int {
+		return cmp.Compare(a.Timestamp, b.Timestamp)
+	})
+
+	return result, nil
 }
 
 func GetGroupTimeSeriesModelDataMinute(
@@ -633,7 +643,6 @@ func GetGroupTimeSeriesModelDataMinute(
 	err := query.
 		Select(selectFields).
 		Group("timestamp, group_id, token_name, model").
-		Order("timestamp ASC").
 		Scan(&rawData).Error
 	if err != nil {
 		return nil, err
@@ -644,11 +653,17 @@ func GetGroupTimeSeriesModelDataMinute(
 		rawData[i].MaxTPM = int64(data.TotalTokens)
 	}
 
-	if len(rawData) > 0 {
+	if len(rawData) > 0 && timeSpan != TimeSpanMinute {
 		rawData = aggregatToSpanGroup(rawData, timeSpan, timezone)
 	}
 
-	return convertToTimeModelData(rawData), nil
+	result := convertToTimeModelData(rawData)
+
+	slices.SortFunc(result, func(a, b TimeSummaryDataV2) int {
+		return cmp.Compare(a.Timestamp, b.Timestamp)
+	})
+
+	return result, nil
 }
 
 func aggregatToSpan(
@@ -862,10 +877,6 @@ func convertToTimeModelData(rawData []SummaryDataV2) []TimeSummaryDataV2 {
 			Summary:   models,
 		})
 	}
-
-	slices.SortFunc(result, func(a, b TimeSummaryDataV2) int {
-		return cmp.Compare(a.Timestamp, b.Timestamp)
-	})
 
 	return result
 }

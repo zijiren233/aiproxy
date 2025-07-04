@@ -346,8 +346,7 @@ func getChartData(
 
 	query = query.
 		Select(selectFields).
-		Group("timestamp").
-		Order("timestamp ASC")
+		Group("timestamp")
 
 	var chartData []ChartData
 
@@ -356,12 +355,13 @@ func getChartData(
 		return nil, err
 	}
 
-	if len(chartData) > 0 {
-		// If timeSpan is day, aggregate hour data into day data
-		if timeSpan == TimeSpanDay || timeSpan == TimeSpanMonth {
-			return aggregateDataToSpan(chartData, timeSpan, timezone), nil
-		}
+	if len(chartData) > 0 && timeSpan != TimeSpanHour {
+		chartData = aggregateDataToSpan(chartData, timeSpan, timezone)
 	}
+
+	slices.SortFunc(chartData, func(a, b ChartData) int {
+		return cmp.Compare(a.Timestamp, b.Timestamp)
+	})
 
 	return chartData, nil
 }
@@ -404,8 +404,7 @@ func getGroupChartData(
 
 	query = query.
 		Select(selectFields).
-		Group("timestamp").
-		Order("timestamp ASC")
+		Group("timestamp")
 
 	var chartData []ChartData
 
@@ -414,11 +413,13 @@ func getGroupChartData(
 		return nil, err
 	}
 
-	if len(chartData) > 0 {
-		if timeSpan == TimeSpanDay || timeSpan == TimeSpanMonth {
-			return aggregateDataToSpan(chartData, timeSpan, timezone), nil
-		}
+	if len(chartData) > 0 && timeSpan != TimeSpanHour {
+		chartData = aggregateDataToSpan(chartData, timeSpan, timezone)
 	}
+
+	slices.SortFunc(chartData, func(a, b ChartData) int {
+		return cmp.Compare(a.Timestamp, b.Timestamp)
+	})
 
 	return chartData, nil
 }
@@ -677,10 +678,6 @@ func aggregateDataToSpan(
 	for _, data := range dataMap {
 		result = append(result, data)
 	}
-
-	slices.SortFunc(result, func(a, b ChartData) int {
-		return cmp.Compare(a.Timestamp, b.Timestamp)
-	})
 
 	return result
 }
