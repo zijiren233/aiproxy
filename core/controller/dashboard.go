@@ -21,12 +21,12 @@ import (
 
 func getDashboardTime(
 	t, timespan string,
-	startTimestamp, endTimestamp int64,
+	startTime, endTime time.Time,
 	timezoneLocation *time.Location,
 ) (time.Time, time.Time, model.TimeSpanType) {
 	end := time.Now()
-	if endTimestamp != 0 {
-		end = time.Unix(endTimestamp, 0)
+	if !endTime.IsZero() {
+		end = endTime
 	}
 
 	if timezoneLocation == nil {
@@ -59,8 +59,8 @@ func getDashboardTime(
 		timeSpan = model.TimeSpanHour
 	}
 
-	if startTimestamp != 0 {
-		start = time.Unix(startTimestamp, 0)
+	if !startTime.IsZero() {
+		start = startTime
 	}
 
 	switch model.TimeSpanType(timespan) {
@@ -185,15 +185,14 @@ func fillGaps(
 //	@Success		200				{object}	middleware.APIResponse{data=model.DashboardResponse}
 //	@Router			/api/dashboard/ [get]
 func GetDashboard(c *gin.Context) {
-	startTimestamp, _ := strconv.ParseInt(c.Query("start_timestamp"), 10, 64)
-	endTimestamp, _ := strconv.ParseInt(c.Query("end_timestamp"), 10, 64)
+	startTime, endTime := utils.ParseTimeRange(c, -1)
 	timezoneLocation, _ := time.LoadLocation(c.DefaultQuery("timezone", "Local"))
 	timespan := c.Query("timespan")
 	start, end, timeSpan := getDashboardTime(
 		c.Query("type"),
 		timespan,
-		startTimestamp,
-		endTimestamp,
+		startTime,
+		endTime,
 		timezoneLocation,
 	)
 	modelName := c.Query("model")
@@ -250,15 +249,14 @@ func GetGroupDashboard(c *gin.Context) {
 		return
 	}
 
-	startTimestamp, _ := strconv.ParseInt(c.Query("start_timestamp"), 10, 64)
-	endTimestamp, _ := strconv.ParseInt(c.Query("end_timestamp"), 10, 64)
+	startTime, endTime := utils.ParseTimeRange(c, -1)
 	timezoneLocation, _ := time.LoadLocation(c.DefaultQuery("timezone", "Local"))
 	timespan := c.Query("timespan")
 	start, end, timeSpan := getDashboardTime(
 		c.Query("type"),
 		timespan,
-		startTimestamp,
-		endTimestamp,
+		startTime,
+		endTime,
 		timezoneLocation,
 	)
 	tokenName := c.Query("token_name")

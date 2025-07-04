@@ -338,7 +338,7 @@ func getChartData(
 	}
 
 	// Only include max metrics when we have specific channel and model
-	selectFields := "hour_timestamp as timestamp, sum(used_amount) as used_amount, " +
+	const selectFields = "hour_timestamp as timestamp, sum(used_amount) as used_amount, " +
 		"sum(request_count) as request_count, sum(exception_count) as exception_count, sum(status4xx_count) as status4xx_count, sum(status5xx_count) as status5xx_count, sum(status400_count) as status400_count, sum(status429_count) as status429_count, sum(status500_count) as status500_count, " +
 		"sum(total_time_milliseconds) as total_time_milliseconds, sum(total_ttfb_milliseconds) as total_ttfb_milliseconds, " +
 		"sum(input_tokens) as input_tokens, sum(image_input_tokens) as image_input_tokens, sum(audio_input_tokens) as audio_input_tokens, sum(output_tokens) as output_tokens, " +
@@ -395,7 +395,7 @@ func getGroupChartData(
 	}
 
 	// Only include max metrics when we have specific channel and model
-	selectFields := "hour_timestamp as timestamp, sum(used_amount) as used_amount, " +
+	const selectFields = "hour_timestamp as timestamp, sum(used_amount) as used_amount, " +
 		"sum(request_count) as request_count, sum(exception_count) as exception_count, sum(status4xx_count) as status4xx_count, sum(status5xx_count) as status5xx_count, sum(status400_count) as status400_count, sum(status429_count) as status429_count, sum(status500_count) as status500_count, " +
 		"sum(total_time_milliseconds) as total_time_milliseconds, sum(total_ttfb_milliseconds) as total_ttfb_milliseconds, " +
 		"sum(input_tokens) as input_tokens, sum(image_input_tokens) as image_input_tokens, sum(audio_input_tokens) as audio_input_tokens, sum(output_tokens) as output_tokens, " +
