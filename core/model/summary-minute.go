@@ -163,7 +163,7 @@ func getChartDataMinute(
 
 	var chartData []ChartData
 
-	err := query.Scan(&chartData).Error
+	err := query.Find(&chartData).Error
 	if err != nil {
 		return nil, err
 	}
@@ -227,7 +227,7 @@ func getGroupChartDataMinute(
 
 	var chartData []ChartData
 
-	err := query.Scan(&chartData).Error
+	err := query.Find(&chartData).Error
 	if err != nil {
 		return nil, err
 	}
@@ -295,7 +295,7 @@ func getLogGroupByValuesMinute[T cmp.Ordered](
 			field + " as value, SUM(request_count) as request_count, SUM(used_amount) as used_amount",
 		).
 		Group(field).
-		Scan(&results).Error
+		Find(&results).Error
 	if err != nil {
 		return nil, err
 	}
@@ -356,7 +356,7 @@ func getGroupLogGroupByValuesMinute[T cmp.Ordered](
 			field + " as value, SUM(request_count) as request_count, SUM(used_amount) as used_amount",
 		).
 		Group(field).
-		Scan(&results).Error
+		Find(&results).Error
 	if err != nil {
 		return nil, err
 	}
@@ -573,7 +573,7 @@ func GetTimeSeriesModelDataMinute(
 	err := query.
 		Select(selectFields).
 		Group("timestamp, channel_id, model").
-		Scan(&rawData).Error
+		Find(&rawData).Error
 	if err != nil {
 		return nil, err
 	}
@@ -643,7 +643,7 @@ func GetGroupTimeSeriesModelDataMinute(
 	err := query.
 		Select(selectFields).
 		Group("timestamp, group_id, token_name, model").
-		Scan(&rawData).Error
+		Find(&rawData).Error
 	if err != nil {
 		return nil, err
 	}

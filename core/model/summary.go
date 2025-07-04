@@ -350,7 +350,7 @@ func getChartData(
 
 	var chartData []ChartData
 
-	err := query.Scan(&chartData).Error
+	err := query.Find(&chartData).Error
 	if err != nil {
 		return nil, err
 	}
@@ -408,7 +408,7 @@ func getGroupChartData(
 
 	var chartData []ChartData
 
-	err := query.Scan(&chartData).Error
+	err := query.Find(&chartData).Error
 	if err != nil {
 		return nil, err
 	}
@@ -471,7 +471,7 @@ func getLogGroupByValues[T cmp.Ordered](
 			field + " as value, SUM(request_count) as request_count, SUM(used_amount) as used_amount",
 		).
 		Group(field).
-		Scan(&results).Error
+		Find(&results).Error
 	if err != nil {
 		return nil, err
 	}
@@ -532,7 +532,7 @@ func getGroupLogGroupByValues[T cmp.Ordered](
 			field + " as value, SUM(request_count) as request_count, SUM(used_amount) as used_amount",
 		).
 		Group(field).
-		Scan(&results).Error
+		Find(&results).Error
 	if err != nil {
 		return nil, err
 	}
