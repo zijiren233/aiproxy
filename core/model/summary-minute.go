@@ -236,7 +236,7 @@ func getGroupChartDataMinute(
 	}
 
 	// If timeSpan is day, aggregate hour data into day data
-	if timeSpan == TimeSpanDay && len(chartData) > 0 {
+	if (timeSpan == TimeSpanDay || timeSpan == TimeSpanMonth) && len(chartData) > 0 {
 		return aggregateDataToSpan(chartData, timeSpan, timezone), nil
 	}
 
@@ -673,6 +673,9 @@ func aggregatToSpan(
 		}
 
 		switch timeSpan {
+		case TimeSpanMonth:
+			startOfMonth := time.Date(t.Year(), t.Month(), 1, 0, 0, 0, 0, timezone)
+			key.Timestamp = startOfMonth.Unix()
 		case TimeSpanDay:
 			startOfDay := time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, timezone)
 			key.Timestamp = startOfDay.Unix()
@@ -695,15 +698,15 @@ func aggregatToSpan(
 			key.Timestamp = startOfMinute.Unix()
 		}
 
-		if _, exists := dataMap[key]; !exists {
-			dataMap[key] = SummaryDataV2{
+		currentData, exists := dataMap[key]
+		if !exists {
+			currentData = SummaryDataV2{
 				Timestamp: key.Timestamp,
 				ChannelID: data.ChannelID,
 				Model:     data.Model,
 			}
 		}
 
-		currentData := dataMap[key]
 		currentData.Count.Add(data.Count)
 		currentData.Usage.Add(data.Usage)
 

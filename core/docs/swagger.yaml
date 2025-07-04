@@ -1092,13 +1092,13 @@ definitions:
         type: integer
       rpm:
         type: integer
-      status_400_count:
-        type: integer
       status_4xx_count:
         type: integer
       status_500_count:
         type: integer
       status_5xx_count:
+        type: integer
+      status_400_count:
         type: integer
       status_429_count:
         type: integer
@@ -1348,8 +1348,6 @@ definitions:
         type: integer
       rpm:
         type: integer
-      status_5xx_count:
-        type: integer
       status_400_count:
         type: integer
       status_429_count:
@@ -1357,6 +1355,8 @@ definitions:
       status_4xx_count:
         type: integer
       status_500_count:
+        type: integer
+      status_5xx_count:
         type: integer
       token_names:
         items:
@@ -2102,13 +2102,13 @@ definitions:
         type: integer
       request_count:
         type: integer
-      status_400_count:
-        type: integer
-      status_4xx_count:
-        type: integer
       status_5xx_count:
         type: integer
+      status_400_count:
+        type: integer
       status_429_count:
+        type: integer
+      status_4xx_count:
         type: integer
       status_500_count:
         type: integer

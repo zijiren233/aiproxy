@@ -358,7 +358,7 @@ func getChartData(
 	}
 
 	// If timeSpan is day, aggregate hour data into day data
-	if timeSpan == TimeSpanDay && len(chartData) > 0 {
+	if (timeSpan == TimeSpanDay || timeSpan == TimeSpanMonth) && len(chartData) > 0 {
 		return aggregateDataToSpan(chartData, timeSpan, timezone), nil
 	}
 
@@ -415,7 +415,7 @@ func getGroupChartData(
 	}
 
 	// If timeSpan is day, aggregate hour data into day data
-	if timeSpan == TimeSpanDay && len(chartData) > 0 {
+	if (timeSpan == TimeSpanDay || timeSpan == TimeSpanMonth) && len(chartData) > 0 {
 		return aggregateDataToSpan(chartData, timeSpan, timezone), nil
 	}
 
@@ -599,8 +599,9 @@ type TimeSpanType string
 
 const (
 	TimeSpanMinute TimeSpanType = "minute"
-	TimeSpanDay    TimeSpanType = "day"
 	TimeSpanHour   TimeSpanType = "hour"
+	TimeSpanDay    TimeSpanType = "day"
+	TimeSpanMonth  TimeSpanType = "month"
 )
 
 func aggregateDataToSpan(
@@ -620,6 +621,9 @@ func aggregateDataToSpan(
 		// Get the start of the day in the specified timezone
 		var timestamp int64
 		switch timeSpan {
+		case TimeSpanMonth:
+			startOfMonth := time.Date(t.Year(), t.Month(), 1, 0, 0, 0, 0, timezone)
+			timestamp = startOfMonth.Unix()
 		case TimeSpanDay:
 			startOfDay := time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, timezone)
 			timestamp = startOfDay.Unix()
@@ -627,16 +631,26 @@ func aggregateDataToSpan(
 			startOfHour := time.Date(t.Year(), t.Month(), t.Day(), t.Hour(), 0, 0, 0, timezone)
 			timestamp = startOfHour.Unix()
 		case TimeSpanMinute:
-			timestamp = t.Unix()
+			startOfHour := time.Date(
+				t.Year(),
+				t.Month(),
+				t.Day(),
+				t.Hour(),
+				t.Minute(),
+				0,
+				0,
+				timezone,
+			)
+			timestamp = startOfHour.Unix()
 		}
 
-		if _, exists := dataMap[timestamp]; !exists {
-			dataMap[timestamp] = ChartData{
+		currentData, exists := dataMap[timestamp]
+		if !exists {
+			currentData = ChartData{
 				Timestamp: timestamp,
 			}
 		}
 
-		currentData := dataMap[timestamp]
 		currentData.Count.Add(data.Count)
 		currentData.Usage.Add(data.Usage)
 

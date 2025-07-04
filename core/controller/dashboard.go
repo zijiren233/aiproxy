@@ -64,7 +64,7 @@ func getDashboardTime(
 	}
 
 	switch model.TimeSpanType(timespan) {
-	case model.TimeSpanDay, model.TimeSpanHour:
+	case model.TimeSpanDay, model.TimeSpanHour, model.TimeSpanMonth:
 		timeSpan = model.TimeSpanType(timespan)
 	}
 
@@ -76,7 +76,7 @@ func fillGaps(
 	start, end time.Time,
 	t model.TimeSpanType,
 ) []model.ChartData {
-	if len(data) == 0 {
+	if len(data) == 0 || t == model.TimeSpanMonth {
 		return data
 	}
 
@@ -84,8 +84,12 @@ func fillGaps(
 	switch t {
 	case model.TimeSpanDay:
 		timeSpan = time.Hour * 24
-	default:
+	case model.TimeSpanHour:
 		timeSpan = time.Hour
+	case model.TimeSpanMinute:
+		timeSpan = time.Minute
+	default:
+		return data
 	}
 
 	// Handle first point
