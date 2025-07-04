@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"errors"
 	"fmt"
+	"net/http"
 	"slices"
 	"time"
 
@@ -26,27 +27,115 @@ type SummaryUnique struct {
 	HourTimestamp int64  `gorm:"not null;uniqueIndex:idx_summary_unique,priority:3,sort:desc"`
 }
 
+type Count struct {
+	RequestCount   int64         `json:"request_count"`
+	ExceptionCount ZeroNullInt64 `json:"exception_count"`
+	Status4xxCount ZeroNullInt64 `json:"status_4xx_count"`
+	Status5xxCount ZeroNullInt64 `json:"status_5xx_count"`
+	Status400Count ZeroNullInt64 `json:"status_400_count"`
+	Status429Count ZeroNullInt64 `json:"status_429_count"`
+	Status500Count ZeroNullInt64 `json:"status_500_count"`
+}
+
+func (c *Count) AddRequest(status int) {
+	c.RequestCount++
+
+	if status != http.StatusOK {
+		c.ExceptionCount++
+	}
+
+	if status >= 400 && status < 500 {
+		c.Status4xxCount++
+	}
+
+	if status >= 500 && status < 600 {
+		c.Status5xxCount++
+	}
+
+	if status == http.StatusBadRequest {
+		c.Status400Count++
+	}
+
+	if status == http.StatusTooManyRequests {
+		c.Status429Count++
+	}
+
+	if status == http.StatusInternalServerError {
+		c.Status500Count++
+	}
+}
+
+func (c *Count) Add(other Count) {
+	c.RequestCount += other.RequestCount
+	c.ExceptionCount += other.ExceptionCount
+	c.Status4xxCount += other.Status4xxCount
+	c.Status5xxCount += other.Status5xxCount
+	c.Status400Count += other.Status400Count
+	c.Status429Count += other.Status429Count
+	c.Status500Count += other.Status500Count
+}
+
 type SummaryData struct {
-	RequestCount          int64   `json:"request_count"`
-	UsedAmount            float64 `json:"used_amount"`
-	ExceptionCount        int64   `json:"exception_count"`
-	TotalTimeMilliseconds int64   `json:"total_time_milliseconds,omitempty"`
-	TotalTTFBMilliseconds int64   `json:"total_ttfb_milliseconds,omitempty"`
-	Usage                 Usage   `json:"usage,omitempty"                   gorm:"embedded"`
+	Count
+	Usage
+
+	UsedAmount float64 `json:"used_amount"`
+
+	TotalTimeMilliseconds int64 `json:"total_time_milliseconds,omitempty"`
+	TotalTTFBMilliseconds int64 `json:"total_ttfb_milliseconds,omitempty"`
 }
 
 func (d *SummaryData) buildUpdateData(tableName string) map[string]any {
 	data := map[string]any{}
-	if d.RequestCount > 0 {
-		data["request_count"] = gorm.Expr(tableName+".request_count + ?", d.RequestCount)
-	}
 
 	if d.UsedAmount > 0 {
 		data["used_amount"] = gorm.Expr(tableName+".used_amount + ?", d.UsedAmount)
 	}
 
+	if d.RequestCount > 0 {
+		data["request_count"] = gorm.Expr(tableName+".request_count + ?", d.RequestCount)
+	}
+
 	if d.ExceptionCount > 0 {
-		data["exception_count"] = gorm.Expr(tableName+".exception_count + ?", d.ExceptionCount)
+		data["exception_count"] = gorm.Expr(
+			tableName+".exception_count + ?",
+			d.ExceptionCount,
+		)
+	}
+
+	if d.Status4xxCount > 0 {
+		data["status4xx_count"] = gorm.Expr(
+			tableName+".status4xx_count + ?",
+			d.Status4xxCount,
+		)
+	}
+
+	if d.Status5xxCount > 0 {
+		data["status5xx_count"] = gorm.Expr(
+			tableName+".status5xx_count + ?",
+			d.Status5xxCount,
+		)
+	}
+
+	if d.Status400Count > 0 {
+		data["status400_count"] = gorm.Expr(
+			tableName+".status400_count + ?",
+			d.Status400Count,
+		)
+	}
+
+	if d.Status429Count > 0 {
+		data["status429_count"] = gorm.Expr(
+			tableName+".status429_count + ?",
+			d.Status429Count,
+		)
+	}
+
+	if d.Status500Count > 0 {
+		data["status500_count"] = gorm.Expr(
+			tableName+".status500_count + ?",
+			d.Status500Count,
+		)
 	}
 
 	if d.TotalTimeMilliseconds > 0 {
@@ -64,59 +153,59 @@ func (d *SummaryData) buildUpdateData(tableName string) map[string]any {
 	}
 
 	// usage update
-	if d.Usage.InputTokens > 0 {
+	if d.InputTokens > 0 {
 		data["input_tokens"] = gorm.Expr(
 			fmt.Sprintf("COALESCE(%s.input_tokens, 0) + ?", tableName),
-			d.Usage.InputTokens,
+			d.InputTokens,
 		)
 	}
 
-	if d.Usage.ImageInputTokens > 0 {
+	if d.ImageInputTokens > 0 {
 		data["image_input_tokens"] = gorm.Expr(
 			fmt.Sprintf("COALESCE(%s.image_input_tokens, 0) + ?", tableName),
-			d.Usage.ImageInputTokens,
+			d.ImageInputTokens,
 		)
 	}
 
-	if d.Usage.AudioInputTokens > 0 {
+	if d.AudioInputTokens > 0 {
 		data["audio_input_tokens"] = gorm.Expr(
 			fmt.Sprintf("COALESCE(%s.audio_input_tokens, 0) + ?", tableName),
-			d.Usage.AudioInputTokens,
+			d.AudioInputTokens,
 		)
 	}
 
-	if d.Usage.OutputTokens > 0 {
+	if d.OutputTokens > 0 {
 		data["output_tokens"] = gorm.Expr(
 			fmt.Sprintf("COALESCE(%s.output_tokens, 0) + ?", tableName),
-			d.Usage.OutputTokens,
+			d.OutputTokens,
 		)
 	}
 
-	if d.Usage.TotalTokens > 0 {
+	if d.TotalTokens > 0 {
 		data["total_tokens"] = gorm.Expr(
 			fmt.Sprintf("COALESCE(%s.total_tokens, 0) + ?", tableName),
-			d.Usage.TotalTokens,
+			d.TotalTokens,
 		)
 	}
 
-	if d.Usage.CachedTokens > 0 {
+	if d.CachedTokens > 0 {
 		data["cached_tokens"] = gorm.Expr(
 			fmt.Sprintf("COALESCE(%s.cached_tokens, 0) + ?", tableName),
-			d.Usage.CachedTokens,
+			d.CachedTokens,
 		)
 	}
 
-	if d.Usage.CacheCreationTokens > 0 {
+	if d.CacheCreationTokens > 0 {
 		data["cache_creation_tokens"] = gorm.Expr(
 			fmt.Sprintf("COALESCE(%s.cache_creation_tokens, 0) + ?", tableName),
-			d.Usage.CacheCreationTokens,
+			d.CacheCreationTokens,
 		)
 	}
 
-	if d.Usage.WebSearchCount > 0 {
+	if d.WebSearchCount > 0 {
 		data["web_search_count"] = gorm.Expr(
 			fmt.Sprintf("COALESCE(%s.web_search_count, 0) + ?", tableName),
-			d.Usage.WebSearchCount,
+			d.WebSearchCount,
 		)
 	}
 
@@ -228,7 +317,7 @@ func getChartData(
 	modelName string,
 	timeSpan TimeSpanType,
 	timezone *time.Location,
-) ([]*ChartData, error) {
+) ([]ChartData, error) {
 	query := LogDB.Model(&Summary{})
 
 	if channelID != 0 {
@@ -249,8 +338,9 @@ func getChartData(
 	}
 
 	// Only include max metrics when we have specific channel and model
-	selectFields := "hour_timestamp as timestamp, sum(request_count) as request_count, sum(used_amount) as used_amount, " +
-		"sum(exception_count) as exception_count, sum(total_time_milliseconds) as total_time_milliseconds, sum(total_ttfb_milliseconds) as total_ttfb_milliseconds, " +
+	selectFields := "hour_timestamp as timestamp, sum(used_amount) as used_amount, " +
+		"sum(request_count) as request_count, sum(exception_count) as exception_count, sum(status4xx_count) as status4xx_count, sum(status5xx_count) as status5xx_count, sum(status400_count) as status400_count, sum(status429_count) as status429_count, sum(status500_count) as status500_count, " +
+		"sum(total_time_milliseconds) as total_time_milliseconds, sum(total_ttfb_milliseconds) as total_ttfb_milliseconds, " +
 		"sum(input_tokens) as input_tokens, sum(image_input_tokens) as image_input_tokens, sum(audio_input_tokens) as audio_input_tokens, sum(output_tokens) as output_tokens, " +
 		"sum(cached_tokens) as cached_tokens, sum(cache_creation_tokens) as cache_creation_tokens, " +
 		"sum(total_tokens) as total_tokens, sum(web_search_count) as web_search_count"
@@ -260,7 +350,7 @@ func getChartData(
 		Group("timestamp").
 		Order("timestamp ASC")
 
-	var chartData []*ChartData
+	var chartData []ChartData
 
 	err := query.Scan(&chartData).Error
 	if err != nil {
@@ -281,7 +371,7 @@ func getGroupChartData(
 	tokenName, modelName string,
 	timeSpan TimeSpanType,
 	timezone *time.Location,
-) ([]*ChartData, error) {
+) ([]ChartData, error) {
 	query := LogDB.Model(&GroupSummary{})
 	if group != "" {
 		query = query.Where("group_id = ?", group)
@@ -305,8 +395,9 @@ func getGroupChartData(
 	}
 
 	// Only include max metrics when we have specific channel and model
-	selectFields := "hour_timestamp as timestamp, sum(request_count) as request_count, sum(used_amount) as used_amount, " +
-		"sum(exception_count) as exception_count, sum(total_time_milliseconds) as total_time_milliseconds, sum(total_ttfb_milliseconds) as total_ttfb_milliseconds, " +
+	selectFields := "hour_timestamp as timestamp, sum(used_amount) as used_amount, " +
+		"sum(request_count) as request_count, sum(exception_count) as exception_count, sum(status4xx_count) as status4xx_count, sum(status5xx_count) as status5xx_count, sum(status400_count) as status400_count, sum(status429_count) as status429_count, sum(status500_count) as status500_count, " +
+		"sum(total_time_milliseconds) as total_time_milliseconds, sum(total_ttfb_milliseconds) as total_ttfb_milliseconds, " +
 		"sum(input_tokens) as input_tokens, sum(image_input_tokens) as image_input_tokens, sum(audio_input_tokens) as audio_input_tokens, sum(output_tokens) as output_tokens, " +
 		"sum(cached_tokens) as cached_tokens, sum(cache_creation_tokens) as cache_creation_tokens, " +
 		"sum(total_tokens) as total_tokens, sum(web_search_count) as web_search_count"
@@ -316,7 +407,7 @@ func getGroupChartData(
 		Group("timestamp").
 		Order("timestamp ASC")
 
-	var chartData []*ChartData
+	var chartData []ChartData
 
 	err := query.Scan(&chartData).Error
 	if err != nil {
@@ -465,33 +556,23 @@ func getGroupLogGroupByValues[T cmp.Ordered](
 }
 
 type ChartData struct {
-	Timestamp    int64   `json:"timestamp"`
-	RequestCount int64   `json:"request_count"`
-	UsedAmount   float64 `json:"used_amount"`
+	Timestamp  int64   `json:"timestamp"`
+	UsedAmount float64 `json:"used_amount"`
 
 	TotalTimeMilliseconds int64 `json:"total_time_milliseconds,omitempty"`
 	TotalTTFBMilliseconds int64 `json:"total_ttfb_milliseconds,omitempty"`
 
-	InputTokens         int64 `json:"input_tokens,omitempty"`
-	ImageInputTokens    int64 `json:"image_input_tokens,omitempty"`
-	AudioInputTokens    int64 `json:"audio_input_tokens,omitempty"`
-	OutputTokens        int64 `json:"output_tokens,omitempty"`
-	CachedTokens        int64 `json:"cached_tokens,omitempty"`
-	CacheCreationTokens int64 `json:"cache_creation_tokens,omitempty"`
-	TotalTokens         int64 `json:"total_tokens,omitempty"`
-	ExceptionCount      int64 `json:"exception_count"`
-	WebSearchCount      int64 `json:"web_search_count,omitempty"`
+	Count
+	Usage
 
 	MaxRPM int64 `json:"max_rpm,omitempty"`
 	MaxTPM int64 `json:"max_tpm,omitempty"`
 }
 
 type DashboardResponse struct {
-	ChartData             []*ChartData `json:"chart_data"`
-	TotalCount            int64        `json:"total_count"`
-	ExceptionCount        int64        `json:"exception_count"`
-	TotalTimeMilliseconds int64        `json:"total_time_milliseconds,omitempty"`
-	TotalTTFBMilliseconds int64        `json:"total_ttfb_milliseconds,omitempty"`
+	ChartData             []ChartData `json:"chart_data"`
+	TotalTimeMilliseconds int64       `json:"total_time_milliseconds,omitempty"`
+	TotalTTFBMilliseconds int64       `json:"total_ttfb_milliseconds,omitempty"`
 
 	RPM int64 `json:"rpm"`
 	TPM int64 `json:"tpm"`
@@ -499,15 +580,11 @@ type DashboardResponse struct {
 	MaxRPM int64 `json:"max_rpm,omitempty"`
 	MaxTPM int64 `json:"max_tpm,omitempty"`
 
-	UsedAmount          float64 `json:"used_amount"`
-	InputTokens         int64   `json:"input_tokens,omitempty"`
-	ImageInputTokens    int64   `json:"image_input_tokens,omitempty"`
-	AudioInputTokens    int64   `json:"audio_input_tokens,omitempty"`
-	OutputTokens        int64   `json:"output_tokens,omitempty"`
-	TotalTokens         int64   `json:"total_tokens,omitempty"`
-	CachedTokens        int64   `json:"cached_tokens,omitempty"`
-	CacheCreationTokens int64   `json:"cache_creation_tokens,omitempty"`
-	WebSearchCount      int64   `json:"web_search_count,omitempty"`
+	UsedAmount float64 `json:"used_amount"`
+
+	TotalCount int64 `json:"total_count"` // use Count.RequestCount instead
+	Count
+	Usage
 
 	Channels []int    `json:"channels,omitempty"`
 	Models   []string `json:"models,omitempty"`
@@ -527,11 +604,11 @@ const (
 )
 
 func aggregateDataToSpan(
-	data []*ChartData,
+	data []ChartData,
 	timeSpan TimeSpanType,
 	timezone *time.Location,
-) []*ChartData {
-	dataMap := make(map[int64]*ChartData)
+) []ChartData {
+	dataMap := make(map[int64]ChartData)
 
 	if timezone == nil {
 		timezone = time.Local
@@ -554,28 +631,21 @@ func aggregateDataToSpan(
 		}
 
 		if _, exists := dataMap[timestamp]; !exists {
-			dataMap[timestamp] = &ChartData{
+			dataMap[timestamp] = ChartData{
 				Timestamp: timestamp,
 			}
 		}
 
 		currentData := dataMap[timestamp]
-		currentData.RequestCount += data.RequestCount
+		currentData.Count.Add(data.Count)
+		currentData.Usage.Add(data.Usage)
+
 		currentData.TotalTimeMilliseconds += data.TotalTimeMilliseconds
 		currentData.TotalTTFBMilliseconds += data.TotalTTFBMilliseconds
 		currentData.UsedAmount = decimal.
 			NewFromFloat(currentData.UsedAmount).
 			Add(decimal.NewFromFloat(data.UsedAmount)).
 			InexactFloat64()
-		currentData.ExceptionCount += data.ExceptionCount
-		currentData.InputTokens += data.InputTokens
-		currentData.ImageInputTokens += data.ImageInputTokens
-		currentData.AudioInputTokens += data.AudioInputTokens
-		currentData.OutputTokens += data.OutputTokens
-		currentData.CachedTokens += data.CachedTokens
-		currentData.CacheCreationTokens += data.CacheCreationTokens
-		currentData.TotalTokens += data.TotalTokens
-		currentData.WebSearchCount += data.WebSearchCount
 
 		if data.MaxRPM > currentData.MaxRPM {
 			currentData.MaxRPM = data.MaxRPM
@@ -584,29 +654,34 @@ func aggregateDataToSpan(
 		if data.MaxTPM > currentData.MaxTPM {
 			currentData.MaxTPM = data.MaxTPM
 		}
+
+		dataMap[timestamp] = currentData
 	}
 
-	result := make([]*ChartData, 0, len(dataMap))
+	result := make([]ChartData, 0, len(dataMap))
 	for _, data := range dataMap {
 		result = append(result, data)
 	}
 
-	slices.SortFunc(result, func(a, b *ChartData) int {
+	slices.SortFunc(result, func(a, b ChartData) int {
 		return cmp.Compare(a.Timestamp, b.Timestamp)
 	})
 
 	return result
 }
 
-func sumDashboardResponse(chartData []*ChartData) DashboardResponse {
+func sumDashboardResponse(chartData []ChartData) DashboardResponse {
 	dashboardResponse := DashboardResponse{
 		ChartData: chartData,
 	}
 
 	usedAmount := decimal.NewFromFloat(0)
 	for _, data := range chartData {
-		dashboardResponse.TotalCount += data.RequestCount
-		dashboardResponse.ExceptionCount += data.ExceptionCount
+		dashboardResponse.Count.Add(data.Count)
+		dashboardResponse.TotalCount = dashboardResponse.RequestCount
+
+		dashboardResponse.Usage.Add(data.Usage)
+
 		dashboardResponse.TotalTimeMilliseconds += data.TotalTimeMilliseconds
 		dashboardResponse.TotalTTFBMilliseconds += data.TotalTTFBMilliseconds
 		usedAmount = usedAmount.Add(decimal.NewFromFloat(data.UsedAmount))
@@ -614,14 +689,6 @@ func sumDashboardResponse(chartData []*ChartData) DashboardResponse {
 			NewFromFloat(dashboardResponse.UsedAmount).
 			Add(decimal.NewFromFloat(data.UsedAmount)).
 			InexactFloat64()
-		dashboardResponse.InputTokens += data.InputTokens
-		dashboardResponse.ImageInputTokens += data.ImageInputTokens
-		dashboardResponse.AudioInputTokens += data.AudioInputTokens
-		dashboardResponse.OutputTokens += data.OutputTokens
-		dashboardResponse.TotalTokens += data.TotalTokens
-		dashboardResponse.CachedTokens += data.CachedTokens
-		dashboardResponse.CacheCreationTokens += data.CacheCreationTokens
-		dashboardResponse.WebSearchCount += data.WebSearchCount
 
 		if data.MaxRPM > dashboardResponse.MaxRPM {
 			dashboardResponse.MaxRPM = data.MaxRPM
@@ -652,7 +719,7 @@ func GetDashboardData(
 	}
 
 	var (
-		chartData []*ChartData
+		chartData []ChartData
 		channels  []int
 		models    []string
 	)
@@ -710,7 +777,7 @@ func GetGroupDashboardData(
 	}
 
 	var (
-		chartData  []*ChartData
+		chartData  []ChartData
 		tokenNames []string
 		models     []string
 	)

@@ -72,10 +72,10 @@ func getDashboardTime(
 }
 
 func fillGaps(
-	data []*model.ChartData,
+	data []model.ChartData,
 	start, end time.Time,
 	t model.TimeSpanType,
-) []*model.ChartData {
+) []model.ChartData {
 	if len(data) == 0 {
 		return data
 	}
@@ -98,7 +98,7 @@ func fillGaps(
 
 	var firstIsZero bool
 	if !firstAlignedTime.Equal(firstPoint) {
-		data = append([]*model.ChartData{
+		data = append([]model.ChartData{
 			{
 				Timestamp: firstAlignedTime.Unix(),
 			},
@@ -116,13 +116,13 @@ func fillGaps(
 
 	var lastIsZero bool
 	if !lastAlignedTime.Equal(lastPoint) {
-		data = append(data, &model.ChartData{
+		data = append(data, model.ChartData{
 			Timestamp: lastAlignedTime.Unix(),
 		})
 		lastIsZero = true
 	}
 
-	result := make([]*model.ChartData, 0, len(data))
+	result := make([]model.ChartData, 0, len(data))
 	result = append(result, data[0])
 
 	for i := 1; i < len(data); i++ {
@@ -140,13 +140,13 @@ func fillGaps(
 		if hourDiff > 3 {
 			// Add point for hour after prev
 			if i != 1 || (i == 1 && !firstIsZero) {
-				result = append(result, &model.ChartData{
+				result = append(result, model.ChartData{
 					Timestamp: prev.Timestamp + int64(timeSpan.Seconds()),
 				})
 			}
 			// Add point for hour before curr
 			if i != len(data)-1 || (i == len(data)-1 && !lastIsZero) {
-				result = append(result, &model.ChartData{
+				result = append(result, model.ChartData{
 					Timestamp: curr.Timestamp - int64(timeSpan.Seconds()),
 				})
 			}
@@ -158,7 +158,7 @@ func fillGaps(
 
 		// Fill gaps of 2-3 hours with zero points
 		for j := prev.Timestamp + int64(timeSpan.Seconds()); j < curr.Timestamp; j += int64(timeSpan.Seconds()) {
-			result = append(result, &model.ChartData{
+			result = append(result, model.ChartData{
 				Timestamp: j,
 			})
 		}
