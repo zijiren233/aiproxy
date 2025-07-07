@@ -29,7 +29,7 @@ type SummaryUnique struct {
 
 type Count struct {
 	RequestCount   int64         `json:"request_count"`
-	RetryCount     ZeroNullInt64 `json:"retry_count,omitempty"`
+	RetryCount     ZeroNullInt64 `json:"retry_count"`
 	ExceptionCount ZeroNullInt64 `json:"exception_count"`
 	Status4xxCount ZeroNullInt64 `json:"status_4xx_count"`
 	Status5xxCount ZeroNullInt64 `json:"status_5xx_count"`
@@ -571,26 +571,26 @@ type ChartData struct {
 	Timestamp  int64   `json:"timestamp"`
 	UsedAmount float64 `json:"used_amount"`
 
-	TotalTimeMilliseconds int64 `json:"total_time_milliseconds,omitempty"`
-	TotalTTFBMilliseconds int64 `json:"total_ttfb_milliseconds,omitempty"`
+	TotalTimeMilliseconds int64 `json:"total_time_milliseconds"`
+	TotalTTFBMilliseconds int64 `json:"total_ttfb_milliseconds"`
 
 	Count
 	Usage
 
-	MaxRPM int64 `json:"max_rpm,omitempty"`
-	MaxTPM int64 `json:"max_tpm,omitempty"`
+	MaxRPM int64 `json:"max_rpm"`
+	MaxTPM int64 `json:"max_tpm"`
 }
 
 type DashboardResponse struct {
 	ChartData             []ChartData `json:"chart_data"`
-	TotalTimeMilliseconds int64       `json:"total_time_milliseconds,omitempty"`
-	TotalTTFBMilliseconds int64       `json:"total_ttfb_milliseconds,omitempty"`
+	TotalTimeMilliseconds int64       `json:"total_time_milliseconds"`
+	TotalTTFBMilliseconds int64       `json:"total_ttfb_milliseconds"`
 
 	RPM int64 `json:"rpm"`
 	TPM int64 `json:"tpm"`
 
-	MaxRPM int64 `json:"max_rpm,omitempty"`
-	MaxTPM int64 `json:"max_tpm,omitempty"`
+	MaxRPM int64 `json:"max_rpm"`
+	MaxTPM int64 `json:"max_tpm"`
 
 	UsedAmount float64 `json:"used_amount"`
 
