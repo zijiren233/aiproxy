@@ -49,8 +49,9 @@ type TokenUpdate struct {
 }
 
 type ChannelUpdate struct {
-	Amount decimal.Decimal
-	Count  int
+	Amount     decimal.Decimal
+	Count      int
+	RetryCount int
 }
 
 type SummaryUpdate struct {
@@ -202,7 +203,12 @@ func processChannelUpdates(wg *sync.WaitGroup) {
 	defer wg.Done()
 
 	for channelID, data := range batchData.Channels {
-		err := UpdateChannelUsedAmount(channelID, data.Amount.InexactFloat64(), data.Count)
+		err := UpdateChannelUsedAmount(
+			channelID,
+			data.Amount.InexactFloat64(),
+			data.Count,
+			data.RetryCount,
+		)
 		if IgnoreNotFound(err) != nil {
 			notify.ErrorThrottle(
 				"batchUpdateChannelUsedAmount",
@@ -364,15 +370,7 @@ func BatchRecordLogs(
 	batchData.Lock()
 	defer batchData.Unlock()
 
-	updateChannelData(channelID, amount, amountDecimal)
-
-	if !downstreamResult {
-		return err
-	}
-
-	updateGroupData(group, amount, amountDecimal)
-
-	updateTokenData(tokenID, amount, amountDecimal)
+	updateChannelData(channelID, amount, amountDecimal, !downstreamResult)
 
 	if channelID != 0 {
 		updateSummaryData(
@@ -384,6 +382,7 @@ func BatchRecordLogs(
 			code,
 			amountDecimal,
 			usage,
+			!downstreamResult,
 		)
 
 		updateSummaryDataMinute(
@@ -395,8 +394,18 @@ func BatchRecordLogs(
 			code,
 			amountDecimal,
 			usage,
+			!downstreamResult,
 		)
 	}
+
+	// group related data only records downstream result
+	if !downstreamResult {
+		return err
+	}
+
+	updateGroupData(group, amount, amountDecimal)
+
+	updateTokenData(tokenID, amount, amountDecimal)
 
 	if group != "" {
 		updateGroupSummaryData(
@@ -427,49 +436,63 @@ func BatchRecordLogs(
 	return err
 }
 
-func updateChannelData(channelID int, amount float64, amountDecimal decimal.Decimal) {
-	if channelID > 0 {
-		if _, ok := batchData.Channels[channelID]; !ok {
-			batchData.Channels[channelID] = &ChannelUpdate{}
-		}
+func updateChannelData(
+	channelID int,
+	amount float64,
+	amountDecimal decimal.Decimal,
+	isRetry bool,
+) {
+	if channelID <= 0 {
+		return
+	}
 
-		if amount > 0 {
-			batchData.Channels[channelID].Amount = amountDecimal.
-				Add(batchData.Channels[channelID].Amount)
-		}
+	if _, ok := batchData.Channels[channelID]; !ok {
+		batchData.Channels[channelID] = &ChannelUpdate{}
+	}
 
-		batchData.Channels[channelID].Count++
+	if amount > 0 {
+		batchData.Channels[channelID].Amount = amountDecimal.
+			Add(batchData.Channels[channelID].Amount)
+	}
+
+	batchData.Channels[channelID].Count++
+	if isRetry {
+		batchData.Channels[channelID].RetryCount++
 	}
 }
 
 func updateGroupData(group string, amount float64, amountDecimal decimal.Decimal) {
-	if group != "" {
-		if _, ok := batchData.Groups[group]; !ok {
-			batchData.Groups[group] = &GroupUpdate{}
-		}
-
-		if amount > 0 {
-			batchData.Groups[group].Amount = amountDecimal.
-				Add(batchData.Groups[group].Amount)
-		}
-
-		batchData.Groups[group].Count++
+	if group == "" {
+		return
 	}
+
+	if _, ok := batchData.Groups[group]; !ok {
+		batchData.Groups[group] = &GroupUpdate{}
+	}
+
+	if amount > 0 {
+		batchData.Groups[group].Amount = amountDecimal.
+			Add(batchData.Groups[group].Amount)
+	}
+
+	batchData.Groups[group].Count++
 }
 
 func updateTokenData(tokenID int, amount float64, amountDecimal decimal.Decimal) {
-	if tokenID > 0 {
-		if _, ok := batchData.Tokens[tokenID]; !ok {
-			batchData.Tokens[tokenID] = &TokenUpdate{}
-		}
-
-		if amount > 0 {
-			batchData.Tokens[tokenID].Amount = amountDecimal.
-				Add(batchData.Tokens[tokenID].Amount)
-		}
-
-		batchData.Tokens[tokenID].Count++
+	if tokenID <= 0 {
+		return
 	}
+
+	if _, ok := batchData.Tokens[tokenID]; !ok {
+		batchData.Tokens[tokenID] = &TokenUpdate{}
+	}
+
+	if amount > 0 {
+		batchData.Tokens[tokenID].Amount = amountDecimal.
+			Add(batchData.Tokens[tokenID].Amount)
+	}
+
+	batchData.Tokens[tokenID].Count++
 }
 
 func updateGroupSummaryData(
@@ -516,7 +539,7 @@ func updateGroupSummaryData(
 	groupSummary.TotalTTFBMilliseconds += firstByteAt.Sub(requestAt).Milliseconds()
 
 	groupSummary.Usage.Add(usage)
-	groupSummary.AddRequest(code)
+	groupSummary.AddRequest(code, false)
 }
 
 func updateGroupSummaryDataMinute(
@@ -563,7 +586,7 @@ func updateGroupSummaryDataMinute(
 	groupSummary.TotalTTFBMilliseconds += firstByteAt.Sub(requestAt).Milliseconds()
 
 	groupSummary.Usage.Add(usage)
-	groupSummary.AddRequest(code)
+	groupSummary.AddRequest(code, false)
 }
 
 func updateSummaryData(
@@ -575,6 +598,7 @@ func updateSummaryData(
 	code int,
 	amountDecimal decimal.Decimal,
 	usage Usage,
+	isRetry bool,
 ) {
 	if createAt.IsZero() {
 		createAt = time.Now()
@@ -610,7 +634,7 @@ func updateSummaryData(
 	summary.TotalTTFBMilliseconds += firstByteAt.Sub(requestAt).Milliseconds()
 
 	summary.Usage.Add(usage)
-	summary.AddRequest(code)
+	summary.AddRequest(code, isRetry)
 }
 
 func updateSummaryDataMinute(
@@ -622,6 +646,7 @@ func updateSummaryDataMinute(
 	code int,
 	amountDecimal decimal.Decimal,
 	usage Usage,
+	isRetry bool,
 ) {
 	if createAt.IsZero() {
 		createAt = time.Now()
@@ -657,5 +682,5 @@ func updateSummaryDataMinute(
 	summary.TotalTTFBMilliseconds += firstByteAt.Sub(requestAt).Milliseconds()
 
 	summary.Usage.Add(usage)
-	summary.AddRequest(code)
+	summary.AddRequest(code, isRetry)
 }

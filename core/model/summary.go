@@ -29,6 +29,7 @@ type SummaryUnique struct {
 
 type Count struct {
 	RequestCount   int64         `json:"request_count"`
+	RetryCount     ZeroNullInt64 `json:"retry_count,omitempty"`
 	ExceptionCount ZeroNullInt64 `json:"exception_count"`
 	Status4xxCount ZeroNullInt64 `json:"status_4xx_count"`
 	Status5xxCount ZeroNullInt64 `json:"status_5xx_count"`
@@ -37,11 +38,15 @@ type Count struct {
 	Status500Count ZeroNullInt64 `json:"status_500_count"`
 }
 
-func (c *Count) AddRequest(status int) {
+func (c *Count) AddRequest(status int, isRetry bool) {
 	c.RequestCount++
 
 	if status != http.StatusOK {
 		c.ExceptionCount++
+	}
+
+	if isRetry {
+		c.RetryCount++
 	}
 
 	if status >= 400 && status < 500 {
@@ -67,6 +72,7 @@ func (c *Count) AddRequest(status int) {
 
 func (c *Count) Add(other Count) {
 	c.RequestCount += other.RequestCount
+	c.RetryCount += other.RetryCount
 	c.ExceptionCount += other.ExceptionCount
 	c.Status4xxCount += other.Status4xxCount
 	c.Status5xxCount += other.Status5xxCount
@@ -94,6 +100,10 @@ func (d *SummaryData) buildUpdateData(tableName string) map[string]any {
 
 	if d.RequestCount > 0 {
 		data["request_count"] = gorm.Expr(tableName+".request_count + ?", d.RequestCount)
+	}
+
+	if d.RetryCount > 0 {
+		data["retry_count"] = gorm.Expr(tableName+".retry_count + ?", d.RetryCount)
 	}
 
 	if d.ExceptionCount > 0 {
@@ -338,7 +348,7 @@ func getChartData(
 	}
 
 	const selectFields = "hour_timestamp as timestamp, sum(used_amount) as used_amount, " +
-		"sum(request_count) as request_count, sum(exception_count) as exception_count, sum(status4xx_count) as status4xx_count, sum(status5xx_count) as status5xx_count, sum(status400_count) as status400_count, sum(status429_count) as status429_count, sum(status500_count) as status500_count, " +
+		"sum(request_count) as request_count, sum(retry_count) as retry_count, sum(exception_count) as exception_count, sum(status4xx_count) as status4xx_count, sum(status5xx_count) as status5xx_count, sum(status400_count) as status400_count, sum(status429_count) as status429_count, sum(status500_count) as status500_count, " +
 		"sum(total_time_milliseconds) as total_time_milliseconds, sum(total_ttfb_milliseconds) as total_ttfb_milliseconds, " +
 		"sum(input_tokens) as input_tokens, sum(image_input_tokens) as image_input_tokens, sum(audio_input_tokens) as audio_input_tokens, sum(output_tokens) as output_tokens, " +
 		"sum(cached_tokens) as cached_tokens, sum(cache_creation_tokens) as cache_creation_tokens, " +

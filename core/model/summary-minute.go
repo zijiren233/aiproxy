@@ -151,7 +151,7 @@ func getChartDataMinute(
 
 	// Only include max metrics when we have specific channel and model
 	const selectFields = "minute_timestamp as timestamp, sum(used_amount) as used_amount, " +
-		"sum(request_count) as request_count, sum(exception_count) as exception_count, sum(status4xx_count) as status4xx_count, sum(status5xx_count) as status5xx_count, sum(status400_count) as status400_count, sum(status429_count) as status429_count, sum(status500_count) as status500_count, " +
+		"sum(request_count) as request_count, sum(retry_count) as retry_count, sum(exception_count) as exception_count, sum(status4xx_count) as status4xx_count, sum(status5xx_count) as status5xx_count, sum(status400_count) as status400_count, sum(status429_count) as status429_count, sum(status500_count) as status500_count, " +
 		"sum(total_time_milliseconds) as total_time_milliseconds, sum(total_ttfb_milliseconds) as total_ttfb_milliseconds, " +
 		"sum(input_tokens) as input_tokens, sum(image_input_tokens) as image_input_tokens, sum(audio_input_tokens) as audio_input_tokens, sum(output_tokens) as output_tokens, " +
 		"sum(cached_tokens) as cached_tokens, sum(cache_creation_tokens) as cache_creation_tokens, " +
@@ -512,14 +512,14 @@ type SummaryDataV2 struct {
 	Model      string  `json:"model"`
 	UsedAmount float64 `json:"used_amount"`
 
-	TotalTimeMilliseconds int64 `json:"total_time_milliseconds,omitempty"`
-	TotalTTFBMilliseconds int64 `json:"total_ttfb_milliseconds,omitempty"`
+	TotalTimeMilliseconds int64 `json:"total_time_milliseconds"`
+	TotalTTFBMilliseconds int64 `json:"total_ttfb_milliseconds"`
 
 	Count
 	Usage
 
-	MaxRPM int64 `json:"max_rpm,omitempty"`
-	MaxTPM int64 `json:"max_tpm,omitempty"`
+	MaxRPM int64 `json:"max_rpm"`
+	MaxTPM int64 `json:"max_tpm"`
 }
 
 type TimeSummaryDataV2 struct {
@@ -527,7 +527,337 @@ type TimeSummaryDataV2 struct {
 	Summary   []SummaryDataV2 `json:"summary"`
 }
 
-func GetTimeSeriesModelDataMinute(
+func GetTimeSeriesModelData(
+	channelID int,
+	modelName string,
+	start, end time.Time,
+	timeSpan TimeSpanType,
+	timezone *time.Location,
+) ([]TimeSummaryDataV2, error) {
+	if timeSpan == TimeSpanMinute {
+		return getTimeSeriesModelDataMinute(channelID, modelName, start, end, timeSpan, timezone)
+	}
+
+	if end.IsZero() {
+		end = time.Now()
+	} else if end.Before(start) {
+		return nil, errors.New("end time is before start time")
+	}
+
+	query := LogDB.Model(&Summary{})
+
+	if channelID != 0 {
+		query = query.Where("channel_id = ?", channelID)
+	}
+
+	if modelName != "" {
+		query = query.Where("model = ?", modelName)
+	}
+
+	switch {
+	case !start.IsZero() && !end.IsZero():
+		query = query.Where("hour_timestamp BETWEEN ? AND ?", start.Unix(), end.Unix())
+	case !start.IsZero():
+		query = query.Where("hour_timestamp >= ?", start.Unix())
+	case !end.IsZero():
+		query = query.Where("hour_timestamp <= ?", end.Unix())
+	}
+
+	const selectFields = "hour_timestamp as timestamp, channel_id, model, " +
+		"sum(used_amount) as used_amount, " +
+		"sum(request_count) as request_count, sum(retry_count) as retry_count, sum(exception_count) as exception_count, sum(status4xx_count) as status4xx_count, sum(status5xx_count) as status5xx_count, sum(status400_count) as status400_count, sum(status429_count) as status429_count, sum(status500_count) as status500_count, " +
+		"sum(total_time_milliseconds) as total_time_milliseconds, sum(total_ttfb_milliseconds) as total_ttfb_milliseconds, " +
+		"sum(input_tokens) as input_tokens, sum(image_input_tokens) as image_input_tokens, sum(audio_input_tokens) as audio_input_tokens, " +
+		"sum(output_tokens) as output_tokens, sum(cached_tokens) as cached_tokens, " +
+		"sum(cache_creation_tokens) as cache_creation_tokens, sum(total_tokens) as total_tokens, " +
+		"sum(web_search_count) as web_search_count"
+
+	var rawData []SummaryDataV2
+
+	err := query.
+		Select(selectFields).
+		Group("timestamp, channel_id, model").
+		Find(&rawData).Error
+	if err != nil {
+		return nil, err
+	}
+
+	if len(rawData) > 0 {
+		err = batchFillMaxValues(rawData, channelID, modelName, start, end)
+		if err != nil {
+			return nil, err
+		}
+
+		if timeSpan != TimeSpanHour {
+			rawData = aggregatToSpan(rawData, timeSpan, timezone)
+		}
+	}
+
+	result := convertToTimeModelData(rawData)
+
+	slices.SortFunc(result, func(a, b TimeSummaryDataV2) int {
+		return cmp.Compare(a.Timestamp, b.Timestamp)
+	})
+
+	return result, nil
+}
+
+func GetGroupTimeSeriesModelData(
+	group string,
+	tokenName string,
+	modelName string,
+	start, end time.Time,
+	timeSpan TimeSpanType,
+	timezone *time.Location,
+) ([]TimeSummaryDataV2, error) {
+	if timeSpan == TimeSpanMinute {
+		return getGroupTimeSeriesModelDataMinute(
+			group,
+			tokenName,
+			modelName,
+			start,
+			end,
+			timeSpan,
+			timezone,
+		)
+	}
+
+	if end.IsZero() {
+		end = time.Now()
+	} else if end.Before(start) {
+		return nil, errors.New("end time is before start time")
+	}
+
+	query := LogDB.Model(&GroupSummary{}).
+		Where("group_id = ?", group)
+	if tokenName != "" {
+		query = query.Where("token_name = ?", tokenName)
+	}
+
+	if modelName != "" {
+		query = query.Where("model = ?", modelName)
+	}
+
+	switch {
+	case !start.IsZero() && !end.IsZero():
+		query = query.Where("hour_timestamp BETWEEN ? AND ?", start.Unix(), end.Unix())
+	case !start.IsZero():
+		query = query.Where("hour_timestamp >= ?", start.Unix())
+	case !end.IsZero():
+		query = query.Where("hour_timestamp <= ?", end.Unix())
+	}
+
+	const selectFields = "hour_timestamp as timestamp, group_id, token_name, model, " +
+		"sum(used_amount) as used_amount, " +
+		"sum(request_count) as request_count, sum(exception_count) as exception_count, sum(status4xx_count) as status4xx_count, sum(status5xx_count) as status5xx_count, sum(status400_count) as status400_count, sum(status429_count) as status429_count, sum(status500_count) as status500_count, " +
+		"sum(total_time_milliseconds) as total_time_milliseconds, sum(total_ttfb_milliseconds) as total_ttfb_milliseconds, " +
+		"sum(input_tokens) as input_tokens, sum(image_input_tokens) as image_input_tokens, sum(audio_input_tokens) as audio_input_tokens, " +
+		"sum(output_tokens) as output_tokens, sum(cached_tokens) as cached_tokens, " +
+		"sum(cache_creation_tokens) as cache_creation_tokens, sum(total_tokens) as total_tokens, " +
+		"sum(web_search_count) as web_search_count"
+
+	var rawData []SummaryDataV2
+
+	err := query.
+		Select(selectFields).
+		Group("timestamp, group_id, token_name, model").
+		Find(&rawData).Error
+	if err != nil {
+		return nil, err
+	}
+
+	if len(rawData) > 0 {
+		err = batchFillGroupMaxValues(rawData, group, tokenName, modelName, start, end)
+		if err != nil {
+			return nil, err
+		}
+
+		if timeSpan != TimeSpanHour {
+			rawData = aggregatToSpan(rawData, timeSpan, timezone)
+		}
+	}
+
+	result := convertToTimeModelData(rawData)
+
+	slices.SortFunc(result, func(a, b TimeSummaryDataV2) int {
+		return cmp.Compare(a.Timestamp, b.Timestamp)
+	})
+
+	return result, nil
+}
+
+func batchFillMaxValues(
+	rawData []SummaryDataV2,
+	channelID int,
+	modelName string,
+	start, end time.Time,
+) error {
+	minuteQuery := LogDB.Model(&SummaryMinute{})
+
+	if channelID != 0 {
+		minuteQuery = minuteQuery.Where("channel_id = ?", channelID)
+	}
+
+	if modelName != "" {
+		minuteQuery = minuteQuery.Where("model = ?", modelName)
+	}
+
+	minuteStart := start.Unix()
+	minuteEnd := end.Unix()
+	if end.IsZero() {
+		minuteEnd = time.Now().Unix()
+	}
+
+	minuteQuery = minuteQuery.Where(
+		"minute_timestamp >= ? AND minute_timestamp <= ?",
+		minuteStart,
+		minuteEnd,
+	)
+
+	type MaxResult struct {
+		HourTimestamp int64  `json:"hour_timestamp"`
+		ChannelID     int    `json:"channel_id"`
+		Model         string `json:"model"`
+		MaxRPM        int64  `json:"max_rpm"`
+		MaxTPM        int64  `json:"max_tpm"`
+	}
+
+	var maxResults []MaxResult
+	err := minuteQuery.
+		Select(`
+			(minute_timestamp - minute_timestamp % 3600) as hour_timestamp,
+			channel_id,
+			model,
+			MAX(request_count) as max_rpm,
+			MAX(total_tokens) as max_tpm
+		`).
+		Group("hour_timestamp, channel_id, model").
+		Find(&maxResults).Error
+	if err != nil {
+		return err
+	}
+
+	type Key struct {
+		HourTimestamp int64
+		ChannelID     int
+		Model         string
+	}
+
+	maxMap := make(map[Key]MaxResult)
+	for _, result := range maxResults {
+		key := Key{
+			HourTimestamp: result.HourTimestamp,
+			ChannelID:     result.ChannelID,
+			Model:         result.Model,
+		}
+		maxMap[key] = result
+	}
+
+	for i := range rawData {
+		data := &rawData[i]
+		key := Key{
+			HourTimestamp: data.Timestamp,
+			ChannelID:     data.ChannelID,
+			Model:         data.Model,
+		}
+		if maxResult, exists := maxMap[key]; exists {
+			data.MaxRPM = maxResult.MaxRPM
+			data.MaxTPM = maxResult.MaxTPM
+		}
+	}
+
+	return nil
+}
+
+func batchFillGroupMaxValues(
+	rawData []SummaryDataV2,
+	group, tokenName, modelName string,
+	start, end time.Time,
+) error {
+	minuteQuery := LogDB.Model(&GroupSummaryMinute{}).
+		Where("group_id = ?", group)
+
+	if tokenName != "" {
+		minuteQuery = minuteQuery.Where("token_name = ?", tokenName)
+	}
+
+	if modelName != "" {
+		minuteQuery = minuteQuery.Where("model = ?", modelName)
+	}
+
+	minuteStart := start.Unix()
+	minuteEnd := end.Unix()
+	if end.IsZero() {
+		minuteEnd = time.Now().Unix()
+	}
+
+	minuteQuery = minuteQuery.Where(
+		"minute_timestamp >= ? AND minute_timestamp <= ?",
+		minuteStart,
+		minuteEnd,
+	)
+
+	type MaxResult struct {
+		HourTimestamp int64  `json:"hour_timestamp"`
+		GroupID       string `json:"group_id"`
+		TokenName     string `json:"token_name"`
+		Model         string `json:"model"`
+		MaxRPM        int64  `json:"max_rpm"`
+		MaxTPM        int64  `json:"max_tpm"`
+	}
+
+	var maxResults []MaxResult
+	err := minuteQuery.
+		Select(`
+			(minute_timestamp - minute_timestamp % 3600) as hour_timestamp,
+			group_id,
+			token_name,
+			model,
+			MAX(request_count) as max_rpm,
+			MAX(total_tokens) as max_tpm
+		`).
+		Group("hour_timestamp, group_id, token_name, model").
+		Find(&maxResults).Error
+	if err != nil {
+		return err
+	}
+
+	type Key struct {
+		HourTimestamp int64
+		GroupID       string
+		TokenName     string
+		Model         string
+	}
+
+	maxMap := make(map[Key]MaxResult)
+	for _, result := range maxResults {
+		key := Key{
+			HourTimestamp: result.HourTimestamp,
+			GroupID:       result.GroupID,
+			TokenName:     result.TokenName,
+			Model:         result.Model,
+		}
+		maxMap[key] = result
+	}
+
+	for i := range rawData {
+		data := &rawData[i]
+		key := Key{
+			HourTimestamp: data.Timestamp,
+			GroupID:       data.GroupID,
+			TokenName:     data.TokenName,
+			Model:         data.Model,
+		}
+		if maxResult, exists := maxMap[key]; exists {
+			data.MaxRPM = maxResult.MaxRPM
+			data.MaxTPM = maxResult.MaxTPM
+		}
+	}
+
+	return nil
+}
+
+func getTimeSeriesModelDataMinute(
 	channelID int,
 	modelName string,
 	start, end time.Time,
@@ -561,7 +891,7 @@ func GetTimeSeriesModelDataMinute(
 
 	const selectFields = "minute_timestamp as timestamp, channel_id, model, " +
 		"sum(used_amount) as used_amount, " +
-		"sum(request_count) as request_count, sum(exception_count) as exception_count, sum(status4xx_count) as status4xx_count, sum(status5xx_count) as status5xx_count, sum(status400_count) as status400_count, sum(status429_count) as status429_count, sum(status500_count) as status500_count, " +
+		"sum(request_count) as request_count, sum(retry_count) as retry_count, sum(exception_count) as exception_count, sum(status4xx_count) as status4xx_count, sum(status5xx_count) as status5xx_count, sum(status400_count) as status400_count, sum(status429_count) as status429_count, sum(status500_count) as status500_count, " +
 		"sum(total_time_milliseconds) as total_time_milliseconds, sum(total_ttfb_milliseconds) as total_ttfb_milliseconds, " +
 		"sum(input_tokens) as input_tokens, sum(image_input_tokens) as image_input_tokens, sum(audio_input_tokens) as audio_input_tokens, " +
 		"sum(output_tokens) as output_tokens, sum(cached_tokens) as cached_tokens, " +
@@ -596,7 +926,7 @@ func GetTimeSeriesModelDataMinute(
 	return result, nil
 }
 
-func GetGroupTimeSeriesModelDataMinute(
+func getGroupTimeSeriesModelDataMinute(
 	group string,
 	tokenName string,
 	modelName string,

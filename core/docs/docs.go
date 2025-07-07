@@ -9398,6 +9398,9 @@ const docTemplate = `{
                 "request_count": {
                     "type": "integer"
                 },
+                "retry_count": {
+                    "type": "integer"
+                },
                 "sets": {
                     "type": "array",
                     "items": {
@@ -9579,6 +9582,9 @@ const docTemplate = `{
                 "request_count": {
                     "type": "integer"
                 },
+                "retry_count": {
+                    "type": "integer"
+                },
                 "status_400_count": {
                     "type": "integer"
                 },
@@ -9717,6 +9723,9 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "request_count": {
+                    "type": "integer"
+                },
+                "retry_count": {
                     "type": "integer"
                 },
                 "rpm": {
@@ -10098,6 +10107,9 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "request_count": {
+                    "type": "integer"
+                },
+                "retry_count": {
                     "type": "integer"
                 },
                 "rpm": {
@@ -11201,6 +11213,9 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "request_count": {
+                    "type": "integer"
+                },
+                "retry_count": {
                     "type": "integer"
                 },
                 "status_400_count": {

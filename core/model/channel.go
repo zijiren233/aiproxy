@@ -84,6 +84,7 @@ type Channel struct {
 	ID                      int               `gorm:"primaryKey"                         json:"id"`
 	UsedAmount              float64           `gorm:"index"                              json:"used_amount"`
 	RequestCount            int               `gorm:"index"                              json:"request_count"`
+	RetryCount              int               `gorm:"index"                              json:"retry_count"`
 	Status                  int               `gorm:"default:1;index"                    json:"status"`
 	Type                    ChannelType       `gorm:"default:0;index"                    json:"type"`
 	Priority                int32             `                                          json:"priority"`
@@ -556,12 +557,13 @@ func UpdateChannelStatusByID(id, status int) error {
 	return HandleUpdateResult(result, ErrChannelNotFound)
 }
 
-func UpdateChannelUsedAmount(id int, amount float64, requestCount int) error {
+func UpdateChannelUsedAmount(id int, amount float64, requestCount, retryCount int) error {
 	result := DB.Model(&Channel{}).
 		Where("id = ?", id).
 		Updates(map[string]any{
 			"used_amount":   gorm.Expr("used_amount + ?", amount),
 			"request_count": gorm.Expr("request_count + ?", requestCount),
+			"retry_count":   gorm.Expr("retry_count + ?", retryCount),
 		})
 
 	return HandleUpdateResult(result, ErrChannelNotFound)

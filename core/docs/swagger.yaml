@@ -855,6 +855,8 @@ definitions:
         type: integer
       request_count:
         type: integer
+      retry_count:
+        type: integer
       sets:
         items:
           type: string
@@ -998,7 +1000,7 @@ definitions:
         type: integer
       request_count:
         type: integer
-      status_5xx_count:
+      retry_count:
         type: integer
       status_400_count:
         type: integer
@@ -1007,6 +1009,8 @@ definitions:
       status_4xx_count:
         type: integer
       status_500_count:
+        type: integer
+      status_5xx_count:
         type: integer
       timestamp:
         type: integer
@@ -1090,17 +1094,19 @@ definitions:
         type: integer
       request_count:
         type: integer
+      retry_count:
+        type: integer
       rpm:
+        type: integer
+      status_4xx_count:
+        type: integer
+      status_500_count:
         type: integer
       status_5xx_count:
         type: integer
       status_400_count:
         type: integer
       status_429_count:
-        type: integer
-      status_4xx_count:
-        type: integer
-      status_500_count:
         type: integer
       total_count:
         description: use Count.RequestCount instead
@@ -1346,17 +1352,19 @@ definitions:
         type: integer
       request_count:
         type: integer
+      retry_count:
+        type: integer
       rpm:
+        type: integer
+      status_4xx_count:
+        type: integer
+      status_500_count:
         type: integer
       status_5xx_count:
         type: integer
       status_400_count:
         type: integer
       status_429_count:
-        type: integer
-      status_4xx_count:
-        type: integer
-      status_500_count:
         type: integer
       token_names:
         items:
@@ -2103,6 +2111,8 @@ definitions:
       reasoning_tokens:
         type: integer
       request_count:
+        type: integer
+      retry_count:
         type: integer
       status_400_count:
         type: integer

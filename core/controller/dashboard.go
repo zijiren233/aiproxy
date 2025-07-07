@@ -424,7 +424,7 @@ func GetGroupDashboardModels(c *gin.Context) {
 //	@Param			start_timestamp	query		int64	false	"Start timestamp"
 //	@Param			end_timestamp	query		int64	false	"End timestamp"
 //	@Param			timezone		query		string	false	"Timezone, default is Local"
-//	@Param			timespan		query		string	false	"Time span type (day, hour, minute)"
+//	@Param			timespan		query		string	false	"Time span type (minute, hour, day, month)"
 //	@Success		200				{object}	middleware.APIResponse{data=[]model.TimeSummaryDataV2}
 //	@Router			/api/dashboardv2/ [get]
 func GetTimeSeriesModelData(c *gin.Context) {
@@ -433,7 +433,7 @@ func GetTimeSeriesModelData(c *gin.Context) {
 	startTime, endTime := utils.ParseTimeRange(c, -1)
 	timezoneLocation, _ := time.LoadLocation(c.DefaultQuery("timezone", "Local"))
 
-	models, err := model.GetTimeSeriesModelDataMinute(
+	models, err := model.GetTimeSeriesModelData(
 		channelID,
 		modelName,
 		startTime,
@@ -462,7 +462,7 @@ func GetTimeSeriesModelData(c *gin.Context) {
 //	@Param			start_timestamp	query		int64	false	"Start timestamp"
 //	@Param			end_timestamp	query		int64	false	"End timestamp"
 //	@Param			timezone		query		string	false	"Timezone, default is Local"
-//	@Param			timespan		query		string	false	"Time span type (day, hour, minute)"
+//	@Param			timespan		query		string	false	"Time span type (minute, hour, day, month)"
 //	@Success		200				{object}	middleware.APIResponse{data=[]model.TimeSummaryDataV2}
 //	@Router			/api/dashboardv2/{group} [get]
 func GetGroupTimeSeriesModelData(c *gin.Context) {
@@ -477,7 +477,7 @@ func GetGroupTimeSeriesModelData(c *gin.Context) {
 	startTime, endTime := utils.ParseTimeRange(c, -1)
 	timezoneLocation, _ := time.LoadLocation(c.DefaultQuery("timezone", "Local"))
 
-	models, err := model.GetGroupTimeSeriesModelDataMinute(
+	models, err := model.GetGroupTimeSeriesModelData(
 		group,
 		tokenName,
 		modelName,
