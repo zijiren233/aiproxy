@@ -703,6 +703,7 @@ func batchFillMaxValues(
 	}
 
 	minuteStart := start.Unix()
+
 	minuteEnd := end.Unix()
 	if end.IsZero() {
 		minuteEnd = time.Now().Unix()
@@ -723,6 +724,7 @@ func batchFillMaxValues(
 	}
 
 	var maxResults []MaxResult
+
 	err := minuteQuery.
 		Select(`
 			(minute_timestamp - minute_timestamp % 3600) as hour_timestamp,
@@ -755,6 +757,7 @@ func batchFillMaxValues(
 
 	for i := range rawData {
 		data := &rawData[i]
+
 		key := Key{
 			HourTimestamp: data.Timestamp,
 			ChannelID:     data.ChannelID,
@@ -786,6 +789,7 @@ func batchFillGroupMaxValues(
 	}
 
 	minuteStart := start.Unix()
+
 	minuteEnd := end.Unix()
 	if end.IsZero() {
 		minuteEnd = time.Now().Unix()
@@ -807,6 +811,7 @@ func batchFillGroupMaxValues(
 	}
 
 	var maxResults []MaxResult
+
 	err := minuteQuery.
 		Select(`
 			(minute_timestamp - minute_timestamp % 3600) as hour_timestamp,
@@ -842,6 +847,7 @@ func batchFillGroupMaxValues(
 
 	for i := range rawData {
 		data := &rawData[i]
+
 		key := Key{
 			HourTimestamp: data.Timestamp,
 			GroupID:       data.GroupID,
