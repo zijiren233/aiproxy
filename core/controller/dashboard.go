@@ -21,12 +21,12 @@ import (
 
 func getDashboardTime(
 	t, timespan string,
-	startTimestamp, endTimestamp int64,
+	startTime, endTime time.Time,
 	timezoneLocation *time.Location,
 ) (time.Time, time.Time, model.TimeSpanType) {
 	end := time.Now()
-	if endTimestamp != 0 {
-		end = time.Unix(endTimestamp, 0)
+	if !endTime.IsZero() {
+		end = endTime
 	}
 
 	if timezoneLocation == nil {
@@ -59,12 +59,12 @@ func getDashboardTime(
 		timeSpan = model.TimeSpanHour
 	}
 
-	if startTimestamp != 0 {
-		start = time.Unix(startTimestamp, 0)
+	if !startTime.IsZero() {
+		start = startTime
 	}
 
 	switch model.TimeSpanType(timespan) {
-	case model.TimeSpanDay, model.TimeSpanHour:
+	case model.TimeSpanDay, model.TimeSpanHour, model.TimeSpanMonth:
 		timeSpan = model.TimeSpanType(timespan)
 	}
 
@@ -72,11 +72,11 @@ func getDashboardTime(
 }
 
 func fillGaps(
-	data []*model.ChartData,
+	data []model.ChartData,
 	start, end time.Time,
 	t model.TimeSpanType,
-) []*model.ChartData {
-	if len(data) == 0 {
+) []model.ChartData {
+	if len(data) == 0 || t == model.TimeSpanMonth {
 		return data
 	}
 
@@ -84,8 +84,12 @@ func fillGaps(
 	switch t {
 	case model.TimeSpanDay:
 		timeSpan = time.Hour * 24
-	default:
+	case model.TimeSpanHour:
 		timeSpan = time.Hour
+	case model.TimeSpanMinute:
+		timeSpan = time.Minute
+	default:
+		return data
 	}
 
 	// Handle first point
@@ -98,7 +102,7 @@ func fillGaps(
 
 	var firstIsZero bool
 	if !firstAlignedTime.Equal(firstPoint) {
-		data = append([]*model.ChartData{
+		data = append([]model.ChartData{
 			{
 				Timestamp: firstAlignedTime.Unix(),
 			},
@@ -116,13 +120,13 @@ func fillGaps(
 
 	var lastIsZero bool
 	if !lastAlignedTime.Equal(lastPoint) {
-		data = append(data, &model.ChartData{
+		data = append(data, model.ChartData{
 			Timestamp: lastAlignedTime.Unix(),
 		})
 		lastIsZero = true
 	}
 
-	result := make([]*model.ChartData, 0, len(data))
+	result := make([]model.ChartData, 0, len(data))
 	result = append(result, data[0])
 
 	for i := 1; i < len(data); i++ {
@@ -140,13 +144,13 @@ func fillGaps(
 		if hourDiff > 3 {
 			// Add point for hour after prev
 			if i != 1 || (i == 1 && !firstIsZero) {
-				result = append(result, &model.ChartData{
+				result = append(result, model.ChartData{
 					Timestamp: prev.Timestamp + int64(timeSpan.Seconds()),
 				})
 			}
 			// Add point for hour before curr
 			if i != len(data)-1 || (i == len(data)-1 && !lastIsZero) {
-				result = append(result, &model.ChartData{
+				result = append(result, model.ChartData{
 					Timestamp: curr.Timestamp - int64(timeSpan.Seconds()),
 				})
 			}
@@ -158,7 +162,7 @@ func fillGaps(
 
 		// Fill gaps of 2-3 hours with zero points
 		for j := prev.Timestamp + int64(timeSpan.Seconds()); j < curr.Timestamp; j += int64(timeSpan.Seconds()) {
-			result = append(result, &model.ChartData{
+			result = append(result, model.ChartData{
 				Timestamp: j,
 			})
 		}
@@ -181,19 +185,18 @@ func fillGaps(
 //	@Param			start_timestamp	query		int64	false	"Start second timestamp"
 //	@Param			end_timestamp	query		int64	false	"End second timestamp"
 //	@Param			timezone		query		string	false	"Timezone, default is Local"
-//	@Param			timespan		query		string	false	"Time span type (day, hour)"
+//	@Param			timespan		query		string	false	"Time span type (minute, hour, day, month)"
 //	@Success		200				{object}	middleware.APIResponse{data=model.DashboardResponse}
 //	@Router			/api/dashboard/ [get]
 func GetDashboard(c *gin.Context) {
-	startTimestamp, _ := strconv.ParseInt(c.Query("start_timestamp"), 10, 64)
-	endTimestamp, _ := strconv.ParseInt(c.Query("end_timestamp"), 10, 64)
+	startTime, endTime := utils.ParseTimeRange(c, -1)
 	timezoneLocation, _ := time.LoadLocation(c.DefaultQuery("timezone", "Local"))
 	timespan := c.Query("timespan")
 	start, end, timeSpan := getDashboardTime(
 		c.Query("type"),
 		timespan,
-		startTimestamp,
-		endTimestamp,
+		startTime,
+		endTime,
 		timezoneLocation,
 	)
 	modelName := c.Query("model")
@@ -240,7 +243,7 @@ func GetDashboard(c *gin.Context) {
 //	@Param			start_timestamp	query		int64	false	"Start second timestamp"
 //	@Param			end_timestamp	query		int64	false	"End second timestamp"
 //	@Param			timezone		query		string	false	"Timezone, default is Local"
-//	@Param			timespan		query		string	false	"Time span type (day, hour)"
+//	@Param			timespan		query		string	false	"Time span type (minute, hour, day, month)"
 //	@Success		200				{object}	middleware.APIResponse{data=model.GroupDashboardResponse}
 //	@Router			/api/dashboard/{group} [get]
 func GetGroupDashboard(c *gin.Context) {
@@ -250,15 +253,14 @@ func GetGroupDashboard(c *gin.Context) {
 		return
 	}
 
-	startTimestamp, _ := strconv.ParseInt(c.Query("start_timestamp"), 10, 64)
-	endTimestamp, _ := strconv.ParseInt(c.Query("end_timestamp"), 10, 64)
+	startTime, endTime := utils.ParseTimeRange(c, -1)
 	timezoneLocation, _ := time.LoadLocation(c.DefaultQuery("timezone", "Local"))
 	timespan := c.Query("timespan")
 	start, end, timeSpan := getDashboardTime(
 		c.Query("type"),
 		timespan,
-		startTimestamp,
-		endTimestamp,
+		startTime,
+		endTime,
 		timezoneLocation,
 	)
 	tokenName := c.Query("token_name")
@@ -422,7 +424,7 @@ func GetGroupDashboardModels(c *gin.Context) {
 //	@Param			start_timestamp	query		int64	false	"Start timestamp"
 //	@Param			end_timestamp	query		int64	false	"End timestamp"
 //	@Param			timezone		query		string	false	"Timezone, default is Local"
-//	@Param			timespan		query		string	false	"Time span type (day, hour, minute)"
+//	@Param			timespan		query		string	false	"Time span type (minute, hour, day, month)"
 //	@Success		200				{object}	middleware.APIResponse{data=[]model.TimeSummaryDataV2}
 //	@Router			/api/dashboardv2/ [get]
 func GetTimeSeriesModelData(c *gin.Context) {
@@ -431,7 +433,7 @@ func GetTimeSeriesModelData(c *gin.Context) {
 	startTime, endTime := utils.ParseTimeRange(c, -1)
 	timezoneLocation, _ := time.LoadLocation(c.DefaultQuery("timezone", "Local"))
 
-	models, err := model.GetTimeSeriesModelDataMinute(
+	models, err := model.GetTimeSeriesModelData(
 		channelID,
 		modelName,
 		startTime,
@@ -460,7 +462,7 @@ func GetTimeSeriesModelData(c *gin.Context) {
 //	@Param			start_timestamp	query		int64	false	"Start timestamp"
 //	@Param			end_timestamp	query		int64	false	"End timestamp"
 //	@Param			timezone		query		string	false	"Timezone, default is Local"
-//	@Param			timespan		query		string	false	"Time span type (day, hour, minute)"
+//	@Param			timespan		query		string	false	"Time span type (minute, hour, day, month)"
 //	@Success		200				{object}	middleware.APIResponse{data=[]model.TimeSummaryDataV2}
 //	@Router			/api/dashboardv2/{group} [get]
 func GetGroupTimeSeriesModelData(c *gin.Context) {
@@ -475,7 +477,7 @@ func GetGroupTimeSeriesModelData(c *gin.Context) {
 	startTime, endTime := utils.ParseTimeRange(c, -1)
 	timezoneLocation, _ := time.LoadLocation(c.DefaultQuery("timezone", "Local"))
 
-	models, err := model.GetGroupTimeSeriesModelDataMinute(
+	models, err := model.GetGroupTimeSeriesModelData(
 		group,
 		tokenName,
 		modelName,

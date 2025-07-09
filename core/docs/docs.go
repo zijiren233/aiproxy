@@ -969,7 +969,7 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "Time span type (day, hour)",
+                        "description": "Time span type (minute, hour, day, month)",
                         "name": "timespan",
                         "in": "query"
                     }
@@ -1051,7 +1051,7 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "Time span type (day, hour)",
+                        "description": "Time span type (minute, hour, day, month)",
                         "name": "timespan",
                         "in": "query"
                     }
@@ -1175,7 +1175,7 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "Time span type (day, hour, minute)",
+                        "description": "Time span type (minute, hour, day, month)",
                         "name": "timespan",
                         "in": "query"
                     }
@@ -1260,7 +1260,7 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "Time span type (day, hour, minute)",
+                        "description": "Time span type (minute, hour, day, month)",
                         "name": "timespan",
                         "in": "query"
                     }
@@ -9398,6 +9398,9 @@ const docTemplate = `{
                 "request_count": {
                     "type": "integer"
                 },
+                "retry_count": {
+                    "type": "integer"
+                },
                 "sets": {
                     "type": "array",
                     "items": {
@@ -9564,16 +9567,31 @@ const docTemplate = `{
                 "input_tokens": {
                     "type": "integer"
                 },
-                "max_rpm": {
-                    "type": "integer"
-                },
-                "max_tpm": {
-                    "type": "integer"
-                },
                 "output_tokens": {
                     "type": "integer"
                 },
+                "reasoning_tokens": {
+                    "type": "integer"
+                },
                 "request_count": {
+                    "type": "integer"
+                },
+                "retry_count": {
+                    "type": "integer"
+                },
+                "status_400_count": {
+                    "type": "integer"
+                },
+                "status_429_count": {
+                    "type": "integer"
+                },
+                "status_4xx_count": {
+                    "type": "integer"
+                },
+                "status_500_count": {
+                    "type": "integer"
+                },
+                "status_5xx_count": {
                     "type": "integer"
                 },
                 "timestamp": {
@@ -9695,10 +9713,35 @@ const docTemplate = `{
                 "output_tokens": {
                     "type": "integer"
                 },
+                "reasoning_tokens": {
+                    "type": "integer"
+                },
+                "request_count": {
+                    "type": "integer"
+                },
+                "retry_count": {
+                    "type": "integer"
+                },
                 "rpm": {
                     "type": "integer"
                 },
+                "status_400_count": {
+                    "type": "integer"
+                },
+                "status_429_count": {
+                    "type": "integer"
+                },
+                "status_4xx_count": {
+                    "type": "integer"
+                },
+                "status_500_count": {
+                    "type": "integer"
+                },
+                "status_5xx_count": {
+                    "type": "integer"
+                },
                 "total_count": {
+                    "description": "use Count.RequestCount instead",
                     "type": "integer"
                 },
                 "total_time_milliseconds": {
@@ -10054,7 +10097,31 @@ const docTemplate = `{
                 "output_tokens": {
                     "type": "integer"
                 },
+                "reasoning_tokens": {
+                    "type": "integer"
+                },
+                "request_count": {
+                    "type": "integer"
+                },
+                "retry_count": {
+                    "type": "integer"
+                },
                 "rpm": {
+                    "type": "integer"
+                },
+                "status_400_count": {
+                    "type": "integer"
+                },
+                "status_429_count": {
+                    "type": "integer"
+                },
+                "status_4xx_count": {
+                    "type": "integer"
+                },
+                "status_500_count": {
+                    "type": "integer"
+                },
+                "status_5xx_count": {
                     "type": "integer"
                 },
                 "token_names": {
@@ -10064,6 +10131,7 @@ const docTemplate = `{
                     }
                 },
                 "total_count": {
+                    "description": "use Count.RequestCount instead",
                     "type": "integer"
                 },
                 "total_time_milliseconds": {
@@ -11114,6 +11182,9 @@ const docTemplate = `{
                 "exception_count": {
                     "type": "integer"
                 },
+                "group_id": {
+                    "type": "string"
+                },
                 "image_input_tokens": {
                     "type": "integer"
                 },
@@ -11132,11 +11203,35 @@ const docTemplate = `{
                 "output_tokens": {
                     "type": "integer"
                 },
+                "reasoning_tokens": {
+                    "type": "integer"
+                },
                 "request_count": {
+                    "type": "integer"
+                },
+                "retry_count": {
+                    "type": "integer"
+                },
+                "status_400_count": {
+                    "type": "integer"
+                },
+                "status_429_count": {
+                    "type": "integer"
+                },
+                "status_4xx_count": {
+                    "type": "integer"
+                },
+                "status_500_count": {
+                    "type": "integer"
+                },
+                "status_5xx_count": {
                     "type": "integer"
                 },
                 "timestamp": {
                     "type": "integer"
+                },
+                "token_name": {
+                    "type": "string"
                 },
                 "total_time_milliseconds": {
                     "type": "integer"
