@@ -185,7 +185,7 @@ func fillGaps(
 //	@Param			start_timestamp	query		int64	false	"Start second timestamp"
 //	@Param			end_timestamp	query		int64	false	"End second timestamp"
 //	@Param			timezone		query		string	false	"Timezone, default is Local"
-//	@Param			timespan		query		string	false	"Time span type (day, hour)"
+//	@Param			timespan		query		string	false	"Time span type (minute, hour, day, month)"
 //	@Success		200				{object}	middleware.APIResponse{data=model.DashboardResponse}
 //	@Router			/api/dashboard/ [get]
 func GetDashboard(c *gin.Context) {
@@ -243,7 +243,7 @@ func GetDashboard(c *gin.Context) {
 //	@Param			start_timestamp	query		int64	false	"Start second timestamp"
 //	@Param			end_timestamp	query		int64	false	"End second timestamp"
 //	@Param			timezone		query		string	false	"Timezone, default is Local"
-//	@Param			timespan		query		string	false	"Time span type (day, hour)"
+//	@Param			timespan		query		string	false	"Time span type (minute, hour, day, month)"
 //	@Success		200				{object}	middleware.APIResponse{data=model.GroupDashboardResponse}
 //	@Router			/api/dashboard/{group} [get]
 func GetGroupDashboard(c *gin.Context) {

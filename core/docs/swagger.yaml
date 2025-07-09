@@ -990,10 +990,6 @@ definitions:
         type: integer
       input_tokens:
         type: integer
-      max_rpm:
-        type: integer
-      max_tpm:
-        type: integer
       output_tokens:
         type: integer
       reasoning_tokens:
@@ -1002,6 +998,8 @@ definitions:
         type: integer
       retry_count:
         type: integer
+      status_5xx_count:
+        type: integer
       status_400_count:
         type: integer
       status_429_count:
@@ -1009,8 +1007,6 @@ definitions:
       status_4xx_count:
         type: integer
       status_500_count:
-        type: integer
-      status_5xx_count:
         type: integer
       timestamp:
         type: integer
@@ -1098,15 +1094,15 @@ definitions:
         type: integer
       rpm:
         type: integer
+      status_429_count:
+        type: integer
+      status_500_count:
+        type: integer
       status_5xx_count:
         type: integer
       status_400_count:
         type: integer
-      status_429_count:
-        type: integer
       status_4xx_count:
-        type: integer
-      status_500_count:
         type: integer
       total_count:
         description: use Count.RequestCount instead
@@ -1356,6 +1352,8 @@ definitions:
         type: integer
       rpm:
         type: integer
+      status_5xx_count:
+        type: integer
       status_400_count:
         type: integer
       status_429_count:
@@ -1363,8 +1361,6 @@ definitions:
       status_4xx_count:
         type: integer
       status_500_count:
-        type: integer
-      status_5xx_count:
         type: integer
       token_names:
         items:
@@ -2114,8 +2110,6 @@ definitions:
         type: integer
       retry_count:
         type: integer
-      status_5xx_count:
-        type: integer
       status_400_count:
         type: integer
       status_429_count:
@@ -2123,6 +2117,8 @@ definitions:
       status_4xx_count:
         type: integer
       status_500_count:
+        type: integer
+      status_5xx_count:
         type: integer
       timestamp:
         type: integer
@@ -2912,7 +2908,7 @@ paths:
         in: query
         name: timezone
         type: string
-      - description: Time span type (day, hour)
+      - description: Time span type (minute, hour, day, month)
         in: query
         name: timespan
         type: string
@@ -2962,7 +2958,7 @@ paths:
         in: query
         name: timezone
         type: string
-      - description: Time span type (day, hour)
+      - description: Time span type (minute, hour, day, month)
         in: query
         name: timespan
         type: string

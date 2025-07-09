@@ -168,11 +168,6 @@ func getChartDataMinute(
 		return nil, err
 	}
 
-	for i, data := range chartData {
-		chartData[i].MaxRPM = data.RequestCount
-		chartData[i].MaxTPM = int64(data.TotalTokens)
-	}
-
 	if len(chartData) > 0 && timeSpan != TimeSpanMinute {
 		chartData = aggregateDataToSpan(chartData, timeSpan, timezone)
 	}
@@ -230,11 +225,6 @@ func getGroupChartDataMinute(
 	err := query.Find(&chartData).Error
 	if err != nil {
 		return nil, err
-	}
-
-	for i, data := range chartData {
-		chartData[i].MaxRPM = data.RequestCount
-		chartData[i].MaxTPM = int64(data.TotalTokens)
 	}
 
 	if len(chartData) > 0 && timeSpan != TimeSpanMinute {
@@ -381,7 +371,7 @@ func getGroupLogGroupByValuesMinute[T cmp.Ordered](
 	return values, nil
 }
 
-func GetDashboardDataMinute(
+func getDashboardDataMinute(
 	start,
 	end time.Time,
 	modelName string,
@@ -435,7 +425,7 @@ func GetDashboardDataMinute(
 	return &dashboardResponse, nil
 }
 
-func GetGroupDashboardDataMinute(
+func getGroupDashboardDataMinute(
 	group string,
 	start, end time.Time,
 	tokenName string,

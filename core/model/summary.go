@@ -576,9 +576,6 @@ type ChartData struct {
 
 	Count
 	Usage
-
-	MaxRPM int64 `json:"max_rpm"`
-	MaxTPM int64 `json:"max_tpm"`
 }
 
 type DashboardResponse struct {
@@ -673,14 +670,6 @@ func aggregateDataToSpan(
 			Add(decimal.NewFromFloat(data.UsedAmount)).
 			InexactFloat64()
 
-		if data.MaxRPM > currentData.MaxRPM {
-			currentData.MaxRPM = data.MaxRPM
-		}
-
-		if data.MaxTPM > currentData.MaxTPM {
-			currentData.MaxTPM = data.MaxTPM
-		}
-
 		dataMap[timestamp] = currentData
 	}
 
@@ -711,14 +700,6 @@ func sumDashboardResponse(chartData []ChartData) DashboardResponse {
 			NewFromFloat(dashboardResponse.UsedAmount).
 			Add(decimal.NewFromFloat(data.UsedAmount)).
 			InexactFloat64()
-
-		if data.MaxRPM > dashboardResponse.MaxRPM {
-			dashboardResponse.MaxRPM = data.MaxRPM
-		}
-
-		if data.MaxTPM > dashboardResponse.MaxTPM {
-			dashboardResponse.MaxTPM = data.MaxTPM
-		}
 	}
 
 	dashboardResponse.UsedAmount = usedAmount.InexactFloat64()
@@ -734,6 +715,10 @@ func GetDashboardData(
 	timeSpan TimeSpanType,
 	timezone *time.Location,
 ) (*DashboardResponse, error) {
+	if timeSpan == TimeSpanMinute {
+		return getDashboardDataMinute(start, end, modelName, channelID, timeSpan, timezone)
+	}
+
 	if end.IsZero() {
 		end = time.Now()
 	} else if end.Before(start) {
@@ -788,6 +773,18 @@ func GetGroupDashboardData(
 	timeSpan TimeSpanType,
 	timezone *time.Location,
 ) (*GroupDashboardResponse, error) {
+	if timeSpan == TimeSpanMinute {
+		return getGroupDashboardDataMinute(
+			group,
+			start,
+			end,
+			tokenName,
+			modelName,
+			timeSpan,
+			timezone,
+		)
+	}
+
 	if group == "" {
 		return nil, errors.New("group is required")
 	}

@@ -969,7 +969,7 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "Time span type (day, hour)",
+                        "description": "Time span type (minute, hour, day, month)",
                         "name": "timespan",
                         "in": "query"
                     }
@@ -1051,7 +1051,7 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "Time span type (day, hour)",
+                        "description": "Time span type (minute, hour, day, month)",
                         "name": "timespan",
                         "in": "query"
                     }
@@ -9565,12 +9565,6 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "input_tokens": {
-                    "type": "integer"
-                },
-                "max_rpm": {
-                    "type": "integer"
-                },
-                "max_tpm": {
                     "type": "integer"
                 },
                 "output_tokens": {
