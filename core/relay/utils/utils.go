@@ -1,8 +1,10 @@
 package utils
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
+	"sync"
 
 	"github.com/labring/aiproxy/core/common"
 	model "github.com/labring/aiproxy/core/relay/model"
@@ -110,4 +112,31 @@ func IsStreamResponseWithHeader(header http.Header) bool {
 
 	return strings.Contains(contentType, "event-stream") ||
 		strings.Contains(contentType, "x-ndjson")
+}
+
+const scannerBufferSize = 256 * 1024
+
+var scannerBufferPool = sync.Pool{
+	New: func() any {
+		buf := make([]byte, scannerBufferSize)
+		return &buf
+	},
+}
+
+//nolint:forcetypeassert
+func GetScannerBuffer() *[]byte {
+	v, ok := scannerBufferPool.Get().(*[]byte)
+	if !ok {
+		panic(fmt.Sprintf("scanner buffer type error: %T, %v", v, v))
+	}
+
+	return v
+}
+
+func PutScannerBuffer(buf *[]byte) {
+	if cap(*buf) != scannerBufferSize {
+		return
+	}
+
+	scannerBufferPool.Put(buf)
 }

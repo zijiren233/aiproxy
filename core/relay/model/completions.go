@@ -44,8 +44,8 @@ type GeneralOpenAIRequest struct {
 	Model               string          `json:"model,omitempty"`
 	User                string          `json:"user,omitempty"`
 	Size                string          `json:"size,omitempty"`
-	Messages            []*Message      `json:"messages,omitempty"`
-	Tools               []*Tool         `json:"tools,omitempty"`
+	Messages            []Message       `json:"messages,omitempty"`
+	Tools               []Tool          `json:"tools,omitempty"`
 	Seed                float64         `json:"seed,omitempty"`
 	MaxTokens           int             `json:"max_tokens,omitempty"`
 	TopK                int             `json:"top_k,omitempty"`
@@ -107,12 +107,12 @@ type TextResponse struct {
 }
 
 type Message struct {
-	Content          any         `json:"content,omitempty"`
-	ReasoningContent string      `json:"reasoning_content,omitempty"`
-	Name             *string     `json:"name,omitempty"`
-	Role             string      `json:"role,omitempty"`
-	ToolCallID       string      `json:"tool_call_id,omitempty"`
-	ToolCalls        []*ToolCall `json:"tool_calls,omitempty"`
+	Content          any        `json:"content,omitempty"`
+	ReasoningContent string     `json:"reasoning_content,omitempty"`
+	Name             *string    `json:"name,omitempty"`
+	Role             string     `json:"role,omitempty"`
+	ToolCallID       string     `json:"tool_call_id,omitempty"`
+	ToolCalls        []ToolCall `json:"tool_calls,omitempty"`
 }
 
 func (m *Message) IsStringContent() bool {

@@ -19,6 +19,7 @@ import (
 	"github.com/labring/aiproxy/core/relay/adaptor"
 	"github.com/labring/aiproxy/core/relay/meta"
 	relaymodel "github.com/labring/aiproxy/core/relay/model"
+	"github.com/labring/aiproxy/core/relay/render"
 	"github.com/labring/aiproxy/core/relay/utils"
 )
 
@@ -235,8 +236,8 @@ func handleSTTStream(
 
 	scanner := bufio.NewScanner(resp.Body)
 
-	buf := GetScannerBuffer()
-	defer PutScannerBuffer(buf)
+	buf := utils.GetScannerBuffer()
+	defer utils.PutScannerBuffer(buf)
 
 	scanner.Buffer(*buf, cap(*buf))
 
@@ -258,12 +259,12 @@ func processSTTStreamChunks(
 
 	for scanner.Scan() {
 		data := scanner.Bytes()
-		if !IsValidSSEData(data) {
+		if !render.IsValidSSEData(data) {
 			continue
 		}
 
-		data = ExtractSSEData(data)
-		if IsSSEDone(data) {
+		data = render.ExtractSSEData(data)
+		if render.IsSSEDone(data) {
 			break
 		}
 
@@ -280,10 +281,10 @@ func processSTTStreamChunks(
 			usage = totalUsage
 		}
 
-		BytesData(c, data)
+		render.OpenaiBytesData(c, data)
 	}
 
-	Done(c)
+	render.OpenaiDone(c)
 
 	if usage == nil {
 		usage = calculateSTTUsage(fullText.String(), meta)

@@ -1,4 +1,4 @@
-package openai
+package render
 
 import (
 	"bytes"
@@ -15,18 +15,14 @@ import (
 )
 
 const (
-	nn               = "\n\n"
 	DONE             = "[DONE]"
 	DataPrefix       = "data:"
 	DataPrefixLength = len(DataPrefix)
-	dataSpace        = "data: "
 )
 
 var (
 	DataPrefixBytes = conv.StringToBytes(DataPrefix)
 	DoneBytes       = conv.StringToBytes(DONE)
-	nnBytes         = conv.StringToBytes(nn)
-	dataSpaceBytes  = conv.StringToBytes(dataSpace)
 )
 
 // IsValidSSEData checks if data is valid SSE format
@@ -45,15 +41,15 @@ func IsSSEDone(data []byte) bool {
 	return slices.Equal(data, DoneBytes)
 }
 
-type SSE struct {
+type OpenaiSSE struct {
 	Data []byte
 }
 
-func (r *SSE) Render(w http.ResponseWriter) error {
+func (r *OpenaiSSE) Render(w http.ResponseWriter) error {
 	r.WriteContentType(w)
 
 	for _, bytes := range [][]byte{
-		dataSpaceBytes,
+		dataBytes,
 		r.Data,
 		nnBytes,
 	} {
@@ -67,7 +63,7 @@ func (r *SSE) Render(w http.ResponseWriter) error {
 	return nil
 }
 
-func (r *SSE) WriteContentType(w http.ResponseWriter) {
+func (r *OpenaiSSE) WriteContentType(w http.ResponseWriter) {
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Connection", "keep-alive")
@@ -75,11 +71,11 @@ func (r *SSE) WriteContentType(w http.ResponseWriter) {
 	w.Header().Set("X-Accel-Buffering", "no")
 }
 
-func StringData(c *gin.Context, str string) {
-	BytesData(c, conv.StringToBytes(str))
+func OpenaiStringData(c *gin.Context, str string) {
+	OpenaiBytesData(c, conv.StringToBytes(str))
 }
 
-func BytesData(c *gin.Context, data []byte) {
+func OpenaiBytesData(c *gin.Context, data []byte) {
 	if len(c.Errors) > 0 {
 		return
 	}
@@ -88,11 +84,11 @@ func BytesData(c *gin.Context, data []byte) {
 		return
 	}
 
-	c.Render(-1, &SSE{Data: data})
+	c.Render(-1, &OpenaiSSE{Data: data})
 	c.Writer.Flush()
 }
 
-func ObjectData(c *gin.Context, object any) error {
+func OpenaiObjectData(c *gin.Context, object any) error {
 	if len(c.Errors) > 0 {
 		return c.Errors.Last()
 	}
@@ -106,22 +102,22 @@ func ObjectData(c *gin.Context, object any) error {
 		return fmt.Errorf("error marshalling object: %w", err)
 	}
 
-	c.Render(-1, &SSE{Data: jsonData})
+	c.Render(-1, &OpenaiSSE{Data: jsonData})
 	c.Writer.Flush()
 
 	return nil
 }
 
-func Done(c *gin.Context) {
-	StringData(c, DONE)
+func OpenaiDone(c *gin.Context) {
+	OpenaiStringData(c, DONE)
 }
 
-type TtsSSE struct {
+type OpenaiTtsSSE struct {
 	Audio string // base64 encode audio data
 	Usage *model.TextToSpeechUsage
 }
 
-func (r *TtsSSE) Render(w http.ResponseWriter) error {
+func (r *OpenaiTtsSSE) Render(w http.ResponseWriter) error {
 	r.WriteContentType(w)
 
 	payload := model.TextToSpeechSSEResponse{
@@ -140,7 +136,7 @@ func (r *TtsSSE) Render(w http.ResponseWriter) error {
 	}
 
 	for _, bytes := range [][]byte{
-		dataSpaceBytes,
+		dataBytes,
 		jsonData,
 		nnBytes,
 	} {
@@ -154,7 +150,7 @@ func (r *TtsSSE) Render(w http.ResponseWriter) error {
 	return nil
 }
 
-func (r *TtsSSE) WriteContentType(w http.ResponseWriter) {
+func (r *OpenaiTtsSSE) WriteContentType(w http.ResponseWriter) {
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Connection", "keep-alive")
@@ -162,7 +158,7 @@ func (r *TtsSSE) WriteContentType(w http.ResponseWriter) {
 	w.Header().Set("X-Accel-Buffering", "no")
 }
 
-func AudioData(c *gin.Context, audio string) {
+func OpenaiAudioData(c *gin.Context, audio string) {
 	if len(c.Errors) > 0 {
 		return
 	}
@@ -171,24 +167,24 @@ func AudioData(c *gin.Context, audio string) {
 		return
 	}
 
-	c.Render(-1, &TtsSSE{Audio: audio})
+	c.Render(-1, &OpenaiTtsSSE{Audio: audio})
 	c.Writer.Flush()
 }
 
-type AudioDataWriter struct {
+type OpenaiAudioDataWriter struct {
 	c *gin.Context
 }
 
-func NewAudioDataWriter(c *gin.Context) *AudioDataWriter {
-	return &AudioDataWriter{c: c}
+func NewOpenaiAudioDataWriter(c *gin.Context) *OpenaiAudioDataWriter {
+	return &OpenaiAudioDataWriter{c: c}
 }
 
-func (w *AudioDataWriter) Write(p []byte) (n int, err error) {
-	AudioData(w.c, base64.StdEncoding.EncodeToString(p))
+func (w *OpenaiAudioDataWriter) Write(p []byte) (n int, err error) {
+	OpenaiAudioData(w.c, base64.StdEncoding.EncodeToString(p))
 	return len(p), nil
 }
 
-func AudioDone(c *gin.Context, usage model.TextToSpeechUsage) {
+func OpenaiAudioDone(c *gin.Context, usage model.TextToSpeechUsage) {
 	if len(c.Errors) > 0 {
 		return
 	}
@@ -197,6 +193,6 @@ func AudioDone(c *gin.Context, usage model.TextToSpeechUsage) {
 		return
 	}
 
-	c.Render(-1, &TtsSSE{Usage: &usage})
+	c.Render(-1, &OpenaiTtsSSE{Usage: &usage})
 	c.Writer.Flush()
 }

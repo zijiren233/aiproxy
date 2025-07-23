@@ -19,6 +19,8 @@ import (
 	"github.com/labring/aiproxy/core/relay/adaptor/openai"
 	"github.com/labring/aiproxy/core/relay/meta"
 	relaymodel "github.com/labring/aiproxy/core/relay/model"
+	"github.com/labring/aiproxy/core/relay/render"
+	"github.com/labring/aiproxy/core/relay/utils"
 	"golang.org/x/sync/semaphore"
 )
 
@@ -48,12 +50,12 @@ func stopReasonClaude2OpenAI(reason string) string {
 }
 
 type onlyThinkingRequest struct {
-	Thinking *Thinking `json:"thinking,omitempty"`
+	Thinking *relaymodel.ClaudeThinking `json:"thinking,omitempty"`
 }
 
 //nolint:gocyclo
-func OpenAIConvertRequest(meta *meta.Meta, req *http.Request) (*Request, error) {
-	var textRequest OpenAIRequest
+func OpenAIConvertRequest(meta *meta.Meta, req *http.Request) (*relaymodel.ClaudeRequest, error) {
+	var textRequest relaymodel.ClaudeOpenAIRequest
 
 	err := common.UnmarshalRequestReusable(req, &textRequest)
 	if err != nil {
@@ -68,11 +70,11 @@ func OpenAIConvertRequest(meta *meta.Meta, req *http.Request) (*Request, error) 
 	}
 
 	textRequest.Model = meta.ActualModel
-	claudeTools := make([]Tool, 0, len(textRequest.Tools))
+	claudeTools := make([]relaymodel.ClaudeTool, 0, len(textRequest.Tools))
 
 	for _, tool := range textRequest.Tools {
 		if tool.Type != "function" {
-			claudeTools = append(claudeTools, Tool{
+			claudeTools = append(claudeTools, relaymodel.ClaudeTool{
 				Type:            tool.Type,
 				Name:            tool.Name,
 				DisplayWidthPx:  tool.DisplayWidthPx,
@@ -92,10 +94,10 @@ func OpenAIConvertRequest(meta *meta.Meta, req *http.Request) (*Request, error) 
 					t = "object"
 				}
 
-				claudeTools = append(claudeTools, Tool{
+				claudeTools = append(claudeTools, relaymodel.ClaudeTool{
 					Name:        tool.Function.Name,
 					Description: tool.Function.Description,
-					InputSchema: &InputSchema{
+					InputSchema: &relaymodel.ClaudeInputSchema{
 						Type:       t,
 						Properties: params["properties"],
 						Required:   params["required"],
@@ -111,7 +113,7 @@ func OpenAIConvertRequest(meta *meta.Meta, req *http.Request) (*Request, error) 
 		}
 	}
 
-	claudeRequest := Request{
+	claudeRequest := relaymodel.ClaudeRequest{
 		Model:       meta.ActualModel,
 		MaxTokens:   textRequest.MaxTokens,
 		Temperature: textRequest.Temperature,
@@ -131,7 +133,7 @@ func OpenAIConvertRequest(meta *meta.Meta, req *http.Request) (*Request, error) 
 			claudeRequest.Thinking = nil
 		}
 	} else if strings.Contains(meta.OriginModel, "think") {
-		claudeRequest.Thinking = &Thinking{
+		claudeRequest.Thinking = &relaymodel.ClaudeThinking{
 			Type: "enabled",
 		}
 	}
@@ -169,13 +171,13 @@ func OpenAIConvertRequest(meta *meta.Meta, req *http.Request) (*Request, error) 
 		claudeRequest.ToolChoice = claudeToolChoice
 	}
 
-	var imageTasks []*Content
+	var imageTasks []*relaymodel.ClaudeContent
 
 	hasToolCalls := false
 
 	for _, message := range textRequest.Messages {
 		if message.Role == "system" {
-			claudeRequest.System = append(claudeRequest.System, Content{
+			claudeRequest.System = append(claudeRequest.System, relaymodel.ClaudeContent{
 				Type:         conetentTypeText,
 				Text:         message.StringContent(),
 				CacheControl: message.CacheControl.ResetTTL(),
@@ -184,11 +186,11 @@ func OpenAIConvertRequest(meta *meta.Meta, req *http.Request) (*Request, error) 
 			continue
 		}
 
-		claudeMessage := Message{
+		claudeMessage := relaymodel.ClaudeMessage{
 			Role: message.Role,
 		}
 
-		var content Content
+		var content relaymodel.ClaudeContent
 
 		content.CacheControl = message.CacheControl.ResetTTL()
 		if message.IsStringContent() {
@@ -203,27 +205,27 @@ func OpenAIConvertRequest(meta *meta.Meta, req *http.Request) (*Request, error) 
 				content.ToolUseID = message.ToolCallID
 			}
 
-			claudeMessage.Content = append(claudeMessage.Content, &content)
+			claudeMessage.Content = append(claudeMessage.Content, content)
 		} else {
-			var contents []*Content
+			var contents []relaymodel.ClaudeContent
 
 			openaiContent := message.ParseContent()
 			for _, part := range openaiContent {
-				var content Content
+				var content relaymodel.ClaudeContent
 				switch part.Type {
 				case relaymodel.ContentTypeText:
 					content.Type = conetentTypeText
 					content.Text = part.Text
 				case relaymodel.ContentTypeImageURL:
 					content.Type = conetentTypeImage
-					content.Source = &ImageSource{
+					content.Source = &relaymodel.ClaudeImageSource{
 						Type: "url",
 						URL:  part.ImageURL.URL,
 					}
 					imageTasks = append(imageTasks, &content)
 				}
 
-				contents = append(contents, &content)
+				contents = append(contents, content)
 			}
 
 			claudeMessage.Content = contents
@@ -233,7 +235,7 @@ func OpenAIConvertRequest(meta *meta.Meta, req *http.Request) (*Request, error) 
 			hasToolCalls = true
 			inputParam := make(map[string]any)
 			_ = sonic.UnmarshalString(toolCall.Function.Arguments, &inputParam)
-			claudeMessage.Content = append(claudeMessage.Content, &Content{
+			claudeMessage.Content = append(claudeMessage.Content, relaymodel.ClaudeContent{
 				Type:  toolUseType,
 				ID:    toolCall.ID,
 				Name:  toolCall.Function.Name,
@@ -258,7 +260,7 @@ func OpenAIConvertRequest(meta *meta.Meta, req *http.Request) (*Request, error) 
 	return &claudeRequest, nil
 }
 
-func batchPatchImage2Base64(ctx context.Context, imageTasks []*Content) error {
+func batchPatchImage2Base64(ctx context.Context, imageTasks []*relaymodel.ClaudeContent) error {
 	sem := semaphore.NewWeighted(3)
 
 	var (
@@ -319,9 +321,9 @@ func StreamResponse2OpenAI(
 		stopReason string
 	)
 
-	tools := make([]*relaymodel.ToolCall, 0)
+	tools := make([]relaymodel.ToolCall, 0)
 
-	var claudeResponse StreamResponse
+	var claudeResponse relaymodel.ClaudeStreamResponse
 
 	err := sonic.Unmarshal(respData, &claudeResponse)
 	if err != nil {
@@ -344,7 +346,7 @@ func StreamResponse2OpenAI(
 		if claudeResponse.ContentBlock != nil {
 			content = claudeResponse.ContentBlock.Text
 			if claudeResponse.ContentBlock.Type == toolUseType {
-				tools = append(tools, &relaymodel.ToolCall{
+				tools = append(tools, relaymodel.ToolCall{
 					ID:   claudeResponse.ContentBlock.ID,
 					Type: "function",
 					Function: relaymodel.Function{
@@ -357,7 +359,7 @@ func StreamResponse2OpenAI(
 		if claudeResponse.Delta != nil {
 			switch claudeResponse.Delta.Type {
 			case "input_json_delta":
-				tools = append(tools, &relaymodel.ToolCall{
+				tools = append(tools, relaymodel.ToolCall{
 					Type: "function",
 					Function: relaymodel.Function{
 						Arguments: claudeResponse.Delta.PartialJSON,
@@ -414,7 +416,7 @@ func Response2OpenAI(
 	meta *meta.Meta,
 	respData []byte,
 ) (*relaymodel.TextResponse, adaptor.Error) {
-	var claudeResponse Response
+	var claudeResponse relaymodel.ClaudeResponse
 
 	err := sonic.Unmarshal(respData, &claudeResponse)
 	if err != nil {
@@ -437,7 +439,7 @@ func Response2OpenAI(
 		thinking string
 	)
 
-	tools := make([]*relaymodel.ToolCall, 0)
+	tools := make([]relaymodel.ToolCall, 0)
 	for _, v := range claudeResponse.Content {
 		switch v.Type {
 		case conetentTypeText:
@@ -446,7 +448,7 @@ func Response2OpenAI(
 			thinking = v.Thinking
 		case toolUseType:
 			args, _ := sonic.MarshalString(v.Input)
-			tools = append(tools, &relaymodel.ToolCall{
+			tools = append(tools, relaymodel.ToolCall{
 				ID:   v.ID,
 				Type: "function",
 				Function: relaymodel.Function{
@@ -504,8 +506,8 @@ func OpenAIStreamHandler(
 
 	scanner := bufio.NewScanner(resp.Body)
 
-	buf := openai.GetScannerBuffer()
-	defer openai.PutScannerBuffer(buf)
+	buf := utils.GetScannerBuffer()
+	defer utils.PutScannerBuffer(buf)
 
 	scanner.Buffer(*buf, cap(*buf))
 
@@ -518,12 +520,12 @@ func OpenAIStreamHandler(
 
 	for scanner.Scan() {
 		data := scanner.Bytes()
-		if !openai.IsValidSSEData(data) {
+		if !render.IsValidSSEData(data) {
 			continue
 		}
 
-		data = openai.ExtractSSEData(data)
-		if openai.IsSSEDone(data) {
+		data = render.ExtractSSEData(data)
+		if render.IsSSEDone(data) {
 			break
 		}
 
@@ -573,7 +575,7 @@ func OpenAIStreamHandler(
 			response.Usage = usage
 		}
 
-		_ = openai.ObjectData(c, response)
+		_ = render.OpenaiObjectData(c, response)
 		writed = true
 	}
 
@@ -592,7 +594,7 @@ func OpenAIStreamHandler(
 				m.OriginModel,
 			),
 		}
-		_ = openai.ObjectData(c, &relaymodel.ChatCompletionsStreamResponse{
+		_ = render.OpenaiObjectData(c, &relaymodel.ChatCompletionsStreamResponse{
 			ID:      openai.ChatCompletionID(),
 			Model:   m.OriginModel,
 			Object:  relaymodel.ChatCompletionChunkObject,
@@ -602,7 +604,7 @@ func OpenAIStreamHandler(
 		})
 	}
 
-	openai.Done(c)
+	render.OpenaiDone(c)
 
 	return usage.ToModelUsage(), nil
 }

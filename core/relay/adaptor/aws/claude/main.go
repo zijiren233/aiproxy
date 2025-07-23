@@ -23,6 +23,7 @@ import (
 	"github.com/labring/aiproxy/core/relay/meta"
 	"github.com/labring/aiproxy/core/relay/mode"
 	relaymodel "github.com/labring/aiproxy/core/relay/model"
+	"github.com/labring/aiproxy/core/relay/render"
 	"github.com/pkg/errors"
 )
 
@@ -118,7 +119,7 @@ func Handler(meta *meta.Meta, c *gin.Context) (model.Usage, adaptor.Error) {
 		)
 	}
 
-	claudeReq, ok := convReq.(*anthropic.Request)
+	claudeReq, ok := convReq.(*relaymodel.ClaudeRequest)
 	if !ok {
 		panic(fmt.Sprintf("claude request type error: %T, %v", claudeReq, claudeReq))
 	}
@@ -209,7 +210,7 @@ func StreamHandler(m *meta.Meta, c *gin.Context) (model.Usage, adaptor.Error) {
 		)
 	}
 
-	claudeReq, ok := convReq.(*anthropic.Request)
+	claudeReq, ok := convReq.(*relaymodel.ClaudeRequest)
 	if !ok {
 		panic(fmt.Sprintf("claude request type error: %T, %v", claudeReq, claudeReq))
 	}
@@ -300,7 +301,7 @@ func StreamHandler(m *meta.Meta, c *gin.Context) (model.Usage, adaptor.Error) {
 				}
 			}
 
-			_ = openai.ObjectData(c, response)
+			_ = render.OpenaiObjectData(c, response)
 			writed = true
 		case *types.UnknownUnionMember:
 			log.Error("unknown tag: " + v.Tag)
@@ -322,7 +323,7 @@ func StreamHandler(m *meta.Meta, c *gin.Context) (model.Usage, adaptor.Error) {
 				m.OriginModel,
 			),
 		}
-		_ = openai.ObjectData(c, &relaymodel.ChatCompletionsStreamResponse{
+		_ = render.OpenaiObjectData(c, &relaymodel.ChatCompletionsStreamResponse{
 			ID:      openai.ChatCompletionID(),
 			Model:   m.OriginModel,
 			Object:  relaymodel.ChatCompletionChunkObject,
@@ -332,7 +333,7 @@ func StreamHandler(m *meta.Meta, c *gin.Context) (model.Usage, adaptor.Error) {
 		})
 	}
 
-	openai.Done(c)
+	render.OpenaiDone(c)
 
 	return usage.ToModelUsage(), nil
 }

@@ -11,9 +11,9 @@ import (
 	"github.com/labring/aiproxy/core/common"
 	"github.com/labring/aiproxy/core/model"
 	"github.com/labring/aiproxy/core/relay/adaptor"
-	"github.com/labring/aiproxy/core/relay/adaptor/openai"
 	"github.com/labring/aiproxy/core/relay/meta"
 	relaymodel "github.com/labring/aiproxy/core/relay/model"
+	"github.com/labring/aiproxy/core/relay/render"
 	"github.com/labring/aiproxy/core/relay/utils"
 )
 
@@ -25,16 +25,16 @@ type Message struct {
 }
 
 type ChatRequest struct {
-	Temperature     *float64              `json:"temperature,omitempty"`
-	TopP            *float64              `json:"top_p,omitempty"`
-	PenaltyScore    *float64              `json:"penalty_score,omitempty"`
-	System          string                `json:"system,omitempty"`
-	UserID          string                `json:"user_id,omitempty"`
-	Messages        []*relaymodel.Message `json:"messages"`
-	MaxOutputTokens int                   `json:"max_output_tokens,omitempty"`
-	Stream          bool                  `json:"stream,omitempty"`
-	DisableSearch   bool                  `json:"disable_search,omitempty"`
-	EnableCitation  bool                  `json:"enable_citation,omitempty"`
+	Temperature     *float64             `json:"temperature,omitempty"`
+	TopP            *float64             `json:"top_p,omitempty"`
+	PenaltyScore    *float64             `json:"penalty_score,omitempty"`
+	System          string               `json:"system,omitempty"`
+	UserID          string               `json:"user_id,omitempty"`
+	Messages        []relaymodel.Message `json:"messages"`
+	MaxOutputTokens int                  `json:"max_output_tokens,omitempty"`
+	Stream          bool                 `json:"stream,omitempty"`
+	DisableSearch   bool                 `json:"disable_search,omitempty"`
+	EnableCitation  bool                 `json:"enable_citation,omitempty"`
 }
 
 func ConvertRequest(meta *meta.Meta, req *http.Request) (adaptor.ConvertResult, error) {
@@ -152,19 +152,19 @@ func StreamHandler(
 
 	scanner := bufio.NewScanner(resp.Body)
 
-	buf := openai.GetScannerBuffer()
-	defer openai.PutScannerBuffer(buf)
+	buf := utils.GetScannerBuffer()
+	defer utils.PutScannerBuffer(buf)
 
 	scanner.Buffer(*buf, cap(*buf))
 
 	for scanner.Scan() {
 		data := scanner.Bytes()
-		if !openai.IsValidSSEData(data) {
+		if !render.IsValidSSEData(data) {
 			continue
 		}
 
-		data = openai.ExtractSSEData(data)
-		if openai.IsSSEDone(data) {
+		data = render.ExtractSSEData(data)
+		if render.IsSSEDone(data) {
 			break
 		}
 
@@ -181,14 +181,14 @@ func StreamHandler(
 			usage = *response.Usage
 		}
 
-		_ = openai.ObjectData(c, response)
+		_ = render.OpenaiObjectData(c, response)
 	}
 
 	if err := scanner.Err(); err != nil {
 		log.Error("error reading stream: " + err.Error())
 	}
 
-	openai.Done(c)
+	render.OpenaiDone(c)
 
 	return usage.ToModelUsage(), nil
 }

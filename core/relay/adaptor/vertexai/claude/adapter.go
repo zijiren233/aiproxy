@@ -71,7 +71,7 @@ func handleChatCompletionsRequest(meta *meta.Meta, request *http.Request) ([]byt
 
 	req := Request{
 		AnthropicVersion: anthropicVersion,
-		Request:          claudeReq,
+		ClaudeRequest:    claudeReq,
 	}
 	req.Model = ""
 

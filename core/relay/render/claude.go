@@ -1,4 +1,4 @@
-package anthropic
+package render
 
 import (
 	"errors"
@@ -8,7 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func Data(c *gin.Context, data []byte) {
+func ClaudeData(c *gin.Context, data []byte) {
 	if len(c.Errors) > 0 {
 		return
 	}
@@ -21,7 +21,7 @@ func Data(c *gin.Context, data []byte) {
 	c.Writer.Flush()
 }
 
-func EventData(c *gin.Context, event string, data []byte) {
+func ClaudeEventData(c *gin.Context, event string, data []byte) {
 	if len(c.Errors) > 0 {
 		return
 	}
@@ -34,7 +34,7 @@ func EventData(c *gin.Context, event string, data []byte) {
 	c.Writer.Flush()
 }
 
-func ObjectData(c *gin.Context, object any) error {
+func ClaudeObjectData(c *gin.Context, object any) error {
 	if len(c.Errors) > 0 {
 		return c.Errors.Last()
 	}
@@ -54,7 +54,7 @@ func ObjectData(c *gin.Context, object any) error {
 	return nil
 }
 
-func EventObjectData(c *gin.Context, event string, object any) error {
+func ClaudeEventObjectData(c *gin.Context, event string, object any) error {
 	if len(c.Errors) > 0 {
 		return c.Errors.Last()
 	}

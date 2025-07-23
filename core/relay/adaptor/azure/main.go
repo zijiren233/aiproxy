@@ -88,7 +88,7 @@ func GetRequestURL(meta *meta.Meta, replaceDot bool) (adaptor.RequestURL, error)
 			Method: http.MethodPost,
 			URL:    fmt.Sprintf("%s?api-version=%s", url, apiVersion),
 		}, nil
-	case mode.ChatCompletions:
+	case mode.ChatCompletions, mode.Anthropic:
 		// https://learn.microsoft.com/en-us/azure/cognitive-services/openai/chatgpt-quickstart?pivots=rest-api&tabs=command-line#rest-api
 		url, err := url.JoinPath(
 			meta.Channel.BaseURL,

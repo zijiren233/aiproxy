@@ -9,7 +9,7 @@ import (
 )
 
 func TestRenderPrompt(t *testing.T) {
-	messages := []*model.Message{
+	messages := []model.Message{
 		{
 			Role:    "user",
 			Content: "What's your name?",
@@ -20,7 +20,7 @@ func TestRenderPrompt(t *testing.T) {
 `
 	assert.Equal(t, expected, prompt)
 
-	messages = []*model.Message{
+	messages = []model.Message{
 		{
 			Role:    "system",
 			Content: "Your name is Kat. You are a detective.",

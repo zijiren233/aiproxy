@@ -1,8 +1,10 @@
 package vertexai
 
-import "github.com/labring/aiproxy/core/relay/adaptor/anthropic"
+import (
+	relaymodel "github.com/labring/aiproxy/core/relay/model"
+)
 
 type Request struct {
 	AnthropicVersion string `json:"anthropic_version"`
-	*anthropic.Request
+	*relaymodel.ClaudeRequest
 }
