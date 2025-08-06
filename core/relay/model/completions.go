@@ -51,6 +51,8 @@ type GeneralOpenAIRequest struct {
 	TopK                int             `json:"top_k,omitempty"`
 	NumCtx              int             `json:"num_ctx,omitempty"`
 	Stream              bool            `json:"stream,omitempty"`
+	// aiproxy control field
+	Thinking *GeneralThinking `json:"thinking,omitempty"`
 }
 
 func (r GeneralOpenAIRequest) ParseInput() []string {
@@ -72,6 +74,12 @@ func (r GeneralOpenAIRequest) ParseInput() []string {
 	}
 
 	return input
+}
+
+type GeneralThinking = ClaudeThinking
+
+type GeneralOpenAIThinkingRequest struct {
+	Thinking *GeneralThinking `json:"thinking,omitempty"`
 }
 
 type ChatCompletionsStreamResponseChoice struct {

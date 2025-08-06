@@ -213,11 +213,11 @@ func ConvertRequest(
 	case mode.Moderations:
 		return ConvertModerationsRequest(meta, req)
 	case mode.Embeddings:
-		return ConvertEmbeddingsRequest(meta, req, nil, false)
+		return ConvertEmbeddingsRequest(meta, req, false)
 	case mode.Completions:
-		return ConvertCompletionsRequest(meta, req, nil)
+		return ConvertCompletionsRequest(meta, req)
 	case mode.ChatCompletions:
-		return ConvertChatCompletionsRequest(meta, req, nil, false)
+		return ConvertChatCompletionsRequest(meta, req, false)
 	case mode.Anthropic:
 		return ConvertClaudeRequest(meta, req)
 	case mode.ImagesGenerations:

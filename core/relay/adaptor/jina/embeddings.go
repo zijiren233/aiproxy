@@ -13,8 +13,8 @@ func ConvertEmbeddingsRequest(
 	meta *meta.Meta,
 	req *http.Request,
 ) (adaptor.ConvertResult, error) {
-	return openai.ConvertEmbeddingsRequest(meta, req, func(node *ast.Node) error {
+	return openai.ConvertEmbeddingsRequest(meta, req, true, func(node *ast.Node) error {
 		_, err := node.Unset("encoding_format")
 		return err
-	}, true)
+	})
 }

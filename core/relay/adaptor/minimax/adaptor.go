@@ -99,7 +99,7 @@ func (a *Adaptor) ConvertRequest(
 ) (adaptor.ConvertResult, error) {
 	switch meta.Mode {
 	case mode.ChatCompletions:
-		return openai.ConvertChatCompletionsRequest(meta, req, nil, true)
+		return openai.ConvertChatCompletionsRequest(meta, req, true)
 	case mode.AudioSpeech:
 		return ConvertTTSRequest(meta, req)
 	default:

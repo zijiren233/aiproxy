@@ -117,9 +117,17 @@ type ClaudeInputSchema struct {
 	Type       string `json:"type"`
 }
 
+type ClaudeThinkingType = string
+
+const (
+	ClaudeThinkingTypeEnabled  ClaudeThinkingType = "enabled"
+	ClaudeThinkingTypeDisabled ClaudeThinkingType = "disabled"
+)
+
 type ClaudeThinking struct {
-	Type         string `json:"type"`
-	BudgetTokens int    `json:"budget_tokens,omitempty"`
+	Type ClaudeThinkingType `json:"type"`
+	// when type is "disabled", this field must be 0
+	BudgetTokens int `json:"budget_tokens,omitempty"`
 }
 
 type ClaudeRequest struct {

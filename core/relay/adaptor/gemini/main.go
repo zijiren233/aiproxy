@@ -60,15 +60,11 @@ func buildSafetySettings(safetySetting string) []ChatSafetySettings {
 	}
 }
 
-type thinkingConfigOnly struct {
-	ThinkingConfig *ThinkingConfig `json:"thinking_config"`
-}
-
 func buildGenerationConfig(
 	meta *meta.Meta,
-	req *http.Request,
+	req *relaymodel.GeneralOpenAIRequest,
 	textRequest *relaymodel.GeneralOpenAIRequest,
-) (*ChatGenerationConfig, error) {
+) *ChatGenerationConfig {
 	config := ChatGenerationConfig{
 		Temperature:     textRequest.Temperature,
 		TopP:            textRequest.TopP,
@@ -93,15 +89,17 @@ func buildGenerationConfig(
 		}
 	}
 
-	var thinkingConfigOnly thinkingConfigOnly
+	if req.Thinking != nil {
+		thinkingConfig := ThinkingConfig{}
+		switch req.Thinking.Type {
+		case relaymodel.ClaudeThinkingTypeEnabled:
+			thinkingConfig.IncludeThoughts = true
+			thinkingConfig.ThinkingBudget = req.Thinking.BudgetTokens
+		case relaymodel.ClaudeThinkingTypeDisabled:
+			thinkingConfig.IncludeThoughts = false
+		}
 
-	err := common.UnmarshalRequestReusable(req, &thinkingConfigOnly)
-	if err != nil {
-		return nil, err
-	}
-
-	if thinkingConfigOnly.ThinkingConfig != nil {
-		config.ThinkingConfig = thinkingConfigOnly.ThinkingConfig
+		config.ThinkingConfig = &thinkingConfig
 	}
 
 	// https://ai.google.dev/gemini-api/docs/thinking
@@ -113,7 +111,7 @@ func buildGenerationConfig(
 		config.ThinkingConfig.IncludeThoughts = true
 	}
 
-	return &config, nil
+	return &config
 }
 
 func buildTools(textRequest *relaymodel.GeneralOpenAIRequest) []ChatTools {
@@ -408,10 +406,7 @@ func ConvertRequest(meta *meta.Meta, req *http.Request) (adaptor.ConvertResult, 
 		}
 	}
 
-	config, err := buildGenerationConfig(meta, req, textRequest)
-	if err != nil {
-		return adaptor.ConvertResult{}, err
-	}
+	config := buildGenerationConfig(meta, textRequest, textRequest)
 
 	// Build actual request
 	geminiRequest := ChatRequest{

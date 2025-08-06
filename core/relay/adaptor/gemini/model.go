@@ -10,7 +10,7 @@ type ChatRequest struct {
 }
 
 type ThinkingConfig struct {
-	ThinkingBudget  *int `json:"thinking_budget,omitempty"`
+	ThinkingBudget  int  `json:"thinking_budget,omitempty"`
 	IncludeThoughts bool `json:"includeThoughts,omitempty"`
 }
 

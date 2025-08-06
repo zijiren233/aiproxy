@@ -117,7 +117,7 @@ func (a *Adaptor) ConvertRequest(
 ) (adaptor.ConvertResult, error) {
 	switch meta.Mode {
 	case mode.Embeddings:
-		return openai.ConvertEmbeddingsRequest(meta, req, nil, true)
+		return openai.ConvertEmbeddingsRequest(meta, req, true)
 	case mode.Rerank:
 		return openai.ConvertRequest(meta, store, req)
 	case mode.ImagesGenerations:
