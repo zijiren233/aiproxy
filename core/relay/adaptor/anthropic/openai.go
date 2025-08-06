@@ -49,10 +49,6 @@ func stopReasonClaude2OpenAI(reason string) string {
 	}
 }
 
-type onlyThinkingRequest struct {
-	Thinking *relaymodel.ClaudeThinking `json:"thinking,omitempty"`
-}
-
 //nolint:gocyclo
 func OpenAIConvertRequest(meta *meta.Meta, req *http.Request) (*relaymodel.ClaudeRequest, error) {
 	var textRequest relaymodel.ClaudeOpenAIRequest
@@ -62,9 +58,7 @@ func OpenAIConvertRequest(meta *meta.Meta, req *http.Request) (*relaymodel.Claud
 		return nil, err
 	}
 
-	var onlyThinking onlyThinkingRequest
-
-	err = common.UnmarshalRequestReusable(req, &onlyThinking)
+	onlyThinking, err := utils.UnmarshalGeneralThinking(req)
 	if err != nil {
 		return nil, err
 	}

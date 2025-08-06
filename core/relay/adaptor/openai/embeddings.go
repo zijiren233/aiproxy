@@ -19,15 +19,19 @@ import (
 func ConvertEmbeddingsRequest(
 	meta *meta.Meta,
 	req *http.Request,
-	callback func(node *ast.Node) error,
 	inputToSlices bool,
+	callback ...func(node *ast.Node) error,
 ) (adaptor.ConvertResult, error) {
 	node, err := common.UnmarshalRequest2NodeReusable(req)
 	if err != nil {
 		return adaptor.ConvertResult{}, err
 	}
 
-	if callback != nil {
+	for _, callback := range callback {
+		if callback == nil {
+			continue
+		}
+
 		err = callback(&node)
 		if err != nil {
 			return adaptor.ConvertResult{}, err

@@ -22,7 +22,6 @@ func ConvertChatCompletionsRequest(
 	result, err := openai.ConvertChatCompletionsRequest(
 		meta,
 		req,
-		nil,
 		false,
 	)
 	if err != nil {

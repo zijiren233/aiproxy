@@ -6,9 +6,45 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/bytedance/sonic"
+	"github.com/bytedance/sonic/ast"
 	"github.com/labring/aiproxy/core/common"
 	model "github.com/labring/aiproxy/core/relay/model"
 )
+
+func UnmarshalGeneralThinking(req *http.Request) (model.GeneralOpenAIThinkingRequest, error) {
+	var request model.GeneralOpenAIThinkingRequest
+
+	err := common.UnmarshalRequestReusable(req, &request)
+	if err != nil {
+		return request, err
+	}
+
+	return request, nil
+}
+
+func UnmarshalGeneralThinkingFromNode(node *ast.Node) (model.GeneralOpenAIThinkingRequest, error) {
+	var request model.GeneralOpenAIThinkingRequest
+
+	thinkingNode := node.Get("thinking")
+	if !thinkingNode.Exists() {
+		return request, nil
+	}
+
+	raw, err := thinkingNode.Raw()
+	if err != nil {
+		return request, err
+	}
+
+	request.Thinking = &model.ClaudeThinking{}
+
+	err = sonic.UnmarshalString(raw, request.Thinking)
+	if err != nil {
+		return request, err
+	}
+
+	return request, nil
+}
 
 func UnmarshalAnthropicMessageRequest(req *http.Request) (*model.AnthropicMessageRequest, error) {
 	var request model.AnthropicMessageRequest

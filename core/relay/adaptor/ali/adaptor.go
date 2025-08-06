@@ -1,13 +1,10 @@
 package ali
 
 import (
-	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
-	"strings"
 
-	"github.com/bytedance/sonic/ast"
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/core/model"
 	"github.com/labring/aiproxy/core/relay/adaptor"
@@ -137,35 +134,6 @@ func (a *Adaptor) SetupRequestHeader(
 	return nil
 }
 
-// qwen3 enable_thinking must be set to false for non-streaming calls
-func patchQwen3EnableThinking(node *ast.Node) error {
-	streamNode := node.Get("stream")
-	isStreaming := false
-
-	if streamNode.Exists() {
-		streamBool, err := streamNode.Bool()
-		if err != nil {
-			return errors.New("stream is not a boolean")
-		}
-
-		isStreaming = streamBool
-	}
-
-	// Set enable_thinking to false for non-streaming requests
-	if !isStreaming {
-		_, err := node.Set("enable_thinking", ast.NewBool(false))
-		return err
-	}
-
-	return nil
-}
-
-// qwq only support stream mode
-func patchQwqOnlySupportStream(node *ast.Node) error {
-	_, err := node.Set("stream", ast.NewBool(true))
-	return err
-}
-
 func (a *Adaptor) ConvertRequest(
 	meta *meta.Meta,
 	store adaptor.Store,
@@ -177,25 +145,9 @@ func (a *Adaptor) ConvertRequest(
 	case mode.Rerank:
 		return ConvertRerankRequest(meta, req)
 	case mode.ChatCompletions:
-		if strings.HasPrefix(meta.ActualModel, "qwen3-") {
-			return openai.ConvertChatCompletionsRequest(meta, req, patchQwen3EnableThinking, false)
-		}
-
-		if strings.HasPrefix(meta.ActualModel, "qwq-") {
-			return openai.ConvertChatCompletionsRequest(meta, req, patchQwqOnlySupportStream, false)
-		}
-
-		return openai.ConvertChatCompletionsRequest(meta, req, nil, false)
+		return ConvertChatCompletionsRequest(meta, store, req)
 	case mode.Completions:
-		if strings.HasPrefix(meta.ActualModel, "qwen3-") {
-			return openai.ConvertCompletionsRequest(meta, req, patchQwen3EnableThinking)
-		}
-
-		if strings.HasPrefix(meta.ActualModel, "qwq-") {
-			return openai.ConvertCompletionsRequest(meta, req, patchQwqOnlySupportStream)
-		}
-
-		return openai.ConvertCompletionsRequest(meta, req, nil)
+		return ConvertCompletionsRequest(meta, store, req)
 	case mode.Embeddings:
 		return openai.ConvertRequest(meta, store, req)
 	case mode.AudioSpeech:

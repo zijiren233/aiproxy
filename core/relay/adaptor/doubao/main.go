@@ -99,9 +99,9 @@ func (a *Adaptor) ConvertRequest(
 	switch meta.Mode {
 	case mode.Embeddings:
 		if strings.Contains(meta.ActualModel, "vision") {
-			return openai.ConvertEmbeddingsRequest(meta, req, patchEmbeddingsVisionInput, false)
+			return openai.ConvertEmbeddingsRequest(meta, req, false, patchEmbeddingsVisionInput)
 		}
-		return openai.ConvertEmbeddingsRequest(meta, req, nil, true)
+		return openai.ConvertEmbeddingsRequest(meta, req, true)
 	case mode.ChatCompletions:
 		return ConvertChatCompletionsRequest(meta, req)
 	default:
