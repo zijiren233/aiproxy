@@ -44,7 +44,11 @@ func (a *Adaptor) GetRequestURL(meta *meta.Meta, _ adaptor.Store) (adaptor.Reque
 	}, nil
 }
 
-const AnthropicVersion = "2023-06-01"
+const (
+	AnthropicVersion = "2023-06-01"
+	//nolint:gosec
+	AnthropicTokenHeader = "X-Api-Key"
+)
 
 func (a *Adaptor) SetupRequestHeader(
 	meta *meta.Meta,
@@ -52,7 +56,7 @@ func (a *Adaptor) SetupRequestHeader(
 	c *gin.Context,
 	req *http.Request,
 ) error {
-	req.Header.Set("X-Api-Key", meta.Channel.Key)
+	req.Header.Set(AnthropicTokenHeader, meta.Channel.Key)
 
 	anthropicVersion := c.Request.Header.Get("Anthropic-Version")
 	if anthropicVersion == "" {

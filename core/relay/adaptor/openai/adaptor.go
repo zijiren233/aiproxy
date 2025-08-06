@@ -39,14 +39,15 @@ func (a *Adaptor) SupportMode(m mode.Mode) bool {
 		m == mode.ParsePdf ||
 		m == mode.VideoGenerationsJobs ||
 		m == mode.VideoGenerationsGetJobs ||
-		m == mode.VideoGenerationsContent
+		m == mode.VideoGenerationsContent ||
+		m == mode.Anthropic
 }
 
 func (a *Adaptor) GetRequestURL(meta *meta.Meta, _ adaptor.Store) (adaptor.RequestURL, error) {
 	u := meta.Channel.BaseURL
 
 	switch meta.Mode {
-	case mode.ChatCompletions:
+	case mode.ChatCompletions, mode.Anthropic:
 		url, err := url.JoinPath(u, "/chat/completions")
 		if err != nil {
 			return adaptor.RequestURL{}, err
@@ -217,6 +218,8 @@ func ConvertRequest(
 		return ConvertCompletionsRequest(meta, req, nil)
 	case mode.ChatCompletions:
 		return ConvertChatCompletionsRequest(meta, req, nil, false)
+	case mode.Anthropic:
+		return ConvertClaudeRequest(meta, req)
 	case mode.ImagesGenerations:
 		return ConvertImagesRequest(meta, req)
 	case mode.ImagesEdits:
@@ -263,6 +266,12 @@ func DoResponse(
 		} else {
 			usage, err = Handler(meta, c, resp, nil)
 		}
+	case mode.Anthropic:
+		if utils.IsStreamResponse(resp) {
+			usage, err = ClaudeStreamHandler(meta, c, resp)
+		} else {
+			usage, err = ClaudeHandler(meta, c, resp)
+		}
 	case mode.VideoGenerationsJobs:
 		usage, err = VideoHandler(meta, store, c, resp)
 	case mode.VideoGenerationsGetJobs:
@@ -304,6 +313,7 @@ func (a *Adaptor) Metadata() adaptor.Metadata {
 	return adaptor.Metadata{
 		Features: []string{
 			"OpenAI compatibility",
+			"Anthropic conversation",
 		},
 		Models: ModelList,
 	}

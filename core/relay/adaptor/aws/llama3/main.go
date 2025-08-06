@@ -22,6 +22,7 @@ import (
 	"github.com/labring/aiproxy/core/relay/meta"
 	"github.com/labring/aiproxy/core/relay/mode"
 	relaymodel "github.com/labring/aiproxy/core/relay/model"
+	"github.com/labring/aiproxy/core/relay/render"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
@@ -67,10 +68,10 @@ const promptTemplate = `<|begin_of_text|>{{range .Messages}}<|start_header_id|>{
 
 var promptTpl = template.Must(template.New("llama3-chat").Parse(promptTemplate))
 
-func RenderPrompt(messages []*relaymodel.Message) string {
+func RenderPrompt(messages []relaymodel.Message) string {
 	var buf bytes.Buffer
 
-	err := promptTpl.Execute(&buf, struct{ Messages []*relaymodel.Message }{messages})
+	err := promptTpl.Execute(&buf, struct{ Messages []relaymodel.Message }{messages})
 	if err != nil {
 		log.Error("error rendering prompt messages: " + err.Error())
 	}
@@ -271,7 +272,7 @@ func StreamHandler(meta *meta.Meta, c *gin.Context) (model.Usage, adaptor.Error)
 	c.Stream(func(_ io.Writer) bool {
 		event, ok := <-stream.Events()
 		if !ok {
-			openai.Done(c)
+			render.OpenaiDone(c)
 			return false
 		}
 
@@ -299,7 +300,7 @@ func StreamHandler(meta *meta.Meta, c *gin.Context) (model.Usage, adaptor.Error)
 			response.Model = meta.OriginModel
 			response.Created = createdTime
 
-			err = openai.ObjectData(c, response)
+			err = render.OpenaiObjectData(c, response)
 			if err != nil {
 				log.Error("error stream response: " + err.Error())
 				return true

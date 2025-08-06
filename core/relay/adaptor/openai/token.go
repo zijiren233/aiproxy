@@ -16,7 +16,7 @@ func getTokenNum(tokenEncoder *tiktoken.Tiktoken, text string) int64 {
 	return int64(len(tokenEncoder.Encode(text, nil, nil)))
 }
 
-func CountTokenMessages(messages []*model.Message, model string) int64 {
+func CountTokenMessages(messages []model.Message, model string) int64 {
 	tokenEncoder := intertiktoken.GetTokenEncoder(model)
 	// Reference:
 	// https://github.com/openai/openai-cookbook/blob/main/examples/How_to_count_tokens_with_tiktoken.ipynb

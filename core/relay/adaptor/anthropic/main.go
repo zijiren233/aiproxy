@@ -19,6 +19,8 @@ import (
 	"github.com/labring/aiproxy/core/relay/adaptor/openai"
 	"github.com/labring/aiproxy/core/relay/meta"
 	relaymodel "github.com/labring/aiproxy/core/relay/model"
+	"github.com/labring/aiproxy/core/relay/render"
+	"github.com/labring/aiproxy/core/relay/utils"
 	"golang.org/x/sync/semaphore"
 )
 
@@ -181,8 +183,8 @@ func StreamHandler(
 
 	scanner := bufio.NewScanner(resp.Body)
 
-	buf := openai.GetScannerBuffer()
-	defer openai.PutScannerBuffer(buf)
+	buf := utils.GetScannerBuffer()
+	defer utils.PutScannerBuffer(buf)
 
 	scanner.Buffer(*buf, cap(*buf))
 
@@ -195,12 +197,12 @@ func StreamHandler(
 
 	for scanner.Scan() {
 		data := scanner.Bytes()
-		if !openai.IsValidSSEData(data) {
+		if !render.IsValidSSEData(data) {
 			continue
 		}
 
-		data = openai.ExtractSSEData(data)
-		if openai.IsSSEDone(data) {
+		data = render.ExtractSSEData(data)
+		if render.IsSSEDone(data) {
 			break
 		}
 
@@ -247,7 +249,7 @@ func StreamHandler(
 			}
 		}
 
-		Data(c, data)
+		render.ClaudeData(c, data)
 
 		writed = true
 	}

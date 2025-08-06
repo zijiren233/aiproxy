@@ -23,10 +23,10 @@ import (
 	"github.com/labring/aiproxy/core/middleware"
 	"github.com/labring/aiproxy/core/model"
 	"github.com/labring/aiproxy/core/monitor"
-	"github.com/labring/aiproxy/core/relay/adaptor/openai"
 	"github.com/labring/aiproxy/core/relay/adaptors"
 	"github.com/labring/aiproxy/core/relay/meta"
 	"github.com/labring/aiproxy/core/relay/mode"
+	"github.com/labring/aiproxy/core/relay/render"
 	"github.com/labring/aiproxy/core/relay/utils"
 	log "github.com/sirupsen/logrus"
 )
@@ -369,7 +369,7 @@ func TestChannelModels(c *gin.Context) {
 			resultsMutex.Lock()
 
 			if isStream {
-				err := openai.ObjectData(c, result)
+				err := render.OpenaiObjectData(c, result)
 				if err != nil {
 					log.Errorf("failed to render result: %s", err.Error())
 				}
@@ -489,7 +489,7 @@ func TestAllChannels(c *gin.Context) {
 				resultsMutex.Lock()
 
 				if isStream {
-					err := openai.ObjectData(c, result)
+					err := render.OpenaiObjectData(c, result)
 					if err != nil {
 						log.Errorf("failed to render result: %s", err.Error())
 					}

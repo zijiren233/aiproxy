@@ -16,6 +16,7 @@ import (
 	"github.com/labring/aiproxy/core/relay/adaptor"
 	"github.com/labring/aiproxy/core/relay/meta"
 	relaymodel "github.com/labring/aiproxy/core/relay/model"
+	"github.com/labring/aiproxy/core/relay/render"
 	"github.com/labring/aiproxy/core/relay/utils"
 )
 
@@ -88,12 +89,12 @@ func TTSHandler(
 	}
 
 	if sseFormat {
-		_, err := io.Copy(NewAudioDataWriter(c), resp.Body)
+		_, err := io.Copy(render.NewOpenaiAudioDataWriter(c), resp.Body)
 		if err != nil {
 			log.Warnf("write response body failed: %v", err)
 		}
 
-		AudioDone(c, usage)
+		render.OpenaiAudioDone(c, usage)
 
 		return usage.ToModelUsage(), nil
 	}
@@ -123,8 +124,8 @@ func ttsStreamHandler(
 
 	scanner := bufio.NewScanner(resp.Body)
 
-	buf := GetScannerBuffer()
-	defer PutScannerBuffer(buf)
+	buf := utils.GetScannerBuffer()
+	defer utils.PutScannerBuffer(buf)
 
 	scanner.Buffer(*buf, cap(*buf))
 
@@ -132,12 +133,12 @@ func ttsStreamHandler(
 
 	for scanner.Scan() {
 		data := scanner.Bytes()
-		if !IsValidSSEData(data) {
+		if !render.IsValidSSEData(data) {
 			continue
 		}
 
-		data = ExtractSSEData(data)
-		if IsSSEDone(data) {
+		data = render.ExtractSSEData(data)
+		if render.IsSSEDone(data) {
 			break
 		}
 
@@ -153,18 +154,18 @@ func ttsStreamHandler(
 		case relaymodel.TextToSpeechSSEResponseTypeDelta:
 			// Stream audio data
 			if sseResponse.Audio != "" {
-				AudioData(c, sseResponse.Audio)
+				render.OpenaiAudioData(c, sseResponse.Audio)
 			}
 		case relaymodel.TextToSpeechSSEResponseTypeDone:
 			// Final response with usage
 			if sseResponse.Usage != nil {
 				totalUsage = sseResponse.Usage
-				AudioDone(c, *totalUsage)
+				render.OpenaiAudioDone(c, *totalUsage)
 			}
 		}
 	}
 
-	Done(c)
+	render.OpenaiDone(c)
 
 	if err := scanner.Err(); err != nil {
 		log.Error("error reading TTS stream: " + err.Error())
@@ -177,7 +178,7 @@ func ttsStreamHandler(
 			OutputTokens: 0, // TTS doesn't have output tokens in the traditional sense
 			TotalTokens:  int64(meta.RequestUsage.InputTokens),
 		}
-		AudioDone(c, *totalUsage)
+		render.OpenaiAudioDone(c, *totalUsage)
 	}
 
 	return totalUsage.ToModelUsage(), nil

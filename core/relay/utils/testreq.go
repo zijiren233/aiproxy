@@ -90,7 +90,7 @@ func BuildRequest(modelConfig model.ModelConfig) (io.Reader, mode.Mode, error) {
 func BuildChatCompletionRequest(model string) (io.Reader, error) {
 	testRequest := &relaymodel.GeneralOpenAIRequest{
 		Model: model,
-		Messages: []*relaymodel.Message{
+		Messages: []relaymodel.Message{
 			{
 				Role:    "user",
 				Content: "hi",

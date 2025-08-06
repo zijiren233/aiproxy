@@ -11,6 +11,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/core/model"
 	"github.com/labring/aiproxy/core/relay/adaptor"
+	"github.com/labring/aiproxy/core/relay/adaptor/anthropic"
 	"github.com/labring/aiproxy/core/relay/adaptor/openai"
 	"github.com/labring/aiproxy/core/relay/meta"
 	"github.com/labring/aiproxy/core/relay/mode"
@@ -36,7 +37,8 @@ func (a *Adaptor) SupportMode(m mode.Mode) bool {
 		m == mode.Rerank ||
 		m == mode.AudioSpeech ||
 		m == mode.AudioTranscription ||
-		m == mode.AudioTranslation
+		m == mode.AudioTranslation ||
+		m == mode.Anthropic
 }
 
 func (a *Adaptor) GetRequestURL(meta *meta.Meta, _ adaptor.Store) (adaptor.RequestURL, error) {
@@ -103,6 +105,16 @@ func (a *Adaptor) GetRequestURL(meta *meta.Meta, _ adaptor.Store) (adaptor.Reque
 			Method: http.MethodPost,
 			URL:    url,
 		}, nil
+	case mode.Anthropic:
+		url, err := url.JoinPath(u, "/api/v2/apps/claude-code-proxy")
+		if err != nil {
+			return adaptor.RequestURL{}, err
+		}
+
+		return adaptor.RequestURL{
+			Method: http.MethodPost,
+			URL:    url,
+		}, nil
 	default:
 		return adaptor.RequestURL{}, fmt.Errorf("unsupported mode: %s", meta.Mode)
 	}
@@ -114,7 +126,12 @@ func (a *Adaptor) SetupRequestHeader(
 	_ *gin.Context,
 	req *http.Request,
 ) error {
-	req.Header.Set("Authorization", "Bearer "+meta.Channel.Key)
+	switch meta.Mode {
+	case mode.Anthropic:
+		req.Header.Set(anthropic.AnthropicTokenHeader, "Bearer "+meta.Channel.Key)
+	default:
+		req.Header.Set("Authorization", "Bearer "+meta.Channel.Key)
+	}
 
 	// req.Header.Set("X-Dashscope-Plugin", meta.Channel.Config.Plugin)
 	return nil
@@ -185,6 +202,8 @@ func (a *Adaptor) ConvertRequest(
 		return ConvertTTSRequest(meta, req)
 	case mode.AudioTranscription:
 		return ConvertSTTRequest(meta, req)
+	case mode.Anthropic:
+		return anthropic.ConvertRequest(meta, req)
 	default:
 		return adaptor.ConvertResult{}, fmt.Errorf("unsupported mode: %s", meta.Mode)
 	}
@@ -227,6 +246,8 @@ func (a *Adaptor) DoResponse(
 		return TTSDoResponse(meta, c, resp)
 	case mode.AudioTranscription:
 		return STTDoResponse(meta, c, resp)
+	case mode.Anthropic:
+		return anthropic.Handler(meta, c, resp)
 	default:
 		return model.Usage{}, relaymodel.WrapperOpenAIErrorWithMessage(
 			fmt.Sprintf("unsupported mode: %s", meta.Mode),
@@ -243,6 +264,7 @@ func (a *Adaptor) Metadata() adaptor.Metadata {
 			"Network search metering support",
 			"Rerank support: https://help.aliyun.com/zh/model-studio/text-rerank-api",
 			"STT support: https://help.aliyun.com/zh/model-studio/sambert-speech-synthesis/",
+			"Anthropic support: /api/v2/apps/claude-code-proxy",
 		},
 		Models: ModelList,
 	}

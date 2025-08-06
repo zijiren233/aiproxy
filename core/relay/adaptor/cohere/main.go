@@ -16,6 +16,8 @@ import (
 	"github.com/labring/aiproxy/core/relay/adaptor/openai"
 	"github.com/labring/aiproxy/core/relay/meta"
 	relaymodel "github.com/labring/aiproxy/core/relay/model"
+	"github.com/labring/aiproxy/core/relay/render"
+	"github.com/labring/aiproxy/core/relay/utils"
 )
 
 var WebSearchConnector = Connector{ID: "web-search"}
@@ -178,8 +180,8 @@ func StreamHandler(
 
 	scanner := bufio.NewScanner(resp.Body)
 
-	buf := openai.GetScannerBuffer()
-	defer openai.PutScannerBuffer(buf)
+	buf := utils.GetScannerBuffer()
+	defer utils.PutScannerBuffer(buf)
 
 	scanner.Buffer(*buf, cap(*buf))
 
@@ -202,14 +204,14 @@ func StreamHandler(
 			usage = *response.Usage
 		}
 
-		_ = openai.ObjectData(c, response)
+		_ = render.OpenaiObjectData(c, response)
 	}
 
 	if err := scanner.Err(); err != nil {
 		log.Error("error reading stream: " + err.Error())
 	}
 
-	openai.Done(c)
+	render.OpenaiDone(c)
 
 	return usage.ToModelUsage(), nil
 }

@@ -19,9 +19,9 @@ import (
 	"github.com/labring/aiproxy/core/common/conv"
 	"github.com/labring/aiproxy/core/model"
 	"github.com/labring/aiproxy/core/relay/adaptor"
-	"github.com/labring/aiproxy/core/relay/adaptor/openai"
 	"github.com/labring/aiproxy/core/relay/meta"
 	relaymodel "github.com/labring/aiproxy/core/relay/model"
+	"github.com/labring/aiproxy/core/relay/render"
 	"github.com/labring/aiproxy/core/relay/utils"
 )
 
@@ -225,7 +225,7 @@ func TTSDoResponse(
 		}
 
 		if sseFormat {
-			openai.AudioData(c, base64.StdEncoding.EncodeToString(resp.Audio))
+			render.OpenaiAudioData(c, base64.StdEncoding.EncodeToString(resp.Audio))
 		} else {
 			_, err = c.Writer.Write(resp.Audio)
 			if err != nil {
@@ -239,7 +239,7 @@ func TTSDoResponse(
 	}
 
 	if sseFormat {
-		openai.AudioDone(c, relaymodel.TextToSpeechUsage{
+		render.OpenaiAudioDone(c, relaymodel.TextToSpeechUsage{
 			InputTokens:  int64(usage.InputTokens),
 			OutputTokens: int64(usage.OutputTokens),
 			TotalTokens:  int64(usage.TotalTokens),

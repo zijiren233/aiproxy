@@ -16,6 +16,7 @@ import (
 	"github.com/labring/aiproxy/core/relay/adaptor/openai"
 	"github.com/labring/aiproxy/core/relay/meta"
 	relaymodel "github.com/labring/aiproxy/core/relay/model"
+	"github.com/labring/aiproxy/core/relay/render"
 	"github.com/labring/aiproxy/core/relay/utils"
 )
 
@@ -123,19 +124,19 @@ func ConvertRequest(meta *meta.Meta, req *http.Request) (adaptor.ConvertResult, 
 	}, nil
 }
 
-func getToolCalls(ollamaResponse *ChatResponse) []*relaymodel.ToolCall {
+func getToolCalls(ollamaResponse *ChatResponse) []relaymodel.ToolCall {
 	if ollamaResponse.Message == nil || len(ollamaResponse.Message.ToolCalls) == 0 {
 		return nil
 	}
 
-	toolCalls := make([]*relaymodel.ToolCall, 0, len(ollamaResponse.Message.ToolCalls))
+	toolCalls := make([]relaymodel.ToolCall, 0, len(ollamaResponse.Message.ToolCalls))
 	for _, tool := range ollamaResponse.Message.ToolCalls {
 		argString, err := sonic.MarshalString(tool.Function.Arguments)
 		if err != nil {
 			continue
 		}
 
-		toolCalls = append(toolCalls, &relaymodel.ToolCall{
+		toolCalls = append(toolCalls, relaymodel.ToolCall{
 			ID:   openai.CallID(),
 			Type: "function",
 			Function: relaymodel.Function{
@@ -235,8 +236,8 @@ func StreamHandler(
 
 	scanner := bufio.NewScanner(resp.Body)
 
-	buf := openai.GetScannerBuffer()
-	defer openai.PutScannerBuffer(buf)
+	buf := utils.GetScannerBuffer()
+	defer utils.PutScannerBuffer(buf)
 
 	scanner.Buffer(*buf, cap(*buf))
 
@@ -256,14 +257,14 @@ func StreamHandler(
 			usage = response.Usage
 		}
 
-		_ = openai.ObjectData(c, response)
+		_ = render.OpenaiObjectData(c, response)
 	}
 
 	if err := scanner.Err(); err != nil {
 		log.Error("error reading stream: " + err.Error())
 	}
 
-	openai.Done(c)
+	render.OpenaiDone(c)
 
 	if usage == nil {
 		return meta.RequestUsage, nil

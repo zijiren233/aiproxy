@@ -22,6 +22,7 @@ import (
 	"github.com/labring/aiproxy/core/relay/adaptor/openai"
 	"github.com/labring/aiproxy/core/relay/meta"
 	relaymodel "github.com/labring/aiproxy/core/relay/model"
+	"github.com/labring/aiproxy/core/relay/render"
 	"github.com/labring/aiproxy/core/relay/utils"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/sync/semaphore"
@@ -594,7 +595,7 @@ func responseChat2OpenAI(meta *meta.Meta, response *ChatResponse) *relaymodel.Te
 					}
 
 					if toolCall != nil {
-						choice.Message.ToolCalls = append(choice.Message.ToolCalls, toolCall)
+						choice.Message.ToolCalls = append(choice.Message.ToolCalls, *toolCall)
 					}
 				}
 
@@ -692,7 +693,7 @@ func streamResponseChat2OpenAI(
 					}
 
 					if toolCall != nil {
-						choice.Delta.ToolCalls = append(choice.Delta.ToolCalls, toolCall)
+						choice.Delta.ToolCalls = append(choice.Delta.ToolCalls, *toolCall)
 					}
 				}
 
@@ -788,8 +789,8 @@ func StreamHandler(
 
 		scanner.Buffer(*buf, cap(*buf))
 	} else {
-		buf := openai.GetScannerBuffer()
-		defer openai.PutScannerBuffer(buf)
+		buf := utils.GetScannerBuffer()
+		defer utils.PutScannerBuffer(buf)
 
 		scanner.Buffer(*buf, cap(*buf))
 	}
@@ -800,12 +801,12 @@ func StreamHandler(
 
 	for scanner.Scan() {
 		data := scanner.Bytes()
-		if !openai.IsValidSSEData(data) {
+		if !render.IsValidSSEData(data) {
 			continue
 		}
 
-		data = openai.ExtractSSEData(data)
-		if openai.IsSSEDone(data) {
+		data = render.ExtractSSEData(data)
+		if render.IsSSEDone(data) {
 			break
 		}
 
@@ -824,14 +825,14 @@ func StreamHandler(
 
 		responseText.WriteString(response.Choices[0].Delta.StringContent())
 
-		_ = openai.ObjectData(c, response)
+		_ = render.OpenaiObjectData(c, response)
 	}
 
 	if err := scanner.Err(); err != nil {
 		log.Error("error reading stream: " + err.Error())
 	}
 
-	openai.Done(c)
+	render.OpenaiDone(c)
 
 	return usage.ToModelUsage(), nil
 }

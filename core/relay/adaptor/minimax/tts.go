@@ -13,9 +13,9 @@ import (
 	"github.com/labring/aiproxy/core/common"
 	"github.com/labring/aiproxy/core/model"
 	"github.com/labring/aiproxy/core/relay/adaptor"
-	"github.com/labring/aiproxy/core/relay/adaptor/openai"
 	"github.com/labring/aiproxy/core/relay/meta"
 	relaymodel "github.com/labring/aiproxy/core/relay/model"
+	"github.com/labring/aiproxy/core/relay/render"
 	"github.com/labring/aiproxy/core/relay/utils"
 )
 
@@ -212,8 +212,8 @@ func ttsStreamHandler(
 
 	scanner := bufio.NewScanner(resp.Body)
 
-	buf := openai.GetScannerBuffer()
-	defer openai.PutScannerBuffer(buf)
+	buf := utils.GetScannerBuffer()
+	defer utils.PutScannerBuffer(buf)
 
 	scanner.Buffer(*buf, cap(*buf))
 
@@ -221,12 +221,12 @@ func ttsStreamHandler(
 
 	for scanner.Scan() {
 		data := scanner.Bytes()
-		if !openai.IsValidSSEData(data) {
+		if !render.IsValidSSEData(data) {
 			continue
 		}
 
-		data = openai.ExtractSSEData(data)
-		if openai.IsSSEDone(data) {
+		data = render.ExtractSSEData(data)
+		if render.IsSSEDone(data) {
 			break
 		}
 
@@ -251,7 +251,7 @@ func ttsStreamHandler(
 		}
 
 		if sseFormat {
-			openai.AudioData(c, base64.StdEncoding.EncodeToString(audioBytes))
+			render.OpenaiAudioData(c, base64.StdEncoding.EncodeToString(audioBytes))
 			continue
 		}
 
@@ -276,7 +276,7 @@ func ttsStreamHandler(
 	}
 
 	if sseFormat {
-		openai.AudioDone(c, usage)
+		render.OpenaiAudioDone(c, usage)
 	}
 
 	return usage.ToModelUsage(), nil

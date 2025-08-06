@@ -4,11 +4,9 @@ import (
 	"bufio"
 	"bytes"
 	"errors"
-	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/bytedance/sonic"
@@ -19,34 +17,9 @@ import (
 	"github.com/labring/aiproxy/core/relay/adaptor"
 	"github.com/labring/aiproxy/core/relay/meta"
 	relaymodel "github.com/labring/aiproxy/core/relay/model"
+	"github.com/labring/aiproxy/core/relay/render"
+	"github.com/labring/aiproxy/core/relay/utils"
 )
-
-const scannerBufferSize = 256 * 1024
-
-var scannerBufferPool = sync.Pool{
-	New: func() any {
-		buf := make([]byte, scannerBufferSize)
-		return &buf
-	},
-}
-
-//nolint:forcetypeassert
-func GetScannerBuffer() *[]byte {
-	v, ok := scannerBufferPool.Get().(*[]byte)
-	if !ok {
-		panic(fmt.Sprintf("scanner buffer type error: %T, %v", v, v))
-	}
-
-	return v
-}
-
-func PutScannerBuffer(buf *[]byte) {
-	if cap(*buf) != scannerBufferSize {
-		return
-	}
-
-	scannerBufferPool.Put(buf)
-}
 
 func ConvertCompletionsRequest(
 	meta *meta.Meta,
@@ -213,8 +186,8 @@ func StreamHandler(
 
 	scanner := bufio.NewScanner(resp.Body)
 
-	buf := GetScannerBuffer()
-	defer PutScannerBuffer(buf)
+	buf := utils.GetScannerBuffer()
+	defer utils.PutScannerBuffer(buf)
 
 	scanner.Buffer(*buf, cap(*buf))
 
@@ -222,12 +195,12 @@ func StreamHandler(
 
 	for scanner.Scan() {
 		data := scanner.Bytes()
-		if !IsValidSSEData(data) {
+		if !render.IsValidSSEData(data) {
 			continue
 		}
 
-		data = ExtractSSEData(data)
-		if IsSSEDone(data) {
+		data = render.ExtractSSEData(data)
+		if render.IsSSEDone(data) {
 			break
 		}
 
@@ -272,7 +245,7 @@ func StreamHandler(
 			log.Error("error set model: " + err.Error())
 		}
 
-		_ = ObjectData(c, &node)
+		_ = render.OpenaiObjectData(c, &node)
 	}
 
 	if err := scanner.Err(); err != nil {
@@ -285,7 +258,7 @@ func StreamHandler(
 			meta.ActualModel,
 			int64(meta.RequestUsage.InputTokens),
 		)
-		_ = ObjectData(c, &relaymodel.ChatCompletionsStreamResponse{
+		_ = render.OpenaiObjectData(c, &relaymodel.ChatCompletionsStreamResponse{
 			ID:      ChatCompletionID(),
 			Model:   meta.OriginModel,
 			Object:  relaymodel.ChatCompletionChunkObject,
@@ -298,7 +271,7 @@ func StreamHandler(
 		usage.CompletionTokens = usage.TotalTokens - int64(meta.RequestUsage.InputTokens)
 	}
 
-	Done(c)
+	render.OpenaiDone(c)
 
 	return usage.ToModelUsage(), nil
 }

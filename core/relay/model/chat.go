@@ -53,6 +53,20 @@ func (u *ChatUsage) Add(other *ChatUsage) {
 	}
 }
 
+func (u ChatUsage) ToClaudeUsage() ClaudeUsage {
+	cu := ClaudeUsage{
+		InputTokens:  u.PromptTokens,
+		OutputTokens: u.CompletionTokens,
+	}
+
+	if u.PromptTokensDetails != nil {
+		cu.CacheCreationInputTokens = u.PromptTokensDetails.CacheCreationTokens
+		cu.CacheReadInputTokens = u.PromptTokensDetails.CachedTokens
+	}
+
+	return cu
+}
+
 type PromptTokensDetails struct {
 	CachedTokens        int64 `json:"cached_tokens"`
 	AudioTokens         int64 `json:"audio_tokens"`
