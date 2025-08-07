@@ -1,9 +1,7 @@
 version: "3.3"
 services:
   aiproxy:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: 'ghcr.io/labring/aiproxy:latest'
     container_name: aiproxy
     restart: unless-stopped
     depends_on:
