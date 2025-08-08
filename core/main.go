@@ -7,12 +7,10 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	stdlog "log"
 	"net/http"
 	"os"
 	"os/signal"
 	"path/filepath"
-	"runtime"
 	"slices"
 	"sync"
 	"syscall"
@@ -28,6 +26,7 @@ import (
 	"github.com/labring/aiproxy/core/common/conv"
 	"github.com/labring/aiproxy/core/common/ipblack"
 	"github.com/labring/aiproxy/core/common/notify"
+	"github.com/labring/aiproxy/core/common/pprof"
 	"github.com/labring/aiproxy/core/common/trylock"
 	"github.com/labring/aiproxy/core/controller"
 	"github.com/labring/aiproxy/core/middleware"
@@ -36,13 +35,18 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-var listen string
+var (
+	listen    string
+	pprofPort int
+)
 
 func init() {
-	flag.StringVar(&listen, "listen", ":3000", "http server listen")
+	flag.StringVar(&listen, "listen", "0.0.0.0:3000", "http server listen")
+	flag.IntVar(&pprofPort, "pprof-port", 15000, "pport http server port")
 }
 
 func initializeServices() error {
+	initializePprof()
 	initializeNotifier()
 
 	if err := initializeBalance(); err != nil {
@@ -54,6 +58,15 @@ func initializeServices() error {
 	}
 
 	return initializeCaches()
+}
+
+func initializePprof() {
+	go func() {
+		err := pprof.RunPprofServer(pprofPort)
+		if err != nil {
+			log.Errorf("run pprof server error: %v", err)
+		}
+	}()
 }
 
 func initializeBalance() error {
@@ -73,48 +86,6 @@ func initializeNotifier() {
 	if feishuWh != "" {
 		notify.SetDefaultNotifier(notify.NewFeishuNotify(feishuWh))
 		log.Info("NOTIFY_FEISHU_WEBHOOK is set, notifier will be use feishu")
-	}
-}
-
-var logCallerIgnoreFuncs = map[string]struct{}{
-	"github.com/labring/aiproxy/core/middleware.logColor": {},
-}
-
-func setLog(l *log.Logger) {
-	gin.ForceConsoleColor()
-
-	if config.DebugEnabled {
-		l.SetLevel(log.DebugLevel)
-		l.SetReportCaller(true)
-		gin.SetMode(gin.DebugMode)
-	} else {
-		l.SetLevel(log.InfoLevel)
-		l.SetReportCaller(false)
-		gin.SetMode(gin.ReleaseMode)
-	}
-
-	l.SetOutput(os.Stdout)
-	stdlog.SetOutput(l.Writer())
-
-	l.SetFormatter(&log.TextFormatter{
-		ForceColors:      true,
-		DisableColors:    false,
-		ForceQuote:       config.DebugEnabled,
-		DisableQuote:     !config.DebugEnabled,
-		DisableSorting:   false,
-		FullTimestamp:    true,
-		TimestampFormat:  time.DateTime,
-		QuoteEmptyFields: true,
-		CallerPrettyfier: func(f *runtime.Frame) (function, file string) {
-			if _, ok := logCallerIgnoreFuncs[f.Function]; ok {
-				return "", ""
-			}
-			return f.Function, fmt.Sprintf("%s:%d", f.File, f.Line)
-		},
-	})
-
-	if common.NeedColor() {
-		gin.ForceConsoleColor()
 	}
 }
 
@@ -353,7 +324,7 @@ func main() {
 
 	config.ReloadEnv()
 
-	setLog(log.StandardLogger())
+	common.InitLog(log.StandardLogger(), config.DebugEnabled)
 
 	printLoadedEnvFiles()
 
@@ -376,8 +347,8 @@ func main() {
 	srv, _ := setupHTTPServer()
 
 	go func() {
-		log.Infof("server started on %s", srv.Addr)
-		log.Infof("swagger server started on %s/swagger/index.html", srv.Addr)
+		log.Infof("server started on http://%s", srv.Addr)
+		log.Infof("swagger server started on http://%s/swagger/index.html", srv.Addr)
 
 		if err := srv.ListenAndServe(); err != nil &&
 			!errors.Is(err, http.ErrServerClosed) {
