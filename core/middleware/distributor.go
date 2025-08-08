@@ -537,7 +537,7 @@ func NewMetaByContext(c *gin.Context,
 }
 
 // https://platform.openai.com/docs/api-reference/chat
-func getRequestModel(c *gin.Context, m mode.Mode, groupID string, tokenID int) (string, error) {
+func getRequestModel(c *gin.Context, m mode.Mode, group string, tokenID int) (string, error) {
 	path := c.Request.URL.Path
 	switch {
 	case m == mode.ParsePdf:
@@ -561,13 +561,9 @@ func getRequestModel(c *gin.Context, m mode.Mode, groupID string, tokenID int) (
 	case m == mode.VideoGenerationsGetJobs:
 		jobID := c.Param("id")
 
-		store, err := model.CacheGetStore(jobID)
+		store, err := model.CacheGetStore(group, tokenID, jobID)
 		if err != nil {
 			return "", fmt.Errorf("get request model failed: %w", err)
-		}
-
-		if err := validateStoreGroupAndToken(store, groupID, tokenID); err != nil {
-			return "", fmt.Errorf("validate store group and token failed: %w", err)
 		}
 
 		c.Set(JobID, store.ID)
@@ -577,13 +573,9 @@ func getRequestModel(c *gin.Context, m mode.Mode, groupID string, tokenID int) (
 	case m == mode.VideoGenerationsContent:
 		generationID := c.Param("id")
 
-		store, err := model.CacheGetStore(generationID)
+		store, err := model.CacheGetStore(group, tokenID, generationID)
 		if err != nil {
 			return "", fmt.Errorf("get request model failed: %w", err)
-		}
-
-		if err := validateStoreGroupAndToken(store, groupID, tokenID); err != nil {
-			return "", fmt.Errorf("validate store group and token failed: %w", err)
 		}
 
 		c.Set(GenerationID, store.ID)
@@ -594,13 +586,9 @@ func getRequestModel(c *gin.Context, m mode.Mode, groupID string, tokenID int) (
 		m == mode.ResponsesCancel || m == mode.ResponsesInputItems:
 		responseID := c.Param("response_id")
 
-		store, err := model.CacheGetStore(responseID)
+		store, err := model.CacheGetStore(group, tokenID, responseID)
 		if err != nil {
 			return "", fmt.Errorf("get request model failed: %w", err)
-		}
-
-		if err := validateStoreGroupAndToken(store, groupID, tokenID); err != nil {
-			return "", fmt.Errorf("validate store group and token failed: %w", err)
 		}
 
 		c.Set(ResponseID, store.ID)
@@ -624,13 +612,9 @@ func getRequestModel(c *gin.Context, m mode.Mode, groupID string, tokenID int) (
 		}
 
 		if responseID != "" {
-			store, err := model.CacheGetStore(responseID)
+			store, err := model.CacheGetStore(group, tokenID, responseID)
 			if err != nil {
 				return "", fmt.Errorf("get request model failed: %w", err)
-			}
-
-			if err := validateStoreGroupAndToken(store, groupID, tokenID); err != nil {
-				return "", fmt.Errorf("validate store group and token failed: %w", err)
 			}
 
 			c.Set(ResponseID, store.ID)
@@ -646,18 +630,6 @@ func getRequestModel(c *gin.Context, m mode.Mode, groupID string, tokenID int) (
 
 		return GetModelFromJSON(body)
 	}
-}
-
-func validateStoreGroupAndToken(store *model.StoreCache, groupID string, tokenID int) error {
-	if store.GroupID != groupID {
-		return fmt.Errorf("store group id mismatch: %s != %s", store.GroupID, groupID)
-	}
-
-	if store.TokenID != tokenID {
-		return fmt.Errorf("store token id mismatch: %d != %d", store.TokenID, tokenID)
-	}
-
-	return nil
 }
 
 func GetModelFromJSON(body []byte) (string, error) {

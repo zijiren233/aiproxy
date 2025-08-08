@@ -52,8 +52,8 @@ var adaptorStore adaptor.Store = &storeImpl{}
 
 type storeImpl struct{}
 
-func (s *storeImpl) GetStore(id string) (adaptor.StoreCache, error) {
-	store, err := model.CacheGetStore(id)
+func (s *storeImpl) GetStore(group string, tokenID int, id string) (adaptor.StoreCache, error) {
+	store, err := model.CacheGetStore(group, tokenID, id)
 	if err != nil {
 		return adaptor.StoreCache{}, err
 	}
@@ -69,7 +69,7 @@ func (s *storeImpl) GetStore(id string) (adaptor.StoreCache, error) {
 }
 
 func (s *storeImpl) SaveStore(store adaptor.StoreCache) error {
-	_, err := model.SaveStore(&model.Store{
+	_, err := model.SaveStore(&model.StoreV2{
 		ID:        store.ID,
 		GroupID:   store.GroupID,
 		TokenID:   store.TokenID,

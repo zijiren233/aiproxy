@@ -256,9 +256,9 @@ func cleanLog(batchSize int) error {
 	}
 
 	return LogDB.
-		Model(&Store{}).
+		Model(&StoreV2{}).
 		Where("expires_at < ?", time.Now()).
-		Delete(&Store{}).
+		Delete(&StoreV2{}).
 		Error
 }
 

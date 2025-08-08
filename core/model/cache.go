@@ -726,7 +726,7 @@ func CacheGetPublicMCPReusingParam(mcpID, groupID string) (PublicMCPReusingParam
 }
 
 const (
-	StoreCacheKey = "store:%s" // store_id
+	StoreCacheKey = "storev2:%s:%d:%s" // store_id
 )
 
 type StoreCache struct {
@@ -738,7 +738,7 @@ type StoreCache struct {
 	ExpiresAt time.Time `json:"expires_at" redis:"e"`
 }
 
-func (s *Store) ToStoreCache() *StoreCache {
+func (s *StoreV2) ToStoreCache() *StoreCache {
 	return &StoreCache{
 		ID:        s.ID,
 		GroupID:   s.GroupID,
@@ -754,7 +754,7 @@ func CacheSetStore(store *StoreCache) error {
 		return nil
 	}
 
-	key := common.RedisKeyf(StoreCacheKey, store.ID)
+	key := common.RedisKeyf(StoreCacheKey, store.GroupID, store.TokenID, store.ID)
 	pipe := common.RDB.Pipeline()
 	pipe.HSet(context.Background(), key, store)
 
@@ -765,9 +765,9 @@ func CacheSetStore(store *StoreCache) error {
 	return err
 }
 
-func CacheGetStore(id string) (*StoreCache, error) {
+func CacheGetStore(group string, tokenID int, id string) (*StoreCache, error) {
 	if !common.RedisEnabled {
-		store, err := GetStore(id)
+		store, err := GetStore(group, tokenID, id)
 		if err != nil {
 			return nil, err
 		}
@@ -775,7 +775,7 @@ func CacheGetStore(id string) (*StoreCache, error) {
 		return store.ToStoreCache(), nil
 	}
 
-	cacheKey := common.RedisKeyf(StoreCacheKey, id)
+	cacheKey := common.RedisKeyf(StoreCacheKey, group, tokenID, id)
 	storeCache := &StoreCache{}
 
 	err := common.RDB.HGetAll(context.Background(), cacheKey).Scan(storeCache)
@@ -783,7 +783,7 @@ func CacheGetStore(id string) (*StoreCache, error) {
 		return storeCache, nil
 	}
 
-	store, err := GetStore(id)
+	store, err := GetStore(group, tokenID, id)
 	if err != nil {
 		return nil, err
 	}
