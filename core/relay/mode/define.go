@@ -38,6 +38,16 @@ func (m Mode) String() string {
 		return "VideoGenerationsGetJobs"
 	case VideoGenerationsContent:
 		return "VideoGenerationsContent"
+	case Responses:
+		return "Responses"
+	case ResponsesGet:
+		return "ResponsesGet"
+	case ResponsesDelete:
+		return "ResponsesDelete"
+	case ResponsesCancel:
+		return "ResponsesCancel"
+	case ResponsesInputItems:
+		return "ResponsesInputItems"
 	default:
 		return fmt.Sprintf("Mode(%d)", m)
 	}
@@ -60,4 +70,9 @@ const (
 	VideoGenerationsJobs
 	VideoGenerationsGetJobs
 	VideoGenerationsContent
+	Responses
+	ResponsesGet
+	ResponsesDelete
+	ResponsesCancel
+	ResponsesInputItems
 )

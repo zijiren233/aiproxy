@@ -15,4 +15,5 @@ const (
 	Mode            = "mode"
 	JobID           = "job_id"
 	GenerationID    = "generation_id"
+	ResponseID      = "response_id"
 )

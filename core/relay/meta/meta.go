@@ -37,6 +37,7 @@ type Meta struct {
 
 	JobID        string
 	GenerationID string
+	ResponseID   string
 }
 
 type Option func(meta *Meta)
@@ -92,6 +93,12 @@ func WithJobID(jobID string) Option {
 func WithGenerationID(generationID string) Option {
 	return func(meta *Meta) {
 		meta.GenerationID = generationID
+	}
+}
+
+func WithResponseID(responseID string) Option {
+	return func(meta *Meta) {
+		meta.ResponseID = responseID
 	}
 }
 

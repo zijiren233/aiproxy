@@ -27,6 +27,7 @@ func (a *Adaptor) GetRequestURL(meta *meta.Meta, _ adaptor.Store) (adaptor.Reque
 	return GetRequestURL(meta, true)
 }
 
+//nolint:gocyclo
 func GetRequestURL(meta *meta.Meta, replaceDot bool) (adaptor.RequestURL, error) {
 	_, apiVersion, err := GetTokenAndAPIVersion(meta.Channel.Key)
 	if err != nil {
@@ -176,6 +177,89 @@ func GetRequestURL(meta *meta.Meta, replaceDot bool) (adaptor.RequestURL, error)
 			Method: http.MethodPost,
 			URL:    fmt.Sprintf("%s?api-version=%s", url, apiVersion),
 		}, nil
+
+	// Add support for Responses API endpoints
+	case mode.Responses:
+		// POST https://YOUR-RESOURCE-NAME.openai.azure.com/openai/v1/responses?api-version=preview
+		url, err := url.JoinPath(
+			meta.Channel.BaseURL,
+			"/openai/v1/responses",
+		)
+		if err != nil {
+			return adaptor.RequestURL{}, err
+		}
+
+		return adaptor.RequestURL{
+			Method: http.MethodPost,
+			URL:    fmt.Sprintf("%s?api-version=%s", url, "preview"),
+		}, nil
+
+	case mode.ResponsesGet:
+		// GET https://YOUR-RESOURCE-NAME.openai.azure.com/openai/v1/responses/{response_id}?api-version=preview
+		url, err := url.JoinPath(
+			meta.Channel.BaseURL,
+			"/openai/v1/responses",
+			meta.ResponseID,
+		)
+		if err != nil {
+			return adaptor.RequestURL{}, err
+		}
+
+		return adaptor.RequestURL{
+			Method: http.MethodGet,
+			URL:    fmt.Sprintf("%s?api-version=%s", url, "preview"),
+		}, nil
+
+	case mode.ResponsesDelete:
+		// DELETE https://YOUR-RESOURCE-NAME.openai.azure.com/openai/v1/responses/{response_id}?api-version=preview
+		url, err := url.JoinPath(
+			meta.Channel.BaseURL,
+			"/openai/v1/responses",
+			meta.ResponseID,
+		)
+		if err != nil {
+			return adaptor.RequestURL{}, err
+		}
+
+		return adaptor.RequestURL{
+			Method: http.MethodDelete,
+			URL:    fmt.Sprintf("%s?api-version=%s", url, "preview"),
+		}, nil
+
+	case mode.ResponsesCancel:
+		// POST https://YOUR-RESOURCE-NAME.openai.azure.com/openai/v1/responses/{response_id}/cancel?api-version=preview
+		url, err := url.JoinPath(
+			meta.Channel.BaseURL,
+			"/openai/v1/responses",
+			meta.ResponseID,
+			"/cancel",
+		)
+		if err != nil {
+			return adaptor.RequestURL{}, err
+		}
+
+		return adaptor.RequestURL{
+			Method: http.MethodPost,
+			URL:    fmt.Sprintf("%s?api-version=%s", url, "preview"),
+		}, nil
+
+	case mode.ResponsesInputItems:
+		// GET https://YOUR-RESOURCE-NAME.openai.azure.com/openai/v1/responses/{response_id}/input_items?api-version=preview
+		url, err := url.JoinPath(
+			meta.Channel.BaseURL,
+			"/openai/v1/responses",
+			meta.ResponseID,
+			"/input_items",
+		)
+		if err != nil {
+			return adaptor.RequestURL{}, err
+		}
+
+		return adaptor.RequestURL{
+			Method: http.MethodGet,
+			URL:    fmt.Sprintf("%s?api-version=%s", url, "preview"),
+		}, nil
+
 	default:
 		return adaptor.RequestURL{}, fmt.Errorf("unsupported mode: %s", meta.Mode)
 	}

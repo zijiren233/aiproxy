@@ -70,6 +70,8 @@ func VideoHandler(
 		return model.Usage{}, VideoErrorHanlder(resp)
 	}
 
+	defer resp.Body.Close()
+
 	responseBody, err := common.GetResponseBody(resp)
 	if err != nil {
 		return model.Usage{}, relaymodel.WrapperOpenAIVideoError(
@@ -125,6 +127,8 @@ func VideoGetJobsHandler(
 	if resp.StatusCode != http.StatusOK {
 		return model.Usage{}, VideoErrorHanlder(resp)
 	}
+
+	defer resp.Body.Close()
 
 	responseBody, err := common.GetResponseBody(resp)
 	if err != nil {
@@ -206,7 +210,10 @@ func VideoGetJobsContentHandler(
 		return model.Usage{}, VideoErrorHanlder(resp)
 	}
 
+	defer resp.Body.Close()
+
 	c.Writer.Header().Set("Content-Type", resp.Header.Get("Content-Type"))
+	c.Writer.Header().Set("Content-Length", resp.Header.Get("Content-Length"))
 	_, _ = io.Copy(c.Writer, resp.Body)
 
 	return model.Usage{}, nil

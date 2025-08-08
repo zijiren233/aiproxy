@@ -40,13 +40,69 @@ func (a *Adaptor) SupportMode(m mode.Mode) bool {
 		m == mode.VideoGenerationsJobs ||
 		m == mode.VideoGenerationsGetJobs ||
 		m == mode.VideoGenerationsContent ||
-		m == mode.Anthropic
+		m == mode.Anthropic ||
+		m == mode.Responses ||
+		m == mode.ResponsesGet ||
+		m == mode.ResponsesDelete ||
+		m == mode.ResponsesCancel ||
+		m == mode.ResponsesInputItems
 }
 
+//nolint:gocyclo
 func (a *Adaptor) GetRequestURL(meta *meta.Meta, _ adaptor.Store) (adaptor.RequestURL, error) {
 	u := meta.Channel.BaseURL
 
 	switch meta.Mode {
+	case mode.Responses:
+		url, err := url.JoinPath(u, "/responses")
+		if err != nil {
+			return adaptor.RequestURL{}, err
+		}
+
+		return adaptor.RequestURL{
+			Method: http.MethodPost,
+			URL:    url,
+		}, nil
+	case mode.ResponsesGet:
+		url, err := url.JoinPath(u, "/responses", meta.ResponseID)
+		if err != nil {
+			return adaptor.RequestURL{}, err
+		}
+
+		return adaptor.RequestURL{
+			Method: http.MethodGet,
+			URL:    url,
+		}, nil
+	case mode.ResponsesDelete:
+		url, err := url.JoinPath(u, "/responses", meta.ResponseID)
+		if err != nil {
+			return adaptor.RequestURL{}, err
+		}
+
+		return adaptor.RequestURL{
+			Method: http.MethodDelete,
+			URL:    url,
+		}, nil
+	case mode.ResponsesCancel:
+		url, err := url.JoinPath(u, "/responses", meta.ResponseID, "cancel")
+		if err != nil {
+			return adaptor.RequestURL{}, err
+		}
+
+		return adaptor.RequestURL{
+			Method: http.MethodPost,
+			URL:    url,
+		}, nil
+	case mode.ResponsesInputItems:
+		url, err := url.JoinPath(u, "/responses", meta.ResponseID, "input_items")
+		if err != nil {
+			return adaptor.RequestURL{}, err
+		}
+
+		return adaptor.RequestURL{
+			Method: http.MethodGet,
+			URL:    url,
+		}, nil
 	case mode.ChatCompletions, mode.Anthropic:
 		url, err := url.JoinPath(u, "/chat/completions")
 		if err != nil {
@@ -210,6 +266,11 @@ func ConvertRequest(
 	}
 
 	switch meta.Mode {
+	case mode.Responses:
+		return ConvertResponseRequest(meta, req)
+	case mode.ResponsesGet, mode.ResponsesDelete, mode.ResponsesCancel, mode.ResponsesInputItems:
+		// These endpoints don't need request conversion
+		return adaptor.ConvertResult{}, nil
 	case mode.Moderations:
 		return ConvertModerationsRequest(meta, req)
 	case mode.Embeddings:
@@ -248,6 +309,20 @@ func DoResponse(
 	resp *http.Response,
 ) (usage model.Usage, err adaptor.Error) {
 	switch meta.Mode {
+	case mode.Responses:
+		if utils.IsStreamResponse(resp) {
+			usage, err = ResponseStreamHandler(meta, store, c, resp)
+		} else {
+			usage, err = ResponseHandler(meta, store, c, resp)
+		}
+	case mode.ResponsesGet:
+		usage, err = GetResponseHandler(meta, c, resp)
+	case mode.ResponsesDelete:
+		usage, err = DeleteResponseHandler(meta, c, resp)
+	case mode.ResponsesCancel:
+		usage, err = CancelResponseHandler(meta, c, resp)
+	case mode.ResponsesInputItems:
+		usage, err = GetInputItemsHandler(meta, c, resp)
 	case mode.ImagesGenerations, mode.ImagesEdits:
 		usage, err = ImagesHandler(meta, c, resp)
 	case mode.AudioTranscription, mode.AudioTranslation:

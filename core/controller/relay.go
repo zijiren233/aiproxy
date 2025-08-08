@@ -355,3 +355,99 @@ func VideoGenerationsContent() []gin.HandlerFunc {
 		NewRelay(mode.VideoGenerationsContent),
 	}
 }
+
+// CreateResponse godoc
+//
+//	@Summary		Create response
+//	@Description	Create a new response
+//	@Tags			relay
+//	@Produce		json
+//	@Security		ApiKeyAuth
+//	@Param			request			body		model.CreateResponseRequest	true	"Request"
+//	@Param			Aiproxy-Channel	header		string						false	"Optional Aiproxy-Channel header"
+//	@Success		200				{object}	model.Response
+//	@Header			all				{integer}	X-RateLimit-Limit-Requests		"X-RateLimit-Limit-Requests"
+//	@Header			all				{integer}	X-RateLimit-Limit-Tokens		"X-RateLimit-Limit-Tokens"
+//	@Header			all				{integer}	X-RateLimit-Remaining-Requests	"X-RateLimit-Remaining-Requests"
+//	@Header			all				{integer}	X-RateLimit-Remaining-Tokens	"X-RateLimit-Remaining-Tokens"
+//	@Header			all				{string}	X-RateLimit-Reset-Requests		"X-RateLimit-Reset-Requests"
+//	@Header			all				{string}	X-RateLimit-Reset-Tokens		"X-RateLimit-Reset-Tokens"
+//	@Router			/v1/responses [post]
+func CreateResponse() []gin.HandlerFunc {
+	return []gin.HandlerFunc{
+		middleware.NewDistribute(mode.Responses),
+		NewRelay(mode.Responses),
+	}
+}
+
+// GetResponse godoc
+//
+//	@Summary		Get response
+//	@Description	Get a response by ID
+//	@Tags			relay
+//	@Produce		json
+//	@Security		ApiKeyAuth
+//	@Param			response_id		path		string	true	"Response ID"
+//	@Param			Aiproxy-Channel	header		string	false	"Optional Aiproxy-Channel header"
+//	@Success		200				{object}	model.Response
+//	@Router			/v1/responses/{response_id} [get]
+func GetResponse() []gin.HandlerFunc {
+	return []gin.HandlerFunc{
+		middleware.NewDistribute(mode.ResponsesGet),
+		NewRelay(mode.ResponsesGet),
+	}
+}
+
+// DeleteResponse godoc
+//
+//	@Summary		Delete response
+//	@Description	Delete a response by ID
+//	@Tags			relay
+//	@Produce		json
+//	@Security		ApiKeyAuth
+//	@Param			response_id		path	string	true	"Response ID"
+//	@Param			Aiproxy-Channel	header	string	false	"Optional Aiproxy-Channel header"
+//	@Success		204
+//	@Router			/v1/responses/{response_id} [delete]
+func DeleteResponse() []gin.HandlerFunc {
+	return []gin.HandlerFunc{
+		middleware.NewDistribute(mode.ResponsesDelete),
+		NewRelay(mode.ResponsesDelete),
+	}
+}
+
+// CancelResponse godoc
+//
+//	@Summary		Cancel response
+//	@Description	Cancel a response by ID
+//	@Tags			relay
+//	@Produce		json
+//	@Security		ApiKeyAuth
+//	@Param			response_id		path		string	true	"Response ID"
+//	@Param			Aiproxy-Channel	header		string	false	"Optional Aiproxy-Channel header"
+//	@Success		200				{object}	model.Response
+//	@Router			/v1/responses/{response_id}/cancel [post]
+func CancelResponse() []gin.HandlerFunc {
+	return []gin.HandlerFunc{
+		middleware.NewDistribute(mode.ResponsesCancel),
+		NewRelay(mode.ResponsesCancel),
+	}
+}
+
+// GetResponseInputItems godoc
+//
+//	@Summary		Get response input items
+//	@Description	Get input items for a response
+//	@Tags			relay
+//	@Produce		json
+//	@Security		ApiKeyAuth
+//	@Param			response_id		path		string	true	"Response ID"
+//	@Param			Aiproxy-Channel	header		string	false	"Optional Aiproxy-Channel header"
+//	@Success		200				{object}	model.InputItemList
+//	@Router			/v1/responses/{response_id}/input_items [get]
+func GetResponseInputItems() []gin.HandlerFunc {
+	return []gin.HandlerFunc{
+		middleware.NewDistribute(mode.ResponsesInputItems),
+		NewRelay(mode.ResponsesInputItems),
+	}
+}
