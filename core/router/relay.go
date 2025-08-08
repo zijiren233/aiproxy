@@ -89,6 +89,17 @@ func SetRelayRouter(router *gin.Engine) {
 			"/video/generations/:id/content/video",
 			controller.VideoGenerationsContent()...,
 		)
+		relayRouter.POST("/responses",
+			controller.CreateResponse()...)
+		relayRouter.GET("/responses/:response_id",
+			controller.GetResponse()...)
+		relayRouter.DELETE("/responses/:response_id",
+			controller.DeleteResponse()...)
+		relayRouter.POST("/responses/:response_id/cancel",
+			controller.CancelResponse()...)
+		relayRouter.GET(
+			"/responses/:response_id/input_items",
+			controller.GetResponseInputItems()...)
 
 		relayRouter.POST("/images/variations", controller.RelayNotImplemented)
 		relayRouter.GET("/files", controller.RelayNotImplemented)

@@ -324,10 +324,16 @@ func CheckRelayMode(requestMode, modelMode mode.Mode) bool {
 	}
 
 	switch requestMode {
-	case mode.ChatCompletions, mode.Completions, mode.Anthropic:
+	case mode.ChatCompletions, mode.Completions, mode.Anthropic,
+		mode.Responses, mode.ResponsesGet, mode.ResponsesDelete, mode.ResponsesCancel, mode.ResponsesInputItems:
 		return modelMode == mode.ChatCompletions ||
 			modelMode == mode.Completions ||
-			modelMode == mode.Anthropic
+			modelMode == mode.Anthropic ||
+			modelMode == mode.Responses ||
+			modelMode == mode.ResponsesGet ||
+			modelMode == mode.ResponsesDelete ||
+			modelMode == mode.ResponsesCancel ||
+			modelMode == mode.ResponsesInputItems
 	case mode.ImagesGenerations, mode.ImagesEdits:
 		return modelMode == mode.ImagesGenerations ||
 			modelMode == mode.ImagesEdits
@@ -477,6 +483,10 @@ func GetGenerationID(c *gin.Context) string {
 	return c.GetString(GenerationID)
 }
 
+func GetResponseID(c *gin.Context) string {
+	return c.GetString(ResponseID)
+}
+
 func GetRequestMetadata(c *gin.Context) map[string]string {
 	return c.GetStringMapString(RequestMetadata)
 }
@@ -503,6 +513,7 @@ func NewMetaByContext(c *gin.Context,
 	requestAt := GetRequestAt(c)
 	jobID := GetJobID(c)
 	generationID := GetGenerationID(c)
+	responseID := GetResponseID(c)
 
 	opts = append(
 		opts,
@@ -513,6 +524,7 @@ func NewMetaByContext(c *gin.Context,
 		meta.WithEndpoint(c.Request.URL.Path),
 		meta.WithJobID(jobID),
 		meta.WithGenerationID(generationID),
+		meta.WithResponseID(responseID),
 	)
 
 	return meta.NewMeta(
@@ -525,7 +537,7 @@ func NewMetaByContext(c *gin.Context,
 }
 
 // https://platform.openai.com/docs/api-reference/chat
-func getRequestModel(c *gin.Context, m mode.Mode, groupID string, tokenID int) (string, error) {
+func getRequestModel(c *gin.Context, m mode.Mode, group string, tokenID int) (string, error) {
 	path := c.Request.URL.Path
 	switch {
 	case m == mode.ParsePdf:
@@ -549,13 +561,9 @@ func getRequestModel(c *gin.Context, m mode.Mode, groupID string, tokenID int) (
 	case m == mode.VideoGenerationsGetJobs:
 		jobID := c.Param("id")
 
-		store, err := model.CacheGetStore(jobID)
+		store, err := model.CacheGetStore(group, tokenID, jobID)
 		if err != nil {
 			return "", fmt.Errorf("get request model failed: %w", err)
-		}
-
-		if err := validateStoreGroupAndToken(store, groupID, tokenID); err != nil {
-			return "", fmt.Errorf("validate store group and token failed: %w", err)
 		}
 
 		c.Set(JobID, store.ID)
@@ -565,19 +573,55 @@ func getRequestModel(c *gin.Context, m mode.Mode, groupID string, tokenID int) (
 	case m == mode.VideoGenerationsContent:
 		generationID := c.Param("id")
 
-		store, err := model.CacheGetStore(generationID)
+		store, err := model.CacheGetStore(group, tokenID, generationID)
 		if err != nil {
 			return "", fmt.Errorf("get request model failed: %w", err)
-		}
-
-		if err := validateStoreGroupAndToken(store, groupID, tokenID); err != nil {
-			return "", fmt.Errorf("validate store group and token failed: %w", err)
 		}
 
 		c.Set(GenerationID, store.ID)
 		c.Set(ChannelID, store.ChannelID)
 
 		return store.Model, nil
+	case m == mode.ResponsesGet || m == mode.ResponsesDelete ||
+		m == mode.ResponsesCancel || m == mode.ResponsesInputItems:
+		responseID := c.Param("response_id")
+
+		store, err := model.CacheGetStore(group, tokenID, responseID)
+		if err != nil {
+			return "", fmt.Errorf("get request model failed: %w", err)
+		}
+
+		c.Set(ResponseID, store.ID)
+		c.Set(ChannelID, store.ChannelID)
+
+		return store.Model, nil
+	case m == mode.Responses:
+		body, err := common.GetRequestBodyReusable(c.Request)
+		if err != nil {
+			return "", fmt.Errorf("get request model failed: %w", err)
+		}
+
+		responseID, err := GetPreviousResponseIDFromJSON(body)
+		if err != nil {
+			return "", fmt.Errorf("get request previous response id failed: %w", err)
+		}
+
+		modelName, err := GetModelFromJSON(body)
+		if err != nil {
+			return "", err
+		}
+
+		if responseID != "" {
+			store, err := model.CacheGetStore(group, tokenID, responseID)
+			if err != nil {
+				return "", fmt.Errorf("get request model failed: %w", err)
+			}
+
+			c.Set(ResponseID, store.ID)
+			c.Set(ChannelID, store.ChannelID)
+		}
+
+		return modelName, nil
 	default:
 		body, err := common.GetRequestBodyReusable(c.Request)
 		if err != nil {
@@ -588,20 +632,20 @@ func getRequestModel(c *gin.Context, m mode.Mode, groupID string, tokenID int) (
 	}
 }
 
-func validateStoreGroupAndToken(store *model.StoreCache, groupID string, tokenID int) error {
-	if store.GroupID != groupID {
-		return fmt.Errorf("store group id mismatch: %s != %s", store.GroupID, groupID)
-	}
-
-	if store.TokenID != tokenID {
-		return fmt.Errorf("store token id mismatch: %d != %d", store.TokenID, tokenID)
-	}
-
-	return nil
-}
-
 func GetModelFromJSON(body []byte) (string, error) {
 	node, err := sonic.GetWithOptions(body, ast.SearchOptions{}, "model")
+	if err != nil {
+		if errors.Is(err, ast.ErrNotExist) {
+			return "", nil
+		}
+		return "", fmt.Errorf("get request model failed: %w", err)
+	}
+
+	return node.String()
+}
+
+func GetPreviousResponseIDFromJSON(body []byte) (string, error) {
+	node, err := sonic.GetWithOptions(body, ast.SearchOptions{}, "previous_response_id")
 	if err != nil {
 		if errors.Is(err, ast.ErrNotExist) {
 			return "", nil

@@ -12,20 +12,6 @@ type Anthropic struct {
 	Data  []byte
 }
 
-const (
-	n     = "\n"
-	nn    = "\n\n"
-	event = "event: "
-	data  = "data: "
-)
-
-var (
-	nBytes     = conv.StringToBytes(n)
-	nnBytes    = conv.StringToBytes(nn)
-	eventBytes = conv.StringToBytes(event)
-	dataBytes  = conv.StringToBytes(data)
-)
-
 func (r *Anthropic) Render(w http.ResponseWriter) error {
 	r.WriteContentType(w)
 
@@ -62,9 +48,5 @@ func (r *Anthropic) Render(w http.ResponseWriter) error {
 }
 
 func (r *Anthropic) WriteContentType(w http.ResponseWriter) {
-	w.Header().Set("Content-Type", "text/event-stream")
-	w.Header().Set("Cache-Control", "no-cache")
-	w.Header().Set("Connection", "keep-alive")
-	w.Header().Set("Transfer-Encoding", "chunked")
-	w.Header().Set("X-Accel-Buffering", "no")
+	WriteSSEContentType(w)
 }

@@ -1,45 +1,16 @@
 package render
 
 import (
-	"bytes"
 	"encoding/base64"
 	"errors"
 	"fmt"
 	"net/http"
-	"slices"
 
 	"github.com/bytedance/sonic"
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/core/common/conv"
 	"github.com/labring/aiproxy/core/relay/model"
 )
-
-const (
-	DONE             = "[DONE]"
-	DataPrefix       = "data:"
-	DataPrefixLength = len(DataPrefix)
-)
-
-var (
-	DataPrefixBytes = conv.StringToBytes(DataPrefix)
-	DoneBytes       = conv.StringToBytes(DONE)
-)
-
-// IsValidSSEData checks if data is valid SSE format
-func IsValidSSEData(data []byte) bool {
-	return len(data) >= DataPrefixLength &&
-		slices.Equal(data[:DataPrefixLength], DataPrefixBytes)
-}
-
-// ExtractSSEData extracts data from SSE format
-func ExtractSSEData(data []byte) []byte {
-	return bytes.TrimSpace(data[DataPrefixLength:])
-}
-
-// IsSSEDone checks if SSE data indicates completion
-func IsSSEDone(data []byte) bool {
-	return slices.Equal(data, DoneBytes)
-}
 
 type OpenaiSSE struct {
 	Data []byte
@@ -64,11 +35,7 @@ func (r *OpenaiSSE) Render(w http.ResponseWriter) error {
 }
 
 func (r *OpenaiSSE) WriteContentType(w http.ResponseWriter) {
-	w.Header().Set("Content-Type", "text/event-stream")
-	w.Header().Set("Cache-Control", "no-cache")
-	w.Header().Set("Connection", "keep-alive")
-	w.Header().Set("Transfer-Encoding", "chunked")
-	w.Header().Set("X-Accel-Buffering", "no")
+	WriteSSEContentType(w)
 }
 
 func OpenaiStringData(c *gin.Context, str string) {
@@ -151,11 +118,7 @@ func (r *OpenaiTtsSSE) Render(w http.ResponseWriter) error {
 }
 
 func (r *OpenaiTtsSSE) WriteContentType(w http.ResponseWriter) {
-	w.Header().Set("Content-Type", "text/event-stream")
-	w.Header().Set("Cache-Control", "no-cache")
-	w.Header().Set("Connection", "keep-alive")
-	w.Header().Set("Transfer-Encoding", "chunked")
-	w.Header().Set("X-Accel-Buffering", "no")
+	WriteSSEContentType(w)
 }
 
 func OpenaiAudioData(c *gin.Context, audio string) {

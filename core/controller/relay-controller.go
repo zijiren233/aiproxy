@@ -52,8 +52,8 @@ var adaptorStore adaptor.Store = &storeImpl{}
 
 type storeImpl struct{}
 
-func (s *storeImpl) GetStore(id string) (adaptor.StoreCache, error) {
-	store, err := model.CacheGetStore(id)
+func (s *storeImpl) GetStore(group string, tokenID int, id string) (adaptor.StoreCache, error) {
+	store, err := model.CacheGetStore(group, tokenID, id)
 	if err != nil {
 		return adaptor.StoreCache{}, err
 	}
@@ -69,7 +69,7 @@ func (s *storeImpl) GetStore(id string) (adaptor.StoreCache, error) {
 }
 
 func (s *storeImpl) SaveStore(store adaptor.StoreCache) error {
-	_, err := model.SaveStore(&model.Store{
+	_, err := model.SaveStore(&model.StoreV2{
 		ID:        store.ID,
 		GroupID:   store.GroupID,
 		TokenID:   store.TokenID,
@@ -229,18 +229,18 @@ func relay(c *gin.Context, mode mode.Mode, relayController RelayController) {
 			return
 		}
 
-		gbc := middleware.GetGroupBalanceConsumerFromContext(c)
-		if !gbc.CheckBalance(consume.CalculateAmount(http.StatusOK, requestUsage, price)) {
-			middleware.AbortLogWithMessageWithMode(mode, c,
-				http.StatusForbidden,
-				fmt.Sprintf("group (%s) balance not enough", gbc.Group),
-				relaymodel.WithType(middleware.GroupBalanceNotEnough),
-			)
-
-			return
-		}
-
 		meta.RequestUsage = requestUsage
+	}
+
+	gbc := middleware.GetGroupBalanceConsumerFromContext(c)
+	if !gbc.CheckBalance(consume.CalculateAmount(http.StatusOK, meta.RequestUsage, price)) {
+		middleware.AbortLogWithMessageWithMode(mode, c,
+			http.StatusForbidden,
+			fmt.Sprintf("group (%s) balance not enough", gbc.Group),
+			relaymodel.WithType(middleware.GroupBalanceNotEnough),
+		)
+
+		return
 	}
 
 	// First attempt

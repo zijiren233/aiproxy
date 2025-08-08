@@ -12,21 +12,21 @@ const (
 	ErrStoreNotFound = "store id"
 )
 
-// Store represents channel-associated data storage for various purposes:
+// StoreV2 represents channel-associated data storage for various purposes:
 // - Video generation jobs and their results
 // - File storage with associated metadata
 // - Any other channel-specific data that needs persistence
-type Store struct {
-	ID        string    `gorm:"primaryKey"`
+type StoreV2 struct {
+	ID        string    `gorm:"primaryKey:3"`
 	CreatedAt time.Time `gorm:"autoCreateTime"`
 	ExpiresAt time.Time
-	GroupID   string
-	TokenID   int
+	GroupID   string `gorm:"primaryKey:1"`
+	TokenID   int    `gorm:"primaryKey:2"`
 	ChannelID int
 	Model     string
 }
 
-func (s *Store) BeforeSave(_ *gorm.DB) error {
+func (s *StoreV2) BeforeSave(_ *gorm.DB) error {
 	if s.GroupID != "" {
 		if s.TokenID == 0 {
 			return errors.New("token id is required")
@@ -52,16 +52,19 @@ func (s *Store) BeforeSave(_ *gorm.DB) error {
 	return nil
 }
 
-func SaveStore(s *Store) (*Store, error) {
+func SaveStore(s *StoreV2) (*StoreV2, error) {
 	if err := LogDB.Save(s).Error; err != nil {
 		return nil, err
 	}
 	return s, nil
 }
 
-func GetStore(id string) (*Store, error) {
-	var s Store
+func GetStore(group string, tokenID int, id string) (*StoreV2, error) {
+	var s StoreV2
 
-	err := LogDB.Where("id = ?", id).First(&s).Error
+	err := LogDB.Where("group_id = ? and token_id = ? and id = ?", group, tokenID, id).
+		First(&s).
+		Error
+
 	return &s, HandleNotFound(err, ErrStoreNotFound)
 }

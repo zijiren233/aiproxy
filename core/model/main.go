@@ -216,7 +216,7 @@ func migrateLOGDB() error {
 		&GroupSummary{},
 		&Summary{},
 		&ConsumeError{},
-		&Store{},
+		&StoreV2{},
 		&SummaryMinute{},
 		&GroupSummaryMinute{},
 	)
