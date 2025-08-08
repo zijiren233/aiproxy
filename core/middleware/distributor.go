@@ -599,6 +599,10 @@ func getRequestModel(c *gin.Context, m mode.Mode, groupID string, tokenID int) (
 			return "", fmt.Errorf("get request model failed: %w", err)
 		}
 
+		if err := validateStoreGroupAndToken(store, groupID, tokenID); err != nil {
+			return "", fmt.Errorf("validate store group and token failed: %w", err)
+		}
+
 		c.Set(ResponseID, store.ID)
 		c.Set(ChannelID, store.ChannelID)
 
@@ -623,6 +627,10 @@ func getRequestModel(c *gin.Context, m mode.Mode, groupID string, tokenID int) (
 			store, err := model.CacheGetStore(responseID)
 			if err != nil {
 				return "", fmt.Errorf("get request model failed: %w", err)
+			}
+
+			if err := validateStoreGroupAndToken(store, groupID, tokenID); err != nil {
+				return "", fmt.Errorf("validate store group and token failed: %w", err)
 			}
 
 			c.Set(ResponseID, store.ID)
