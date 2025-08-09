@@ -40,10 +40,6 @@ func rerankPromptTokens(rerankRequest *relaymodel.RerankRequest) int64 {
 	return tokens
 }
 
-func GetRerankRequestPrice(_ *gin.Context, mc model.ModelConfig) (model.Price, error) {
-	return mc.Price, nil
-}
-
 func GetRerankRequestUsage(c *gin.Context, _ model.ModelConfig) (model.Usage, error) {
 	rerankRequest, err := getRerankRequest(c)
 	if err != nil {

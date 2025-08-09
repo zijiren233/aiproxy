@@ -6,10 +6,6 @@ import (
 	"github.com/labring/aiproxy/core/relay/utils"
 )
 
-func GetVideoGenerationJobRequestPrice(_ *gin.Context, mc model.ModelConfig) (model.Price, error) {
-	return mc.Price, nil
-}
-
 func GetVideoGenerationJobRequestUsage(c *gin.Context, _ model.ModelConfig) (model.Usage, error) {
 	_, err := utils.UnmarshalVideoGenerationJobRequest(c.Request)
 	if err != nil {

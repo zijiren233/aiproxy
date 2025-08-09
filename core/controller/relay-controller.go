@@ -114,12 +114,18 @@ func relayHandler(c *gin.Context, meta *meta.Meta, mc *model.ModelCaches) *contr
 	return controller.Handle(adaptor, c, meta, adaptorStore)
 }
 
+func defaultPriceFunc(_ *gin.Context, mc model.ModelConfig) (model.Price, error) {
+	return mc.Price, nil
+}
+
 func relayController(m mode.Mode) RelayController {
 	c := RelayController{
 		Handler: func(c *gin.Context, meta *meta.Meta) *controller.HandleResult {
 			return relayHandler(c, meta, middleware.GetModelCaches(c))
 		},
+		GetRequestPrice: defaultPriceFunc,
 	}
+
 	switch m {
 	case mode.ImagesGenerations:
 		c.GetRequestPrice = controller.GetImagesRequestPrice
@@ -128,32 +134,25 @@ func relayController(m mode.Mode) RelayController {
 		c.GetRequestPrice = controller.GetImagesEditsRequestPrice
 		c.GetRequestUsage = controller.GetImagesEditsRequestUsage
 	case mode.AudioSpeech:
-		c.GetRequestPrice = controller.GetTTSRequestPrice
 		c.GetRequestUsage = controller.GetTTSRequestUsage
 	case mode.AudioTranslation, mode.AudioTranscription:
-		c.GetRequestPrice = controller.GetSTTRequestPrice
 		c.GetRequestUsage = controller.GetSTTRequestUsage
 	case mode.ParsePdf:
-		c.GetRequestPrice = controller.GetPdfRequestPrice
 		c.GetRequestUsage = controller.GetPdfRequestUsage
 	case mode.Rerank:
-		c.GetRequestPrice = controller.GetRerankRequestPrice
 		c.GetRequestUsage = controller.GetRerankRequestUsage
 	case mode.Anthropic:
-		c.GetRequestPrice = controller.GetAnthropicRequestPrice
 		c.GetRequestUsage = controller.GetAnthropicRequestUsage
 	case mode.ChatCompletions:
-		c.GetRequestPrice = controller.GetChatRequestPrice
 		c.GetRequestUsage = controller.GetChatRequestUsage
 	case mode.Embeddings:
-		c.GetRequestPrice = controller.GetEmbedRequestPrice
 		c.GetRequestUsage = controller.GetEmbedRequestUsage
 	case mode.Completions:
-		c.GetRequestPrice = controller.GetCompletionsRequestPrice
 		c.GetRequestUsage = controller.GetCompletionsRequestUsage
 	case mode.VideoGenerationsJobs:
-		c.GetRequestPrice = controller.GetVideoGenerationJobRequestPrice
 		c.GetRequestUsage = controller.GetVideoGenerationJobRequestUsage
+	case mode.Responses:
+		c.GetRequestUsage = controller.GetResponsesRequestUsage
 	}
 
 	return c
