@@ -36,12 +36,21 @@ func CountTokenMessages(messages []model.Message, model string) int64 {
 		tokensPerName = 1
 	}
 
-	var tokenNum int64
+	var (
+		textBuilder     strings.Builder
+		tokenNum        int64
+		imageTokenCount int64
+	)
+
 	for _, message := range messages {
 		tokenNum += tokensPerMessage
+
+		textBuilder.WriteString(message.Role)
+
 		switch v := message.Content.(type) {
 		case string:
-			tokenNum += getTokenNum(tokenEncoder, v)
+			textBuilder.WriteString(v)
+
 		case []any:
 			for _, it := range v {
 				m, ok := it.(map[string]any)
@@ -53,7 +62,7 @@ func CountTokenMessages(messages []model.Message, model string) int64 {
 				case "text":
 					if textValue, ok := m["text"]; ok {
 						if textString, ok := textValue.(string); ok {
-							tokenNum += getTokenNum(tokenEncoder, textString)
+							textBuilder.WriteString(textString)
 						}
 					}
 				case "image_url":
@@ -66,30 +75,32 @@ func CountTokenMessages(messages []model.Message, model string) int64 {
 
 						detail := ""
 						if imageURL["detail"] != nil {
-							detail, ok = imageURL["detail"].(string)
-							if !ok {
-								continue
-							}
+							detail, _ = imageURL["detail"].(string)
 						}
 
 						imageTokens, err := countImageTokens(url, detail, model)
 						if err != nil {
 							log.Error("error counting image tokens: " + err.Error())
 						} else {
-							tokenNum += imageTokens
+							imageTokenCount += imageTokens
 						}
 					}
 				}
 			}
 		}
 
-		tokenNum += getTokenNum(tokenEncoder, message.Role)
 		if message.Name != nil {
 			tokenNum += tokensPerName
-			tokenNum += getTokenNum(tokenEncoder, *message.Name)
+
+			textBuilder.WriteString(*message.Name)
 		}
 	}
 
+	if textBuilder.Len() > 0 {
+		tokenNum += getTokenNum(tokenEncoder, textBuilder.String())
+	}
+
+	tokenNum += imageTokenCount
 	tokenNum += 3 // Every reply is primed with <|start|>assistant<|message|>
 
 	return tokenNum
