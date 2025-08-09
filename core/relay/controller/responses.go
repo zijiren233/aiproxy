@@ -5,6 +5,6 @@ import (
 	"github.com/labring/aiproxy/core/model"
 )
 
-func GetPdfRequestUsage(_ *gin.Context, _ model.ModelConfig) (model.Usage, error) {
+func GetResponsesRequestUsage(c *gin.Context, _ model.ModelConfig) (model.Usage, error) {
 	return model.Usage{}, nil
 }

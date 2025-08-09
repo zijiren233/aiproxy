@@ -14,10 +14,6 @@ import (
 	"github.com/labring/aiproxy/core/relay/adaptor/openai"
 )
 
-func GetSTTRequestPrice(_ *gin.Context, mc model.ModelConfig) (model.Price, error) {
-	return mc.Price, nil
-}
-
 func GetSTTRequestUsage(c *gin.Context, mc model.ModelConfig) (model.Usage, error) {
 	audioFile, err := c.FormFile("file")
 	if err != nil {
