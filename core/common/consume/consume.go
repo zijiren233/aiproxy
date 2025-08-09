@@ -117,7 +117,11 @@ func Consume(
 func checkNeedRecordConsume(code int, meta *meta.Meta) bool {
 	switch meta.Mode {
 	case mode.VideoGenerationsGetJobs,
-		mode.VideoGenerationsContent:
+		mode.VideoGenerationsContent,
+		mode.ResponsesGet,
+		mode.ResponsesDelete,
+		mode.ResponsesCancel,
+		mode.ResponsesInputItems:
 		return code != http.StatusOK
 	default:
 		return true
