@@ -177,7 +177,7 @@ func SetAPIRouter(router *gin.Engine) {
 		modelConfigRoute := apiRouter.Group("/model_config")
 		{
 			modelConfigRoute.GET("/*model", controller.GetModelConfig)
-			modelConfigRoute.POST("/", controller.SaveModelConfig)
+			modelConfigRoute.POST("/*model", controller.SaveModelConfig)
 			modelConfigRoute.DELETE("/*model", controller.DeleteModelConfig)
 		}
 

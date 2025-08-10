@@ -41,7 +41,7 @@ export const useCreateModel = () => {
 
   const mutation = useMutation({
     mutationFn: (data: ModelCreateRequest) => {
-      return modelApi.createModel(data);
+      return modelApi.createModel(data.model, data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["models"] });
