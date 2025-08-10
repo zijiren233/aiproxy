@@ -224,7 +224,8 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "type": "number"
+                                            "type": "number",
+                                            "format": "float64"
                                         }
                                     }
                                 }
@@ -951,12 +952,14 @@ const docTemplate = `{
                     },
                     {
                         "type": "integer",
+                        "format": "int64",
                         "description": "Start second timestamp",
                         "name": "start_timestamp",
                         "in": "query"
                     },
                     {
                         "type": "integer",
+                        "format": "int64",
                         "description": "End second timestamp",
                         "name": "end_timestamp",
                         "in": "query"
@@ -1033,12 +1036,14 @@ const docTemplate = `{
                     },
                     {
                         "type": "integer",
+                        "format": "int64",
                         "description": "Start second timestamp",
                         "name": "start_timestamp",
                         "in": "query"
                     },
                     {
                         "type": "integer",
+                        "format": "int64",
                         "description": "End second timestamp",
                         "name": "end_timestamp",
                         "in": "query"
@@ -1157,12 +1162,14 @@ const docTemplate = `{
                     },
                     {
                         "type": "integer",
+                        "format": "int64",
                         "description": "Start timestamp",
                         "name": "start_timestamp",
                         "in": "query"
                     },
                     {
                         "type": "integer",
+                        "format": "int64",
                         "description": "End timestamp",
                         "name": "end_timestamp",
                         "in": "query"
@@ -1242,12 +1249,14 @@ const docTemplate = `{
                     },
                     {
                         "type": "integer",
+                        "format": "int64",
                         "description": "Start timestamp",
                         "name": "start_timestamp",
                         "in": "query"
                     },
                     {
                         "type": "integer",
+                        "format": "int64",
                         "description": "End timestamp",
                         "name": "end_timestamp",
                         "in": "query"
@@ -4239,42 +4248,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/model_config/": {
-            "post": {
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ],
-                "description": "Saves a model config",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "modelconfig"
-                ],
-                "summary": "Save model config",
-                "parameters": [
-                    {
-                        "description": "Model config",
-                        "name": "config",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/controller.SaveModelConfigsRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/middleware.APIResponse"
-                        }
-                    }
-                }
-            }
-        },
         "/api/model_config/{model}": {
             "get": {
                 "security": [
@@ -4316,6 +4289,40 @@ const docTemplate = `{
                                     }
                                 }
                             ]
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Saves a model config",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "modelconfig"
+                ],
+                "summary": "Save model config",
+                "parameters": [
+                    {
+                        "description": "Model config",
+                        "name": "config",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/controller.SaveModelConfigsRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.APIResponse"
                         }
                     }
                 }
@@ -4808,7 +4815,8 @@ const docTemplate = `{
                             45,
                             46,
                             47,
-                            48
+                            48,
+                            49
                         ],
                         "type": "integer",
                         "description": "Channel type",
@@ -5138,7 +5146,8 @@ const docTemplate = `{
                                             "additionalProperties": {
                                                 "type": "object",
                                                 "additionalProperties": {
-                                                    "type": "number"
+                                                    "type": "number",
+                                                    "format": "float64"
                                                 }
                                             }
                                         }
@@ -5204,7 +5213,8 @@ const docTemplate = `{
                                             "additionalProperties": {
                                                 "type": "array",
                                                 "items": {
-                                                    "type": "integer"
+                                                    "type": "integer",
+                                                    "format": "int64"
                                                 }
                                             }
                                         }
@@ -5245,7 +5255,8 @@ const docTemplate = `{
                                         "data": {
                                             "type": "object",
                                             "additionalProperties": {
-                                                "type": "number"
+                                                "type": "number",
+                                                "format": "float64"
                                             }
                                         }
                                     }
@@ -5296,7 +5307,8 @@ const docTemplate = `{
                                             "items": {
                                                 "type": "object",
                                                 "additionalProperties": {
-                                                    "type": "number"
+                                                    "type": "number",
+                                                    "format": "float64"
                                                 }
                                             }
                                         }
@@ -7907,6 +7919,229 @@ const docTemplate = `{
                 }
             }
         },
+        "/v1/responses": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Create a new response",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "relay"
+                ],
+                "summary": "Create response",
+                "parameters": [
+                    {
+                        "description": "Request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.CreateResponseRequest"
+                        }
+                    },
+                    {
+                        "type": "string",
+                        "description": "Optional Aiproxy-Channel header",
+                        "name": "Aiproxy-Channel",
+                        "in": "header"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.Response"
+                        },
+                        "headers": {
+                            "X-RateLimit-Limit-Requests": {
+                                "type": "integer",
+                                "description": "X-RateLimit-Limit-Requests"
+                            },
+                            "X-RateLimit-Limit-Tokens": {
+                                "type": "integer",
+                                "description": "X-RateLimit-Limit-Tokens"
+                            },
+                            "X-RateLimit-Remaining-Requests": {
+                                "type": "integer",
+                                "description": "X-RateLimit-Remaining-Requests"
+                            },
+                            "X-RateLimit-Remaining-Tokens": {
+                                "type": "integer",
+                                "description": "X-RateLimit-Remaining-Tokens"
+                            },
+                            "X-RateLimit-Reset-Requests": {
+                                "type": "string",
+                                "description": "X-RateLimit-Reset-Requests"
+                            },
+                            "X-RateLimit-Reset-Tokens": {
+                                "type": "string",
+                                "description": "X-RateLimit-Reset-Tokens"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/responses/{response_id}": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Get a response by ID",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "relay"
+                ],
+                "summary": "Get response",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Response ID",
+                        "name": "response_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Optional Aiproxy-Channel header",
+                        "name": "Aiproxy-Channel",
+                        "in": "header"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.Response"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Delete a response by ID",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "relay"
+                ],
+                "summary": "Delete response",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Response ID",
+                        "name": "response_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Optional Aiproxy-Channel header",
+                        "name": "Aiproxy-Channel",
+                        "in": "header"
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    }
+                }
+            }
+        },
+        "/v1/responses/{response_id}/cancel": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Cancel a response by ID",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "relay"
+                ],
+                "summary": "Cancel response",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Response ID",
+                        "name": "response_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Optional Aiproxy-Channel header",
+                        "name": "Aiproxy-Channel",
+                        "in": "header"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/responses/{response_id}/input_items": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Get input items for a response",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "relay"
+                ],
+                "summary": "Get response input items",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Response ID",
+                        "name": "response_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Optional Aiproxy-Channel header",
+                        "name": "Aiproxy-Channel",
+                        "in": "header"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.InputItemList"
+                        }
+                    }
+                }
+            }
+        },
         "/v1/video/generations/jobs": {
             "post": {
                 "security": [
@@ -8265,7 +8500,8 @@ const docTemplate = `{
                     "description": "map[size]price_per_image",
                     "type": "object",
                     "additionalProperties": {
-                        "type": "number"
+                        "type": "number",
+                        "format": "float64"
                     }
                 },
                 "image_quality_prices": {
@@ -8274,7 +8510,8 @@ const docTemplate = `{
                     "additionalProperties": {
                         "type": "object",
                         "additionalProperties": {
-                            "type": "number"
+                            "type": "number",
+                            "format": "float64"
                         }
                     }
                 },
@@ -8492,7 +8729,8 @@ const docTemplate = `{
                     "description": "map[size]price_per_image",
                     "type": "object",
                     "additionalProperties": {
-                        "type": "number"
+                        "type": "number",
+                        "format": "float64"
                     }
                 },
                 "image_quality_prices": {
@@ -8501,7 +8739,8 @@ const docTemplate = `{
                     "additionalProperties": {
                         "type": "object",
                         "additionalProperties": {
-                            "type": "number"
+                            "type": "number",
+                            "format": "float64"
                         }
                     }
                 },
@@ -8945,7 +9184,8 @@ const docTemplate = `{
                 "image_prices": {
                     "type": "object",
                     "additionalProperties": {
-                        "type": "number"
+                        "type": "number",
+                        "format": "float64"
                     }
                 },
                 "model": {
@@ -8997,7 +9237,8 @@ const docTemplate = `{
                     "description": "map[size]price_per_image",
                     "type": "object",
                     "additionalProperties": {
-                        "type": "number"
+                        "type": "number",
+                        "format": "float64"
                     }
                 },
                 "image_quality_prices": {
@@ -9006,7 +9247,8 @@ const docTemplate = `{
                     "additionalProperties": {
                         "type": "object",
                         "additionalProperties": {
-                            "type": "number"
+                            "type": "number",
+                            "format": "float64"
                         }
                     }
                 },
@@ -9303,7 +9545,12 @@ const docTemplate = `{
                 12,
                 13,
                 14,
-                15
+                15,
+                16,
+                17,
+                18,
+                19,
+                20
             ],
             "x-enum-varnames": [
                 "Unknown",
@@ -9321,7 +9568,12 @@ const docTemplate = `{
                 "Anthropic",
                 "VideoGenerationsJobs",
                 "VideoGenerationsGetJobs",
-                "VideoGenerationsContent"
+                "VideoGenerationsContent",
+                "Responses",
+                "ResponsesGet",
+                "ResponsesDelete",
+                "ResponsesCancel",
+                "ResponsesInputItems"
             ]
         },
         "model.AnthropicMessageRequest": {
@@ -9505,7 +9757,8 @@ const docTemplate = `{
                 45,
                 46,
                 47,
-                48
+                48,
+                49
             ],
             "x-enum-varnames": [
                 "ChannelTypeOpenAI",
@@ -9543,7 +9796,8 @@ const docTemplate = `{
                 "ChannelTypeXAI",
                 "ChannelTypeDoc2x",
                 "ChannelTypeJina",
-                "ChannelTypeTextEmbeddingsInference"
+                "ChannelTypeTextEmbeddingsInference",
+                "ChannelTypeQianfan"
             ]
         },
         "model.ChartData": {
@@ -9637,6 +9891,17 @@ const docTemplate = `{
                 }
             }
         },
+        "model.ClaudeThinkingType": {
+            "type": "string",
+            "enum": [
+                "enabled",
+                "disabled"
+            ],
+            "x-enum-varnames": [
+                "ClaudeThinkingTypeEnabled",
+                "ClaudeThinkingTypeDisabled"
+            ]
+        },
         "model.CompletionTokensDetails": {
             "type": "object",
             "properties": {
@@ -9662,6 +9927,61 @@ const docTemplate = `{
                 },
                 "price": {
                     "$ref": "#/definitions/model.Price"
+                }
+            }
+        },
+        "model.CreateResponseRequest": {
+            "type": "object",
+            "properties": {
+                "instructions": {
+                    "type": "string"
+                },
+                "max_output_tokens": {
+                    "type": "integer"
+                },
+                "messages": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.Message"
+                    }
+                },
+                "metadata": {
+                    "type": "object",
+                    "additionalProperties": {}
+                },
+                "model": {
+                    "type": "string"
+                },
+                "parallel_tool_calls": {
+                    "type": "boolean"
+                },
+                "previous_response_id": {
+                    "type": "string"
+                },
+                "store": {
+                    "type": "boolean"
+                },
+                "stream": {
+                    "type": "boolean"
+                },
+                "temperature": {
+                    "type": "number"
+                },
+                "tool_choice": {},
+                "tools": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.Tool"
+                    }
+                },
+                "top_p": {
+                    "type": "number"
+                },
+                "truncation": {
+                    "type": "string"
+                },
+                "user": {
+                    "type": "string"
                 }
             }
         },
@@ -9938,6 +10258,14 @@ const docTemplate = `{
                 "temperature": {
                     "type": "number"
                 },
+                "thinking": {
+                    "description": "aiproxy control field",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/model.GeneralThinking"
+                        }
+                    ]
+                },
                 "tool_choice": {},
                 "tools": {
                     "type": "array",
@@ -9956,6 +10284,18 @@ const docTemplate = `{
                 },
                 "user": {
                     "type": "string"
+                }
+            }
+        },
+        "model.GeneralThinking": {
+            "type": "object",
+            "properties": {
+                "budget_tokens": {
+                    "description": "when type is \"disabled\", this field must be 0",
+                    "type": "integer"
+                },
+                "type": {
+                    "$ref": "#/definitions/model.ClaudeThinkingType"
                 }
             }
         },
@@ -10245,7 +10585,8 @@ const docTemplate = `{
                 "image_prices": {
                     "type": "object",
                     "additionalProperties": {
-                        "type": "number"
+                        "type": "number",
+                        "format": "float64"
                     }
                 },
                 "model": {
@@ -10397,6 +10738,68 @@ const docTemplate = `{
                 }
             }
         },
+        "model.IncompleteDetails": {
+            "type": "object",
+            "properties": {
+                "reason": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.InputContent": {
+            "type": "object",
+            "properties": {
+                "text": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.InputItem": {
+            "type": "object",
+            "properties": {
+                "content": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.InputContent"
+                    }
+                },
+                "id": {
+                    "type": "string"
+                },
+                "role": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.InputItemList": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.InputItem"
+                    }
+                },
+                "first_id": {
+                    "type": "string"
+                },
+                "has_more": {
+                    "type": "boolean"
+                },
+                "last_id": {
+                    "type": "string"
+                },
+                "object": {
+                    "type": "string"
+                }
+            }
+        },
         "model.JSONSchema": {
             "type": "object",
             "properties": {
@@ -10539,7 +10942,8 @@ const docTemplate = `{
                 "tools_call_prices": {
                     "type": "object",
                     "additionalProperties": {
-                        "type": "number"
+                        "type": "number",
+                        "format": "float64"
                     }
                 }
             }
@@ -10588,7 +10992,8 @@ const docTemplate = `{
                     "description": "map[size]price_per_image",
                     "type": "object",
                     "additionalProperties": {
-                        "type": "number"
+                        "type": "number",
+                        "format": "float64"
                     }
                 },
                 "image_quality_prices": {
@@ -10597,7 +11002,8 @@ const docTemplate = `{
                     "additionalProperties": {
                         "type": "object",
                         "additionalProperties": {
-                            "type": "number"
+                            "type": "number",
+                            "format": "float64"
                         }
                     }
                 },
@@ -10720,6 +11126,44 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "value": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.OutputContent": {
+            "type": "object",
+            "properties": {
+                "annotations": {
+                    "type": "array",
+                    "items": {}
+                },
+                "text": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.OutputItem": {
+            "type": "object",
+            "properties": {
+                "content": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.OutputContent"
+                    }
+                },
+                "id": {
+                    "type": "string"
+                },
+                "role": {
+                    "type": "string"
+                },
+                "status": {
+                    "$ref": "#/definitions/model.ResponseStatus"
+                },
+                "type": {
                     "type": "string"
                 }
             }
@@ -11010,6 +11454,13 @@ const docTemplate = `{
             "x-enum-comments": {
                 "PublicMCPTypeDocs": "read only"
             },
+            "x-enum-descriptions": [
+                "",
+                "",
+                "read only",
+                "",
+                ""
+            ],
             "x-enum-varnames": [
                 "PublicMCPTypeProxySSE",
                 "PublicMCPTypeProxyStreamable",
@@ -11123,6 +11574,96 @@ const docTemplate = `{
                 }
             }
         },
+        "model.Response": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "integer"
+                },
+                "error": {
+                    "$ref": "#/definitions/model.ResponseError"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "incomplete_details": {
+                    "$ref": "#/definitions/model.IncompleteDetails"
+                },
+                "instructions": {
+                    "type": "string"
+                },
+                "max_output_tokens": {
+                    "type": "integer"
+                },
+                "metadata": {
+                    "type": "object",
+                    "additionalProperties": {}
+                },
+                "model": {
+                    "type": "string"
+                },
+                "object": {
+                    "type": "string"
+                },
+                "output": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.OutputItem"
+                    }
+                },
+                "parallel_tool_calls": {
+                    "type": "boolean"
+                },
+                "previous_response_id": {
+                    "type": "string"
+                },
+                "reasoning": {
+                    "$ref": "#/definitions/model.ResponseReasoning"
+                },
+                "status": {
+                    "$ref": "#/definitions/model.ResponseStatus"
+                },
+                "store": {
+                    "type": "boolean"
+                },
+                "temperature": {
+                    "type": "number"
+                },
+                "text": {
+                    "$ref": "#/definitions/model.ResponseText"
+                },
+                "tool_choice": {},
+                "tools": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.Tool"
+                    }
+                },
+                "top_p": {
+                    "type": "number"
+                },
+                "truncation": {
+                    "type": "string"
+                },
+                "usage": {
+                    "$ref": "#/definitions/model.ResponseUsage"
+                },
+                "user": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.ResponseError": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string"
+                },
+                "message": {
+                    "type": "string"
+                }
+            }
+        },
         "model.ResponseFormat": {
             "type": "object",
             "properties": {
@@ -11131,6 +11672,81 @@ const docTemplate = `{
                 },
                 "type": {
                     "type": "string"
+                }
+            }
+        },
+        "model.ResponseReasoning": {
+            "type": "object",
+            "properties": {
+                "effort": {
+                    "type": "string"
+                },
+                "summary": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.ResponseStatus": {
+            "type": "string",
+            "enum": [
+                "in_progress",
+                "completed",
+                "failed",
+                "incomplete",
+                "cancelled"
+            ],
+            "x-enum-varnames": [
+                "ResponseStatusInProgress",
+                "ResponseStatusCompleted",
+                "ResponseStatusFailed",
+                "ResponseStatusIncomplete",
+                "ResponseStatusCancelled"
+            ]
+        },
+        "model.ResponseText": {
+            "type": "object",
+            "properties": {
+                "format": {
+                    "$ref": "#/definitions/model.ResponseTextFormat"
+                }
+            }
+        },
+        "model.ResponseTextFormat": {
+            "type": "object",
+            "properties": {
+                "type": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.ResponseUsage": {
+            "type": "object",
+            "properties": {
+                "input_tokens": {
+                    "type": "integer"
+                },
+                "input_tokens_details": {
+                    "$ref": "#/definitions/model.ResponseUsageDetails"
+                },
+                "output_tokens": {
+                    "type": "integer"
+                },
+                "output_tokens_details": {
+                    "$ref": "#/definitions/model.ResponseUsageDetails"
+                },
+                "total_tokens": {
+                    "type": "integer"
+                }
+            }
+        },
+        "model.ResponseUsageDetails": {
+            "type": "object",
+            "properties": {
+                "cached_tokens": {
+                    "type": "integer"
+                },
+                "reasoning_tokens": {
+                    "type": "integer"
                 }
             }
         },
