@@ -1,5 +1,5 @@
 // src/api/model.ts
-import { get, post, del, put } from "./index";
+import { get, post, del } from "./index";
 import { ModelConfig, ModelCreateRequest } from "@/types/model";
 
 // Define the type for model sets response
@@ -29,8 +29,11 @@ export const modelApi = {
     return response;
   },
 
-  createModel: async (data: ModelCreateRequest): Promise<void> => {
-    await post("model_config/", data);
+  createModel: async (
+    model: string,
+    data: Omit<ModelCreateRequest, "model">
+  ): Promise<void> => {
+    await post(`model_config/${model}`, data);
     return;
   },
 
@@ -38,7 +41,7 @@ export const modelApi = {
     model: string,
     data: Omit<ModelCreateRequest, "model">
   ): Promise<void> => {
-    await put(`model_config/${model}`, data);
+    await post(`model_config/${model}`, data);
     return;
   },
 

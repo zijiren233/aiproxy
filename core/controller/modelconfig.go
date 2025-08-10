@@ -162,13 +162,21 @@ func SaveModelConfigs(c *gin.Context) {
 //	@Security		ApiKeyAuth
 //	@Param			config	body		SaveModelConfigsRequest	true	"Model config"
 //	@Success		200		{object}	middleware.APIResponse
-//	@Router			/api/model_config/ [post]
+//	@Router			/api/model_config/{model} [post]
 func SaveModelConfig(c *gin.Context) {
 	var config SaveModelConfigsRequest
 	if err := c.ShouldBindJSON(&config); err != nil {
 		middleware.ErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
 	}
+
+	modelName := strings.TrimPrefix(c.Param("model"), "/")
+	if modelName == "" {
+		middleware.ErrorResponse(c, http.StatusBadRequest, "invalid parameter")
+		return
+	}
+
+	config.Model = modelName
 
 	err := model.SaveModelConfig(config)
 	if err != nil {
