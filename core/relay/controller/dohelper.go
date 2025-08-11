@@ -263,7 +263,7 @@ func doRequest(
 		if errors.Is(err, context.DeadlineExceeded) {
 			return nil, relaymodel.WrapperErrorWithMessage(
 				meta.Mode,
-				http.StatusGatewayTimeout,
+				http.StatusRequestTimeout,
 				"request timeout: "+err.Error(),
 			)
 		}
@@ -287,7 +287,7 @@ func doRequest(
 		if strings.Contains(err.Error(), "timeout awaiting response headers") {
 			return nil, relaymodel.WrapperErrorWithMessage(
 				meta.Mode,
-				http.StatusGatewayTimeout,
+				http.StatusRequestTimeout,
 				"request timeout: "+err.Error(),
 			)
 		}

@@ -237,14 +237,6 @@ func (m *ChannelMonitor) DoResponse(
 	}
 
 	switch {
-	case relayErr.StatusCode() == http.StatusTooManyRequests:
-		notifyChannelResponseIssue(
-			c,
-			meta,
-			"requestRateLimitExceeded",
-			"Request Rate Limit Exceeded",
-			relayErr,
-		)
 	case banExecution:
 		notifyChannelResponseIssue(c, meta, "autoBanned", "Auto Banned", relayErr)
 	case beyondThreshold:
