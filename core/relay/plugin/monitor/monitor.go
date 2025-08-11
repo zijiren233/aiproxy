@@ -101,6 +101,7 @@ func (m *ChannelMonitor) DoRequest(
 		int64(meta.Channel.ID),
 		true,
 		false,
+		meta.ModelConfig.WarnErrorRate,
 		meta.ModelConfig.MaxErrorRate,
 	)
 	if _err != nil {
@@ -210,6 +211,7 @@ func (m *ChannelMonitor) DoResponse(
 			int64(meta.Channel.ID),
 			false,
 			false,
+			meta.ModelConfig.WarnErrorRate,
 			meta.ModelConfig.MaxErrorRate,
 		); err != nil {
 			log.Errorf("add request failed: %+v", err)
@@ -230,6 +232,7 @@ func (m *ChannelMonitor) DoResponse(
 		int64(meta.Channel.ID),
 		true,
 		!hasPermission,
+		meta.ModelConfig.WarnErrorRate,
 		meta.ModelConfig.MaxErrorRate,
 	)
 	if err != nil {

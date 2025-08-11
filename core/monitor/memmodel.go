@@ -96,8 +96,14 @@ func (m *MemModelMonitor) AddRequest(
 	model string,
 	channelID int64,
 	isError, tryBan bool,
+	warnErrorRate,
 	maxErrorRate float64,
 ) (beyondThreshold, banExecution bool) {
+	// Set default warning threshold if not specified
+	if warnErrorRate <= 0 {
+		warnErrorRate = DefaultWarnErrorRate
+	}
+
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -127,23 +133,24 @@ func (m *MemModelMonitor) AddRequest(
 	modelData.totalStats.AddRequest(now, isError)
 	channel.timeWindows.AddRequest(now, isError)
 
-	return m.checkAndBan(now, channel, tryBan, maxErrorRate)
+	return m.checkAndBan(now, channel, tryBan, warnErrorRate, maxErrorRate)
 }
 
 func (m *MemModelMonitor) checkAndBan(
 	now time.Time,
 	channel *ChannelStats,
 	tryBan bool,
+	warnErrorRate,
 	maxErrorRate float64,
 ) (beyondThreshold, banExecution bool) {
 	canBan := maxErrorRate > 0
+
 	if tryBan && canBan {
 		if channel.bannedUntil.After(now) {
 			return false, false
 		}
 
 		channel.bannedUntil = now.Add(banDuration)
-
 		return false, true
 	}
 
@@ -152,14 +159,21 @@ func (m *MemModelMonitor) checkAndBan(
 		return false, false
 	}
 
-	if float64(err)/float64(req) >= maxErrorRate {
-		if !canBan || channel.bannedUntil.After(now) {
-			return true, false
+	errorRate := float64(err) / float64(req)
+
+	// Check if error rate exceeds warning threshold
+	exceedsWarning := errorRate >= warnErrorRate
+
+	// Check if we should ban (only if maxErrorRate is set and exceeded)
+	if canBan && errorRate >= maxErrorRate {
+		if channel.bannedUntil.After(now) {
+			return true, false // Already banned
 		}
 
 		channel.bannedUntil = now.Add(banDuration)
-
-		return false, true
+		return false, true // Ban executed
+	} else if exceedsWarning {
+		return true, false // Beyond warning threshold but not banning
 	}
 
 	return false, false

@@ -33,7 +33,7 @@ func (t *Timeout) ConvertRequest(
 	var stream bool
 	switch meta.Mode {
 	case mode.Embeddings:
-		meta.RequestTimeout = time.Second * 30
+		meta.RequestTimeout = time.Second * 10
 	case mode.Moderations:
 		meta.RequestTimeout = time.Minute * 3
 	case mode.ImagesGenerations,
@@ -43,7 +43,7 @@ func (t *Timeout) ConvertRequest(
 		mode.AudioTranslation:
 		meta.RequestTimeout = time.Minute * 3
 	case mode.Rerank:
-		meta.RequestTimeout = time.Second * 30
+		meta.RequestTimeout = time.Second * 10
 	case mode.ParsePdf:
 		meta.RequestTimeout = time.Minute * 3
 	case mode.VideoGenerationsJobs,
