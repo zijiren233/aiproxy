@@ -6,6 +6,7 @@ import (
 	"runtime"
 
 	"github.com/bytedance/sonic"
+	"github.com/bytedance/sonic/ast"
 	"github.com/mark3labs/mcp-go/client/transport"
 	"github.com/mark3labs/mcp-go/mcp"
 )
@@ -22,7 +23,7 @@ func (s *client2Server) HandleMessage(
 	ctx context.Context,
 	message json.RawMessage,
 ) mcp.JSONRPCMessage {
-	methodNode, err := sonic.Get(message, "method")
+	methodNode, err := sonic.GetWithOptions(message, ast.SearchOptions{}, "method")
 	if err != nil {
 		return CreateMCPErrorResponse(nil, mcp.PARSE_ERROR, err.Error())
 	}

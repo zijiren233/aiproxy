@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/bytedance/sonic"
+	"github.com/bytedance/sonic/ast"
 	"github.com/labring/aiproxy/core/common/conv"
 )
 
@@ -18,7 +19,7 @@ func (r *Anthropic) Render(w http.ResponseWriter) error {
 	event := r.Event
 
 	if event == "" {
-		eventNode, err := sonic.Get(r.Data, "type")
+		eventNode, err := sonic.GetWithOptions(r.Data, ast.SearchOptions{}, "type")
 		if err != nil {
 			return err
 		}

@@ -80,15 +80,13 @@ func VideoHandler(
 		)
 	}
 
-	node, err := sonic.Get(responseBody)
+	idNode, err := sonic.GetWithOptions(responseBody, ast.SearchOptions{}, "id")
 	if err != nil {
 		return model.Usage{}, relaymodel.WrapperOpenAIVideoError(
 			err,
 			http.StatusInternalServerError,
 		)
 	}
-
-	idNode := node.Get("id")
 
 	id, err := idNode.String()
 	if err != nil {

@@ -21,9 +21,9 @@ func NewLog(l *logrus.Logger) gin.HandlerFunc {
 			Logger: l,
 			Data:   fields,
 		}
-		c.Set("log", entry)
+		common.SetLogger(c.Request, entry)
 
-		start := time.Now()
+		start := GetRequestAt(c)
 		path := c.Request.URL.Path
 		raw := c.Request.URL.RawQuery
 
@@ -74,13 +74,9 @@ func formatter(param gin.LogFormatterParams) string {
 		resetColor = param.ResetColor()
 	}
 
-	if param.Latency > time.Minute {
-		param.Latency = param.Latency.Truncate(time.Second)
-	}
-
-	return fmt.Sprintf("[GIN] |%s %3d %s| %13v | %15s |%s %-7s %s %#v\n%s",
+	return fmt.Sprintf("[GIN] |%s %3d %s| %6v | %15s |%s %-7s %s %#v\n%s",
 		statusColor, param.StatusCode, resetColor,
-		param.Latency,
+		common.TruncateDuration(param.Latency),
 		param.ClientIP,
 		methodColor, param.Method, resetColor,
 		param.Path,

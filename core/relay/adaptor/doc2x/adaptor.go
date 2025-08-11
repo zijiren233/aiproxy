@@ -59,12 +59,12 @@ func (a *Adaptor) ConvertRequest(
 }
 
 func (a *Adaptor) DoRequest(
-	_ *meta.Meta,
+	meta *meta.Meta,
 	_ adaptor.Store,
 	_ *gin.Context,
 	req *http.Request,
 ) (*http.Response, error) {
-	return utils.DoRequest(req)
+	return utils.DoRequest(req, meta.RequestTimeout)
 }
 
 func (a *Adaptor) DoResponse(

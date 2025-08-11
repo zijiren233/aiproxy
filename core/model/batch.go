@@ -295,6 +295,7 @@ func processSummaryMinuteUpdates(wg *sync.WaitGroup) {
 }
 
 func BatchRecordLogs(
+	now time.Time,
 	requestID string,
 	requestAt time.Time,
 	retryAt time.Time,
@@ -318,7 +319,9 @@ func BatchRecordLogs(
 	user string,
 	metadata map[string]string,
 ) (err error) {
-	now := time.Now()
+	if now.IsZero() {
+		now = time.Now()
+	}
 
 	if downstreamResult {
 		if config.GetLogStorageHours() >= 0 {

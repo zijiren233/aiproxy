@@ -112,10 +112,12 @@ func startSyncServices(ctx context.Context, wg *sync.WaitGroup) {
 func setupHTTPServer() (*http.Server, *gin.Engine) {
 	server := gin.New()
 
-	server.
-		Use(middleware.GinRecoveryHandler).
-		Use(middleware.NewLog(log.StandardLogger())).
-		Use(middleware.RequestIDMiddleware, middleware.CORS())
+	server.Use(
+		middleware.GinRecoveryHandler,
+		middleware.RequestIDMiddleware,
+		middleware.NewLog(log.StandardLogger()),
+		middleware.CORS(),
+	)
 	router.SetRouter(server)
 
 	listenEnv := os.Getenv("LISTEN")
@@ -131,8 +133,6 @@ func setupHTTPServer() (*http.Server, *gin.Engine) {
 }
 
 func autoTestBannedModels(ctx context.Context) {
-	log.Info("auto test banned models start")
-
 	ticker := time.NewTicker(time.Second * 30)
 	defer ticker.Stop()
 
@@ -147,8 +147,6 @@ func autoTestBannedModels(ctx context.Context) {
 }
 
 func detectIPGroupsTask(ctx context.Context) {
-	log.Info("detect IP groups start")
-
 	ticker := time.NewTicker(time.Minute)
 	defer ticker.Stop()
 
@@ -244,7 +242,6 @@ func detectIPGroups() {
 }
 
 func cleanLog(ctx context.Context) {
-	log.Info("clean log start")
 	// the interval should not be too large to avoid cleaning too much at once
 	ticker := time.NewTicker(time.Minute)
 	defer ticker.Stop()
@@ -310,6 +307,13 @@ func printLoadedEnvFiles() {
 	}
 }
 
+func listenAndServe(srv *http.Server) {
+	if err := srv.ListenAndServe(); err != nil &&
+		!errors.Is(err, http.ErrServerClosed) {
+		log.Fatal("failed to start HTTP server: " + err.Error())
+	}
+}
+
 // Swagger godoc
 //
 //	@title						AI Proxy Swagger API
@@ -346,19 +350,20 @@ func main() {
 
 	srv, _ := setupHTTPServer()
 
-	go func() {
-		log.Infof("server started on http://%s", srv.Addr)
-		log.Infof("swagger server started on http://%s/swagger/index.html", srv.Addr)
-
-		if err := srv.ListenAndServe(); err != nil &&
-			!errors.Is(err, http.ErrServerClosed) {
-			log.Fatal("failed to start HTTP server: " + err.Error())
-		}
-	}()
+	log.Info("auto test banned models task started")
 
 	go autoTestBannedModels(ctx)
+
+	log.Info("clean log task started")
+
 	go cleanLog(ctx)
+
+	log.Info("detect ip groups task started")
+
 	go detectIPGroupsTask(ctx)
+
+	log.Info("update channels balance task started")
+
 	go controller.UpdateChannelsBalance(time.Minute * 10)
 
 	batchProcessorCtx, batchProcessorCancel := context.WithCancel(context.Background())
@@ -366,6 +371,11 @@ func main() {
 	wg.Add(1)
 
 	go model.StartBatchProcessorSummary(batchProcessorCtx, &wg)
+
+	log.Infof("server started on http://%s", srv.Addr)
+	log.Infof("swagger started on http://%s/swagger/index.html", srv.Addr)
+
+	go listenAndServe(srv)
 
 	<-ctx.Done()
 

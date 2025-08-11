@@ -18,6 +18,11 @@ const (
 	PriceUnit = 1000
 )
 
+type TimeoutConfig struct {
+	RequestTimeout       int64 `json:"request_timeout,omitempty"`
+	StreamRequestTimeout int64 `json:"stream_request_timeout,omitempty"`
+}
+
 type ModelConfig struct {
 	CreatedAt        time.Time                  `gorm:"index;autoCreateTime"          json:"created_at"`
 	UpdatedAt        time.Time                  `gorm:"index;autoUpdateTime"          json:"updated_at"`
@@ -35,7 +40,7 @@ type ModelConfig struct {
 	ImagePrices     map[string]float64 `gorm:"serializer:fastjson;type:text" json:"image_prices,omitempty"`
 	Price           Price              `gorm:"embedded"                      json:"price,omitempty"`
 	RetryTimes      int64              `                                     json:"retry_times,omitempty"`
-	Timeout         int64              `                                     json:"timeout,omitempty"`
+	TimeoutConfig   TimeoutConfig      `gorm:"embedded"                      json:"timeout_config,omitempty"`
 	MaxErrorRate    float64            `                                     json:"max_error_rate,omitempty"`
 	ForceSaveDetail bool               `                                     json:"force_save_detail,omitempty"`
 }
@@ -56,6 +61,21 @@ func NewDefaultModelConfig(model string) ModelConfig {
 	return ModelConfig{
 		Model: model,
 	}
+}
+
+func (c *ModelConfig) RequestTimeout() time.Duration {
+	return timeoutSecond(c.TimeoutConfig.RequestTimeout)
+}
+
+func (c *ModelConfig) StreamRequestTimeout() time.Duration {
+	return timeoutSecond(c.TimeoutConfig.StreamRequestTimeout)
+}
+
+func timeoutSecond(second int64) time.Duration {
+	if second == 0 {
+		return 0
+	}
+	return time.Duration(second) * time.Second
 }
 
 func (c *ModelConfig) LoadPluginConfig(pluginName string, config any) error {

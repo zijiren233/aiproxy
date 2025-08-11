@@ -270,7 +270,7 @@ func (rw *fakeStreamResponseWriter) parseStreamingData(data []byte) error {
 			rw.finishReason = finishReason
 		}
 
-		logprobsContentNode := choiceNode.Get("logprobs").Get("content")
+		logprobsContentNode := choiceNode.GetByPath("logprobs", "content")
 		if err := logprobsContentNode.Check(); err == nil {
 			l, err := logprobsContentNode.Len()
 			if err != nil {

@@ -65,7 +65,7 @@ func getRequestDuration(meta *meta.Meta) time.Duration {
 		return 0
 	}
 
-	return time.Since(requestAtTime)
+	return common.TruncateDuration(time.Since(requestAtTime))
 }
 
 func (m *ChannelMonitor) DoRequest(
@@ -86,6 +86,11 @@ func (m *ChannelMonitor) DoRequest(
 	meta.Set("requestAt", requestAt)
 
 	resp, err := do.DoRequest(meta, store, c, req)
+
+	requestCost := common.TruncateDuration(time.Since(requestAt))
+	log := common.GetLogger(c)
+	log.Data["req_cost"] = requestCost.String()
+
 	if err == nil {
 		return resp, nil
 	}
@@ -99,17 +104,34 @@ func (m *ChannelMonitor) DoRequest(
 		meta.ModelConfig.MaxErrorRate,
 	)
 	if _err != nil {
-		common.GetLogger(c).
-			Errorf("add request failed: %+v", _err)
+		log.Errorf("add request failed: %+v", _err)
 	}
 
 	switch {
 	case banExecution:
-		notifyChannelRequestIssue(meta, "autoBanned", "Auto Banned", err)
+		notifyChannelRequestIssue(
+			meta,
+			"autoBanned",
+			"Auto Banned",
+			err,
+			requestCost,
+		)
 	case beyondThreshold:
-		notifyChannelRequestIssue(meta, "beyondThreshold", "Error Rate Beyond Threshold", err)
+		notifyChannelRequestIssue(
+			meta,
+			"beyondThreshold",
+			"Error Rate Beyond Threshold",
+			err,
+			requestCost,
+		)
 	default:
-		notifyChannelRequestIssue(meta, "requestFailed", "Request Failed", err)
+		notifyChannelRequestIssue(
+			meta,
+			"requestFailed",
+			"Request Failed",
+			err,
+			requestCost,
+		)
 	}
 
 	return resp, err
@@ -119,6 +141,7 @@ func notifyChannelRequestIssue(
 	meta *meta.Meta,
 	issueType, titleSuffix string,
 	err error,
+	requestCost time.Duration,
 ) {
 	var notifyFunc func(title, message string)
 
@@ -150,7 +173,7 @@ func notifyChannelRequestIssue(
 		meta.Mode,
 		err.Error(),
 		meta.RequestID,
-		getRequestDuration(meta).String(),
+		requestCost.String(),
 	)
 
 	notifyFunc(
