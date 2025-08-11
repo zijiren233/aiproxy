@@ -151,6 +151,7 @@ func (m *MemModelMonitor) checkAndBan(
 		}
 
 		channel.bannedUntil = now.Add(banDuration)
+
 		return false, true
 	}
 
@@ -171,6 +172,7 @@ func (m *MemModelMonitor) checkAndBan(
 		}
 
 		channel.bannedUntil = now.Add(banDuration)
+
 		return false, true // Ban executed
 	} else if exceedsWarning {
 		return true, false // Beyond warning threshold but not banning
