@@ -125,14 +125,6 @@ func (m *ChannelMonitor) DoRequest(
 			err,
 			requestCost,
 		)
-	default:
-		notifyChannelRequestIssue(
-			meta,
-			"requestFailed",
-			"Request Failed",
-			err,
-			requestCost,
-		)
 	}
 
 	return resp, err

@@ -456,9 +456,6 @@ local function check_channel_error()
 
 	local error_rate = total_err / total_req
 	
-	-- Check if error rate exceeds warning threshold
-	local exceeds_warning = error_rate >= warn_error_rate
-	
 	-- Check if we should ban (only if max_error_rate is set and exceeded)
 	if can_ban == 1 and error_rate >= max_error_rate then
 		if already_banned then
@@ -467,7 +464,7 @@ local function check_channel_error()
 		redis.call("SET", banned_key, 1)
 		redis.call("PEXPIRE", banned_key, banExpiry)
 		return 1  -- Ban executed
-	elseif exceeds_warning then
+	elseif error_rate >= warn_error_rate then
 		return 3  -- Beyond warning threshold but not banning
 	else
 		return 0  -- All good
