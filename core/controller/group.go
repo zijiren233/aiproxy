@@ -495,7 +495,7 @@ func (r *SaveGroupModelConfigRequest) ToGroupModelConfig(groupID string) model.G
 //	@Param			group	path		string							true	"Group name"
 //	@Param			data	body		[]SaveGroupModelConfigRequest	true	"Group model config information"
 //	@Success		200		{object}	middleware.APIResponse
-//	@Router			/api/group/{group}/model_configs [post]
+//	@Router			/api/group/{group}/model_configs/ [post]
 func SaveGroupModelConfigs(c *gin.Context) {
 	group := c.Param("group")
 	if group == "" {
@@ -613,7 +613,7 @@ func DeleteGroupModelConfig(c *gin.Context) {
 //	@Param			group	path		string		true	"Group name"
 //	@Param			models	body		[]string	true	"Model names"
 //	@Success		200		{object}	middleware.APIResponse
-//	@Router			/api/group/{group}/model_configs [delete]
+//	@Router			/api/group/{group}/model_configs/ [delete]
 func DeleteGroupModelConfigs(c *gin.Context) {
 	group := c.Param("group")
 	if group == "" {
@@ -647,7 +647,7 @@ func DeleteGroupModelConfigs(c *gin.Context) {
 //	@Security		ApiKeyAuth
 //	@Param			group	path		string	true	"Group name"
 //	@Success		200		{object}	middleware.APIResponse{data=[]model.GroupModelConfig}
-//	@Router			/api/group/{group}/model_configs [get]
+//	@Router			/api/group/{group}/model_configs/ [get]
 func GetGroupModelConfigs(c *gin.Context) {
 	group := c.Param("group")
 	if group == "" {
@@ -754,7 +754,7 @@ func UpdateGroupModelConfig(c *gin.Context) {
 //	@Param			group	path		string							true	"Group name"
 //	@Param			data	body		[]SaveGroupModelConfigRequest	true	"Group model config information"
 //	@Success		200		{object}	middleware.APIResponse
-//	@Router			/api/group/{group}/model_configs [put]
+//	@Router			/api/group/{group}/model_configs/ [put]
 func UpdateGroupModelConfigs(c *gin.Context) {
 	group := c.Param("group")
 	if group == "" {

@@ -65,12 +65,16 @@ func SetAPIRouter(router *gin.Engine) {
 			groupRoute.POST("/:group/rpm_ratio", controller.UpdateGroupRPMRatio)
 			groupRoute.POST("/:group/tpm_ratio", controller.UpdateGroupTPMRatio)
 
+			groupModelConfigsRoute := groupRoute.Group("/:group/model_configs")
+			{
+				groupModelConfigsRoute.GET("/", controller.GetGroupModelConfigs)
+				groupModelConfigsRoute.POST("/", controller.SaveGroupModelConfigs)
+				groupModelConfigsRoute.PUT("/", controller.UpdateGroupModelConfigs)
+				groupModelConfigsRoute.DELETE("/", controller.DeleteGroupModelConfigs)
+			}
+
 			groupModelConfigRoute := groupRoute.Group("/:group/model_config")
 			{
-				groupModelConfigRoute.GET("", controller.GetGroupModelConfigs)
-				groupModelConfigRoute.POST("", controller.SaveGroupModelConfigs)
-				groupModelConfigRoute.PUT("", controller.UpdateGroupModelConfigs)
-				groupModelConfigRoute.DELETE("", controller.DeleteGroupModelConfigs)
 				groupModelConfigRoute.POST("/*model", controller.SaveGroupModelConfig)
 				groupModelConfigRoute.PUT("/*model", controller.UpdateGroupModelConfig)
 				groupModelConfigRoute.DELETE("/*model", controller.DeleteGroupModelConfig)
