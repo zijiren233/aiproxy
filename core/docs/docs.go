@@ -1875,7 +1875,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/group/{group}/model_configs": {
+        "/api/group/{group}/model_configs/": {
             "get": {
                 "security": [
                     {
