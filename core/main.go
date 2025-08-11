@@ -114,8 +114,8 @@ func setupHTTPServer() (*http.Server, *gin.Engine) {
 
 	server.Use(
 		middleware.GinRecoveryHandler,
-		middleware.RequestIDMiddleware,
 		middleware.NewLog(log.StandardLogger()),
+		middleware.RequestIDMiddleware,
 		middleware.CORS(),
 	)
 	router.SetRouter(server)

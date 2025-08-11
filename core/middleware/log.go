@@ -10,8 +10,19 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+func SetRequestAt(c *gin.Context, requestAt time.Time) {
+	c.Set(RequestAt, requestAt)
+}
+
+func GetRequestAt(c *gin.Context) time.Time {
+	return c.GetTime(RequestAt)
+}
+
 func NewLog(l *logrus.Logger) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		start := time.Now()
+		SetRequestAt(c, start)
+
 		fields := common.GetLogFields()
 		defer func() {
 			common.PutLogFields(fields)
@@ -23,7 +34,6 @@ func NewLog(l *logrus.Logger) gin.HandlerFunc {
 		}
 		common.SetLogger(c.Request, entry)
 
-		start := GetRequestAt(c)
 		path := c.Request.URL.Path
 		raw := c.Request.URL.RawQuery
 
