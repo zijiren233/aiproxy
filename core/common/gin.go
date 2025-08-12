@@ -1,8 +1,11 @@
 package common
 
 import (
+	"context"
 	"fmt"
+	"net/http"
 	"sync"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
@@ -29,7 +32,14 @@ func PutLogFields(fields logrus.Fields) {
 }
 
 func GetLogger(c *gin.Context) *logrus.Entry {
-	if log, ok := c.Get("log"); ok {
+	return GetLoggerFromReq(c.Request)
+}
+
+type ginLoggerKey struct{}
+
+func GetLoggerFromReq(req *http.Request) *logrus.Entry {
+	ctx := req.Context()
+	if log := ctx.Value(ginLoggerKey{}); log != nil {
 		v, ok := log.(*logrus.Entry)
 		if !ok {
 			panic(fmt.Sprintf("log type error: %T, %v", v, v))
@@ -39,9 +49,14 @@ func GetLogger(c *gin.Context) *logrus.Entry {
 	}
 
 	entry := NewLogger()
-	c.Set("log", entry)
+	SetLogger(req, entry)
 
 	return entry
+}
+
+func SetLogger(req *http.Request, entry *logrus.Entry) {
+	newCtx := context.WithValue(req.Context(), ginLoggerKey{}, entry)
+	*req = *req.WithContext(newCtx)
 }
 
 func NewLogger() *logrus.Entry {
@@ -49,4 +64,24 @@ func NewLogger() *logrus.Entry {
 		Logger: logrus.StandardLogger(),
 		Data:   GetLogFields(),
 	}
+}
+
+func TruncateDuration(d time.Duration) time.Duration {
+	if d > time.Hour {
+		return d.Truncate(time.Minute)
+	}
+
+	if d > time.Minute {
+		return d.Truncate(time.Second)
+	}
+
+	if d > time.Second {
+		return d.Truncate(time.Millisecond)
+	}
+
+	if d > time.Millisecond {
+		return d.Truncate(time.Microsecond)
+	}
+
+	return d
 }

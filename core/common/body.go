@@ -13,7 +13,7 @@ import (
 	"github.com/bytedance/sonic/ast"
 )
 
-type RequestBodyKey struct{}
+type requestBodyKey struct{}
 
 const (
 	MaxRequestBodySize  = 1024 * 1024 * 50 // 50MB
@@ -84,18 +84,23 @@ func GetRequestBody(req *http.Request) ([]byte, error) {
 
 func SetRequestBody(req *http.Request, body []byte) {
 	ctx := req.Context()
-	bufCtx := context.WithValue(ctx, RequestBodyKey{}, body)
+	bufCtx := context.WithValue(ctx, requestBodyKey{}, body)
 	*req = *req.WithContext(bufCtx)
+}
+
+func IsJSONContentType(ct string) bool {
+	return strings.HasSuffix(ct, "/json") ||
+		strings.Contains(ct, "/json;")
 }
 
 func GetRequestBodyReusable(req *http.Request) ([]byte, error) {
 	contentType := req.Header.Get("Content-Type")
-	if contentType == "application/x-www-form-urlencoded" ||
+	if strings.HasPrefix(contentType, "application/x-www-form-urlencoded") ||
 		strings.HasPrefix(contentType, "multipart/form-data") {
 		return nil, nil
 	}
 
-	requestBody := req.Context().Value(RequestBodyKey{})
+	requestBody := req.Context().Value(requestBodyKey{})
 	if requestBody != nil {
 		b, _ := requestBody.([]byte)
 		return b, nil
@@ -115,7 +120,7 @@ func GetRequestBodyReusable(req *http.Request) ([]byte, error) {
 	}()
 
 	if req.ContentLength <= 0 ||
-		strings.HasPrefix(contentType, "application/json") {
+		IsJSONContentType(contentType) {
 		buf, err = io.ReadAll(LimitReader(req.Body, MaxRequestBodySize))
 		if err != nil {
 			if errors.Is(err, ErrLimitedReaderExceeded) {

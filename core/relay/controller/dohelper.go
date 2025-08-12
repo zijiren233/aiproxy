@@ -94,31 +94,18 @@ func DoHelper(
 ) {
 	detail := RequestDetail{}
 
-	// 1. Get request body
-	if err := getRequestBody(meta, c, &detail); err != nil {
+	if err := storeRequestBody(meta, c, &detail); err != nil {
 		return model.Usage{}, nil, err
 	}
 
 	// donot use c.Request.Context() because it will be canceled by the client
 	ctx := context.Background()
 
-	timeout := meta.ModelConfig.Timeout
-	if timeout <= 0 {
-		timeout = defaultTimeout
-	}
-
-	var cancel context.CancelFunc
-
-	ctx, cancel = context.WithTimeout(ctx, time.Duration(timeout)*time.Second)
-	defer cancel()
-
-	// 2. Convert and prepare request
 	resp, err := prepareAndDoRequest(ctx, a, c, meta, store)
 	if err != nil {
 		return model.Usage{}, &detail, err
 	}
 
-	// 3. Handle error response
 	if resp == nil {
 		relayErr := relaymodel.WrapperErrorWithMessage(
 			meta.Mode,
@@ -135,25 +122,29 @@ func DoHelper(
 		defer resp.Body.Close()
 	}
 
-	// 4. Handle success response
 	usage, relayErr := handleResponse(a, c, meta, store, resp, &detail)
 	if relayErr != nil {
 		return model.Usage{}, &detail, relayErr
 	}
 
-	// 5. Update usage metrics
-	updateUsageMetrics(usage, common.GetLogger(c))
+	log := common.GetLogger(c)
+	updateUsageMetrics(usage, log)
+
+	if !detail.FirstByteAt.IsZero() {
+		ttfb := detail.FirstByteAt.Sub(meta.RequestAt)
+		log.Data["ttfb"] = common.TruncateDuration(ttfb).String()
+	}
 
 	return usage, &detail, nil
 }
 
-func getRequestBody(meta *meta.Meta, c *gin.Context, detail *RequestDetail) adaptor.Error {
+func storeRequestBody(meta *meta.Meta, c *gin.Context, detail *RequestDetail) adaptor.Error {
 	switch {
 	case meta.Mode == mode.AudioTranscription,
 		meta.Mode == mode.AudioTranslation,
 		meta.Mode == mode.ImagesEdits:
 		return nil
-	case !strings.Contains(c.GetHeader("Content-Type"), "/json"):
+	case !common.IsJSONContentType(c.GetHeader("Content-Type")):
 		return nil
 	default:
 		reqBody, err := common.GetRequestBodyReusable(c.Request)
@@ -170,8 +161,6 @@ func getRequestBody(meta *meta.Meta, c *gin.Context, detail *RequestDetail) adap
 		return nil
 	}
 }
-
-const defaultTimeout = 60 * 30 // 30 minutes
 
 func prepareAndDoRequest(
 	ctx context.Context,
@@ -274,7 +263,7 @@ func doRequest(
 		if errors.Is(err, context.DeadlineExceeded) {
 			return nil, relaymodel.WrapperErrorWithMessage(
 				meta.Mode,
-				http.StatusGatewayTimeout,
+				http.StatusRequestTimeout,
 				"request timeout: "+err.Error(),
 			)
 		}
@@ -292,6 +281,14 @@ func doRequest(
 				meta.Mode,
 				http.StatusInternalServerError,
 				"request unexpected eof: "+err.Error(),
+			)
+		}
+
+		if strings.Contains(err.Error(), "timeout awaiting response headers") {
+			return nil, relaymodel.WrapperErrorWithMessage(
+				meta.Mode,
+				http.StatusRequestTimeout,
+				"request timeout: "+err.Error(),
 			)
 		}
 

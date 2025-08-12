@@ -2,14 +2,18 @@ package utils
 
 import (
 	"fmt"
+	"net"
 	"net/http"
+	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/bytedance/sonic"
 	"github.com/bytedance/sonic/ast"
 	"github.com/labring/aiproxy/core/common"
 	model "github.com/labring/aiproxy/core/relay/model"
+	"github.com/patrickmn/go-cache"
 )
 
 func UnmarshalGeneralThinking(req *http.Request) (model.GeneralOpenAIThinkingRequest, error) {
@@ -125,10 +129,67 @@ func UnmarshalMap(req *http.Request) (map[string]any, error) {
 	return request, nil
 }
 
-var defaultClient = &http.Client{}
+const (
+	defaultHeaderTimeout = time.Minute * 15
+	tlsHandshakeTimeout  = time.Second * 5
+)
 
-func DoRequest(req *http.Request) (*http.Response, error) {
-	resp, err := defaultClient.Do(req)
+var (
+	defaultTransport *http.Transport
+	defaultClient    *http.Client
+	defaultDialer    = &net.Dialer{
+		Timeout:   10 * time.Second,
+		KeepAlive: 30 * time.Second,
+	}
+	clientCache = cache.New(time.Minute, time.Minute)
+)
+
+func init() {
+	defaultTransport, _ = http.DefaultTransport.(*http.Transport)
+	if defaultTransport == nil {
+		panic("http default transport is not http.Transport type")
+	}
+
+	defaultTransport = defaultTransport.Clone()
+	defaultTransport.DialContext = defaultDialer.DialContext
+	defaultTransport.ResponseHeaderTimeout = defaultHeaderTimeout
+	defaultTransport.TLSHandshakeTimeout = tlsHandshakeTimeout
+
+	defaultClient = &http.Client{
+		Transport: defaultTransport,
+	}
+}
+
+func loadHTTPClient(timeout time.Duration) *http.Client {
+	if timeout == 0 || timeout == defaultHeaderTimeout {
+		return defaultClient
+	}
+
+	key := strconv.Itoa(int(timeout))
+
+	clientI, ok := clientCache.Get(key)
+	if ok {
+		client, ok := clientI.(*http.Client)
+		if !ok {
+			panic("unknow http client type")
+		}
+
+		return client
+	}
+
+	transport := defaultTransport.Clone()
+	transport.ResponseHeaderTimeout = timeout
+
+	client := &http.Client{
+		Transport: transport,
+	}
+	clientCache.SetDefault(key, client)
+
+	return client
+}
+
+func DoRequest(req *http.Request, timeout time.Duration) (*http.Response, error) {
+	resp, err := loadHTTPClient(timeout).Do(req)
 	if err != nil {
 		return nil, err
 	}

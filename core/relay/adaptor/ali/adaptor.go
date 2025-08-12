@@ -172,10 +172,8 @@ func (a *Adaptor) DoRequest(
 		return TTSDoRequest(meta, req)
 	case mode.AudioTranscription:
 		return STTDoRequest(meta, req)
-	case mode.ChatCompletions:
-		fallthrough
 	default:
-		return utils.DoRequest(req)
+		return utils.DoRequest(req, meta.RequestTimeout)
 	}
 }
 

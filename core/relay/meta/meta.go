@@ -33,6 +33,8 @@ type Meta struct {
 	ActualModel string
 	Mode        mode.Mode
 
+	RequestTimeout time.Duration
+
 	RequestUsage model.Usage
 
 	JobID        string

@@ -165,47 +165,33 @@ func migrateDB() error {
 func InitLogDB() {
 	if os.Getenv("LOG_SQL_DSN") == "" {
 		LogDB = DB
+	} else {
+		log.Info("using log database for table logs")
 
-		if config.DisableAutoMigrateDB {
-			return
-		}
+		var err error
 
-		err := migrateLOGDB()
+		LogDB, err = chooseDB("LOG_SQL_DSN")
 		if err != nil {
-			log.Fatal("failed to migrate secondary database: " + err.Error())
+			log.Fatal("failed to initialize log database: " + err.Error())
 			return
 		}
 
-		log.Info("secondary database migrated")
-
-		return
+		setDBConns(LogDB)
 	}
-
-	log.Info("using secondary database for table logs")
-
-	var err error
-
-	LogDB, err = chooseDB("LOG_SQL_DSN")
-	if err != nil {
-		log.Fatal("failed to initialize secondary database: " + err.Error())
-		return
-	}
-
-	setDBConns(LogDB)
 
 	if config.DisableAutoMigrateDB {
 		return
 	}
 
-	log.Info("secondary database migration started")
+	log.Info("log database migration started")
 
-	err = migrateLOGDB()
+	err := migrateLOGDB()
 	if err != nil {
-		log.Fatal("failed to migrate secondary database: " + err.Error())
+		log.Fatal("failed to migrate log database: " + err.Error())
 		return
 	}
 
-	log.Info("secondary database migrated")
+	log.Info("log database migrated")
 }
 
 func migrateLOGDB() error {

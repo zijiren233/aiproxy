@@ -70,7 +70,7 @@ func getBaiduAccessTokenHelper(ctx context.Context, apiKey string) (*AccessToken
 	req.Header.Add("Content-Type", "application/json")
 	req.Header.Add("Accept", "application/json")
 
-	res, err := utils.DoRequest(req)
+	res, err := utils.DoRequest(req, 0)
 	if err != nil {
 		return nil, err
 	}

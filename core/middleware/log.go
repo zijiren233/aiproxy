@@ -10,8 +10,19 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+func SetRequestAt(c *gin.Context, requestAt time.Time) {
+	c.Set(RequestAt, requestAt)
+}
+
+func GetRequestAt(c *gin.Context) time.Time {
+	return c.GetTime(RequestAt)
+}
+
 func NewLog(l *logrus.Logger) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		start := time.Now()
+		SetRequestAt(c, start)
+
 		fields := common.GetLogFields()
 		defer func() {
 			common.PutLogFields(fields)
@@ -21,9 +32,8 @@ func NewLog(l *logrus.Logger) gin.HandlerFunc {
 			Logger: l,
 			Data:   fields,
 		}
-		c.Set("log", entry)
+		common.SetLogger(c.Request, entry)
 
-		start := time.Now()
 		path := c.Request.URL.Path
 		raw := c.Request.URL.RawQuery
 
@@ -74,13 +84,9 @@ func formatter(param gin.LogFormatterParams) string {
 		resetColor = param.ResetColor()
 	}
 
-	if param.Latency > time.Minute {
-		param.Latency = param.Latency.Truncate(time.Second)
-	}
-
-	return fmt.Sprintf("[GIN] |%s %3d %s| %13v | %15s |%s %-7s %s %#v\n%s",
+	return fmt.Sprintf("[GIN] |%s %3d %s| %10v | %15s |%s %-7s %s %#v\n%s",
 		statusColor, param.StatusCode, resetColor,
-		param.Latency,
+		common.TruncateDuration(param.Latency),
 		param.ClientIP,
 		methodColor, param.Method, resetColor,
 		param.Path,

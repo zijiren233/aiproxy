@@ -17,6 +17,9 @@ const (
 	statsKeySuffix        = ":stats"
 	modelTotalStatsSuffix = ":total_stats"
 	channelKeyPart        = ":channel:"
+
+	// Default warning threshold
+	DefaultWarnErrorRate = 0.3 // 30%
 )
 
 func modelKeyPrefix() string {
@@ -69,19 +72,28 @@ func GetModelsErrorRate(ctx context.Context) (map[string]float64, error) {
 }
 
 // AddRequest adds a request record and checks if channel should be banned
+// warnErrorRate: threshold for warning (default 30%)
+// maxErrorRate: threshold for banning (0 means no banning)
 func AddRequest(
 	ctx context.Context,
 	model string,
 	channelID int64,
 	isError, tryBan bool,
+	warnErrorRate,
 	maxErrorRate float64,
 ) (beyondThreshold, banExecution bool, err error) {
+	// Set default warning threshold if not specified
+	if warnErrorRate <= 0 {
+		warnErrorRate = DefaultWarnErrorRate
+	}
+
 	if !common.RedisEnabled {
 		beyondThreshold, banExecution = memModelMonitor.AddRequest(
 			model,
 			channelID,
 			isError,
 			tryBan,
+			warnErrorRate,
 			maxErrorRate,
 		)
 
@@ -104,6 +116,7 @@ func AddRequest(
 		channelID,
 		errorFlag,
 		now,
+		warnErrorRate,
 		maxErrorRate,
 		maxErrorRate > 0,
 		tryBan,
@@ -376,9 +389,10 @@ local model = KEYS[2]
 local channel_id = ARGV[1]
 local is_error = tonumber(ARGV[2])
 local now_ts = tonumber(ARGV[3])
-local max_error_rate = tonumber(ARGV[4])
-local can_ban = tonumber(ARGV[5])
-local try_ban = tonumber(ARGV[6])
+local warn_error_rate = tonumber(ARGV[4])
+local max_error_rate = tonumber(ARGV[5])
+local can_ban = tonumber(ARGV[6])
+local try_ban = tonumber(ARGV[7])
 
 local banned_key = prefix .. ":model:" .. model .. ":channel:" .. channel_id .. ":banned"
 local stats_key = prefix .. ":model:" .. model .. ":channel:" .. channel_id .. ":stats"
@@ -440,15 +454,20 @@ local function check_channel_error()
 		return 0
 	end
 
-	if (total_err / total_req) < max_error_rate then
-		return 0
-	else
-		if can_ban == 0 or already_banned then
-			return 3
+	local error_rate = total_err / total_req
+	
+	-- Check if we should ban (only if max_error_rate is set and exceeded)
+	if can_ban == 1 and error_rate >= max_error_rate then
+		if already_banned then
+			return 3  -- Beyond threshold but already banned
 		end
 		redis.call("SET", banned_key, 1)
 		redis.call("PEXPIRE", banned_key, banExpiry)
-		return 1
+		return 1  -- Ban executed
+	elseif error_rate >= warn_error_rate then
+		return 3  -- Beyond warning threshold but not banning
+	else
+		return 0  -- All good
 	end
 end
 

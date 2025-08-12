@@ -28,16 +28,7 @@ func GetRequestID(c *gin.Context) string {
 }
 
 func RequestIDMiddleware(c *gin.Context) {
-	now := time.Now()
+	now := GetRequestAt(c)
 	id := GenRequestID(now)
 	SetRequestID(c, id)
-	SetRequestAt(c, now)
-}
-
-func SetRequestAt(c *gin.Context, requestAt time.Time) {
-	c.Set(RequestAt, requestAt)
-}
-
-func GetRequestAt(c *gin.Context) time.Time {
-	return c.GetTime(RequestAt)
 }

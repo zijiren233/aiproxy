@@ -389,7 +389,7 @@ func distribute(c *gin.Context, mode mode.Mode) {
 			c,
 			http.StatusNotFound,
 			fmt.Sprintf(
-				"The model `%s` does not exist or you do not have access to it.",
+				"The model `%s` does not exist on this endpoint.",
 				requestModel,
 			),
 		)

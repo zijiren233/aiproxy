@@ -8,6 +8,7 @@ import (
 )
 
 func recordConsume(
+	now time.Time,
 	meta *meta.Meta,
 	code int,
 	firstByteAt time.Time,
@@ -23,6 +24,7 @@ func recordConsume(
 	metadata map[string]string,
 ) error {
 	return model.BatchRecordLogs(
+		now,
 		meta.RequestID,
 		meta.RequestAt,
 		meta.RetryAt,

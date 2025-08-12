@@ -51,6 +51,7 @@ func AsyncConsume(
 
 	go Consume(
 		context.Background(),
+		time.Now(),
 		postGroupConsumer,
 		firstByteAt,
 		code,
@@ -69,6 +70,7 @@ func AsyncConsume(
 
 func Consume(
 	ctx context.Context,
+	now time.Time,
 	postGroupConsumer balance.PostGroupConsumer,
 	firstByteAt time.Time,
 	code int,
@@ -94,6 +96,7 @@ func Consume(
 	selectedModelPrice.ConditionalPrices = nil
 
 	err := recordConsume(
+		now,
 		meta,
 		code,
 		firstByteAt,
