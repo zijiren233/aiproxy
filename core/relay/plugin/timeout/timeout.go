@@ -33,7 +33,7 @@ func (t *Timeout) ConvertRequest(
 	var stream bool
 	switch meta.Mode {
 	case mode.Embeddings:
-		meta.RequestTimeout = time.Second * 10
+		meta.RequestTimeout = time.Second * 30
 	case mode.Moderations:
 		meta.RequestTimeout = time.Minute * 3
 	case mode.ImagesGenerations,
@@ -43,7 +43,7 @@ func (t *Timeout) ConvertRequest(
 		mode.AudioTranslation:
 		meta.RequestTimeout = time.Minute * 3
 	case mode.Rerank:
-		meta.RequestTimeout = time.Second * 10
+		meta.RequestTimeout = time.Second * 30
 	case mode.ParsePdf:
 		meta.RequestTimeout = time.Minute * 3
 	case mode.VideoGenerationsJobs,
@@ -65,29 +65,29 @@ func (t *Timeout) ConvertRequest(
 		if stream {
 			switch {
 			case inputTokens > 100*1024:
-				meta.RequestTimeout = time.Minute * 3
-			case inputTokens > 10*1024:
-				meta.RequestTimeout = time.Minute * 2
-			default:
-				meta.RequestTimeout = time.Minute
-			}
-		} else {
-			switch {
-			case inputTokens > 100*1024:
 				meta.RequestTimeout = time.Minute * 10
 			case inputTokens > 10*1024:
 				meta.RequestTimeout = time.Minute * 5
 			default:
 				meta.RequestTimeout = time.Minute * 3
 			}
+		} else {
+			switch {
+			case inputTokens > 100*1024:
+				meta.RequestTimeout = time.Minute * 15
+			case inputTokens > 10*1024:
+				meta.RequestTimeout = time.Minute * 10
+			default:
+				meta.RequestTimeout = time.Minute * 5
+			}
 		}
 	default:
 		if common.IsJSONContentType(req.Header.Get("Content-Type")) {
 			stream, _ = isStream(req)
 			if stream {
-				meta.RequestTimeout = time.Minute
-			} else {
 				meta.RequestTimeout = time.Minute * 3
+			} else {
+				meta.RequestTimeout = time.Minute * 15
 			}
 		}
 	}
