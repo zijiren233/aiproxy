@@ -1440,7 +1440,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/controller.CreateGroupRequest"
+                            "$ref": "#/definitions/model.UpdateGroupRequest"
                         }
                     }
                 ],
@@ -6185,7 +6185,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/controller.AddTokenRequest"
+                            "$ref": "#/definitions/model.UpdateTokenRequest"
                         }
                     }
                 ],
@@ -6757,7 +6757,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/controller.AddTokenRequest"
+                            "$ref": "#/definitions/model.UpdateTokenRequest"
                         }
                     }
                 ],
@@ -8457,9 +8457,6 @@ const docTemplate = `{
         "controller.AddTokenRequest": {
             "type": "object",
             "properties": {
-                "expiredAt": {
-                    "type": "integer"
-                },
                 "models": {
                     "type": "array",
                     "items": {
@@ -8542,8 +8539,8 @@ const docTemplate = `{
                 "rpm": {
                     "type": "integer"
                 },
-                "timeout": {
-                    "type": "integer"
+                "timeout_config": {
+                    "$ref": "#/definitions/model.TimeoutConfig"
                 },
                 "tpm": {
                     "type": "integer"
@@ -8553,6 +8550,9 @@ const docTemplate = `{
                 },
                 "updated_at": {
                     "type": "string"
+                },
+                "warn_error_rate": {
+                    "type": "number"
                 }
             }
         },
@@ -9279,8 +9279,8 @@ const docTemplate = `{
                 "rpm": {
                     "type": "integer"
                 },
-                "timeout": {
-                    "type": "integer"
+                "timeout_config": {
+                    "$ref": "#/definitions/model.TimeoutConfig"
                 },
                 "tpm": {
                     "type": "integer"
@@ -9290,6 +9290,9 @@ const docTemplate = `{
                 },
                 "updated_at": {
                     "type": "string"
+                },
+                "warn_error_rate": {
+                    "type": "number"
                 }
             }
         },
@@ -9322,9 +9325,6 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "created_at": {
-                    "type": "string"
-                },
-                "expired_at": {
                     "type": "string"
                 },
                 "group": {
@@ -9443,9 +9443,30 @@ const docTemplate = `{
                 }
             }
         },
+        "mcp.Meta": {
+            "type": "object",
+            "properties": {
+                "additionalFields": {
+                    "description": "AdditionalFields are any fields present in the Meta that are not\notherwise defined in the protocol.",
+                    "type": "object",
+                    "additionalProperties": {}
+                },
+                "progressToken": {
+                    "description": "If specified, the caller is requesting out-of-band progress\nnotifications for this request (as represented by\nnotifications/progress). The value of this parameter is an\nopaque token that will be attached to any subsequent\nnotifications. The receiver is not obligated to provide these\nnotifications."
+                }
+            }
+        },
         "mcp.Tool": {
             "type": "object",
             "properties": {
+                "_meta": {
+                    "description": "Meta is a metadata object that is reserved by MCP for storing additional information.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/mcp.Meta"
+                        }
+                    ]
+                },
                 "annotations": {
                     "description": "Optional properties describing tool behavior",
                     "allOf": [
@@ -9500,6 +9521,10 @@ const docTemplate = `{
         "mcp.ToolInputSchema": {
             "type": "object",
             "properties": {
+                "$defs": {
+                    "type": "object",
+                    "additionalProperties": {}
+                },
                 "properties": {
                     "type": "object",
                     "additionalProperties": {}
@@ -11034,8 +11059,8 @@ const docTemplate = `{
                 "rpm": {
                     "type": "integer"
                 },
-                "timeout": {
-                    "type": "integer"
+                "timeout_config": {
+                    "$ref": "#/definitions/model.TimeoutConfig"
                 },
                 "tpm": {
                     "type": "integer"
@@ -11045,6 +11070,9 @@ const docTemplate = `{
                 },
                 "updated_at": {
                     "type": "string"
+                },
+                "warn_error_rate": {
+                    "type": "number"
                 }
             }
         },
@@ -11962,6 +11990,17 @@ const docTemplate = `{
                 }
             }
         },
+        "model.TimeoutConfig": {
+            "type": "object",
+            "properties": {
+                "request_timeout": {
+                    "type": "integer"
+                },
+                "stream_request_timeout": {
+                    "type": "integer"
+                }
+            }
+        },
         "model.Tool": {
             "type": "object",
             "properties": {
@@ -11987,6 +12026,58 @@ const docTemplate = `{
                 },
                 "type": {
                     "type": "string"
+                }
+            }
+        },
+        "model.UpdateGroupRequest": {
+            "type": "object",
+            "properties": {
+                "available_sets": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "balance_alert_enabled": {
+                    "type": "boolean"
+                },
+                "balance_alert_threshold": {
+                    "type": "number"
+                },
+                "rpm_ratio": {
+                    "type": "number"
+                },
+                "status": {
+                    "type": "integer"
+                },
+                "tpm_ratio": {
+                    "type": "number"
+                }
+            }
+        },
+        "model.UpdateTokenRequest": {
+            "type": "object",
+            "properties": {
+                "models": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "name": {
+                    "type": "string"
+                },
+                "quota": {
+                    "type": "number"
+                },
+                "status": {
+                    "type": "integer"
+                },
+                "subnets": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 }
             }
         },

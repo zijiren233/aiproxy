@@ -180,10 +180,25 @@ func DeleteGroupsByIDs(ids []string) (err error) {
 	})
 }
 
-func UpdateGroup(id string, group *Group) (err error) {
+type UpdateGroupRequest struct {
+	Status                int       `json:"status"`
+	RPMRatio              *float64  `json:"rpm_ratio,omitempty"`
+	TPMRatio              *float64  `json:"tpm_ratio,omitempty"`
+	AvailableSets         *[]string `json:"available_sets,omitempty"`
+	BalanceAlertEnabled   *bool     `json:"balance_alert_enabled"`
+	BalanceAlertThreshold *float64  `json:"balance_alert_threshold"`
+}
+
+func UpdateGroup(id string, update UpdateGroupRequest) (group *Group, err error) {
 	if id == "" {
-		return errors.New("group id is empty")
+		return nil, errors.New("group id is empty")
 	}
+
+	group = &Group{
+		ID:     id,
+		Status: update.Status,
+	}
+
 	defer func() {
 		if err == nil {
 			if err := CacheDeleteGroup(id); err != nil {
@@ -192,13 +207,37 @@ func UpdateGroup(id string, group *Group) (err error) {
 		}
 	}()
 
-	selects := []string{
-		"rpm_ratio",
-		"tpm_ratio",
-		"available_sets",
-		"balance_alert_enabled",
-		"balance_alert_threshold",
+	selects := []string{}
+	if update.RPMRatio != nil {
+		group.RPMRatio = *update.RPMRatio
+
+		selects = append(selects, "rpm_ratio")
 	}
+
+	if update.TPMRatio != nil {
+		group.TPMRatio = *update.TPMRatio
+
+		selects = append(selects, "tpm_ratio")
+	}
+
+	if update.AvailableSets != nil {
+		group.AvailableSets = *update.AvailableSets
+
+		selects = append(selects, "available_sets")
+	}
+
+	if update.BalanceAlertEnabled != nil {
+		group.BalanceAlertEnabled = *update.BalanceAlertEnabled
+
+		selects = append(selects, "balance_alert_enabled")
+	}
+
+	if update.BalanceAlertThreshold != nil {
+		group.BalanceAlertThreshold = *update.BalanceAlertThreshold
+
+		selects = append(selects, "balance_alert_threshold")
+	}
+
 	if group.Status != 0 {
 		selects = append(selects, "status")
 	}
@@ -209,7 +248,7 @@ func UpdateGroup(id string, group *Group) (err error) {
 		Select(selects).
 		Updates(group)
 
-	return HandleUpdateResult(result, ErrGroupNotFound)
+	return group, HandleUpdateResult(result, ErrGroupNotFound)
 }
 
 func UpdateGroupUsedAmountAndRequestCount(id string, amount float64, count int) (err error) {

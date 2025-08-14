@@ -73,8 +73,6 @@ definitions:
     type: object
   controller.AddTokenRequest:
     properties:
-      expiredAt:
-        type: integer
       models:
         items:
           type: string
@@ -131,14 +129,16 @@ definitions:
         type: integer
       rpm:
         type: integer
-      timeout:
-        type: integer
+      timeout_config:
+        $ref: '#/definitions/model.TimeoutConfig'
       tpm:
         type: integer
       type:
         $ref: '#/definitions/mode.Mode'
       updated_at:
         type: string
+      warn_error_rate:
+        type: number
     type: object
   controller.CreateGroupRequest:
     properties:
@@ -616,14 +616,16 @@ definitions:
         type: integer
       rpm:
         type: integer
-      timeout:
-        type: integer
+      timeout_config:
+        $ref: '#/definitions/model.TimeoutConfig'
       tpm:
         type: integer
       type:
         $ref: '#/definitions/mode.Mode'
       updated_at:
         type: string
+      warn_error_rate:
+        type: number
     type: object
   controller.StatusData:
     properties:
@@ -644,8 +646,6 @@ definitions:
       accessed_at:
         type: string
       created_at:
-        type: string
-      expired_at:
         type: string
       group:
         type: string
@@ -721,8 +721,30 @@ definitions:
       status:
         type: integer
     type: object
+  mcp.Meta:
+    properties:
+      additionalFields:
+        additionalProperties: {}
+        description: |-
+          AdditionalFields are any fields present in the Meta that are not
+          otherwise defined in the protocol.
+        type: object
+      progressToken:
+        description: |-
+          If specified, the caller is requesting out-of-band progress
+          notifications for this request (as represented by
+          notifications/progress). The value of this parameter is an
+          opaque token that will be attached to any subsequent
+          notifications. The receiver is not obligated to provide these
+          notifications.
+    type: object
   mcp.Tool:
     properties:
+      _meta:
+        allOf:
+        - $ref: '#/definitions/mcp.Meta'
+        description: Meta is a metadata object that is reserved by MCP for storing
+          additional information.
       annotations:
         allOf:
         - $ref: '#/definitions/mcp.ToolAnnotation'
@@ -759,6 +781,9 @@ definitions:
     type: object
   mcp.ToolInputSchema:
     properties:
+      $defs:
+        additionalProperties: {}
+        type: object
       properties:
         additionalProperties: {}
         type: object
@@ -1017,15 +1042,15 @@ definitions:
         type: integer
       retry_count:
         type: integer
+      status_4xx_count:
+        type: integer
+      status_500_count:
+        type: integer
       status_5xx_count:
         type: integer
       status_400_count:
         type: integer
       status_429_count:
-        type: integer
-      status_4xx_count:
-        type: integer
-      status_500_count:
         type: integer
       timestamp:
         type: integer
@@ -1158,8 +1183,6 @@ definitions:
         type: integer
       rpm:
         type: integer
-      status_5xx_count:
-        type: integer
       status_400_count:
         type: integer
       status_429_count:
@@ -1167,6 +1190,8 @@ definitions:
       status_4xx_count:
         type: integer
       status_500_count:
+        type: integer
+      status_5xx_count:
         type: integer
       total_count:
         description: use Count.RequestCount instead
@@ -1428,15 +1453,15 @@ definitions:
         type: integer
       rpm:
         type: integer
-      status_400_count:
-        type: integer
-      status_429_count:
-        type: integer
       status_4xx_count:
         type: integer
       status_500_count:
         type: integer
       status_5xx_count:
+        type: integer
+      status_400_count:
+        type: integer
+      status_429_count:
         type: integer
       token_names:
         items:
@@ -1821,14 +1846,16 @@ definitions:
         type: integer
       rpm:
         type: integer
-      timeout:
-        type: integer
+      timeout_config:
+        $ref: '#/definitions/model.TimeoutConfig'
       tpm:
         type: integer
       type:
         $ref: '#/definitions/mode.Mode'
       updated_at:
         type: string
+      warn_error_rate:
+        type: number
     type: object
   model.ModelOwner:
     enum:
@@ -2372,15 +2399,15 @@ definitions:
         type: integer
       retry_count:
         type: integer
-      status_4xx_count:
-        type: integer
-      status_500_count:
-        type: integer
       status_5xx_count:
         type: integer
       status_400_count:
         type: integer
       status_429_count:
+        type: integer
+      status_4xx_count:
+        type: integer
+      status_500_count:
         type: integer
       timestamp:
         type: integer
@@ -2460,6 +2487,13 @@ definitions:
       timestamp:
         type: integer
     type: object
+  model.TimeoutConfig:
+    properties:
+      request_timeout:
+        type: integer
+      stream_request_timeout:
+        type: integer
+    type: object
   model.Tool:
     properties:
       function:
@@ -2477,6 +2511,40 @@ definitions:
         type: integer
       type:
         type: string
+    type: object
+  model.UpdateGroupRequest:
+    properties:
+      available_sets:
+        items:
+          type: string
+        type: array
+      balance_alert_enabled:
+        type: boolean
+      balance_alert_threshold:
+        type: number
+      rpm_ratio:
+        type: number
+      status:
+        type: integer
+      tpm_ratio:
+        type: number
+    type: object
+  model.UpdateTokenRequest:
+    properties:
+      models:
+        items:
+          type: string
+        type: array
+      name:
+        type: string
+      quota:
+        type: number
+      status:
+        type: integer
+      subnets:
+        items:
+          type: string
+        type: array
     type: object
   model.Usage:
     properties:
@@ -3511,7 +3579,7 @@ paths:
         name: data
         required: true
         schema:
-          $ref: '#/definitions/controller.CreateGroupRequest'
+          $ref: '#/definitions/model.UpdateGroupRequest'
       produces:
       - application/json
       responses:
@@ -6262,7 +6330,7 @@ paths:
         name: token
         required: true
         schema:
-          $ref: '#/definitions/controller.AddTokenRequest'
+          $ref: '#/definitions/model.UpdateTokenRequest'
       produces:
       - application/json
       responses:
@@ -6609,7 +6677,7 @@ paths:
         name: token
         required: true
         schema:
-          $ref: '#/definitions/controller.AddTokenRequest'
+          $ref: '#/definitions/model.UpdateTokenRequest'
       produces:
       - application/json
       responses:

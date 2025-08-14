@@ -59,7 +59,6 @@ func (t redisTime) MarshalBinary() ([]byte, error) {
 }
 
 type TokenCache struct {
-	ExpiredAt     redisTime        `json:"expired_at"  redis:"e"`
 	Group         string           `json:"group"       redis:"g"`
 	Key           string           `json:"-"           redis:"-"`
 	Name          string           `json:"name"        redis:"n"`
@@ -135,11 +134,10 @@ func (t *Token) ToTokenCache() *TokenCache {
 		ID:         t.ID,
 		Group:      t.GroupID,
 		Key:        t.Key,
-		Name:       t.Name.String(),
+		Name:       string(t.Name),
 		Models:     t.Models,
 		Subnets:    t.Subnets,
 		Status:     t.Status,
-		ExpiredAt:  redisTime(t.ExpiredAt),
 		Quota:      t.Quota,
 		UsedAmount: t.UsedAmount,
 	}

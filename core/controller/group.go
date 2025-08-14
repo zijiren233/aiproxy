@@ -165,7 +165,7 @@ func UpdateGroupRPMRatio(c *gin.Context) {
 
 	req := UpdateGroupRPMRatioRequest{}
 
-	err := sonic.ConfigDefault.NewDecoder(c.Request.Body).Decode(&req)
+	err := c.ShouldBindJSON(&req)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusBadRequest, "invalid parameter")
 		return
@@ -205,7 +205,7 @@ func UpdateGroupTPMRatio(c *gin.Context) {
 
 	req := UpdateGroupTPMRatioRequest{}
 
-	err := sonic.ConfigDefault.NewDecoder(c.Request.Body).Decode(&req)
+	err := c.ShouldBindJSON(&req)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusBadRequest, "invalid parameter")
 		return
@@ -245,7 +245,7 @@ func UpdateGroupStatus(c *gin.Context) {
 
 	req := UpdateGroupStatusRequest{}
 
-	err := sonic.ConfigDefault.NewDecoder(c.Request.Body).Decode(&req)
+	err := c.ShouldBindJSON(&req)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusBadRequest, "invalid parameter")
 		return
@@ -390,7 +390,7 @@ func CreateGroup(c *gin.Context) {
 
 	req := CreateGroupRequest{}
 
-	err := sonic.ConfigDefault.NewDecoder(c.Request.Body).Decode(&req)
+	err := c.ShouldBindJSON(&req)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusBadRequest, "invalid parameter")
 		return
@@ -404,7 +404,9 @@ func CreateGroup(c *gin.Context) {
 		return
 	}
 
-	middleware.SuccessResponse(c, g)
+	middleware.SuccessResponse(c, &GroupResponse{
+		Group: g,
+	})
 }
 
 // UpdateGroup godoc
@@ -415,8 +417,8 @@ func CreateGroup(c *gin.Context) {
 //	@Accept			json
 //	@Produce		json
 //	@Security		ApiKeyAuth
-//	@Param			group	path		string				true	"Group name"
-//	@Param			data	body		CreateGroupRequest	true	"Updated group information"
+//	@Param			group	path		string						true	"Group name"
+//	@Param			data	body		model.UpdateGroupRequest	true	"Updated group information"
 //	@Success		200		{object}	middleware.APIResponse{data=model.Group}
 //	@Router			/api/group/{group} [put]
 func UpdateGroup(c *gin.Context) {
@@ -426,23 +428,23 @@ func UpdateGroup(c *gin.Context) {
 		return
 	}
 
-	req := CreateGroupRequest{}
+	req := model.UpdateGroupRequest{}
 
-	err := sonic.ConfigDefault.NewDecoder(c.Request.Body).Decode(&req)
+	err := c.ShouldBindJSON(&req)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusBadRequest, "invalid parameter")
 		return
 	}
 
-	g := req.ToGroup()
-
-	err = model.UpdateGroup(group, g)
+	g, err := model.UpdateGroup(group, req)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	middleware.SuccessResponse(c, g)
+	middleware.SuccessResponse(c, &GroupResponse{
+		Group: g,
+	})
 }
 
 type SaveGroupModelConfigRequest struct {
