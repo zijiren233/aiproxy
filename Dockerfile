@@ -8,7 +8,7 @@ RUN npm install -g pnpm
 
 RUN pnpm install && pnpm run build
 
-FROM golang:1.24-alpine AS builder
+FROM golang:1.25-alpine AS builder
 
 RUN apk add --no-cache curl
 
@@ -24,7 +24,7 @@ RUN go install github.com/swaggo/swag/cmd/swag@latest
 
 RUN sh scripts/swag.sh
 
-RUN go build -trimpath -tags "jsoniter" -ldflags "-s -w" -o aiproxy
+RUN go build -trimpath -ldflags "-s -w" -o aiproxy
 
 FROM alpine:latest
 

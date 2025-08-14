@@ -26,7 +26,6 @@ const (
 
 type Token struct {
 	CreatedAt    time.Time       `json:"created_at"`
-	ExpiredAt    time.Time       `json:"expired_at"`
 	Group        *Group          `json:"-"             gorm:"foreignKey:GroupID"`
 	Key          string          `json:"key"           gorm:"type:char(48);uniqueIndex"`
 	Name         EmptyNullString `json:"name"          gorm:"index;uniqueIndex:idx_group_name;not null"`
@@ -40,11 +39,18 @@ type Token struct {
 	RequestCount int             `json:"request_count" gorm:"index"`
 }
 
-func (t *Token) BeforeCreate(_ *gorm.DB) (err error) {
+func (t *Token) BeforeCreate(_ *gorm.DB) error {
 	if t.Key == "" || len(t.Key) != 48 {
 		t.Key = generateKey()
 	}
-	return
+	return nil
+}
+
+func (t *Token) BeforeSave(_ *gorm.DB) error {
+	if len(t.Name) > 30 {
+		return errors.New("token name is too long")
+	}
+	return nil
 }
 
 const (
@@ -352,10 +358,6 @@ func ValidateAndGetToken(key string) (token *TokenCache, err error) {
 		return nil, fmt.Errorf("token (%s[%d]) is disabled", token.Name, token.ID)
 	}
 
-	if !time.Time(token.ExpiredAt).IsZero() && time.Time(token.ExpiredAt).Before(time.Now()) {
-		return nil, fmt.Errorf("token (%s[%d]) is expired", token.Name, token.ID)
-	}
-
 	if token.Quota > 0 && token.UsedAmount >= token.Quota {
 		return nil, fmt.Errorf("token (%s[%d]) quota is exhausted", token.Name, token.ID)
 	}
@@ -560,9 +562,22 @@ func DeleteTokensByIDs(ids []int) (err error) {
 	})
 }
 
-func UpdateToken(id int, token *Token) (err error) {
+type UpdateTokenRequest struct {
+	Name    *string   `json:"name"`
+	Subnets *[]string `json:"subnets"`
+	Models  *[]string `json:"models"`
+	Status  int       `json:"status"`
+	Quota   *float64  `json:"quota"`
+}
+
+func UpdateToken(id int, update UpdateTokenRequest) (token *Token, err error) {
 	if id == 0 {
-		return errors.New("id is empty")
+		return nil, errors.New("id is empty")
+	}
+
+	token = &Token{
+		ID:     id,
+		Status: update.Status,
 	}
 
 	defer func() {
@@ -573,18 +588,37 @@ func UpdateToken(id int, token *Token) (err error) {
 		}
 	}()
 
-	selects := []string{
-		"subnets",
-		"quota",
-		"models",
-		"expired_at",
-	}
-	if token.Name != "" {
+	selects := []string{}
+	if update.Name != nil && *update.Name != "" {
+		token.Name = EmptyNullString(*update.Name)
+
 		selects = append(selects, "name")
 	}
 
-	if token.Status != 0 {
+	if update.Quota != nil {
+		token.Quota = *update.Quota
+
+		selects = append(selects, "quota")
+	}
+
+	if update.Subnets != nil {
+		token.Subnets = *update.Subnets
+
+		selects = append(selects, "subnets")
+	}
+
+	if update.Models != nil {
+		token.Models = *update.Models
+
+		selects = append(selects, "models")
+	}
+
+	if update.Status != 0 {
 		selects = append(selects, "status")
+	}
+
+	if len(selects) == 0 {
+		return nil, errors.New("empty update request")
 	}
 
 	result := DB.
@@ -594,16 +628,26 @@ func UpdateToken(id int, token *Token) (err error) {
 		Updates(token)
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrDuplicatedKey) {
-			return errors.New("token name already exists in this group")
+			return nil, errors.New("token name already exists in this group")
 		}
 	}
 
-	return HandleUpdateResult(result, ErrTokenNotFound)
+	return token, HandleUpdateResult(result, ErrTokenNotFound)
 }
 
-func UpdateGroupToken(id int, group string, token *Token) (err error) {
+func UpdateGroupToken(
+	id int,
+	group string,
+	update UpdateTokenRequest,
+) (token *Token, err error) {
 	if id == 0 || group == "" {
-		return errors.New("id or group is empty")
+		return nil, errors.New("id or group is empty")
+	}
+
+	token = &Token{
+		ID:      id,
+		GroupID: group,
+		Status:  update.Status,
 	}
 
 	defer func() {
@@ -614,18 +658,37 @@ func UpdateGroupToken(id int, group string, token *Token) (err error) {
 		}
 	}()
 
-	selects := []string{
-		"subnets",
-		"quota",
-		"models",
-		"expired_at",
-	}
-	if token.Name != "" {
+	selects := []string{}
+	if update.Name != nil && *update.Name != "" {
+		token.Name = EmptyNullString(*update.Name)
+
 		selects = append(selects, "name")
 	}
 
-	if token.Status != 0 {
+	if update.Quota != nil {
+		token.Quota = *update.Quota
+
+		selects = append(selects, "quota")
+	}
+
+	if update.Subnets != nil {
+		token.Subnets = *update.Subnets
+
+		selects = append(selects, "subnets")
+	}
+
+	if update.Models != nil {
+		token.Models = *update.Models
+
+		selects = append(selects, "models")
+	}
+
+	if update.Status != 0 {
 		selects = append(selects, "status")
+	}
+
+	if len(selects) == 0 {
+		return nil, errors.New("empty update request")
 	}
 
 	result := DB.
@@ -635,11 +698,11 @@ func UpdateGroupToken(id int, group string, token *Token) (err error) {
 		Updates(token)
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrDuplicatedKey) {
-			return errors.New("token name already exists in this group")
+			return nil, errors.New("token name already exists in this group")
 		}
 	}
 
-	return HandleUpdateResult(result, ErrTokenNotFound)
+	return token, HandleUpdateResult(result, ErrTokenNotFound)
 }
 
 func UpdateTokenUsedAmount(id int, amount float64, requestCount int) (err error) {

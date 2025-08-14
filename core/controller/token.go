@@ -1,7 +1,6 @@
 package controller
 
 import (
-	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -27,23 +26,20 @@ func (t *TokenResponse) MarshalJSON() ([]byte, error) {
 	return sonic.Marshal(&struct {
 		*Alias
 		CreatedAt  int64 `json:"created_at"`
-		ExpiredAt  int64 `json:"expired_at"`
 		AccessedAt int64 `json:"accessed_at"`
 	}{
 		Alias:      (*Alias)(t),
 		CreatedAt:  t.CreatedAt.UnixMilli(),
-		ExpiredAt:  t.ExpiredAt.UnixMilli(),
 		AccessedAt: t.AccessedAt.UnixMilli(),
 	})
 }
 
 type (
 	AddTokenRequest struct {
-		Name      string   `json:"name"`
-		Subnets   []string `json:"subnets"`
-		Models    []string `json:"models"`
-		ExpiredAt int64    `json:"expiredAt"`
-		Quota     float64  `json:"quota"`
+		Name    string   `json:"name"`
+		Subnets []string `json:"subnets"`
+		Models  []string `json:"models"`
+		Quota   float64  `json:"quota"`
 	}
 
 	UpdateTokenStatusRequest struct {
@@ -56,29 +52,15 @@ type (
 )
 
 func (at *AddTokenRequest) ToToken() *model.Token {
-	var expiredAt time.Time
-	if at.ExpiredAt > 0 {
-		expiredAt = time.UnixMilli(at.ExpiredAt)
-	}
-
 	return &model.Token{
-		Name:      model.EmptyNullString(at.Name),
-		Subnets:   at.Subnets,
-		Models:    at.Models,
-		ExpiredAt: expiredAt,
-		Quota:     at.Quota,
+		Name:    model.EmptyNullString(at.Name),
+		Subnets: at.Subnets,
+		Models:  at.Models,
+		Quota:   at.Quota,
 	}
 }
 
 func validateToken(token AddTokenRequest) error {
-	if token.Name == "" {
-		return errors.New("token name cannot be empty")
-	}
-
-	if len(token.Name) > 30 {
-		return errors.New("token name is too long")
-	}
-
 	if err := network.IsValidSubnets(token.Subnets); err != nil {
 		return fmt.Errorf("invalid subnet: %w", err)
 	}
@@ -86,8 +68,8 @@ func validateToken(token AddTokenRequest) error {
 	return nil
 }
 
-func validateTokenUpdate(token AddTokenRequest) error {
-	if err := network.IsValidSubnets(token.Subnets); err != nil {
+func validateSubnets(subnets []string) error {
+	if err := network.IsValidSubnets(subnets); err != nil {
 		return fmt.Errorf("invalid subnet: %w", err)
 	}
 	return nil
@@ -492,8 +474,8 @@ func DeleteGroupTokens(c *gin.Context) {
 //	@Accept			json
 //	@Produce		json
 //	@Security		ApiKeyAuth
-//	@Param			id		path		int				true	"Token ID"
-//	@Param			token	body		AddTokenRequest	true	"Updated token information"
+//	@Param			id		path		int							true	"Token ID"
+//	@Param			token	body		model.UpdateTokenRequest	true	"Updated token information"
 //	@Success		200		{object}	middleware.APIResponse{data=TokenResponse}
 //	@Router			/api/tokens/{id} [put]
 func UpdateToken(c *gin.Context) {
@@ -503,20 +485,21 @@ func UpdateToken(c *gin.Context) {
 		return
 	}
 
-	var req AddTokenRequest
+	var req model.UpdateTokenRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		middleware.ErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	if err := validateTokenUpdate(req); err != nil {
-		middleware.ErrorResponse(c, http.StatusBadRequest, "parameter error: "+err.Error())
-		return
+	if req.Subnets != nil {
+		if err := validateSubnets(*req.Subnets); err != nil {
+			middleware.ErrorResponse(c, http.StatusBadRequest, "parameter error: "+err.Error())
+			return
+		}
 	}
 
-	token := req.ToToken()
-
-	if err := model.UpdateToken(id, token); err != nil {
+	token, err := model.UpdateToken(id, req)
+	if err != nil {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
@@ -532,9 +515,9 @@ func UpdateToken(c *gin.Context) {
 //	@Accept			json
 //	@Produce		json
 //	@Security		ApiKeyAuth
-//	@Param			group	path		string			true	"Group name"
-//	@Param			id		path		int				true	"Token ID"
-//	@Param			token	body		AddTokenRequest	true	"Updated token information"
+//	@Param			group	path		string						true	"Group name"
+//	@Param			id		path		int							true	"Token ID"
+//	@Param			token	body		model.UpdateTokenRequest	true	"Updated token information"
 //	@Success		200		{object}	middleware.APIResponse{data=TokenResponse}
 //	@Router			/api/token/{group}/{id} [put]
 func UpdateGroupToken(c *gin.Context) {
@@ -546,20 +529,21 @@ func UpdateGroupToken(c *gin.Context) {
 		return
 	}
 
-	var req AddTokenRequest
+	var req model.UpdateTokenRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		middleware.ErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	if err := validateTokenUpdate(req); err != nil {
-		middleware.ErrorResponse(c, http.StatusBadRequest, "parameter error: "+err.Error())
-		return
+	if req.Subnets != nil {
+		if err := validateSubnets(*req.Subnets); err != nil {
+			middleware.ErrorResponse(c, http.StatusBadRequest, "parameter error: "+err.Error())
+			return
+		}
 	}
 
-	token := req.ToToken()
-
-	if err := model.UpdateGroupToken(id, group, token); err != nil {
+	token, err := model.UpdateGroupToken(id, group, req)
+	if err != nil {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
