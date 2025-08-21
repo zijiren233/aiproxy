@@ -103,7 +103,7 @@ func (a *Adaptor) GetRequestURL(meta *meta.Meta, _ adaptor.Store) (adaptor.Reque
 			URL:    url,
 		}, nil
 	case mode.Anthropic:
-		url, err := url.JoinPath(u, "/api/v2/apps/claude-code-proxy")
+		url, err := url.JoinPath(u, "/api/v2/apps/claude-code-proxy/v1/messages")
 		if err != nil {
 			return adaptor.RequestURL{}, err
 		}
@@ -123,12 +123,7 @@ func (a *Adaptor) SetupRequestHeader(
 	_ *gin.Context,
 	req *http.Request,
 ) error {
-	switch meta.Mode {
-	case mode.Anthropic:
-		req.Header.Set(anthropic.AnthropicTokenHeader, "Bearer "+meta.Channel.Key)
-	default:
-		req.Header.Set("Authorization", "Bearer "+meta.Channel.Key)
-	}
+	req.Header.Set("Authorization", "Bearer "+meta.Channel.Key)
 
 	// req.Header.Set("X-Dashscope-Plugin", meta.Channel.Config.Plugin)
 	return nil
@@ -197,7 +192,11 @@ func (a *Adaptor) DoResponse(
 	case mode.AudioTranscription:
 		return STTDoResponse(meta, c, resp)
 	case mode.Anthropic:
-		return anthropic.Handler(meta, c, resp)
+		if utils.IsStreamResponse(resp) {
+			return anthropic.StreamHandler(meta, c, resp)
+		} else {
+			return anthropic.Handler(meta, c, resp)
+		}
 	default:
 		return model.Usage{}, relaymodel.WrapperOpenAIErrorWithMessage(
 			fmt.Sprintf("unsupported mode: %s", meta.Mode),
