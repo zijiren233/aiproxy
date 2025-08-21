@@ -354,6 +354,7 @@ func ClaudeStreamHandler(
 				// If we're not in a thinking block, start one
 				if currentContentType != "thinking" {
 					closeCurrentBlock()
+
 					currentContentIndex++
 					currentContentType = "thinking"
 
@@ -384,6 +385,7 @@ func ClaudeStreamHandler(
 				// If we're not in a text block, start one
 				if currentContentType != "text" {
 					closeCurrentBlock()
+
 					currentContentIndex++
 					currentContentType = "text"
 
@@ -418,6 +420,7 @@ func ClaudeStreamHandler(
 					if _, exists := toolCallsBuffer[idx]; !exists {
 						// Close current block if needed
 						closeCurrentBlock()
+
 						currentContentIndex++
 						currentContentType = "tool_use"
 
@@ -470,6 +473,7 @@ func ClaudeStreamHandler(
 		if thinkingText.Len() > 0 {
 			totalText = thinkingText.String() + "\n" + totalText
 		}
+
 		usage = ResponseText2Usage(
 			totalText,
 			meta.ActualModel,
