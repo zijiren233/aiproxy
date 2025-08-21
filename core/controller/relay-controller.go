@@ -342,9 +342,10 @@ func recordResult(
 type retryState struct {
 	retryTimes               int
 	lastHasPermissionChannel *model.Channel
-	ignoreChannelIDs         []int64
+	ignoreChannelIDs         map[int64]struct{}
 	errorRates               map[int64]float64
 	exhausted                bool
+	failedChannelIDs         map[int64]struct{} // Track all failed channels in this request
 
 	meta             *meta.Meta
 	price            model.Price
@@ -389,14 +390,22 @@ func initRetryState(
 		price:            price,
 		requestUsage:     meta.RequestUsage,
 		migratedChannels: channel.migratedChannels,
+		failedChannelIDs: make(map[int64]struct{}),
 	}
+
+	// Record initial failed channel
+	state.failedChannelIDs[int64(meta.Channel.ID)] = struct{}{}
 
 	if channel.designatedChannel {
 		state.exhausted = true
 	}
 
 	if !monitorplugin.ChannelHasPermission(result.Error) {
-		state.ignoreChannelIDs = append(state.ignoreChannelIDs, int64(channel.channel.ID))
+		if state.ignoreChannelIDs == nil {
+			state.ignoreChannelIDs = make(map[int64]struct{})
+		}
+
+		state.ignoreChannelIDs[int64(channel.channel.ID)] = struct{}{}
 	} else {
 		state.lastHasPermissionChannel = channel.channel
 	}
@@ -414,7 +423,7 @@ func retryLoop(c *gin.Context, mode mode.Mode, state *retryState, relayControlle
 		lastStatusCode := state.result.Error.StatusCode()
 		lastChannelID := state.meta.Channel.ID
 
-		newChannel, err := getRetryChannel(state)
+		newChannel, err := getRetryChannel(state, i, state.retryTimes)
 		if err == nil {
 			err = prepareRetry(c)
 		}
@@ -482,6 +491,12 @@ func retryLoop(c *gin.Context, mode mode.Mode, state *retryState, relayControlle
 		state.result, retry = RelayHelper(c, state.meta, relayController)
 
 		done := handleRetryResult(c, retry, newChannel, state)
+
+		// Record failed channel if retry is needed
+		if !done && state.result.Error != nil {
+			state.failedChannelIDs[int64(newChannel.ID)] = struct{}{}
+		}
+
 		if done || i == state.retryTimes-1 {
 			recordResult(
 				c,
@@ -538,7 +553,11 @@ func handleRetryResult(
 		}
 	} else {
 		if !hasPermission {
-			state.ignoreChannelIDs = append(state.ignoreChannelIDs, int64(newChannel.ID))
+			if state.ignoreChannelIDs == nil {
+				state.ignoreChannelIDs = make(map[int64]struct{})
+			}
+
+			state.ignoreChannelIDs[int64(newChannel.ID)] = struct{}{}
 			state.retryTimes++
 		} else {
 			state.lastHasPermissionChannel = newChannel

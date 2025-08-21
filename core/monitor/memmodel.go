@@ -276,6 +276,26 @@ func (m *MemModelMonitor) GetBannedChannelsWithModel(
 	return banned, nil
 }
 
+func (m *MemModelMonitor) GetBannedChannelsMapWithModel(
+	_ context.Context,
+	model string,
+) (map[int64]struct{}, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	banned := make(map[int64]struct{})
+	if data, exists := m.models[model]; exists {
+		now := time.Now()
+		for channelID, channel := range data.channels {
+			if channel.bannedUntil.After(now) {
+				banned[channelID] = struct{}{}
+			}
+		}
+	}
+
+	return banned, nil
+}
+
 func (m *MemModelMonitor) GetAllBannedModelChannels(_ context.Context) (map[string][]int64, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
