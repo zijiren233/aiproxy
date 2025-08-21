@@ -263,6 +263,36 @@ func GetBannedChannelsWithModel(ctx context.Context, model string) ([]int64, err
 	return result, nil
 }
 
+// GetBannedChannelsMapWithModel gets banned channels for a specific model as a map for efficient lookups
+func GetBannedChannelsMapWithModel(ctx context.Context, model string) (map[int64]struct{}, error) {
+	if !common.RedisEnabled {
+		return memModelMonitor.GetBannedChannelsMapWithModel(ctx, model)
+	}
+
+	result := make(map[int64]struct{})
+	prefix := modelKeyPrefix() + model + channelKeyPart
+	pattern := prefix + "*" + bannedKeySuffix
+	iter := common.RDB.Scan(ctx, 0, pattern, 0).Iterator()
+
+	for iter.Next(ctx) {
+		key := iter.Val()
+		channelIDStr := strings.TrimSuffix(strings.TrimPrefix(key, prefix), bannedKeySuffix)
+
+		channelID, err := strconv.ParseInt(channelIDStr, 10, 64)
+		if err != nil {
+			continue
+		}
+
+		result[channelID] = struct{}{}
+	}
+
+	if err := iter.Err(); err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
 // ClearChannelModelErrors clears errors for a specific channel and model
 func ClearChannelModelErrors(ctx context.Context, model string, channelID int) error {
 	if !common.RedisEnabled {
