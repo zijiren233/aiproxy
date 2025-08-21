@@ -453,6 +453,7 @@ func filterChannels(
 			if ignores == nil {
 				continue
 			}
+
 			_, needIgnore = ignores[chid]
 			if needIgnore {
 				break

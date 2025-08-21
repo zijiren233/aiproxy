@@ -404,6 +404,7 @@ func initRetryState(
 		if state.ignoreChannelIDs == nil {
 			state.ignoreChannelIDs = make(map[int64]struct{})
 		}
+
 		state.ignoreChannelIDs[int64(channel.channel.ID)] = struct{}{}
 	} else {
 		state.lastHasPermissionChannel = channel.channel
@@ -555,6 +556,7 @@ func handleRetryResult(
 			if state.ignoreChannelIDs == nil {
 				state.ignoreChannelIDs = make(map[int64]struct{})
 			}
+
 			state.ignoreChannelIDs[int64(newChannel.ID)] = struct{}{}
 			state.retryTimes++
 		} else {
