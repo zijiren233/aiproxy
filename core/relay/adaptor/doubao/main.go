@@ -18,7 +18,7 @@ import (
 func GetRequestURL(meta *meta.Meta) (adaptor.RequestURL, error) {
 	u := meta.Channel.BaseURL
 	switch meta.Mode {
-	case mode.ChatCompletions:
+	case mode.ChatCompletions, mode.Anthropic:
 		if strings.HasPrefix(meta.ActualModel, "bot-") {
 			url, err := url.JoinPath(u, "/api/v3/bots/chat/completions")
 			if err != nil {

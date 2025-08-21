@@ -2,6 +2,7 @@ package openai
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -72,7 +73,7 @@ func ConvertClaudeRequest(
 			"Content-Type":   {"application/json"},
 			"Content-Length": {strconv.Itoa(len(jsonData))},
 		},
-		Body: strings.NewReader(string(jsonData)),
+		Body: bytes.NewReader(jsonData),
 	}, nil
 }
 
@@ -112,67 +113,69 @@ func convertClaudeMessagesToOpenAI(
 		switch msg.Content.(type) {
 		case string:
 			openAIMsg.Content = msg.Content
-		case []map[string]any:
+		case []any:
 			rawBytes, _ := sonic.Marshal(msg.Content)
 
 			var content []relaymodel.ClaudeContent
 
 			_ = sonic.Unmarshal(rawBytes, &content)
-			if len(content) == 1 && content[0].Type == "text" {
-				// Simple text content
-				openAIMsg.Content = content[0].Text
-			} else {
-				// Multi-part content
-				var parts []relaymodel.MessageContent
-				for _, content := range content {
-					switch content.Type {
-					case "text":
+
+			var parts []relaymodel.MessageContent
+			for _, content := range content {
+				switch content.Type {
+				case "text":
+					parts = append(parts, relaymodel.MessageContent{
+						Type: relaymodel.ContentTypeText,
+						Text: content.Text,
+					})
+				case "thinking":
+					parts = append(parts, relaymodel.MessageContent{
+						Type: relaymodel.ContentTypeText,
+						Text: content.Thinking,
+					})
+				case "image":
+					if content.Source != nil {
+						imageURL := relaymodel.ImageURL{}
+						switch content.Source.Type {
+						case "url":
+							imageURL.URL = content.Source.URL
+						case "base64":
+							imageURL.URL = fmt.Sprintf("data:%s;base64,%s",
+								content.Source.MediaType, content.Source.Data)
+						}
+
 						parts = append(parts, relaymodel.MessageContent{
-							Type: relaymodel.ContentTypeText,
-							Text: content.Text,
-						})
-					case "image":
-						if content.Source != nil {
-							imageURL := relaymodel.ImageURL{}
-							switch content.Source.Type {
-							case "url":
-								imageURL.URL = content.Source.URL
-							case "base64":
-								imageURL.URL = fmt.Sprintf("data:%s;base64,%s",
-									content.Source.MediaType, content.Source.Data)
-							}
-
-							parts = append(parts, relaymodel.MessageContent{
-								Type:     relaymodel.ContentTypeImageURL,
-								ImageURL: &imageURL,
-							})
-						}
-					case "tool_result":
-						// Convert tool result to assistant message with tool calls
-						openAIMsg.Role = "tool"
-						openAIMsg.Content = content.Content
-						openAIMsg.ToolCallID = content.ToolUseID
-					case "tool_use":
-						// This should be handled as tool calls
-						if openAIMsg.ToolCalls == nil {
-							openAIMsg.ToolCalls = []relaymodel.ToolCall{}
-						}
-
-						args, _ := sonic.MarshalString(content.Input)
-						openAIMsg.ToolCalls = append(openAIMsg.ToolCalls, relaymodel.ToolCall{
-							ID:   content.ID,
-							Type: "function",
-							Function: relaymodel.Function{
-								Name:      content.Name,
-								Arguments: args,
-							},
+							Type:     relaymodel.ContentTypeImageURL,
+							ImageURL: &imageURL,
 						})
 					}
-				}
+				case "tool_result":
+					// Convert tool result to assistant message with tool calls
+					openAIMsg.Role = "tool"
+					openAIMsg.Content = content.Content
+					openAIMsg.ToolCallID = content.ToolUseID
+				case "tool_use":
+					// This should be handled as tool calls
+					if openAIMsg.ToolCalls == nil {
+						openAIMsg.ToolCalls = []relaymodel.ToolCall{}
+					}
 
-				if len(parts) > 0 {
-					openAIMsg.Content = parts
+					args, _ := sonic.MarshalString(content.Input)
+					openAIMsg.ToolCalls = append(openAIMsg.ToolCalls, relaymodel.ToolCall{
+						ID:   content.ID,
+						Type: "function",
+						Function: relaymodel.Function{
+							Name:      content.Name,
+							Arguments: args,
+						},
+					})
+				default:
+					continue
 				}
+			}
+
+			if len(parts) > 0 {
+				openAIMsg.Content = parts
 			}
 		}
 
@@ -247,8 +250,6 @@ func convertClaudeToolChoice(toolChoice any) any {
 	return "auto"
 }
 
-// File: core/relay/adaptor/openai/claude.go (优化版)
-
 // ClaudeStreamHandler handles OpenAI streaming responses and converts them to Claude format
 func ClaudeStreamHandler(
 	meta *meta.Meta,
@@ -272,16 +273,26 @@ func ClaudeStreamHandler(
 
 	// Initialize Claude response tracking
 	var (
-		messageID             = "msg_" + common.ShortUUID()
-		contentText           strings.Builder
-		usage                 relaymodel.ChatUsage
-		stopReason            string
-		hasToolCalls          = false
-		toolCallsBuffer       = make(map[int]*relaymodel.ClaudeContent)
-		toolCallIndex         = 0
-		sentMessageStart      = false
-		sentContentBlockStart = false
+		messageID           = "msg_" + common.ShortUUID()
+		contentText         strings.Builder
+		thinkingText        strings.Builder
+		usage               relaymodel.ChatUsage
+		stopReason          string
+		currentContentIndex = -1
+		currentContentType  = ""
+		sentMessageStart    = false
+		toolCallsBuffer     = make(map[int]*relaymodel.ClaudeContent)
 	)
+
+	// Helper function to close current content block
+	closeCurrentBlock := func() {
+		if currentContentIndex >= 0 {
+			_ = render.ClaudeObjectData(c, relaymodel.ClaudeStreamResponse{
+				Type:  "content_block_stop",
+				Index: currentContentIndex,
+			})
+		}
+	}
 
 	for scanner.Scan() {
 		data := scanner.Bytes()
@@ -311,7 +322,9 @@ func ClaudeStreamHandler(
 		// Send message_start event (only once)
 		if !sentMessageStart {
 			sentMessageStart = true
-			_ = render.ClaudeObjectData(c, relaymodel.ClaudeStreamResponse{
+
+			// Include initial usage if available
+			messageStartResp := relaymodel.ClaudeStreamResponse{
 				Type: "message_start",
 				Message: &relaymodel.ClaudeResponse{
 					ID:      messageID,
@@ -320,7 +333,15 @@ func ClaudeStreamHandler(
 					Model:   meta.ActualModel,
 					Content: []relaymodel.ClaudeContent{},
 				},
-			})
+			}
+
+			// Add initial usage if available
+			if openAIResponse.Usage != nil {
+				claudeUsage := openAIResponse.Usage.ToClaudeUsage()
+				messageStartResp.Message.Usage = claudeUsage
+			}
+
+			_ = render.ClaudeObjectData(c, messageStartResp)
 
 			// Send ping event
 			_ = render.ClaudeObjectData(c, relaymodel.ClaudeStreamResponse{Type: "ping"})
@@ -328,27 +349,59 @@ func ClaudeStreamHandler(
 
 		// Process each choice
 		for _, choice := range openAIResponse.Choices {
-			// Handle text content
-			if content, ok := choice.Delta.Content.(string); ok && content != "" {
-				if !sentContentBlockStart && !hasToolCalls {
-					// Send content_block_start for text
+			// Handle reasoning/thinking content
+			if choice.Delta.ReasoningContent != "" {
+				// If we're not in a thinking block, start one
+				if currentContentType != "thinking" {
+					closeCurrentBlock()
+					currentContentIndex++
+					currentContentType = "thinking"
+
 					_ = render.ClaudeObjectData(c, relaymodel.ClaudeStreamResponse{
 						Type:  "content_block_start",
-						Index: 0,
+						Index: currentContentIndex,
+						ContentBlock: &relaymodel.ClaudeContent{
+							Type:     "thinking",
+							Thinking: "",
+						},
+					})
+				}
+
+				thinkingText.WriteString(choice.Delta.ReasoningContent)
+
+				_ = render.ClaudeObjectData(c, relaymodel.ClaudeStreamResponse{
+					Type:  "content_block_delta",
+					Index: currentContentIndex,
+					Delta: &relaymodel.ClaudeDelta{
+						Type:     "thinking_delta",
+						Thinking: choice.Delta.ReasoningContent,
+					},
+				})
+			}
+
+			// Handle text content
+			if content, ok := choice.Delta.Content.(string); ok && content != "" {
+				// If we're not in a text block, start one
+				if currentContentType != "text" {
+					closeCurrentBlock()
+					currentContentIndex++
+					currentContentType = "text"
+
+					_ = render.ClaudeObjectData(c, relaymodel.ClaudeStreamResponse{
+						Type:  "content_block_start",
+						Index: currentContentIndex,
 						ContentBlock: &relaymodel.ClaudeContent{
 							Type: "text",
 							Text: "",
 						},
 					})
-					sentContentBlockStart = true
 				}
 
 				contentText.WriteString(content)
 
-				// Send content_block_delta
 				_ = render.ClaudeObjectData(c, relaymodel.ClaudeStreamResponse{
 					Type:  "content_block_delta",
-					Index: 0,
+					Index: currentContentIndex,
 					Delta: &relaymodel.ClaudeDelta{
 						Type: "text_delta",
 						Text: content,
@@ -356,47 +409,17 @@ func ClaudeStreamHandler(
 				})
 			}
 
-			if choice.Delta.ReasoningContent != "" {
-				if !sentContentBlockStart && !hasToolCalls {
-					// Send content_block_start for text
-					_ = render.ClaudeObjectData(c, relaymodel.ClaudeStreamResponse{
-						Type:  "content_block_start",
-						Index: 0,
-						ContentBlock: &relaymodel.ClaudeContent{
-							Type: "text",
-							Text: "",
-						},
-					})
-					sentContentBlockStart = true
-				}
-
-				contentText.WriteString(choice.Delta.ReasoningContent)
-				_ = render.ClaudeObjectData(c, relaymodel.ClaudeStreamResponse{
-					Type:  "content_block_delta",
-					Index: 0,
-					Delta: &relaymodel.ClaudeDelta{
-						Type: "thinking_delta",
-						Text: choice.Delta.ReasoningContent,
-					},
-				})
-			}
-
 			// Handle tool calls
 			if len(choice.Delta.ToolCalls) > 0 {
-				hasToolCalls = true
-
 				for _, toolCall := range choice.Delta.ToolCalls {
 					idx := toolCall.Index
+
 					// Initialize tool call if new
 					if _, exists := toolCallsBuffer[idx]; !exists {
-						if sentContentBlockStart && idx == 0 {
-							// Close text block if it was started
-							_ = render.ClaudeObjectData(c, relaymodel.ClaudeStreamResponse{
-								Type:  "content_block_stop",
-								Index: 0,
-							})
-							toolCallIndex = 1
-						}
+						// Close current block if needed
+						closeCurrentBlock()
+						currentContentIndex++
+						currentContentType = "tool_use"
 
 						toolCallsBuffer[idx] = &relaymodel.ClaudeContent{
 							Type:  "tool_use",
@@ -408,7 +431,7 @@ func ClaudeStreamHandler(
 						// Send content_block_start for tool use
 						_ = render.ClaudeObjectData(c, relaymodel.ClaudeStreamResponse{
 							Type:         "content_block_start",
-							Index:        toolCallIndex + idx,
+							Index:        currentContentIndex,
 							ContentBlock: toolCallsBuffer[idx],
 						})
 					}
@@ -417,7 +440,7 @@ func ClaudeStreamHandler(
 					if toolCall.Function.Arguments != "" {
 						_ = render.ClaudeObjectData(c, relaymodel.ClaudeStreamResponse{
 							Type:  "content_block_delta",
-							Index: toolCallIndex + idx,
+							Index: currentContentIndex,
 							Delta: &relaymodel.ClaudeDelta{
 								Type:        "input_json_delta",
 								PartialJSON: toolCall.Function.Arguments,
@@ -438,26 +461,17 @@ func ClaudeStreamHandler(
 		log.Error("error reading stream: " + err.Error())
 	}
 
-	// Close any open content blocks
-	if sentContentBlockStart {
-		_ = render.ClaudeObjectData(c, relaymodel.ClaudeStreamResponse{
-			Type:  "content_block_stop",
-			Index: 0,
-		})
-	}
-
-	// Close tool blocks
-	for idx := range toolCallsBuffer {
-		_ = render.ClaudeObjectData(c, relaymodel.ClaudeStreamResponse{
-			Type:  "content_block_stop",
-			Index: toolCallIndex + idx,
-		})
-	}
+	// Close the last open content block
+	closeCurrentBlock()
 
 	// Calculate final usage if not provided
-	if usage.TotalTokens == 0 && contentText.Len() > 0 {
+	if usage.TotalTokens == 0 && (contentText.Len() > 0 || thinkingText.Len() > 0) {
+		totalText := contentText.String()
+		if thinkingText.Len() > 0 {
+			totalText = thinkingText.String() + "\n" + totalText
+		}
 		usage = ResponseText2Usage(
-			contentText.String(),
+			totalText,
 			meta.ActualModel,
 			int64(meta.RequestUsage.InputTokens),
 		)
@@ -469,6 +483,7 @@ func ClaudeStreamHandler(
 		stopReason = claudeStopReasonEndTurn
 	}
 
+	// Send message_delta with final usage
 	_ = render.ClaudeObjectData(c, relaymodel.ClaudeStreamResponse{
 		Type: "message_delta",
 		Delta: &relaymodel.ClaudeDelta{
@@ -477,6 +492,7 @@ func ClaudeStreamHandler(
 		Usage: &claudeUsage,
 	})
 
+	// Send message_stop
 	_ = render.ClaudeObjectData(c, relaymodel.ClaudeStreamResponse{
 		Type: "message_stop",
 	})
