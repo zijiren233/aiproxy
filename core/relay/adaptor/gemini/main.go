@@ -818,7 +818,9 @@ func StreamHandler(
 			usage = *response.Usage
 		}
 
-		responseText.WriteString(response.Choices[0].Delta.StringContent())
+		if len(response.Choices) > 0 {
+			responseText.WriteString(response.Choices[0].Delta.StringContent())
+		}
 
 		_ = render.OpenaiObjectData(c, response)
 	}
