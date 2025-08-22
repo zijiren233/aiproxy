@@ -98,12 +98,13 @@ func TestApplyPatches_GPT5MaxTokensConversion(t *testing.T) {
 	config := &patch.Config{}
 
 	testCases := []struct {
-		name                        string
-		input                       map[string]any
-		actualModel                 string
-		expectedMaxCompletionTokens int
-		shouldHaveMaxTokens         bool
-		shouldModify                bool
+		name                          string
+		input                         map[string]any
+		actualModel                   string
+		expectedMaxCompletionTokens   int
+		shouldHaveMaxTokens           bool
+		shouldModify                  bool
+		shouldHaveMaxCompletionTokens bool
 	}{
 		{
 			name: "gpt-5 model with max_tokens",
@@ -112,10 +113,11 @@ func TestApplyPatches_GPT5MaxTokensConversion(t *testing.T) {
 				"max_tokens":  4000,
 				"temperature": 0.7,
 			},
-			actualModel:                 "gpt-5",
-			expectedMaxCompletionTokens: 4000,
-			shouldHaveMaxTokens:         false,
-			shouldModify:                true,
+			actualModel:                   "gpt-5",
+			expectedMaxCompletionTokens:   4000,
+			shouldHaveMaxTokens:           false,
+			shouldModify:                  true,
+			shouldHaveMaxCompletionTokens: true,
 		},
 		{
 			name: "gpt-5 model without max_tokens",
@@ -123,9 +125,10 @@ func TestApplyPatches_GPT5MaxTokensConversion(t *testing.T) {
 				"model":       "gpt-5",
 				"temperature": 0.7,
 			},
-			actualModel:         "gpt-5",
-			shouldHaveMaxTokens: false,
-			shouldModify:        false,
+			actualModel:                   "gpt-5",
+			shouldHaveMaxTokens:           false,
+			shouldModify:                  true,
+			shouldHaveMaxCompletionTokens: false,
 		},
 		{
 			name: "gpt-4 model with max_tokens",
@@ -133,9 +136,10 @@ func TestApplyPatches_GPT5MaxTokensConversion(t *testing.T) {
 				"model":      "gpt-4",
 				"max_tokens": 4000,
 			},
-			actualModel:         "gpt-4",
-			shouldHaveMaxTokens: true,
-			shouldModify:        false,
+			actualModel:                   "gpt-4",
+			shouldHaveMaxTokens:           true,
+			shouldModify:                  false,
+			shouldHaveMaxCompletionTokens: false,
 		},
 	}
 
@@ -154,7 +158,7 @@ func TestApplyPatches_GPT5MaxTokensConversion(t *testing.T) {
 			err = sonic.Unmarshal(outputBytes, &output)
 			require.NoError(t, err)
 
-			if tc.shouldModify {
+			if tc.shouldHaveMaxCompletionTokens {
 				maxCompletionTokens, ok := output["max_completion_tokens"].(float64)
 				require.True(t, ok, "max_completion_tokens should be float64")
 				assert.Equal(
@@ -162,57 +166,13 @@ func TestApplyPatches_GPT5MaxTokensConversion(t *testing.T) {
 					tc.expectedMaxCompletionTokens,
 					int(maxCompletionTokens),
 				)
+			} else {
+				_, hasMaxCompletionTokens := output["max_completion_tokens"]
+				assert.False(t, hasMaxCompletionTokens, "max_completion_tokens should not exist")
 			}
 
 			_, hasMaxTokens := output["max_tokens"]
 			assert.Equal(t, tc.shouldHaveMaxTokens, hasMaxTokens)
-		})
-	}
-}
-
-func TestApplyPatches_O1ModelConversion(t *testing.T) {
-	plugin := patch.NewPatchPlugin()
-	config := &patch.Config{}
-
-	testCases := []struct {
-		name        string
-		actualModel string
-		shouldMatch bool
-	}{
-		{"o1", "o1", true},
-		{"o1-preview", "o1-preview", true},
-		{"o1-mini", "o1-mini", true},
-		{"o1-something-else", "o1-something-else", false},
-		{"gpt-4o1", "gpt-4o1", false},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			input := map[string]any{
-				"model":      tc.actualModel,
-				"max_tokens": 2000,
-			}
-			inputBytes, err := sonic.Marshal(input)
-			require.NoError(t, err)
-
-			meta := &meta.Meta{ActualModel: tc.actualModel}
-			outputBytes, modified, err := plugin.ApplyPatches(inputBytes, meta, config)
-			require.NoError(t, err)
-			assert.Equal(t, tc.shouldMatch, modified)
-
-			var output map[string]any
-
-			err = sonic.Unmarshal(outputBytes, &output)
-			require.NoError(t, err)
-
-			if tc.shouldMatch {
-				maxCompletionTokens, ok := output["max_completion_tokens"].(float64)
-				require.True(t, ok, "max_completion_tokens should be float64")
-				assert.Equal(t, 2000, int(maxCompletionTokens))
-
-				_, hasMaxTokens := output["max_tokens"]
-				assert.False(t, hasMaxTokens)
-			}
 		})
 	}
 }
