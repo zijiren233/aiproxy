@@ -228,6 +228,7 @@ func (m *Message) ParseContent() []MessageContent {
 				if imageURL == nil {
 					continue
 				}
+
 				contentList = append(contentList, MessageContent{
 					Type: ContentTypeImageURL,
 					ImageURL: &ImageURL{
@@ -236,6 +237,7 @@ func (m *Message) ParseContent() []MessageContent {
 				})
 			}
 		}
+
 		return contentList
 	default:
 		return nil

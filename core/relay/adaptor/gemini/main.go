@@ -256,7 +256,8 @@ func buildContents(
 		}
 
 		// Track tool calls from assistant messages
-		if message.Role == "assistant" && len(message.ToolCalls) > 0 {
+		switch {
+		case message.Role == "assistant" && len(message.ToolCalls) > 0:
 			for _, toolCall := range message.ToolCalls {
 				toolCallMap[toolCall.ID] = toolCall.Function.Name
 
@@ -276,7 +277,7 @@ func buildContents(
 					},
 				})
 			}
-		} else if message.Role == "tool" && message.ToolCallID != "" {
+		case message.Role == "tool" && message.ToolCallID != "":
 			// Handle tool results - get the tool name from our map
 			toolName := toolCallMap[message.ToolCallID]
 			if toolName == "" {
@@ -315,7 +316,7 @@ func buildContents(
 					},
 				},
 			})
-		} else if message.Role == "system" {
+		case message.Role == "system":
 			systemContent = &ChatContent{
 				Role: "user", // Gemini uses "user" for system content
 				Parts: []*Part{{
@@ -324,7 +325,7 @@ func buildContents(
 			}
 
 			continue
-		} else {
+		default:
 			// Handle regular messages
 			openaiContent := message.ParseContent()
 			for _, part := range openaiContent {

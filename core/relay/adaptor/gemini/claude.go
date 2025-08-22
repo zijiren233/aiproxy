@@ -225,7 +225,8 @@ func ClaudeStreamHandler(
 
 			// Process content parts
 			for _, part := range candidate.Content.Parts {
-				if part.Thought {
+				switch {
+				case part.Thought:
 					// Handle thinking content
 					if currentContentType != "thinking" {
 						closeCurrentBlock()
@@ -253,7 +254,7 @@ func ClaudeStreamHandler(
 							Thinking: part.Text,
 						},
 					})
-				} else if part.Text != "" {
+				case part.Text != "":
 					// Handle text content
 					if currentContentType != "text" {
 						closeCurrentBlock()
@@ -281,7 +282,7 @@ func ClaudeStreamHandler(
 							Text: part.Text,
 						},
 					})
-				} else if part.FunctionCall != nil {
+				case part.FunctionCall != nil:
 					// Handle tool/function calls
 					closeCurrentBlock()
 
@@ -304,13 +305,13 @@ func ClaudeStreamHandler(
 					})
 
 					// Send tool arguments as delta
-					argsJson, _ := sonic.MarshalString(part.FunctionCall.Args)
+					args, _ := sonic.MarshalString(part.FunctionCall.Args)
 					_ = render.ClaudeObjectData(c, relaymodel.ClaudeStreamResponse{
 						Type:  "content_block_delta",
 						Index: currentContentIndex,
 						Delta: &relaymodel.ClaudeDelta{
 							Type:        "input_json_delta",
-							PartialJSON: argsJson,
+							PartialJSON: args,
 						},
 					})
 				}
