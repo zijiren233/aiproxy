@@ -22,7 +22,9 @@ func (a *Adaptor) DefaultBaseURL() string {
 }
 
 func (a *Adaptor) SupportMode(m mode.Mode) bool {
-	return m == mode.ChatCompletions || m == mode.Embeddings
+	return m == mode.ChatCompletions ||
+		m == mode.Anthropic ||
+		m == mode.Embeddings
 }
 
 var v1ModelMap = map[string]struct{}{}
@@ -80,6 +82,8 @@ func (a *Adaptor) ConvertRequest(
 		return ConvertEmbeddingRequest(meta, req)
 	case mode.ChatCompletions:
 		return ConvertRequest(meta, req)
+	case mode.Anthropic:
+		return ConvertClaudeRequest(meta, req)
 	default:
 		return adaptor.ConvertResult{}, fmt.Errorf("unsupported mode: %s", meta.Mode)
 	}
@@ -108,6 +112,12 @@ func (a *Adaptor) DoResponse(
 			usage, err = StreamHandler(meta, c, resp)
 		} else {
 			usage, err = Handler(meta, c, resp)
+		}
+	case mode.Anthropic:
+		if utils.IsStreamResponse(resp) {
+			usage, err = ClaudeStreamHandler(meta, c, resp)
+		} else {
+			usage, err = ClaudeHandler(meta, c, resp)
 		}
 	default:
 		return model.Usage{}, relaymodel.WrapperOpenAIErrorWithMessage(

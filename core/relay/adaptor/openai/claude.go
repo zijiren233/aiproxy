@@ -24,12 +24,36 @@ func ConvertClaudeRequest(
 	meta *meta.Meta,
 	req *http.Request,
 ) (adaptor.ConvertResult, error) {
+	openAIRequest, err := ConvertClaudeRequestModel(meta, req)
+	if err != nil {
+		return adaptor.ConvertResult{}, err
+	}
+
+	// Marshal the converted request
+	jsonData, err := sonic.Marshal(openAIRequest)
+	if err != nil {
+		return adaptor.ConvertResult{}, err
+	}
+
+	return adaptor.ConvertResult{
+		Header: http.Header{
+			"Content-Type":   {"application/json"},
+			"Content-Length": {strconv.Itoa(len(jsonData))},
+		},
+		Body: bytes.NewReader(jsonData),
+	}, nil
+}
+
+func ConvertClaudeRequestModel(
+	meta *meta.Meta,
+	req *http.Request,
+) (*relaymodel.GeneralOpenAIRequest, error) {
 	// Parse Claude request
 	var claudeRequest relaymodel.ClaudeAnyContentRequest
 
 	err := common.UnmarshalRequestReusable(req, &claudeRequest)
 	if err != nil {
-		return adaptor.ConvertResult{}, err
+		return nil, err
 	}
 
 	// Convert to OpenAI format
@@ -63,19 +87,7 @@ func ConvertClaudeRequest(
 		}
 	}
 
-	// Marshal the converted request
-	jsonData, err := sonic.Marshal(openAIRequest)
-	if err != nil {
-		return adaptor.ConvertResult{}, err
-	}
-
-	return adaptor.ConvertResult{
-		Header: http.Header{
-			"Content-Type":   {"application/json"},
-			"Content-Length": {strconv.Itoa(len(jsonData))},
-		},
-		Body: bytes.NewReader(jsonData),
-	}, nil
+	return &openAIRequest, nil
 }
 
 // convertClaudeMessagesToOpenAI converts Claude message format to OpenAI format

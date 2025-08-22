@@ -1,6 +1,8 @@
 package model
 
-import "strings"
+import (
+	"strings"
+)
 
 type ResponseFormat struct {
 	JSONSchema *JSONSchema `json:"json_schema,omitempty"`
@@ -172,19 +174,16 @@ func (m *Message) StringContent() string {
 func (m *Message) ParseContent() []MessageContent {
 	var contentList []MessageContent
 
-	content, ok := m.Content.(string)
-	if ok {
+	switch content := m.Content.(type) {
+	case string:
 		contentList = append(contentList, MessageContent{
 			Type: ContentTypeText,
 			Text: content,
 		})
 
 		return contentList
-	}
-
-	anyList, ok := m.Content.([]any)
-	if ok {
-		for _, contentItem := range anyList {
+	case []any:
+		for _, contentItem := range content {
 			contentMap, ok := contentItem.(map[string]any)
 			if !ok {
 				continue
@@ -216,9 +215,31 @@ func (m *Message) ParseContent() []MessageContent {
 		}
 
 		return contentList
+	case []MessageContent:
+		for _, contentItem := range content {
+			switch contentItem.Type {
+			case ContentTypeText:
+				contentList = append(contentList, MessageContent{
+					Type: ContentTypeText,
+					Text: contentItem.Text,
+				})
+			case ContentTypeImageURL:
+				imageURL := contentItem.ImageURL
+				if imageURL == nil {
+					continue
+				}
+				contentList = append(contentList, MessageContent{
+					Type: ContentTypeImageURL,
+					ImageURL: &ImageURL{
+						URL: imageURL.URL,
+					},
+				})
+			}
+		}
+		return contentList
+	default:
+		return nil
 	}
-
-	return nil
 }
 
 type ImageURL struct {
