@@ -59,15 +59,23 @@ func (t redisTime) MarshalBinary() ([]byte, error) {
 }
 
 type TokenCache struct {
-	Group         string           `json:"group"       redis:"g"`
-	Key           string           `json:"-"           redis:"-"`
-	Name          string           `json:"name"        redis:"n"`
-	Subnets       redisStringSlice `json:"subnets"     redis:"s"`
-	Models        redisStringSlice `json:"models"      redis:"m"`
-	ID            int              `json:"id"          redis:"i"`
-	Status        int              `json:"status"      redis:"st"`
-	Quota         float64          `json:"quota"       redis:"q"`
-	UsedAmount    float64          `json:"used_amount" redis:"u"`
+	Group      string           `json:"group"       redis:"g"`
+	Key        string           `json:"-"           redis:"-"`
+	Name       string           `json:"name"        redis:"n"`
+	Subnets    redisStringSlice `json:"subnets"     redis:"s"`
+	Models     redisStringSlice `json:"models"      redis:"m"`
+	ID         int              `json:"id"          redis:"i"`
+	Status     int              `json:"status"      redis:"st"`
+	UsedAmount float64          `json:"used_amount" redis:"u"`
+
+	// Quota system
+	Quota                  float64   `json:"quota"                     redis:"q"`
+	PeriodQuota            float64   `json:"period_quota"              redis:"pq"`
+	PeriodType             string    `json:"period_type"               redis:"pt"`
+	PeriodStartTime        redisTime `json:"period_start_time"         redis:"ps"`
+	PeriodLastUpdateTime   redisTime `json:"period_last_update_time"   redis:"plut"`
+	PeriodLastUpdateAmount float64   `json:"period_last_update_amount" redis:"plua"`
+
 	availableSets []string
 	modelsBySet   map[string][]string
 }
@@ -138,8 +146,14 @@ func (t *Token) ToTokenCache() *TokenCache {
 		Models:     t.Models,
 		Subnets:    t.Subnets,
 		Status:     t.Status,
-		Quota:      t.Quota,
 		UsedAmount: t.UsedAmount,
+
+		Quota:                  t.Quota,
+		PeriodQuota:            t.PeriodQuota,
+		PeriodType:             t.PeriodType,
+		PeriodStartTime:        redisTime(t.PeriodStartTime),
+		PeriodLastUpdateTime:   redisTime(t.PeriodLastUpdateTime),
+		PeriodLastUpdateAmount: t.PeriodLastUpdateAmount,
 	}
 }
 
@@ -220,6 +234,26 @@ func CacheUpdateTokenUsedAmountOnlyIncrease(key string, amount float64) error {
 
 	return updateTokenUsedAmountOnlyIncreaseScript.Run(context.Background(), common.RDB, []string{common.RedisKeyf(TokenCacheKey, key)}, amount).
 		Err()
+}
+
+// CacheResetTokenPeriodUsage resets period usage in cache and updates period last update info
+func CacheResetTokenPeriodUsage(
+	key string,
+	periodLastUpdateTime time.Time,
+	periodLastUpdateAmount float64,
+) error {
+	if !common.RedisEnabled {
+		return nil
+	}
+
+	cacheKey := common.RedisKeyf(TokenCacheKey, key)
+	pipe := common.RDB.Pipeline()
+	periodLastUpdateTimeBytes, _ := periodLastUpdateTime.MarshalBinary()
+	pipe.HSet(context.Background(), cacheKey, "plut", periodLastUpdateTimeBytes)
+	pipe.HSet(context.Background(), cacheKey, "plua", periodLastUpdateAmount)
+	_, err := pipe.Exec(context.Background())
+
+	return err
 }
 
 var updateTokenNameScript = redis.NewScript(`
