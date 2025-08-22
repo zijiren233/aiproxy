@@ -32,7 +32,6 @@ type GeneralOpenAIRequest struct {
 	FunctionCall        any             `json:"function_call,omitempty"`
 	ToolChoice          any             `json:"tool_choice,omitempty"`
 	Stop                any             `json:"stop,omitempty"`
-	MaxCompletionTokens *int            `json:"max_completion_tokens,omitempty"`
 	TopLogprobs         *int            `json:"top_logprobs,omitempty"`
 	PresencePenalty     *float64        `json:"presence_penalty,omitempty"`
 	ResponseFormat      *ResponseFormat `json:"response_format,omitempty"`
@@ -48,6 +47,7 @@ type GeneralOpenAIRequest struct {
 	Tools               []Tool          `json:"tools,omitempty"`
 	Seed                float64         `json:"seed,omitempty"`
 	MaxTokens           int             `json:"max_tokens,omitempty"`
+	MaxCompletionTokens int             `json:"max_completion_tokens,omitempty"`
 	TopK                int             `json:"top_k,omitempty"`
 	NumCtx              int             `json:"num_ctx,omitempty"`
 	Stream              bool            `json:"stream,omitempty"`

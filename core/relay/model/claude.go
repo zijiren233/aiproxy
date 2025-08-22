@@ -146,18 +146,19 @@ type ClaudeRequest struct {
 }
 
 type ClaudeAnyContentRequest struct {
-	ToolChoice    any                       `json:"tool_choice,omitempty"`
-	Temperature   *float64                  `json:"temperature,omitempty"`
-	TopP          *float64                  `json:"top_p,omitempty"`
-	Model         string                    `json:"model,omitempty"`
-	System        []ClaudeContent           `json:"system,omitempty"`
-	Messages      []ClaudeAnyContentMessage `json:"messages"`
-	StopSequences []string                  `json:"stop_sequences,omitempty"`
-	Tools         []ClaudeTool              `json:"tools,omitempty"`
-	MaxTokens     int                       `json:"max_tokens,omitempty"`
-	TopK          int                       `json:"top_k,omitempty"`
-	Stream        bool                      `json:"stream,omitempty"`
-	Thinking      *ClaudeThinking           `json:"thinking,omitempty"`
+	ToolChoice          any                       `json:"tool_choice,omitempty"`
+	Temperature         *float64                  `json:"temperature,omitempty"`
+	TopP                *float64                  `json:"top_p,omitempty"`
+	Model               string                    `json:"model,omitempty"`
+	System              []ClaudeContent           `json:"system,omitempty"`
+	Messages            []ClaudeAnyContentMessage `json:"messages"`
+	StopSequences       []string                  `json:"stop_sequences,omitempty"`
+	Tools               []ClaudeTool              `json:"tools,omitempty"`
+	MaxTokens           int                       `json:"max_tokens,omitempty"`
+	MaxCompletionTokens int                       `json:"max_completion_tokens,omitempty"`
+	TopK                int                       `json:"top_k,omitempty"`
+	Stream              bool                      `json:"stream,omitempty"`
+	Thinking            *ClaudeThinking           `json:"thinking,omitempty"`
 }
 
 type ClaudeUsage struct {

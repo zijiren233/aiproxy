@@ -34,11 +34,12 @@ func ConvertClaudeRequest(
 
 	// Convert to OpenAI format
 	openAIRequest := relaymodel.GeneralOpenAIRequest{
-		Model:       meta.ActualModel,
-		Stream:      claudeRequest.Stream,
-		MaxTokens:   claudeRequest.MaxTokens,
-		Temperature: claudeRequest.Temperature,
-		TopP:        claudeRequest.TopP,
+		Model:               meta.ActualModel,
+		Stream:              claudeRequest.Stream,
+		MaxTokens:           claudeRequest.MaxTokens,
+		MaxCompletionTokens: claudeRequest.MaxCompletionTokens,
+		Temperature:         claudeRequest.Temperature,
+		TopP:                claudeRequest.TopP,
 	}
 
 	// Convert messages
@@ -108,11 +109,14 @@ func convertClaudeMessagesToOpenAI(
 	for _, msg := range claudeRequest.Messages {
 		// Check if this is a user message with tool results - handle specially
 		if msg.Role == "user" {
+			content, ok := msg.Content.([]any)
+
 			hasToolResults := false
-			switch content := msg.Content.(type) {
-			case []any:
+			if ok {
 				rawBytes, _ := sonic.Marshal(content)
+
 				var contentArray []relaymodel.ClaudeContent
+
 				_ = sonic.Unmarshal(rawBytes, &contentArray)
 
 				// First check if there are any tool_result blocks
@@ -145,6 +149,7 @@ func convertClaudeMessagesToOpenAI(
 							Content: regularContent,
 						})
 					}
+
 					continue // Skip the normal message processing
 				}
 			}
@@ -160,7 +165,9 @@ func convertClaudeMessagesToOpenAI(
 			openAIMsg.Content = content
 		case []any:
 			rawBytes, _ := sonic.Marshal(content)
+
 			var contentArray []relaymodel.ClaudeContent
+
 			_ = sonic.Unmarshal(rawBytes, &contentArray)
 
 			var parts []relaymodel.MessageContent
