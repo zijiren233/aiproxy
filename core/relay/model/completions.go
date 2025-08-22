@@ -1,6 +1,8 @@
 package model
 
-import "strings"
+import (
+	"strings"
+)
 
 type ResponseFormat struct {
 	JSONSchema *JSONSchema `json:"json_schema,omitempty"`
@@ -32,7 +34,6 @@ type GeneralOpenAIRequest struct {
 	FunctionCall        any             `json:"function_call,omitempty"`
 	ToolChoice          any             `json:"tool_choice,omitempty"`
 	Stop                any             `json:"stop,omitempty"`
-	MaxCompletionTokens *int            `json:"max_completion_tokens,omitempty"`
 	TopLogprobs         *int            `json:"top_logprobs,omitempty"`
 	PresencePenalty     *float64        `json:"presence_penalty,omitempty"`
 	ResponseFormat      *ResponseFormat `json:"response_format,omitempty"`
@@ -48,6 +49,7 @@ type GeneralOpenAIRequest struct {
 	Tools               []Tool          `json:"tools,omitempty"`
 	Seed                float64         `json:"seed,omitempty"`
 	MaxTokens           int             `json:"max_tokens,omitempty"`
+	MaxCompletionTokens int             `json:"max_completion_tokens,omitempty"`
 	TopK                int             `json:"top_k,omitempty"`
 	NumCtx              int             `json:"num_ctx,omitempty"`
 	Stream              bool            `json:"stream,omitempty"`
@@ -172,19 +174,16 @@ func (m *Message) StringContent() string {
 func (m *Message) ParseContent() []MessageContent {
 	var contentList []MessageContent
 
-	content, ok := m.Content.(string)
-	if ok {
+	switch content := m.Content.(type) {
+	case string:
 		contentList = append(contentList, MessageContent{
 			Type: ContentTypeText,
 			Text: content,
 		})
 
 		return contentList
-	}
-
-	anyList, ok := m.Content.([]any)
-	if ok {
-		for _, contentItem := range anyList {
+	case []any:
+		for _, contentItem := range content {
 			contentMap, ok := contentItem.(map[string]any)
 			if !ok {
 				continue
@@ -216,9 +215,33 @@ func (m *Message) ParseContent() []MessageContent {
 		}
 
 		return contentList
-	}
+	case []MessageContent:
+		for _, contentItem := range content {
+			switch contentItem.Type {
+			case ContentTypeText:
+				contentList = append(contentList, MessageContent{
+					Type: ContentTypeText,
+					Text: contentItem.Text,
+				})
+			case ContentTypeImageURL:
+				imageURL := contentItem.ImageURL
+				if imageURL == nil {
+					continue
+				}
 
-	return nil
+				contentList = append(contentList, MessageContent{
+					Type: ContentTypeImageURL,
+					ImageURL: &ImageURL{
+						URL: imageURL.URL,
+					},
+				})
+			}
+		}
+
+		return contentList
+	default:
+		return nil
+	}
 }
 
 type ImageURL struct {

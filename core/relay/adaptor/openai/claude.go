@@ -24,21 +24,46 @@ func ConvertClaudeRequest(
 	meta *meta.Meta,
 	req *http.Request,
 ) (adaptor.ConvertResult, error) {
+	openAIRequest, err := ConvertClaudeRequestModel(meta, req)
+	if err != nil {
+		return adaptor.ConvertResult{}, err
+	}
+
+	// Marshal the converted request
+	jsonData, err := sonic.Marshal(openAIRequest)
+	if err != nil {
+		return adaptor.ConvertResult{}, err
+	}
+
+	return adaptor.ConvertResult{
+		Header: http.Header{
+			"Content-Type":   {"application/json"},
+			"Content-Length": {strconv.Itoa(len(jsonData))},
+		},
+		Body: bytes.NewReader(jsonData),
+	}, nil
+}
+
+func ConvertClaudeRequestModel(
+	meta *meta.Meta,
+	req *http.Request,
+) (*relaymodel.GeneralOpenAIRequest, error) {
 	// Parse Claude request
 	var claudeRequest relaymodel.ClaudeAnyContentRequest
 
 	err := common.UnmarshalRequestReusable(req, &claudeRequest)
 	if err != nil {
-		return adaptor.ConvertResult{}, err
+		return nil, err
 	}
 
 	// Convert to OpenAI format
 	openAIRequest := relaymodel.GeneralOpenAIRequest{
-		Model:       meta.ActualModel,
-		Stream:      claudeRequest.Stream,
-		MaxTokens:   claudeRequest.MaxTokens,
-		Temperature: claudeRequest.Temperature,
-		TopP:        claudeRequest.TopP,
+		Model:               meta.ActualModel,
+		Stream:              claudeRequest.Stream,
+		MaxTokens:           claudeRequest.MaxTokens,
+		MaxCompletionTokens: claudeRequest.MaxCompletionTokens,
+		Temperature:         claudeRequest.Temperature,
+		TopP:                claudeRequest.TopP,
 	}
 
 	// Convert messages
@@ -62,19 +87,7 @@ func ConvertClaudeRequest(
 		}
 	}
 
-	// Marshal the converted request
-	jsonData, err := sonic.Marshal(openAIRequest)
-	if err != nil {
-		return adaptor.ConvertResult{}, err
-	}
-
-	return adaptor.ConvertResult{
-		Header: http.Header{
-			"Content-Type":   {"application/json"},
-			"Content-Length": {strconv.Itoa(len(jsonData))},
-		},
-		Body: bytes.NewReader(jsonData),
-	}, nil
+	return &openAIRequest, nil
 }
 
 // convertClaudeMessagesToOpenAI converts Claude message format to OpenAI format
@@ -106,22 +119,71 @@ func convertClaudeMessagesToOpenAI(
 
 	// Convert regular messages
 	for _, msg := range claudeRequest.Messages {
+		// Check if this is a user message with tool results - handle specially
+		if msg.Role == "user" {
+			content, ok := msg.Content.([]any)
+
+			hasToolResults := false
+			if ok {
+				rawBytes, _ := sonic.Marshal(content)
+
+				var contentArray []relaymodel.ClaudeContent
+
+				_ = sonic.Unmarshal(rawBytes, &contentArray)
+
+				// First check if there are any tool_result blocks
+				var regularContent []relaymodel.MessageContent
+				for _, content := range contentArray {
+					switch content.Type {
+					case "tool_result":
+						hasToolResults = true
+						// Create a separate tool message for each tool_result
+						toolMsg := relaymodel.Message{
+							Role:       "tool",
+							Content:    content.Content,
+							ToolCallID: content.ToolUseID,
+						}
+						messages = append(messages, toolMsg)
+					case "text":
+						// Collect non-tool_result content
+						regularContent = append(regularContent, relaymodel.MessageContent{
+							Type: relaymodel.ContentTypeText,
+							Text: content.Text,
+						})
+					}
+				}
+
+				// If there were tool results and also regular content, add the regular content as a user message
+				if hasToolResults {
+					if len(regularContent) > 0 {
+						messages = append(messages, relaymodel.Message{
+							Role:    "user",
+							Content: regularContent,
+						})
+					}
+
+					continue // Skip the normal message processing
+				}
+			}
+		}
+
+		// Regular message processing
 		openAIMsg := relaymodel.Message{
 			Role: msg.Role,
 		}
 
-		switch msg.Content.(type) {
+		switch content := msg.Content.(type) {
 		case string:
-			openAIMsg.Content = msg.Content
+			openAIMsg.Content = content
 		case []any:
-			rawBytes, _ := sonic.Marshal(msg.Content)
+			rawBytes, _ := sonic.Marshal(content)
 
-			var content []relaymodel.ClaudeContent
+			var contentArray []relaymodel.ClaudeContent
 
-			_ = sonic.Unmarshal(rawBytes, &content)
+			_ = sonic.Unmarshal(rawBytes, &contentArray)
 
 			var parts []relaymodel.MessageContent
-			for _, content := range content {
+			for _, content := range contentArray {
 				switch content.Type {
 				case "text":
 					parts = append(parts, relaymodel.MessageContent{
@@ -149,13 +211,8 @@ func convertClaudeMessagesToOpenAI(
 							ImageURL: &imageURL,
 						})
 					}
-				case "tool_result":
-					// Convert tool result to assistant message with tool calls
-					openAIMsg.Role = "tool"
-					openAIMsg.Content = content.Content
-					openAIMsg.ToolCallID = content.ToolUseID
 				case "tool_use":
-					// This should be handled as tool calls
+					// Handle tool calls
 					if openAIMsg.ToolCalls == nil {
 						openAIMsg.ToolCalls = []relaymodel.ToolCall{}
 					}
@@ -178,8 +235,6 @@ func convertClaudeMessagesToOpenAI(
 				openAIMsg.Content = parts
 			}
 		}
-
-		// Handle different content types
 
 		messages = append(messages, openAIMsg)
 	}

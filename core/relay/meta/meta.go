@@ -225,6 +225,35 @@ func (m *Meta) GetInt(key string) int {
 	return i
 }
 
+// PushToSlice appends an item to a slice stored under the given key
+func (m *Meta) PushToSlice(key string, item any) {
+	var slice []any
+	if existing, ok := m.Get(key); ok {
+		if existingSlice, ok := existing.([]any); ok {
+			slice = existingSlice
+		}
+	}
+
+	slice = append(slice, item)
+	m.Set(key, slice)
+}
+
+// GetSlice retrieves a slice stored under the given key
+func (m *Meta) GetSlice(key string) []any {
+	if slice, ok := m.Get(key); ok {
+		if typedSlice, ok := slice.([]any); ok {
+			return typedSlice
+		}
+	}
+
+	return nil
+}
+
+// ClearSlice removes the slice stored under the given key
+func (m *Meta) ClearSlice(key string) {
+	m.Delete(key)
+}
+
 func GetMappedModelName(modelName string, mapping map[string]string) (string, bool) {
 	if len(modelName) == 0 {
 		return modelName, false

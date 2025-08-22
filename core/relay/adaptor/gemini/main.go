@@ -236,23 +236,31 @@ func buildMessageParts(message relaymodel.MessageContent) *Part {
 	return part
 }
 
+// Add this helper function to track tool calls
 func buildContents(
 	textRequest *relaymodel.GeneralOpenAIRequest,
 ) (*ChatContent, []*ChatContent, []*Part) {
 	contents := make([]*ChatContent, 0, len(textRequest.Messages))
 
-	var imageTasks []*Part
+	var (
+		imageTasks    []*Part
+		systemContent *ChatContent
+	)
 
-	var systemContent *ChatContent
+	// Track tool calls by ID to get their names for tool results
+	toolCallMap := make(map[string]string) // tool_call_id -> tool_name
 
 	for _, message := range textRequest.Messages {
 		content := ChatContent{
 			Role: message.Role,
 		}
 
+		// Track tool calls from assistant messages
 		switch {
 		case message.Role == "assistant" && len(message.ToolCalls) > 0:
 			for _, toolCall := range message.ToolCalls {
+				toolCallMap[toolCall.ID] = toolCall.Function.Name
+
 				var args map[string]any
 				if toolCall.Function.Arguments != "" {
 					if err := sonic.UnmarshalString(toolCall.Function.Arguments, &args); err != nil {
@@ -270,6 +278,18 @@ func buildContents(
 				})
 			}
 		case message.Role == "tool" && message.ToolCallID != "":
+			// Handle tool results - get the tool name from our map
+			toolName := toolCallMap[message.ToolCallID]
+			if toolName == "" {
+				// Fallback: try to get from message.Name if available
+				if message.Name != nil {
+					toolName = *message.Name
+				} else {
+					// If still no name, use a default or the tool ID
+					toolName = "tool_" + message.ToolCallID
+				}
+			}
+
 			var contentMap map[string]any
 			if message.Content != nil {
 				switch content := message.Content.(type) {
@@ -277,53 +297,58 @@ func buildContents(
 					contentMap = content
 				case string:
 					if err := sonic.UnmarshalString(content, &contentMap); err != nil {
-						log.Error("unmarshal content failed: " + err.Error())
+						contentMap = map[string]any{"result": content}
 					}
 				}
 			} else {
 				contentMap = make(map[string]any)
 			}
 
-			name := ""
-			if message.Name != nil {
-				name = *message.Name
-			}
-
 			content.Parts = append(content.Parts, &Part{
 				FunctionResponse: &FunctionResponse{
-					Name: name,
+					Name: toolName, // Now properly set
 					Response: struct {
 						Name    string         `json:"name"`
 						Content map[string]any `json:"content"`
 					}{
-						Name:    name,
+						Name:    toolName, // Now properly set
 						Content: contentMap,
 					},
 				},
 			})
+		case message.Role == "system":
+			systemContent = &ChatContent{
+				Role: "user", // Gemini uses "user" for system content
+				Parts: []*Part{{
+					Text: message.StringContent(),
+				}},
+			}
+
+			continue
 		default:
+			// Handle regular messages
 			openaiContent := message.ParseContent()
 			for _, part := range openaiContent {
-				part := buildMessageParts(part)
-				if part.InlineData != nil {
-					imageTasks = append(imageTasks, part)
+				msgPart := buildMessageParts(part)
+				if msgPart.InlineData != nil {
+					imageTasks = append(imageTasks, msgPart)
 				}
 
-				content.Parts = append(content.Parts, part)
+				content.Parts = append(content.Parts, msgPart)
 			}
 		}
 
+		// Adjust role for Gemini
 		switch content.Role {
 		case "assistant":
 			content.Role = "model"
 		case "tool":
 			content.Role = "user"
-		case "system":
-			systemContent = &content
-			continue
 		}
 
-		contents = append(contents, &content)
+		if len(content.Parts) > 0 {
+			contents = append(contents, &content)
+		}
 	}
 
 	return systemContent, contents, imageTasks
