@@ -19,6 +19,8 @@ type PatchRule struct {
 	Description string `json:"description,omitempty"`
 	// Conditions determine when this patch should be applied
 	Conditions []PatchCondition `json:"conditions,omitempty"`
+	// ConditionLogic defines how conditions are combined (default: "and")
+	ConditionLogic LogicOperator `json:"condition_logic,omitempty"`
 	// Operations define what modifications to make
 	Operations []PatchOperation `json:"operations"`
 }
@@ -34,6 +36,8 @@ type PatchCondition struct {
 	Value string `json:"value"`
 	// Values is an array of values for 'in' and 'not_in' operators
 	Values []string `json:"values,omitempty"`
+	// Negate inverts the result of this condition (for "not" logic)
+	Negate bool `json:"negate,omitempty"`
 }
 
 type PatchFunction func(root *ast.Node) (bool, error)
@@ -46,8 +50,8 @@ type PatchOperation struct {
 	Key string `json:"key"`
 	// Value is the new value to set (not used for delete operations)
 	Value any `json:"value,omitempty"`
-	// Function is the inline function code for OpFunction operations
-	function PatchFunction `json:"-"`
+	// Function is the inline Function code for OpFunction operations
+	Function PatchFunction `json:"-"`
 }
 
 // ConditionOperator defines how to evaluate a condition
@@ -69,6 +73,16 @@ const (
 	OperatorLessEq      ConditionOperator = "less_eq"
 	OperatorIn          ConditionOperator = "in"
 	OperatorNotIn       ConditionOperator = "not_in"
+)
+
+// LogicOperator defines how multiple conditions are combined
+type LogicOperator string
+
+const (
+	// LogicAnd requires all conditions to be true (default)
+	LogicAnd LogicOperator = "and"
+	// LogicOr requires at least one condition to be true
+	LogicOr LogicOperator = "or"
 )
 
 // OperationType defines the type of operation to perform
@@ -102,20 +116,26 @@ const (
 // DefaultPredefinedPatches are built-in patches that are always available
 var DefaultPredefinedPatches = []PatchRule{
 	{
-		Name:        "deepseek_max_tokens_limit",
-		Description: "Limit max_tokens to 16000 for DeepSeek models",
+		Name:           "deepseek_max_tokens_limit",
+		Description:    "Limit max_tokens to 16000 for DeepSeek models",
+		ConditionLogic: LogicOr,
 		Conditions: []PatchCondition{
 			{
 				Key:      "model",
 				Operator: OperatorContains,
-				Value:    "deepseek",
+				Value:    "deepseek-v3",
+			},
+			{
+				Key:      "model",
+				Operator: OperatorContains,
+				Value:    "deepseek-chat",
 			},
 		},
 		Operations: []PatchOperation{
 			{
 				Op:    OpLimit,
 				Key:   "max_tokens",
-				Value: 16000,
+				Value: 16384,
 			},
 		},
 	},
@@ -131,7 +151,6 @@ var DefaultPredefinedPatches = []PatchRule{
 			{
 				Key:      "max_tokens",
 				Operator: OperatorExists,
-				Value:    "",
 			},
 		},
 		Operations: []PatchOperation{
@@ -143,73 +162,6 @@ var DefaultPredefinedPatches = []PatchRule{
 			{
 				Op:  OpDelete,
 				Key: "max_tokens",
-			},
-		},
-	},
-	{
-		Name:        "o1_max_tokens_to_max_completion_tokens",
-		Description: "Convert max_tokens to max_completion_tokens for o1 models",
-		Conditions: []PatchCondition{
-			{
-				Key:      "model",
-				Operator: OperatorRegex,
-				Value:    "^o1(-preview|-mini)?$",
-			},
-			{
-				Key:      "max_tokens",
-				Operator: OperatorExists,
-				Value:    "",
-			},
-		},
-		Operations: []PatchOperation{
-			{
-				Op:    OpSet,
-				Key:   "max_completion_tokens",
-				Value: "{{max_tokens}}",
-			},
-			{
-				Op:  OpDelete,
-				Key: "max_tokens",
-			},
-		},
-	},
-	{
-		Name:        "claude_max_tokens_limit",
-		Description: "Limit max_tokens to reasonable values for Claude models",
-		Conditions: []PatchCondition{
-			{
-				Key:      "model",
-				Operator: OperatorContains,
-				Value:    "claude",
-			},
-		},
-		Operations: []PatchOperation{
-			{
-				Op:    OpLimit,
-				Key:   "max_tokens",
-				Value: 8192,
-			},
-		},
-	},
-	{
-		Name:        "remove_unsupported_stream_options",
-		Description: "Remove stream_options for models that don't support it",
-		Conditions: []PatchCondition{
-			{
-				Key:      "model",
-				Operator: OperatorRegex,
-				Value:    "(gpt-3\\.5|gpt-4-(?!turbo))",
-			},
-			{
-				Key:      "stream_options",
-				Operator: OperatorExists,
-				Value:    "",
-			},
-		},
-		Operations: []PatchOperation{
-			{
-				Op:  OpDelete,
-				Key: "stream_options",
 			},
 		},
 	},

@@ -11,13 +11,13 @@ import (
 )
 
 func TestNew(t *testing.T) {
-	plugin := patch.New()
+	plugin := patch.NewPatchPlugin()
 	assert.NotNil(t, plugin)
 	assert.True(t, len(patch.DefaultPredefinedPatches) > 0)
 }
 
 func TestApplyPatches_DeepSeekMaxTokensLimit(t *testing.T) {
-	plugin := patch.New()
+	plugin := patch.NewPatchPlugin()
 	config := &patch.Config{}
 
 	testCases := []struct {
@@ -34,7 +34,17 @@ func TestApplyPatches_DeepSeekMaxTokensLimit(t *testing.T) {
 				"max_tokens": 20000,
 			},
 			actualModel:       "deepseek-chat",
-			expectedMaxTokens: 16000,
+			expectedMaxTokens: 16384,
+			shouldModify:      true,
+		},
+		{
+			name: "deepseek model with high max_tokens",
+			input: map[string]any{
+				"model":      "deepseek-v3",
+				"max_tokens": 20000,
+			},
+			actualModel:       "deepseek-v3",
+			expectedMaxTokens: 16384,
 			shouldModify:      true,
 		},
 		{
@@ -84,7 +94,7 @@ func TestApplyPatches_DeepSeekMaxTokensLimit(t *testing.T) {
 }
 
 func TestApplyPatches_GPT5MaxTokensConversion(t *testing.T) {
-	plugin := patch.New()
+	plugin := patch.NewPatchPlugin()
 	config := &patch.Config{}
 
 	testCases := []struct {
@@ -161,7 +171,7 @@ func TestApplyPatches_GPT5MaxTokensConversion(t *testing.T) {
 }
 
 func TestApplyPatches_O1ModelConversion(t *testing.T) {
-	plugin := patch.New()
+	plugin := patch.NewPatchPlugin()
 	config := &patch.Config{}
 
 	testCases := []struct {
@@ -199,6 +209,7 @@ func TestApplyPatches_O1ModelConversion(t *testing.T) {
 				maxCompletionTokens, ok := output["max_completion_tokens"].(float64)
 				require.True(t, ok, "max_completion_tokens should be float64")
 				assert.Equal(t, 2000, int(maxCompletionTokens))
+
 				_, hasMaxTokens := output["max_tokens"]
 				assert.False(t, hasMaxTokens)
 			}
@@ -207,7 +218,7 @@ func TestApplyPatches_O1ModelConversion(t *testing.T) {
 }
 
 func TestCustomUserPatches(t *testing.T) {
-	plugin := patch.New()
+	plugin := patch.NewPatchPlugin()
 	config := &patch.Config{
 		UserPatches: []patch.PatchRule{
 			{
@@ -269,7 +280,7 @@ func TestCustomUserPatches(t *testing.T) {
 }
 
 func TestNestedFieldOperations(t *testing.T) {
-	plugin := patch.New()
+	plugin := patch.NewPatchPlugin()
 	config := &patch.Config{
 		UserPatches: []patch.PatchRule{
 			{
@@ -323,7 +334,7 @@ func TestNestedFieldOperations(t *testing.T) {
 }
 
 func TestPlaceholderResolution(t *testing.T) {
-	plugin := patch.New()
+	plugin := patch.NewPatchPlugin()
 	config := &patch.Config{
 		UserPatches: []patch.PatchRule{
 			{
@@ -332,7 +343,6 @@ func TestPlaceholderResolution(t *testing.T) {
 					{
 						Key:      "max_tokens",
 						Operator: patch.OperatorExists,
-						Value:    "",
 					},
 				},
 				Operations: []patch.PatchOperation{
@@ -370,12 +380,13 @@ func TestPlaceholderResolution(t *testing.T) {
 	maxCompletionTokens, ok := output["max_completion_tokens"].(float64)
 	require.True(t, ok, "max_completion_tokens should be float64")
 	assert.Equal(t, 3000, int(maxCompletionTokens))
+
 	_, hasMaxTokens := output["max_tokens"]
 	assert.False(t, hasMaxTokens)
 }
 
 func TestOperators(t *testing.T) {
-	plugin := patch.New()
+	plugin := patch.NewPatchPlugin()
 	config := &patch.Config{
 		UserPatches: []patch.PatchRule{
 			{
@@ -424,6 +435,7 @@ func TestOperators(t *testing.T) {
 
 				err = sonic.Unmarshal(outputBytes, &output)
 				require.NoError(t, err)
+
 				matched, ok := output["matched"].(bool)
 				require.True(t, ok, "matched should be bool")
 				assert.True(t, matched)
@@ -433,7 +445,7 @@ func TestOperators(t *testing.T) {
 }
 
 func TestInvalidJSON(t *testing.T) {
-	plugin := patch.New()
+	plugin := patch.NewPatchPlugin()
 	config := &patch.Config{}
 
 	invalidJSON := []byte(`{"invalid": json}`)
@@ -475,5 +487,309 @@ func TestToFloat64(t *testing.T) {
 			assert.NoError(t, err)
 			assert.Equal(t, tc.expected, result)
 		}
+	}
+}
+
+func TestConditionLogicOperators(t *testing.T) {
+	plugin := patch.NewPatchPlugin()
+
+	testCases := []struct {
+		name         string
+		config       *patch.Config
+		input        map[string]any
+		actualModel  string
+		shouldModify bool
+	}{
+		{
+			name: "OR logic - one condition matches",
+			config: &patch.Config{
+				UserPatches: []patch.PatchRule{
+					{
+						Name:           "or_logic_test",
+						ConditionLogic: patch.LogicOr,
+						Conditions: []patch.PatchCondition{
+							{
+								Key:      "model",
+								Operator: patch.OperatorEquals,
+								Value:    "gpt-4",
+							},
+							{
+								Key:      "temperature",
+								Operator: patch.OperatorGreaterThan,
+								Value:    "1.5",
+							},
+						},
+						Operations: []patch.PatchOperation{
+							{
+								Op:    patch.OpSet,
+								Key:   "modified",
+								Value: true,
+							},
+						},
+					},
+				},
+			},
+			input: map[string]any{
+				"model":       "claude-3",
+				"temperature": 2.0,
+			},
+			actualModel:  "claude-3",
+			shouldModify: true,
+		},
+		{
+			name: "OR logic - no condition matches",
+			config: &patch.Config{
+				UserPatches: []patch.PatchRule{
+					{
+						Name:           "or_logic_test_no_match",
+						ConditionLogic: patch.LogicOr,
+						Conditions: []patch.PatchCondition{
+							{
+								Key:      "model",
+								Operator: patch.OperatorEquals,
+								Value:    "gpt-4",
+							},
+							{
+								Key:      "temperature",
+								Operator: patch.OperatorGreaterThan,
+								Value:    "1.5",
+							},
+						},
+						Operations: []patch.PatchOperation{
+							{
+								Op:    patch.OpSet,
+								Key:   "modified",
+								Value: true,
+							},
+						},
+					},
+				},
+			},
+			input: map[string]any{
+				"model":       "claude-3",
+				"temperature": 1.0,
+			},
+			actualModel:  "claude-3",
+			shouldModify: false,
+		},
+		{
+			name: "AND logic (default) - all conditions match",
+			config: &patch.Config{
+				UserPatches: []patch.PatchRule{
+					{
+						Name: "and_logic_test",
+						Conditions: []patch.PatchCondition{
+							{
+								Key:      "model",
+								Operator: patch.OperatorContains,
+								Value:    "gpt",
+							},
+							{
+								Key:      "temperature",
+								Operator: patch.OperatorLessThan,
+								Value:    "1.5",
+							},
+						},
+						Operations: []patch.PatchOperation{
+							{
+								Op:    patch.OpSet,
+								Key:   "modified",
+								Value: true,
+							},
+						},
+					},
+				},
+			},
+			input: map[string]any{
+				"model":       "gpt-4",
+				"temperature": 1.0,
+			},
+			actualModel:  "gpt-4",
+			shouldModify: true,
+		},
+		{
+			name: "AND logic (default) - one condition fails",
+			config: &patch.Config{
+				UserPatches: []patch.PatchRule{
+					{
+						Name: "and_logic_test_fail",
+						Conditions: []patch.PatchCondition{
+							{
+								Key:      "model",
+								Operator: patch.OperatorContains,
+								Value:    "gpt",
+							},
+							{
+								Key:      "temperature",
+								Operator: patch.OperatorLessThan,
+								Value:    "1.5",
+							},
+						},
+						Operations: []patch.PatchOperation{
+							{
+								Op:    patch.OpSet,
+								Key:   "modified",
+								Value: true,
+							},
+						},
+					},
+				},
+			},
+			input: map[string]any{
+				"model":       "gpt-4",
+				"temperature": 2.0,
+			},
+			actualModel:  "gpt-4",
+			shouldModify: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			inputBytes, err := sonic.Marshal(tc.input)
+			require.NoError(t, err)
+
+			meta := &meta.Meta{ActualModel: tc.actualModel}
+			outputBytes, modified, err := plugin.ApplyPatches(inputBytes, meta, tc.config)
+			require.NoError(t, err)
+			assert.Equal(t, tc.shouldModify, modified)
+
+			if tc.shouldModify {
+				var output map[string]any
+
+				err = sonic.Unmarshal(outputBytes, &output)
+				require.NoError(t, err)
+				assert.Equal(t, output["modified"], true)
+			}
+		})
+	}
+}
+
+func TestConditionNegation(t *testing.T) {
+	plugin := patch.NewPatchPlugin()
+
+	testCases := []struct {
+		name         string
+		config       *patch.Config
+		input        map[string]any
+		actualModel  string
+		shouldModify bool
+	}{
+		{
+			name: "negate condition - should match when negated",
+			config: &patch.Config{
+				UserPatches: []patch.PatchRule{
+					{
+						Name: "negate_test",
+						Conditions: []patch.PatchCondition{
+							{
+								Key:      "model",
+								Operator: patch.OperatorEquals,
+								Value:    "gpt-4",
+								Negate:   true,
+							},
+						},
+						Operations: []patch.PatchOperation{
+							{
+								Op:    patch.OpSet,
+								Key:   "modified",
+								Value: true,
+							},
+						},
+					},
+				},
+			},
+			input: map[string]any{
+				"model": "claude-3",
+			},
+			actualModel:  "claude-3",
+			shouldModify: true,
+		},
+		{
+			name: "negate condition - should not match when negated",
+			config: &patch.Config{
+				UserPatches: []patch.PatchRule{
+					{
+						Name: "negate_test_no_match",
+						Conditions: []patch.PatchCondition{
+							{
+								Key:      "model",
+								Operator: patch.OperatorEquals,
+								Value:    "gpt-4",
+								Negate:   true,
+							},
+						},
+						Operations: []patch.PatchOperation{
+							{
+								Op:    patch.OpSet,
+								Key:   "modified",
+								Value: true,
+							},
+						},
+					},
+				},
+			},
+			input: map[string]any{
+				"model": "gpt-4",
+			},
+			actualModel:  "gpt-4",
+			shouldModify: false,
+		},
+		{
+			name: "OR with negation - complex logic",
+			config: &patch.Config{
+				UserPatches: []patch.PatchRule{
+					{
+						Name:           "or_with_negate",
+						ConditionLogic: patch.LogicOr,
+						Conditions: []patch.PatchCondition{
+							{
+								Key:      "model",
+								Operator: patch.OperatorEquals,
+								Value:    "gpt-4",
+							},
+							{
+								Key:      "temperature",
+								Operator: patch.OperatorExists,
+								Negate:   true, // NOT exists
+							},
+						},
+						Operations: []patch.PatchOperation{
+							{
+								Op:    patch.OpSet,
+								Key:   "modified",
+								Value: true,
+							},
+						},
+					},
+				},
+			},
+			input: map[string]any{
+				"model": "claude-3",
+				// no temperature field
+			},
+			actualModel:  "claude-3",
+			shouldModify: true, // Should match because temperature doesn't exist (negated exists)
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			inputBytes, err := sonic.Marshal(tc.input)
+			require.NoError(t, err)
+
+			meta := &meta.Meta{ActualModel: tc.actualModel}
+			outputBytes, modified, err := plugin.ApplyPatches(inputBytes, meta, tc.config)
+			require.NoError(t, err)
+			assert.Equal(t, tc.shouldModify, modified)
+
+			if tc.shouldModify {
+				var output map[string]any
+
+				err = sonic.Unmarshal(outputBytes, &output)
+				require.NoError(t, err)
+				assert.Equal(t, output["modified"], true)
+			}
+		})
 	}
 }

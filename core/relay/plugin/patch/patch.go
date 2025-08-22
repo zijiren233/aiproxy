@@ -6,13 +6,13 @@ import (
 	"fmt"
 	"net/http"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 
 	"github.com/bytedance/sonic"
 	"github.com/bytedance/sonic/ast"
 	"github.com/labring/aiproxy/core/common"
-	"github.com/labring/aiproxy/core/model"
 	"github.com/labring/aiproxy/core/relay/adaptor"
 	"github.com/labring/aiproxy/core/relay/meta"
 	"github.com/labring/aiproxy/core/relay/plugin"
@@ -23,14 +23,44 @@ var _ plugin.Plugin = (*Plugin)(nil)
 
 const PluginName = "patch"
 
+// LazyPatchData represents data to be applied by patch plugin later
+type LazyPatchData struct {
+	Source string `json:"source"` // Source plugin name
+	Data   any    `json:"data"`   // Data to be patched
+}
+
+const lazyPatchesKey = "_lazy_patches"
+
 // Plugin implements JSON request patching functionality
 type Plugin struct {
 	noop.Noop
 }
 
-// New creates a new patch plugin instance
-func New() *Plugin {
+// NewPatchPlugin creates a new patch plugin instance
+func NewPatchPlugin() *Plugin {
 	return &Plugin{}
+}
+
+// AddLazyPatch adds data to the lazy patch queue in meta
+func AddLazyPatch(meta *meta.Meta, patch PatchOperation) {
+	meta.PushToSlice(lazyPatchesKey, patch)
+}
+
+// GetLazyPatches retrieves all lazy patch data from meta
+func GetLazyPatches(meta *meta.Meta) []PatchOperation {
+	slice := meta.GetSlice(lazyPatchesKey)
+	if slice == nil {
+		return nil
+	}
+
+	patches := make([]PatchOperation, 0, len(slice))
+	for _, item := range slice {
+		if patch, ok := item.(PatchOperation); ok {
+			patches = append(patches, patch)
+		}
+	}
+
+	return patches
 }
 
 // ConvertRequest applies JSON patches to the request body
@@ -41,10 +71,7 @@ func (p *Plugin) ConvertRequest(
 	do adaptor.ConvertRequest,
 ) (adaptor.ConvertResult, error) {
 	// Load patch configuration from model config
-	config, err := p.loadConfig(meta)
-	if err != nil {
-		return do.ConvertRequest(meta, store, req)
-	}
+	config := p.loadConfig(meta)
 
 	bodyBytes, err := common.GetRequestBodyReusable(req)
 	if err != nil {
@@ -71,21 +98,14 @@ func (p *Plugin) ConvertRequest(
 }
 
 // loadConfig loads patch configuration from model config
-func (p *Plugin) loadConfig(meta *meta.Meta) (*Config, error) {
-	// Try to get model config
-	modelConfig, err := model.GetModelConfig(meta.ActualModel)
-	if err != nil {
-		// If model config not found, return default config with only predefined patches enabled
-		return nil, err
-	}
-
+func (p *Plugin) loadConfig(meta *meta.Meta) *Config {
 	// Load plugin config from model config
 	var config Config
-	if err := modelConfig.LoadPluginConfig(PluginName, &config); err != nil {
-		return &Config{}, nil
+	if err := meta.ModelConfig.LoadPluginConfig(PluginName, &config); err != nil {
+		return &Config{}
 	}
 
-	return &config, nil
+	return &config
 }
 
 // ApplyPatches applies all applicable patches to the JSON body
@@ -112,6 +132,11 @@ func (p *Plugin) ApplyPatches(
 		}
 	}
 
+	// Apply lazy patches from meta
+	if p.applyLazyPatches(&node, meta) {
+		modified = true
+	}
+
 	// Apply user-defined patches
 	for _, patch := range config.UserPatches {
 		if p.shouldApplyPatch(&patch, &node, meta) {
@@ -131,7 +156,6 @@ func (p *Plugin) ApplyPatches(
 		return bodyBytes, false, fmt.Errorf("failed to marshal patched JSON: %w", err)
 	}
 
-	// DEBUG: Final marshaled JSON: %s\n", string(patchedBytes))
 	return patchedBytes, true, nil
 }
 
@@ -142,14 +166,34 @@ func (p *Plugin) shouldApplyPatch(patch *PatchRule, root *ast.Node, meta *meta.M
 		return true // No conditions means always apply
 	}
 
-	// All conditions must be satisfied
-	for _, condition := range patch.Conditions {
-		if !p.evaluateCondition(&condition, root, meta) {
-			return false
-		}
+	// Default to "and" logic if not specified
+	logic := patch.ConditionLogic
+	if logic == "" {
+		logic = LogicAnd
 	}
 
-	return true
+	switch logic {
+	case LogicOr:
+		// At least one condition must be satisfied
+		for _, condition := range patch.Conditions {
+			if p.evaluateCondition(&condition, root, meta) {
+				return true
+			}
+		}
+
+		return false
+	case LogicAnd:
+		fallthrough
+	default:
+		// All conditions must be satisfied
+		for _, condition := range patch.Conditions {
+			if !p.evaluateCondition(&condition, root, meta) {
+				return false
+			}
+		}
+
+		return true
+	}
 }
 
 // evaluateCondition evaluates a single condition
@@ -164,72 +208,74 @@ func (p *Plugin) evaluateCondition(
 	switch condition.Key {
 	case "model":
 		actualValue = meta.ActualModel
-		// DEBUG: Using meta.ActualModel: %v\n", actualValue)
 	case "original_model":
 		actualValue = meta.OriginModel
-		// DEBUG: Using meta.OriginModel: %v\n", actualValue)
 	default:
 		// Look in JSON data
 		actualValue = p.getNestedValueAST(root, condition.Key)
-		// DEBUG: From JSON key %s: %v\n", condition.Key, actualValue)
 	}
 
 	// Convert to string for comparison
 	actualStr := fmt.Sprintf("%v", actualValue)
-	// DEBUG: Comparing actualStr='%s' with condition.Value='%s'\n", actualStr, condition.Value)
+
+	var result bool
 
 	// Apply the operator
 	switch condition.Operator {
 	case OperatorEquals:
-		return actualStr == condition.Value
+		result = actualStr == condition.Value
 	case OperatorNotEquals:
-		return actualStr != condition.Value
+		result = actualStr != condition.Value
 	case OperatorContains:
-		return strings.Contains(actualStr, condition.Value)
+		result = strings.Contains(actualStr, condition.Value)
 	case OperatorNotContains:
-		return !strings.Contains(actualStr, condition.Value)
+		result = !strings.Contains(actualStr, condition.Value)
 	case OperatorHasPrefix:
-		return strings.HasPrefix(actualStr, condition.Value)
+		result = strings.HasPrefix(actualStr, condition.Value)
 	case OperatorHasSuffix:
-		return strings.HasSuffix(actualStr, condition.Value)
+		result = strings.HasSuffix(actualStr, condition.Value)
 	case OperatorRegex:
 		matched, err := regexp.MatchString(condition.Value, actualStr)
-		return err == nil && matched
+		result = err == nil && matched
 	case OperatorExists:
-		return actualValue != nil
+		result = actualValue != nil
 	case OperatorNotExists:
-		return actualValue == nil
+		result = actualValue == nil
 	case OperatorGreaterThan:
-		return p.compareNumeric(actualValue, condition.Value, ">")
+		result = p.compareNumeric(actualValue, condition.Value, ">")
 	case OperatorLessThan:
-		return p.compareNumeric(actualValue, condition.Value, "<")
+		result = p.compareNumeric(actualValue, condition.Value, "<")
 	case OperatorGreaterEq:
-		return p.compareNumeric(actualValue, condition.Value, ">=")
+		result = p.compareNumeric(actualValue, condition.Value, ">=")
 	case OperatorLessEq:
-		return p.compareNumeric(actualValue, condition.Value, "<=")
+		result = p.compareNumeric(actualValue, condition.Value, "<=")
 	case OperatorIn:
-		return p.stringInSlice(actualStr, condition.Values)
+		result = p.stringInSlice(actualStr, condition.Values)
 	case OperatorNotIn:
-		return !p.stringInSlice(actualStr, condition.Values)
+		result = !p.stringInSlice(actualStr, condition.Values)
 	default:
-		return false
+		result = false
 	}
+
+	// Apply negation if specified
+	if condition.Negate {
+		result = !result
+	}
+
+	return result
 }
 
 // applyPatch applies a single patch to the JSON data
 func (p *Plugin) applyPatch(patch *PatchRule, root *ast.Node) bool {
 	modified := false
 
-	// DEBUG: Applying patch %s with %d operations\n", patch.Name, len(patch.Operations))
 	for _, operation := range patch.Operations {
 		operationModified, err := p.applyOperation(&operation, root)
-		// DEBUG: Operation %s on key %s, modified=%v, err=%v\n", operation.Op, operation.Key, operationModified, err)
 		if err == nil && operationModified {
 			modified = true
 		}
 	}
 
-	// DEBUG: Patch %s overall modified: %v\n", patch.Name, modified)
 	return modified
 }
 
@@ -264,7 +310,7 @@ func (p *Plugin) applyOperation(operation *PatchOperation, root *ast.Node) (bool
 	case OpPrepend:
 		return p.prependValueAST(root, operation.Key, resolvedValue), nil
 	case OpFunction:
-		return operation.function(root)
+		return operation.Function(root)
 	default:
 		return false, nil
 	}
@@ -272,19 +318,16 @@ func (p *Plugin) applyOperation(operation *PatchOperation, root *ast.Node) (bool
 
 // getNestedValueAST retrieves a value from nested JSON structure using AST
 func (p *Plugin) getNestedValueAST(root *ast.Node, key string) any {
-	// DEBUG: getNestedValueAST key=%s\n", key)
 	keys := strings.Split(key, ".")
 	current := root
 
 	for _, k := range keys {
 		if current.TypeSafe() != ast.V_OBJECT {
-			// DEBUG: getNestedValueAST current is not object at key %s\n", k)
 			return nil
 		}
 
 		next := current.Get(k)
 		if !next.Valid() {
-			// DEBUG: getNestedValueAST key %s not found\n", k)
 			return nil
 		}
 
@@ -293,20 +336,18 @@ func (p *Plugin) getNestedValueAST(root *ast.Node, key string) any {
 
 	// Convert AST node to interface{}
 	val, _ := current.Interface()
-	// DEBUG: getNestedValueAST returning: %v\n", val)
+
 	return val
 }
 
 // setValueAST sets a value in nested JSON structure using AST
 func (p *Plugin) setValueAST(root *ast.Node, key string, value any) bool {
-	// DEBUG: setValueAST key=%s, value=%v\n", key, value)
 	keys := strings.Split(key, ".")
 	current := root
 
 	// Navigate to the parent of the target key
 	for i := range len(keys) - 1 {
 		if current.TypeSafe() != ast.V_OBJECT {
-			// DEBUG: setValueAST current is not object at key %s\n", keys[i])
 			return false
 		}
 
@@ -315,7 +356,6 @@ func (p *Plugin) setValueAST(root *ast.Node, key string, value any) bool {
 			// Create new object if it doesn't exist
 			newObj := ast.NewObject([]ast.Pair{})
 			if _, err := current.Set(keys[i], newObj); err != nil {
-				// DEBUG: setValueAST failed to create new object: %v\n", err)
 				return false
 			}
 
@@ -326,7 +366,6 @@ func (p *Plugin) setValueAST(root *ast.Node, key string, value any) bool {
 	}
 
 	if current.TypeSafe() != ast.V_OBJECT {
-		// DEBUG: setValueAST final current is not object\n")
 		return false
 	}
 
@@ -342,10 +381,8 @@ func (p *Plugin) setValueAST(root *ast.Node, key string, value any) bool {
 	if oldValue.Valid() {
 		oldVal, _ = oldValue.Interface()
 		hasOldValue = true
-		// DEBUG: setValueAST finalKey=%s, oldValue exists=%v, oldVal=%v\n", finalKey, oldValue.Valid(), oldVal)
 	} else {
 		hasOldValue = false
-		// DEBUG: setValueAST finalKey=%s, oldValue exists=%v\n", finalKey, oldValue.Valid())
 	}
 
 	// Create AST node from value
@@ -370,18 +407,15 @@ func (p *Plugin) setValueAST(root *ast.Node, key string, value any) bool {
 				if node, err := sonic.Get(bytes); err == nil {
 					newNode = node
 				} else {
-					// DEBUG: setValueAST failed to parse marshalled value: %v\n", err)
 					return false
 				}
 			} else {
-				// DEBUG: setValueAST failed to marshal value: %v\n", err)
 				return false
 			}
 		}
 	}
 
 	if _, err := current.Set(finalKey, newNode); err != nil {
-		// DEBUG: setValueAST failed to set value: %v\n", err)
 		return false
 	}
 
@@ -389,10 +423,9 @@ func (p *Plugin) setValueAST(root *ast.Node, key string, value any) bool {
 	if hasOldValue {
 		newVal, _ := newNode.Interface()
 		changed := fmt.Sprintf("%v", oldVal) != fmt.Sprintf("%v", newVal)
-		// DEBUG: setValueAST oldVal=%v, newVal=%v, changed=%v\n", oldVal, newVal, changed)
 		return changed
 	}
-	// DEBUG: setValueAST no old value, returning true\n")
+
 	return true
 }
 
@@ -436,34 +469,27 @@ func (p *Plugin) deleteValueAST(root *ast.Node, key string) bool {
 // limitValueAST limits a numeric value to a maximum using AST
 func (p *Plugin) limitValueAST(root *ast.Node, key string, maxValue any) bool {
 	currentValue := p.getNestedValueAST(root, key)
-	// DEBUG: limitValueAST key=%s, currentValue=%v, maxValue=%v\n", key, currentValue, maxValue)
 	if currentValue == nil {
-		// DEBUG: limitValueAST currentValue is nil\n")
 		return false
 	}
 
 	// Convert values to float64 for comparison
 	currentFloat, err := ToFloat64(currentValue)
 	if err != nil {
-		// DEBUG: limitValueAST failed to convert currentValue to float64: %v\n", err)
 		return false
 	}
 
 	maxFloat, err := ToFloat64(maxValue)
 	if err != nil {
-		// DEBUG: limitValueAST failed to convert maxValue to float64: %v\n", err)
 		return false
 	}
 
-	// DEBUG: limitValueAST comparing %f > %f = %v\n", currentFloat, maxFloat, currentFloat > maxFloat)
 	// If current value exceeds the limit, set it to the limit
 	if currentFloat > maxFloat {
 		result := p.setValueAST(root, key, maxValue)
-		// DEBUG: limitValueAST setValueAST result: %v\n", result)
 		return result
 	}
 
-	// DEBUG: limitValueAST no change needed\n")
 	return false
 }
 
@@ -731,13 +757,24 @@ func (p *Plugin) compareNumeric(actualValue any, expectedValue, operator string)
 
 // stringInSlice checks if a string is in a slice
 func (p *Plugin) stringInSlice(str string, slice []string) bool {
-	for _, s := range slice {
-		if s == str {
-			return true
+	return slices.Contains(slice, str)
+}
+
+// applyLazyPatches applies patches queued in meta from other plugins
+func (p *Plugin) applyLazyPatches(root *ast.Node, meta *meta.Meta) bool {
+	lazyPatches := GetLazyPatches(meta)
+	if len(lazyPatches) == 0 {
+		return false
+	}
+
+	modified := false
+	for _, lazyPatch := range lazyPatches {
+		if opModified, err := p.applyOperation(&lazyPatch, root); err == nil && opModified {
+			modified = true
 		}
 	}
 
-	return false
+	return modified
 }
 
 // resolvePlaceholdersAST replaces placeholders in values with actual values from JSON data using AST

@@ -20,6 +20,7 @@ import (
 	relaymodel "github.com/labring/aiproxy/core/relay/model"
 	"github.com/labring/aiproxy/core/relay/plugin"
 	"github.com/labring/aiproxy/core/relay/plugin/noop"
+	"github.com/labring/aiproxy/core/relay/plugin/patch"
 )
 
 var _ plugin.Plugin = (*StreamFake)(nil)
@@ -83,22 +84,16 @@ func (p *StreamFake) ConvertRequest(
 		return do.ConvertRequest(meta, store, req)
 	}
 
-	// Modify request to enable streaming
-	_, err = node.Set("stream", ast.NewBool(true))
-	if err != nil {
-		return do.ConvertRequest(meta, store, req)
-	}
-
-	// Create new request body
-	modifiedBody, err := node.MarshalJSON()
-	if err != nil {
-		return do.ConvertRequest(meta, store, req)
-	}
-
-	// Update the request
-	common.SetRequestBody(req, modifiedBody)
-	defer common.SetRequestBody(req, body)
-
+	patch.AddLazyPatch(meta, patch.PatchOperation{
+		Op: patch.OpFunction,
+		Function: func(root *ast.Node) (bool, error) {
+			_, err := root.Set("stream", ast.NewBool(true))
+			if err != nil {
+				return false, err
+			}
+			return true, nil
+		},
+	})
 	meta.Set(fakeStreamKey, true)
 
 	return do.ConvertRequest(meta, store, req)
