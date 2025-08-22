@@ -34,7 +34,7 @@ func TestApplyPatches_DeepSeekMaxTokensLimit(t *testing.T) {
 				"max_tokens": 20000,
 			},
 			actualModel:       "deepseek-chat",
-			expectedMaxTokens: 16384,
+			expectedMaxTokens: 8192,
 			shouldModify:      true,
 		},
 		{
