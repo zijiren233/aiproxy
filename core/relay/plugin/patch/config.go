@@ -125,6 +125,25 @@ var DefaultPredefinedPatches = []PatchRule{
 				Operator: OperatorContains,
 				Value:    "deepseek-v3",
 			},
+		},
+		Operations: []PatchOperation{
+			{
+				Op:    OpLimit,
+				Key:   "max_tokens",
+				Value: 16384,
+			},
+		},
+	},
+	{
+		Name:           "deepseek_3.1_max_tokens_limit",
+		Description:    "Limit max_tokens to 16000 for DeepSeek models",
+		ConditionLogic: LogicOr,
+		Conditions: []PatchCondition{
+			{
+				Key:      "model",
+				Operator: OperatorContains,
+				Value:    "deepseek-v3.1",
+			},
 			{
 				Key:      "model",
 				Operator: OperatorContains,
@@ -135,7 +154,7 @@ var DefaultPredefinedPatches = []PatchRule{
 			{
 				Op:    OpLimit,
 				Key:   "max_tokens",
-				Value: 16384,
+				Value: 8192,
 			},
 		},
 	},
