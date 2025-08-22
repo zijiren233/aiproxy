@@ -165,4 +165,25 @@ var DefaultPredefinedPatches = []PatchRule{
 			},
 		},
 	},
+	{
+		Name:        "gpt5_remove_temperature",
+		Description: "Remove temperature field for GPT-5 models",
+		Conditions: []PatchCondition{
+			{
+				Key:      "model",
+				Operator: OperatorContains,
+				Value:    "gpt-5",
+			},
+			{
+				Key:      "temperature",
+				Operator: OperatorExists,
+			},
+		},
+		Operations: []PatchOperation{
+			{
+				Op:  OpDelete,
+				Key: "temperature",
+			},
+		},
+	},
 }
