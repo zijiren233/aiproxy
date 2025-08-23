@@ -15,7 +15,7 @@ type ConsumeError struct {
 	GroupID    string          `gorm:"size:64;index;index:idx_consume_error_group_reqat,priority:1" json:"group_id"`
 	RequestID  string          `gorm:"type:char(16);index"                                          json:"request_id"`
 	TokenName  EmptyNullString `gorm:"not null"                                                     json:"token_name"`
-	Model      string          `gorm:"size:32"                                                      json:"model"`
+	Model      string          `gorm:"size:64"                                                      json:"model"`
 	Content    string          `gorm:"type:text"                                                    json:"content"`
 	ID         int             `gorm:"primaryKey"                                                   json:"id"`
 	UsedAmount float64         `                                                                    json:"used_amount"`
