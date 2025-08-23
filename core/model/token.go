@@ -44,12 +44,11 @@ type Token struct {
 	UsedAmount   float64 `json:"used_amount"   gorm:"index"`
 	RequestCount int     `json:"request_count" gorm:"index"`
 
-	Quota                  float64   `json:"quota"`
-	PeriodQuota            float64   `json:"period_quota"              gorm:"default:0"`
-	PeriodType             string    `json:"period_type"               gorm:"size:20;default:'daily'"` // daily, weekly, monthly
-	PeriodStartTime        time.Time `json:"period_start_time"         gorm:"index"`
-	PeriodLastUpdateTime   time.Time `json:"period_last_update_time"   gorm:"index"`     // Last time period was reset
-	PeriodLastUpdateAmount float64   `json:"period_last_update_amount" gorm:"default:0"` // Total usage at last period reset
+	Quota                  float64         `json:"quota"`
+	PeriodQuota            float64         `json:"period_quota"`
+	PeriodType             EmptyNullString `json:"period_type"               gorm:"size:20"` // daily, weekly, monthly, default is monthly
+	PeriodLastUpdateTime   time.Time       `json:"period_last_update_time"`                  // Last time period was reset
+	PeriodLastUpdateAmount float64         `json:"period_last_update_amount"`                // Total usage at last period reset
 }
 
 func (t *Token) BeforeCreate(_ *gorm.DB) error {
@@ -107,25 +106,13 @@ func (t *Token) NeedsPeriodReset() (bool, error) {
 	// If never been reset, use PeriodStartTime as baseline
 	baseTime := t.PeriodLastUpdateTime
 	if baseTime.IsZero() {
-		if t.PeriodStartTime.IsZero() {
-			return true, nil // Never initialized
-		}
-
-		baseTime = t.PeriodStartTime
+		return true, nil // Never initialized
 	}
 
 	now := time.Now()
 
 	switch t.PeriodType {
-	case PeriodTypeDaily:
-		// Check if we've crossed to a new day since last reset
-		baseDate := baseTime.Truncate(24 * time.Hour)
-		currentDate := now.Truncate(24 * time.Hour)
-		return currentDate.After(baseDate), nil
-	case PeriodTypeWeekly:
-		// Check if we've passed 7 days since last reset
-		return now.Sub(baseTime) >= 7*24*time.Hour, nil
-	case PeriodTypeMonthly:
+	case "", PeriodTypeMonthly:
 		// Check if we've crossed a month boundary since last reset
 		baseMonth := baseTime.Month()
 		baseYear := baseTime.Year()
@@ -141,6 +128,14 @@ func (t *Token) NeedsPeriodReset() (bool, error) {
 		}
 
 		return false, nil
+	case PeriodTypeWeekly:
+		// Check if we've passed 7 days since last reset
+		return now.Sub(baseTime) >= 7*24*time.Hour, nil
+	case PeriodTypeDaily:
+		// Check if we've crossed to a new day since last reset
+		baseDate := baseTime.Truncate(24 * time.Hour)
+		currentDate := now.Truncate(24 * time.Hour)
+		return currentDate.After(baseDate), nil
 	default:
 		return false, fmt.Errorf("unknown period type: %s", t.PeriodType)
 	}
@@ -459,8 +454,7 @@ func GetAndValidateToken(key string) (token *TokenCache, err error) {
 		Quota:                  token.Quota,
 		UsedAmount:             token.UsedAmount,
 		PeriodQuota:            token.PeriodQuota,
-		PeriodType:             token.PeriodType,
-		PeriodStartTime:        time.Time(token.PeriodStartTime),
+		PeriodType:             EmptyNullString(token.PeriodType),
 		PeriodLastUpdateTime:   time.Time(token.PeriodLastUpdateTime),
 		PeriodLastUpdateAmount: token.PeriodLastUpdateAmount,
 	}
@@ -727,19 +721,9 @@ func UpdateToken(id int, update UpdateTokenRequest) (token *Token, err error) {
 	}
 
 	if update.PeriodType != nil {
-		token.PeriodType = *update.PeriodType
+		token.PeriodType = EmptyNullString(*update.PeriodType)
 
 		selects = append(selects, "period_type")
-		// Reset period usage when type changes, but don't update start time unless it's zero
-		// Also update last update info to current state - this will be handled in the update logic
-		// No need to reset here as we'll handle it differently
-
-		// Only set start time if it's currently zero (initial setup)
-		if token.PeriodStartTime.IsZero() {
-			token.PeriodStartTime = time.Now()
-
-			selects = append(selects, "period_start_time")
-		}
 	}
 
 	if update.Subnets != nil {
@@ -819,19 +803,9 @@ func UpdateGroupToken(
 	}
 
 	if update.PeriodType != nil {
-		token.PeriodType = *update.PeriodType
+		token.PeriodType = EmptyNullString(*update.PeriodType)
 
 		selects = append(selects, "period_type")
-		// Reset period usage when type changes, but don't update start time unless it's zero
-		// Also update last update info to current state - this will be handled in the update logic
-		// No need to reset here as we'll handle it differently
-
-		// Only set start time if it's currently zero (initial setup)
-		if token.PeriodStartTime.IsZero() {
-			token.PeriodStartTime = time.Now()
-
-			selects = append(selects, "period_start_time")
-		}
 	}
 
 	if update.Subnets != nil {

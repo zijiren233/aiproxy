@@ -384,12 +384,12 @@ func distribute(c *gin.Context, mode mode.Mode) {
 	SetLogModelFields(log.Data, requestModel)
 
 	mc, ok := GetModelCaches(c).ModelConfig.GetModelConfig(requestModel)
-	if !ok || !CheckRelayMode(mode, mc.Type) {
+	if !ok || !token.ContainsModel(requestModel) {
 		AbortLogWithMessage(
 			c,
 			http.StatusNotFound,
 			fmt.Sprintf(
-				"The model `%s` does not exist on this endpoint.",
+				"The model `%s` does not exist or you do not have access to it.",
 				requestModel,
 			),
 		)
@@ -399,12 +399,12 @@ func distribute(c *gin.Context, mode mode.Mode) {
 
 	c.Set(ModelConfig, mc)
 
-	if !token.ContainsModel(requestModel) {
+	if !CheckRelayMode(mode, mc.Type) {
 		AbortLogWithMessage(
 			c,
 			http.StatusNotFound,
 			fmt.Sprintf(
-				"The model `%s` does not exist or you do not have access to it.",
+				"The model `%s` does not exist on this endpoint.",
 				requestModel,
 			),
 		)

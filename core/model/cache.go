@@ -72,7 +72,6 @@ type TokenCache struct {
 	Quota                  float64   `json:"quota"                     redis:"q"`
 	PeriodQuota            float64   `json:"period_quota"              redis:"pq"`
 	PeriodType             string    `json:"period_type"               redis:"pt"`
-	PeriodStartTime        redisTime `json:"period_start_time"         redis:"ps"`
 	PeriodLastUpdateTime   redisTime `json:"period_last_update_time"   redis:"plut"`
 	PeriodLastUpdateAmount float64   `json:"period_last_update_amount" redis:"plua"`
 
@@ -150,8 +149,7 @@ func (t *Token) ToTokenCache() *TokenCache {
 
 		Quota:                  t.Quota,
 		PeriodQuota:            t.PeriodQuota,
-		PeriodType:             t.PeriodType,
-		PeriodStartTime:        redisTime(t.PeriodStartTime),
+		PeriodType:             string(t.PeriodType),
 		PeriodLastUpdateTime:   redisTime(t.PeriodLastUpdateTime),
 		PeriodLastUpdateAmount: t.PeriodLastUpdateAmount,
 	}

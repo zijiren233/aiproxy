@@ -25,12 +25,14 @@ func (t *TokenResponse) MarshalJSON() ([]byte, error) {
 
 	return sonic.Marshal(&struct {
 		*Alias
-		CreatedAt  int64 `json:"created_at"`
-		AccessedAt int64 `json:"accessed_at"`
+		CreatedAt            int64 `json:"created_at"`
+		PeriodLastUpdateTime int64 `json:"period_last_update_time"`
+		AccessedAt           int64 `json:"accessed_at"`
 	}{
-		Alias:      (*Alias)(t),
-		CreatedAt:  t.CreatedAt.UnixMilli(),
-		AccessedAt: t.AccessedAt.UnixMilli(),
+		Alias:                (*Alias)(t),
+		CreatedAt:            t.CreatedAt.UnixMilli(),
+		PeriodLastUpdateTime: t.PeriodLastUpdateTime.UnixMilli(),
+		AccessedAt:           t.AccessedAt.UnixMilli(),
 	})
 }
 
