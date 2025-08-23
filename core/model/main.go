@@ -34,14 +34,7 @@ func chooseDB(envName string) (*gorm.DB, error) {
 		// Use PostgreSQL
 		log.Info("using PostgreSQL as database")
 
-		common.UsingPostgreSQL = true
 		return OpenPostgreSQL(dsn)
-	case strings.HasPrefix(dsn, "mysql"):
-		// Use MySQL
-		log.Info("using MySQL as database")
-
-		common.UsingMySQL = true
-		return OpenMySQL(dsn)
 	default:
 		// Use SQLite
 		absPath, err := filepath.Abs(common.SQLitePath)
@@ -91,7 +84,9 @@ func OpenPostgreSQL(dsn string) (*gorm.DB, error) {
 }
 
 func OpenMySQL(dsn string) (*gorm.DB, error) {
-	return gorm.Open(mysql.Open(strings.TrimPrefix(dsn, "mysql://")), &gorm.Config{
+	return gorm.Open(mysql.New(mysql.Config{
+		DSN: strings.TrimPrefix(dsn, "mysql://"),
+	}), &gorm.Config{
 		PrepareStmt:                              true, // precompile SQL
 		TranslateError:                           true,
 		Logger:                                   newDBLogger(),

@@ -23,7 +23,7 @@ const (
 
 type Group struct {
 	CreatedAt              time.Time               `json:"created_at"`
-	ID                     string                  `json:"id"                       gorm:"primaryKey"`
+	ID                     string                  `json:"id"                       gorm:"size:64;primaryKey"`
 	Tokens                 []Token                 `json:"-"                        gorm:"foreignKey:GroupID"`
 	GroupModelConfigs      []GroupModelConfig      `json:"-"                        gorm:"foreignKey:GroupID"`
 	PublicMCPReusingParams []PublicMCPReusingParam `json:"-"                        gorm:"foreignKey:GroupID"`
@@ -37,6 +37,13 @@ type Group struct {
 
 	BalanceAlertEnabled   bool    `gorm:"default:false" json:"balance_alert_enabled"`
 	BalanceAlertThreshold float64 `gorm:"default:0"     json:"balance_alert_threshold"`
+}
+
+func (g *Group) BeforeSave(_ *gorm.DB) error {
+	if len(g.ID) > 64 {
+		return errors.New("group id length too long")
+	}
+	return nil
 }
 
 func (g *Group) BeforeDelete(tx *gorm.DB) (err error) {
@@ -348,7 +355,7 @@ func SearchGroup(
 		tx = tx.Where("status = ?", status)
 	}
 
-	if common.UsingPostgreSQL {
+	if !common.UsingSQLite {
 		tx = tx.Where("id ILIKE ? OR available_sets ILIKE ?", "%"+keyword+"%", "%"+keyword+"%")
 	} else {
 		tx = tx.Where("id LIKE ? OR available_sets LIKE ?", "%"+keyword+"%", "%"+keyword+"%")

@@ -285,7 +285,7 @@ AI Proxy provides comprehensive MCP support for extending AI capabilities:
 
 - Go 1.24+
 - Node.js 22+ (for frontend development)
-- PostgreSQL/MySQL (optional, SQLite by default)
+- PostgreSQL (optional, SQLite by default)
 - Redis (optional, for caching)
 
 ### Building from Source

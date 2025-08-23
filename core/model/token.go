@@ -34,8 +34,8 @@ type Token struct {
 	CreatedAt time.Time       `json:"created_at"`
 	Group     *Group          `json:"-"          gorm:"foreignKey:GroupID"`
 	Key       string          `json:"key"        gorm:"type:char(48);uniqueIndex"`
-	Name      EmptyNullString `json:"name"       gorm:"index;uniqueIndex:idx_group_name;not null"`
-	GroupID   string          `json:"group"      gorm:"index;uniqueIndex:idx_group_name"`
+	Name      EmptyNullString `json:"name"       gorm:"size:32;index;uniqueIndex:idx_group_name;not null"`
+	GroupID   string          `json:"group"      gorm:"size:64;index;uniqueIndex:idx_group_name"`
 	Subnets   []string        `json:"subnets"    gorm:"serializer:fastjson;type:text"`
 	Models    []string        `json:"models"     gorm:"serializer:fastjson;type:text"`
 	Status    int             `json:"status"     gorm:"default:1;index"`
@@ -46,7 +46,7 @@ type Token struct {
 
 	Quota                  float64   `json:"quota"`
 	PeriodQuota            float64   `json:"period_quota"              gorm:"default:0"`
-	PeriodType             string    `json:"period_type"               gorm:"type:varchar(20);default:'daily'"` // daily, weekly, monthly
+	PeriodType             string    `json:"period_type"               gorm:"size:20;default:'daily'"` // daily, weekly, monthly
 	PeriodStartTime        time.Time `json:"period_start_time"         gorm:"index"`
 	PeriodLastUpdateTime   time.Time `json:"period_last_update_time"   gorm:"index"`     // Last time period was reset
 	PeriodLastUpdateAmount float64   `json:"period_last_update_amount" gorm:"default:0"` // Total usage at last period reset
@@ -60,7 +60,7 @@ func (t *Token) BeforeCreate(_ *gorm.DB) error {
 }
 
 func (t *Token) BeforeSave(_ *gorm.DB) error {
-	if len(t.Name) > 30 {
+	if len(t.Name) > 32 {
 		return errors.New("token name is too long")
 	}
 	return nil
@@ -276,7 +276,7 @@ func SearchTokens(
 		)
 
 		if group == "" {
-			if common.UsingPostgreSQL {
+			if !common.UsingSQLite {
 				conditions = append(conditions, "group_id ILIKE ?")
 			} else {
 				conditions = append(conditions, "group_id LIKE ?")
@@ -286,7 +286,7 @@ func SearchTokens(
 		}
 
 		if name == "" {
-			if common.UsingPostgreSQL {
+			if !common.UsingSQLite {
 				conditions = append(conditions, "name ILIKE ?")
 			} else {
 				conditions = append(conditions, "name LIKE ?")
@@ -296,7 +296,7 @@ func SearchTokens(
 		}
 
 		if key == "" {
-			if common.UsingPostgreSQL {
+			if !common.UsingSQLite {
 				conditions = append(conditions, "key ILIKE ?")
 			} else {
 				conditions = append(conditions, "key LIKE ?")
@@ -305,7 +305,7 @@ func SearchTokens(
 			values = append(values, "%"+keyword+"%")
 		}
 
-		if common.UsingPostgreSQL {
+		if !common.UsingSQLite {
 			conditions = append(conditions, "models ILIKE ?")
 		} else {
 			conditions = append(conditions, "models LIKE ?")
@@ -365,7 +365,7 @@ func SearchGroupTokens(
 		)
 
 		if name == "" {
-			if common.UsingPostgreSQL {
+			if !common.UsingSQLite {
 				conditions = append(conditions, "name ILIKE ?")
 			} else {
 				conditions = append(conditions, "name LIKE ?")
@@ -375,7 +375,7 @@ func SearchGroupTokens(
 		}
 
 		if key == "" {
-			if common.UsingPostgreSQL {
+			if !common.UsingSQLite {
 				conditions = append(conditions, "key ILIKE ?")
 			} else {
 				conditions = append(conditions, "key LIKE ?")
@@ -384,7 +384,7 @@ func SearchGroupTokens(
 			values = append(values, "%"+keyword+"%")
 		}
 
-		if common.UsingPostgreSQL {
+		if !common.UsingSQLite {
 			conditions = append(conditions, "models ILIKE ?")
 		} else {
 			conditions = append(conditions, "models LIKE ?")

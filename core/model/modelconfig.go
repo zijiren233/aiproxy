@@ -28,8 +28,8 @@ type ModelConfig struct {
 	UpdatedAt        time.Time                  `gorm:"index;autoUpdateTime"          json:"updated_at"`
 	Config           map[ModelConfigKey]any     `gorm:"serializer:fastjson;type:text" json:"config,omitempty"`
 	Plugin           map[string]json.RawMessage `gorm:"serializer:fastjson;type:text" json:"plugin,omitempty"`
-	Model            string                     `gorm:"primaryKey"                    json:"model"`
-	Owner            ModelOwner                 `gorm:"type:varchar(255);index"       json:"owner"`
+	Model            string                     `gorm:"size:64;primaryKey"            json:"model"`
+	Owner            ModelOwner                 `gorm:"type:varchar(32);index"        json:"owner"`
 	Type             mode.Mode                  `                                     json:"type"`
 	ExcludeFromTests bool                       `                                     json:"exclude_from_tests,omitempty"`
 	RPM              int64                      `                                     json:"rpm,omitempty"`
@@ -247,7 +247,7 @@ func SearchModelConfigs(
 		)
 
 		if model == "" {
-			if common.UsingPostgreSQL {
+			if !common.UsingSQLite {
 				conditions = append(conditions, "model ILIKE ?")
 			} else {
 				conditions = append(conditions, "model LIKE ?")
@@ -257,7 +257,7 @@ func SearchModelConfigs(
 		}
 
 		if owner != "" {
-			if common.UsingPostgreSQL {
+			if !common.UsingSQLite {
 				conditions = append(conditions, "owner ILIKE ?")
 			} else {
 				conditions = append(conditions, "owner LIKE ?")

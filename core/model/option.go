@@ -18,8 +18,8 @@ import (
 )
 
 type Option struct {
-	Key   string `gorm:"primaryKey" json:"key"`
-	Value string `                  json:"value"`
+	Key   string `gorm:"size:64;primaryKey" json:"key"`
+	Value string `gorm:"type:text"          json:"value"`
 }
 
 func GetAllOption() ([]*Option, error) {

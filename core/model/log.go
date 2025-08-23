@@ -45,24 +45,24 @@ type Log struct {
 	RetryAt          time.Time       `                                                                      json:"retry_at,omitempty"`
 	TTFBMilliseconds ZeroNullInt64   `                                                                      json:"ttfb_milliseconds,omitempty"`
 	CreatedAt        time.Time       `gorm:"autoCreateTime;index"                                           json:"created_at"`
-	TokenName        string          `                                                                      json:"token_name,omitempty"`
-	Endpoint         EmptyNullString `                                                                      json:"endpoint,omitempty"`
+	TokenName        string          `gorm:"size:32"                                                        json:"token_name,omitempty"`
+	Endpoint         EmptyNullString `gorm:"size:64"                                                        json:"endpoint,omitempty"`
 	Content          EmptyNullString `gorm:"type:text"                                                      json:"content,omitempty"`
-	GroupID          string          `                                                                      json:"group,omitempty"`
-	Model            string          `                                                                      json:"model"`
-	RequestID        EmptyNullString `gorm:"index:,where:request_id is not null"                            json:"request_id"`
+	GroupID          string          `gorm:"size:64"                                                        json:"group,omitempty"`
+	Model            string          `gorm:"size:32"                                                        json:"model"`
+	RequestID        EmptyNullString `gorm:"type:char(16);index:,where:request_id is not null"              json:"request_id"`
 	ID               int             `gorm:"primaryKey"                                                     json:"id"`
 	TokenID          int             `gorm:"index"                                                          json:"token_id,omitempty"`
 	ChannelID        int             `                                                                      json:"channel,omitempty"`
 	Code             int             `gorm:"index"                                                          json:"code,omitempty"`
 	Mode             int             `                                                                      json:"mode,omitempty"`
-	IP               EmptyNullString `gorm:"index:,where:ip is not null"                                    json:"ip,omitempty"`
+	IP               EmptyNullString `gorm:"size:45;index:,where:ip is not null"                            json:"ip,omitempty"`
 	RetryTimes       ZeroNullInt64   `                                                                      json:"retry_times,omitempty"`
 	Price            Price           `gorm:"embedded"                                                       json:"price,omitempty"`
 	Usage            Usage           `gorm:"embedded"                                                       json:"usage,omitempty"`
 	UsedAmount       float64         `                                                                      json:"used_amount,omitempty"`
 	// https://platform.openai.com/docs/guides/safety-best-practices#end-user-ids
-	User     EmptyNullString   `                                                                      json:"user,omitempty"`
+	User     EmptyNullString   `gorm:"type:text"                                                      json:"user,omitempty"`
 	Metadata map[string]string `gorm:"serializer:fastjson;type:text"                                  json:"metadata,omitempty"`
 }
 
@@ -264,15 +264,11 @@ func cleanLog(batchSize int) error {
 
 func optimizeLog() error {
 	switch {
-	case common.UsingPostgreSQL:
-		return LogDB.Exec("VACUUM ANALYZE logs").Error
-	case common.UsingMySQL:
-		return LogDB.Exec("OPTIMIZE TABLE logs").Error
 	case common.UsingSQLite:
 		return LogDB.Exec("VACUUM").Error
+	default:
+		return LogDB.Exec("VACUUM ANALYZE logs").Error
 	}
-
-	return nil
 }
 
 func cleanLogDetail(batchSize int) error {

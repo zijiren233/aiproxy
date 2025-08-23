@@ -224,7 +224,7 @@ func GetGroupMCPs(
 		)
 
 		if id == "" {
-			if common.UsingPostgreSQL {
+			if !common.UsingSQLite {
 				conditions = append(conditions, "id ILIKE ?")
 				values = append(values, "%"+keyword+"%")
 			} else {
@@ -233,7 +233,7 @@ func GetGroupMCPs(
 			}
 		}
 
-		if common.UsingPostgreSQL {
+		if !common.UsingSQLite {
 			conditions = append(conditions, "name ILIKE ?")
 			values = append(values, "%"+keyword+"%")
 		} else {
@@ -241,7 +241,7 @@ func GetGroupMCPs(
 			values = append(values, "%"+keyword+"%")
 		}
 
-		if common.UsingPostgreSQL {
+		if !common.UsingSQLite {
 			conditions = append(conditions, "description ILIKE ?")
 			values = append(values, "%"+keyword+"%")
 		} else {
