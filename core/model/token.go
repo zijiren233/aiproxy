@@ -81,6 +81,13 @@ func (t *Token) GetEffectiveQuotaStatus() (totalExceeded, periodExceeded bool, e
 			// Period usage should be considered as reset (0) but we don't modify the struct here
 			// The actual database reset should be handled separately
 			periodExceeded = false // Consider as reset, so no period limit exceeded
+
+			// Trigger async period reset - don't wait for it to complete
+			go func() {
+				if err := ResetTokenPeriodUsage(t.ID); err != nil {
+					log.Error("failed to reset token period usage: " + err.Error())
+				}
+			}()
 		} else {
 			// Period is still valid, check against current usage
 			// Calculate period usage: current total - last recorded total at period reset
@@ -424,9 +431,9 @@ func GetTokenByKey(key string) (*Token, error) {
 	return &token, HandleNotFound(err, ErrTokenNotFound)
 }
 
-// ValidateAndGetToken validates a token and checks quota limits
+// GetAndValidateToken validates a token and checks quota limits
 // This function is safe for concurrent use and handles period resets atomically
-func ValidateAndGetToken(key string) (token *TokenCache, err error) {
+func GetAndValidateToken(key string) (token *TokenCache, err error) {
 	if key == "" {
 		return nil, errors.New("no token provided")
 	}
@@ -469,20 +476,6 @@ func ValidateAndGetToken(key string) (token *TokenCache, err error) {
 
 	if periodExceeded {
 		return nil, fmt.Errorf("token (%s[%d]) period quota is exhausted", token.Name, token.ID)
-	}
-
-	// Check if period needs reset and trigger reset if needed
-	if tokenModel.PeriodQuota > 0 {
-		if needsReset, err := tokenModel.NeedsPeriodReset(); err == nil && needsReset {
-			// Trigger async period reset - don't wait for it to complete
-			go func() {
-				if err := ResetTokenPeriodUsage(token.ID); err != nil {
-					log.Error("failed to reset token period usage: " + err.Error())
-				}
-			}()
-			// For immediate response, consider period as reset
-			token.PeriodLastUpdateAmount = token.UsedAmount
-		}
 	}
 
 	return token, nil
