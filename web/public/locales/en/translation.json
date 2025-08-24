@@ -260,6 +260,11 @@
         "title": "Think Split Plugin",
         "description": "Split complex thinking into structured responses",
         "enable": "Enable Think Split"
+      },
+      "streamFakePlugin": {
+        "title": "Stream Fake Plugin",
+        "description": "Convert non-streaming requests to streaming responses for better user experience",
+        "enable": "Enable Stream Fake"
       }
     },
     "deleteDialog": {

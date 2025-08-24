@@ -64,6 +64,9 @@ const pluginSchema = z.object({
     "think-split": z.object({
         enable: z.boolean(),
     }).optional(),
+    "stream-fake": z.object({
+        enable: z.boolean(),
+    }).optional(),
 }).optional()
 
 export const modelCreateSchema = z.object({

@@ -48,6 +48,7 @@ type Plugin = {
     cache: CachePlugin // 缓存插件
     "web-search": WebSearchPlugin // 网络搜索插件
     "think-split": ThinkSplitPlugin // 思考拆分插件
+    "stream-fake": StreamFakePlugin // 流式伪装插件
 }
 
 type CachePlugin = {
@@ -79,6 +80,10 @@ type WebSearchPlugin = {
 }
 
 type ThinkSplitPlugin = {
+    enable: boolean
+}
+
+type StreamFakePlugin = {
     enable: boolean
 }
 
@@ -115,6 +120,7 @@ export type {
     CachePlugin,
     WebSearchPlugin,
     ThinkSplitPlugin,
+    StreamFakePlugin,
     EngineConfig,
     GoogleSpec,
     BingSpec,

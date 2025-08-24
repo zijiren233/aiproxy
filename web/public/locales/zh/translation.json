@@ -259,6 +259,11 @@
         "title": "思考拆分插件",
         "description": "将复杂思考拆分为结构化响应",
         "enable": "启用思考拆分"
+      },
+      "streamFakePlugin": {
+        "title": "流式伪装插件",
+        "description": "将非流式请求转换为流式处理，提供更好的用户体验",
+        "enable": "启用流式伪装"
       }
     },
     "deleteDialog": {
