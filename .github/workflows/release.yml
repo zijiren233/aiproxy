@@ -103,17 +103,20 @@ jobs:
           go build -trimpath -ldflags "-s -w" -o aiproxy-${{ matrix.targets.GOOS }}-${{ matrix.targets.GOARCH }}${{ matrix.targets.EXT }}
 
       - name: Get release meta
+        id: release_meta
         if: ${{ startsWith(github.ref, 'refs/tags/') }}
         working-directory: core
         run: |
           version=${GITHUB_REF/refs\/tags\/v/}
           echo "version: ${version}"
-          prerelease=$(echo ${version} | grep -E 'rc|beta|alpha' || true)
+          prerelease=$(echo ${version} | grep -E 'rc|beta|alpha|pre|dev|snapshot|nightly' || true)
           release_name="Version ${version}"
           echo "release_name: ${release_name}"
           if [ -n "${prerelease}" ]; then
             prerelease=true
             release_name="${release_name} (Prerelease)"
+          else
+            prerelease=false
           fi
           tag_name="v${version}"
           echo "prerelease: ${prerelease}"
