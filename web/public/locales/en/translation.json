@@ -175,6 +175,7 @@
     "cachePlugin": "Cache",
     "webSearchPlugin": "Web Search",
     "thinkSplitPlugin": "Think Split",
+    "streamFakePlugin": "Stream Fake",
     "accessibleSets": "Accessible Sets",
     "loading": "Loading...",
     "noChannel": "No available channels",

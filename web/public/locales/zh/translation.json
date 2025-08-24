@@ -175,6 +175,7 @@
     "cachePlugin": "缓存",
     "webSearchPlugin": "网络搜索",
     "thinkSplitPlugin": "思考拆分",
+    "streamFakePlugin": "流式伪装",
     "accessibleSets": "可访问组",
     "loading": "加载中...",
     "noChannel": "无可用渠道",

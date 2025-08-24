@@ -200,6 +200,10 @@ export function ModelTable() {
           enabledPlugins.push(t("model.thinkSplitPlugin"));
         }
 
+        if (plugin["stream-fake"]?.enable) {
+          enabledPlugins.push(t("model.streamFakePlugin"));
+        }
+
         if (enabledPlugins.length === 0) {
           return (
             <div className="text-muted-foreground text-sm">
