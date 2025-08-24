@@ -101,6 +101,7 @@ export function ModelForm({
                 cache: { enable: false, ...defaultValues.plugin?.cache },
                 "web-search": { enable: false, search_from: [], ...defaultValues.plugin?.["web-search"] },
                 "think-split": { enable: false, ...defaultValues.plugin?.["think-split"] },
+                "stream-fake": { enable: false, ...defaultValues.plugin?.["stream-fake"] },
             }
         },
     })
@@ -266,6 +267,15 @@ export function ModelForm({
         if (data.plugin?.["think-split"]?.enable) {
             Object.assign(pluginData, {
                 "think-split": {
+                    enable: true
+                }
+            })
+        }
+
+        // Stream fake plugin - 如果开启，必须有 enable 字段
+        if (data.plugin?.["stream-fake"]?.enable) {
+            Object.assign(pluginData, {
+                "stream-fake": {
                     enable: true
                 }
             })
@@ -828,6 +838,32 @@ export function ModelForm({
                                 <div>
                                     <Label className="text-sm font-medium">{t("model.dialog.thinkSplitPlugin.title")}</Label>
                                     <p className="text-xs text-muted-foreground">{t("model.dialog.thinkSplitPlugin.description")}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <hr className="border-border" />
+
+                        {/* Stream Fake Plugin */}
+                        <div className="flex items-center justify-between py-2">
+                            <div className="flex items-center space-x-3">
+                                <FormField
+                                    control={form.control}
+                                    name="plugin.stream-fake.enable"
+                                    render={({ field }) => (
+                                        <FormItem className="flex items-center space-x-2">
+                                            <FormControl>
+                                                <Switch
+                                                    checked={field.value}
+                                                    onCheckedChange={field.onChange}
+                                                />
+                                            </FormControl>
+                                        </FormItem>
+                                    )}
+                                />
+                                <div>
+                                    <Label className="text-sm font-medium">{t("model.dialog.streamFakePlugin.title")}</Label>
+                                    <p className="text-xs text-muted-foreground">{t("model.dialog.streamFakePlugin.description")}</p>
                                 </div>
                             </div>
                         </div>
