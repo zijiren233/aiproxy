@@ -14,7 +14,7 @@
 
 ## 🚀 项目概述
 
-AI Proxy 是一个强大的、生产就绪的 AI 网关，提供智能请求路由、全面监控和无缝多租户管理。基于 OpenAI 兼容协议构建，是需要可靠性、可扩展性和高级功能的 AI 应用的完美中间件。
+AI Proxy 是一个强大的、生产就绪的 AI 网关，提供智能请求路由、全面监控和无缝多租户管理。基于 OpenAI、Anthropic 兼容协议构建，是需要可靠性、可扩展性和高级功能的 AI 应用的完美中间件。
 
 ## ✨ 核心特性
 
@@ -23,6 +23,7 @@ AI Proxy 是一个强大的、生产就绪的 AI 网关，提供智能请求路�
 - **智能重试机制**：智能重试策略与自动错误恢复
 - **基于优先级的渠道选择**：根据渠道优先级和错误率路由请求
 - **负载均衡**：高效地在多个 AI 提供商之间分配流量
+- **协议转换**：无缝的 Claude 到 OpenAI API 协议转换
 
 ### 📊 **全面监控与分析**
 
@@ -258,6 +259,21 @@ curl -X POST http://localhost:3000/v1/chat/completions \
   }'
 ```
 
+#### **通过 OpenAI 协议使用 Claude API**
+
+AI Proxy 自动将 Claude API 请求转换为 OpenAI 兼容格式：
+
+```bash
+# 通过 OpenAI API 格式使用 Claude 模型
+curl -X POST http://localhost:3000/v1/messages \
+  -H "X-Api-Key: Bearer your-token" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "gpt-5",
+    "messages": [{"role": "user", "content": "你好 Claude！"}]
+  }'
+```
+
 ## 🔌 集成方案
 
 ### Sealos 平台
@@ -269,6 +285,23 @@ curl -X POST http://localhost:3000/v1/chat/completions \
 
 与 FastGPT 无缝集成，增强 AI 工作流：
 [FastGPT 文档](https://doc.tryfastgpt.ai/docs/development/modelconfig/ai-proxy/)
+
+### Claude Code 集成
+
+通过配置以下环境变量在 Claude Code 中使用 AI Proxy：
+
+```bash
+export ANTHROPIC_BASE_URL=http://127.0.0.1:3000
+export ANTHROPIC_AUTH_TOKEN=sk-xxx
+export ANTHROPIC_MODEL=gpt-5
+export ANTHROPIC_SMALL_FAST_MODEL=gpt-5-nano
+```
+
+此配置允许 Claude Code 将所有 Anthropic API 请求路由通过 AI Proxy，让您能够：
+
+- 通过统一的 OpenAI 兼容接口使用任何 AI 模型
+- 享受 AI Proxy 的智能路由、监控和插件功能
+- 通过 OpenAI 协议转换访问 Claude 模型
 
 ### MCP (模型上下文协议)
 

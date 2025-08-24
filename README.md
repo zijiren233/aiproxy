@@ -14,7 +14,7 @@
 
 ## 🚀 Overview
 
-AI Proxy is a powerful, production-ready AI gateway that provides intelligent request routing, comprehensive monitoring, and seamless multi-tenant management. Built with OpenAI-compatible protocols, it serves as the perfect middleware for AI applications requiring reliability, scalability, and advanced features.
+AI Proxy is a powerful, production-ready AI gateway that provides intelligent request routing, comprehensive monitoring, and seamless multi-tenant management. Built with OpenAI-compatible and Anthropic protocols, it serves as the perfect middleware for AI applications requiring reliability, scalability, and advanced features.
 
 ## ✨ Key Features
 
@@ -23,6 +23,7 @@ AI Proxy is a powerful, production-ready AI gateway that provides intelligent re
 - **Smart Retry Logic**: Intelligent retry strategies with automatic error recovery
 - **Priority-based Channel Selection**: Route requests based on channel priority and error rates
 - **Load Balancing**: Efficiently distribute traffic across multiple AI providers
+- **Protocol Conversion**: Seamless Claude to OpenAI API protocol conversion
 
 ### 📊 **Comprehensive Monitoring & Analytics**
 
@@ -258,6 +259,21 @@ curl -X POST http://localhost:3000/v1/chat/completions \
   }'
 ```
 
+#### **Claude API via OpenAI Protocol**
+
+AI Proxy automatically converts Claude API requests to OpenAI-compatible format:
+
+```bash
+# Use Claude models through OpenAI API format
+curl -X POST http://localhost:3000/v1/messages \
+  -H "X-Api-Key: Bearer your-token" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "gpt-5",
+    "messages": [{"role": "user", "content": "Hello Claude!"}]
+  }'
+```
+
 ## 🔌 Integrations
 
 ### Sealos Platform
@@ -269,6 +285,23 @@ Deploy instantly on Sealos with built-in model capabilities:
 
 Seamlessly integrate with FastGPT for enhanced AI workflows:
 [FastGPT Documentation](https://doc.tryfastgpt.ai/docs/development/modelconfig/ai-proxy/)
+
+### Claude Code Integration
+
+Use AI Proxy with Claude Code by configuring these environment variables:
+
+```bash
+export ANTHROPIC_BASE_URL=http://127.0.0.1:3000
+export ANTHROPIC_AUTH_TOKEN=sk-xxx
+export ANTHROPIC_MODEL=gpt-5
+export ANTHROPIC_SMALL_FAST_MODEL=gpt-5-nano
+```
+
+This configuration allows Claude Code to route all Anthropic API requests through AI Proxy, enabling you to:
+
+- Use any AI model through the unified OpenAI-compatible interface
+- Benefit from AI Proxy's intelligent routing, monitoring, and plugin features
+- Access Claude models through OpenAI protocol conversion
 
 ### MCP (Model Context Protocol)
 
