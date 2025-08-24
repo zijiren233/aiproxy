@@ -10,16 +10,16 @@ import (
 )
 
 type ConsumeError struct {
-	RequestAt  time.Time       `gorm:"index;index:idx_consume_error_group_reqat,priority:2" json:"request_at"`
-	CreatedAt  time.Time       `                                                            json:"created_at"`
-	GroupID    string          `gorm:"index;index:idx_consume_error_group_reqat,priority:1" json:"group_id"`
-	RequestID  string          `gorm:"index"                                                json:"request_id"`
-	TokenName  EmptyNullString `gorm:"not null"                                             json:"token_name"`
-	Model      string          `                                                            json:"model"`
-	Content    string          `gorm:"type:text"                                            json:"content"`
-	ID         int             `gorm:"primaryKey"                                           json:"id"`
-	UsedAmount float64         `                                                            json:"used_amount"`
-	TokenID    int             `                                                            json:"token_id"`
+	RequestAt  time.Time       `gorm:"index;index:idx_consume_error_group_reqat,priority:2"         json:"request_at"`
+	CreatedAt  time.Time       `                                                                    json:"created_at"`
+	GroupID    string          `gorm:"size:64;index;index:idx_consume_error_group_reqat,priority:1" json:"group_id"`
+	RequestID  string          `gorm:"type:char(16);index"                                          json:"request_id"`
+	TokenName  EmptyNullString `gorm:"not null"                                                     json:"token_name"`
+	Model      string          `gorm:"size:64"                                                      json:"model"`
+	Content    string          `gorm:"type:text"                                                    json:"content"`
+	ID         int             `gorm:"primaryKey"                                                   json:"id"`
+	UsedAmount float64         `                                                                    json:"used_amount"`
+	TokenID    int             `                                                                    json:"token_id"`
 }
 
 func (c *ConsumeError) MarshalJSON() ([]byte, error) {
@@ -91,7 +91,7 @@ func SearchConsumeError(
 		)
 
 		if requestID == "" {
-			if common.UsingPostgreSQL {
+			if !common.UsingSQLite {
 				conditions = append(conditions, "request_id ILIKE ?")
 			} else {
 				conditions = append(conditions, "request_id LIKE ?")
@@ -101,7 +101,7 @@ func SearchConsumeError(
 		}
 
 		if group == "" {
-			if common.UsingPostgreSQL {
+			if !common.UsingSQLite {
 				conditions = append(conditions, "group_id ILIKE ?")
 			} else {
 				conditions = append(conditions, "group_id LIKE ?")
@@ -111,7 +111,7 @@ func SearchConsumeError(
 		}
 
 		if tokenName == "" {
-			if common.UsingPostgreSQL {
+			if !common.UsingSQLite {
 				conditions = append(conditions, "token_name ILIKE ?")
 			} else {
 				conditions = append(conditions, "token_name LIKE ?")
@@ -121,7 +121,7 @@ func SearchConsumeError(
 		}
 
 		if model == "" {
-			if common.UsingPostgreSQL {
+			if !common.UsingSQLite {
 				conditions = append(conditions, "model ILIKE ?")
 			} else {
 				conditions = append(conditions, "model LIKE ?")

@@ -76,9 +76,9 @@ type Channel struct {
 	ChannelTests            []*ChannelTest    `gorm:"foreignKey:ChannelID;references:ID" json:"channel_tests,omitempty"`
 	BalanceUpdatedAt        time.Time         `                                          json:"balance_updated_at"`
 	ModelMapping            map[string]string `gorm:"serializer:fastjson;type:text"      json:"model_mapping"`
-	Key                     string            `gorm:"type:text;index"                    json:"key"`
-	Name                    string            `gorm:"index"                              json:"name"`
-	BaseURL                 string            `gorm:"index"                              json:"base_url"`
+	Key                     string            `gorm:"type:text;index:,length:191"        json:"key"`
+	Name                    string            `gorm:"size:64;index"                      json:"name"`
+	BaseURL                 string            `gorm:"size:128;index"                     json:"base_url"`
 	Models                  []string          `gorm:"serializer:fastjson;type:text"      json:"models"`
 	Balance                 float64           `                                          json:"balance"`
 	ID                      int               `gorm:"primaryKey"                         json:"id"`
@@ -321,7 +321,7 @@ func SearchChannels(
 		}
 
 		if name == "" {
-			if common.UsingPostgreSQL {
+			if !common.UsingSQLite {
 				conditions = append(conditions, "name ILIKE ?")
 			} else {
 				conditions = append(conditions, "name LIKE ?")
@@ -331,7 +331,7 @@ func SearchChannels(
 		}
 
 		if key == "" {
-			if common.UsingPostgreSQL {
+			if !common.UsingSQLite {
 				conditions = append(conditions, "key ILIKE ?")
 			} else {
 				conditions = append(conditions, "key LIKE ?")
@@ -341,7 +341,7 @@ func SearchChannels(
 		}
 
 		if baseURL == "" {
-			if common.UsingPostgreSQL {
+			if !common.UsingSQLite {
 				conditions = append(conditions, "base_url ILIKE ?")
 			} else {
 				conditions = append(conditions, "base_url LIKE ?")
@@ -350,7 +350,7 @@ func SearchChannels(
 			values = append(values, "%"+keyword+"%")
 		}
 
-		if common.UsingPostgreSQL {
+		if !common.UsingSQLite {
 			conditions = append(conditions, "models ILIKE ?")
 		} else {
 			conditions = append(conditions, "models LIKE ?")
@@ -358,7 +358,7 @@ func SearchChannels(
 
 		values = append(values, "%"+keyword+"%")
 
-		if common.UsingPostgreSQL {
+		if !common.UsingSQLite {
 			conditions = append(conditions, "sets ILIKE ?")
 		} else {
 			conditions = append(conditions, "sets LIKE ?")

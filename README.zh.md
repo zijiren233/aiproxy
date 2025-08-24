@@ -285,7 +285,7 @@ AI Proxy 提供全面的 MCP 支持，扩展 AI 能力：
 
 - Go 1.24+
 - Node.js 22+（前端开发）
-- PostgreSQL/MySQL（可选，默认 SQLite）
+- PostgreSQL（可选，默认 SQLite）
 - Redis（可选，用于缓存）
 
 ### 从源码构建

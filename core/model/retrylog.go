@@ -10,21 +10,21 @@ import (
 )
 
 type RetryLog struct {
-	RequestBody           string          `gorm:"type:text"                           json:"request_body,omitempty"`
-	ResponseBody          string          `gorm:"type:text"                           json:"response_body,omitempty"`
-	RequestBodyTruncated  bool            `                                           json:"request_body_truncated,omitempty"`
-	ResponseBodyTruncated bool            `                                           json:"response_body_truncated,omitempty"`
-	RequestAt             time.Time       `                                           json:"request_at"`
-	RetryAt               time.Time       `                                           json:"retry_at,omitempty"`
-	TTFBMilliseconds      ZeroNullInt64   `                                           json:"ttfb_milliseconds,omitempty"`
-	CreatedAt             time.Time       `gorm:"autoCreateTime;index"                json:"created_at"`
-	Model                 string          `                                           json:"model"`
-	RequestID             EmptyNullString `gorm:"index:,where:request_id is not null" json:"request_id"`
-	ID                    int             `gorm:"primaryKey"                          json:"id"`
-	ChannelID             int             `                                           json:"channel,omitempty"`
-	Code                  int             `gorm:"index"                               json:"code,omitempty"`
-	Mode                  int             `                                           json:"mode,omitempty"`
-	RetryTimes            ZeroNullInt64   `                                           json:"retry_times,omitempty"`
+	RequestBody           string          `gorm:"type:text"                                         json:"request_body,omitempty"`
+	ResponseBody          string          `gorm:"type:text"                                         json:"response_body,omitempty"`
+	RequestBodyTruncated  bool            `                                                         json:"request_body_truncated,omitempty"`
+	ResponseBodyTruncated bool            `                                                         json:"response_body_truncated,omitempty"`
+	RequestAt             time.Time       `                                                         json:"request_at"`
+	RetryAt               time.Time       `                                                         json:"retry_at,omitempty"`
+	TTFBMilliseconds      ZeroNullInt64   `                                                         json:"ttfb_milliseconds,omitempty"`
+	CreatedAt             time.Time       `gorm:"autoCreateTime;index"                              json:"created_at"`
+	Model                 string          `gorm:"size:64"                                           json:"model"`
+	RequestID             EmptyNullString `gorm:"type:char(16);index:,where:request_id is not null" json:"request_id"`
+	ID                    int             `gorm:"primaryKey"                                        json:"id"`
+	ChannelID             int             `                                                         json:"channel,omitempty"`
+	Code                  int             `gorm:"index"                                             json:"code,omitempty"`
+	Mode                  int             `                                                         json:"mode,omitempty"`
+	RetryTimes            ZeroNullInt64   `                                                         json:"retry_times,omitempty"`
 }
 
 func (r *RetryLog) BeforeSave(_ *gorm.DB) (err error) {

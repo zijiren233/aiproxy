@@ -398,7 +398,7 @@ func GetPublicMCPs(
 		)
 
 		if id == "" {
-			if common.UsingPostgreSQL {
+			if !common.UsingSQLite {
 				conditions = append(conditions, "id ILIKE ?")
 				values = append(values, "%"+keyword+"%")
 			} else {
@@ -407,7 +407,7 @@ func GetPublicMCPs(
 			}
 		}
 
-		if common.UsingPostgreSQL {
+		if !common.UsingSQLite {
 			conditions = append(conditions, "name ILIKE ?")
 			values = append(values, "%"+keyword+"%")
 		} else {
@@ -415,7 +415,7 @@ func GetPublicMCPs(
 			values = append(values, "%"+keyword+"%")
 		}
 
-		if common.UsingPostgreSQL {
+		if !common.UsingSQLite {
 			conditions = append(conditions, "name_cn ILIKE ?")
 			values = append(values, "%"+keyword+"%")
 		} else {
@@ -423,7 +423,7 @@ func GetPublicMCPs(
 			values = append(values, "%"+keyword+"%")
 		}
 
-		if common.UsingPostgreSQL {
+		if !common.UsingSQLite {
 			conditions = append(conditions, "description ILIKE ?")
 			values = append(values, "%"+keyword+"%")
 		} else {
@@ -431,7 +431,7 @@ func GetPublicMCPs(
 			values = append(values, "%"+keyword+"%")
 		}
 
-		if common.UsingPostgreSQL {
+		if !common.UsingSQLite {
 			conditions = append(conditions, "description_cn ILIKE ?")
 			values = append(values, "%"+keyword+"%")
 		} else {
@@ -439,7 +439,7 @@ func GetPublicMCPs(
 			values = append(values, "%"+keyword+"%")
 		}
 
-		if common.UsingPostgreSQL {
+		if !common.UsingSQLite {
 			conditions = append(conditions, "readme ILIKE ?")
 			values = append(values, "%"+keyword+"%")
 		} else {
@@ -447,7 +447,7 @@ func GetPublicMCPs(
 			values = append(values, "%"+keyword+"%")
 		}
 
-		if common.UsingPostgreSQL {
+		if !common.UsingSQLite {
 			conditions = append(conditions, "readme_cn ILIKE ?")
 			values = append(values, "%"+keyword+"%")
 		} else {

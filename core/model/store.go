@@ -17,13 +17,13 @@ const (
 // - File storage with associated metadata
 // - Any other channel-specific data that needs persistence
 type StoreV2 struct {
-	ID        string    `gorm:"primaryKey:3"`
+	ID        string    `gorm:"size:128;primaryKey:3"`
 	CreatedAt time.Time `gorm:"autoCreateTime"`
 	ExpiresAt time.Time
-	GroupID   string `gorm:"primaryKey:1"`
+	GroupID   string `gorm:"size:64;primaryKey:1"`
 	TokenID   int    `gorm:"primaryKey:2"`
 	ChannelID int
-	Model     string
+	Model     string `gorm:"size:64"`
 }
 
 func (s *StoreV2) BeforeSave(_ *gorm.DB) error {
