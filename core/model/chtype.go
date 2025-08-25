@@ -49,6 +49,7 @@ const (
 	ChannelTypeJina                    ChannelType = 47
 	ChannelTypeTextEmbeddingsInference ChannelType = 48
 	ChannelTypeQianfan                 ChannelType = 49
+	ChannelTypeSangforAICP             ChannelType = 50
 )
 
 var channelTypeNames = map[ChannelType]string{
@@ -89,6 +90,7 @@ var channelTypeNames = map[ChannelType]string{
 	ChannelTypeJina:                    "jina",
 	ChannelTypeTextEmbeddingsInference: "huggingface text-embeddings-inference",
 	ChannelTypeQianfan:                 "qianfan",
+	ChannelTypeSangforAICP:             "Sangfor AICP",
 }
 
 func AllChannelTypes() []ChannelType {
