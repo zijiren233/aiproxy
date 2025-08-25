@@ -32,6 +32,7 @@ import (
 	"github.com/labring/aiproxy/core/relay/adaptor/openai"
 	"github.com/labring/aiproxy/core/relay/adaptor/openrouter"
 	"github.com/labring/aiproxy/core/relay/adaptor/qianfan"
+	sangforaicp "github.com/labring/aiproxy/core/relay/adaptor/sangforAICP"
 	"github.com/labring/aiproxy/core/relay/adaptor/siliconflow"
 	"github.com/labring/aiproxy/core/relay/adaptor/stepfun"
 	"github.com/labring/aiproxy/core/relay/adaptor/tencent"
@@ -81,6 +82,7 @@ var ChannelAdaptor = map[model.ChannelType]adaptor.Adaptor{
 	model.ChannelTypeJina:                    &jina.Adaptor{},
 	model.ChannelTypeTextEmbeddingsInference: &textembeddingsinference.Adaptor{},
 	model.ChannelTypeQianfan:                 &qianfan.Adaptor{},
+	model.ChannelTypeSangforAICP:             &sangforaicp.Adaptor{},
 }
 
 func GetAdaptor(channelType model.ChannelType) (adaptor.Adaptor, bool) {
