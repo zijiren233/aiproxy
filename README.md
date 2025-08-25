@@ -259,9 +259,7 @@ curl -X POST http://localhost:3000/v1/chat/completions \
   }'
 ```
 
-#### **Claude API via OpenAI Protocol**
-
-AI Proxy automatically converts Claude API requests to OpenAI-compatible format:
+#### **Claude API**
 
 ```bash
 # Use Claude models through OpenAI API format
@@ -296,12 +294,6 @@ export ANTHROPIC_AUTH_TOKEN=sk-xxx
 export ANTHROPIC_MODEL=gpt-5
 export ANTHROPIC_SMALL_FAST_MODEL=gpt-5-nano
 ```
-
-This configuration allows Claude Code to route all Anthropic API requests through AI Proxy, enabling you to:
-
-- Use any AI model through the unified OpenAI-compatible interface
-- Benefit from AI Proxy's intelligent routing, monitoring, and plugin features
-- Access Claude models through OpenAI protocol conversion
 
 ### MCP (Model Context Protocol)
 

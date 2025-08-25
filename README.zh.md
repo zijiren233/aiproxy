@@ -259,9 +259,7 @@ curl -X POST http://localhost:3000/v1/chat/completions \
   }'
 ```
 
-#### **通过 OpenAI 协议使用 Claude API**
-
-AI Proxy 自动将 Claude API 请求转换为 OpenAI 兼容格式：
+#### **使用 Claude API**
 
 ```bash
 # 通过 OpenAI API 格式使用 Claude 模型
@@ -296,12 +294,6 @@ export ANTHROPIC_AUTH_TOKEN=sk-xxx
 export ANTHROPIC_MODEL=gpt-5
 export ANTHROPIC_SMALL_FAST_MODEL=gpt-5-nano
 ```
-
-此配置允许 Claude Code 将所有 Anthropic API 请求路由通过 AI Proxy，让您能够：
-
-- 通过统一的 OpenAI 兼容接口使用任何 AI 模型
-- 享受 AI Proxy 的智能路由、监控和插件功能
-- 通过 OpenAI 协议转换访问 Claude 模型
 
 ### MCP (模型上下文协议)
 
