@@ -32,7 +32,7 @@ import (
 	"github.com/labring/aiproxy/core/relay/adaptor/openai"
 	"github.com/labring/aiproxy/core/relay/adaptor/openrouter"
 	"github.com/labring/aiproxy/core/relay/adaptor/qianfan"
-	sangforaicp "github.com/labring/aiproxy/core/relay/adaptor/sangforAICP"
+	"github.com/labring/aiproxy/core/relay/adaptor/sangforaicp"
 	"github.com/labring/aiproxy/core/relay/adaptor/siliconflow"
 	"github.com/labring/aiproxy/core/relay/adaptor/stepfun"
 	"github.com/labring/aiproxy/core/relay/adaptor/tencent"
