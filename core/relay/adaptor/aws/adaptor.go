@@ -103,7 +103,7 @@ func (a *Adaptor) Metadata() adaptor.Metadata {
 
 	return adaptor.Metadata{
 		Models:  models,
-		KeyHelp: "region|ak|sk",
+		KeyHelp: "region|ak|sk or region|apikey",
 	}
 }
 

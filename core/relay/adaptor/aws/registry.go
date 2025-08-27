@@ -22,7 +22,8 @@ type Model struct {
 var adaptors = map[string]Model{}
 
 func init() {
-	for _, model := range claude.AwsModelIDMap {
+	for name, model := range claude.AwsModelIDMap {
+		model.Model = name
 		adaptors[model.Model] = Model{config: model.ModelConfig, modelType: AwsClaude}
 	}
 }

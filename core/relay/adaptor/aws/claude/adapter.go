@@ -70,7 +70,10 @@ func handleChatCompletionsRequest(meta *meta.Meta, request *http.Request) ([]byt
 		return nil, err
 	}
 
+	claudeReq.Model = ""
+
 	meta.Set("stream", claudeReq.Stream)
+	claudeReq.Stream = false
 
 	req := Request{
 		AnthropicVersion: anthropicVersion,
@@ -91,12 +94,18 @@ func handleAnthropicRequest(meta *meta.Meta, request *http.Request) ([]byte, err
 		return nil, err
 	}
 
+	if _, err = node.Unset("model"); err != nil {
+		return nil, err
+	}
+
 	if err = anthropic.ConvertImage2Base64(context.Background(), &node); err != nil {
 		return nil, err
 	}
 
 	stream, _ := node.Get("stream").Bool()
 	meta.Set("stream", stream)
+
+	_, _ = node.Unset("stream")
 
 	if _, err = node.Set("anthropic_version", ast.NewString(anthropicVersion)); err != nil {
 		return nil, err
@@ -129,7 +138,16 @@ func (a *Adaptor) DoRequest(
 		)
 	}
 
-	awsModelID, err := awsModelID(meta.ActualModel)
+	region, err := utils.AwsRegionFromMeta(meta)
+	if err != nil {
+		return nil, relaymodel.WrapperOpenAIErrorWithMessage(
+			err.Error(),
+			nil,
+			http.StatusInternalServerError,
+		)
+	}
+
+	awsModelID, err := awsModelID(meta.ActualModel, region)
 	if err != nil {
 		return nil, relaymodel.WrapperOpenAIErrorWithMessage(
 			err.Error(),

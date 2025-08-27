@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"strings"
@@ -8,6 +9,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/bedrockruntime"
+	"github.com/aws/smithy-go/auth/bearer"
 	"github.com/labring/aiproxy/core/relay/meta"
 )
 
@@ -15,10 +17,18 @@ type AwsConfig struct {
 	Region string
 	AK     string
 	SK     string
+	APIKey string
 }
 
 func GetAwsConfigFromKey(key string) (*AwsConfig, error) {
 	split := strings.Split(key, "|")
+	if len(split) == 2 {
+		return &AwsConfig{
+			Region: split[0],
+			APIKey: split[1],
+		}, nil
+	}
+
 	if len(split) != 3 {
 		return nil, errors.New("invalid key format")
 	}
@@ -31,12 +41,23 @@ func GetAwsConfigFromKey(key string) (*AwsConfig, error) {
 }
 
 func AwsClient(config *AwsConfig) *bedrockruntime.Client {
-	return bedrockruntime.New(bedrockruntime.Options{
+	options := bedrockruntime.Options{
 		Region: config.Region,
-		Credentials: aws.NewCredentialsCache(
+	}
+	if config.APIKey != "" {
+		options.BearerAuthTokenProvider = bearer.TokenProviderFunc(
+			func(ctx context.Context) (bearer.Token, error) {
+				return bearer.Token{Value: config.APIKey}, nil
+			},
+		)
+		options.AuthSchemePreference = []string{"httpBearerAuth"}
+	} else {
+		options.Credentials = aws.NewCredentialsCache(
 			credentials.NewStaticCredentialsProvider(config.AK, config.SK, ""),
-		),
-	})
+		)
+	}
+
+	return bedrockruntime.New(options)
 }
 
 func awsClientFromKey(key string) (*bedrockruntime.Client, error) {
@@ -69,4 +90,13 @@ func AwsClientFromMeta(meta *meta.Meta) (*bedrockruntime.Client, error) {
 	meta.Set(AwsClientKey, awsClient)
 
 	return awsClient, nil
+}
+
+func AwsRegionFromMeta(meta *meta.Meta) (string, error) {
+	config, err := GetAwsConfigFromKey(meta.Channel.Key)
+	if err != nil {
+		return "", err
+	}
+
+	return config.Region, nil
 }

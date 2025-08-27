@@ -105,30 +105,32 @@ func OpenaiStreamHandler(meta *meta.Meta, c *gin.Context) (model.Usage, adaptor.
 				return usage.ToModelUsage(), err
 			}
 
-			if response != nil {
-				switch {
-				case response.Usage != nil:
-					if usage == nil {
-						usage = &relaymodel.ChatUsage{}
-					}
+			if response == nil {
+				continue
+			}
 
-					usage.Add(response.Usage)
-
-					if usage.PromptTokens == 0 {
-						usage.PromptTokens = int64(meta.RequestUsage.InputTokens)
-						usage.TotalTokens += int64(meta.RequestUsage.InputTokens)
-					}
-
-					response.Usage = usage
-
-					responseText.Reset()
-				case usage == nil:
-					for _, choice := range response.Choices {
-						responseText.WriteString(choice.Delta.StringContent())
-					}
-				default:
-					response.Usage = usage
+			switch {
+			case response.Usage != nil:
+				if usage == nil {
+					usage = &relaymodel.ChatUsage{}
 				}
+
+				usage.Add(response.Usage)
+
+				if usage.PromptTokens == 0 {
+					usage.PromptTokens = int64(meta.RequestUsage.InputTokens)
+					usage.TotalTokens += int64(meta.RequestUsage.InputTokens)
+				}
+
+				response.Usage = usage
+
+				responseText.Reset()
+			case usage == nil:
+				for _, choice := range response.Choices {
+					responseText.WriteString(choice.Delta.StringContent())
+				}
+			default:
+				response.Usage = usage
 			}
 
 			_ = render.OpenaiObjectData(c, response)
