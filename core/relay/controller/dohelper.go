@@ -253,6 +253,7 @@ func doRequest(
 	resp, err := a.DoRequest(meta, store, c, req)
 	if err != nil {
 		var adaptorErr adaptor.Error
+
 		ok := errors.As(err, &adaptorErr)
 		if ok {
 			return nil, adaptorErr
