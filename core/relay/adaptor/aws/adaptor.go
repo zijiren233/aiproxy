@@ -21,7 +21,9 @@ func (a *Adaptor) DefaultBaseURL() string {
 }
 
 func (a *Adaptor) SupportMode(m mode.Mode) bool {
-	return m == mode.ChatCompletions || m == mode.Completions
+	return m == mode.ChatCompletions ||
+		m == mode.Completions ||
+		m == mode.Anthropic
 }
 
 func (a *Adaptor) ConvertRequest(
@@ -37,6 +39,33 @@ func (a *Adaptor) ConvertRequest(
 	meta.Set("awsAdapter", aa)
 
 	return aa.ConvertRequest(meta, store, req)
+}
+
+func (a *Adaptor) DoRequest(
+	meta *meta.Meta,
+	store adaptor.Store,
+	c *gin.Context,
+	req *http.Request,
+) (*http.Response, error) {
+	adaptor, ok := meta.Get("awsAdapter")
+	if !ok {
+		return nil, relaymodel.WrapperOpenAIErrorWithMessage(
+			"awsAdapter not found",
+			nil,
+			http.StatusInternalServerError,
+		)
+	}
+
+	v, ok := adaptor.(utils.AwsAdapter)
+	if !ok {
+		return nil, relaymodel.WrapperOpenAIErrorWithMessage(
+			fmt.Sprintf("aws adapter type error: %T, %v", v, v),
+			nil,
+			http.StatusInternalServerError,
+		)
+	}
+
+	return v.DoRequest(meta, store, c, req)
 }
 
 func (a *Adaptor) DoResponse(
@@ -56,7 +85,11 @@ func (a *Adaptor) DoResponse(
 
 	v, ok := adaptor.(utils.AwsAdapter)
 	if !ok {
-		panic(fmt.Sprintf("aws adapter type error: %T, %v", v, v))
+		return model.Usage{}, relaymodel.WrapperOpenAIErrorWithMessage(
+			fmt.Sprintf("aws adapter type error: %T, %v", v, v),
+			nil,
+			http.StatusInternalServerError,
+		)
 	}
 
 	return v.DoResponse(meta, store, c)
@@ -70,7 +103,7 @@ func (a *Adaptor) Metadata() adaptor.Metadata {
 
 	return adaptor.Metadata{
 		Models:  models,
-		KeyHelp: "region|ak|sk",
+		KeyHelp: "region|ak|sk or region|apikey",
 	}
 }
 
@@ -88,13 +121,4 @@ func (a *Adaptor) SetupRequestHeader(
 	_ *http.Request,
 ) error {
 	return nil
-}
-
-func (a *Adaptor) DoRequest(
-	_ *meta.Meta,
-	_ adaptor.Store,
-	_ *gin.Context,
-	_ *http.Request,
-) (*http.Response, error) {
-	return nil, nil
 }

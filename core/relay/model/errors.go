@@ -53,6 +53,10 @@ func WrapperErrorWithMessage(
 ) adaptor.Error {
 	opt := DefaultWrapperErrorOption()
 	for _, o := range opts {
+		if o == nil {
+			continue
+		}
+
 		o(&opt)
 	}
 

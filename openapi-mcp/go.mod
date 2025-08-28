@@ -4,8 +4,8 @@ go 1.25.0
 
 require (
 	github.com/bytedance/sonic v1.14.0
-	github.com/getkin/kin-openapi v0.132.0
-	github.com/mark3labs/mcp-go v0.37.0
+	github.com/getkin/kin-openapi v0.133.0
+	github.com/mark3labs/mcp-go v0.38.0
 )
 
 require (
@@ -30,6 +30,7 @@ require (
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
 	github.com/ugorji/go/codec v1.3.0 // indirect
 	github.com/wk8/go-ordered-map/v2 v2.1.8 // indirect
+	github.com/woodsbury/decimal128 v1.4.0 // indirect
 	github.com/yosida95/uritemplate/v3 v3.0.2 // indirect
 	golang.org/x/arch v0.20.0 // indirect
 	golang.org/x/sys v0.35.0 // indirect
