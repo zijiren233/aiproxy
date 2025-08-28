@@ -122,46 +122,46 @@ func (a *Adaptor) DoRequest(
 ) (*http.Response, error) {
 	convReq, ok := meta.Get(ConvertedRequest)
 	if !ok {
-		return nil, relaymodel.WrapperOpenAIErrorWithMessage(
-			"request not found",
-			nil,
+		return nil, relaymodel.WrapperErrorWithMessage(
+			meta.Mode,
 			http.StatusInternalServerError,
+			"request not found",
 		)
 	}
 
 	body, ok := convReq.([]byte)
 	if !ok {
-		return nil, relaymodel.WrapperOpenAIErrorWithMessage(
-			fmt.Sprintf("claude request type error: %T", convReq),
-			nil,
+		return nil, relaymodel.WrapperErrorWithMessage(
+			meta.Mode,
 			http.StatusInternalServerError,
+			fmt.Sprintf("claude request type error: %T", convReq),
 		)
 	}
 
 	region, err := utils.AwsRegionFromMeta(meta)
 	if err != nil {
-		return nil, relaymodel.WrapperOpenAIErrorWithMessage(
-			err.Error(),
-			nil,
+		return nil, relaymodel.WrapperErrorWithMessage(
+			meta.Mode,
 			http.StatusInternalServerError,
+			err.Error(),
 		)
 	}
 
 	awsModelID, err := awsModelID(meta.ActualModel, region)
 	if err != nil {
-		return nil, relaymodel.WrapperOpenAIErrorWithMessage(
-			err.Error(),
-			nil,
+		return nil, relaymodel.WrapperErrorWithMessage(
+			meta.Mode,
 			http.StatusInternalServerError,
+			err.Error(),
 		)
 	}
 
 	awsClient, err := utils.AwsClientFromMeta(meta)
 	if err != nil {
-		return nil, relaymodel.WrapperOpenAIErrorWithMessage(
-			err.Error(),
-			nil,
+		return nil, relaymodel.WrapperErrorWithMessage(
+			meta.Mode,
 			http.StatusInternalServerError,
+			err.Error(),
 		)
 	}
 
@@ -174,10 +174,12 @@ func (a *Adaptor) DoRequest(
 
 		awsResp, err := awsClient.InvokeModelWithResponseStream(c.Request.Context(), awsReq)
 		if err != nil {
-			return nil, relaymodel.WrapperOpenAIErrorWithMessage(
-				err.Error(),
-				nil,
-				http.StatusInternalServerError,
+			code, errmessage := UnwrapInvokeError(err)
+
+			return nil, relaymodel.WrapperErrorWithMessage(
+				meta.Mode,
+				code,
+				errmessage,
 			)
 		}
 
@@ -191,10 +193,12 @@ func (a *Adaptor) DoRequest(
 
 		awsResp, err := awsClient.InvokeModel(c.Request.Context(), awsReq)
 		if err != nil {
-			return nil, relaymodel.WrapperOpenAIErrorWithMessage(
-				err.Error(),
-				nil,
-				http.StatusInternalServerError,
+			code, errmessage := UnwrapInvokeError(err)
+
+			return nil, relaymodel.WrapperErrorWithMessage(
+				meta.Mode,
+				code,
+				errmessage,
 			)
 		}
 

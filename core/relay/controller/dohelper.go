@@ -252,6 +252,12 @@ func doRequest(
 ) (*http.Response, adaptor.Error) {
 	resp, err := a.DoRequest(meta, store, c, req)
 	if err != nil {
+		var adaptorErr adaptor.Error
+		ok := errors.As(err, &adaptorErr)
+		if ok {
+			return nil, adaptorErr
+		}
+
 		if errors.Is(err, context.Canceled) {
 			return nil, relaymodel.WrapperErrorWithMessage(
 				meta.Mode,

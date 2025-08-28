@@ -104,6 +104,7 @@ var AwsModelIDMap = map[string]awsModelItem{
 	},
 }
 
+// https://docs.aws.amazon.com/bedrock/latest/userguide/inference-profiles-support.html
 var awsModelCanCrossRegionMap = map[string]map[string]bool{
 	"anthropic.claude-3-sonnet-20240229-v1:0": {
 		"us": true,
@@ -141,6 +142,9 @@ var awsModelCanCrossRegionMap = map[string]map[string]bool{
 		"eu": true,
 	},
 	"anthropic.claude-opus-4-20250514-v1:0": {
+		"us": true,
+	},
+	"anthropic.claude-opus-4-1-20250805-v1:0": {
 		"us": true,
 	},
 }
