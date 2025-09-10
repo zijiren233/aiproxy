@@ -408,6 +408,7 @@ func updateOption(key, value string, isInit bool) (err error) {
 		if err != nil {
 			return err
 		}
+
 		config.SetDefaultWarnNotifyErrorRate(rate)
 	default:
 		return ErrUnknownOptionKey
