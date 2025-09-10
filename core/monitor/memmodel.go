@@ -4,6 +4,8 @@ import (
 	"context"
 	"sync"
 	"time"
+
+	"github.com/labring/aiproxy/core/common/config"
 )
 
 var memModelMonitor *MemModelMonitor
@@ -101,7 +103,7 @@ func (m *MemModelMonitor) AddRequest(
 ) (beyondThreshold, banExecution bool) {
 	// Set default warning threshold if not specified
 	if warnErrorRate <= 0 {
-		warnErrorRate = DefaultWarnErrorRate
+		warnErrorRate = config.GetDefaultWarnNotifyErrorRate()
 	}
 
 	m.mu.Lock()

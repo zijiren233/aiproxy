@@ -105,6 +105,12 @@ func initOptionMap() error {
 	optionMap["DefaultMCPHost"] = config.GetDefaultMCPHost()
 	optionMap["PublicMCPHost"] = config.GetPublicMCPHost()
 	optionMap["GroupMCPHost"] = config.GetGroupMCPHost()
+	optionMap["DefaultWarnNotifyErrorRate"] = strconv.FormatFloat(
+		config.GetDefaultWarnNotifyErrorRate(),
+		'f',
+		-1,
+		64,
+	)
 
 	optionKeys = make([]string, 0, len(optionMap))
 	for key := range optionMap {
@@ -397,6 +403,12 @@ func updateOption(key, value string, isInit bool) (err error) {
 		config.SetPublicMCPHost(value)
 	case "GroupMCPHost":
 		config.SetGroupMCPHost(value)
+	case "DefaultWarnNotifyErrorRate":
+		rate, err := strconv.ParseFloat(value, 64)
+		if err != nil {
+			return err
+		}
+		config.SetDefaultWarnNotifyErrorRate(rate)
 	default:
 		return ErrUnknownOptionKey
 	}

@@ -1,6 +1,7 @@
 package config
 
 import (
+	"math"
 	"slices"
 	"strconv"
 	"sync/atomic"
@@ -25,6 +26,8 @@ var (
 	defaultChannelModelMapping   atomic.Value
 	groupMaxTokenNum             atomic.Int64
 	groupConsumeLevelRatio       atomic.Value
+
+	defaultWarnNotifyErrorRate uint64 = math.Float64bits(0.5)
 
 	defaultMCPHost atomic.Value
 	publicMCPHost  atomic.Value
@@ -234,4 +237,13 @@ func GetGroupMCPHost() string {
 func SetGroupMCPHost(host string) {
 	host = env.String("GROUP_MCP_HOST", host)
 	groupMCPHost.Store(host)
+}
+
+func GetDefaultWarnNotifyErrorRate() float64 {
+	return math.Float64frombits(atomic.LoadUint64(&defaultWarnNotifyErrorRate))
+}
+
+func SetDefaultWarnNotifyErrorRate(rate float64) {
+	rate = env.Float64("DEFAULT_WARN_NOTIFY_ERROR_RATE", rate)
+	atomic.StoreUint64(&defaultWarnNotifyErrorRate, math.Float64bits(rate))
 }
