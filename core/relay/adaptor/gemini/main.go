@@ -338,6 +338,10 @@ func buildContents(
 					imageTasks = append(imageTasks, msgPart)
 				}
 
+				if msgPart.Text == "" {
+					continue
+				}
+
 				content.Parts = append(content.Parts, msgPart)
 			}
 		}
