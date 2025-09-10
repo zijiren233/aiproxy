@@ -19,7 +19,7 @@ const (
 	channelKeyPart        = ":channel:"
 
 	// Default warning threshold
-	DefaultWarnErrorRate = 0.3 // 30%
+	DefaultWarnErrorRate = 0.5 // 50%
 )
 
 func modelKeyPrefix() string {
