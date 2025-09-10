@@ -328,6 +328,10 @@ func buildContents(
 		default:
 			// Handle regular messages
 			openaiContent := message.ParseContent()
+			if len(openaiContent) == 0 {
+				continue
+			}
+
 			for _, part := range openaiContent {
 				msgPart := buildMessageParts(part)
 				if msgPart.InlineData != nil {
