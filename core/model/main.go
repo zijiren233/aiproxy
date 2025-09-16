@@ -352,9 +352,11 @@ func preMigrationCleanupLogs(batchSize int) error {
 
 	cutoffTime := time.Now().Add(-time.Duration(logStorageHours) * time.Hour)
 
+	// First, get the IDs to delete
+	ids := make([]int, 0, batchSize)
+
 	for {
-		// First, get the IDs to delete
-		ids := make([]int, 0, batchSize)
+		ids = ids[:0]
 
 		err := LogDB.Model(&Log{}).
 			Select("id").
@@ -402,9 +404,11 @@ func preMigrationCleanupRequestDetails(batchSize int) error {
 
 	cutoffTime := time.Now().Add(-time.Duration(detailStorageHours) * time.Hour)
 
+	// First, get the IDs to delete
+	ids := make([]int, 0, batchSize)
+
 	for {
-		// First, get the IDs to delete
-		ids := make([]int, 0, batchSize)
+		ids = ids[:0]
 
 		err := LogDB.Model(&RequestDetail{}).
 			Select("id").
