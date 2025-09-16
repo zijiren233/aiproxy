@@ -49,15 +49,23 @@ func initializeServices() error {
 	initializePprof()
 	initializeNotifier()
 
+	if err := common.InitRedisClient(); err != nil {
+		return err
+	}
+
 	if err := initializeBalance(); err != nil {
 		return err
 	}
 
-	if err := initializeDatabases(); err != nil {
+	if err := model.InitDB(); err != nil {
 		return err
 	}
 
-	return initializeCaches()
+	if err := initializeOptionAndCaches(); err != nil {
+		return err
+	}
+
+	return model.InitLogDB(int(config.GetCleanLogBatchSize()))
 }
 
 func initializePprof() {
@@ -89,16 +97,13 @@ func initializeNotifier() {
 	}
 }
 
-func initializeDatabases() error {
-	model.InitDB()
-	model.InitLogDB()
-	return common.InitRedisClient()
-}
+func initializeOptionAndCaches() error {
+	log.Info("starting init config and channel")
 
-func initializeCaches() error {
 	if err := model.InitOption2DB(); err != nil {
 		return err
 	}
+
 	return model.InitModelConfigAndChannelCache()
 }
 
