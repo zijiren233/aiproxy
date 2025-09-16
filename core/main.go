@@ -99,9 +99,11 @@ func initializeNotifier() {
 
 func initializeOptionAndCaches() error {
 	log.Info("starting init config and channel")
+
 	if err := model.InitOption2DB(); err != nil {
 		return err
 	}
+
 	return model.InitModelConfigAndChannelCache()
 }
 

@@ -134,6 +134,7 @@ func InitDB() error {
 	}
 
 	log.Info("database migrated")
+
 	return nil
 }
 
@@ -185,6 +186,7 @@ func InitLogDB(batchSize int) error {
 	}
 
 	log.Info("log database migrated")
+
 	return nil
 }
 
@@ -347,6 +349,7 @@ func preMigrationCleanupLogs(batchSize int) error {
 	if batchSize <= 0 {
 		batchSize = defaultCleanLogBatchSize
 	}
+
 	cutoffTime := time.Now().Add(-time.Duration(logStorageHours) * time.Hour)
 
 	for {
@@ -396,6 +399,7 @@ func preMigrationCleanupRequestDetails(batchSize int) error {
 	if batchSize <= 0 {
 		batchSize = defaultCleanLogBatchSize
 	}
+
 	cutoffTime := time.Now().Add(-time.Duration(detailStorageHours) * time.Hour)
 
 	for {
