@@ -590,12 +590,12 @@ func (p *WebSearch) executeSearches(
 
 	_ = g.Wait()
 
-	seen := make(map[string]bool)
+	seen := make(map[string]struct{})
 
 	var uniqueResults []engine.SearchResult
 	for _, result := range allResults {
-		if !seen[result.Link] {
-			seen[result.Link] = true
+		if _, ok := seen[result.Link]; !ok {
+			seen[result.Link] = struct{}{}
 			uniqueResults = append(uniqueResults, result)
 		}
 	}
