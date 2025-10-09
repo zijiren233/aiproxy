@@ -192,6 +192,11 @@ func (p *WebSearch) ConvertRequest(
 
 	// Execute searches
 	searchResult := p.executeSearches(context.Background(), engines, searchContexts)
+	logrus.Debugf(
+		"search count: %d, search result count: %d",
+		searchResult.Count,
+		len(searchResult.Results),
+	)
 	if searchResult.Count == 0 || len(searchResult.Results) == 0 {
 		return do.ConvertRequest(meta, store, req)
 	}
