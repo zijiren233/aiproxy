@@ -93,6 +93,8 @@ func (s *SearchXNGEngine) Search(ctx context.Context, query SearchQuery) ([]Sear
 		return nil, fmt.Errorf("failed to decode response: %w", err)
 	}
 
+	fmt.Printf("searchxng: %+v\n", response)
+
 	// Convert to SearchResult format
 	results := make([]SearchResult, 0, len(response.Results))
 	for i, item := range response.Results {
