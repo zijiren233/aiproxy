@@ -51,6 +51,7 @@ type ClaudeContent struct {
 	Type         string              `json:"type"`
 	Text         string              `json:"text,omitempty"`
 	Thinking     string              `json:"thinking,omitempty"`
+	Signature    string              `json:"signature,omitempty"`
 	Source       *ClaudeImageSource  `json:"source,omitempty"`
 	ID           string              `json:"id,omitempty"`
 	Name         string              `json:"name,omitempty"`
@@ -220,6 +221,7 @@ type ClaudeDelta struct {
 	StopSequence *string `json:"stop_sequence,omitempty"`
 	Type         string  `json:"type,omitempty"`
 	Thinking     string  `json:"thinking,omitempty"`
+	Signature    string  `json:"signature,omitempty"`
 	Text         string  `json:"text,omitempty"`
 	PartialJSON  string  `json:"partial_json,omitempty"`
 }

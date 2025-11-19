@@ -236,8 +236,9 @@ func ClaudeStreamHandler(
 							Type:  "content_block_start",
 							Index: currentContentIndex,
 							ContentBlock: &relaymodel.ClaudeContent{
-								Type:     "thinking",
-								Thinking: "",
+								Type:             "thinking",
+								Thinking:         "",
+								ThoughtSignature: part.ThoughtSignature,
 							},
 						})
 					}
@@ -400,8 +401,9 @@ func geminiResponse2Claude(meta *meta.Meta, response *ChatResponse) *relaymodel.
 				if part.Thought {
 					// Add thinking content
 					claudeResponse.Content = append(claudeResponse.Content, relaymodel.ClaudeContent{
-						Type:     "thinking",
-						Thinking: part.Text,
+						Type:             "thinking",
+						Thinking:         part.Text,
+						ThoughtSignature: part.ThoughtSignature,
 					})
 				} else {
 					// Add text content
