@@ -12,6 +12,7 @@ import (
 
 	"github.com/bytedance/sonic"
 	"github.com/bytedance/sonic/ast"
+	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/core/common"
 	"github.com/labring/aiproxy/core/relay/adaptor"
 	"github.com/labring/aiproxy/core/relay/meta"
@@ -67,6 +68,7 @@ func GetLazyPatches(meta *meta.Meta) []PatchOperation {
 func (p *Plugin) ConvertRequest(
 	meta *meta.Meta,
 	store adaptor.Store,
+	c *gin.Context,
 	req *http.Request,
 	do adaptor.ConvertRequest,
 ) (adaptor.ConvertResult, error) {
@@ -75,18 +77,18 @@ func (p *Plugin) ConvertRequest(
 
 	bodyBytes, err := common.GetRequestBodyReusable(req)
 	if err != nil {
-		return do.ConvertRequest(meta, store, req)
+		return do.ConvertRequest(meta, store, c, req)
 	}
 
 	// Apply patches
 	patchedBody, modified, err := p.ApplyPatches(bodyBytes, meta, config)
 	if err != nil {
-		return do.ConvertRequest(meta, store, req)
+		return do.ConvertRequest(meta, store, c, req)
 	}
 
 	// If no modifications were made, return original
 	if !modified {
-		return do.ConvertRequest(meta, store, req)
+		return do.ConvertRequest(meta, store, c, req)
 	}
 
 	common.SetRequestBody(req, patchedBody)
@@ -94,7 +96,7 @@ func (p *Plugin) ConvertRequest(
 		common.SetRequestBody(req, bodyBytes)
 	}()
 
-	return do.ConvertRequest(meta, store, req)
+	return do.ConvertRequest(meta, store, c, req)
 }
 
 // loadConfig loads patch configuration from model config

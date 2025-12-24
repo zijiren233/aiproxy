@@ -3,12 +3,15 @@ package stepfun
 import (
 	"net/http"
 
+	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/core/model"
 	"github.com/labring/aiproxy/core/relay/adaptor"
 	"github.com/labring/aiproxy/core/relay/adaptor/openai"
 	"github.com/labring/aiproxy/core/relay/meta"
 	"github.com/labring/aiproxy/core/relay/mode"
 )
+
+var _ adaptor.Adaptor = (*Adaptor)(nil)
 
 type Adaptor struct {
 	openai.Adaptor
@@ -23,13 +26,14 @@ func (a *Adaptor) DefaultBaseURL() string {
 func (a *Adaptor) ConvertRequest(
 	meta *meta.Meta,
 	store adaptor.Store,
+	c *gin.Context,
 	req *http.Request,
 ) (adaptor.ConvertResult, error) {
 	switch meta.Mode {
 	case mode.AudioSpeech:
 		return openai.ConvertTTSRequest(meta, req, "cixingnansheng")
 	default:
-		return a.Adaptor.ConvertRequest(meta, store, req)
+		return a.Adaptor.ConvertRequest(meta, store, c, req)
 	}
 }
 

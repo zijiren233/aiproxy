@@ -15,6 +15,8 @@ import (
 	"github.com/labring/aiproxy/core/relay/utils"
 )
 
+var _ adaptor.Adaptor = (*Adaptor)(nil)
+
 // text-embeddings-inference adaptor supports rerank and embeddings models deployed by
 // https://github.com/huggingface/text-embeddings-inference
 type Adaptor struct{}
@@ -37,37 +39,6 @@ func (a *Adaptor) Metadata() adaptor.Metadata {
 	}
 }
 
-func (a *Adaptor) GetRequestURL(
-	meta *meta.Meta,
-	_ adaptor.Store,
-	_ *gin.Context,
-) (adaptor.RequestURL, error) {
-	switch meta.Mode {
-	case mode.Rerank:
-		url, err := url.JoinPath(meta.Channel.BaseURL, "/rerank")
-		if err != nil {
-			return adaptor.RequestURL{}, err
-		}
-
-		return adaptor.RequestURL{
-			Method: http.MethodPost,
-			URL:    url,
-		}, nil
-	case mode.Embeddings:
-		url, err := url.JoinPath(meta.Channel.BaseURL, "/v1/embeddings")
-		if err != nil {
-			return adaptor.RequestURL{}, err
-		}
-
-		return adaptor.RequestURL{
-			Method: http.MethodPost,
-			URL:    url,
-		}, nil
-	default:
-		return adaptor.RequestURL{}, fmt.Errorf("unsupported mode: %s", meta.Mode)
-	}
-}
-
 // text-embeddings-inference api see
 // https://huggingface.github.io/text-embeddings-inference/#/Text%20Embeddings%20Inference/rerank
 
@@ -84,16 +55,44 @@ func (a *Adaptor) SetupRequestHeader(
 func (a *Adaptor) ConvertRequest(
 	meta *meta.Meta,
 	store adaptor.Store,
+	c *gin.Context,
 	req *http.Request,
 ) (adaptor.ConvertResult, error) {
+	var (
+		result     adaptor.ConvertResult
+		err        error
+		requestURL string
+	)
+
 	switch meta.Mode {
 	case mode.Rerank:
-		return ConvertRerankRequest(meta, req)
+		result, err = ConvertRerankRequest(meta, req)
+		if err != nil {
+			return adaptor.ConvertResult{}, err
+		}
+
+		requestURL, err = url.JoinPath(meta.Channel.BaseURL, "/rerank")
+		if err != nil {
+			return adaptor.ConvertResult{}, err
+		}
 	case mode.Embeddings:
-		return openai.ConvertRequest(meta, store, req)
+		result, err = openai.ConvertRequest(meta, store, c, req)
+		if err != nil {
+			return adaptor.ConvertResult{}, err
+		}
+
+		requestURL, err = url.JoinPath(meta.Channel.BaseURL, "/v1/embeddings")
+		if err != nil {
+			return adaptor.ConvertResult{}, err
+		}
 	default:
 		return adaptor.ConvertResult{}, fmt.Errorf("unsupported mode: %s", meta.Mode)
 	}
+
+	result.Method = http.MethodPost
+	result.URL = requestURL
+
+	return result, nil
 }
 
 func (a *Adaptor) DoRequest(
@@ -110,17 +109,28 @@ func (a *Adaptor) DoResponse(
 	store adaptor.Store,
 	c *gin.Context,
 	resp *http.Response,
-) (model.Usage, adaptor.Error) {
+) (adaptor.UsageResult, adaptor.Error) {
+	var (
+		usage model.Usage
+		err   adaptor.Error
+	)
+
 	switch meta.Mode {
 	case mode.Rerank:
-		return RerankHandler(meta, c, resp)
+		usage, err = RerankHandler(meta, c, resp)
 	case mode.Embeddings:
-		return EmbeddingsHandler(meta, store, c, resp)
+		usage, err = EmbeddingsHandler(meta, store, c, resp)
 	default:
-		return model.Usage{}, relaymodel.WrapperOpenAIErrorWithMessage(
+		return nil, relaymodel.WrapperOpenAIErrorWithMessage(
 			fmt.Sprintf("unsupported mode: %s", meta.Mode),
 			"unsupported_mode",
 			http.StatusBadRequest,
 		)
 	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return adaptor.NewSyncUsage(usage), nil
 }

@@ -2,6 +2,7 @@ package azure2
 
 import (
 	"fmt"
+	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/core/relay/adaptor"
@@ -14,12 +15,28 @@ type Adaptor struct {
 	azure.Adaptor
 }
 
-func (a *Adaptor) GetRequestURL(
+func (a *Adaptor) ConvertRequest(
 	meta *meta.Meta,
-	_ adaptor.Store,
-	_ *gin.Context,
-) (adaptor.RequestURL, error) {
-	return azure.GetRequestURL(meta, false)
+	store adaptor.Store,
+	c *gin.Context,
+	req *http.Request,
+) (adaptor.ConvertResult, error) {
+	// Use parent's ConvertRequest
+	result, err := a.Adaptor.ConvertRequest(meta, store, c, req)
+	if err != nil {
+		return adaptor.ConvertResult{}, err
+	}
+
+	// Override URL with Azure-specific URL (replaceDot = false for azure2)
+	method, fullURL, err := azure.GetRequestURL(meta, false)
+	if err != nil {
+		return adaptor.ConvertResult{}, err
+	}
+
+	result.Method = method
+	result.URL = fullURL
+
+	return result, nil
 }
 
 func (a *Adaptor) Metadata() adaptor.Metadata {

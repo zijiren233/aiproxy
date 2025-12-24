@@ -5,6 +5,8 @@ import (
 	"github.com/labring/aiproxy/core/relay/adaptor/openai"
 )
 
+var _ adaptor.Adaptor = (*Adaptor)(nil)
+
 type Adaptor struct {
 	openai.Adaptor
 }

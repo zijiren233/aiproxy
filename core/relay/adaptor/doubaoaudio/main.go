@@ -6,28 +6,20 @@ import (
 	"net/url"
 
 	"github.com/gin-gonic/gin"
-	"github.com/labring/aiproxy/core/model"
 	"github.com/labring/aiproxy/core/relay/adaptor"
 	"github.com/labring/aiproxy/core/relay/meta"
 	"github.com/labring/aiproxy/core/relay/mode"
 	relaymodel "github.com/labring/aiproxy/core/relay/model"
 )
 
-func GetRequestURL(meta *meta.Meta) (adaptor.RequestURL, error) {
+func getRequestURL(meta *meta.Meta) (method, fullURL string, err error) {
 	u := meta.Channel.BaseURL
 	switch meta.Mode {
 	case mode.AudioSpeech:
-		url, err := url.JoinPath(u, "/api/v1/tts/ws_binary")
-		if err != nil {
-			return adaptor.RequestURL{}, err
-		}
-
-		return adaptor.RequestURL{
-			Method: http.MethodPost,
-			URL:    url,
-		}, nil
+		fullURL, err = url.JoinPath(u, "/api/v1/tts/ws_binary")
+		return http.MethodPost, fullURL, err
 	default:
-		return adaptor.RequestURL{}, fmt.Errorf("unsupported mode: %s", meta.Mode)
+		return "", "", fmt.Errorf("unsupported mode: %s", meta.Mode)
 	}
 }
 
@@ -51,25 +43,38 @@ func (a *Adaptor) Metadata() adaptor.Metadata {
 	}
 }
 
-func (a *Adaptor) GetRequestURL(
-	meta *meta.Meta,
-	_ adaptor.Store,
-	_ *gin.Context,
-) (adaptor.RequestURL, error) {
-	return GetRequestURL(meta)
-}
-
 func (a *Adaptor) ConvertRequest(
 	meta *meta.Meta,
 	_ adaptor.Store,
+	_ *gin.Context,
 	req *http.Request,
 ) (adaptor.ConvertResult, error) {
+	var (
+		result adaptor.ConvertResult
+		err    error
+	)
+
 	switch meta.Mode {
 	case mode.AudioSpeech:
-		return ConvertTTSRequest(meta, req)
+		result, err = ConvertTTSRequest(meta, req)
 	default:
 		return adaptor.ConvertResult{}, fmt.Errorf("unsupported mode: %s", meta.Mode)
 	}
+
+	if err != nil {
+		return adaptor.ConvertResult{}, err
+	}
+
+	// Get URL
+	method, fullURL, err := getRequestURL(meta)
+	if err != nil {
+		return adaptor.ConvertResult{}, err
+	}
+
+	result.Method = method
+	result.URL = fullURL
+
+	return result, nil
 }
 
 func (a *Adaptor) SetupRequestHeader(
@@ -112,12 +117,13 @@ func (a *Adaptor) DoResponse(
 	_ adaptor.Store,
 	c *gin.Context,
 	resp *http.Response,
-) (model.Usage, adaptor.Error) {
+) (adaptor.UsageResult, adaptor.Error) {
 	switch meta.Mode {
 	case mode.AudioSpeech:
-		return TTSDoResponse(meta, c, resp)
+		usage, err := TTSDoResponse(meta, c, resp)
+		return adaptor.NewSyncUsage(usage), err
 	default:
-		return model.Usage{}, relaymodel.WrapperOpenAIErrorWithMessage(
+		return nil, relaymodel.WrapperOpenAIErrorWithMessage(
 			fmt.Sprintf("unsupported mode: %s", meta.Mode),
 			nil,
 			http.StatusBadRequest,

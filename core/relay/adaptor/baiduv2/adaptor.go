@@ -19,6 +19,8 @@ import (
 
 type Adaptor struct{}
 
+var _ adaptor.Adaptor = (*Adaptor)(nil)
+
 const (
 	baseURL = "https://qianfan.baidubce.com/v2"
 )
@@ -44,37 +46,6 @@ func toV2ModelName(modelName string) string {
 	return strings.ToLower(modelName)
 }
 
-func (a *Adaptor) GetRequestURL(
-	meta *meta.Meta,
-	_ adaptor.Store,
-	_ *gin.Context,
-) (adaptor.RequestURL, error) {
-	switch meta.Mode {
-	case mode.ChatCompletions:
-		url, err := url.JoinPath(meta.Channel.BaseURL, "/chat/completions")
-		if err != nil {
-			return adaptor.RequestURL{}, err
-		}
-
-		return adaptor.RequestURL{
-			Method: http.MethodPost,
-			URL:    url,
-		}, nil
-	case mode.Rerank:
-		url, err := url.JoinPath(meta.Channel.BaseURL, "/rerankers")
-		if err != nil {
-			return adaptor.RequestURL{}, err
-		}
-
-		return adaptor.RequestURL{
-			Method: http.MethodPost,
-			URL:    url,
-		}, nil
-	default:
-		return adaptor.RequestURL{}, fmt.Errorf("unsupported mode: %s", meta.Mode)
-	}
-}
-
 func (a *Adaptor) SetupRequestHeader(
 	meta *meta.Meta,
 	_ adaptor.Store,
@@ -94,8 +65,33 @@ func (a *Adaptor) SetupRequestHeader(
 func (a *Adaptor) ConvertRequest(
 	meta *meta.Meta,
 	store adaptor.Store,
+	c *gin.Context,
 	req *http.Request,
 ) (adaptor.ConvertResult, error) {
+	// Set URL and Method based on mode
+	var (
+		requestURL string
+		err        error
+	)
+
+	switch meta.Mode {
+	case mode.ChatCompletions:
+		requestURL, err = url.JoinPath(meta.Channel.BaseURL, "/chat/completions")
+		if err != nil {
+			return adaptor.ConvertResult{}, err
+		}
+	case mode.Rerank:
+		requestURL, err = url.JoinPath(meta.Channel.BaseURL, "/rerankers")
+		if err != nil {
+			return adaptor.ConvertResult{}, err
+		}
+	default:
+		return adaptor.ConvertResult{}, fmt.Errorf("unsupported mode: %s", meta.Mode)
+	}
+
+	// Convert request body
+	var result adaptor.ConvertResult
+
 	switch meta.Mode {
 	case mode.ChatCompletions, mode.Rerank:
 		actModel := meta.ActualModel
@@ -106,10 +102,19 @@ func (a *Adaptor) ConvertRequest(
 			defer func() { meta.ActualModel = actModel }()
 		}
 
-		return openai.ConvertRequest(meta, store, req)
+		result, err = openai.ConvertRequest(meta, store, c, req)
+		if err != nil {
+			return adaptor.ConvertResult{}, err
+		}
 	default:
 		return adaptor.ConvertResult{}, fmt.Errorf("unsupported mode: %s", meta.Mode)
 	}
+
+	// Set URL and Method
+	result.Method = http.MethodPost
+	result.URL = requestURL
+
+	return result, nil
 }
 
 func (a *Adaptor) DoRequest(
@@ -126,12 +131,12 @@ func (a *Adaptor) DoResponse(
 	store adaptor.Store,
 	c *gin.Context,
 	resp *http.Response,
-) (usage model.Usage, err adaptor.Error) {
+) (adaptor.UsageResult, adaptor.Error) {
 	switch meta.Mode {
 	case mode.ChatCompletions, mode.Rerank:
 		return openai.DoResponse(meta, store, c, resp)
 	default:
-		return model.Usage{}, relaymodel.WrapperOpenAIErrorWithMessage(
+		return adaptor.NewSyncUsage(model.Usage{}), relaymodel.WrapperOpenAIErrorWithMessage(
 			fmt.Sprintf("unsupported mode: %s", meta.Mode),
 			nil,
 			http.StatusBadRequest,

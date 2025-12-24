@@ -3,6 +3,7 @@ package openai
 import (
 	"bytes"
 	"net/http"
+	"net/url"
 	"strconv"
 
 	"github.com/bytedance/sonic"
@@ -34,7 +35,14 @@ func ConvertRerankRequest(
 		return adaptor.ConvertResult{}, err
 	}
 
+	fullURL, err := url.JoinPath(meta.Channel.BaseURL, "/rerank")
+	if err != nil {
+		return adaptor.ConvertResult{}, err
+	}
+
 	return adaptor.ConvertResult{
+		Method: http.MethodPost,
+		URL:    fullURL,
 		Header: http.Header{
 			"Content-Type":   {"application/json"},
 			"Content-Length": {strconv.Itoa(len(jsonData))},

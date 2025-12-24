@@ -13,7 +13,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/core/common"
 	"github.com/labring/aiproxy/core/common/conv"
-	"github.com/labring/aiproxy/core/model"
 	"github.com/labring/aiproxy/core/relay/adaptor"
 	"github.com/labring/aiproxy/core/relay/meta"
 	"github.com/labring/aiproxy/core/relay/mode"
@@ -55,18 +54,19 @@ func (p *StreamFake) getConfig(meta *meta.Meta) (*Config, error) {
 func (p *StreamFake) ConvertRequest(
 	meta *meta.Meta,
 	store adaptor.Store,
+	c *gin.Context,
 	req *http.Request,
 	do adaptor.ConvertRequest,
 ) (adaptor.ConvertResult, error) {
 	// Only process chat completions
 	if meta.Mode != mode.ChatCompletions {
-		return do.ConvertRequest(meta, store, req)
+		return do.ConvertRequest(meta, store, c, req)
 	}
 
 	// Check if stream fake is enabled
 	pluginConfig, err := p.getConfig(meta)
 	if err != nil || !pluginConfig.Enable {
-		return do.ConvertRequest(meta, store, req)
+		return do.ConvertRequest(meta, store, c, req)
 	}
 
 	body, err := common.GetRequestBodyReusable(req)
@@ -76,13 +76,13 @@ func (p *StreamFake) ConvertRequest(
 
 	node, err := sonic.Get(body)
 	if err != nil {
-		return do.ConvertRequest(meta, store, req)
+		return do.ConvertRequest(meta, store, c, req)
 	}
 
 	stream, _ := node.Get("stream").Bool()
 	if stream {
 		// Already streaming, no need to fake
-		return do.ConvertRequest(meta, store, req)
+		return do.ConvertRequest(meta, store, c, req)
 	}
 
 	patch.AddLazyPatch(meta, patch.PatchOperation{
@@ -98,7 +98,7 @@ func (p *StreamFake) ConvertRequest(
 	})
 	meta.Set(fakeStreamKey, true)
 
-	return do.ConvertRequest(meta, store, req)
+	return do.ConvertRequest(meta, store, c, req)
 }
 
 // DoResponse handles the response processing to collect streaming data and convert back to non-streaming
@@ -108,7 +108,7 @@ func (p *StreamFake) DoResponse(
 	c *gin.Context,
 	resp *http.Response,
 	do adaptor.DoResponse,
-) (model.Usage, adaptor.Error) {
+) (adaptor.UsageResult, adaptor.Error) {
 	// Only process chat completions
 	if meta.Mode != mode.ChatCompletions {
 		return do.DoResponse(meta, store, c, resp)
@@ -135,7 +135,7 @@ func (p *StreamFake) handleFakeStreamResponse(
 	c *gin.Context,
 	resp *http.Response,
 	do adaptor.DoResponse,
-) (model.Usage, adaptor.Error) {
+) (adaptor.UsageResult, adaptor.Error) {
 	log := common.GetLogger(c)
 	// Create a custom response writer to collect streaming data
 	rw := &fakeStreamResponseWriter{
@@ -148,16 +148,16 @@ func (p *StreamFake) handleFakeStreamResponse(
 	}()
 
 	// Process the streaming response
-	usage, relayErr := do.DoResponse(meta, store, c, resp)
+	usageResult, relayErr := do.DoResponse(meta, store, c, resp)
 	if relayErr != nil {
-		return usage, relayErr
+		return usageResult, relayErr
 	}
 
 	// Convert collected streaming chunks to non-streaming response
 	respBody, err := rw.convertToNonStream()
 	if err != nil {
 		log.Errorf("failed to convert to non-streaming response: %v", err)
-		return usage, relayErr
+		return usageResult, relayErr
 	}
 
 	// Set appropriate headers for non-streaming response
@@ -173,7 +173,7 @@ func (p *StreamFake) handleFakeStreamResponse(
 	// Write the non-streaming response
 	_, _ = rw.ResponseWriter.Write(respBody)
 
-	return usage, nil
+	return usageResult, nil
 }
 
 // fakeStreamResponseWriter captures streaming response data

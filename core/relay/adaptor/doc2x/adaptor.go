@@ -6,7 +6,6 @@ import (
 	"net/url"
 
 	"github.com/gin-gonic/gin"
-	"github.com/labring/aiproxy/core/model"
 	"github.com/labring/aiproxy/core/relay/adaptor"
 	"github.com/labring/aiproxy/core/relay/meta"
 	"github.com/labring/aiproxy/core/relay/mode"
@@ -28,35 +27,28 @@ func (a *Adaptor) SupportMode(m mode.Mode) bool {
 	return m == mode.ParsePdf
 }
 
-func (a *Adaptor) GetRequestURL(
-	meta *meta.Meta,
-	_ adaptor.Store,
-	_ *gin.Context,
-) (adaptor.RequestURL, error) {
-	switch meta.Mode {
-	case mode.ParsePdf:
-		url, err := url.JoinPath(meta.Channel.BaseURL, "/api/v2/parse/pdf")
-		if err != nil {
-			return adaptor.RequestURL{}, err
-		}
-
-		return adaptor.RequestURL{
-			Method: http.MethodPost,
-			URL:    url,
-		}, nil
-	default:
-		return adaptor.RequestURL{}, fmt.Errorf("unsupported mode: %s", meta.Mode)
-	}
-}
-
 func (a *Adaptor) ConvertRequest(
 	meta *meta.Meta,
 	_ adaptor.Store,
+	_ *gin.Context,
 	req *http.Request,
 ) (adaptor.ConvertResult, error) {
 	switch meta.Mode {
 	case mode.ParsePdf:
-		return ConvertParsePdfRequest(meta, req)
+		result, err := ConvertParsePdfRequest(meta, req)
+		if err != nil {
+			return adaptor.ConvertResult{}, err
+		}
+
+		url, err := url.JoinPath(meta.Channel.BaseURL, "/api/v2/parse/pdf")
+		if err != nil {
+			return adaptor.ConvertResult{}, err
+		}
+
+		result.Method = http.MethodPost
+		result.URL = url
+
+		return result, nil
 	default:
 		return adaptor.ConvertResult{}, fmt.Errorf("unsupported mode: %s", meta.Mode)
 	}
@@ -76,12 +68,17 @@ func (a *Adaptor) DoResponse(
 	_ adaptor.Store,
 	c *gin.Context,
 	resp *http.Response,
-) (model.Usage, adaptor.Error) {
+) (adaptor.UsageResult, adaptor.Error) {
 	switch meta.Mode {
 	case mode.ParsePdf:
-		return HandleParsePdfResponse(meta, c, resp)
+		usage, err := HandleParsePdfResponse(meta, c, resp)
+		if err != nil {
+			return nil, err
+		}
+
+		return adaptor.NewSyncUsage(usage), nil
 	default:
-		return model.Usage{}, relaymodel.WrapperOpenAIErrorWithMessage(
+		return nil, relaymodel.WrapperOpenAIErrorWithMessage(
 			fmt.Sprintf("unsupported mode: %s", meta.Mode),
 			"unsupported_mode",
 			http.StatusBadRequest,

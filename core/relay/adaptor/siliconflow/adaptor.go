@@ -37,12 +37,17 @@ func (a *Adaptor) DoResponse(
 	store adaptor.Store,
 	c *gin.Context,
 	resp *http.Response,
-) (usage model.Usage, err adaptor.Error) {
+) (adaptor.UsageResult, adaptor.Error) {
+	var (
+		usage model.Usage
+		err   adaptor.Error
+	)
+
 	switch meta.Mode {
 	case mode.AudioSpeech:
 		_, err = a.Adaptor.DoResponse(meta, store, c, resp)
 		if err != nil {
-			return model.Usage{}, err
+			return nil, err
 		}
 
 		size := c.Writer.Size()
@@ -52,19 +57,23 @@ func (a *Adaptor) DoResponse(
 		}
 	case mode.Rerank:
 		if resp.StatusCode != http.StatusOK {
-			return model.Usage{}, ErrorHandler(resp)
+			return nil, ErrorHandler(resp)
 		}
 
-		usage, err = a.Adaptor.DoResponse(meta, store, c, resp)
+		result, err := a.Adaptor.DoResponse(meta, store, c, resp)
 		if err != nil {
-			return model.Usage{}, err
+			return nil, err
 		}
+
+		usage = result.Usage()
 	default:
-		usage, err = a.Adaptor.DoResponse(meta, store, c, resp)
+		result, err := a.Adaptor.DoResponse(meta, store, c, resp)
 		if err != nil {
-			return model.Usage{}, err
+			return nil, err
 		}
+
+		usage = result.Usage()
 	}
 
-	return usage, nil
+	return adaptor.NewSyncUsage(usage), nil
 }

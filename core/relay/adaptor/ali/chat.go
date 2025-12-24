@@ -151,14 +151,15 @@ func ChatHandler(
 		)
 	}
 
-	u, e := openai.DoResponse(meta, store, c, resp)
+	usageResult, e := openai.DoResponse(meta, store, c, resp)
 	if e != nil {
 		return model.Usage{}, e
 	}
 
+	usage := usageResult.Usage()
 	if getEnableSearch(&node) {
-		u.WebSearchCount++
+		usage.WebSearchCount++
 	}
 
-	return u, nil
+	return usage, nil
 }

@@ -1,9 +1,11 @@
 package anthropic
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"sync"
@@ -42,6 +44,34 @@ func stopReasonClaude2OpenAI(reason string) string {
 	default:
 		return reason
 	}
+}
+
+// ConvertOpenAIRequest converts OpenAI format request to Claude format with URL
+func ConvertOpenAIRequest(meta *meta.Meta, req *http.Request) (adaptor.ConvertResult, error) {
+	claudeReq, err := OpenAIConvertRequest(meta, req)
+	if err != nil {
+		return adaptor.ConvertResult{}, err
+	}
+
+	data, err := sonic.Marshal(claudeReq)
+	if err != nil {
+		return adaptor.ConvertResult{}, err
+	}
+
+	fullURL, err := url.JoinPath(meta.Channel.BaseURL, "/messages")
+	if err != nil {
+		return adaptor.ConvertResult{}, err
+	}
+
+	return adaptor.ConvertResult{
+		Method: http.MethodPost,
+		URL:    fullURL,
+		Header: http.Header{
+			"Content-Type":   {"application/json"},
+			"Content-Length": {strconv.Itoa(len(data))},
+		},
+		Body: bytes.NewReader(data),
+	}, nil
 }
 
 //nolint:gocyclo

@@ -20,6 +20,8 @@ import (
 
 type Adaptor struct{}
 
+var _ adaptor.Adaptor = (*Adaptor)(nil)
+
 const baseURL = "https://dashscope.aliyuncs.com"
 
 func (a *Adaptor) DefaultBaseURL() string {
@@ -39,99 +41,6 @@ func (a *Adaptor) SupportMode(m mode.Mode) bool {
 		m == mode.Gemini
 }
 
-func (a *Adaptor) GetRequestURL(
-	meta *meta.Meta,
-	_ adaptor.Store,
-	_ *gin.Context,
-) (adaptor.RequestURL, error) {
-	u := meta.Channel.BaseURL
-
-	switch meta.Mode {
-	case mode.ImagesGenerations:
-		url, err := url.JoinPath(u, "/api/v1/services/aigc/text2image/image-synthesis")
-		if err != nil {
-			return adaptor.RequestURL{}, err
-		}
-
-		return adaptor.RequestURL{
-			Method: http.MethodPost,
-			URL:    url,
-		}, nil
-	case mode.ChatCompletions:
-		url, err := url.JoinPath(u, "/compatible-mode/v1/chat/completions")
-		if err != nil {
-			return adaptor.RequestURL{}, err
-		}
-
-		return adaptor.RequestURL{
-			Method: http.MethodPost,
-			URL:    url,
-		}, nil
-	case mode.Completions:
-		url, err := url.JoinPath(u, "/compatible-mode/v1/completions")
-		if err != nil {
-			return adaptor.RequestURL{}, err
-		}
-
-		return adaptor.RequestURL{
-			Method: http.MethodPost,
-			URL:    url,
-		}, nil
-	case mode.Embeddings:
-		url, err := url.JoinPath(u, "/compatible-mode/v1/embeddings")
-		if err != nil {
-			return adaptor.RequestURL{}, err
-		}
-
-		return adaptor.RequestURL{
-			Method: http.MethodPost,
-			URL:    url,
-		}, nil
-	case mode.AudioSpeech, mode.AudioTranscription:
-		url, err := url.JoinPath(u, "/api-ws/v1/inference")
-		if err != nil {
-			return adaptor.RequestURL{}, err
-		}
-
-		return adaptor.RequestURL{
-			Method: http.MethodPost,
-			URL:    url,
-		}, nil
-	case mode.Rerank:
-		url, err := url.JoinPath(u, "/api/v1/services/rerank/text-rerank/text-rerank")
-		if err != nil {
-			return adaptor.RequestURL{}, err
-		}
-
-		return adaptor.RequestURL{
-			Method: http.MethodPost,
-			URL:    url,
-		}, nil
-	case mode.Anthropic:
-		url, err := url.JoinPath(u, "/api/v2/apps/claude-code-proxy/v1/messages")
-		if err != nil {
-			return adaptor.RequestURL{}, err
-		}
-
-		return adaptor.RequestURL{
-			Method: http.MethodPost,
-			URL:    url,
-		}, nil
-	case mode.Gemini:
-		url, err := url.JoinPath(u, "/compatible-mode/v1/chat/completions")
-		if err != nil {
-			return adaptor.RequestURL{}, err
-		}
-
-		return adaptor.RequestURL{
-			Method: http.MethodPost,
-			URL:    url,
-		}, nil
-	default:
-		return adaptor.RequestURL{}, fmt.Errorf("unsupported mode: %s", meta.Mode)
-	}
-}
-
 func (a *Adaptor) SetupRequestHeader(
 	meta *meta.Meta,
 	_ adaptor.Store,
@@ -147,30 +56,76 @@ func (a *Adaptor) SetupRequestHeader(
 func (a *Adaptor) ConvertRequest(
 	meta *meta.Meta,
 	store adaptor.Store,
+	_ *gin.Context,
 	req *http.Request,
 ) (adaptor.ConvertResult, error) {
+	// Construct URL based on mode
+	u := meta.Channel.BaseURL
+
+	var (
+		fullURL string
+		err     error
+	)
+
 	switch meta.Mode {
 	case mode.ImagesGenerations:
-		return ConvertImageRequest(meta, req)
-	case mode.Rerank:
-		return ConvertRerankRequest(meta, req)
+		fullURL, err = url.JoinPath(u, "/api/v1/services/aigc/text2image/image-synthesis")
 	case mode.ChatCompletions:
-		return ConvertChatCompletionsRequest(meta, store, req)
+		fullURL, err = url.JoinPath(u, "/compatible-mode/v1/chat/completions")
 	case mode.Completions:
-		return ConvertCompletionsRequest(meta, store, req)
+		fullURL, err = url.JoinPath(u, "/compatible-mode/v1/completions")
 	case mode.Embeddings:
-		return openai.ConvertRequest(meta, store, req)
-	case mode.AudioSpeech:
-		return ConvertTTSRequest(meta, req)
-	case mode.AudioTranscription:
-		return ConvertSTTRequest(meta, req)
+		fullURL, err = url.JoinPath(u, "/compatible-mode/v1/embeddings")
+	case mode.AudioSpeech, mode.AudioTranscription:
+		fullURL, err = url.JoinPath(u, "/api-ws/v1/inference")
+	case mode.Rerank:
+		fullURL, err = url.JoinPath(u, "/api/v1/services/rerank/text-rerank/text-rerank")
 	case mode.Anthropic:
-		return anthropic.ConvertRequest(meta, req)
+		fullURL, err = url.JoinPath(u, "/api/v2/apps/claude-code-proxy/v1/messages")
 	case mode.Gemini:
-		return openai.ConvertGeminiRequest(meta, req)
+		fullURL, err = url.JoinPath(u, "/compatible-mode/v1/chat/completions")
 	default:
 		return adaptor.ConvertResult{}, fmt.Errorf("unsupported mode: %s", meta.Mode)
 	}
+
+	if err != nil {
+		return adaptor.ConvertResult{}, err
+	}
+
+	// Convert request body
+	var result adaptor.ConvertResult
+	switch meta.Mode {
+	case mode.ImagesGenerations:
+		result, err = ConvertImageRequest(meta, req)
+	case mode.Rerank:
+		result, err = ConvertRerankRequest(meta, req)
+	case mode.ChatCompletions:
+		result, err = ConvertChatCompletionsRequest(meta, store, req)
+	case mode.Completions:
+		result, err = ConvertCompletionsRequest(meta, store, req)
+	case mode.Embeddings:
+		result, err = openai.ConvertRequest(meta, store, nil, req)
+	case mode.AudioSpeech:
+		result, err = ConvertTTSRequest(meta, req)
+	case mode.AudioTranscription:
+		result, err = ConvertSTTRequest(meta, req)
+	case mode.Anthropic:
+		result, err = anthropic.ConvertRequest(meta, req)
+	case mode.Gemini:
+		result, err = openai.ConvertGeminiRequest(meta, req)
+	default:
+		return adaptor.ConvertResult{}, fmt.Errorf("unsupported mode: %s", meta.Mode)
+	}
+
+	if err != nil {
+		return adaptor.ConvertResult{}, err
+	}
+
+	// Set Method and URL
+	result.Method = http.MethodPost
+	result.URL = fullURL
+
+	return result, nil
 }
 
 func (a *Adaptor) DoRequest(
@@ -194,39 +149,50 @@ func (a *Adaptor) DoResponse(
 	store adaptor.Store,
 	c *gin.Context,
 	resp *http.Response,
-) (model.Usage, adaptor.Error) {
+) (adaptor.UsageResult, adaptor.Error) {
+	var (
+		usage model.Usage
+		err   adaptor.Error
+	)
+
 	switch meta.Mode {
 	case mode.ImagesGenerations:
-		return ImageHandler(meta, c, resp)
+		usage, err = ImageHandler(meta, c, resp)
 	case mode.Embeddings:
-		return EmbeddingsHandler(meta, store, c, resp)
+		usage, err = EmbeddingsHandler(meta, store, c, resp)
 	case mode.Completions, mode.ChatCompletions:
-		return ChatHandler(meta, store, c, resp)
+		usage, err = ChatHandler(meta, store, c, resp)
 	case mode.Rerank:
-		return RerankHandler(meta, c, resp)
+		usage, err = RerankHandler(meta, c, resp)
 	case mode.AudioSpeech:
-		return TTSDoResponse(meta, c, resp)
+		usage, err = TTSDoResponse(meta, c, resp)
 	case mode.AudioTranscription:
-		return STTDoResponse(meta, c, resp)
+		usage, err = STTDoResponse(meta, c, resp)
 	case mode.Anthropic:
 		if utils.IsStreamResponse(resp) {
-			return anthropic.StreamHandler(meta, c, resp)
+			usage, err = anthropic.StreamHandler(meta, c, resp)
 		} else {
-			return anthropic.Handler(meta, c, resp)
+			usage, err = anthropic.Handler(meta, c, resp)
 		}
 	case mode.Gemini:
 		if utils.IsStreamResponse(resp) {
-			return openai.GeminiStreamHandler(meta, c, resp)
+			usage, err = openai.GeminiStreamHandler(meta, c, resp)
 		} else {
-			return openai.GeminiHandler(meta, c, resp)
+			usage, err = openai.GeminiHandler(meta, c, resp)
 		}
 	default:
-		return model.Usage{}, relaymodel.WrapperOpenAIErrorWithMessage(
+		return nil, relaymodel.WrapperOpenAIErrorWithMessage(
 			fmt.Sprintf("unsupported mode: %s", meta.Mode),
 			"unsupported_mode",
 			http.StatusBadRequest,
 		)
 	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return adaptor.NewSyncUsage(usage), nil
 }
 
 func (a *Adaptor) Metadata() adaptor.Metadata {

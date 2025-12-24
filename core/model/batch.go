@@ -78,15 +78,21 @@ type GroupSummaryMinuteUpdate struct {
 var batchData batchUpdateData
 
 func init() {
-	batchData = batchUpdateData{
-		Groups:               make(map[string]*GroupUpdate),
-		Tokens:               make(map[int]*TokenUpdate),
-		Channels:             make(map[int]*ChannelUpdate),
-		Summaries:            make(map[SummaryUnique]*SummaryUpdate),
-		GroupSummaries:       make(map[GroupSummaryUnique]*GroupSummaryUpdate),
-		SummariesMinute:      make(map[SummaryMinuteUnique]*SummaryMinuteUpdate),
-		GroupSummariesMinute: make(map[GroupSummaryMinuteUnique]*GroupSummaryMinuteUpdate),
-	}
+	ResetBatchData()
+}
+
+// ResetBatchData clears all pending batch updates. Useful for testing.
+func ResetBatchData() {
+	batchData.Lock()
+	defer batchData.Unlock()
+
+	batchData.Groups = make(map[string]*GroupUpdate)
+	batchData.Tokens = make(map[int]*TokenUpdate)
+	batchData.Channels = make(map[int]*ChannelUpdate)
+	batchData.Summaries = make(map[SummaryUnique]*SummaryUpdate)
+	batchData.GroupSummaries = make(map[GroupSummaryUnique]*GroupSummaryUpdate)
+	batchData.SummariesMinute = make(map[SummaryMinuteUnique]*SummaryMinuteUpdate)
+	batchData.GroupSummariesMinute = make(map[GroupSummaryMinuteUnique]*GroupSummaryMinuteUpdate)
 }
 
 func StartBatchProcessorSummary(ctx context.Context, wg *sync.WaitGroup) {
@@ -744,5 +750,76 @@ func updateSummaryDataMinute(
 
 	if usage.CachedTokens > 0 {
 		summary.CacheHitCount++
+	}
+}
+
+// BatchUpdateSummaryOnlyUsage updates summary tables with only usage and amount data.
+// This is used for async usage where request count was already recorded.
+// It does NOT increment request counts.
+func BatchUpdateSummaryOnlyUsage(
+	channelID int,
+	groupID string,
+	tokenName string,
+	modelName string,
+	hourTimestamp int64,
+	usage Usage,
+	amount float64,
+) {
+	amountDecimal := decimal.NewFromFloat(amount)
+
+	batchData.Lock()
+	defer batchData.Unlock()
+
+	// Update channel summary (without request count)
+	if channelID != 0 {
+		summaryUnique := SummaryUnique{
+			ChannelID:     channelID,
+			Model:         modelName,
+			HourTimestamp: hourTimestamp,
+		}
+
+		summary, ok := batchData.Summaries[summaryUnique]
+		if !ok {
+			summary = &SummaryUpdate{
+				SummaryUnique: summaryUnique,
+			}
+			batchData.Summaries[summaryUnique] = summary
+		}
+
+		summary.UsedAmount = amountDecimal.
+			Add(decimal.NewFromFloat(summary.UsedAmount)).
+			InexactFloat64()
+		summary.Usage.Add(usage)
+
+		if usage.CachedTokens > 0 {
+			summary.CacheHitCount++
+		}
+	}
+
+	// Update group summary (without request count)
+	if groupID != "" {
+		groupUnique := GroupSummaryUnique{
+			GroupID:       groupID,
+			TokenName:     tokenName,
+			Model:         modelName,
+			HourTimestamp: hourTimestamp,
+		}
+
+		groupSummary, ok := batchData.GroupSummaries[groupUnique]
+		if !ok {
+			groupSummary = &GroupSummaryUpdate{
+				GroupSummaryUnique: groupUnique,
+			}
+			batchData.GroupSummaries[groupUnique] = groupSummary
+		}
+
+		groupSummary.UsedAmount = amountDecimal.
+			Add(decimal.NewFromFloat(groupSummary.UsedAmount)).
+			InexactFloat64()
+		groupSummary.Usage.Add(usage)
+
+		if usage.CachedTokens > 0 {
+			groupSummary.CacheHitCount++
+		}
 	}
 }

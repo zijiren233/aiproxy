@@ -15,6 +15,8 @@ type Adaptor struct {
 	openai.Adaptor
 }
 
+var _ adaptor.Adaptor = (*Adaptor)(nil)
+
 const baseURL = "https://qianfan.baidubce.com/v2"
 
 func (a *Adaptor) DefaultBaseURL() string {
@@ -33,9 +35,9 @@ func (a *Adaptor) DoResponse(
 	store adaptor.Store,
 	c *gin.Context,
 	resp *http.Response,
-) (usage model.Usage, err adaptor.Error) {
+) (adaptor.UsageResult, adaptor.Error) {
 	if resp.StatusCode != http.StatusOK {
-		return model.Usage{}, ErrorHandler(resp)
+		return adaptor.NewSyncUsage(model.Usage{}), ErrorHandler(resp)
 	}
 
 	return a.Adaptor.DoResponse(meta, store, c, resp)

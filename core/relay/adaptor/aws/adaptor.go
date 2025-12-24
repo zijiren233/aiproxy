@@ -16,6 +16,8 @@ import (
 
 type Adaptor struct{}
 
+var _ adaptor.Adaptor = (*Adaptor)(nil)
+
 func (a *Adaptor) DefaultBaseURL() string {
 	return ""
 }
@@ -30,6 +32,7 @@ func (a *Adaptor) SupportMode(m mode.Mode) bool {
 func (a *Adaptor) ConvertRequest(
 	meta *meta.Meta,
 	store adaptor.Store,
+	c *gin.Context,
 	req *http.Request,
 ) (adaptor.ConvertResult, error) {
 	aa := GetAdaptor(meta.ActualModel)
@@ -39,7 +42,15 @@ func (a *Adaptor) ConvertRequest(
 
 	meta.Set("awsAdapter", aa)
 
-	return aa.ConvertRequest(meta, store, req)
+	result, err := aa.ConvertRequest(meta, store, req)
+	if err != nil {
+		return result, err
+	}
+
+	result.Method = http.MethodPost
+	result.URL = ""
+
+	return result, nil
 }
 
 func (a *Adaptor) DoRequest(
@@ -48,7 +59,7 @@ func (a *Adaptor) DoRequest(
 	c *gin.Context,
 	req *http.Request,
 ) (*http.Response, error) {
-	adaptor, ok := meta.Get("awsAdapter")
+	awsAdaptor, ok := meta.Get("awsAdapter")
 	if !ok {
 		return nil, relaymodel.WrapperOpenAIErrorWithMessage(
 			"awsAdapter not found",
@@ -57,7 +68,7 @@ func (a *Adaptor) DoRequest(
 		)
 	}
 
-	v, ok := adaptor.(utils.AwsAdapter)
+	v, ok := awsAdaptor.(utils.AwsAdapter)
 	if !ok {
 		return nil, relaymodel.WrapperOpenAIErrorWithMessage(
 			fmt.Sprintf("aws adapter type error: %T, %v", v, v),
@@ -74,26 +85,31 @@ func (a *Adaptor) DoResponse(
 	store adaptor.Store,
 	c *gin.Context,
 	_ *http.Response,
-) (usage model.Usage, err adaptor.Error) {
-	adaptor, ok := meta.Get("awsAdapter")
+) (adaptor.UsageResult, adaptor.Error) {
+	awsAdaptor, ok := meta.Get("awsAdapter")
 	if !ok {
-		return model.Usage{}, relaymodel.WrapperOpenAIErrorWithMessage(
+		return nil, relaymodel.WrapperOpenAIErrorWithMessage(
 			"awsAdapter not found",
 			nil,
 			http.StatusInternalServerError,
 		)
 	}
 
-	v, ok := adaptor.(utils.AwsAdapter)
+	v, ok := awsAdaptor.(utils.AwsAdapter)
 	if !ok {
-		return model.Usage{}, relaymodel.WrapperOpenAIErrorWithMessage(
+		return nil, relaymodel.WrapperOpenAIErrorWithMessage(
 			fmt.Sprintf("aws adapter type error: %T, %v", v, v),
 			nil,
 			http.StatusInternalServerError,
 		)
 	}
 
-	return v.DoResponse(meta, store, c)
+	usage, err := v.DoResponse(meta, store, c)
+	if err != nil {
+		return nil, err
+	}
+
+	return adaptor.NewSyncUsage(usage), nil
 }
 
 func (a *Adaptor) Metadata() adaptor.Metadata {
@@ -107,17 +123,6 @@ func (a *Adaptor) Metadata() adaptor.Metadata {
 		Models:  models,
 		KeyHelp: "region|ak|sk or region|apikey",
 	}
-}
-
-func (a *Adaptor) GetRequestURL(
-	_ *meta.Meta,
-	_ adaptor.Store,
-	_ *gin.Context,
-) (adaptor.RequestURL, error) {
-	return adaptor.RequestURL{
-		Method: http.MethodPost,
-		URL:    "",
-	}, nil
 }
 
 func (a *Adaptor) SetupRequestHeader(

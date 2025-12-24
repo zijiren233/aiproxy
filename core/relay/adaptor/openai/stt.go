@@ -7,6 +7,7 @@ import (
 	"io"
 	"mime/multipart"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 
@@ -18,6 +19,7 @@ import (
 	"github.com/labring/aiproxy/core/model"
 	"github.com/labring/aiproxy/core/relay/adaptor"
 	"github.com/labring/aiproxy/core/relay/meta"
+	"github.com/labring/aiproxy/core/relay/mode"
 	relaymodel "github.com/labring/aiproxy/core/relay/model"
 	"github.com/labring/aiproxy/core/relay/render"
 	"github.com/labring/aiproxy/core/relay/utils"
@@ -47,7 +49,22 @@ func ConvertSTTRequest(
 
 	multipartWriter.Close()
 
+	// Determine the URL based on mode
+	var path string
+	if meta.Mode == mode.AudioTranslation {
+		path = "/audio/translations"
+	} else {
+		path = "/audio/transcriptions"
+	}
+
+	fullURL, err := url.JoinPath(meta.Channel.BaseURL, path)
+	if err != nil {
+		return adaptor.ConvertResult{}, fmt.Errorf("join url path: %w", err)
+	}
+
 	return adaptor.ConvertResult{
+		Method: http.MethodPost,
+		URL:    fullURL,
 		Header: http.Header{
 			"Content-Type": {multipartWriter.FormDataContentType()},
 		},

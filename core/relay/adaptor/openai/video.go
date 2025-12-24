@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"io"
 	"net/http"
+	"net/url"
 	"strconv"
 	"time"
 
@@ -36,7 +37,14 @@ func ConvertVideoRequest(
 		return adaptor.ConvertResult{}, err
 	}
 
+	fullURL, err := url.JoinPath(meta.Channel.BaseURL, "/video/generations/jobs")
+	if err != nil {
+		return adaptor.ConvertResult{}, err
+	}
+
 	return adaptor.ConvertResult{
+		Method: http.MethodPost,
+		URL:    fullURL,
 		Header: http.Header{
 			"Content-Type":   {"application/json"},
 			"Content-Length": {strconv.Itoa(len(jsonData))},
@@ -46,17 +54,38 @@ func ConvertVideoRequest(
 }
 
 func ConvertVideoGetJobsRequest(
-	_ *meta.Meta,
+	meta *meta.Meta,
 	_ *http.Request,
 ) (adaptor.ConvertResult, error) {
-	return adaptor.ConvertResult{}, nil
+	fullURL, err := url.JoinPath(meta.Channel.BaseURL, "/video/generations/jobs", meta.JobID)
+	if err != nil {
+		return adaptor.ConvertResult{}, err
+	}
+
+	return adaptor.ConvertResult{
+		Method: http.MethodGet,
+		URL:    fullURL,
+	}, nil
 }
 
 func ConvertVideoGetJobsContentRequest(
-	_ *meta.Meta,
+	meta *meta.Meta,
 	_ *http.Request,
 ) (adaptor.ConvertResult, error) {
-	return adaptor.ConvertResult{}, nil
+	fullURL, err := url.JoinPath(
+		meta.Channel.BaseURL,
+		"/video/generations",
+		meta.GenerationID,
+		"/content/video",
+	)
+	if err != nil {
+		return adaptor.ConvertResult{}, err
+	}
+
+	return adaptor.ConvertResult{
+		Method: http.MethodGet,
+		URL:    fullURL,
+	}, nil
 }
 
 func VideoHandler(
@@ -114,6 +143,72 @@ func VideoHandler(
 	_, _ = c.Writer.Write(responseBody)
 
 	return model.Usage{}, nil
+}
+
+// VideoHandlerWithUsageResult handles video generation job creation and returns async usage info
+func VideoHandlerWithUsageResult(
+	meta *meta.Meta,
+	store adaptor.Store,
+	c *gin.Context,
+	resp *http.Response,
+) (adaptor.UsageResult, adaptor.Error) {
+	if resp.StatusCode != http.StatusOK &&
+		resp.StatusCode != http.StatusCreated {
+		return nil, VideoErrorHanlder(resp)
+	}
+
+	defer resp.Body.Close()
+
+	responseBody, err := common.GetResponseBody(resp)
+	if err != nil {
+		return nil, relaymodel.WrapperOpenAIVideoError(
+			err,
+			http.StatusInternalServerError,
+		)
+	}
+
+	idNode, err := sonic.GetWithOptions(responseBody, ast.SearchOptions{}, "id")
+	if err != nil {
+		return nil, relaymodel.WrapperOpenAIVideoError(
+			err,
+			http.StatusInternalServerError,
+		)
+	}
+
+	id, err := idNode.String()
+	if err != nil {
+		return nil, relaymodel.WrapperOpenAIVideoError(
+			err,
+			http.StatusInternalServerError,
+		)
+	}
+
+	err = store.SaveStore(adaptor.StoreCache{
+		ID:        id,
+		GroupID:   meta.Group.ID,
+		TokenID:   meta.Token.ID,
+		ChannelID: meta.Channel.ID,
+		Model:     meta.ActualModel,
+		ExpiresAt: time.Now().Add(time.Hour * 24),
+	})
+	if err != nil {
+		log := common.GetLogger(c)
+		log.Errorf("save store failed: %v", err)
+	}
+
+	c.Writer.Header().Set("Content-Type", "application/json")
+	c.Writer.Header().Set("Content-Length", strconv.Itoa(len(responseBody)))
+	_, _ = c.Writer.Write(responseBody)
+
+	// Return async usage result with job ID in Data field
+	return adaptor.NewAsyncUsage(&model.AsyncUsageInfo{
+		Mode:      int(meta.Mode),
+		Model:     meta.ActualModel,
+		ChannelID: meta.Channel.ID,
+		GroupID:   meta.Group.ID,
+		TokenID:   meta.Token.ID,
+		Data:      `{"job_id":"` + id + `"}`,
+	}), nil
 }
 
 func VideoGetJobsHandler(

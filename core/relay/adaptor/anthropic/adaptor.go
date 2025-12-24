@@ -1,15 +1,11 @@
 package anthropic
 
 import (
-	"bytes"
 	"fmt"
 	"net/http"
-	"net/url"
 	"slices"
-	"strconv"
 	"strings"
 
-	"github.com/bytedance/sonic"
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/core/model"
 	"github.com/labring/aiproxy/core/relay/adaptor"
@@ -18,6 +14,8 @@ import (
 	relaymodel "github.com/labring/aiproxy/core/relay/model"
 	"github.com/labring/aiproxy/core/relay/utils"
 )
+
+var _ adaptor.Adaptor = (*Adaptor)(nil)
 
 type Adaptor struct{}
 
@@ -31,24 +29,6 @@ func (a *Adaptor) SupportMode(m mode.Mode) bool {
 	return m == mode.ChatCompletions ||
 		m == mode.Anthropic ||
 		m == mode.Gemini
-}
-
-func (a *Adaptor) GetRequestURL(
-	meta *meta.Meta,
-	_ adaptor.Store,
-	_ *gin.Context,
-) (adaptor.RequestURL, error) {
-	u := meta.Channel.BaseURL
-
-	url, err := url.JoinPath(u, "/messages")
-	if err != nil {
-		return adaptor.RequestURL{}, err
-	}
-
-	return adaptor.RequestURL{
-		Method: http.MethodPost,
-		URL:    url,
-	}, nil
 }
 
 const (
@@ -148,27 +128,12 @@ func (a *Adaptor) SetupRequestHeader(
 func (a *Adaptor) ConvertRequest(
 	meta *meta.Meta,
 	_ adaptor.Store,
+	_ *gin.Context,
 	req *http.Request,
 ) (adaptor.ConvertResult, error) {
 	switch meta.Mode {
 	case mode.ChatCompletions:
-		data, err := OpenAIConvertRequest(meta, req)
-		if err != nil {
-			return adaptor.ConvertResult{}, err
-		}
-
-		data2, err := sonic.Marshal(data)
-		if err != nil {
-			return adaptor.ConvertResult{}, err
-		}
-
-		return adaptor.ConvertResult{
-			Header: http.Header{
-				"Content-Type":   {"application/json"},
-				"Content-Length": {strconv.Itoa(len(data2))},
-			},
-			Body: bytes.NewReader(data2),
-		}, nil
+		return ConvertOpenAIRequest(meta, req)
 	case mode.Anthropic:
 		return ConvertRequest(meta, req)
 	case mode.Gemini:
@@ -192,7 +157,12 @@ func (a *Adaptor) DoResponse(
 	_ adaptor.Store,
 	c *gin.Context,
 	resp *http.Response,
-) (usage model.Usage, err adaptor.Error) {
+) (adaptor.UsageResult, adaptor.Error) {
+	var (
+		usage model.Usage
+		err   adaptor.Error
+	)
+
 	switch meta.Mode {
 	case mode.ChatCompletions:
 		if utils.IsStreamResponse(resp) {
@@ -213,14 +183,18 @@ func (a *Adaptor) DoResponse(
 			usage, err = GeminiHandler(meta, c, resp)
 		}
 	default:
-		return model.Usage{}, relaymodel.WrapperOpenAIErrorWithMessage(
+		return nil, relaymodel.WrapperOpenAIErrorWithMessage(
 			fmt.Sprintf("unsupported mode: %s", meta.Mode),
 			"unsupported_mode",
 			http.StatusBadRequest,
 		)
 	}
 
-	return usage, err
+	if err != nil {
+		return nil, err
+	}
+
+	return adaptor.NewSyncUsage(usage), nil
 }
 
 func (a *Adaptor) Metadata() adaptor.Metadata {

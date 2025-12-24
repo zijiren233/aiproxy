@@ -16,6 +16,8 @@ import (
 	"github.com/labring/aiproxy/core/relay/utils"
 )
 
+var _ adaptor.Adaptor = (*Adaptor)(nil)
+
 type Adaptor struct{}
 
 const baseURL = "https://api.cohere.ai"
@@ -26,22 +28,6 @@ func (a *Adaptor) DefaultBaseURL() string {
 
 func (a *Adaptor) SupportMode(m mode.Mode) bool {
 	return m == mode.ChatCompletions
-}
-
-func (a *Adaptor) GetRequestURL(
-	meta *meta.Meta,
-	_ adaptor.Store,
-	_ *gin.Context,
-) (adaptor.RequestURL, error) {
-	url, err := url.JoinPath(meta.Channel.BaseURL, "/v1/chat")
-	if err != nil {
-		return adaptor.RequestURL{}, err
-	}
-
-	return adaptor.RequestURL{
-		Method: http.MethodPost,
-		URL:    url,
-	}, nil
 }
 
 func (a *Adaptor) SetupRequestHeader(
@@ -57,6 +43,7 @@ func (a *Adaptor) SetupRequestHeader(
 func (a *Adaptor) ConvertRequest(
 	meta *meta.Meta,
 	_ adaptor.Store,
+	_ *gin.Context,
 	req *http.Request,
 ) (adaptor.ConvertResult, error) {
 	request, err := utils.UnmarshalGeneralOpenAIRequest(req)
@@ -76,7 +63,15 @@ func (a *Adaptor) ConvertRequest(
 		return adaptor.ConvertResult{}, err
 	}
 
+	// Get URL
+	fullURL, err := url.JoinPath(meta.Channel.BaseURL, "/v1/chat")
+	if err != nil {
+		return adaptor.ConvertResult{}, err
+	}
+
 	return adaptor.ConvertResult{
+		Method: http.MethodPost,
+		URL:    fullURL,
 		Header: http.Header{
 			"Content-Type":   {"application/json"},
 			"Content-Length": {strconv.Itoa(len(data))},
@@ -99,14 +94,23 @@ func (a *Adaptor) DoResponse(
 	_ adaptor.Store,
 	c *gin.Context,
 	resp *http.Response,
-) (usage model.Usage, err adaptor.Error) {
+) (adaptor.UsageResult, adaptor.Error) {
+	var (
+		usage model.Usage
+		err   adaptor.Error
+	)
+
 	if utils.IsStreamResponse(resp) {
 		usage, err = StreamHandler(meta, c, resp)
 	} else {
 		usage, err = Handler(meta, c, resp)
 	}
 
-	return usage, err
+	if err != nil {
+		return nil, err
+	}
+
+	return adaptor.NewSyncUsage(usage), nil
 }
 
 func (a *Adaptor) Metadata() adaptor.Metadata {

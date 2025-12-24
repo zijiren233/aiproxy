@@ -225,16 +225,17 @@ func (c *Cache) setToCache(ctx context.Context, key string, item Item, ttl time.
 func (c *Cache) ConvertRequest(
 	meta *meta.Meta,
 	store adaptor.Store,
+	ctx *gin.Context,
 	req *http.Request,
 	do adaptor.ConvertRequest,
 ) (adaptor.ConvertResult, error) {
 	pluginConfig, err := getPluginConfig(meta)
 	if err != nil {
-		return do.ConvertRequest(meta, store, req)
+		return do.ConvertRequest(meta, store, ctx, req)
 	}
 
 	if !pluginConfig.Enable {
-		return do.ConvertRequest(meta, store, req)
+		return do.ConvertRequest(meta, store, ctx, req)
 	}
 
 	body, err := common.GetRequestBodyReusable(req)
@@ -243,7 +244,7 @@ func (c *Cache) ConvertRequest(
 	}
 
 	if len(body) == 0 {
-		return do.ConvertRequest(meta, store, req)
+		return do.ConvertRequest(meta, store, ctx, req)
 	}
 
 	// Generate hash as cache key
@@ -252,13 +253,13 @@ func (c *Cache) ConvertRequest(
 	setCacheKey(meta, cacheKey)
 
 	// Check cache
-	ctx := req.Context()
-	if item, ok := c.getFromCache(ctx, cacheKey); ok {
+	reqCtx := req.Context()
+	if item, ok := c.getFromCache(reqCtx, cacheKey); ok {
 		setCacheHit(meta, item)
 		return adaptor.ConvertResult{}, nil
 	}
 
-	return do.ConvertRequest(meta, store, req)
+	return do.ConvertRequest(meta, store, ctx, req)
 }
 
 // DoRequest handles the request execution phase
@@ -334,7 +335,7 @@ func (c *Cache) DoResponse(
 	ctx *gin.Context,
 	resp *http.Response,
 	do adaptor.DoResponse,
-) (usage model.Usage, adapterErr adaptor.Error) {
+) (adaptor.UsageResult, adaptor.Error) {
 	pluginConfig, err := getPluginConfig(meta)
 	if err != nil {
 		return do.DoResponse(meta, store, ctx, resp)
@@ -360,7 +361,7 @@ func (c *Cache) DoResponse(
 		c.writeCacheHeader(ctx, pluginConfig, "hit")
 		_, _ = ctx.Writer.Write(item.Body)
 
-		return item.Usage, nil
+		return adaptor.NewSyncUsage(item.Usage), nil
 	}
 
 	if !pluginConfig.Enable {
@@ -379,6 +380,11 @@ func (c *Cache) DoResponse(
 		cacheBody:      buf,
 	}
 
+	var (
+		adapterErr  adaptor.Error
+		usageResult adaptor.UsageResult
+	)
+
 	ctx.Writer = rw
 	defer func() {
 		ctx.Writer = rw.ResponseWriter
@@ -395,12 +401,14 @@ func (c *Cache) DoResponse(
 		item := Item{
 			Body:   bytes.Clone(rw.cacheBody.Bytes()),
 			Header: headerMap,
-			Usage:  usage,
+			Usage:  usageResult.Usage(),
 		}
 
 		ttl := time.Duration(pluginConfig.TTL) * time.Second
 		c.setToCache(ctx.Request.Context(), getCacheKey(meta), item, ttl)
 	}()
 
-	return do.DoResponse(meta, store, ctx, resp)
+	usageResult, adapterErr = do.DoResponse(meta, store, ctx, resp)
+
+	return usageResult, adapterErr
 }

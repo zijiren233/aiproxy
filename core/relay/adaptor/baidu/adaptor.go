@@ -19,6 +19,8 @@ import (
 
 type Adaptor struct{}
 
+var _ adaptor.Adaptor = (*Adaptor)(nil)
+
 const (
 	baseURL = "https://aip.baidubce.com"
 )
@@ -56,46 +58,6 @@ var modelEndpointMap = map[string]string{
 	"Fuyu-8B":              "fuyu_8b",
 }
 
-func (a *Adaptor) GetRequestURL(
-	meta *meta.Meta,
-	_ adaptor.Store,
-	_ *gin.Context,
-) (adaptor.RequestURL, error) {
-	// Get API path suffix based on mode
-	var pathSuffix string
-	switch meta.Mode {
-	case mode.ChatCompletions:
-		pathSuffix = "chat"
-	case mode.Embeddings:
-		pathSuffix = "embeddings"
-	case mode.Rerank:
-		pathSuffix = "reranker"
-	case mode.ImagesGenerations:
-		pathSuffix = "text2image"
-	}
-
-	modelEndpoint, ok := modelEndpointMap[meta.ActualModel]
-	if !ok {
-		modelEndpoint = strings.ToLower(meta.ActualModel)
-	}
-
-	// Construct full URL
-	fullURL, err := url.JoinPath(
-		meta.Channel.BaseURL,
-		"/rpc/2.0/ai_custom/v1/wenxinworkshop",
-		pathSuffix,
-		modelEndpoint,
-	)
-	if err != nil {
-		return adaptor.RequestURL{}, err
-	}
-
-	return adaptor.RequestURL{
-		Method: http.MethodPost,
-		URL:    fullURL,
-	}, nil
-}
-
 func (a *Adaptor) SetupRequestHeader(
 	meta *meta.Meta,
 	_ adaptor.Store,
@@ -117,20 +79,64 @@ func (a *Adaptor) SetupRequestHeader(
 func (a *Adaptor) ConvertRequest(
 	meta *meta.Meta,
 	store adaptor.Store,
+	_ *gin.Context,
 	req *http.Request,
 ) (adaptor.ConvertResult, error) {
+	// Get API path suffix based on mode
+	var pathSuffix string
 	switch meta.Mode {
-	case mode.Embeddings:
-		return openai.ConvertEmbeddingsRequest(meta, req, true)
-	case mode.Rerank:
-		return openai.ConvertRequest(meta, store, req)
-	case mode.ImagesGenerations:
-		return openai.ConvertRequest(meta, store, req)
 	case mode.ChatCompletions:
-		return ConvertRequest(meta, req)
+		pathSuffix = "chat"
+	case mode.Embeddings:
+		pathSuffix = "embeddings"
+	case mode.Rerank:
+		pathSuffix = "reranker"
+	case mode.ImagesGenerations:
+		pathSuffix = "text2image"
 	default:
 		return adaptor.ConvertResult{}, fmt.Errorf("unsupported mode: %s", meta.Mode)
 	}
+
+	modelEndpoint, ok := modelEndpointMap[meta.ActualModel]
+	if !ok {
+		modelEndpoint = strings.ToLower(meta.ActualModel)
+	}
+
+	// Construct full URL
+	fullURL, err := url.JoinPath(
+		meta.Channel.BaseURL,
+		"/rpc/2.0/ai_custom/v1/wenxinworkshop",
+		pathSuffix,
+		modelEndpoint,
+	)
+	if err != nil {
+		return adaptor.ConvertResult{}, err
+	}
+
+	// Convert request body
+	var result adaptor.ConvertResult
+	switch meta.Mode {
+	case mode.Embeddings:
+		result, err = openai.ConvertEmbeddingsRequest(meta, req, true)
+	case mode.Rerank:
+		result, err = openai.ConvertRequest(meta, store, nil, req)
+	case mode.ImagesGenerations:
+		result, err = openai.ConvertRequest(meta, store, nil, req)
+	case mode.ChatCompletions:
+		result, err = ConvertRequest(meta, req)
+	default:
+		return adaptor.ConvertResult{}, fmt.Errorf("unsupported mode: %s", meta.Mode)
+	}
+
+	if err != nil {
+		return adaptor.ConvertResult{}, err
+	}
+
+	// Set Method and URL
+	result.Method = http.MethodPost
+	result.URL = fullURL
+
+	return result, nil
 }
 
 func (a *Adaptor) DoRequest(
@@ -147,7 +153,12 @@ func (a *Adaptor) DoResponse(
 	_ adaptor.Store,
 	c *gin.Context,
 	resp *http.Response,
-) (usage model.Usage, err adaptor.Error) {
+) (adaptor.UsageResult, adaptor.Error) {
+	var (
+		usage model.Usage
+		err   adaptor.Error
+	)
+
 	switch meta.Mode {
 	case mode.Embeddings:
 		usage, err = EmbeddingsHandler(meta, c, resp)
@@ -162,14 +173,18 @@ func (a *Adaptor) DoResponse(
 			usage, err = Handler(meta, c, resp)
 		}
 	default:
-		return model.Usage{}, relaymodel.WrapperOpenAIErrorWithMessage(
+		return nil, relaymodel.WrapperOpenAIErrorWithMessage(
 			fmt.Sprintf("unsupported mode: %s", meta.Mode),
 			nil,
 			http.StatusBadRequest,
 		)
 	}
 
-	return usage, err
+	if err != nil {
+		return nil, err
+	}
+
+	return adaptor.NewSyncUsage(usage), nil
 }
 
 func (a *Adaptor) Metadata() adaptor.Metadata {

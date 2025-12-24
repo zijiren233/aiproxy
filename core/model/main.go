@@ -230,6 +230,7 @@ func migrateLogDB(batchSize int) error {
 		&StoreV2{},
 		&SummaryMinute{},
 		&GroupSummaryMinute{},
+		&AsyncUsageInfo{},
 	)
 	if err != nil {
 		return err

@@ -17,6 +17,8 @@ type Adaptor struct {
 	openai.Adaptor
 }
 
+var _ adaptor.Adaptor = (*Adaptor)(nil)
+
 const baseURL = "https://api.cloudflare.com"
 
 func (a *Adaptor) DefaultBaseURL() string {
@@ -31,11 +33,19 @@ func isAIGateWay(baseURL string) bool {
 		strings.HasSuffix(baseURL, "/workers-ai")
 }
 
-func (a *Adaptor) GetRequestURL(
+func (a *Adaptor) ConvertRequest(
 	meta *meta.Meta,
-	_ adaptor.Store,
-	_ *gin.Context,
-) (adaptor.RequestURL, error) {
+	store adaptor.Store,
+	c *gin.Context,
+	req *http.Request,
+) (adaptor.ConvertResult, error) {
+	// Call parent's ConvertRequest
+	result, err := a.Adaptor.ConvertRequest(meta, store, c, req)
+	if err != nil {
+		return result, err
+	}
+
+	// Merge GetRequestURL logic
 	u := meta.Channel.BaseURL
 	isAIGateWay := isAIGateWay(u)
 
@@ -46,50 +56,38 @@ func (a *Adaptor) GetRequestURL(
 		urlPrefix = fmt.Sprintf("%s/client/v4/accounts/%s/ai", u, meta.Channel.Key)
 	}
 
+	var requestURL string
+
+	result.Method = http.MethodPost
+
 	switch meta.Mode {
 	case mode.ChatCompletions, mode.Gemini:
-		url, err := url.JoinPath(urlPrefix, "/v1/chat/completions")
+		requestURL, err = url.JoinPath(urlPrefix, "/v1/chat/completions")
 		if err != nil {
-			return adaptor.RequestURL{}, err
+			return result, err
 		}
-
-		return adaptor.RequestURL{
-			Method: http.MethodPost,
-			URL:    url,
-		}, nil
 	case mode.Embeddings:
-		url, err := url.JoinPath(urlPrefix, "/v1/embeddings")
+		requestURL, err = url.JoinPath(urlPrefix, "/v1/embeddings")
 		if err != nil {
-			return adaptor.RequestURL{}, err
+			return result, err
 		}
-
-		return adaptor.RequestURL{
-			Method: http.MethodPost,
-			URL:    url,
-		}, nil
 	default:
 		if isAIGateWay {
-			url, err := url.JoinPath(urlPrefix, meta.ActualModel)
+			requestURL, err = url.JoinPath(urlPrefix, meta.ActualModel)
 			if err != nil {
-				return adaptor.RequestURL{}, err
+				return result, err
 			}
-
-			return adaptor.RequestURL{
-				Method: http.MethodPost,
-				URL:    url,
-			}, nil
+		} else {
+			requestURL, err = url.JoinPath(urlPrefix, "/run", meta.ActualModel)
+			if err != nil {
+				return result, err
+			}
 		}
-
-		url, err := url.JoinPath(urlPrefix, "/run", meta.ActualModel)
-		if err != nil {
-			return adaptor.RequestURL{}, err
-		}
-
-		return adaptor.RequestURL{
-			Method: http.MethodPost,
-			URL:    url,
-		}, nil
 	}
+
+	result.URL = requestURL
+
+	return result, nil
 }
 
 func (a *Adaptor) Metadata() adaptor.Metadata {

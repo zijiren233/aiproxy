@@ -18,6 +18,8 @@ type Adaptor struct {
 	openai.Adaptor
 }
 
+var _ adaptor.Adaptor = (*Adaptor)(nil)
+
 const baseURL = "https://api.minimax.chat/v1"
 
 func (a *Adaptor) DefaultBaseURL() string {
@@ -48,67 +50,81 @@ func (a *Adaptor) SetupRequestHeader(
 	return nil
 }
 
-func (a *Adaptor) GetRequestURL(
-	meta *meta.Meta,
-	store adaptor.Store,
-	c *gin.Context,
-) (adaptor.RequestURL, error) {
-	_, groupID, err := GetAPIKeyAndGroupID(meta.Channel.Key)
-	if err != nil {
-		return adaptor.RequestURL{}, err
-	}
-
-	switch meta.Mode {
-	case mode.ChatCompletions, mode.Gemini:
-		url, err := url.JoinPath(meta.Channel.BaseURL, "/text/chatcompletion_v2")
-		if err != nil {
-			return adaptor.RequestURL{}, err
-		}
-
-		return adaptor.RequestURL{
-			Method: http.MethodPost,
-			URL:    url,
-		}, nil
-	case mode.Embeddings:
-		url, err := url.JoinPath(meta.Channel.BaseURL, "/embeddings")
-		if err != nil {
-			return adaptor.RequestURL{}, err
-		}
-
-		return adaptor.RequestURL{
-			Method: http.MethodPost,
-			URL:    fmt.Sprintf("%s?GroupId=%s", url, groupID),
-		}, nil
-	case mode.AudioSpeech:
-		url, err := url.JoinPath(meta.Channel.BaseURL, "/t2a_v2")
-		if err != nil {
-			return adaptor.RequestURL{}, err
-		}
-
-		return adaptor.RequestURL{
-			Method: http.MethodPost,
-			URL:    fmt.Sprintf("%s?GroupId=%s", url, groupID),
-		}, nil
-	default:
-		return a.Adaptor.GetRequestURL(meta, store, c)
-	}
-}
-
 func (a *Adaptor) ConvertRequest(
 	meta *meta.Meta,
 	store adaptor.Store,
+	c *gin.Context,
 	req *http.Request,
 ) (adaptor.ConvertResult, error) {
+	// Get groupID for URL construction
+	_, groupID, err := GetAPIKeyAndGroupID(meta.Channel.Key)
+	if err != nil {
+		return adaptor.ConvertResult{}, err
+	}
+
+	// Determine URL and Method based on mode
+	var (
+		requestURL string
+		urlErr     error
+	)
+
+	switch meta.Mode {
+	case mode.ChatCompletions, mode.Gemini:
+		requestURL, urlErr = url.JoinPath(meta.Channel.BaseURL, "/text/chatcompletion_v2")
+		if urlErr != nil {
+			return adaptor.ConvertResult{}, urlErr
+		}
+	case mode.Embeddings:
+		requestURL, urlErr = url.JoinPath(meta.Channel.BaseURL, "/embeddings")
+		if urlErr != nil {
+			return adaptor.ConvertResult{}, urlErr
+		}
+
+		requestURL = fmt.Sprintf("%s?GroupId=%s", requestURL, groupID)
+	case mode.AudioSpeech:
+		requestURL, urlErr = url.JoinPath(meta.Channel.BaseURL, "/t2a_v2")
+		if urlErr != nil {
+			return adaptor.ConvertResult{}, urlErr
+		}
+
+		requestURL = fmt.Sprintf("%s?GroupId=%s", requestURL, groupID)
+	default:
+		// For other modes, delegate to parent adaptor
+		result, err := a.Adaptor.ConvertRequest(meta, store, c, req)
+		return result, err
+	}
+
+	// Convert request body
+	var result adaptor.ConvertResult
+
 	switch meta.Mode {
 	case mode.ChatCompletions:
-		return openai.ConvertChatCompletionsRequest(meta, req, true)
+		result, err = openai.ConvertChatCompletionsRequest(meta, req, true)
+		if err != nil {
+			return adaptor.ConvertResult{}, err
+		}
 	case mode.Gemini:
-		return openai.ConvertGeminiRequest(meta, req)
+		result, err = openai.ConvertGeminiRequest(meta, req)
+		if err != nil {
+			return adaptor.ConvertResult{}, err
+		}
 	case mode.AudioSpeech:
-		return ConvertTTSRequest(meta, req)
+		result, err = ConvertTTSRequest(meta, req)
+		if err != nil {
+			return adaptor.ConvertResult{}, err
+		}
 	default:
-		return a.Adaptor.ConvertRequest(meta, store, req)
+		result, err = a.Adaptor.ConvertRequest(meta, store, c, req)
+		if err != nil {
+			return adaptor.ConvertResult{}, err
+		}
 	}
+
+	// Set URL and Method
+	result.Method = http.MethodPost
+	result.URL = requestURL
+
+	return result, nil
 }
 
 func (a *Adaptor) DoResponse(
@@ -116,14 +132,15 @@ func (a *Adaptor) DoResponse(
 	store adaptor.Store,
 	c *gin.Context,
 	resp *http.Response,
-) (usage model.Usage, err adaptor.Error) {
+) (adaptor.UsageResult, adaptor.Error) {
 	switch meta.Mode {
 	case mode.AudioSpeech:
-		return TTSHandler(meta, c, resp)
+		usage, err := TTSHandler(meta, c, resp)
+		return adaptor.NewSyncUsage(usage), err
 	default:
 		if !utils.IsStreamResponse(resp) {
 			if err := TryErrorHanlder(resp); err != nil {
-				return model.Usage{}, err
+				return adaptor.NewSyncUsage(model.Usage{}), err
 			}
 		}
 

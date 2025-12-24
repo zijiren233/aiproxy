@@ -14,6 +14,8 @@ import (
 	"github.com/labring/aiproxy/core/relay/utils"
 )
 
+var _ adaptor.Adaptor = (*Adaptor)(nil)
+
 type Adaptor struct {
 	openai.Adaptor
 }
@@ -107,16 +109,33 @@ func (a *Adaptor) DoResponse(
 	store adaptor.Store,
 	c *gin.Context,
 	resp *http.Response,
-) (usage model.Usage, err adaptor.Error) {
+) (adaptor.UsageResult, adaptor.Error) {
+	var (
+		usage model.Usage
+		err   adaptor.Error
+	)
+
 	switch meta.Mode {
 	case mode.ChatCompletions:
 		if utils.IsStreamResponse(resp) {
-			return openai.StreamHandler(meta, c, resp, streamPreHandler)
+			usage, err = openai.StreamHandler(meta, c, resp, streamPreHandler)
+		} else {
+			usage, err = openai.Handler(meta, c, resp, handlerPreHandler)
 		}
-		return openai.Handler(meta, c, resp, handlerPreHandler)
 	default:
-		return openai.DoResponse(meta, store, c, resp)
+		result, err := openai.DoResponse(meta, store, c, resp)
+		if err != nil {
+			return nil, err
+		}
+
+		usage = result.Usage()
 	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return adaptor.NewSyncUsage(usage), nil
 }
 
 func (a *Adaptor) Metadata() adaptor.Metadata {

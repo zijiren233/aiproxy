@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	"github.com/labring/aiproxy/core/model"
 	"github.com/labring/aiproxy/core/relay/adaptor"
 	"github.com/labring/aiproxy/core/relay/meta"
 	"github.com/labring/aiproxy/core/relay/mode"
@@ -17,6 +16,8 @@ import (
 )
 
 type Adaptor struct{}
+
+var _ adaptor.Adaptor = (*Adaptor)(nil)
 
 func (a *Adaptor) DefaultBaseURL() string {
 	return ""
@@ -36,6 +37,7 @@ type Config struct {
 func (a *Adaptor) ConvertRequest(
 	meta *meta.Meta,
 	store adaptor.Store,
+	c *gin.Context,
 	request *http.Request,
 ) (adaptor.ConvertResult, error) {
 	aa := GetAdaptor(meta.ActualModel)
@@ -43,40 +45,12 @@ func (a *Adaptor) ConvertRequest(
 		return adaptor.ConvertResult{}, errors.New("adaptor not found")
 	}
 
-	return aa.ConvertRequest(meta, store, request)
-}
-
-func (a *Adaptor) DoResponse(
-	meta *meta.Meta,
-	store adaptor.Store,
-	c *gin.Context,
-	resp *http.Response,
-) (usage model.Usage, err adaptor.Error) {
-	adaptor := GetAdaptor(meta.ActualModel)
-	if adaptor == nil {
-		return model.Usage{}, relaymodel.WrapperOpenAIErrorWithMessage(
-			meta.ActualModel+" adaptor not found",
-			"adaptor_not_found",
-			http.StatusInternalServerError,
-		)
+	result, err := aa.ConvertRequest(meta, store, request)
+	if err != nil {
+		return result, err
 	}
 
-	return adaptor.DoResponse(meta, store, c, resp)
-}
-
-func (a *Adaptor) Metadata() adaptor.Metadata {
-	return adaptor.Metadata{
-		Readme:  "Claude support native Endpoint: /v1/messages\nGemini support",
-		KeyHelp: "region|adcJSON or region|apikey or region|project_id|apikey",
-		Models:  modelList,
-	}
-}
-
-func (a *Adaptor) GetRequestURL(
-	meta *meta.Meta,
-	_ adaptor.Store,
-	c *gin.Context,
-) (adaptor.RequestURL, error) {
+	// Merge GetRequestURL logic
 	var suffix string
 
 	// For Gemini mode, get stream flag from URL
@@ -105,7 +79,7 @@ func (a *Adaptor) GetRequestURL(
 
 	config, err := getConfigFromKey(meta.Channel.Key)
 	if err != nil {
-		return adaptor.RequestURL{}, err
+		return result, err
 	}
 
 	publishers := "google"
@@ -113,23 +87,21 @@ func (a *Adaptor) GetRequestURL(
 		publishers = "anthropic"
 	}
 
+	var requestURL string
+
+	result.Method = http.MethodPost
+
 	if meta.Channel.BaseURL != "" {
 		if config.ProjectID == "" || config.Region == "" {
-			return adaptor.RequestURL{
-				Method: http.MethodPost,
-				URL: fmt.Sprintf(
-					"%s/v1/publishers/%s/models/%s:%s",
-					meta.Channel.BaseURL,
-					publishers,
-					meta.ActualModel,
-					suffix,
-				),
-			}, nil
-		}
-
-		return adaptor.RequestURL{
-			Method: http.MethodPost,
-			URL: fmt.Sprintf(
+			requestURL = fmt.Sprintf(
+				"%s/v1/publishers/%s/models/%s:%s",
+				meta.Channel.BaseURL,
+				publishers,
+				meta.ActualModel,
+				suffix,
+			)
+		} else {
+			requestURL = fmt.Sprintf(
 				"%s/v1/projects/%s/locations/%s/publishers/%s/models/%s:%s",
 				meta.Channel.BaseURL,
 				config.ProjectID,
@@ -137,42 +109,71 @@ func (a *Adaptor) GetRequestURL(
 				publishers,
 				meta.ActualModel,
 				suffix,
-			),
-		}, nil
-	}
-
-	var requestDoamin string
-	if config.Region == "" || config.Region == "global" {
-		requestDoamin = "aiplatform.googleapis.com"
+			)
+		}
 	} else {
-		requestDoamin = config.Region + "-aiplatform.googleapis.com"
-	}
+		var requestDoamin string
+		if config.Region == "" || config.Region == "global" {
+			requestDoamin = "aiplatform.googleapis.com"
+		} else {
+			requestDoamin = config.Region + "-aiplatform.googleapis.com"
+		}
 
-	if config.ProjectID == "" || config.Region == "" {
-		return adaptor.RequestURL{
-			Method: http.MethodPost,
-			URL: fmt.Sprintf(
+		if config.ProjectID == "" || config.Region == "" {
+			requestURL = fmt.Sprintf(
 				"https://%s/v1/publishers/%s/models/%s:%s",
 				requestDoamin,
 				publishers,
 				meta.ActualModel,
 				suffix,
-			),
-		}, nil
+			)
+		} else {
+			requestURL = fmt.Sprintf(
+				"https://%s/v1/projects/%s/locations/%s/publishers/%s/models/%s:%s",
+				requestDoamin,
+				config.ProjectID,
+				config.Region,
+				publishers,
+				meta.ActualModel,
+				suffix,
+			)
+		}
 	}
 
-	return adaptor.RequestURL{
-		Method: http.MethodPost,
-		URL: fmt.Sprintf(
-			"https://%s/v1/projects/%s/locations/%s/publishers/%s/models/%s:%s",
-			requestDoamin,
-			config.ProjectID,
-			config.Region,
-			publishers,
-			meta.ActualModel,
-			suffix,
-		),
-	}, nil
+	result.URL = requestURL
+
+	return result, nil
+}
+
+func (a *Adaptor) DoResponse(
+	meta *meta.Meta,
+	store adaptor.Store,
+	c *gin.Context,
+	resp *http.Response,
+) (adaptor.UsageResult, adaptor.Error) {
+	innerAdaptor := GetAdaptor(meta.ActualModel)
+	if innerAdaptor == nil {
+		return nil, relaymodel.WrapperOpenAIErrorWithMessage(
+			meta.ActualModel+" adaptor not found",
+			"adaptor_not_found",
+			http.StatusInternalServerError,
+		)
+	}
+
+	usage, err := innerAdaptor.DoResponse(meta, store, c, resp)
+	if err != nil {
+		return nil, err
+	}
+
+	return adaptor.NewSyncUsage(usage), nil
+}
+
+func (a *Adaptor) Metadata() adaptor.Metadata {
+	return adaptor.Metadata{
+		Readme:  "Claude support native Endpoint: /v1/messages\nGemini support",
+		KeyHelp: "region|adcJSON or region|apikey or region|project_id|apikey",
+		Models:  modelList,
+	}
 }
 
 func (a *Adaptor) SetupRequestHeader(
@@ -181,8 +182,8 @@ func (a *Adaptor) SetupRequestHeader(
 	c *gin.Context,
 	req *http.Request,
 ) error {
-	adaptor := GetAdaptor(meta.ActualModel)
-	if adaptor == nil {
+	innerAdaptor := GetAdaptor(meta.ActualModel)
+	if innerAdaptor == nil {
 		return relaymodel.WrapperOpenAIErrorWithMessage(
 			meta.ActualModel+" adaptor not found",
 			"adaptor_not_found",
@@ -190,7 +191,7 @@ func (a *Adaptor) SetupRequestHeader(
 		)
 	}
 
-	err := adaptor.SetupRequestHeader(meta, store, c, req)
+	err := innerAdaptor.SetupRequestHeader(meta, store, c, req)
 	if err != nil {
 		return err
 	}

@@ -12,8 +12,6 @@ import (
 )
 
 func TestGetRequestURL(t *testing.T) {
-	adaptor := &azure.Adaptor{}
-
 	tests := []struct {
 		name            string
 		model           string
@@ -82,21 +80,19 @@ func TestGetRequestURL(t *testing.T) {
 			m.Channel.BaseURL = "https://test.openai.azure.com"
 			m.Channel.Key = "test-key|" + tt.apiVersion
 
-			result, err := adaptor.GetRequestURL(m, nil, nil)
+			method, url, err := azure.GetRequestURL(m, true)
 			require.NoError(t, err)
 
-			assert.Contains(t, result.URL, tt.expectedContain,
+			assert.Contains(t, url, tt.expectedContain,
 				"URL should contain expected pattern for model %s with mode %s", tt.model, tt.mode)
 
 			// Verify it's a POST request for all these modes
-			assert.Equal(t, "POST", result.Method)
+			assert.Equal(t, "POST", method)
 		})
 	}
 }
 
 func TestGetRequestURL_ResponsesOnlyModels(t *testing.T) {
-	adaptor := &azure.Adaptor{}
-
 	// Test that responses-only models always use the Responses API endpoint
 	responsesOnlyModels := []string{"gpt-5-codex", "gpt-5-pro"}
 	modes := []mode.Mode{mode.ChatCompletions, mode.Anthropic, mode.Gemini}
@@ -105,58 +101,54 @@ func TestGetRequestURL_ResponsesOnlyModels(t *testing.T) {
 		for _, m := range modes {
 			testName := model + "_mode_" + m.String()
 			t.Run(testName, func(t *testing.T) {
-				meta := &meta.Meta{
+				testMeta := &meta.Meta{
 					ActualModel: model,
 					Mode:        m,
 				}
-				meta.Channel.BaseURL = "https://test.openai.azure.com"
-				meta.Channel.Key = "test-key|2024-02-01"
+				testMeta.Channel.BaseURL = "https://test.openai.azure.com"
+				testMeta.Channel.Key = "test-key|2024-02-01"
 
-				result, err := adaptor.GetRequestURL(meta, nil, nil)
+				method, url, err := azure.GetRequestURL(testMeta, true)
 				require.NoError(t, err)
 
 				// Should use Responses API endpoint
-				assert.Contains(t, result.URL, "/openai/v1/responses")
+				assert.Contains(t, url, "/openai/v1/responses")
 				// Should use preview API version
-				assert.Contains(t, result.URL, "api-version=preview")
+				assert.Contains(t, url, "api-version=preview")
 				// Should be POST
-				assert.Equal(t, "POST", result.Method)
+				assert.Equal(t, "POST", method)
 			})
 		}
 	}
 }
 
 func TestGetRequestURL_StandardModels(t *testing.T) {
-	adaptor := &azure.Adaptor{}
-
 	// Test that standard models use the regular deployment endpoint
 	standardModels := []string{"gpt-4o", "gpt-35-turbo", "gpt-4"}
 
 	for _, model := range standardModels {
 		t.Run(model, func(t *testing.T) {
-			meta := &meta.Meta{
+			testMeta := &meta.Meta{
 				ActualModel: model,
 				Mode:        mode.ChatCompletions,
 			}
-			meta.Channel.BaseURL = "https://test.openai.azure.com"
-			meta.Channel.Key = "test-key|2024-02-01"
+			testMeta.Channel.BaseURL = "https://test.openai.azure.com"
+			testMeta.Channel.Key = "test-key|2024-02-01"
 
-			result, err := adaptor.GetRequestURL(meta, nil, nil)
+			_, url, err := azure.GetRequestURL(testMeta, true)
 			require.NoError(t, err)
 
 			// Should use deployment endpoint
-			assert.Contains(t, result.URL, "/openai/deployments/"+model)
+			assert.Contains(t, url, "/openai/deployments/"+model)
 			// Should NOT use Responses API
-			assert.NotContains(t, result.URL, "/openai/v1/responses")
+			assert.NotContains(t, url, "/openai/v1/responses")
 			// Should use provided API version
-			assert.Contains(t, result.URL, "api-version=2024-02-01")
+			assert.Contains(t, url, "api-version=2024-02-01")
 		})
 	}
 }
 
 func TestGetRequestURL_DotReplacement(t *testing.T) {
-	adaptor := &azure.Adaptor{}
-
 	tests := []struct {
 		name          string
 		model         string
@@ -181,27 +173,25 @@ func TestGetRequestURL_DotReplacement(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			meta := &meta.Meta{
+			testMeta := &meta.Meta{
 				ActualModel: tt.model,
 				Mode:        mode.ChatCompletions,
 			}
-			meta.Channel.BaseURL = "https://test.openai.azure.com"
-			meta.Channel.Key = "test-key|2024-02-01"
+			testMeta.Channel.BaseURL = "https://test.openai.azure.com"
+			testMeta.Channel.Key = "test-key|2024-02-01"
 
-			result, err := adaptor.GetRequestURL(meta, nil, nil)
+			_, url, err := azure.GetRequestURL(testMeta, true)
 			require.NoError(t, err)
 
 			// For standard models (not responses-only), check dot replacement
-			if !openai.IsResponsesOnlyModel(&meta.ModelConfig, tt.model) {
-				assert.Contains(t, result.URL, "/openai/deployments/"+tt.expectedModel)
+			if !openai.IsResponsesOnlyModel(&testMeta.ModelConfig, tt.model) {
+				assert.Contains(t, url, "/openai/deployments/"+tt.expectedModel)
 			}
 		})
 	}
 }
 
 func TestGetRequestURL_OtherModes(t *testing.T) {
-	adaptor := &azure.Adaptor{}
-
 	tests := []struct {
 		name            string
 		mode            mode.Mode
@@ -236,38 +226,36 @@ func TestGetRequestURL_OtherModes(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			meta := &meta.Meta{
+			testMeta := &meta.Meta{
 				ActualModel: "test-model",
 				Mode:        tt.mode,
 			}
-			meta.Channel.BaseURL = "https://test.openai.azure.com"
-			meta.Channel.Key = "test-key|2024-02-01"
+			testMeta.Channel.BaseURL = "https://test.openai.azure.com"
+			testMeta.Channel.Key = "test-key|2024-02-01"
 
-			result, err := adaptor.GetRequestURL(meta, nil, nil)
+			_, url, err := azure.GetRequestURL(testMeta, true)
 			require.NoError(t, err)
 
-			assert.Contains(t, result.URL, tt.expectedContain)
+			assert.Contains(t, url, tt.expectedContain)
 		})
 	}
 }
 
 func TestGetRequestURL_ResponsesModeDirect(t *testing.T) {
-	adaptor := &azure.Adaptor{}
-
 	// Test direct Responses mode (not converted from another mode)
-	meta := &meta.Meta{
+	testMeta := &meta.Meta{
 		ActualModel: "gpt-4o",
 		Mode:        mode.Responses,
 	}
-	meta.Channel.BaseURL = "https://test.openai.azure.com"
-	meta.Channel.Key = "test-key|2024-02-01"
+	testMeta.Channel.BaseURL = "https://test.openai.azure.com"
+	testMeta.Channel.Key = "test-key|2024-02-01"
 
-	result, err := adaptor.GetRequestURL(meta, nil, nil)
+	method, url, err := azure.GetRequestURL(testMeta, true)
 	require.NoError(t, err)
 
 	// Should use Responses API endpoint
-	assert.Contains(t, result.URL, "/openai/v1/responses")
+	assert.Contains(t, url, "/openai/v1/responses")
 	// Should use preview API version for Responses mode
-	assert.Contains(t, result.URL, "api-version=preview")
-	assert.Equal(t, "POST", result.Method)
+	assert.Contains(t, url, "api-version=preview")
+	assert.Equal(t, "POST", method)
 }

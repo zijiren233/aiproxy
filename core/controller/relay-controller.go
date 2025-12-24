@@ -341,6 +341,31 @@ func recordResult(
 		user,
 		metadata,
 	)
+
+	// Handle async usage tracking
+	if result.UsageResult != nil && result.UsageResult.IsAsync() {
+		saveAsyncUsageInfo(meta, price, result.UsageResult)
+	}
+}
+
+// saveAsyncUsageInfo saves async usage info to database for later processing
+func saveAsyncUsageInfo(m *meta.Meta, price model.Price, usageResult adaptor.UsageResult) {
+	asyncInfo := usageResult.AsyncInfo()
+	if asyncInfo == nil {
+		return
+	}
+
+	// Enhance AsyncUsageInfo with controller-level data
+	asyncInfo.RequestID = m.RequestID
+	asyncInfo.RequestAt = m.RequestAt
+	asyncInfo.TokenName = m.Token.Name
+	asyncInfo.Price = price
+
+	// Save to database
+	if err := model.CreateAsyncUsageInfo(asyncInfo); err != nil {
+		logger := common.NewLogger()
+		logger.Errorf("failed to save async usage info: %v", err)
+	}
 }
 
 type retryState struct {

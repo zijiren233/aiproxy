@@ -15,55 +15,29 @@ import (
 	"github.com/labring/aiproxy/core/relay/utils"
 )
 
-func GetRequestURL(meta *meta.Meta) (adaptor.RequestURL, error) {
+func getRequestURL(meta *meta.Meta) (method, fullURL string, err error) {
 	u := meta.Channel.BaseURL
 	switch meta.Mode {
 	case mode.ChatCompletions, mode.Anthropic:
 		if strings.HasPrefix(meta.ActualModel, "bot-") {
-			url, err := url.JoinPath(u, "/api/v3/bots/chat/completions")
-			if err != nil {
-				return adaptor.RequestURL{}, err
-			}
-
-			return adaptor.RequestURL{
-				Method: http.MethodPost,
-				URL:    url,
-			}, nil
+			fullURL, err = url.JoinPath(u, "/api/v3/bots/chat/completions")
+			return http.MethodPost, fullURL, err
 		}
 
-		url, err := url.JoinPath(u, "/api/v3/chat/completions")
-		if err != nil {
-			return adaptor.RequestURL{}, err
-		}
+		fullURL, err = url.JoinPath(u, "/api/v3/chat/completions")
 
-		return adaptor.RequestURL{
-			Method: http.MethodPost,
-			URL:    url,
-		}, nil
+		return http.MethodPost, fullURL, err
 	case mode.Embeddings:
 		if strings.Contains(meta.ActualModel, "vision") {
-			url, err := url.JoinPath(u, "/api/v3/embeddings/multimodal")
-			if err != nil {
-				return adaptor.RequestURL{}, err
-			}
-
-			return adaptor.RequestURL{
-				Method: http.MethodPost,
-				URL:    url,
-			}, nil
+			fullURL, err = url.JoinPath(u, "/api/v3/embeddings/multimodal")
+			return http.MethodPost, fullURL, err
 		}
 
-		url, err := url.JoinPath(u, "/api/v3/embeddings")
-		if err != nil {
-			return adaptor.RequestURL{}, err
-		}
+		fullURL, err = url.JoinPath(u, "/api/v3/embeddings")
 
-		return adaptor.RequestURL{
-			Method: http.MethodPost,
-			URL:    url,
-		}, nil
+		return http.MethodPost, fullURL, err
 	default:
-		return adaptor.RequestURL{}, fmt.Errorf("unsupported relay mode %d for doubao", meta.Mode)
+		return "", "", fmt.Errorf("unsupported relay mode %d for doubao", meta.Mode)
 	}
 }
 
@@ -90,30 +64,49 @@ func (a *Adaptor) Metadata() adaptor.Metadata {
 	}
 }
 
-func (a *Adaptor) GetRequestURL(
-	meta *meta.Meta,
-	_ adaptor.Store,
-	_ *gin.Context,
-) (adaptor.RequestURL, error) {
-	return GetRequestURL(meta)
-}
-
 func (a *Adaptor) ConvertRequest(
 	meta *meta.Meta,
 	store adaptor.Store,
+	c *gin.Context,
 	req *http.Request,
 ) (adaptor.ConvertResult, error) {
+	var (
+		result adaptor.ConvertResult
+		err    error
+	)
+
 	switch meta.Mode {
 	case mode.Embeddings:
 		if strings.Contains(meta.ActualModel, "vision") {
-			return openai.ConvertEmbeddingsRequest(meta, req, false, patchEmbeddingsVisionInput)
+			result, err = openai.ConvertEmbeddingsRequest(
+				meta,
+				req,
+				false,
+				patchEmbeddingsVisionInput,
+			)
+		} else {
+			result, err = openai.ConvertEmbeddingsRequest(meta, req, true)
 		}
-		return openai.ConvertEmbeddingsRequest(meta, req, true)
 	case mode.ChatCompletions:
-		return ConvertChatCompletionsRequest(meta, req)
+		result, err = ConvertChatCompletionsRequest(meta, req)
 	default:
-		return openai.ConvertRequest(meta, store, req)
+		result, err = openai.ConvertRequest(meta, store, c, req)
 	}
+
+	if err != nil {
+		return adaptor.ConvertResult{}, err
+	}
+
+	// Get URL
+	method, fullURL, err := getRequestURL(meta)
+	if err != nil {
+		return adaptor.ConvertResult{}, err
+	}
+
+	result.Method = method
+	result.URL = fullURL
+
+	return result, nil
 }
 
 func (a *Adaptor) DoResponse(
@@ -121,7 +114,12 @@ func (a *Adaptor) DoResponse(
 	store adaptor.Store,
 	c *gin.Context,
 	resp *http.Response,
-) (usage model.Usage, err adaptor.Error) {
+) (adaptor.UsageResult, adaptor.Error) {
+	var (
+		usage model.Usage
+		err   adaptor.Error
+	)
+
 	switch meta.Mode {
 	case mode.ChatCompletions:
 		websearchCount := int64(0)
@@ -143,7 +141,7 @@ func (a *Adaptor) DoResponse(
 		return openai.DoResponse(meta, store, c, resp)
 	}
 
-	return usage, err
+	return adaptor.NewSyncUsage(usage), err
 }
 
 func (a *Adaptor) GetBalance(_ *model.Channel) (float64, error) {

@@ -15,6 +15,8 @@ import (
 
 type Adaptor struct{}
 
+var _ adaptor.Adaptor = (*Adaptor)(nil)
+
 const baseURL = "https://generativelanguage.googleapis.com"
 
 func (a *Adaptor) DefaultBaseURL() string {
@@ -30,44 +32,6 @@ func (a *Adaptor) SupportMode(m mode.Mode) bool {
 
 var v1ModelMap = map[string]struct{}{}
 
-func getRequestURL(meta *meta.Meta, action string) adaptor.RequestURL {
-	u := meta.Channel.BaseURL
-	if u == "" {
-		u = baseURL
-	}
-
-	version := "v1beta"
-	if _, ok := v1ModelMap[meta.ActualModel]; ok {
-		version = "v1"
-	}
-
-	return adaptor.RequestURL{
-		Method: http.MethodPost,
-		URL:    fmt.Sprintf("%s/%s/models/%s:%s", u, version, meta.ActualModel, action),
-	}
-}
-
-func (a *Adaptor) GetRequestURL(
-	meta *meta.Meta,
-	_ adaptor.Store,
-	c *gin.Context,
-) (adaptor.RequestURL, error) {
-	var action string
-	switch meta.Mode {
-	case mode.Embeddings:
-		action = "batchEmbedContents"
-	default:
-		action = "generateContent"
-	}
-
-	if meta.GetBool("stream") ||
-		(meta.Mode == mode.Gemini && utils.IsGeminiStreamRequest(c.Request.URL.Path)) {
-		action = "streamGenerateContent?alt=sse"
-	}
-
-	return getRequestURL(meta, action), nil
-}
-
 func (a *Adaptor) SetupRequestHeader(
 	meta *meta.Meta,
 	_ adaptor.Store,
@@ -81,20 +45,64 @@ func (a *Adaptor) SetupRequestHeader(
 func (a *Adaptor) ConvertRequest(
 	meta *meta.Meta,
 	_ adaptor.Store,
+	c *gin.Context,
 	req *http.Request,
 ) (adaptor.ConvertResult, error) {
+	// Determine action based on mode
+	var action string
 	switch meta.Mode {
 	case mode.Embeddings:
-		return ConvertEmbeddingRequest(meta, req)
+		action = "batchEmbedContents"
+	default:
+		action = "generateContent"
+	}
+
+	if meta.GetBool("stream") ||
+		(meta.Mode == mode.Gemini && utils.IsGeminiStreamRequest(c.Request.URL.Path)) {
+		action = "streamGenerateContent?alt=sse"
+	}
+
+	// Construct URL
+	u := meta.Channel.BaseURL
+	if u == "" {
+		u = baseURL
+	}
+
+	version := "v1beta"
+	if _, ok := v1ModelMap[meta.ActualModel]; ok {
+		version = "v1"
+	}
+
+	fullURL := fmt.Sprintf("%s/%s/models/%s:%s", u, version, meta.ActualModel, action)
+
+	// Convert request body
+	var (
+		result adaptor.ConvertResult
+		err    error
+	)
+
+	switch meta.Mode {
+	case mode.Embeddings:
+		result, err = ConvertEmbeddingRequest(meta, req)
 	case mode.ChatCompletions:
-		return ConvertRequest(meta, req)
+		result, err = ConvertRequest(meta, req)
 	case mode.Anthropic:
-		return ConvertClaudeRequest(meta, req)
+		result, err = ConvertClaudeRequest(meta, req)
 	case mode.Gemini:
-		return NativeConvertRequest(meta, req)
+		result, err = NativeConvertRequest(meta, req)
 	default:
 		return adaptor.ConvertResult{}, fmt.Errorf("unsupported mode: %s", meta.Mode)
 	}
+
+	if err != nil {
+		return adaptor.ConvertResult{}, err
+	}
+
+	// Set Method and URL
+	result.Method = http.MethodPost
+	result.URL = fullURL
+
+	return result, nil
 }
 
 func (a *Adaptor) DoRequest(
@@ -111,7 +119,12 @@ func (a *Adaptor) DoResponse(
 	_ adaptor.Store,
 	c *gin.Context,
 	resp *http.Response,
-) (usage model.Usage, err adaptor.Error) {
+) (adaptor.UsageResult, adaptor.Error) {
+	var (
+		usage model.Usage
+		err   adaptor.Error
+	)
+
 	switch meta.Mode {
 	case mode.Embeddings:
 		usage, err = EmbeddingHandler(meta, c, resp)
@@ -135,14 +148,18 @@ func (a *Adaptor) DoResponse(
 			usage, err = NativeHandler(meta, c, resp)
 		}
 	default:
-		return model.Usage{}, relaymodel.WrapperOpenAIErrorWithMessage(
+		return nil, relaymodel.WrapperOpenAIErrorWithMessage(
 			fmt.Sprintf("unsupported mode: %s", meta.Mode),
 			"unsupported_mode",
 			http.StatusBadRequest,
 		)
 	}
 
-	return usage, err
+	if err != nil {
+		return nil, err
+	}
+
+	return adaptor.NewSyncUsage(usage), nil
 }
 
 func (a *Adaptor) Metadata() adaptor.Metadata {

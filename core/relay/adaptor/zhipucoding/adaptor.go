@@ -34,42 +34,17 @@ func (a *Adaptor) SupportMode(m mode.Mode) bool {
 		m == mode.Anthropic
 }
 
-func (a *Adaptor) GetRequestURL(
+func (a *Adaptor) ConvertRequest(
 	meta *meta.Meta,
 	store adaptor.Store,
 	c *gin.Context,
-) (adaptor.RequestURL, error) {
+	req *http.Request,
+) (adaptor.ConvertResult, error) {
 	u := meta.Channel.BaseURL
 
 	switch meta.Mode {
 	case mode.Anthropic:
-		url, err := url.JoinPath(u, "/api/anthropic/v1/messages")
-		if err != nil {
-			return adaptor.RequestURL{}, err
-		}
-
-		return adaptor.RequestURL{
-			Method: http.MethodPost,
-			URL:    url,
-		}, nil
-	default:
-		meta.Channel.BaseURL += "/api/coding/paas/v4"
-		defer func() {
-			meta.Channel.BaseURL = u
-		}()
-
-		return a.Adaptor.GetRequestURL(meta, store, c)
-	}
-}
-
-func (a *Adaptor) ConvertRequest(
-	meta *meta.Meta,
-	store adaptor.Store,
-	req *http.Request,
-) (adaptor.ConvertResult, error) {
-	switch meta.Mode {
-	case mode.Anthropic:
-		return anthropic.ConvertRequest(meta, req, func(node *ast.Node) error {
+		result, err := anthropic.ConvertRequest(meta, req, func(node *ast.Node) error {
 			if !node.Get("max_tokens").Exists() {
 				_, err := node.Set("max_tokens", ast.NewNumber("4096"))
 				return err
@@ -77,8 +52,28 @@ func (a *Adaptor) ConvertRequest(
 
 			return nil
 		})
+		if err != nil {
+			return result, err
+		}
+
+		// Set URL and Method for Anthropic
+		fullURL, urlErr := url.JoinPath(u, "/api/anthropic/v1/messages")
+		if urlErr != nil {
+			return adaptor.ConvertResult{}, urlErr
+		}
+
+		result.Method = http.MethodPost
+		result.URL = fullURL
+
+		return result, nil
 	default:
-		return a.Adaptor.ConvertRequest(meta, store, req)
+		// Temporarily modify BaseURL for other modes
+		meta.Channel.BaseURL += "/api/coding/paas/v4"
+		defer func() {
+			meta.Channel.BaseURL = u
+		}()
+
+		return a.Adaptor.ConvertRequest(meta, store, c, req)
 	}
 }
 
@@ -87,19 +82,24 @@ func (a *Adaptor) DoResponse(
 	store adaptor.Store,
 	c *gin.Context,
 	resp *http.Response,
-) (usage model.Usage, err adaptor.Error) {
+) (adaptor.UsageResult, adaptor.Error) {
 	switch meta.Mode {
 	case mode.Anthropic:
+		var (
+			usage model.Usage
+			err   adaptor.Error
+		)
+
 		if utils.IsStreamResponse(resp) {
 			usage, err = anthropic.StreamHandler(meta, c, resp)
 		} else {
 			usage, err = anthropic.Handler(meta, c, resp)
 		}
-	default:
-		usage, err = a.Adaptor.DoResponse(meta, store, c, resp)
-	}
 
-	return usage, err
+		return adaptor.NewSyncUsage(usage), err
+	default:
+		return a.Adaptor.DoResponse(meta, store, c, resp)
+	}
 }
 
 func (a *Adaptor) Metadata() adaptor.Metadata {

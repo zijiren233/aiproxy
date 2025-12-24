@@ -23,19 +23,11 @@ func (a *Adaptor) DefaultBaseURL() string {
 	return "https://{resource_name}.openai.azure.com"
 }
 
-func (a *Adaptor) GetRequestURL(
-	meta *meta.Meta,
-	_ adaptor.Store,
-	_ *gin.Context,
-) (adaptor.RequestURL, error) {
-	return GetRequestURL(meta, true)
-}
-
 //nolint:gocyclo
-func GetRequestURL(meta *meta.Meta, replaceDot bool) (adaptor.RequestURL, error) {
+func GetRequestURL(meta *meta.Meta, replaceDot bool) (method, fullURL string, err error) {
 	_, apiVersion, err := GetTokenAndAPIVersion(meta.Channel.Key)
 	if err != nil {
-		return adaptor.RequestURL{}, err
+		return "", "", err
 	}
 
 	model := meta.ActualModel
@@ -47,258 +39,234 @@ func GetRequestURL(meta *meta.Meta, replaceDot bool) (adaptor.RequestURL, error)
 	case mode.ImagesGenerations:
 		// https://learn.microsoft.com/en-us/azure/ai-services/openai/dall-e-quickstart?tabs=dalle3%2Ccommand-line&pivots=rest-api
 		// https://{resource_name}.openai.azure.com/openai/deployments/dall-e-3/images/generations?api-version=2024-03-01-preview
-		url, err := url.JoinPath(
+		u, err := url.JoinPath(
 			meta.Channel.BaseURL,
 			"/openai/deployments",
 			model,
 			"/images/generations",
 		)
 		if err != nil {
-			return adaptor.RequestURL{}, err
+			return "", "", err
 		}
 
-		return adaptor.RequestURL{
-			Method: http.MethodPost,
-			URL:    fmt.Sprintf("%s?api-version=%s", url, apiVersion),
-		}, nil
+		return http.MethodPost, fmt.Sprintf("%s?api-version=%s", u, apiVersion), nil
 	case mode.ImagesEdits:
-		url, err := url.JoinPath(
+		u, err := url.JoinPath(
 			meta.Channel.BaseURL,
 			"/openai/deployments",
 			model,
 			"/images/edits",
 		)
 		if err != nil {
-			return adaptor.RequestURL{}, err
+			return "", "", err
 		}
 
-		return adaptor.RequestURL{
-			Method: http.MethodPost,
-			URL:    fmt.Sprintf("%s?api-version=%s", url, apiVersion),
-		}, nil
+		return http.MethodPost, fmt.Sprintf("%s?api-version=%s", u, apiVersion), nil
 	case mode.AudioTranscription:
 		// https://learn.microsoft.com/en-us/azure/ai-services/openai/whisper-quickstart?tabs=command-line#rest-api
-		url, err := url.JoinPath(
+		u, err := url.JoinPath(
 			meta.Channel.BaseURL,
 			"/openai/deployments",
 			model,
 			"/audio/transcriptions",
 		)
 		if err != nil {
-			return adaptor.RequestURL{}, err
+			return "", "", err
 		}
 
-		return adaptor.RequestURL{
-			Method: http.MethodPost,
-			URL:    fmt.Sprintf("%s?api-version=%s", url, apiVersion),
-		}, nil
+		return http.MethodPost, fmt.Sprintf("%s?api-version=%s", u, apiVersion), nil
 	case mode.AudioSpeech:
 		// https://learn.microsoft.com/en-us/azure/ai-services/openai/text-to-speech-quickstart?tabs=command-line#rest-api
-		url, err := url.JoinPath(
+		u, err := url.JoinPath(
 			meta.Channel.BaseURL,
 			"/openai/deployments",
 			model,
 			"/audio/speech",
 		)
 		if err != nil {
-			return adaptor.RequestURL{}, err
+			return "", "", err
 		}
 
-		return adaptor.RequestURL{
-			Method: http.MethodPost,
-			URL:    fmt.Sprintf("%s?api-version=%s", url, apiVersion),
-		}, nil
+		return http.MethodPost, fmt.Sprintf("%s?api-version=%s", u, apiVersion), nil
 	case mode.ChatCompletions, mode.Anthropic, mode.Gemini:
 		// Check if model requires Responses API
 		if openai.IsResponsesOnlyModel(&meta.ModelConfig, meta.ActualModel) {
 			// Azure Responses API format
-			url, err := url.JoinPath(
+			u, err := url.JoinPath(
 				meta.Channel.BaseURL,
 				"/openai/v1/responses",
 			)
 			if err != nil {
-				return adaptor.RequestURL{}, err
+				return "", "", err
 			}
 
-			return adaptor.RequestURL{
-				Method: http.MethodPost,
-				URL:    fmt.Sprintf("%s?api-version=%s", url, "preview"),
-			}, nil
+			return http.MethodPost, fmt.Sprintf("%s?api-version=%s", u, "preview"), nil
 		}
 
 		// https://learn.microsoft.com/en-us/azure/cognitive-services/openai/chatgpt-quickstart?pivots=rest-api&tabs=command-line#rest-api
-		url, err := url.JoinPath(
+		u, err := url.JoinPath(
 			meta.Channel.BaseURL,
 			"/openai/deployments",
 			model,
 			"/chat/completions",
 		)
 		if err != nil {
-			return adaptor.RequestURL{}, err
+			return "", "", err
 		}
 
-		return adaptor.RequestURL{
-			Method: http.MethodPost,
-			URL:    fmt.Sprintf("%s?api-version=%s", url, apiVersion),
-		}, nil
+		return http.MethodPost, fmt.Sprintf("%s?api-version=%s", u, apiVersion), nil
 	case mode.Completions:
-		url, err := url.JoinPath(
+		u, err := url.JoinPath(
 			meta.Channel.BaseURL,
 			"/openai/deployments",
 			model,
 			"/completions",
 		)
 		if err != nil {
-			return adaptor.RequestURL{}, err
+			return "", "", err
 		}
 
-		return adaptor.RequestURL{
-			Method: http.MethodPost,
-			URL:    fmt.Sprintf("%s?api-version=%s", url, apiVersion),
-		}, nil
+		return http.MethodPost, fmt.Sprintf("%s?api-version=%s", u, apiVersion), nil
 	case mode.Embeddings:
-		url, err := url.JoinPath(
+		u, err := url.JoinPath(
 			meta.Channel.BaseURL,
 			"/openai/deployments",
 			model,
 			"/embeddings",
 		)
 		if err != nil {
-			return adaptor.RequestURL{}, err
+			return "", "", err
 		}
 
-		return adaptor.RequestURL{
-			Method: http.MethodPost,
-			URL:    fmt.Sprintf("%s?api-version=%s", url, apiVersion),
-		}, nil
+		return http.MethodPost, fmt.Sprintf("%s?api-version=%s", u, apiVersion), nil
 	case mode.VideoGenerationsJobs:
-		url, err := url.JoinPath(
+		u, err := url.JoinPath(
 			meta.Channel.BaseURL,
 			"/openai/v1/video/generations/jobs",
 		)
 		if err != nil {
-			return adaptor.RequestURL{}, err
+			return "", "", err
 		}
 
-		return adaptor.RequestURL{
-			Method: http.MethodPost,
-			URL:    fmt.Sprintf("%s?api-version=%s", url, apiVersion),
-		}, nil
+		return http.MethodPost, fmt.Sprintf("%s?api-version=%s", u, apiVersion), nil
 	case mode.VideoGenerationsGetJobs:
-		url, err := url.JoinPath(
+		u, err := url.JoinPath(
 			meta.Channel.BaseURL,
 			"/openai/v1/video/generations/jobs",
 			meta.JobID,
 		)
 		if err != nil {
-			return adaptor.RequestURL{}, err
+			return "", "", err
 		}
 
-		return adaptor.RequestURL{
-			Method: http.MethodPost,
-			URL:    fmt.Sprintf("%s?api-version=%s", url, apiVersion),
-		}, nil
+		return http.MethodGet, fmt.Sprintf("%s?api-version=%s", u, apiVersion), nil
 	case mode.VideoGenerationsContent:
-		url, err := url.JoinPath(
+		u, err := url.JoinPath(
 			meta.Channel.BaseURL,
 			"/openai/v1/video/generations",
 			meta.GenerationID,
 			"/content/video",
 		)
 		if err != nil {
-			return adaptor.RequestURL{}, err
+			return "", "", err
 		}
 
-		return adaptor.RequestURL{
-			Method: http.MethodPost,
-			URL:    fmt.Sprintf("%s?api-version=%s", url, apiVersion),
-		}, nil
+		return http.MethodGet, fmt.Sprintf("%s?api-version=%s", u, apiVersion), nil
 
 	// Add support for Responses API endpoints
 	case mode.Responses:
 		// POST https://YOUR-RESOURCE-NAME.openai.azure.com/openai/v1/responses?api-version=preview
-		url, err := url.JoinPath(
+		u, err := url.JoinPath(
 			meta.Channel.BaseURL,
 			"/openai/v1/responses",
 		)
 		if err != nil {
-			return adaptor.RequestURL{}, err
+			return "", "", err
 		}
 
-		return adaptor.RequestURL{
-			Method: http.MethodPost,
-			URL:    fmt.Sprintf("%s?api-version=%s", url, "preview"),
-		}, nil
+		return http.MethodPost, fmt.Sprintf("%s?api-version=%s", u, "preview"), nil
 
 	case mode.ResponsesGet:
 		// GET https://YOUR-RESOURCE-NAME.openai.azure.com/openai/v1/responses/{response_id}?api-version=preview
-		url, err := url.JoinPath(
+		u, err := url.JoinPath(
 			meta.Channel.BaseURL,
 			"/openai/v1/responses",
 			meta.ResponseID,
 		)
 		if err != nil {
-			return adaptor.RequestURL{}, err
+			return "", "", err
 		}
 
-		return adaptor.RequestURL{
-			Method: http.MethodGet,
-			URL:    fmt.Sprintf("%s?api-version=%s", url, "preview"),
-		}, nil
+		return http.MethodGet, fmt.Sprintf("%s?api-version=%s", u, "preview"), nil
 
 	case mode.ResponsesDelete:
 		// DELETE https://YOUR-RESOURCE-NAME.openai.azure.com/openai/v1/responses/{response_id}?api-version=preview
-		url, err := url.JoinPath(
+		u, err := url.JoinPath(
 			meta.Channel.BaseURL,
 			"/openai/v1/responses",
 			meta.ResponseID,
 		)
 		if err != nil {
-			return adaptor.RequestURL{}, err
+			return "", "", err
 		}
 
-		return adaptor.RequestURL{
-			Method: http.MethodDelete,
-			URL:    fmt.Sprintf("%s?api-version=%s", url, "preview"),
-		}, nil
+		return http.MethodDelete, fmt.Sprintf("%s?api-version=%s", u, "preview"), nil
 
 	case mode.ResponsesCancel:
 		// POST https://YOUR-RESOURCE-NAME.openai.azure.com/openai/v1/responses/{response_id}/cancel?api-version=preview
-		url, err := url.JoinPath(
+		u, err := url.JoinPath(
 			meta.Channel.BaseURL,
 			"/openai/v1/responses",
 			meta.ResponseID,
 			"/cancel",
 		)
 		if err != nil {
-			return adaptor.RequestURL{}, err
+			return "", "", err
 		}
 
-		return adaptor.RequestURL{
-			Method: http.MethodPost,
-			URL:    fmt.Sprintf("%s?api-version=%s", url, "preview"),
-		}, nil
+		return http.MethodPost, fmt.Sprintf("%s?api-version=%s", u, "preview"), nil
 
 	case mode.ResponsesInputItems:
 		// GET https://YOUR-RESOURCE-NAME.openai.azure.com/openai/v1/responses/{response_id}/input_items?api-version=preview
-		url, err := url.JoinPath(
+		u, err := url.JoinPath(
 			meta.Channel.BaseURL,
 			"/openai/v1/responses",
 			meta.ResponseID,
 			"/input_items",
 		)
 		if err != nil {
-			return adaptor.RequestURL{}, err
+			return "", "", err
 		}
 
-		return adaptor.RequestURL{
-			Method: http.MethodGet,
-			URL:    fmt.Sprintf("%s?api-version=%s", url, "preview"),
-		}, nil
+		return http.MethodGet, fmt.Sprintf("%s?api-version=%s", u, "preview"), nil
 
 	default:
-		return adaptor.RequestURL{}, fmt.Errorf("unsupported mode: %s", meta.Mode)
+		return "", "", fmt.Errorf("unsupported mode: %s", meta.Mode)
 	}
+}
+
+func (a *Adaptor) ConvertRequest(
+	meta *meta.Meta,
+	store adaptor.Store,
+	c *gin.Context,
+	req *http.Request,
+) (adaptor.ConvertResult, error) {
+	// Use parent's ConvertRequest
+	result, err := a.Adaptor.ConvertRequest(meta, store, c, req)
+	if err != nil {
+		return adaptor.ConvertResult{}, err
+	}
+
+	// Override URL with Azure-specific URL
+	method, fullURL, err := GetRequestURL(meta, true)
+	if err != nil {
+		return adaptor.ConvertResult{}, err
+	}
+
+	result.Method = method
+	result.URL = fullURL
+
+	return result, nil
 }
 
 func (a *Adaptor) SetupRequestHeader(

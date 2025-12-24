@@ -118,45 +118,47 @@ func lazyRemoveSearchOption(meta *meta.Meta) {
 func fallback(
 	meta *meta.Meta,
 	store adaptor.Store,
+	c *gin.Context,
 	req *http.Request,
 	do adaptor.ConvertRequest,
 ) (adaptor.ConvertResult, error) {
 	lazyRemoveSearchOption(meta)
-	return do.ConvertRequest(meta, store, req)
+	return do.ConvertRequest(meta, store, c, req)
 }
 
 // ConvertRequest intercepts and modifies requests to add web search capabilities
 func (p *WebSearch) ConvertRequest(
 	meta *meta.Meta,
 	store adaptor.Store,
+	c *gin.Context,
 	req *http.Request,
 	do adaptor.ConvertRequest,
 ) (adaptor.ConvertResult, error) {
 	// Skip if not chat completions mode
 	if meta.Mode != mode.ChatCompletions {
-		return do.ConvertRequest(meta, store, req)
+		return do.ConvertRequest(meta, store, c, req)
 	}
 
 	// Load plugin configuration
 	pluginConfig, err := p.getConfig(meta)
 	if err != nil {
-		return do.ConvertRequest(meta, store, req)
+		return do.ConvertRequest(meta, store, c, req)
 	}
 
 	// Skip if plugin is disabled
 	if !pluginConfig.Enable {
-		return do.ConvertRequest(meta, store, req)
+		return do.ConvertRequest(meta, store, c, req)
 	}
 
 	// Apply default configuration values if needed
 	if err := p.validateAndApplyDefaults(&pluginConfig); err != nil {
-		return fallback(meta, store, req, do)
+		return fallback(meta, store, c, req, do)
 	}
 
 	// Initialize search engines
 	engines, arxivExists, err := p.initializeSearchEngines(pluginConfig.SearchFrom)
 	if err != nil || len(engines) == 0 {
-		return fallback(meta, store, req, do)
+		return fallback(meta, store, c, req, do)
 	}
 
 	// Read and parse request body
@@ -167,29 +169,29 @@ func (p *WebSearch) ConvertRequest(
 
 	var chatRequest map[string]any
 	if err := sonic.Unmarshal(body, &chatRequest); err != nil {
-		return fallback(meta, store, req, do)
+		return fallback(meta, store, c, req, do)
 	}
 
 	// Check if web search should be enabled for this request
 	webSearchOptions, hasWebSearchOptions := chatRequest["web_search_options"].(map[string]any)
 	if !pluginConfig.ForceSearch && !hasWebSearchOptions {
-		return fallback(meta, store, req, do)
+		return fallback(meta, store, c, req, do)
 	}
 
 	webSearchEnable, ok := webSearchOptions["enable"].(bool)
 	if ok && !webSearchEnable {
-		return fallback(meta, store, req, do)
+		return fallback(meta, store, c, req, do)
 	}
 
 	// Extract user query from messages
 	messages, ok := chatRequest["messages"].([]any)
 	if !ok || len(messages) == 0 {
-		return fallback(meta, store, req, do)
+		return fallback(meta, store, c, req, do)
 	}
 
 	queryIndex, query := p.extractUserQuery(messages)
 	if query == "" {
-		return fallback(meta, store, req, do)
+		return fallback(meta, store, c, req, do)
 	}
 
 	// Prepare search rewrite prompt if configured
@@ -208,17 +210,17 @@ func (p *WebSearch) ConvertRequest(
 		searchRewritePrompt,
 	)
 	if err != nil {
-		return fallback(meta, store, req, do)
+		return fallback(meta, store, c, req, do)
 	}
 
 	if len(searchContexts) == 0 {
-		return fallback(meta, store, req, do)
+		return fallback(meta, store, c, req, do)
 	}
 
 	// Execute searches
 	searchResult := p.executeSearches(context.Background(), engines, searchContexts)
 	if searchResult.Count == 0 || len(searchResult.Results) == 0 {
-		return fallback(meta, store, req, do)
+		return fallback(meta, store, c, req, do)
 	}
 
 	setSearchCount(meta, searchResult.Count)
@@ -231,7 +233,7 @@ func (p *WebSearch) ConvertRequest(
 	// Create new request body
 	modifiedBody, err := sonic.Marshal(chatRequest)
 	if err != nil {
-		return fallback(meta, store, req, do)
+		return fallback(meta, store, c, req, do)
 	}
 
 	// Update the request
@@ -243,7 +245,7 @@ func (p *WebSearch) ConvertRequest(
 		meta.Set("references", searchResult.Results)
 	}
 
-	return do.ConvertRequest(meta, store, req)
+	return do.ConvertRequest(meta, store, c, req)
 }
 
 // validateAndApplyDefaults validates configuration and applies default values
@@ -811,7 +813,7 @@ func (p *WebSearch) DoResponse(
 	c *gin.Context,
 	resp *http.Response,
 	do adaptor.DoResponse,
-) (model.Usage, adaptor.Error) {
+) (adaptor.UsageResult, adaptor.Error) {
 	if meta.Mode != mode.ChatCompletions {
 		return do.DoResponse(meta, store, c, resp)
 	}
@@ -868,13 +870,14 @@ func (p *WebSearch) doResponseWithCount(
 	resp *http.Response,
 	do adaptor.DoResponse,
 	count int,
-) (model.Usage, adaptor.Error) {
-	u, err := do.DoResponse(meta, store, c, resp)
+) (adaptor.UsageResult, adaptor.Error) {
+	usageResult, err := do.DoResponse(meta, store, c, resp)
 	if err != nil {
-		return model.Usage{}, err
+		return adaptor.NewSyncUsage(model.Usage{}), err
 	}
 
-	u.WebSearchCount += model.ZeroNullInt64(int64(count))
+	usage := usageResult.Usage()
+	usage.WebSearchCount += model.ZeroNullInt64(int64(count))
 
-	return u, nil
+	return adaptor.NewSyncUsage(usage), nil
 }

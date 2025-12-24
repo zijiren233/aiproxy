@@ -166,8 +166,6 @@ func TestIntegrationModelDetection(t *testing.T) {
 
 // TestIntegrationGetRequestURL tests that GetRequestURL returns correct URL
 func TestIntegrationGetRequestURL(t *testing.T) {
-	adaptor := &openai.Adaptor{}
-
 	tests := []struct {
 		name        string
 		model       string
@@ -214,10 +212,10 @@ func TestIntegrationGetRequestURL(t *testing.T) {
 			}
 			m.Channel.BaseURL = "https://api.openai.com"
 
-			result, err := adaptor.GetRequestURL(m, nil, nil)
+			method, url, err := openai.GetRequestURL(m)
 			require.NoError(t, err)
-			assert.Contains(t, result.URL, tt.expectedURL)
-			assert.Equal(t, http.MethodPost, result.Method)
+			assert.Contains(t, url, tt.expectedURL)
+			assert.Equal(t, http.MethodPost, method)
 		})
 	}
 }

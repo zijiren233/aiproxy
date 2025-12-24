@@ -4,20 +4,12 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/labring/aiproxy/core/model"
 	"github.com/labring/aiproxy/core/relay/adaptor"
 	"github.com/labring/aiproxy/core/relay/meta"
 )
 
 // adaptor hook
 type Plugin interface {
-	GetRequestURL(
-		meta *meta.Meta,
-		store adaptor.Store,
-		c *gin.Context,
-		do adaptor.GetRequestURL,
-	) (adaptor.RequestURL, error)
-
 	SetupRequestHeader(
 		meta *meta.Meta,
 		store adaptor.Store,
@@ -29,6 +21,7 @@ type Plugin interface {
 	ConvertRequest(
 		meta *meta.Meta,
 		store adaptor.Store,
+		c *gin.Context,
 		req *http.Request,
 		do adaptor.ConvertRequest,
 	) (adaptor.ConvertResult, error)
@@ -47,15 +40,15 @@ type Plugin interface {
 		c *gin.Context,
 		resp *http.Response,
 		do adaptor.DoResponse,
-	) (model.Usage, adaptor.Error)
+	) (adaptor.UsageResult, adaptor.Error)
 }
 
-func WrapperAdaptor(adaptor adaptor.Adaptor, plugins ...Plugin) adaptor.Adaptor {
+func WrapperAdaptor(innerAdaptor adaptor.Adaptor, plugins ...Plugin) adaptor.Adaptor {
 	if len(plugins) == 0 {
-		return adaptor
+		return innerAdaptor
 	}
 
-	result := adaptor
+	result := innerAdaptor
 	for i := len(plugins) - 1; i >= 0; i-- {
 		result = &wrappedAdaptor{
 			Adaptor: result,
@@ -73,14 +66,6 @@ type wrappedAdaptor struct {
 	plugin Plugin
 }
 
-func (w *wrappedAdaptor) GetRequestURL(
-	meta *meta.Meta,
-	store adaptor.Store,
-	c *gin.Context,
-) (adaptor.RequestURL, error) {
-	return w.plugin.GetRequestURL(meta, store, c, w.Adaptor)
-}
-
 func (w *wrappedAdaptor) SetupRequestHeader(
 	meta *meta.Meta,
 	store adaptor.Store,
@@ -93,9 +78,10 @@ func (w *wrappedAdaptor) SetupRequestHeader(
 func (w *wrappedAdaptor) ConvertRequest(
 	meta *meta.Meta,
 	store adaptor.Store,
+	c *gin.Context,
 	req *http.Request,
 ) (adaptor.ConvertResult, error) {
-	return w.plugin.ConvertRequest(meta, store, req, w.Adaptor)
+	return w.plugin.ConvertRequest(meta, store, c, req, w.Adaptor)
 }
 
 func (w *wrappedAdaptor) DoRequest(
@@ -112,6 +98,6 @@ func (w *wrappedAdaptor) DoResponse(
 	store adaptor.Store,
 	c *gin.Context,
 	resp *http.Response,
-) (model.Usage, adaptor.Error) {
+) (adaptor.UsageResult, adaptor.Error) {
 	return w.plugin.DoResponse(meta, store, c, resp, w.Adaptor)
 }

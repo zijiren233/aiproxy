@@ -38,9 +38,10 @@ func (m *GroupMonitor) DoResponse(
 	c *gin.Context,
 	resp *http.Response,
 	do adaptor.DoResponse,
-) (model.Usage, adaptor.Error) {
-	usage, relayErr := do.DoResponse(meta, store, c, resp)
+) (adaptor.UsageResult, adaptor.Error) {
+	usageResult, relayErr := do.DoResponse(meta, store, c, resp)
 
+	usage := usageResult.Usage()
 	if usage.TotalTokens > 0 {
 		count, overLimitCount, secondCount := reqlimit.PushGroupModelTokensRequest(
 			context.Background(),
@@ -61,7 +62,7 @@ func (m *GroupMonitor) DoResponse(
 		UpdateGroupModelTokennameTokensRequest(c, count+overLimitCount, secondCount)
 	}
 
-	return usage, relayErr
+	return usageResult, relayErr
 }
 
 func UpdateGroupModelRequest(c *gin.Context, group model.GroupCache, rpm, rps int64) {

@@ -9,22 +9,22 @@ import (
 	"github.com/labring/aiproxy/core/relay/meta"
 )
 
-// HandleResult contains all the information needed for consumption recording
-type HandleResult struct {
-	Error  adaptor.Error
-	Usage  model.Usage
-	Detail *RequestDetail
-}
-
 func Handle(
-	adaptor adaptor.Adaptor,
+	innerAdaptor adaptor.Adaptor,
 	c *gin.Context,
 	meta *meta.Meta,
 	store adaptor.Store,
 ) *HandleResult {
 	log := common.GetLogger(c)
 
-	usage, detail, respErr := DoHelper(adaptor, c, meta, store)
+	usageResult, detail, respErr := DoHelper(innerAdaptor, c, meta, store)
+
+	// Extract usage from UsageResult
+	var usage model.Usage
+	if usageResult != nil {
+		usage = usageResult.Usage()
+	}
+
 	if respErr != nil {
 		var logDetail *RequestDetail
 		if detail != nil && config.DebugEnabled {
@@ -40,14 +40,16 @@ func Handle(
 		}
 
 		return &HandleResult{
-			Error:  respErr,
-			Usage:  usage,
-			Detail: detail,
+			Error:       respErr,
+			Usage:       usage,
+			Detail:      detail,
+			UsageResult: usageResult,
 		}
 	}
 
 	return &HandleResult{
-		Usage:  usage,
-		Detail: detail,
+		Usage:       usage,
+		Detail:      detail,
+		UsageResult: usageResult,
 	}
 }

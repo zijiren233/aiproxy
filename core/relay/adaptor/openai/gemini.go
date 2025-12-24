@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"net/http"
+	"net/url"
 	"sort"
 	"strconv"
 	"strings"
@@ -80,7 +81,14 @@ func ConvertGeminiRequest(meta *meta.Meta, req *http.Request) (adaptor.ConvertRe
 		return adaptor.ConvertResult{}, err
 	}
 
+	fullURL, err := url.JoinPath(meta.Channel.BaseURL, "/chat/completions")
+	if err != nil {
+		return adaptor.ConvertResult{}, err
+	}
+
 	return adaptor.ConvertResult{
+		Method: http.MethodPost,
+		URL:    fullURL,
 		Header: http.Header{
 			"Content-Type":   {"application/json"},
 			"Content-Length": {strconv.Itoa(len(data))},
@@ -803,9 +811,14 @@ func ConvertGeminiToResponsesRequest(
 		return adaptor.ConvertResult{}, err
 	}
 
-	fmt.Println(string(jsonData))
+	fullURL, err := url.JoinPath(meta.Channel.BaseURL, "/responses")
+	if err != nil {
+		return adaptor.ConvertResult{}, err
+	}
 
 	return adaptor.ConvertResult{
+		Method: http.MethodPost,
+		URL:    fullURL,
 		Header: http.Header{
 			"Content-Type":   {"application/json"},
 			"Content-Length": {strconv.Itoa(len(jsonData))},

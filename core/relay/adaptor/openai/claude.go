@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 
@@ -34,7 +35,14 @@ func ConvertClaudeRequest(
 		return adaptor.ConvertResult{}, err
 	}
 
+	fullURL, err := url.JoinPath(meta.Channel.BaseURL, "/chat/completions")
+	if err != nil {
+		return adaptor.ConvertResult{}, err
+	}
+
 	return adaptor.ConvertResult{
+		Method: http.MethodPost,
+		URL:    fullURL,
 		Header: http.Header{
 			"Content-Type":   {"application/json"},
 			"Content-Length": {strconv.Itoa(len(jsonData))},
@@ -818,7 +826,14 @@ func ConvertClaudeToResponsesRequest(
 		return adaptor.ConvertResult{}, err
 	}
 
+	fullURL, err := url.JoinPath(meta.Channel.BaseURL, "/responses")
+	if err != nil {
+		return adaptor.ConvertResult{}, err
+	}
+
 	return adaptor.ConvertResult{
+		Method: http.MethodPost,
+		URL:    fullURL,
 		Header: http.Header{
 			"Content-Type":   {"application/json"},
 			"Content-Length": {strconv.Itoa(len(jsonData))},

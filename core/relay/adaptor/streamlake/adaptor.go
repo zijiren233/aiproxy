@@ -38,39 +38,33 @@ func supportClaudeCodeProxy(modelName string) bool {
 		strings.Contains(strings.ToLower(modelName), "coder")
 }
 
-func (a *Adaptor) GetRequestURL(
-	meta *meta.Meta,
-	store adaptor.Store,
-	c *gin.Context,
-) (adaptor.RequestURL, error) {
-	u := meta.Channel.BaseURL
-
-	switch {
-	case meta.Mode == mode.Anthropic && supportClaudeCodeProxy(meta.OriginModel):
-		url, err := url.JoinPath(u, meta.ActualModel, "/claude-code-proxy/v1/messages")
-		if err != nil {
-			return adaptor.RequestURL{}, err
-		}
-
-		return adaptor.RequestURL{
-			Method: http.MethodPost,
-			URL:    url,
-		}, nil
-	default:
-		return a.Adaptor.GetRequestURL(meta, store, c)
-	}
-}
-
 func (a *Adaptor) ConvertRequest(
 	meta *meta.Meta,
 	store adaptor.Store,
+	c *gin.Context,
 	req *http.Request,
 ) (adaptor.ConvertResult, error) {
 	switch {
 	case meta.Mode == mode.Anthropic && supportClaudeCodeProxy(meta.OriginModel):
-		return anthropic.ConvertRequest(meta, req)
+		result, err := anthropic.ConvertRequest(meta, req)
+		if err != nil {
+			return result, err
+		}
+
+		// Set URL and Method for claude-code-proxy
+		u := meta.Channel.BaseURL
+
+		fullURL, urlErr := url.JoinPath(u, meta.ActualModel, "/claude-code-proxy/v1/messages")
+		if urlErr != nil {
+			return adaptor.ConvertResult{}, urlErr
+		}
+
+		result.Method = http.MethodPost
+		result.URL = fullURL
+
+		return result, nil
 	default:
-		return a.Adaptor.ConvertRequest(meta, store, req)
+		return a.Adaptor.ConvertRequest(meta, store, c, req)
 	}
 }
 
@@ -79,19 +73,24 @@ func (a *Adaptor) DoResponse(
 	store adaptor.Store,
 	c *gin.Context,
 	resp *http.Response,
-) (usage model.Usage, err adaptor.Error) {
+) (adaptor.UsageResult, adaptor.Error) {
 	switch {
 	case meta.Mode == mode.Anthropic && supportClaudeCodeProxy(meta.OriginModel):
+		var (
+			usage model.Usage
+			err   adaptor.Error
+		)
+
 		if utils.IsStreamResponse(resp) {
 			usage, err = anthropic.StreamHandler(meta, c, resp)
 		} else {
 			usage, err = anthropic.Handler(meta, c, resp)
 		}
-	default:
-		usage, err = a.Adaptor.DoResponse(meta, store, c, resp)
-	}
 
-	return usage, err
+		return adaptor.NewSyncUsage(usage), err
+	default:
+		return a.Adaptor.DoResponse(meta, store, c, resp)
+	}
 }
 
 func (a *Adaptor) Metadata() adaptor.Metadata {

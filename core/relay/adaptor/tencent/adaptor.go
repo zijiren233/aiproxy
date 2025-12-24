@@ -12,6 +12,8 @@ type Adaptor struct {
 	openai.Adaptor
 }
 
+var _ adaptor.Adaptor = (*Adaptor)(nil)
+
 const baseURL = "https://api.hunyuan.cloud.tencent.com/v1"
 
 func (a *Adaptor) DefaultBaseURL() string {

@@ -6,6 +6,7 @@ import (
 	"io"
 	"mime/multipart"
 	"net/http"
+	"net/url"
 	"strconv"
 
 	"github.com/bytedance/sonic"
@@ -45,7 +46,14 @@ func ConvertImagesRequest(
 		return adaptor.ConvertResult{}, err
 	}
 
+	fullURL, err := url.JoinPath(meta.Channel.BaseURL, "/images/generations")
+	if err != nil {
+		return adaptor.ConvertResult{}, err
+	}
+
 	return adaptor.ConvertResult{
+		Method: http.MethodPost,
+		URL:    fullURL,
 		Header: http.Header{
 			"Content-Type":   {"application/json"},
 			"Content-Length": {strconv.Itoa(len(jsonData))},
@@ -123,7 +131,14 @@ func ConvertImagesEditsRequest(
 		return adaptor.ConvertResult{}, err
 	}
 
+	fullURL, err := url.JoinPath(meta.Channel.BaseURL, "/images/edits")
+	if err != nil {
+		return adaptor.ConvertResult{}, err
+	}
+
 	return adaptor.ConvertResult{
+		Method: http.MethodPost,
+		URL:    fullURL,
 		Header: http.Header{
 			"Content-Type": {multipartWriter.FormDataContentType()},
 		},

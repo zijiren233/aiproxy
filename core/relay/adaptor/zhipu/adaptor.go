@@ -11,6 +11,8 @@ import (
 	"github.com/labring/aiproxy/core/relay/mode"
 )
 
+var _ adaptor.Adaptor = (*Adaptor)(nil)
+
 type Adaptor struct {
 	openai.Adaptor
 }
@@ -26,15 +28,24 @@ func (a *Adaptor) DoResponse(
 	store adaptor.Store,
 	c *gin.Context,
 	resp *http.Response,
-) (usage model.Usage, err adaptor.Error) {
+) (adaptor.UsageResult, adaptor.Error) {
+	var (
+		usage model.Usage
+		err   adaptor.Error
+	)
+
 	switch meta.Mode {
 	case mode.Embeddings:
 		usage, err = EmbeddingsHandler(c, resp)
 	default:
-		usage, err = openai.DoResponse(meta, store, c, resp)
+		return openai.DoResponse(meta, store, c, resp)
 	}
 
-	return usage, err
+	if err != nil {
+		return nil, err
+	}
+
+	return adaptor.NewSyncUsage(usage), nil
 }
 
 func (a *Adaptor) GetBalance(_ *model.Channel) (float64, error) {

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"io"
 	"net/http"
+	"net/url"
 	"strconv"
 	"time"
 
@@ -40,12 +41,83 @@ func ConvertResponseRequest(
 		return adaptor.ConvertResult{}, err
 	}
 
+	fullURL, err := url.JoinPath(meta.Channel.BaseURL, "/responses")
+	if err != nil {
+		return adaptor.ConvertResult{}, err
+	}
+
 	return adaptor.ConvertResult{
+		Method: http.MethodPost,
+		URL:    fullURL,
 		Header: http.Header{
 			"Content-Type":   {"application/json"},
 			"Content-Length": {strconv.Itoa(len(jsonData))},
 		},
 		Body: bytes.NewReader(jsonData),
+	}, nil
+}
+
+// ConvertResponsesGetRequest converts a get response request
+func ConvertResponsesGetRequest(
+	meta *meta.Meta,
+	_ *http.Request,
+) (adaptor.ConvertResult, error) {
+	fullURL, err := url.JoinPath(meta.Channel.BaseURL, "/responses", meta.ResponseID)
+	if err != nil {
+		return adaptor.ConvertResult{}, err
+	}
+
+	return adaptor.ConvertResult{
+		Method: http.MethodGet,
+		URL:    fullURL,
+	}, nil
+}
+
+// ConvertResponsesDeleteRequest converts a delete response request
+func ConvertResponsesDeleteRequest(
+	meta *meta.Meta,
+	_ *http.Request,
+) (adaptor.ConvertResult, error) {
+	fullURL, err := url.JoinPath(meta.Channel.BaseURL, "/responses", meta.ResponseID)
+	if err != nil {
+		return adaptor.ConvertResult{}, err
+	}
+
+	return adaptor.ConvertResult{
+		Method: http.MethodDelete,
+		URL:    fullURL,
+	}, nil
+}
+
+// ConvertResponsesCancelRequest converts a cancel response request
+func ConvertResponsesCancelRequest(
+	meta *meta.Meta,
+	_ *http.Request,
+) (adaptor.ConvertResult, error) {
+	fullURL, err := url.JoinPath(meta.Channel.BaseURL, "/responses", meta.ResponseID, "cancel")
+	if err != nil {
+		return adaptor.ConvertResult{}, err
+	}
+
+	return adaptor.ConvertResult{
+		Method: http.MethodPost,
+		URL:    fullURL,
+	}, nil
+}
+
+// ConvertResponsesInputItemsRequest converts a get input items request
+func ConvertResponsesInputItemsRequest(
+	meta *meta.Meta,
+	_ *http.Request,
+) (adaptor.ConvertResult, error) {
+	fullURL, err := url.JoinPath(meta.Channel.BaseURL, "/responses", meta.ResponseID, "input_items")
+	if err != nil {
+		return adaptor.ConvertResult{}, err
+	}
+
+	return adaptor.ConvertResult{
+		Method: http.MethodGet,
+		URL:    fullURL,
 	}, nil
 }
 

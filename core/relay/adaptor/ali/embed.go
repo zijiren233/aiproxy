@@ -20,5 +20,10 @@ func EmbeddingsHandler(
 		return model.Usage{}, ErrorHanlder(resp)
 	}
 
-	return openai.DoResponse(meta, store, c, resp)
+	usageResult, err := openai.DoResponse(meta, store, c, resp)
+	if err != nil {
+		return model.Usage{}, err
+	}
+
+	return usageResult.Usage(), nil
 }

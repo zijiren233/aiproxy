@@ -17,6 +17,8 @@ import (
 
 type Adaptor struct{}
 
+var _ adaptor.Adaptor = (*Adaptor)(nil)
+
 const baseURL = "http://localhost:11434"
 
 func (a *Adaptor) DefaultBaseURL() string {
@@ -25,49 +27,6 @@ func (a *Adaptor) DefaultBaseURL() string {
 
 func (a *Adaptor) SupportMode(m mode.Mode) bool {
 	return m == mode.Embeddings || m == mode.ChatCompletions || m == mode.Completions
-}
-
-func (a *Adaptor) GetRequestURL(
-	meta *meta.Meta,
-	_ adaptor.Store,
-	_ *gin.Context,
-) (adaptor.RequestURL, error) {
-	// https://github.com/ollama/ollama/blob/main/docs/api.md
-	u := meta.Channel.BaseURL
-	switch meta.Mode {
-	case mode.Embeddings:
-		url, err := url.JoinPath(u, "/api/embed")
-		if err != nil {
-			return adaptor.RequestURL{}, err
-		}
-
-		return adaptor.RequestURL{
-			Method: http.MethodPost,
-			URL:    url,
-		}, nil
-	case mode.ChatCompletions:
-		url, err := url.JoinPath(u, "/api/chat")
-		if err != nil {
-			return adaptor.RequestURL{}, err
-		}
-
-		return adaptor.RequestURL{
-			Method: http.MethodPost,
-			URL:    url,
-		}, nil
-	case mode.Completions:
-		url, err := url.JoinPath(u, "/api/generate")
-		if err != nil {
-			return adaptor.RequestURL{}, err
-		}
-
-		return adaptor.RequestURL{
-			Method: http.MethodPost,
-			URL:    url,
-		}, nil
-	default:
-		return adaptor.RequestURL{}, fmt.Errorf("unsupported mode: %s", meta.Mode)
-	}
 }
 
 func (a *Adaptor) SetupRequestHeader(
@@ -83,20 +42,62 @@ func (a *Adaptor) SetupRequestHeader(
 func (a *Adaptor) ConvertRequest(
 	meta *meta.Meta,
 	_ adaptor.Store,
+	_ *gin.Context,
 	request *http.Request,
 ) (adaptor.ConvertResult, error) {
 	if request == nil {
 		return adaptor.ConvertResult{}, errors.New("request is nil")
 	}
 
+	// Construct URL based on mode
+	// https://github.com/ollama/ollama/blob/main/docs/api.md
+	u := meta.Channel.BaseURL
+
+	var (
+		fullURL string
+		err     error
+	)
+
 	switch meta.Mode {
 	case mode.Embeddings:
-		return ConvertEmbeddingRequest(meta, request)
-	case mode.ChatCompletions, mode.Completions:
-		return ConvertRequest(meta, request)
+		fullURL, err = url.JoinPath(u, "/api/embed")
+		if err != nil {
+			return adaptor.ConvertResult{}, err
+		}
+	case mode.ChatCompletions:
+		fullURL, err = url.JoinPath(u, "/api/chat")
+		if err != nil {
+			return adaptor.ConvertResult{}, err
+		}
+	case mode.Completions:
+		fullURL, err = url.JoinPath(u, "/api/generate")
+		if err != nil {
+			return adaptor.ConvertResult{}, err
+		}
 	default:
 		return adaptor.ConvertResult{}, fmt.Errorf("unsupported mode: %s", meta.Mode)
 	}
+
+	// Convert request body
+	var result adaptor.ConvertResult
+	switch meta.Mode {
+	case mode.Embeddings:
+		result, err = ConvertEmbeddingRequest(meta, request)
+	case mode.ChatCompletions, mode.Completions:
+		result, err = ConvertRequest(meta, request)
+	default:
+		return adaptor.ConvertResult{}, fmt.Errorf("unsupported mode: %s", meta.Mode)
+	}
+
+	if err != nil {
+		return adaptor.ConvertResult{}, err
+	}
+
+	// Set Method and URL
+	result.Method = http.MethodPost
+	result.URL = fullURL
+
+	return result, nil
 }
 
 func (a *Adaptor) DoRequest(
@@ -113,7 +114,12 @@ func (a *Adaptor) DoResponse(
 	_ adaptor.Store,
 	c *gin.Context,
 	resp *http.Response,
-) (usage model.Usage, err adaptor.Error) {
+) (adaptor.UsageResult, adaptor.Error) {
+	var (
+		usage model.Usage
+		err   adaptor.Error
+	)
+
 	switch meta.Mode {
 	case mode.Embeddings:
 		usage, err = EmbeddingHandler(meta, c, resp)
@@ -124,14 +130,18 @@ func (a *Adaptor) DoResponse(
 			usage, err = Handler(meta, c, resp)
 		}
 	default:
-		return model.Usage{}, relaymodel.WrapperOpenAIErrorWithMessage(
+		return nil, relaymodel.WrapperOpenAIErrorWithMessage(
 			fmt.Sprintf("unsupported mode: %s", meta.Mode),
 			"unsupported_mode",
 			http.StatusBadRequest,
 		)
 	}
 
-	return usage, err
+	if err != nil {
+		return nil, err
+	}
+
+	return adaptor.NewSyncUsage(usage), nil
 }
 
 func (a *Adaptor) Metadata() adaptor.Metadata {

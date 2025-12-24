@@ -34,21 +34,17 @@ type Metadata struct {
 	Models          []model.ModelConfig
 }
 
-type RequestURL struct {
-	Method string
-	URL    string
-}
-
-type GetRequestURL interface {
-	GetRequestURL(meta *meta.Meta, store Store, c *gin.Context) (RequestURL, error)
-}
-
 type SetupRequestHeader interface {
 	SetupRequestHeader(meta *meta.Meta, store Store, c *gin.Context, req *http.Request) error
 }
 
 type ConvertRequest interface {
-	ConvertRequest(meta *meta.Meta, store Store, req *http.Request) (ConvertResult, error)
+	ConvertRequest(
+		meta *meta.Meta,
+		store Store,
+		c *gin.Context,
+		req *http.Request,
+	) (ConvertResult, error)
 }
 
 type DoRequest interface {
@@ -66,24 +62,64 @@ type DoResponse interface {
 		store Store,
 		c *gin.Context,
 		resp *http.Response,
-	) (model.Usage, Error)
+	) (UsageResult, Error)
 }
 
 type Adaptor interface {
 	Metadata() Metadata
 	SupportMode(mode mode.Mode) bool
 	DefaultBaseURL() string
-	GetRequestURL
 	SetupRequestHeader
 	ConvertRequest
 	DoRequest
 	DoResponse
 }
 
+// ConvertResult represents the result of request conversion
 type ConvertResult struct {
-	Header http.Header
-	Body   io.Reader
+	Method string      // HTTP Method (defaults to POST if empty)
+	URL    string      // Full request URL
+	Header http.Header // Request headers
+	Body   io.Reader   // Request body
 }
+
+// UsageResult represents the result of usage calculation
+type UsageResult interface {
+	// Usage returns the current usage (may be zero for async tasks)
+	Usage() model.Usage
+	// IsAsync returns true if usage needs to be fetched asynchronously
+	IsAsync() bool
+	// AsyncInfo returns async metadata if IsAsync is true, nil otherwise
+	AsyncInfo() *model.AsyncUsageInfo
+}
+
+// SyncUsage represents synchronous usage (most common case)
+type SyncUsage struct {
+	usage model.Usage
+}
+
+// NewSyncUsage creates a new SyncUsage
+func NewSyncUsage(usage model.Usage) SyncUsage {
+	return SyncUsage{usage: usage}
+}
+
+func (s SyncUsage) Usage() model.Usage               { return s.usage }
+func (s SyncUsage) IsAsync() bool                    { return false }
+func (s SyncUsage) AsyncInfo() *model.AsyncUsageInfo { return nil }
+
+// AsyncUsage represents asynchronous usage (e.g., Video API)
+type AsyncUsage struct {
+	info *model.AsyncUsageInfo
+}
+
+// NewAsyncUsage creates a new AsyncUsage
+func NewAsyncUsage(info *model.AsyncUsageInfo) AsyncUsage {
+	return AsyncUsage{info: info}
+}
+
+func (a AsyncUsage) Usage() model.Usage               { return model.Usage{} }
+func (a AsyncUsage) IsAsync() bool                    { return true }
+func (a AsyncUsage) AsyncInfo() *model.AsyncUsageInfo { return a.info }
 
 type Error interface {
 	json.Marshaler

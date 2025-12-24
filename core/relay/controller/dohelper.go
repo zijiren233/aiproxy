@@ -83,20 +83,28 @@ type RequestDetail struct {
 	FirstByteAt  time.Time
 }
 
+// HandleResult contains the result of a relay operation
+type HandleResult struct {
+	Usage       model.Usage
+	Detail      *RequestDetail
+	Error       adaptor.Error
+	UsageResult adaptor.UsageResult
+}
+
 func DoHelper(
 	a adaptor.Adaptor,
 	c *gin.Context,
 	meta *meta.Meta,
 	store adaptor.Store,
 ) (
-	model.Usage,
+	adaptor.UsageResult,
 	*RequestDetail,
 	adaptor.Error,
 ) {
 	detail := RequestDetail{}
 
 	if err := storeRequestBody(meta, c, &detail); err != nil {
-		return model.Usage{}, nil, err
+		return nil, nil, err
 	}
 
 	// donot use c.Request.Context() because it will be canceled by the client
@@ -104,7 +112,7 @@ func DoHelper(
 
 	resp, err := prepareAndDoRequest(ctx, a, c, meta, store)
 	if err != nil {
-		return model.Usage{}, &detail, err
+		return nil, &detail, err
 	}
 
 	if resp == nil {
@@ -116,17 +124,20 @@ func DoHelper(
 		respBody, _ := relayErr.MarshalJSON()
 		detail.ResponseBody = conv.BytesToString(respBody)
 
-		return model.Usage{}, &detail, relayErr
+		return nil, &detail, relayErr
 	}
 
 	if resp.Body != nil {
 		defer resp.Body.Close()
 	}
 
-	usage, relayErr := handleResponse(a, c, meta, store, resp, &detail)
+	usageResult, relayErr := handleResponse(a, c, meta, store, resp, &detail)
 	if relayErr != nil {
-		return model.Usage{}, &detail, relayErr
+		return nil, &detail, relayErr
 	}
+
+	// Extract usage from UsageResult
+	usage := usageResult.Usage()
 
 	log := common.GetLogger(c)
 	updateUsageMetrics(usage, log)
@@ -136,7 +147,15 @@ func DoHelper(
 		log.Data["ttfb"] = common.TruncateDuration(ttfb).String()
 	}
 
-	return usage, &detail, nil
+	// Handle async usage
+	if usageResult.IsAsync() {
+		asyncInfo := usageResult.AsyncInfo()
+		if asyncInfo != nil {
+			log.Data["async_job_id"] = asyncInfo.ID
+		}
+	}
+
+	return usageResult, &detail, nil
 }
 
 func storeRequestBody(meta *meta.Meta, c *gin.Context, detail *RequestDetail) adaptor.Error {
@@ -172,7 +191,13 @@ func prepareAndDoRequest(
 ) (*http.Response, adaptor.Error) {
 	log := common.GetLogger(c)
 
-	convertResult, err := a.ConvertRequest(meta, store, c.Request)
+	// Set default BaseURL before ConvertRequest
+	if meta.Channel.BaseURL == "" {
+		meta.Channel.BaseURL = a.DefaultBaseURL()
+	}
+
+	// ConvertRequest now returns URL and Method
+	convertResult, err := a.ConvertRequest(meta, store, c, c.Request)
 	if err != nil {
 		return nil, relaymodel.WrapperErrorWithMessage(
 			meta.Mode,
@@ -185,25 +210,27 @@ func prepareAndDoRequest(
 		defer closer.Close()
 	}
 
-	if meta.Channel.BaseURL == "" {
-		meta.Channel.BaseURL = a.DefaultBaseURL()
-	}
-
-	fullRequestURL, err := a.GetRequestURL(meta, store, c)
-	if err != nil {
+	// Validate URL is not empty
+	if convertResult.URL == "" {
 		return nil, relaymodel.WrapperErrorWithMessage(
 			meta.Mode,
 			http.StatusBadRequest,
-			"get request url failed: "+err.Error(),
+			"request URL is empty",
 		)
 	}
 
-	log.Debugf("request url: %s %s", fullRequestURL.Method, fullRequestURL.URL)
+	// Use Method from ConvertResult, default to POST
+	method := convertResult.Method
+	if method == "" {
+		method = http.MethodPost
+	}
+
+	log.Debugf("request url: %s %s", method, convertResult.URL)
 
 	req, err := http.NewRequestWithContext(
 		ctx,
-		fullRequestURL.Method,
-		fullRequestURL.URL,
+		method,
+		convertResult.URL,
 		convertResult.Body,
 	)
 	if err != nil {
@@ -315,7 +342,7 @@ func handleResponse(
 	store adaptor.Store,
 	resp *http.Response,
 	detail *RequestDetail,
-) (model.Usage, adaptor.Error) {
+) (adaptor.UsageResult, adaptor.Error) {
 	buf := getBuffer()
 	defer putBuffer(buf)
 
@@ -332,7 +359,7 @@ func handleResponse(
 
 	c.Writer = rw
 
-	usage, relayErr := a.DoResponse(meta, store, c, resp)
+	usageResult, relayErr := a.DoResponse(meta, store, c, resp)
 	if relayErr != nil {
 		respBody, _ := relayErr.MarshalJSON()
 		detail.ResponseBody = conv.BytesToString(respBody)
@@ -342,7 +369,7 @@ func handleResponse(
 		detail.ResponseBody = rw.body.String()
 	}
 
-	return usage, relayErr
+	return usageResult, relayErr
 }
 
 func updateUsageMetrics(usage model.Usage, log *log.Entry) {

@@ -6,6 +6,7 @@ import (
 
 	"github.com/bytedance/sonic"
 	"github.com/bytedance/sonic/ast"
+	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/core/common"
 	"github.com/labring/aiproxy/core/relay/adaptor"
 	"github.com/labring/aiproxy/core/relay/meta"
@@ -27,6 +28,7 @@ func NewTimeoutPlugin() plugin.Plugin {
 func (t *Timeout) ConvertRequest(
 	meta *meta.Meta,
 	store adaptor.Store,
+	c *gin.Context,
 	req *http.Request,
 	do adaptor.ConvertRequest,
 ) (adaptor.ConvertResult, error) {
@@ -107,7 +109,7 @@ func (t *Timeout) ConvertRequest(
 		log.Data["req_timeout"] = common.TruncateDuration(meta.RequestTimeout).String()
 	}
 
-	return do.ConvertRequest(meta, store, req)
+	return do.ConvertRequest(meta, store, c, req)
 }
 
 func isStream(req *http.Request) (bool, error) {

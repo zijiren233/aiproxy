@@ -49,213 +49,6 @@ func (a *Adaptor) SupportMode(m mode.Mode) bool {
 		m == mode.ResponsesInputItems
 }
 
-//nolint:gocyclo
-func (a *Adaptor) GetRequestURL(
-	meta *meta.Meta,
-	_ adaptor.Store,
-	_ *gin.Context,
-) (adaptor.RequestURL, error) {
-	u := meta.Channel.BaseURL
-
-	switch meta.Mode {
-	case mode.Responses:
-		url, err := url.JoinPath(u, "/responses")
-		if err != nil {
-			return adaptor.RequestURL{}, err
-		}
-
-		return adaptor.RequestURL{
-			Method: http.MethodPost,
-			URL:    url,
-		}, nil
-	case mode.ResponsesGet:
-		url, err := url.JoinPath(u, "/responses", meta.ResponseID)
-		if err != nil {
-			return adaptor.RequestURL{}, err
-		}
-
-		return adaptor.RequestURL{
-			Method: http.MethodGet,
-			URL:    url,
-		}, nil
-	case mode.ResponsesDelete:
-		url, err := url.JoinPath(u, "/responses", meta.ResponseID)
-		if err != nil {
-			return adaptor.RequestURL{}, err
-		}
-
-		return adaptor.RequestURL{
-			Method: http.MethodDelete,
-			URL:    url,
-		}, nil
-	case mode.ResponsesCancel:
-		url, err := url.JoinPath(u, "/responses", meta.ResponseID, "cancel")
-		if err != nil {
-			return adaptor.RequestURL{}, err
-		}
-
-		return adaptor.RequestURL{
-			Method: http.MethodPost,
-			URL:    url,
-		}, nil
-	case mode.ResponsesInputItems:
-		url, err := url.JoinPath(u, "/responses", meta.ResponseID, "input_items")
-		if err != nil {
-			return adaptor.RequestURL{}, err
-		}
-
-		return adaptor.RequestURL{
-			Method: http.MethodGet,
-			URL:    url,
-		}, nil
-	case mode.ChatCompletions, mode.Anthropic, mode.Gemini:
-		// Check if model requires Responses API
-		if IsResponsesOnlyModel(&meta.ModelConfig, meta.ActualModel) {
-			url, err := url.JoinPath(u, "/responses")
-			if err != nil {
-				return adaptor.RequestURL{}, err
-			}
-
-			return adaptor.RequestURL{
-				Method: http.MethodPost,
-				URL:    url,
-			}, nil
-		}
-
-		url, err := url.JoinPath(u, "/chat/completions")
-		if err != nil {
-			return adaptor.RequestURL{}, err
-		}
-
-		return adaptor.RequestURL{
-			Method: http.MethodPost,
-			URL:    url,
-		}, nil
-	case mode.Completions:
-		url, err := url.JoinPath(u, "/completions")
-		if err != nil {
-			return adaptor.RequestURL{}, err
-		}
-
-		return adaptor.RequestURL{
-			Method: http.MethodPost,
-			URL:    url,
-		}, nil
-	case mode.Embeddings:
-		url, err := url.JoinPath(u, "/embeddings")
-		if err != nil {
-			return adaptor.RequestURL{}, err
-		}
-
-		return adaptor.RequestURL{
-			Method: http.MethodPost,
-			URL:    url,
-		}, nil
-	case mode.Moderations:
-		url, err := url.JoinPath(u, "/moderations")
-		if err != nil {
-			return adaptor.RequestURL{}, err
-		}
-
-		return adaptor.RequestURL{
-			Method: http.MethodPost,
-			URL:    url,
-		}, nil
-	case mode.ImagesGenerations:
-		url, err := url.JoinPath(u, "/images/generations")
-		if err != nil {
-			return adaptor.RequestURL{}, err
-		}
-
-		return adaptor.RequestURL{
-			Method: http.MethodPost,
-			URL:    url,
-		}, nil
-	case mode.ImagesEdits:
-		url, err := url.JoinPath(u, "/images/edits")
-		if err != nil {
-			return adaptor.RequestURL{}, err
-		}
-
-		return adaptor.RequestURL{
-			Method: http.MethodPost,
-			URL:    url,
-		}, nil
-	case mode.AudioSpeech:
-		url, err := url.JoinPath(u, "/audio/speech")
-		if err != nil {
-			return adaptor.RequestURL{}, err
-		}
-
-		return adaptor.RequestURL{
-			Method: http.MethodPost,
-			URL:    url,
-		}, nil
-	case mode.AudioTranscription:
-		url, err := url.JoinPath(u, "/audio/transcriptions")
-		if err != nil {
-			return adaptor.RequestURL{}, err
-		}
-
-		return adaptor.RequestURL{
-			Method: http.MethodPost,
-			URL:    url,
-		}, nil
-	case mode.AudioTranslation:
-		url, err := url.JoinPath(u, "/audio/translations")
-		if err != nil {
-			return adaptor.RequestURL{}, err
-		}
-
-		return adaptor.RequestURL{
-			Method: http.MethodPost,
-			URL:    url,
-		}, nil
-	case mode.Rerank:
-		url, err := url.JoinPath(u, "/rerank")
-		if err != nil {
-			return adaptor.RequestURL{}, err
-		}
-
-		return adaptor.RequestURL{
-			Method: http.MethodPost,
-			URL:    url,
-		}, nil
-	case mode.VideoGenerationsJobs:
-		url, err := url.JoinPath(u, "/video/generations/jobs")
-		if err != nil {
-			return adaptor.RequestURL{}, err
-		}
-
-		return adaptor.RequestURL{
-			Method: http.MethodPost,
-			URL:    url,
-		}, nil
-	case mode.VideoGenerationsGetJobs:
-		url, err := url.JoinPath(u, "/video/generations/jobs", meta.JobID)
-		if err != nil {
-			return adaptor.RequestURL{}, err
-		}
-
-		return adaptor.RequestURL{
-			Method: http.MethodGet,
-			URL:    url,
-		}, nil
-	case mode.VideoGenerationsContent:
-		url, err := url.JoinPath(u, "/video/generations", meta.GenerationID, "/content/video")
-		if err != nil {
-			return adaptor.RequestURL{}, err
-		}
-
-		return adaptor.RequestURL{
-			Method: http.MethodGet,
-			URL:    url,
-		}, nil
-	default:
-		return adaptor.RequestURL{}, fmt.Errorf("unsupported mode: %s", meta.Mode)
-	}
-}
-
 func (a *Adaptor) SetupRequestHeader(
 	meta *meta.Meta,
 	_ adaptor.Store,
@@ -269,14 +62,86 @@ func (a *Adaptor) SetupRequestHeader(
 func (a *Adaptor) ConvertRequest(
 	meta *meta.Meta,
 	store adaptor.Store,
+	c *gin.Context,
 	req *http.Request,
 ) (adaptor.ConvertResult, error) {
-	return ConvertRequest(meta, store, req)
+	return ConvertRequest(meta, store, c, req)
+}
+
+func GetRequestURL(meta *meta.Meta) (method, fullURL string, err error) {
+	u := meta.Channel.BaseURL
+
+	switch meta.Mode {
+	case mode.Responses:
+		fullURL, err = url.JoinPath(u, "/responses")
+		return http.MethodPost, fullURL, err
+	case mode.ResponsesGet:
+		fullURL, err = url.JoinPath(u, "/responses", meta.ResponseID)
+		return http.MethodGet, fullURL, err
+	case mode.ResponsesDelete:
+		fullURL, err = url.JoinPath(u, "/responses", meta.ResponseID)
+		return http.MethodDelete, fullURL, err
+	case mode.ResponsesCancel:
+		fullURL, err = url.JoinPath(u, "/responses", meta.ResponseID, "cancel")
+		return http.MethodPost, fullURL, err
+	case mode.ResponsesInputItems:
+		fullURL, err = url.JoinPath(u, "/responses", meta.ResponseID, "input_items")
+		return http.MethodGet, fullURL, err
+	case mode.ChatCompletions, mode.Anthropic, mode.Gemini:
+		// Check if model requires Responses API
+		if IsResponsesOnlyModel(&meta.ModelConfig, meta.ActualModel) {
+			fullURL, err = url.JoinPath(u, "/responses")
+			return http.MethodPost, fullURL, err
+		}
+
+		fullURL, err = url.JoinPath(u, "/chat/completions")
+
+		return http.MethodPost, fullURL, err
+	case mode.Completions:
+		fullURL, err = url.JoinPath(u, "/completions")
+		return http.MethodPost, fullURL, err
+	case mode.Embeddings:
+		fullURL, err = url.JoinPath(u, "/embeddings")
+		return http.MethodPost, fullURL, err
+	case mode.Moderations:
+		fullURL, err = url.JoinPath(u, "/moderations")
+		return http.MethodPost, fullURL, err
+	case mode.ImagesGenerations:
+		fullURL, err = url.JoinPath(u, "/images/generations")
+		return http.MethodPost, fullURL, err
+	case mode.ImagesEdits:
+		fullURL, err = url.JoinPath(u, "/images/edits")
+		return http.MethodPost, fullURL, err
+	case mode.AudioSpeech:
+		fullURL, err = url.JoinPath(u, "/audio/speech")
+		return http.MethodPost, fullURL, err
+	case mode.AudioTranscription:
+		fullURL, err = url.JoinPath(u, "/audio/transcriptions")
+		return http.MethodPost, fullURL, err
+	case mode.AudioTranslation:
+		fullURL, err = url.JoinPath(u, "/audio/translations")
+		return http.MethodPost, fullURL, err
+	case mode.Rerank:
+		fullURL, err = url.JoinPath(u, "/rerank")
+		return http.MethodPost, fullURL, err
+	case mode.VideoGenerationsJobs:
+		fullURL, err = url.JoinPath(u, "/video/generations/jobs")
+		return http.MethodPost, fullURL, err
+	case mode.VideoGenerationsGetJobs:
+		fullURL, err = url.JoinPath(u, "/video/generations/jobs", meta.JobID)
+		return http.MethodGet, fullURL, err
+	case mode.VideoGenerationsContent:
+		fullURL, err = url.JoinPath(u, "/video/generations", meta.GenerationID, "/content/video")
+		return http.MethodGet, fullURL, err
+	default:
+		return "", "", fmt.Errorf("unsupported mode: %s", meta.Mode)
+	}
 }
 
 func ConvertRequest(
 	meta *meta.Meta,
 	_ adaptor.Store,
+	_ *gin.Context,
 	req *http.Request,
 ) (adaptor.ConvertResult, error) {
 	if req == nil {
@@ -286,9 +151,14 @@ func ConvertRequest(
 	switch meta.Mode {
 	case mode.Responses:
 		return ConvertResponseRequest(meta, req)
-	case mode.ResponsesGet, mode.ResponsesDelete, mode.ResponsesCancel, mode.ResponsesInputItems:
-		// These endpoints don't need request conversion
-		return adaptor.ConvertResult{}, nil
+	case mode.ResponsesGet:
+		return ConvertResponsesGetRequest(meta, req)
+	case mode.ResponsesDelete:
+		return ConvertResponsesDeleteRequest(meta, req)
+	case mode.ResponsesCancel:
+		return ConvertResponsesCancelRequest(meta, req)
+	case mode.ResponsesInputItems:
+		return ConvertResponsesInputItemsRequest(meta, req)
 	case mode.Moderations:
 		return ConvertModerationsRequest(meta, req)
 	case mode.Embeddings:
@@ -339,7 +209,12 @@ func DoResponse(
 	store adaptor.Store,
 	c *gin.Context,
 	resp *http.Response,
-) (usage model.Usage, err adaptor.Error) {
+) (adaptor.UsageResult, adaptor.Error) {
+	var (
+		usage model.Usage
+		err   adaptor.Error
+	)
+
 	switch meta.Mode {
 	case mode.Responses:
 		if utils.IsStreamResponse(resp) {
@@ -400,7 +275,7 @@ func DoResponse(
 			}
 		}
 	case mode.VideoGenerationsJobs:
-		usage, err = VideoHandler(meta, store, c, resp)
+		return VideoHandlerWithUsageResult(meta, store, c, resp)
 	case mode.VideoGenerationsGetJobs:
 		usage, err = VideoGetJobsHandler(meta, store, c, resp)
 	case mode.VideoGenerationsContent:
@@ -422,14 +297,18 @@ func DoResponse(
 			}
 		}
 	default:
-		return model.Usage{}, relaymodel.WrapperOpenAIErrorWithMessage(
+		return nil, relaymodel.WrapperOpenAIErrorWithMessage(
 			fmt.Sprintf("unsupported mode: %s", meta.Mode),
 			"unsupported_mode",
 			http.StatusBadRequest,
 		)
 	}
 
-	return usage, err
+	if err != nil {
+		return nil, err
+	}
+
+	return adaptor.NewSyncUsage(usage), nil
 }
 
 const MetaResponseFormat = "response_format"
@@ -448,7 +327,7 @@ func (a *Adaptor) DoResponse(
 	store adaptor.Store,
 	c *gin.Context,
 	resp *http.Response,
-) (usage model.Usage, err adaptor.Error) {
+) (adaptor.UsageResult, adaptor.Error) {
 	return DoResponse(meta, store, c, resp)
 }
 
