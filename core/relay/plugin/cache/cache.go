@@ -389,6 +389,7 @@ func (c *Cache) DoResponse(
 	defer func() {
 		ctx.Writer = rw.ResponseWriter
 		if adapterErr != nil ||
+			usageResult == nil ||
 			rw.overflow ||
 			rw.cacheBody.Len() == 0 {
 			return

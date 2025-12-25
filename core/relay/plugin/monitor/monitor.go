@@ -202,15 +202,17 @@ func (m *ChannelMonitor) DoResponse(
 ) (adaptor.UsageResult, adaptor.Error) {
 	usageResult, relayErr := do.DoResponse(meta, store, c, resp)
 
-	usage := usageResult.Usage()
-	if usage.TotalTokens > 0 {
-		count, overLimitCount, secondCount := reqlimit.PushChannelModelTokensRequest(
-			context.Background(),
-			strconv.Itoa(meta.Channel.ID),
-			meta.OriginModel,
-			int64(usage.TotalTokens),
-		)
-		updateChannelModelTokensRequestRate(c, meta, count+overLimitCount, secondCount)
+	if usageResult != nil {
+		usage := usageResult.Usage()
+		if usage.TotalTokens > 0 {
+			count, overLimitCount, secondCount := reqlimit.PushChannelModelTokensRequest(
+				context.Background(),
+				strconv.Itoa(meta.Channel.ID),
+				meta.OriginModel,
+				int64(usage.TotalTokens),
+			)
+			updateChannelModelTokensRequestRate(c, meta, count+overLimitCount, secondCount)
+		}
 	}
 
 	if relayErr == nil {

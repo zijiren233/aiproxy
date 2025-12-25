@@ -41,6 +41,10 @@ func (m *GroupMonitor) DoResponse(
 ) (adaptor.UsageResult, adaptor.Error) {
 	usageResult, relayErr := do.DoResponse(meta, store, c, resp)
 
+	if usageResult == nil {
+		return usageResult, relayErr
+	}
+
 	usage := usageResult.Usage()
 	if usage.TotalTokens > 0 {
 		count, overLimitCount, secondCount := reqlimit.PushGroupModelTokensRequest(

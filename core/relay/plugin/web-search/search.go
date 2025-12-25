@@ -876,6 +876,12 @@ func (p *WebSearch) doResponseWithCount(
 		return adaptor.NewSyncUsage(model.Usage{}), err
 	}
 
+	if usageResult == nil {
+		return adaptor.NewSyncUsage(model.Usage{
+			WebSearchCount: model.ZeroNullInt64(int64(count)),
+		}), nil
+	}
+
 	usage := usageResult.Usage()
 	usage.WebSearchCount += model.ZeroNullInt64(int64(count))
 

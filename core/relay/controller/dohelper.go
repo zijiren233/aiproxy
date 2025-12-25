@@ -137,7 +137,10 @@ func DoHelper(
 	}
 
 	// Extract usage from UsageResult
-	usage := usageResult.Usage()
+	var usage model.Usage
+	if usageResult != nil {
+		usage = usageResult.Usage()
+	}
 
 	log := common.GetLogger(c)
 	updateUsageMetrics(usage, log)
@@ -148,7 +151,7 @@ func DoHelper(
 	}
 
 	// Handle async usage
-	if usageResult.IsAsync() {
+	if usageResult != nil && usageResult.IsAsync() {
 		asyncInfo := usageResult.AsyncInfo()
 		if asyncInfo != nil {
 			log.Data["async_job_id"] = asyncInfo.ID
