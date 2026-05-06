@@ -28,7 +28,7 @@ func ConvertSTTRequest(
 	meta *meta.Meta,
 	request *http.Request,
 ) (adaptor.ConvertResult, error) {
-	if err := request.ParseMultipartForm(1024 * 1024 * 4); err != nil {
+	if err := common.ParseMultipartFormWithLimit(request); err != nil {
 		return adaptor.ConvertResult{}, fmt.Errorf("parse multipart form: %w", err)
 	}
 

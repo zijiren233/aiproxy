@@ -2,6 +2,7 @@ package plugin
 
 import (
 	"net/http"
+	"slices"
 
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/core/relay/adaptor"
@@ -55,10 +56,10 @@ func WrapperAdaptor(adaptor adaptor.Adaptor, plugins ...Plugin) adaptor.Adaptor 
 	}
 
 	result := adaptor
-	for i := len(plugins) - 1; i >= 0; i-- {
+	for _, v := range slices.Backward(plugins) {
 		result = &wrappedAdaptor{
 			Adaptor: result,
-			plugin:  plugins[i],
+			plugin:  v,
 		}
 	}
 

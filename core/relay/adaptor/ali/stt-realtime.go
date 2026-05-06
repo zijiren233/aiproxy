@@ -12,6 +12,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
+	"github.com/labring/aiproxy/core/common"
 	"github.com/labring/aiproxy/core/model"
 	"github.com/labring/aiproxy/core/relay/adaptor"
 	"github.com/labring/aiproxy/core/relay/meta"
@@ -70,7 +71,7 @@ func ConvertSTTRequest(
 	meta *meta.Meta,
 	request *http.Request,
 ) (adaptor.ConvertResult, error) {
-	err := request.ParseMultipartForm(1024 * 1024 * 4)
+	err := common.ParseMultipartFormWithLimit(request)
 	if err != nil {
 		return adaptor.ConvertResult{}, err
 	}

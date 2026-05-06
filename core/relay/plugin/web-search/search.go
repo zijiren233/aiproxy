@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -371,8 +372,8 @@ func (p *WebSearch) initializeSearchEngines(configs []EngineConfig) ([]engine.En
 
 // extractUserQuery finds the last user message in the conversation
 func (p *WebSearch) extractUserQuery(messages []any) (int, string) {
-	for i := len(messages) - 1; i >= 0; i-- {
-		msg, ok := messages[i].(map[string]any)
+	for i, v := range slices.Backward(messages) {
+		msg, ok := v.(map[string]any)
 		if !ok {
 			continue
 		}

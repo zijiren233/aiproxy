@@ -73,7 +73,7 @@ func ConvertImagesEditsRequest(
 	request *http.Request,
 	includeModel bool,
 ) (adaptor.ConvertResult, error) {
-	err := request.ParseMultipartForm(1024 * 1024 * 4)
+	err := common.ParseMultipartFormWithLimit(request)
 	if err != nil {
 		return adaptor.ConvertResult{}, err
 	}

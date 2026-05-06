@@ -28,7 +28,7 @@ func ConvertParsePdfRequest(
 	meta *meta.Meta,
 	req *http.Request,
 ) (adaptor.ConvertResult, error) {
-	err := req.ParseMultipartForm(1024 * 1024 * 4)
+	err := common.ParseMultipartFormWithLimit(req)
 	if err != nil {
 		return adaptor.ConvertResult{}, err
 	}

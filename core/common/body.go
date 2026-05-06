@@ -18,9 +18,31 @@ type requestBodyKey struct{}
 const (
 	MaxRequestBodySize  = 1024 * 1024 * 50 // 50MB
 	MaxResponseBodySize = 1024 * 1024 * 50 // 50MB
+
+	multipartFormMemoryLimit = 4 * 1024 * 1024
 )
 
 func LimitReader(r io.Reader, n int64) io.Reader { return &LimitedReader{r, n} }
+
+func ParseMultipartFormWithLimit(req *http.Request) error {
+	if req.ContentLength > 0 && req.ContentLength > MaxRequestBodySize {
+		return fmt.Errorf(
+			"request body too large: %d, max: %d",
+			req.ContentLength,
+			MaxRequestBodySize,
+		)
+	}
+
+	originalBody := req.Body
+
+	req.Body = http.MaxBytesReader(nil, req.Body, MaxRequestBodySize)
+	defer func() {
+		req.Body = originalBody
+	}()
+
+	// #nosec G120 -- ContentLength is checked above and Body is capped by MaxBytesReader.
+	return req.ParseMultipartForm(multipartFormMemoryLimit)
+}
 
 type LimitedReader struct {
 	R io.Reader
