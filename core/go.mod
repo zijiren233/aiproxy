@@ -21,7 +21,7 @@ require (
 	github.com/labring/aiproxy/mcp-servers v0.0.0-20250825151013-9445af955b2e
 	github.com/labring/aiproxy/openapi-mcp v0.0.0-20250825151013-9445af955b2e
 	github.com/mark3labs/mcp-go v0.38.0
-	github.com/maruel/natural v1.1.1
+	github.com/maruel/natural v1.3.0
 	github.com/mattn/go-isatty v0.0.20
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/pkg/errors v0.9.1
