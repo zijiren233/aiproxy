@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strings"
 	"testing"
 	"time"
 
@@ -51,6 +52,32 @@ func TestScannerBuffer(t *testing.T) {
 			convey.So(cap(*buf), convey.ShouldEqual, utils.ScannerBufferSize)
 			utils.PutScannerBuffer(buf)
 		})
+	})
+}
+
+func TestNewStreamScannerUsesFirstMatchingImageModelName(t *testing.T) {
+	convey.Convey("NewStreamScanner should use image buffer if origin or actual model is image", t, func() {
+		longEvent := "data: " + strings.Repeat("x", utils.ScannerBufferSize+1) + "\n"
+
+		scanner, cleanup := utils.NewStreamScanner(
+			bytes.NewBufferString(longEvent),
+			"gpt-image-1",
+			"mapped-upstream-model",
+		)
+		defer cleanup()
+
+		convey.So(scanner.Scan(), convey.ShouldBeTrue)
+		convey.So(scanner.Err(), convey.ShouldBeNil)
+
+		scanner, cleanup = utils.NewStreamScanner(
+			bytes.NewBufferString(longEvent),
+			"friendly-alias",
+			"gpt-image-1",
+		)
+		defer cleanup()
+
+		convey.So(scanner.Scan(), convey.ShouldBeTrue)
+		convey.So(scanner.Err(), convey.ShouldBeNil)
 	})
 }
 

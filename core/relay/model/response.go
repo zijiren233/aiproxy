@@ -320,6 +320,9 @@ type InputItemList struct {
 type ResponseStreamEvent struct {
 	Type           string         `json:"type"`
 	Response       *Response      `json:"response,omitempty"`
+	Code           string         `json:"code,omitempty"`
+	Message        string         `json:"message,omitempty"`
+	Param          string         `json:"param,omitempty"`
 	OutputIndex    *int           `json:"output_index,omitempty"`
 	Item           *OutputItem    `json:"item,omitempty"`
 	ItemID         string         `json:"item_id,omitempty"`

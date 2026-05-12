@@ -18,7 +18,10 @@ import (
 	relaymodel "github.com/labring/aiproxy/core/relay/model"
 	"github.com/labring/aiproxy/core/relay/render"
 	"github.com/labring/aiproxy/core/relay/utils"
+	log "github.com/sirupsen/logrus"
 )
+
+const responseStreamInitialBufferTimeout = 2 * time.Second
 
 // ConvertResponseRequest converts a response creation request
 func ConvertResponseRequest(
@@ -84,6 +87,13 @@ func ResponseHandler(
 		)
 	}
 
+	if retryErr := responseRetryableError(response.Error); retryErr != nil {
+		return adaptor.DoResponseResult{
+			Usage:      response.ToModelUsage(),
+			UpstreamID: response.ID,
+		}, retryErr
+	}
+
 	// Store the response ID if needed for later retrieval
 	if response.Store && response.ID != "" {
 		err = store.SaveStore(adaptor.StoreCache{
@@ -130,63 +140,111 @@ func ResponseStreamHandler(
 
 	log := common.GetLogger(c)
 
-	scanner, cleanup := utils.NewStreamScanner(resp.Body, meta.ActualModel)
-	defer cleanup()
+	done := make(chan struct{})
+	defer close(done)
+
+	events := scanResponseStreamEvents(resp.Body, meta.OriginModel, meta.ActualModel, done)
 
 	var (
-		usage        model.Usage
-		responseID   string
-		lastResponse *relaymodel.Response
+		usage          model.Usage
+		responseID     string
+		lastResponse   *relaymodel.Response
+		delayedEvents  [][]byte
+		streamingBegan bool
+		storeSaved     bool
+		bufferTimer    *time.Timer
 	)
+	defer func() {
+		stopResponseStreamBufferTimer(bufferTimer)
+	}()
 
-	for scanner.Scan() {
-		data := scanner.Bytes()
-		if !render.IsValidSSEData(data) {
-			continue
-		}
+readLoop:
+	for {
+		var item responseStreamEventItem
 
-		data = render.ExtractSSEData(data)
+		if bufferTimer == nil {
+			next, ok := <-events
+			if !ok {
+				break
+			}
 
-		// Parse the stream event
-		var event relaymodel.ResponseStreamEvent
-
-		err := sonic.Unmarshal(data, &event)
-		if err != nil {
-			log.Error("error unmarshalling response stream: " + err.Error())
-			continue
-		}
-
-		// Store response ID if this is the first event with a response
-		if event.Response != nil && responseID == "" {
-			responseID = event.Response.ID
-			if event.Response.Store && responseID != "" {
-				err = store.SaveStore(adaptor.StoreCache{
-					ID:        model.ResponseStoreID(responseID),
-					GroupID:   meta.Group.ID,
-					TokenID:   meta.Token.ID,
-					ChannelID: meta.Channel.ID,
-					Model:     meta.OriginModel,
-					ExpiresAt: time.Now().Add(time.Hour * 24 * 7),
-				})
-				if err != nil {
-					log.Errorf("save response store failed: %v", err)
+			item = next
+		} else {
+			select {
+			case next, ok := <-events:
+				if !ok {
+					break readLoop
 				}
+
+				item = next
+			case <-bufferTimer.C:
+				bufferTimer = nil
+				flushDelayedResponseStreamEvents(c, &delayedEvents, &streamingBegan)
+				continue
 			}
 		}
 
-		// Update usage if available
+		if item.scanErr != nil {
+			log.Error("error reading response stream: " + item.scanErr.Error())
+			continue
+		}
+
+		if item.parseErr != nil {
+			log.Error("error unmarshalling response stream: " + item.parseErr.Error())
+			continue
+		}
+
+		event := item.event
+		data := item.data
+
 		if event.Response != nil {
+			if responseID == "" {
+				responseID = event.Response.ID
+			}
+
 			lastResponse = event.Response
 			usage = event.Response.ToModelUsage()
+
+			storeSaved = saveResponseStreamStoreIfNeeded(
+				store,
+				meta,
+				event.Response,
+				responseID,
+				storeSaved,
+				log,
+			)
 		}
+
+		if retryErr := responseStreamRetryableError(&event); retryErr != nil && !streamingBegan {
+			stopResponseStreamBufferTimer(bufferTimer)
+			bufferTimer = nil
+
+			return adaptor.DoResponseResult{
+				Usage:      usage,
+				UpstreamID: responseID,
+				AsyncUsage: responseNeedsAsyncUsage(lastResponse),
+			}, retryErr
+		}
+
+		if responseStreamEventCanDelay(event.Type) && !streamingBegan {
+			delayedEvents = append(delayedEvents, append([]byte(nil), data...))
+			if bufferTimer == nil {
+				bufferTimer = time.NewTimer(responseStreamInitialBufferTimeout)
+			}
+
+			continue
+		}
+
+		stopResponseStreamBufferTimer(bufferTimer)
+		bufferTimer = nil
+		flushDelayedResponseStreamEvents(c, &delayedEvents, &streamingBegan)
 
 		// Forward the event
 		render.ResponsesData(c, data)
+		streamingBegan = true
 	}
 
-	if err := scanner.Err(); err != nil {
-		log.Error("error reading response stream: " + err.Error())
-	}
+	flushDelayedResponseStreamEvents(c, &delayedEvents, &streamingBegan)
 
 	return adaptor.DoResponseResult{
 		Usage:      usage,
@@ -210,6 +268,176 @@ func responseNeedsAsyncUsage(response *relaymodel.Response) bool {
 	default:
 		return false
 	}
+}
+
+func saveResponseStreamStoreIfNeeded(
+	store adaptor.Store,
+	meta *meta.Meta,
+	response *relaymodel.Response,
+	responseID string,
+	storeSaved bool,
+	log *log.Entry,
+) bool {
+	if storeSaved || response == nil || !response.Store || responseID == "" {
+		return storeSaved
+	}
+
+	saveErr := store.SaveStore(adaptor.StoreCache{
+		ID:        model.ResponseStoreID(responseID),
+		GroupID:   meta.Group.ID,
+		TokenID:   meta.Token.ID,
+		ChannelID: meta.Channel.ID,
+		Model:     meta.OriginModel,
+		ExpiresAt: time.Now().Add(time.Hour * 24 * 7),
+	})
+	if saveErr != nil {
+		log.Errorf("save response store failed: %v", saveErr)
+	}
+
+	return true
+}
+
+type responseStreamEventItem struct {
+	data     []byte
+	event    relaymodel.ResponseStreamEvent
+	parseErr error
+	scanErr  error
+}
+
+func scanResponseStreamEvents(
+	body io.Reader,
+	originModel string,
+	actualModel string,
+	done <-chan struct{},
+) <-chan responseStreamEventItem {
+	events := make(chan responseStreamEventItem, 16)
+
+	go func() {
+		defer close(events)
+
+		scanner, cleanup := utils.NewStreamScanner(body, originModel, actualModel)
+		defer cleanup()
+
+		for scanner.Scan() {
+			data := scanner.Bytes()
+			if !render.IsValidSSEData(data) {
+				continue
+			}
+
+			data = append([]byte(nil), render.ExtractSSEData(data)...)
+
+			var event relaymodel.ResponseStreamEvent
+			parseErr := sonic.Unmarshal(data, &event)
+
+			item := responseStreamEventItem{
+				data:     data,
+				event:    event,
+				parseErr: parseErr,
+			}
+
+			select {
+			case events <- item:
+			case <-done:
+				return
+			}
+		}
+
+		if err := scanner.Err(); err != nil {
+			select {
+			case events <- responseStreamEventItem{scanErr: err}:
+			case <-done:
+			}
+		}
+	}()
+
+	return events
+}
+
+func stopResponseStreamBufferTimer(timer *time.Timer) {
+	if timer == nil {
+		return
+	}
+
+	if !timer.Stop() {
+		select {
+		case <-timer.C:
+		default:
+		}
+	}
+}
+
+func flushDelayedResponseStreamEvents(
+	c *gin.Context,
+	delayedEvents *[][]byte,
+	streamingBegan *bool,
+) {
+	if len(*delayedEvents) == 0 {
+		return
+	}
+
+	for _, delayedEvent := range *delayedEvents {
+		render.ResponsesData(c, delayedEvent)
+	}
+
+	*delayedEvents = nil
+	*streamingBegan = true
+}
+
+func responseStreamEventCanDelay(eventType string) bool {
+	switch eventType {
+	case relaymodel.EventResponseCreated,
+		relaymodel.EventResponseInProgress,
+		relaymodel.EventResponseQueued,
+		"keepalive":
+		return true
+	default:
+		return false
+	}
+}
+
+func responseStreamRetryableError(event *relaymodel.ResponseStreamEvent) adaptor.Error {
+	if event == nil {
+		return nil
+	}
+
+	if event.Response != nil && event.Response.Status == relaymodel.ResponseStatusFailed {
+		return responseRetryableError(event.Response.Error)
+	}
+
+	if event.Type == relaymodel.EventError {
+		return responseRetryableError(&relaymodel.ResponseError{
+			Code:    event.Code,
+			Message: event.Message,
+		})
+	}
+
+	return nil
+}
+
+func responseRetryableError(respErr *relaymodel.ResponseError) adaptor.Error {
+	if respErr == nil {
+		return nil
+	}
+
+	statusCode := http.StatusInternalServerError
+	switch respErr.Code {
+	case "server_is_overloaded", "slow_down":
+		statusCode = http.StatusServiceUnavailable
+	case "server_error", "internal_server_error":
+	default:
+		return nil
+	}
+
+	message := respErr.Message
+	if message == "" {
+		message = "upstream response failed with retryable server error"
+	}
+
+	return relaymodel.NewOpenAIError(statusCode, relaymodel.OpenAIError{
+		Message: message,
+		Type:    "server_error",
+		Code:    respErr.Code,
+	})
 }
 
 // GetResponseHandler handles GET /v1/responses/{response_id}

@@ -402,7 +402,7 @@ func StreamHandler(
 
 	log := common.GetLogger(c)
 
-	scanner, cleanup := utils.NewStreamScanner(resp.Body, m.ActualModel)
+	scanner, cleanup := utils.NewStreamScanner(resp.Body, m.OriginModel, m.ActualModel)
 	defer cleanup()
 
 	responseText := strings.Builder{}

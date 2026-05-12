@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/core/model"
@@ -141,6 +142,150 @@ func TestResponseStreamHandlerPromptCacheRetention(t *testing.T) {
 	require.Empty(t, store.savedIfNotExist)
 	assert.Equal(t, "resp_123", result.UpstreamID)
 	assert.Equal(t, model.ZeroNullInt64(20), result.Usage.TotalTokens)
+}
+
+func TestResponseStreamHandlerReturnsRetryableErrorBeforeStreamingContent(t *testing.T) {
+	t.Parallel()
+	gin.SetMode(gin.TestMode)
+
+	recorder := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(recorder)
+	c.Request = httptest.NewRequestWithContext(
+		t.Context(),
+		http.MethodPost,
+		"/v1/responses",
+		nil,
+	)
+
+	body := "event: response.created\n" +
+		"data: {\"type\":\"response.created\",\"response\":{\"id\":\"resp_overloaded\",\"object\":\"response\",\"created_at\":1,\"status\":\"in_progress\",\"model\":\"gpt-5\",\"output\":[],\"parallel_tool_calls\":true,\"store\":false}}\n\n" +
+		"event: response.failed\n" +
+		"data: {\"type\":\"response.failed\",\"response\":{\"id\":\"resp_overloaded\",\"object\":\"response\",\"created_at\":1,\"status\":\"failed\",\"model\":\"gpt-5\",\"output\":[],\"parallel_tool_calls\":true,\"store\":false,\"error\":{\"code\":\"server_is_overloaded\",\"message\":\"The server is overloaded.\"}}}\n\n"
+	resp := &http.Response{
+		StatusCode: http.StatusOK,
+		Body:       io.NopCloser(bytes.NewBufferString(body)),
+		Header:     make(http.Header),
+	}
+
+	result, err := ResponseStreamHandler(&meta.Meta{}, &responseTestStore{}, c, resp)
+	require.NotNil(t, err)
+	assert.Equal(t, http.StatusServiceUnavailable, err.StatusCode())
+	assert.Equal(t, "resp_overloaded", result.UpstreamID)
+	assert.Empty(t, recorder.Body.String())
+}
+
+func TestResponseStreamHandlerDoesNotReturnErrorAfterForwardingFirstEvent(t *testing.T) {
+	t.Parallel()
+	gin.SetMode(gin.TestMode)
+
+	recorder := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(recorder)
+	c.Request = httptest.NewRequestWithContext(
+		t.Context(),
+		http.MethodPost,
+		"/v1/responses",
+		nil,
+	)
+
+	body := "event: response.output_text.delta\n" +
+		"data: {\"type\":\"response.output_text.delta\",\"delta\":\"hello\",\"output_index\":0,\"content_index\":0}\n\n" +
+		"event: response.failed\n" +
+		"data: {\"type\":\"response.failed\",\"response\":{\"id\":\"resp_after_write\",\"object\":\"response\",\"created_at\":1,\"status\":\"failed\",\"model\":\"gpt-5\",\"output\":[],\"parallel_tool_calls\":true,\"store\":false,\"error\":{\"code\":\"server_is_overloaded\",\"message\":\"The server is overloaded.\"}}}\n\n"
+	resp := &http.Response{
+		StatusCode: http.StatusOK,
+		Body:       io.NopCloser(bytes.NewBufferString(body)),
+		Header:     make(http.Header),
+	}
+
+	result, err := ResponseStreamHandler(&meta.Meta{}, &responseTestStore{}, c, resp)
+	require.Nil(t, err)
+	assert.Equal(t, "resp_after_write", result.UpstreamID)
+	assert.Contains(t, recorder.Body.String(), "event: response.output_text.delta")
+	assert.Contains(t, recorder.Body.String(), "event: response.failed")
+}
+
+func TestResponseStreamHandlerFlushesDelayedEventsAfterTimeout(t *testing.T) {
+	t.Parallel()
+	gin.SetMode(gin.TestMode)
+
+	recorder := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(recorder)
+	c.Request = httptest.NewRequestWithContext(
+		t.Context(),
+		http.MethodPost,
+		"/v1/responses",
+		nil,
+	)
+
+	reader, writer := io.Pipe()
+	resp := &http.Response{
+		StatusCode: http.StatusOK,
+		Body:       reader,
+		Header:     make(http.Header),
+	}
+
+	resultCh := make(chan adaptor.DoResponseResult, 1)
+	errCh := make(chan adaptor.Error, 1)
+
+	go func() {
+		result, err := ResponseStreamHandler(&meta.Meta{}, &responseTestStore{}, c, resp)
+		resultCh <- result
+		errCh <- err
+	}()
+
+	_, err := writer.Write([]byte("event: response.created\n" +
+		"data: {\"type\":\"response.created\",\"response\":{\"id\":\"resp_delayed\",\"object\":\"response\",\"created_at\":1,\"status\":\"in_progress\",\"model\":\"gpt-5\",\"output\":[],\"parallel_tool_calls\":true,\"store\":false}}\n\n"))
+	require.NoError(t, err)
+
+	require.Eventually(t, func() bool {
+		return recorder.Body.String() != ""
+	}, 3*time.Second, 10*time.Millisecond)
+
+	require.NoError(t, writer.Close())
+	result := <-resultCh
+	require.Nil(t, <-errCh)
+	assert.Equal(t, "resp_delayed", result.UpstreamID)
+	assert.Contains(t, recorder.Body.String(), "event: response.created")
+}
+
+func TestResponseStreamHandlerSavesStoreForDelayedLifecycleEvent(t *testing.T) {
+	t.Parallel()
+	gin.SetMode(gin.TestMode)
+
+	recorder := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(recorder)
+	c.Request = httptest.NewRequestWithContext(
+		t.Context(),
+		http.MethodPost,
+		"/v1/responses",
+		nil,
+	)
+	store := &responseTestStore{}
+	meta := &meta.Meta{
+		OriginModel: "gpt-5",
+		ActualModel: "gpt-5",
+		Group:       model.GroupCache{ID: "group-1"},
+		Token:       model.TokenCache{ID: 7},
+		Channel:     meta.ChannelMeta{ID: 9},
+	}
+
+	body := "event: response.created\n" +
+		"data: {\"type\":\"response.created\",\"response\":{\"id\":\"resp_delayed_store\",\"object\":\"response\",\"created_at\":1,\"status\":\"in_progress\",\"model\":\"gpt-5\",\"output\":[],\"parallel_tool_calls\":true,\"store\":true}}\n\n"
+	resp := &http.Response{
+		StatusCode: http.StatusOK,
+		Body:       io.NopCloser(bytes.NewBufferString(body)),
+		Header:     make(http.Header),
+	}
+
+	result, err := ResponseStreamHandler(meta, store, c, resp)
+	require.Nil(t, err)
+	assert.Equal(t, "resp_delayed_store", result.UpstreamID)
+	require.Len(t, store.saved, 1)
+	assert.Equal(t, model.ResponseStoreID("resp_delayed_store"), store.saved[0].ID)
+	assert.Equal(t, "group-1", store.saved[0].GroupID)
+	assert.Equal(t, 7, store.saved[0].TokenID)
+	assert.Equal(t, 9, store.saved[0].ChannelID)
+	assert.Equal(t, "gpt-5", store.saved[0].Model)
 }
 
 func TestResponseHandlerWebSearchCountFromToolUsage(t *testing.T) {

@@ -255,10 +255,14 @@ func IsImageModel(modelName string) bool {
 
 // NewStreamScanner creates a bufio.Scanner with appropriate buffer size based on model type.
 // Returns the scanner and a cleanup function that must be called when done.
-func NewStreamScanner(r io.Reader, modelName string) (*bufio.Scanner, func()) {
+func NewStreamScanner(
+	r io.Reader,
+	originModel string,
+	actualModel string,
+) (*bufio.Scanner, func()) {
 	scanner := bufio.NewScanner(r)
 
-	if IsImageModel(modelName) {
+	if FirstMatchingModelName(originModel, actualModel, IsImageModel) != "" {
 		buf := GetImageScannerBuffer()
 		scanner.Buffer(*buf, cap(*buf))
 
