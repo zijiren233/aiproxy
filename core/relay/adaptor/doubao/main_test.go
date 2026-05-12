@@ -179,6 +179,170 @@ func TestAdaptorGetRequestURL_UsesOriginModelNameFirst(t *testing.T) {
 	})
 }
 
+func TestAdaptorConvertRequestVisionEmbeddings(t *testing.T) {
+	adaptor := &Adaptor{}
+	m := meta.NewMeta(
+		nil,
+		mode.Embeddings,
+		"doubao-embedding-vision-250615",
+		coremodel.ModelConfig{},
+	)
+
+	req, err := http.NewRequestWithContext(
+		context.Background(),
+		http.MethodPost,
+		"/v1/embeddings",
+		strings.NewReader(`{
+			"model": "doubao-embedding-vision-250615",
+			"encoding_format": "float",
+			"dimensions": 1024,
+			"instructions": "Represent the multimodal query",
+			"input": [
+				{"image": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUg"},
+				{"video": "https://example.com/video.mp4"},
+				{"image_url": {"url": "https://example.com/image.jpg"}},
+				"plain text"
+			]
+		}`),
+	)
+	if err != nil {
+		t.Fatalf("failed to create request: %v", err)
+	}
+
+	result, err := adaptor.ConvertRequest(m, nil, req)
+	if err != nil {
+		t.Fatalf("ConvertRequest returned error: %v", err)
+	}
+
+	body, err := io.ReadAll(result.Body)
+	if err != nil {
+		t.Fatalf("failed to read converted body: %v", err)
+	}
+
+	var payload map[string]any
+	if err := json.Unmarshal(body, &payload); err != nil {
+		t.Fatalf("failed to unmarshal converted body %s: %v", string(body), err)
+	}
+
+	if payload["model"] != "doubao-embedding-vision-250615" {
+		t.Fatalf("expected model to be set, got %#v", payload["model"])
+	}
+
+	if payload["encoding_format"] != "float" {
+		t.Fatalf("expected encoding_format to be preserved, got %#v", payload["encoding_format"])
+	}
+
+	if dimensions, ok := payload["dimensions"].(float64); !ok || int(dimensions) != 1024 {
+		t.Fatalf("expected dimensions=1024, got %#v", payload["dimensions"])
+	}
+
+	input, ok := payload["input"].([]any)
+	if !ok {
+		t.Fatalf("expected input array, got %#v", payload["input"])
+	}
+
+	if len(input) != 4 {
+		t.Fatalf("expected 4 input items, got %d", len(input))
+	}
+
+	assertDoubaoEmbeddingURLItem(
+		t,
+		input[0],
+		"image_url",
+		"data:image/png;base64,iVBORw0KGgoAAAANSUhEUg",
+	)
+	assertDoubaoEmbeddingURLItem(t, input[1], "video_url", "https://example.com/video.mp4")
+	assertDoubaoEmbeddingURLItem(t, input[2], "image_url", "https://example.com/image.jpg")
+	assertDoubaoEmbeddingTextItem(t, input[3], "plain text")
+}
+
+func TestAdaptorDoResponseVisionEmbeddings(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	adaptor := &Adaptor{}
+	recorder := httptest.NewRecorder()
+	ctx, _ := gin.CreateTestContext(recorder)
+	ctx.Request = httptest.NewRequestWithContext(
+		context.Background(),
+		http.MethodPost,
+		"/v1/embeddings",
+		nil,
+	)
+
+	resp := &http.Response{
+		StatusCode: http.StatusOK,
+		Header:     make(http.Header),
+		Body: io.NopCloser(strings.NewReader(`{
+			"created": 1743575029,
+			"data": {
+				"embedding": [0.1, 0.2],
+				"object": "embedding",
+				"sparse_embedding": [{"index": 12, "value": 0.5}]
+			},
+			"id": "req_123",
+			"model": "doubao-embedding-vision-250615",
+			"object": "list",
+			"usage": {
+				"prompt_tokens": 528,
+				"prompt_tokens_details": {
+					"image_tokens": 497,
+					"text_tokens": 31
+				},
+				"total_tokens": 528
+			}
+		}`)),
+	}
+
+	result, err := adaptor.DoResponse(
+		&meta.Meta{
+			Mode:        mode.Embeddings,
+			OriginModel: "doubao-embedding-vision-250615",
+			ActualModel: "doubao-embedding-vision-250615",
+		},
+		nil,
+		ctx,
+		resp,
+	)
+	if err != nil {
+		t.Fatalf("DoResponse returned error: %v", err)
+	}
+
+	if result.Usage.InputTokens != coremodel.ZeroNullInt64(528) {
+		t.Fatalf("expected input tokens 528, got %d", result.Usage.InputTokens)
+	}
+
+	if result.Usage.ImageInputTokens != coremodel.ZeroNullInt64(497) {
+		t.Fatalf("expected image input tokens 497, got %d", result.Usage.ImageInputTokens)
+	}
+
+	var payload map[string]any
+	if err := json.Unmarshal(recorder.Body.Bytes(), &payload); err != nil {
+		t.Fatalf("failed to unmarshal response body %s: %v", recorder.Body.String(), err)
+	}
+
+	data, ok := payload["data"].([]any)
+	if !ok || len(data) != 1 {
+		t.Fatalf("expected single-item data array, got %#v", payload["data"])
+	}
+
+	item, ok := data[0].(map[string]any)
+	if !ok {
+		t.Fatalf("expected data item object, got %#v", data[0])
+	}
+
+	if item["object"] != "embedding" {
+		t.Fatalf("expected data.object=embedding, got %#v", item["object"])
+	}
+
+	if index, ok := item["index"].(float64); !ok || int(index) != 0 {
+		t.Fatalf("expected data.index=0, got %#v", item["index"])
+	}
+
+	if _, ok := item["sparse_embedding"].([]any); !ok {
+		t.Fatalf("expected sparse_embedding to be preserved, got %#v", item["sparse_embedding"])
+	}
+}
+
 func TestAdaptorDoResponseResponsesDeleteNoContent(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
@@ -232,6 +396,45 @@ func TestHandlerPreHandler_UsesOriginModelNameFirst(t *testing.T) {
 
 	if websearchCount != 4 {
 		t.Fatalf("expected websearchCount=4, got %d", websearchCount)
+	}
+}
+
+func assertDoubaoEmbeddingURLItem(t *testing.T, got any, itemType, wantURL string) {
+	t.Helper()
+
+	gotMap, ok := got.(map[string]any)
+	if !ok {
+		t.Fatalf("expected input item object, got %#v", got)
+	}
+
+	if gotMap["type"] != itemType {
+		t.Fatalf("expected type %q, got %#v", itemType, gotMap["type"])
+	}
+
+	urlObject, ok := gotMap[itemType].(map[string]any)
+	if !ok {
+		t.Fatalf("expected %s object, got %#v", itemType, gotMap[itemType])
+	}
+
+	if urlObject["url"] != wantURL {
+		t.Fatalf("expected %s.url=%q, got %#v", itemType, wantURL, urlObject["url"])
+	}
+}
+
+func assertDoubaoEmbeddingTextItem(t *testing.T, got any, wantText string) {
+	t.Helper()
+
+	gotMap, ok := got.(map[string]any)
+	if !ok {
+		t.Fatalf("expected input item object, got %#v", got)
+	}
+
+	if gotMap["type"] != "text" {
+		t.Fatalf("expected type text, got %#v", gotMap["type"])
+	}
+
+	if gotMap["text"] != wantText {
+		t.Fatalf("expected text=%q, got %#v", wantText, gotMap["text"])
 	}
 }
 

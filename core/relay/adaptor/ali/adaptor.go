@@ -90,7 +90,12 @@ func (a *Adaptor) GetRequestURL(
 			URL:    url,
 		}, nil
 	case mode.Embeddings:
-		url, err := url.JoinPath(u, "/compatible-mode/v1/embeddings")
+		path := "/compatible-mode/v1/embeddings"
+		if isMultimodalEmbeddingModel(meta) {
+			path = "/api/v1/services/embeddings/multimodal-embedding/multimodal-embedding"
+		}
+
+		url, err := url.JoinPath(u, path)
 		if err != nil {
 			return adaptor.RequestURL{}, err
 		}
@@ -221,6 +226,10 @@ func (a *Adaptor) ConvertRequest(
 	case mode.Completions:
 		return ConvertCompletionsRequest(meta, store, req)
 	case mode.Embeddings:
+		if isMultimodalEmbeddingModel(meta) {
+			return ConvertMultimodalEmbeddingsRequest(meta, req)
+		}
+
 		return openai.ConvertRequest(meta, store, req)
 	case mode.AudioSpeech:
 		return ConvertTTSRequest(meta, req)
