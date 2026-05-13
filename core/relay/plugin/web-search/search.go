@@ -699,7 +699,7 @@ func (rw *responseWriter) Write(b []byte) (int, error) {
 		rw.isStream = true
 	}
 
-	node, err := sonic.Get(b)
+	node, err := sonic.GetWithOptions(b, ast.SearchOptions{})
 	if err != nil || !node.Valid() {
 		return rw.ResponseWriter.Write(b)
 	}

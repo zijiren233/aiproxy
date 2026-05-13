@@ -2,7 +2,6 @@ package common
 
 import (
 	"bytes"
-	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -13,7 +12,25 @@ import (
 	"github.com/bytedance/sonic/ast"
 )
 
-type requestBodyKey struct{}
+type reusableRequestBody struct {
+	*bytes.Reader
+	body []byte
+}
+
+func newReusableRequestBody(body []byte) *reusableRequestBody {
+	return &reusableRequestBody{
+		Reader: bytes.NewReader(body),
+		body:   body,
+	}
+}
+
+func (b *reusableRequestBody) Close() error {
+	return nil
+}
+
+func (b *reusableRequestBody) Bytes() []byte {
+	return b.body
+}
 
 const (
 	MaxRequestBodySize  = 1024 * 1024 * 50 // 50MB
@@ -105,25 +122,21 @@ func GetRequestBody(req *http.Request) ([]byte, error) {
 }
 
 func SetRequestBody(req *http.Request, body []byte) {
-	ctx := req.Context()
-	bufCtx := context.WithValue(ctx, requestBodyKey{}, body)
-	*req = *req.WithContext(bufCtx)
 	req.ContentLength = int64(len(body))
-	req.GetBody = func() (io.ReadCloser, error) {
-		return io.NopCloser(bytes.NewReader(body)), nil
-	}
-	req.Body = io.NopCloser(bytes.NewReader(body))
+	req.GetBody = nil
+	req.Body = newReusableRequestBody(body)
 }
 
 func GetCachedRequestBody(req *http.Request) ([]byte, bool) {
-	requestBody := req.Context().Value(requestBodyKey{})
-	if requestBody == nil {
+	if req == nil {
 		return nil, false
 	}
 
-	body, ok := requestBody.([]byte)
+	if body, ok := req.Body.(*reusableRequestBody); ok {
+		return body.Bytes(), true
+	}
 
-	return body, ok
+	return nil, false
 }
 
 func IsJSONContentType(ct string) bool {
@@ -147,11 +160,10 @@ func GetRequestBodyReusable(req *http.Request) ([]byte, error) {
 		err error
 	)
 
+	originalBody := req.Body
 	defer func() {
-		req.Body.Close()
-
-		if err == nil {
-			req.Body = io.NopCloser(bytes.NewBuffer(buf))
+		if originalBody != nil {
+			_ = originalBody.Close()
 		}
 	}()
 
@@ -200,7 +212,7 @@ func UnmarshalRequest2NodeReusable(req *http.Request, path ...any) (ast.Node, er
 		return ast.Node{}, err
 	}
 
-	return sonic.Get(requestBody, path...)
+	return sonic.GetWithOptions(requestBody, ast.SearchOptions{}, path...)
 }
 
 func GetResponseBodyLimit(resp *http.Response, n int64) ([]byte, error) {
@@ -226,5 +238,5 @@ func UnmarshalResponse2Node(resp *http.Response, path ...any) (ast.Node, error) 
 		return ast.Node{}, err
 	}
 
-	return sonic.Get(responseBody, path...)
+	return sonic.GetWithOptions(responseBody, ast.SearchOptions{}, path...)
 }

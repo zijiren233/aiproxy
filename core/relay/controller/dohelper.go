@@ -170,9 +170,19 @@ func prepareAndDoRequest(
 		return nil, mapRequestError(meta, err, http.StatusBadRequest, "convert request failed")
 	}
 
-	if closer, ok := convertResult.Body.(io.Closer); ok {
-		defer closer.Close()
-	}
+	var req *http.Request
+	defer func() {
+		if req != nil {
+			if req.Body != nil {
+				_ = req.Body.Close()
+				req.Body = http.NoBody
+			}
+			req.GetBody = nil
+			return
+		}
+
+		closeRequestReader(convertResult.Body)
+	}()
 
 	if meta.Channel.BaseURL == "" {
 		meta.Channel.BaseURL = a.DefaultBaseURL()
@@ -189,7 +199,7 @@ func prepareAndDoRequest(
 
 	log.Debugf("request url: %s %s", fullRequestURL.Method, fullRequestURL.URL)
 
-	req, err := http.NewRequestWithContext(
+	req, err = http.NewRequestWithContext(
 		ctx,
 		fullRequestURL.Method,
 		fullRequestURL.URL,
@@ -208,6 +218,12 @@ func prepareAndDoRequest(
 	}
 
 	return doRequest(a, c, meta, store, req)
+}
+
+func closeRequestReader(r io.Reader) {
+	if closer, ok := r.(io.Closer); ok {
+		_ = closer.Close()
+	}
 }
 
 func mapRequestError(
@@ -378,19 +394,35 @@ func requestBodyDetail(c *gin.Context, opt BodyDetailOption) (string, error) {
 		return "", err
 	}
 
-	return limitBodyDetail(conv.BytesToString(body), opt.MaxRequestBodySize), nil
+	return limitBodyDetailString(string(limitBodyDetailBytes(body, opt.MaxRequestBodySize))), nil
 }
 
 func limitBodyDetail(body string, maxSize int64) string {
-	if maxSize != 0 && int64(len(body)) > maxSize {
-		body = body[:min(len(body), int(maxSize)+1)]
+	return limitBodyDetailString(limitBodyDetailStringLength(body, maxSize))
+}
+
+func limitBodyDetailStringLength(body string, maxSize int64) string {
+	if maxSize == 0 || int64(len(body)) <= maxSize {
+		return body
 	}
 
+	return body[:min(len(body), int(maxSize)+1)]
+}
+
+func limitBodyDetailString(body string) string {
 	for len(body) > 0 && !utf8.ValidString(body) {
 		body = body[:len(body)-1]
 	}
 
 	return body
+}
+
+func limitBodyDetailBytes(body []byte, maxSize int64) []byte {
+	if maxSize == 0 || int64(len(body)) <= maxSize {
+		return body
+	}
+
+	return body[:min(len(body), int(maxSize)+1)]
 }
 
 func responseBodyCaptureLimit(opt BodyDetailOption) int {

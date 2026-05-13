@@ -460,7 +460,7 @@ func StreamHandler(
 			break
 		}
 
-		node, err := sonic.Get(data)
+		node, err := sonic.GetWithOptions(data, ast.SearchOptions{})
 		if err != nil {
 			log.Error("error unmarshalling stream response: " + err.Error())
 			continue

@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"github.com/bytedance/sonic"
+	"github.com/bytedance/sonic/ast"
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/core/common/conv"
 	"github.com/labring/aiproxy/core/relay/adaptor"
@@ -114,7 +115,7 @@ func (rw *thinkResponseWriter) Write(b []byte) (int, error) {
 		return rw.writeWithOriginalLength(b, b)
 	}
 	// For streaming responses, process each chunk
-	node, err := sonic.Get(b)
+	node, err := sonic.GetWithOptions(b, ast.SearchOptions{})
 	if err != nil || !node.Valid() {
 		return rw.writeWithOriginalLength(b, b)
 	}

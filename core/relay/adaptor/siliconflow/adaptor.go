@@ -84,7 +84,7 @@ func (a *Adaptor) DoResponse(
 
 		return a.Adaptor.DoResponse(meta, store, c, resp)
 	default:
-		if resp.StatusCode != http.StatusOK {
+		if !adaptor.IsSuccessfulResponseStatus(meta.Mode, resp.StatusCode) {
 			return adaptor.DoResponseResult{}, ErrorHandler(resp)
 		}
 		return a.Adaptor.DoResponse(meta, store, c, resp)

@@ -61,18 +61,7 @@ func TestSetRequestBodySyncsBodyAndContentLength(t *testing.T) {
 		t.Fatalf("unexpected body: %q", string(body))
 	}
 
-	clone, err := req.GetBody()
-	if err != nil {
-		t.Fatalf("unexpected get body error: %v", err)
-	}
-	defer clone.Close()
-
-	body, err = io.ReadAll(clone)
-	if err != nil {
-		t.Fatalf("unexpected clone read error: %v", err)
-	}
-
-	if string(body) != `{"b":2}` {
-		t.Fatalf("unexpected cloned body: %q", string(body))
+	if req.GetBody != nil {
+		t.Fatal("expected GetBody to be cleared")
 	}
 }
