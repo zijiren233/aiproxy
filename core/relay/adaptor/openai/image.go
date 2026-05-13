@@ -257,7 +257,7 @@ func ImagesStreamHandler(
 
 		data := render.ExtractSSEData(line)
 
-		node, err := sonic.Get(data)
+		node, err := sonic.GetWithOptions(data, ast.SearchOptions{})
 		if err != nil {
 			log.Error("error unmarshalling image stream response: " + err.Error())
 			render.OpenaiBytesData(c, data)

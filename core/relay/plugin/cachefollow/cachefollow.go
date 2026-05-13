@@ -102,7 +102,7 @@ func (rw *retentionResponseWriter) tryParseRetention(data []byte) {
 		}
 	}
 
-	node, err := sonic.Get(data)
+	node, err := sonic.GetWithOptions(data, ast.SearchOptions{})
 	if err != nil || !node.Valid() {
 		return
 	}

@@ -38,6 +38,21 @@ type testAdaptor struct {
 		c *gin.Context,
 		resp *http.Response,
 	) (adaptor.DoResponseResult, adaptor.Error)
+	getRequestURL func(
+		meta *meta.Meta,
+		store adaptor.Store,
+		c *gin.Context,
+	) (adaptor.RequestURL, error)
+}
+
+type countingReadCloser struct {
+	io.Reader
+	closed int
+}
+
+func (c *countingReadCloser) Close() error {
+	c.closed++
+	return nil
 }
 
 func (a testAdaptor) Metadata() adaptor.Metadata {
@@ -53,10 +68,14 @@ func (a testAdaptor) DefaultBaseURL() string {
 }
 
 func (a testAdaptor) GetRequestURL(
-	_ *meta.Meta,
-	_ adaptor.Store,
-	_ *gin.Context,
+	meta *meta.Meta,
+	store adaptor.Store,
+	c *gin.Context,
 ) (adaptor.RequestURL, error) {
+	if a.getRequestURL != nil {
+		return a.getRequestURL(meta, store, c)
+	}
+
 	return adaptor.RequestURL{
 		Method: http.MethodPost,
 		URL:    "https://example.com/v1/test",
@@ -411,4 +430,85 @@ func TestHandleBodyDetailTruncatesOnRuneBoundary(t *testing.T) {
 	require.NotNil(t, result.BodyDetail)
 	require.Equal(t, `{"text":"你`, result.BodyDetail.RequestBody)
 	require.Equal(t, "你", result.BodyDetail.ResponseBody)
+}
+
+func TestHandleClosesConvertedRequestBodyAfterDoRequest(t *testing.T) {
+	c, relayMeta := newTestRelayContext()
+	closeCounter := &countingReadCloser{Reader: strings.NewReader(`{"ok":true}`)}
+
+	result := Handle(
+		testAdaptor{
+			convertRequest: func(
+				_ *meta.Meta,
+				_ adaptor.Store,
+				_ *http.Request,
+			) (adaptor.ConvertResult, error) {
+				return adaptor.ConvertResult{Body: closeCounter}, nil
+			},
+			doRequest: func(
+				_ *meta.Meta,
+				_ adaptor.Store,
+				_ *gin.Context,
+				req *http.Request,
+			) (*http.Response, error) {
+				_, err := io.ReadAll(req.Body)
+				require.NoError(t, err)
+
+				return &http.Response{
+					StatusCode: http.StatusOK,
+					Body:       io.NopCloser(strings.NewReader("upstream")),
+					Header:     make(http.Header),
+				}, nil
+			},
+			doResponse: func(
+				_ *meta.Meta,
+				_ adaptor.Store,
+				_ *gin.Context,
+				_ *http.Response,
+			) (adaptor.DoResponseResult, adaptor.Error) {
+				return adaptor.DoResponseResult{}, nil
+			},
+		},
+		c,
+		relayMeta,
+		nil,
+	)
+
+	require.NoError(t, result.Error)
+	require.Equal(t, 1, closeCounter.closed)
+}
+
+func TestPrepareAndDoRequestClosesConvertedRequestBodyWhenGetRequestURLFails(t *testing.T) {
+	c, relayMeta := newTestRelayContext()
+	closeCounter := &countingReadCloser{Reader: strings.NewReader(`{"ok":true}`)}
+
+	resp, err := prepareAndDoRequest(
+		context.Background(),
+		testAdaptor{
+			convertRequest: func(
+				_ *meta.Meta,
+				_ adaptor.Store,
+				_ *http.Request,
+			) (adaptor.ConvertResult, error) {
+				return adaptor.ConvertResult{Body: closeCounter}, nil
+			},
+			getRequestURL: func(
+				_ *meta.Meta,
+				_ adaptor.Store,
+				_ *gin.Context,
+			) (adaptor.RequestURL, error) {
+				return adaptor.RequestURL{}, errors.New("bad url")
+			},
+		},
+		c,
+		relayMeta,
+		nil,
+	)
+	if resp != nil && resp.Body != nil {
+		defer resp.Body.Close()
+	}
+
+	require.Equal(t, http.StatusBadRequest, err.StatusCode())
+	require.Contains(t, err.Error(), "get request url failed: bad url")
+	require.Equal(t, 1, closeCounter.closed)
 }

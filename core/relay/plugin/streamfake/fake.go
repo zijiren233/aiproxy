@@ -223,7 +223,7 @@ func (rw *fakeStreamResponseWriter) parseStreamingData(data []byte) error {
 		}
 	}
 
-	node, err := sonic.Get(data)
+	node, err := sonic.GetWithOptions(data, ast.SearchOptions{})
 	if err != nil || !node.Valid() {
 		return nil
 	}

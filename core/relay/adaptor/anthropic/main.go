@@ -473,7 +473,7 @@ func StreamHandler(
 			}
 		}
 
-		node, parseErr := sonic.Get(data)
+		node, parseErr := sonic.GetWithOptions(data, ast.SearchOptions{})
 		if parseErr != nil {
 			log.Error("error unmarshalling stream response: " + parseErr.Error())
 		} else {

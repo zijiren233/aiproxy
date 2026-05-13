@@ -373,7 +373,7 @@ func injectUsageIntoJSON(node *ast.Node, usage *relaymodel.SttUsage) ([]byte, er
 
 // injectUsageIntoSSE injects usage into SSE response data
 func injectUsageIntoSSE(data []byte, usage *relaymodel.SttUsage) []byte {
-	node, err := sonic.Get(data)
+	node, err := sonic.GetWithOptions(data, ast.SearchOptions{})
 	if err != nil {
 		return nil
 	}
