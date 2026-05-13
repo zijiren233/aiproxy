@@ -65,6 +65,7 @@ func (a *Adaptor) DoResponse(
 		if resp.StatusCode != http.StatusOK {
 			return adaptor.DoResponseResult{}, ErrorHandler(resp)
 		}
+
 		result, err := a.Adaptor.DoResponse(meta, store, c, resp)
 		if err != nil {
 			return adaptor.DoResponseResult{}, err

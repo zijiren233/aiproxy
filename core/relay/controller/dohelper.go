@@ -177,7 +177,9 @@ func prepareAndDoRequest(
 				_ = req.Body.Close()
 				req.Body = http.NoBody
 			}
+
 			req.GetBody = nil
+
 			return
 		}
 
