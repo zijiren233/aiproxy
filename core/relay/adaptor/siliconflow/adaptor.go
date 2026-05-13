@@ -37,6 +37,23 @@ func (a *Adaptor) Metadata() adaptor.Metadata {
 
 //
 
+func (a *Adaptor) ConvertRequest(
+	meta *meta.Meta,
+	store adaptor.Store,
+	req *http.Request,
+) (adaptor.ConvertResult, error) {
+	switch meta.Mode {
+	case mode.Embeddings:
+		if isVLEmbeddingModel(meta) {
+			return openai.ConvertEmbeddingsRequest(meta, req, false, patchVLEmbeddingsInput)
+		}
+
+		return a.Adaptor.ConvertRequest(meta, store, req)
+	default:
+		return a.Adaptor.ConvertRequest(meta, store, req)
+	}
+}
+
 func (a *Adaptor) DoResponse(
 	meta *meta.Meta,
 	store adaptor.Store,

@@ -41,22 +41,27 @@ func patchEmbeddingsVisionInput(node *ast.Node) error {
 						return false
 					}
 
-					_, err = item.Unset("image")
+					return setEmbeddingVisionURLItem(item, "image", "image_url", imageURL) == nil
+				}
+
+				videoNode := item.Get("video")
+				if videoNode.Exists() && videoNode.TypeSafe() == ast.V_STRING {
+					videoURL, err := videoNode.String()
 					if err != nil {
 						return false
 					}
 
-					_, err = item.Set("type", ast.NewString("image_url"))
-					if err != nil {
-						return false
-					}
+					return setEmbeddingVisionURLItem(item, "video", "video_url", videoURL) == nil
+				}
 
-					_, err = item.SetAny("image_url", map[string]string{
-						"url": imageURL,
-					})
-					if err != nil {
-						return false
-					}
+				if item.Get("image_url").Exists() {
+					_, err := item.Set("type", ast.NewString("image_url"))
+					return err == nil
+				}
+
+				if item.Get("video_url").Exists() {
+					_, err := item.Set("type", ast.NewString("video_url"))
+					return err == nil
 				}
 
 				return true
@@ -83,6 +88,29 @@ func patchEmbeddingsVisionInput(node *ast.Node) error {
 	}
 }
 
+func setEmbeddingVisionURLItem(
+	item *ast.Node,
+	sourceKey string,
+	targetKey string,
+	url string,
+) error {
+	_, err := item.Unset(sourceKey)
+	if err != nil {
+		return err
+	}
+
+	_, err = item.Set("type", ast.NewString(targetKey))
+	if err != nil {
+		return err
+	}
+
+	_, err = item.SetAny(targetKey, map[string]string{
+		"url": url,
+	})
+
+	return err
+}
+
 func embeddingPreHandler(_ *meta.Meta, node *ast.Node) error {
 	return patchEmbeddingsVisionResponse(node)
 }
@@ -102,18 +130,15 @@ func patchEmbeddingsVisionResponse(node *ast.Node) error {
 			return nil
 		}
 
-		_, err := node.Unset("data")
-		if err != nil {
+		if _, err := dataNode.Set("object", ast.NewString("embedding")); err != nil {
 			return err
 		}
 
-		_, err = node.SetAny("data", []map[string]any{
-			{
-				"embedding": embeddingNode,
-				"object":    "embedding",
-				"index":     0,
-			},
-		})
+		if _, err := dataNode.Set("index", ast.NewNumber("0")); err != nil {
+			return err
+		}
+
+		_, err := node.Set("data", ast.NewArray([]ast.Node{*dataNode}))
 
 		return err
 	default:

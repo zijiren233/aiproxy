@@ -21,6 +21,15 @@ var ModelList = []model.ModelConfig{
 		Owner: model.ModelOwnerBAAI,
 		RPM:   2000,
 	},
+	{
+		Model: "Qwen/Qwen3-VL-Embedding-8B",
+		Type:  mode.Embeddings,
+		Owner: model.ModelOwnerAlibaba,
+		Config: model.NewModelConfig(
+			model.WithModelConfigVision(true),
+		),
+		RPM: 2000,
+	},
 
 	{
 		Model: "fishaudio/fish-speech-1.4",
