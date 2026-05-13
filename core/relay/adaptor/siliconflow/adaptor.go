@@ -62,6 +62,9 @@ func (a *Adaptor) DoResponse(
 ) (adaptor.DoResponseResult, adaptor.Error) {
 	switch meta.Mode {
 	case mode.AudioSpeech:
+		if resp.StatusCode != http.StatusOK {
+			return adaptor.DoResponseResult{}, ErrorHandler(resp)
+		}
 		result, err := a.Adaptor.DoResponse(meta, store, c, resp)
 		if err != nil {
 			return adaptor.DoResponseResult{}, err
@@ -81,6 +84,9 @@ func (a *Adaptor) DoResponse(
 
 		return a.Adaptor.DoResponse(meta, store, c, resp)
 	default:
+		if resp.StatusCode != http.StatusOK {
+			return adaptor.DoResponseResult{}, ErrorHandler(resp)
+		}
 		return a.Adaptor.DoResponse(meta, store, c, resp)
 	}
 }
