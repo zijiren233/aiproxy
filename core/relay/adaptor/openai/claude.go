@@ -97,7 +97,8 @@ func ConvertClaudeRequestModel(
 		}
 	}
 
-	utils.ApplyReasoningToOpenAIRequest(
+	applyReasoningToOpenAIRequestForModel(
+		meta,
 		&openAIRequest,
 		utils.ParseClaudeReasoning(claudeRequest.Thinking, claudeRequest.OutputConfig),
 	)
@@ -824,7 +825,8 @@ func ConvertClaudeToResponsesRequest(
 		responsesReq.ToolChoice = openAIRequest.ToolChoice
 	}
 
-	utils.ApplyReasoningToResponsesRequest(
+	applyReasoningToResponsesRequestForModel(
+		meta,
 		&responsesReq,
 		utils.ParseOpenAIReasoning(openAIRequest),
 	)

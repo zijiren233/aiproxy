@@ -16,11 +16,13 @@ import (
 func TestConvertGeminiRequest_MapsThinkingConfigToReasoningEffort(t *testing.T) {
 	tests := []struct {
 		name           string
+		actualModel    string
 		requestJSON    string
 		expectedEffort string
 	}{
 		{
-			name: "thinking level maps directly",
+			name:        "thinking level maps directly",
+			actualModel: "gpt-5",
 			requestJSON: `{
 				"generationConfig": {
 					"thinkingConfig": {
@@ -32,7 +34,8 @@ func TestConvertGeminiRequest_MapsThinkingConfigToReasoningEffort(t *testing.T) 
 			expectedEffort: "high",
 		},
 		{
-			name: "thinking budget maps to effort",
+			name:        "thinking budget maps to effort",
+			actualModel: "gpt-5",
 			requestJSON: `{
 				"generationConfig": {
 					"thinkingConfig": {
@@ -43,6 +46,34 @@ func TestConvertGeminiRequest_MapsThinkingConfigToReasoningEffort(t *testing.T) 
 				"contents": [{"role":"user","parts":[{"text":"hello"}]}]
 			}`,
 			expectedEffort: "low",
+		},
+		{
+			name:        "gpt-5.5 does not receive minimal",
+			actualModel: "gpt-5.5",
+			requestJSON: `{
+				"generationConfig": {
+					"thinkingConfig": {
+						"thinkingBudget": 512,
+						"includeThoughts": true
+					}
+				},
+				"contents": [{"role":"user","parts":[{"text":"hello"}]}]
+			}`,
+			expectedEffort: "low",
+		},
+		{
+			name:        "gpt-5 does not receive xhigh",
+			actualModel: "gpt-5",
+			requestJSON: `{
+				"generationConfig": {
+					"thinkingConfig": {
+						"thinkingBudget": 32768,
+						"includeThoughts": true
+					}
+				},
+				"contents": [{"role":"user","parts":[{"text":"hello"}]}]
+			}`,
+			expectedEffort: "high",
 		},
 	}
 
@@ -58,7 +89,7 @@ func TestConvertGeminiRequest_MapsThinkingConfigToReasoningEffort(t *testing.T) 
 				t.Fatalf("failed to create request: %v", err)
 			}
 
-			meta := &meta.Meta{ActualModel: "gpt-5"}
+			meta := &meta.Meta{ActualModel: tt.actualModel}
 
 			result, err := openai.ConvertGeminiRequest(meta, req)
 			if err != nil {

@@ -72,7 +72,7 @@ func ConvertGeminiRequest(
 	openaiReq.Messages = messages
 
 	// Convert generation config
-	convertGeminiGenerationConfigToOpenAI(geminiReq, &openaiReq)
+	convertGeminiGenerationConfigToOpenAI(meta, geminiReq, &openaiReq)
 
 	// Convert tools
 	openaiReq.Tools = convertGeminiToolsToOpenAI(geminiReq)
@@ -508,6 +508,7 @@ func convertGeminiToolConfigToOpenAI(geminiReq *relaymodel.GeminiChatRequest) an
 }
 
 func convertGeminiGenerationConfigToOpenAI(
+	meta *meta.Meta,
 	geminiReq *relaymodel.GeminiChatRequest,
 	openaiReq *relaymodel.GeneralOpenAIRequest,
 ) {
@@ -540,7 +541,8 @@ func convertGeminiGenerationConfigToOpenAI(
 			}
 		}
 
-		utils.ApplyReasoningToOpenAIRequest(
+		applyReasoningToOpenAIRequestForModel(
+			meta,
 			openaiReq,
 			utils.ParseGeminiReasoning(geminiReq.GenerationConfig.ThinkingConfig),
 		)
@@ -779,7 +781,8 @@ func ConvertGeminiToResponsesRequest(
 	}
 
 	if geminiReq.GenerationConfig != nil {
-		utils.ApplyReasoningToResponsesRequest(
+		applyReasoningToResponsesRequestForModel(
+			meta,
 			&responsesReq,
 			utils.ParseGeminiReasoning(geminiReq.GenerationConfig.ThinkingConfig),
 		)

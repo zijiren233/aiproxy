@@ -294,7 +294,7 @@ func ConvertRequest(
 
 	switch meta.Mode {
 	case mode.Responses:
-		return ConvertResponseRequest(meta, req)
+		return ConvertResponseRequest(meta, req, patchOpenAIResponsesReasoningEffort(meta))
 	case mode.ResponsesGet, mode.ResponsesDelete, mode.ResponsesCancel, mode.ResponsesInputItems:
 		// These endpoints don't need request conversion
 		return adaptor.ConvertResult{}, nil
@@ -303,13 +303,13 @@ func ConvertRequest(
 	case mode.Embeddings:
 		return ConvertEmbeddingsRequest(meta, req, false)
 	case mode.Completions:
-		return ConvertCompletionsRequest(meta, req)
+		return ConvertCompletionsRequest(meta, req, patchOpenAIReasoningEffort(meta))
 	case mode.ChatCompletions:
 		// Check if model requires Responses API conversion
 		if IsResponsesOnlyModelAny(&meta.ModelConfig, meta.OriginModel, meta.ActualModel) {
 			return ConvertChatCompletionToResponsesRequest(meta, req)
 		}
-		return ConvertChatCompletionsRequest(meta, req, false)
+		return ConvertChatCompletionsRequest(meta, req, false, patchOpenAIReasoningEffort(meta))
 	case mode.Anthropic:
 		// Check if model requires Responses API conversion
 		if IsResponsesOnlyModelAny(&meta.ModelConfig, meta.OriginModel, meta.ActualModel) {
