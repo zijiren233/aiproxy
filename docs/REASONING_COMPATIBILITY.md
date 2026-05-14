@@ -29,6 +29,8 @@ The implementation follows these rules:
 - native requests are not automatically migrated into another thinking dialect
   - for example, a native Claude request is not rewritten into OpenAI `reasoning_effort`
   - existing protocol-level cleanup may still apply, for example when an upstream forbids `temperature` together with thinking
+- adaptor-specific native fields may still be preserved when the upstream itself
+  accepts them, for example Qianfan native `thinking`
 - every **model-name-based capability branch** uses:
   1. `OriginModel` first
   2. `ActualModel` as fallback when origin does not match
@@ -465,7 +467,49 @@ Exact mapping:
 | `high` | `thinking.type=enabled` |
 | `xhigh` | `thinking.type=enabled` |
 
-### 4.7 Moonshot / Kimi output
+### 4.7 Qianfan output
+
+Qianfan supports multiple upstream reasoning shapes, and different models accept
+different fields:
+
+```json
+{
+  "thinking": {
+    "type": "enabled|disabled"
+  },
+  "enable_thinking": true,
+  "thinking_budget": 2048,
+  "reasoning_effort": "high|max"
+}
+```
+
+Rules:
+
+- native `thinking` has priority and is preserved as provided
+- when `thinking` is present, conflicting `reasoning_effort`, `enable_thinking`, and `thinking_budget` are removed
+- when native `thinking` is absent, the adaptor selects a field family based on model capability:
+  - models that support `reasoning_effort`: enabled states emit `reasoning_effort=high|max`; disabled states emit no reasoning field
+  - models that support `enable_thinking`: emit `enable_thinking=true|false`; enabled states also emit `thinking_budget` when supported
+  - models that support `thinking`: emit `thinking.type=enabled|disabled`; enabled states also emit `thinking_budget` when supported
+  - models that only support `thinking_budget`: enabled states emit only `thinking_budget`; disabled states emit no reasoning field
+- model capability detection first checks exact documented model names, then falls back to family / keyword matches such as `qwen3-*`, `deepseek-v4-*`, `*think*` / `*thinking*`, and `*vl*`
+- models that do not match any Qianfan reasoning capability have normalized reasoning controls removed to avoid sending unsupported fields
+
+Exact mapping by field family when the input does not already contain native `thinking`:
+
+| normalized effort | `reasoning_effort` models | `enable_thinking` models | `thinking` models | budget-only models |
+| --- | --- | --- | --- | --- |
+| `none` | no reasoning field | `enable_thinking=false` | `thinking.type=disabled` | no reasoning field |
+| `minimal` | `reasoning_effort=high` | `enable_thinking=true`; `thinking_budget=1024` when supported | `thinking.type=enabled`; `thinking_budget=1024` when supported | `thinking_budget=1024` |
+| `low` | `reasoning_effort=high` | `enable_thinking=true`; `thinking_budget=2048` when supported | `thinking.type=enabled`; `thinking_budget=2048` when supported | `thinking_budget=2048` |
+| `medium` | `reasoning_effort=high` | `enable_thinking=true`; `thinking_budget=8192` when supported | `thinking.type=enabled`; `thinking_budget=8192` when supported | `thinking_budget=8192` |
+| `high` | `reasoning_effort=high` | `enable_thinking=true`; `thinking_budget=16384` when supported | `thinking.type=enabled`; `thinking_budget=16384` when supported | `thinking_budget=16384` |
+| `xhigh` | `reasoning_effort=max` | `enable_thinking=true`; `thinking_budget=32768` when supported | `thinking.type=enabled`; `thinking_budget=32768` when supported | `thinking_budget=32768` |
+
+For OpenAI Responses input, Qianfan also normalizes `reasoning.effort` into
+the same upstream Qianfan fields.
+
+### 4.8 Moonshot / Kimi output
 
 Moonshot / Kimi uses Kimi's `thinking` object only for upstream models that
 support thinking toggling:
@@ -735,7 +779,39 @@ Exact effort mapping for the hooked Chat / Gemini / Anthropic paths:
 
 Zhipu currently preserves only enabled / disabled for the hooked paths.
 
-## 5.10 Moonshot / Kimi
+## 5.10 Qianfan
+
+Supported reasoning conversion modes:
+
+| source request mode | Qianfan adaptor behavior | emitted upstream field |
+| --- | --- | --- |
+| OpenAI Chat | preserves native `thinking`; otherwise parses `reasoning_effort` | model-dependent `thinking.type` / `enable_thinking` / `thinking_budget` / `reasoning_effort` |
+| OpenAI Completions | preserves native `thinking`; otherwise parses `reasoning_effort` | model-dependent `thinking.type` / `enable_thinking` / `thinking_budget` / `reasoning_effort` |
+| Gemini native | parses `generationConfig.thinkingConfig` through OpenAI-compatible conversion | model-dependent `thinking.type` / `enable_thinking` / `thinking_budget` / `reasoning_effort` |
+| Anthropic native | parses `thinking` / `output_config` through OpenAI-compatible conversion | model-dependent `thinking.type` / `enable_thinking` / `thinking_budget` / `reasoning_effort` |
+| OpenAI Responses | preserves native `thinking`; otherwise parses `reasoning.effort` | model-dependent `thinking.type` / `enable_thinking` / `thinking_budget` / `reasoning_effort` |
+
+Exact effort mapping by field family when native `thinking` is not already present:
+
+| normalized effort | `reasoning_effort` models | `enable_thinking` models | `thinking` models | budget-only models |
+| --- | --- | --- | --- | --- |
+| `none` | no reasoning field | `enable_thinking=false` | `thinking.type=disabled` | no reasoning field |
+| `minimal` | `reasoning_effort=high` | `enable_thinking=true`; `thinking_budget=1024` when supported | `thinking.type=enabled`; `thinking_budget=1024` when supported | `thinking_budget=1024` |
+| `low` | `reasoning_effort=high` | `enable_thinking=true`; `thinking_budget=2048` when supported | `thinking.type=enabled`; `thinking_budget=2048` when supported | `thinking_budget=2048` |
+| `medium` | `reasoning_effort=high` | `enable_thinking=true`; `thinking_budget=8192` when supported | `thinking.type=enabled`; `thinking_budget=8192` when supported | `thinking_budget=8192` |
+| `high` | `reasoning_effort=high` | `enable_thinking=true`; `thinking_budget=16384` when supported | `thinking.type=enabled`; `thinking_budget=16384` when supported | `thinking_budget=16384` |
+| `xhigh` | `reasoning_effort=max` | `enable_thinking=true`; `thinking_budget=32768` when supported | `thinking.type=enabled`; `thinking_budget=32768` when supported | `thinking_budget=32768` |
+
+Notes:
+
+- Qianfan native `thinking` wins over `reasoning_effort` / `reasoning.effort`.
+- When native `thinking` is present in Chat / Completions, the adaptor removes `reasoning_effort`, `enable_thinking`, and `thinking_budget`.
+- When native `thinking` is present in Responses, the adaptor removes `reasoning`.
+- Qianfan accepts only `high` and `max` for `reasoning_effort`, so lower enabled efforts are upgraded to `high`.
+- disabled states are expressed according to the model's field family; models that cannot disable thinking or do not match a reasoning capability are not forced to receive `thinking.type=disabled`.
+- model capability detection is origin-first, actual-fallback, and falls back to family / keyword matching when exact model names do not match.
+
+## 5.11 Moonshot / Kimi
 
 Supported reasoning conversion modes:
 
@@ -1066,8 +1142,7 @@ Output:
 
 ```json
 {
-  "enable_thinking": true,
-  "thinking_budget": 16384
+  "reasoning_effort": "high"
 }
 ```
 
@@ -1281,6 +1356,108 @@ Input:
 ```json
 {
   "model": "glm-4.5",
+  "reasoning_effort": "low",
+  "prompt": "hello"
+}
+```
+
+Output:
+
+```json
+{
+  "enable_thinking": true,
+  "thinking_budget": 2048
+}
+```
+
+### 7.1.20 OpenAI Chat -> Qianfan, disabling reasoning on an `enable_thinking` model
+
+Input:
+
+```json
+{
+  "model": "qwen3-14b",
+  "reasoning_effort": "none",
+  "messages": [{"role": "user", "content": "hello"}]
+}
+```
+
+Output:
+
+```json
+{
+  "enable_thinking": false
+}
+```
+
+Notes:
+
+- `reasoning_effort:none` is removed
+- the Qianfan adaptor expresses disabled reasoning according to the target model's field family; `qwen3-*` uses `enable_thinking=false`
+
+### 7.1.21 OpenAI Chat -> Qianfan, enabled reasoning on a `reasoning_effort` model
+
+Input:
+
+```json
+{
+  "model": "deepseek-v4-pro",
+  "reasoning_effort": "xhigh",
+  "messages": [{"role": "user", "content": "hello"}]
+}
+```
+
+Output:
+
+```json
+{
+  "reasoning_effort": "max"
+}
+```
+
+Notes:
+
+- models that support Qianfan `reasoning_effort` only accept `high` / `max`
+- `low`, `medium`, and `high` all become `high`; `xhigh` / `max` become `max`
+- `thinking` is omitted unless the caller provided native Qianfan `thinking`
+
+### 7.1.22 OpenAI Chat -> Qianfan with native `thinking`
+
+Input:
+
+```json
+{
+  "model": "deepseek-v3.2",
+  "reasoning_effort": "none",
+  "thinking": {
+    "type": "enabled"
+  },
+  "messages": [{"role": "user", "content": "hello"}]
+}
+```
+
+Output:
+
+```json
+{
+  "thinking": {
+    "type": "enabled"
+  }
+}
+```
+
+Notes:
+
+- native `thinking` wins
+- conflicting `reasoning_effort`, `enable_thinking`, and `thinking_budget` are removed
+
+### 7.1.23 OpenAI Completions -> Qianfan
+
+Input:
+
+```json
+{
+  "model": "qwen3-14b",
   "reasoning_effort": "low",
   "prompt": "hello"
 }
@@ -1516,6 +1693,35 @@ Notes:
   `reasoning_effort` path, then the Moonshot hook writes Kimi `thinking`
 - budget details are not preserved
 
+### 7.2.10 Gemini -> Qianfan
+
+Input:
+
+```json
+{
+  "generationConfig": {
+    "thinkingConfig": {
+      "thinkingBudget": 0
+    }
+  },
+  "contents": [{"role": "user", "parts": [{"text": "hello"}]}]
+}
+```
+
+Output:
+
+```json
+{
+  "enable_thinking": false
+}
+```
+
+Notes:
+
+- Gemini `thinkingBudget<=0` is normalized to `none`
+- Qianfan writes disabled states according to the model field family: `enable_thinking=false`, `thinking.type=disabled`, or no reasoning field
+- enabled Gemini budgets first become normalized effort, then Qianfan emits the field family supported by the target model
+
 ## 7.3 Claude / Anthropic requests as the source format
 
 ### 7.3.1 Claude -> OpenAI Chat / Completions
@@ -1717,6 +1923,71 @@ Notes:
 - Claude `thinking` is first normalized through the OpenAI-compatible
   `reasoning_effort` path, then the Moonshot hook writes Kimi `thinking`
 - budget and adaptive effort details are not preserved by the Kimi target
+
+### 7.3.8 Claude -> Qianfan
+
+Input:
+
+```json
+{
+  "thinking": {
+    "type": "adaptive"
+  },
+  "output_config": {
+    "effort": "high"
+  },
+  "messages": [{"role": "user", "content": "hello"}]
+}
+```
+
+Output:
+
+```json
+{
+  "enable_thinking": true,
+  "thinking_budget": 16384
+}
+```
+
+Notes:
+
+- Claude `thinking` / `output_config` are first normalized through the OpenAI-compatible path
+- Qianfan then writes according to the target model's field family; the example `qwen3-*` target uses `enable_thinking` and `thinking_budget`
+- disabled Claude thinking is expressed according to the target model's field family, or omitted when the model cannot disable reasoning
+
+## 7.4 OpenAI Responses requests as the source format
+
+### 7.4.1 OpenAI Responses -> Qianfan
+
+Input:
+
+```json
+{
+  "model": "deepseek-v3.2",
+  "input": "hello",
+  "reasoning": {
+    "effort": "none"
+  }
+}
+```
+
+Output:
+
+```json
+{
+  "model": "deepseek-v3.2",
+  "input": "hello",
+  "thinking": {
+    "type": "disabled"
+  }
+}
+```
+
+Notes:
+
+- `reasoning.effort:none` is removed
+- the example target model supports `thinking`, so Qianfan receives `thinking.type=disabled`
+- if a Responses request already contains native `thinking`, that native `thinking` wins and `reasoning` is removed
 
 ---
 

@@ -20,6 +20,14 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+var noPayloadKeys = []string{
+	"reasoning_effort",
+	"enable_thinking",
+	"thinking_budget",
+	"thinking",
+	"reasoning",
+}
+
 func TestAdaptorSupportModeGemini(t *testing.T) {
 	adaptor := &Adaptor{}
 
@@ -188,6 +196,879 @@ func TestAdaptorConvertRequestResponses(t *testing.T) {
 	require.NoError(t, json.Unmarshal(body, &responseReq))
 	assert.Equal(t, "ernie-4.5-turbo-128k", responseReq.Model)
 	assert.True(t, responseReq.Stream)
+}
+
+func TestAdaptorConvertRequestReasoning(t *testing.T) {
+	adaptor := &Adaptor{}
+
+	t.Run("chat reasoning_effort none maps to disabled thinking for thinking models", func(t *testing.T) {
+		m := meta.NewMeta(nil, mode.ChatCompletions, "deepseek-v3.2", coremodel.ModelConfig{})
+		req, err := http.NewRequestWithContext(
+			context.Background(),
+			http.MethodPost,
+			"/v1/chat/completions",
+			strings.NewReader(`{
+				"model":"deepseek-v3.2",
+				"reasoning_effort":"none",
+				"messages":[{"role":"user","content":"hello"}]
+			}`),
+		)
+		require.NoError(t, err)
+
+		result, err := adaptor.ConvertRequest(m, nil, req)
+		require.NoError(t, err)
+
+		body, err := io.ReadAll(result.Body)
+		require.NoError(t, err)
+
+		var payload map[string]any
+		require.NoError(t, json.Unmarshal(body, &payload))
+		assert.NotContains(t, payload, "reasoning_effort")
+
+		thinking, ok := payload["thinking"].(map[string]any)
+		require.True(t, ok)
+		assert.Equal(t, "disabled", thinking["type"])
+	})
+
+	t.Run("chat low reasoning_effort maps to enable_thinking with budget", func(t *testing.T) {
+		m := meta.NewMeta(nil, mode.ChatCompletions, "qwen3-14b", coremodel.ModelConfig{})
+		req, err := http.NewRequestWithContext(
+			context.Background(),
+			http.MethodPost,
+			"/v1/chat/completions",
+			strings.NewReader(`{
+				"model":"qwen3-14b",
+				"reasoning_effort":"low",
+				"messages":[{"role":"user","content":"hello"}]
+			}`),
+		)
+		require.NoError(t, err)
+
+		result, err := adaptor.ConvertRequest(m, nil, req)
+		require.NoError(t, err)
+
+		body, err := io.ReadAll(result.Body)
+		require.NoError(t, err)
+
+		var payload map[string]any
+		require.NoError(t, json.Unmarshal(body, &payload))
+		assert.Equal(t, true, payload["enable_thinking"])
+		assert.Equal(t, float64(2048), payload["thinking_budget"])
+		assert.NotContains(t, payload, "reasoning_effort")
+		assert.NotContains(t, payload, "thinking")
+	})
+
+	t.Run("chat xhigh reasoning_effort is normalized to qianfan max for effort models", func(t *testing.T) {
+		m := meta.NewMeta(nil, mode.ChatCompletions, "deepseek-v4-pro", coremodel.ModelConfig{})
+		req, err := http.NewRequestWithContext(
+			context.Background(),
+			http.MethodPost,
+			"/v1/chat/completions",
+			strings.NewReader(`{
+				"model":"deepseek-v4-pro",
+				"reasoning_effort":"xhigh",
+				"messages":[{"role":"user","content":"hello"}]
+			}`),
+		)
+		require.NoError(t, err)
+
+		result, err := adaptor.ConvertRequest(m, nil, req)
+		require.NoError(t, err)
+
+		body, err := io.ReadAll(result.Body)
+		require.NoError(t, err)
+
+		var payload map[string]any
+		require.NoError(t, json.Unmarshal(body, &payload))
+		assert.Equal(t, "max", payload["reasoning_effort"])
+	})
+
+	t.Run("native thinking wins over reasoning_effort", func(t *testing.T) {
+		m := meta.NewMeta(nil, mode.ChatCompletions, "deepseek-v3.2", coremodel.ModelConfig{})
+		req, err := http.NewRequestWithContext(
+			context.Background(),
+			http.MethodPost,
+			"/v1/chat/completions",
+			strings.NewReader(`{
+				"model":"deepseek-v3.2",
+				"reasoning_effort":"none",
+				"thinking":{"type":"enabled","budget_tokens":2048},
+				"messages":[{"role":"user","content":"hello"}]
+			}`),
+		)
+		require.NoError(t, err)
+
+		result, err := adaptor.ConvertRequest(m, nil, req)
+		require.NoError(t, err)
+
+		body, err := io.ReadAll(result.Body)
+		require.NoError(t, err)
+
+		var payload map[string]any
+		require.NoError(t, json.Unmarshal(body, &payload))
+		assert.NotContains(t, payload, "reasoning_effort")
+
+		thinking, ok := payload["thinking"].(map[string]any)
+		require.True(t, ok)
+		assert.Equal(t, "enabled", thinking["type"])
+		assert.Equal(t, float64(2048), thinking["budget_tokens"])
+	})
+
+	t.Run("chat reasoning_effort none maps to enable_thinking false", func(t *testing.T) {
+		m := meta.NewMeta(nil, mode.ChatCompletions, "qwen3-14b", coremodel.ModelConfig{})
+		req, err := http.NewRequestWithContext(
+			context.Background(),
+			http.MethodPost,
+			"/v1/chat/completions",
+			strings.NewReader(`{
+				"model":"qwen3-14b",
+				"reasoning_effort":"none",
+				"messages":[{"role":"user","content":"hello"}]
+			}`),
+		)
+		require.NoError(t, err)
+
+		result, err := adaptor.ConvertRequest(m, nil, req)
+		require.NoError(t, err)
+
+		body, err := io.ReadAll(result.Body)
+		require.NoError(t, err)
+
+		var payload map[string]any
+		require.NoError(t, json.Unmarshal(body, &payload))
+		assert.Equal(t, false, payload["enable_thinking"])
+		assert.NotContains(t, payload, "thinking_budget")
+		assert.NotContains(t, payload, "thinking")
+		assert.NotContains(t, payload, "reasoning_effort")
+	})
+
+	t.Run("gemini disabled thinking maps to enable_thinking false", func(t *testing.T) {
+		m := meta.NewMeta(nil, mode.Gemini, "qwen3-14b", coremodel.ModelConfig{})
+		req, err := http.NewRequestWithContext(
+			context.Background(),
+			http.MethodPost,
+			"/v1beta/models/qwen3-14b:generateContent",
+			strings.NewReader(`{
+				"generationConfig": {
+					"thinkingConfig": {
+						"thinkingBudget": 0
+					}
+				},
+				"contents":[{"role":"user","parts":[{"text":"hello"}]}]
+			}`),
+		)
+		require.NoError(t, err)
+
+		result, err := adaptor.ConvertRequest(m, nil, req)
+		require.NoError(t, err)
+
+		body, err := io.ReadAll(result.Body)
+		require.NoError(t, err)
+
+		var openAIReq relaymodel.GeneralOpenAIRequest
+		require.NoError(t, json.Unmarshal(body, &openAIReq))
+		require.NotNil(t, openAIReq.EnableThinking)
+		assert.False(t, *openAIReq.EnableThinking)
+		assert.Nil(t, openAIReq.Thinking)
+		assert.Nil(t, openAIReq.ReasoningEffort)
+	})
+
+	t.Run("responses reasoning_effort none maps to disabled thinking", func(t *testing.T) {
+		m := meta.NewMeta(nil, mode.Responses, "deepseek-v3.2", coremodel.ModelConfig{})
+		req, err := http.NewRequestWithContext(
+			context.Background(),
+			http.MethodPost,
+			"/v1/responses",
+			strings.NewReader(`{
+				"model":"deepseek-v3.2",
+				"input":"hello",
+				"reasoning":{"effort":"none"}
+			}`),
+		)
+		require.NoError(t, err)
+
+		result, err := adaptor.ConvertRequest(m, nil, req)
+		require.NoError(t, err)
+
+		body, err := io.ReadAll(result.Body)
+		require.NoError(t, err)
+
+		var payload map[string]any
+		require.NoError(t, json.Unmarshal(body, &payload))
+		assert.NotContains(t, payload, "reasoning")
+
+		thinking, ok := payload["thinking"].(map[string]any)
+		require.True(t, ok)
+		assert.Equal(t, "disabled", thinking["type"])
+	})
+
+	t.Run("responses native thinking wins over reasoning", func(t *testing.T) {
+		m := meta.NewMeta(nil, mode.Responses, "deepseek-v3.2", coremodel.ModelConfig{})
+		req, err := http.NewRequestWithContext(
+			context.Background(),
+			http.MethodPost,
+			"/v1/responses",
+			strings.NewReader(`{
+				"model":"deepseek-v3.2",
+				"input":"hello",
+				"thinking":{"type":"enabled"},
+				"reasoning":{"effort":"none"}
+			}`),
+		)
+		require.NoError(t, err)
+
+		result, err := adaptor.ConvertRequest(m, nil, req)
+		require.NoError(t, err)
+
+		body, err := io.ReadAll(result.Body)
+		require.NoError(t, err)
+
+		var payload map[string]any
+		require.NoError(t, json.Unmarshal(body, &payload))
+		assert.NotContains(t, payload, "reasoning")
+
+		thinking, ok := payload["thinking"].(map[string]any)
+		require.True(t, ok)
+		assert.Equal(t, "enabled", thinking["type"])
+	})
+
+	t.Run("actual model fallback selects qianfan parameter family", func(t *testing.T) {
+		m := meta.NewMeta(nil, mode.ChatCompletions, "alias-model", coremodel.ModelConfig{})
+		m.ActualModel = "qwen3-14b"
+		req, err := http.NewRequestWithContext(
+			context.Background(),
+			http.MethodPost,
+			"/v1/chat/completions",
+			strings.NewReader(`{
+				"model":"alias-model",
+				"reasoning_effort":"medium",
+				"messages":[{"role":"user","content":"hello"}]
+			}`),
+		)
+		require.NoError(t, err)
+
+		result, err := adaptor.ConvertRequest(m, nil, req)
+		require.NoError(t, err)
+
+		body, err := io.ReadAll(result.Body)
+		require.NoError(t, err)
+
+		var payload map[string]any
+		require.NoError(t, json.Unmarshal(body, &payload))
+		assert.Equal(t, true, payload["enable_thinking"])
+		assert.Equal(t, float64(8192), payload["thinking_budget"])
+	})
+
+	t.Run("model family fallback handles versioned qwen3 models", func(t *testing.T) {
+		m := meta.NewMeta(nil, mode.ChatCompletions, "qwen3-14b-thinking-260101", coremodel.ModelConfig{})
+		req, err := http.NewRequestWithContext(
+			context.Background(),
+			http.MethodPost,
+			"/v1/chat/completions",
+			strings.NewReader(`{
+				"model":"qwen3-14b-thinking-260101",
+				"reasoning_effort":"high",
+				"messages":[{"role":"user","content":"hello"}]
+			}`),
+		)
+		require.NoError(t, err)
+
+		result, err := adaptor.ConvertRequest(m, nil, req)
+		require.NoError(t, err)
+
+		body, err := io.ReadAll(result.Body)
+		require.NoError(t, err)
+
+		var payload map[string]any
+		require.NoError(t, json.Unmarshal(body, &payload))
+		assert.Equal(t, true, payload["enable_thinking"])
+		assert.Equal(t, float64(16384), payload["thinking_budget"])
+	})
+
+	t.Run("keyword fallback handles vl enable_thinking models", func(t *testing.T) {
+		m := meta.NewMeta(nil, mode.ChatCompletions, "ernie-4.5-vl-custom", coremodel.ModelConfig{})
+		req, err := http.NewRequestWithContext(
+			context.Background(),
+			http.MethodPost,
+			"/v1/chat/completions",
+			strings.NewReader(`{
+				"model":"ernie-4.5-vl-custom",
+				"reasoning_effort":"none",
+				"messages":[{"role":"user","content":"hello"}]
+			}`),
+		)
+		require.NoError(t, err)
+
+		result, err := adaptor.ConvertRequest(m, nil, req)
+		require.NoError(t, err)
+
+		body, err := io.ReadAll(result.Body)
+		require.NoError(t, err)
+
+		var payload map[string]any
+		require.NoError(t, json.Unmarshal(body, &payload))
+		assert.Equal(t, false, payload["enable_thinking"])
+		assert.NotContains(t, payload, "thinking")
+	})
+
+	t.Run("unsupported model strips normalized reasoning controls", func(t *testing.T) {
+		m := meta.NewMeta(nil, mode.ChatCompletions, "ernie-4.5-turbo-128k", coremodel.ModelConfig{})
+		req, err := http.NewRequestWithContext(
+			context.Background(),
+			http.MethodPost,
+			"/v1/chat/completions",
+			strings.NewReader(`{
+				"model":"ernie-4.5-turbo-128k",
+				"reasoning_effort":"high",
+				"messages":[{"role":"user","content":"hello"}]
+			}`),
+		)
+		require.NoError(t, err)
+
+		result, err := adaptor.ConvertRequest(m, nil, req)
+		require.NoError(t, err)
+
+		body, err := io.ReadAll(result.Body)
+		require.NoError(t, err)
+
+		var payload map[string]any
+		require.NoError(t, json.Unmarshal(body, &payload))
+		assert.NotContains(t, payload, "reasoning_effort")
+		assert.NotContains(t, payload, "thinking")
+		assert.NotContains(t, payload, "enable_thinking")
+		assert.NotContains(t, payload, "thinking_budget")
+	})
+}
+
+func TestQianfanReasoningNodeFieldFamilies(t *testing.T) {
+	tests := []struct {
+		name      string
+		origin    string
+		actual    string
+		effort    string
+		want      map[string]any
+		wantThink string
+		absent    []string
+	}{
+		{
+			name:   "reasoning effort model high",
+			origin: "deepseek-v4-pro",
+			effort: "high",
+			want: map[string]any{
+				"reasoning_effort": "high",
+			},
+			absent: []string{"enable_thinking", "thinking_budget", "thinking", "reasoning"},
+		},
+		{
+			name:   "reasoning effort model max via family fallback",
+			origin: "deepseek-v4-lite-260101",
+			effort: "xhigh",
+			want: map[string]any{
+				"reasoning_effort": "max",
+			},
+			absent: []string{"enable_thinking", "thinking_budget", "thinking", "reasoning"},
+		},
+		{
+			name:   "reasoning effort model disabled emits no controls",
+			origin: "deepseek-v4-flash",
+			effort: "none",
+			absent: noPayloadKeys,
+		},
+		{
+			name:   "enable thinking model enabled with budget",
+			origin: "qwen3-14b",
+			effort: "medium",
+			want: map[string]any{
+				"enable_thinking": true,
+				"thinking_budget": float64(8192),
+			},
+			absent: []string{"reasoning_effort", "thinking", "reasoning"},
+		},
+		{
+			name:   "enable thinking model disabled",
+			origin: "qwen3-14b",
+			effort: "none",
+			want: map[string]any{
+				"enable_thinking": false,
+			},
+			absent: []string{"reasoning_effort", "thinking_budget", "thinking", "reasoning"},
+		},
+		{
+			name:   "vl keyword fallback enables thinking without budget",
+			origin: "ernie-4.5-vl-custom",
+			effort: "low",
+			want: map[string]any{
+				"enable_thinking": true,
+			},
+			absent: []string{"reasoning_effort", "thinking_budget", "thinking", "reasoning"},
+		},
+		{
+			name:      "thinking model enabled",
+			origin:    "deepseek-v3.2",
+			effort:    "high",
+			wantThink: relaymodel.ClaudeThinkingTypeEnabled,
+			absent:    []string{"reasoning_effort", "enable_thinking", "thinking_budget", "reasoning"},
+		},
+		{
+			name:      "thinking model disabled",
+			origin:    "deepseek-v3.2",
+			effort:    "none",
+			wantThink: relaymodel.ClaudeThinkingTypeDisabled,
+			absent:    []string{"reasoning_effort", "enable_thinking", "thinking_budget", "reasoning"},
+		},
+		{
+			name:   "thinking model with budget enabled",
+			origin: "deepseek-v3.1-250821",
+			effort: "low",
+			want: map[string]any{
+				"thinking_budget": float64(2048),
+			},
+			wantThink: relaymodel.ClaudeThinkingTypeEnabled,
+			absent:    []string{"reasoning_effort", "enable_thinking", "reasoning"},
+		},
+		{
+			name:   "budget only model enabled",
+			origin: "deepseek-r1-250528",
+			effort: "minimal",
+			want: map[string]any{
+				"thinking_budget": float64(1024),
+			},
+			absent: []string{"reasoning_effort", "enable_thinking", "thinking", "reasoning"},
+		},
+		{
+			name:   "budget only model disabled emits no controls",
+			origin: "deepseek-r1-250528",
+			effort: "none",
+			absent: noPayloadKeys,
+		},
+		{
+			name:   "thinking keyword fallback budget only",
+			origin: "custom-thinking-model",
+			effort: "xhigh",
+			want: map[string]any{
+				"thinking_budget": float64(32768),
+			},
+			absent: []string{"reasoning_effort", "enable_thinking", "thinking", "reasoning"},
+		},
+		{
+			name:   "actual fallback selects capability",
+			origin: "alias-model",
+			actual: "qwen3-30b-a3b",
+			effort: "medium",
+			want: map[string]any{
+				"enable_thinking": true,
+				"thinking_budget": float64(8192),
+			},
+			absent: []string{"reasoning_effort", "thinking", "reasoning"},
+		},
+		{
+			name:   "origin match wins over actual fallback",
+			origin: "deepseek-v4-pro",
+			actual: "qwen3-14b",
+			effort: "medium",
+			want: map[string]any{
+				"reasoning_effort": "high",
+			},
+			absent: []string{"enable_thinking", "thinking_budget", "thinking", "reasoning"},
+		},
+		{
+			name:   "unsupported model strips controls",
+			origin: "ernie-4.5-turbo-128k",
+			effort: "high",
+			absent: noPayloadKeys,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			payload := convertQianfanChatPayload(
+				t,
+				tt.origin,
+				tt.actual,
+				`"reasoning_effort":"`+tt.effort+`"`,
+			)
+
+			for key, want := range tt.want {
+				assert.Equal(t, want, payload[key], key)
+			}
+
+			if tt.wantThink != "" {
+				thinking, ok := payload["thinking"].(map[string]any)
+				require.True(t, ok)
+				assert.Equal(t, tt.wantThink, thinking["type"])
+			}
+
+			for _, key := range tt.absent {
+				assert.NotContains(t, payload, key)
+			}
+		})
+	}
+}
+
+func TestQianfanReasoningRequestFieldFamilies(t *testing.T) {
+	enabledReasoning := relaymodel.NormalizedReasoning{
+		Specified: true,
+		Effort:    relaymodel.ReasoningEffortHigh,
+	}
+	disabledReasoning := relaymodel.NormalizedReasoning{
+		Specified: true,
+		Disabled:  true,
+		Effort:    relaymodel.ReasoningEffortNone,
+	}
+
+	tests := []struct {
+		name         string
+		model        string
+		reasoning    relaymodel.NormalizedReasoning
+		wantEffort   *string
+		wantEnable   *bool
+		wantBudget   *int
+		wantThinking *string
+	}{
+		{
+			name:       "request reasoning_effort model enabled",
+			model:      "deepseek-v4-pro",
+			reasoning:  enabledReasoning,
+			wantEffort: stringPtr("high"),
+		},
+		{
+			name:      "request reasoning_effort model disabled",
+			model:     "deepseek-v4-pro",
+			reasoning: disabledReasoning,
+		},
+		{
+			name:       "request enable_thinking model enabled",
+			model:      "qwen3-14b",
+			reasoning:  enabledReasoning,
+			wantEnable: boolPtr(true),
+			wantBudget: intPtr(16384),
+		},
+		{
+			name:       "request enable_thinking model disabled",
+			model:      "qwen3-14b",
+			reasoning:  disabledReasoning,
+			wantEnable: boolPtr(false),
+		},
+		{
+			name:         "request thinking model enabled",
+			model:        "deepseek-v3.2",
+			reasoning:    enabledReasoning,
+			wantThinking: stringPtr(relaymodel.ClaudeThinkingTypeEnabled),
+		},
+		{
+			name:         "request thinking model disabled",
+			model:        "deepseek-v3.2",
+			reasoning:    disabledReasoning,
+			wantThinking: stringPtr(relaymodel.ClaudeThinkingTypeDisabled),
+		},
+		{
+			name:       "request budget only model enabled",
+			model:      "deepseek-r1-250528",
+			reasoning:  enabledReasoning,
+			wantBudget: intPtr(16384),
+		},
+		{
+			name:      "request budget only model disabled",
+			model:     "deepseek-r1-250528",
+			reasoning: disabledReasoning,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := &relaymodel.GeneralOpenAIRequest{}
+			m := meta.NewMeta(nil, mode.Gemini, tt.model, coremodel.ModelConfig{})
+
+			applyQianfanReasoningToRequest(m, req, tt.reasoning)
+
+			if tt.wantEffort == nil {
+				assert.Nil(t, req.ReasoningEffort)
+			} else {
+				require.NotNil(t, req.ReasoningEffort)
+				assert.Equal(t, *tt.wantEffort, *req.ReasoningEffort)
+			}
+
+			if tt.wantEnable == nil {
+				assert.Nil(t, req.EnableThinking)
+			} else {
+				require.NotNil(t, req.EnableThinking)
+				assert.Equal(t, *tt.wantEnable, *req.EnableThinking)
+			}
+
+			if tt.wantBudget == nil {
+				assert.Nil(t, req.ThinkingBudget)
+			} else {
+				require.NotNil(t, req.ThinkingBudget)
+				assert.Equal(t, *tt.wantBudget, *req.ThinkingBudget)
+			}
+
+			if tt.wantThinking == nil {
+				assert.Nil(t, req.Thinking)
+			} else {
+				require.NotNil(t, req.Thinking)
+				assert.Equal(t, *tt.wantThinking, req.Thinking.Type)
+			}
+		})
+	}
+}
+
+func TestQianfanReasoningEffortAndBudgetMapping(t *testing.T) {
+	tests := []struct {
+		effort     string
+		wantEffort string
+		wantBudget float64
+	}{
+		{effort: "minimal", wantEffort: "high", wantBudget: 1024},
+		{effort: "low", wantEffort: "high", wantBudget: 2048},
+		{effort: "medium", wantEffort: "high", wantBudget: 8192},
+		{effort: "high", wantEffort: "high", wantBudget: 16384},
+		{effort: "xhigh", wantEffort: "max", wantBudget: 32768},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.effort+" maps reasoning_effort", func(t *testing.T) {
+			payload := convertQianfanChatPayload(
+				t,
+				"deepseek-v4-pro",
+				"",
+				`"reasoning_effort":"`+tt.effort+`"`,
+			)
+
+			assert.Equal(t, tt.wantEffort, payload["reasoning_effort"])
+			assert.NotContains(t, payload, "thinking_budget")
+		})
+
+		t.Run(tt.effort+" maps budget", func(t *testing.T) {
+			payload := convertQianfanChatPayload(
+				t,
+				"qwen3-14b",
+				"",
+				`"reasoning_effort":"`+tt.effort+`"`,
+			)
+
+			assert.Equal(t, true, payload["enable_thinking"])
+			assert.Equal(t, tt.wantBudget, payload["thinking_budget"])
+		})
+	}
+}
+
+func TestQianfanReasoningNativeThinkingCleanup(t *testing.T) {
+	payload := convertQianfanChatPayload(
+		t,
+		"qwen3-14b",
+		"",
+		`"reasoning_effort":"none",
+		"enable_thinking":true,
+		"thinking_budget":8192,
+		"thinking":{"type":"enabled","budget_tokens":2048}`,
+	)
+
+	assert.NotContains(t, payload, "reasoning_effort")
+	assert.NotContains(t, payload, "enable_thinking")
+	assert.NotContains(t, payload, "thinking_budget")
+
+	thinking, ok := payload["thinking"].(map[string]any)
+	require.True(t, ok)
+	assert.Equal(t, "enabled", thinking["type"])
+	assert.Equal(t, float64(2048), thinking["budget_tokens"])
+}
+
+func TestQianfanReasoningInvalidEffortPassesThrough(t *testing.T) {
+	payload := convertQianfanChatPayload(
+		t,
+		"qwen3-14b",
+		"",
+		`"reasoning_effort":"invalid"`,
+	)
+
+	assert.Equal(t, "invalid", payload["reasoning_effort"])
+	assert.NotContains(t, payload, "enable_thinking")
+	assert.NotContains(t, payload, "thinking_budget")
+	assert.NotContains(t, payload, "thinking")
+}
+
+func TestQianfanReasoningCompletionsMode(t *testing.T) {
+	adaptor := &Adaptor{}
+	m := meta.NewMeta(nil, mode.Completions, "qwen3-14b", coremodel.ModelConfig{})
+	req, err := http.NewRequestWithContext(
+		context.Background(),
+		http.MethodPost,
+		"/v1/completions",
+		strings.NewReader(`{
+			"model":"qwen3-14b",
+			"prompt":"hello",
+			"reasoning_effort":"high"
+		}`),
+	)
+	require.NoError(t, err)
+
+	result, err := adaptor.ConvertRequest(m, nil, req)
+	require.NoError(t, err)
+
+	payload := readJSONMap(t, result.Body)
+	assert.Equal(t, true, payload["enable_thinking"])
+	assert.Equal(t, float64(16384), payload["thinking_budget"])
+	assert.NotContains(t, payload, "reasoning_effort")
+}
+
+func TestQianfanReasoningAnthropicMode(t *testing.T) {
+	adaptor := &Adaptor{}
+	m := meta.NewMeta(nil, mode.Anthropic, "qwen3-14b", coremodel.ModelConfig{})
+	req, err := http.NewRequestWithContext(
+		context.Background(),
+		http.MethodPost,
+		"/v1/messages",
+		strings.NewReader(`{
+			"model":"qwen3-14b",
+			"thinking":{"type":"adaptive"},
+			"output_config":{"effort":"high"},
+			"messages":[{"role":"user","content":"hello"}]
+		}`),
+	)
+	require.NoError(t, err)
+
+	result, err := adaptor.ConvertRequest(m, nil, req)
+	require.NoError(t, err)
+
+	var openAIReq relaymodel.GeneralOpenAIRequest
+	require.NoError(t, json.NewDecoder(result.Body).Decode(&openAIReq))
+	require.NotNil(t, openAIReq.EnableThinking)
+	assert.True(t, *openAIReq.EnableThinking)
+	require.NotNil(t, openAIReq.ThinkingBudget)
+	assert.Equal(t, 16384, *openAIReq.ThinkingBudget)
+	assert.Nil(t, openAIReq.Thinking)
+	assert.Nil(t, openAIReq.ReasoningEffort)
+}
+
+func TestQianfanReasoningGeminiEnabledBudget(t *testing.T) {
+	adaptor := &Adaptor{}
+	m := meta.NewMeta(nil, mode.Gemini, "qwen3-14b", coremodel.ModelConfig{})
+	req, err := http.NewRequestWithContext(
+		context.Background(),
+		http.MethodPost,
+		"/v1beta/models/qwen3-14b:generateContent",
+		strings.NewReader(`{
+			"generationConfig":{"thinkingConfig":{"thinkingBudget":2048,"includeThoughts":true}},
+			"contents":[{"role":"user","parts":[{"text":"hello"}]}]
+		}`),
+	)
+	require.NoError(t, err)
+
+	result, err := adaptor.ConvertRequest(m, nil, req)
+	require.NoError(t, err)
+
+	var openAIReq relaymodel.GeneralOpenAIRequest
+	require.NoError(t, json.NewDecoder(result.Body).Decode(&openAIReq))
+	require.NotNil(t, openAIReq.EnableThinking)
+	assert.True(t, *openAIReq.EnableThinking)
+	require.NotNil(t, openAIReq.ThinkingBudget)
+	assert.Equal(t, 2048, *openAIReq.ThinkingBudget)
+	assert.Nil(t, openAIReq.Thinking)
+	assert.Nil(t, openAIReq.ReasoningEffort)
+}
+
+func TestQianfanReasoningResponsesEnabled(t *testing.T) {
+	adaptor := &Adaptor{}
+	m := meta.NewMeta(nil, mode.Responses, "deepseek-v4-pro", coremodel.ModelConfig{})
+	req, err := http.NewRequestWithContext(
+		context.Background(),
+		http.MethodPost,
+		"/v1/responses",
+		strings.NewReader(`{
+			"model":"deepseek-v4-pro",
+			"input":"hello",
+			"reasoning":{"effort":"xhigh"}
+		}`),
+	)
+	require.NoError(t, err)
+
+	result, err := adaptor.ConvertRequest(m, nil, req)
+	require.NoError(t, err)
+
+	payload := readJSONMap(t, result.Body)
+	assert.Equal(t, "max", payload["reasoning_effort"])
+	assert.NotContains(t, payload, "reasoning")
+	assert.NotContains(t, payload, "thinking")
+}
+
+func TestQianfanReasoningResponsesInvalidEffortPassesThrough(t *testing.T) {
+	adaptor := &Adaptor{}
+	m := meta.NewMeta(nil, mode.Responses, "deepseek-v4-pro", coremodel.ModelConfig{})
+	req, err := http.NewRequestWithContext(
+		context.Background(),
+		http.MethodPost,
+		"/v1/responses",
+		strings.NewReader(`{
+			"model":"deepseek-v4-pro",
+			"input":"hello",
+			"reasoning":{"effort":"invalid"}
+		}`),
+	)
+	require.NoError(t, err)
+
+	result, err := adaptor.ConvertRequest(m, nil, req)
+	require.NoError(t, err)
+
+	payload := readJSONMap(t, result.Body)
+	reasoning, ok := payload["reasoning"].(map[string]any)
+	require.True(t, ok)
+	assert.Equal(t, "invalid", reasoning["effort"])
+	assert.NotContains(t, payload, "reasoning_effort")
+	assert.NotContains(t, payload, "thinking")
+}
+
+func convertQianfanChatPayload(
+	t *testing.T,
+	originModel string,
+	actualModel string,
+	extraFields string,
+) map[string]any {
+	t.Helper()
+
+	adaptor := &Adaptor{}
+	m := meta.NewMeta(nil, mode.ChatCompletions, originModel, coremodel.ModelConfig{})
+	if actualModel != "" {
+		m.ActualModel = actualModel
+	}
+
+	body := `{
+		"model":"` + originModel + `",
+		` + extraFields + `,
+		"messages":[{"role":"user","content":"hello"}]
+	}`
+	req, err := http.NewRequestWithContext(
+		context.Background(),
+		http.MethodPost,
+		"/v1/chat/completions",
+		strings.NewReader(body),
+	)
+	require.NoError(t, err)
+
+	result, err := adaptor.ConvertRequest(m, nil, req)
+	require.NoError(t, err)
+
+	return readJSONMap(t, result.Body)
+}
+
+func readJSONMap(t *testing.T, r io.Reader) map[string]any {
+	t.Helper()
+
+	var payload map[string]any
+	require.NoError(t, json.NewDecoder(r).Decode(&payload))
+
+	return payload
+}
+
+func stringPtr(v string) *string {
+	return &v
+}
+
+func boolPtr(v bool) *bool {
+	return &v
+}
+
+func intPtr(v int) *int {
+	return &v
 }
 
 func TestAdaptorDoResponseResponsesDeleteNoContent(t *testing.T) {

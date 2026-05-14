@@ -24,10 +24,21 @@ import (
 func ConvertResponseRequest(
 	meta *meta.Meta,
 	req *http.Request,
+	callback ...func(node *ast.Node) error,
 ) (adaptor.ConvertResult, error) {
 	node, err := common.UnmarshalRequest2NodeReusable(req)
 	if err != nil {
 		return adaptor.ConvertResult{}, err
+	}
+
+	for _, callback := range callback {
+		if callback == nil {
+			continue
+		}
+
+		if err := callback(&node); err != nil {
+			return adaptor.ConvertResult{}, err
+		}
 	}
 
 	// Set the model
