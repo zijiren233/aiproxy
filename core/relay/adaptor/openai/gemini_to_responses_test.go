@@ -169,6 +169,39 @@ func TestConvertGeminiToResponsesRequest_WithFunctionCalls(t *testing.T) {
 	)
 }
 
+func TestConvertGeminiToResponsesRequest_ReasoningEffortCompatibility(t *testing.T) {
+	t.Parallel()
+
+	requestJSON := `{
+		"generationConfig": {
+			"thinkingConfig": {
+				"thinkingBudget": 32768,
+				"includeThoughts": true
+			}
+		},
+		"contents": [{"role":"user","parts":[{"text":"hello"}]}]
+	}`
+	httpReq := httptest.NewRequest(
+		http.MethodPost,
+		"/v1beta/models/gemini-pro:generateContent",
+		bytes.NewReader([]byte(requestJSON)),
+	)
+	httpReq.Header.Set("Content-Type", "application/json")
+
+	m := &meta.Meta{
+		ActualModel: "gpt-5.1",
+	}
+
+	result, err := openai.ConvertGeminiToResponsesRequest(m, httpReq)
+	require.NoError(t, err)
+
+	var responsesReq relaymodel.CreateResponseRequest
+	require.NoError(t, json.NewDecoder(result.Body).Decode(&responsesReq))
+	require.NotNil(t, responsesReq.Reasoning)
+	require.NotNil(t, responsesReq.Reasoning.Effort)
+	assert.Equal(t, "high", *responsesReq.Reasoning.Effort)
+}
+
 func TestConvertGeminiToResponsesRequest_WithToolsRequiredField(t *testing.T) {
 	// Create a Gemini request with tools that have null required field
 	geminiReq := map[string]any{

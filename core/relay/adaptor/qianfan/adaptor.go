@@ -163,13 +163,21 @@ func (a *Adaptor) ConvertRequest(
 			return patchReasoningFromNode(meta, node)
 		})
 	case mode.Anthropic:
-		return openai.ConvertClaudeRequest(meta, req, func(openAIReq *relaymodel.GeneralOpenAIRequest) error {
-			return patchReasoningRequest(meta, openAIReq)
-		})
+		return openai.ConvertClaudeRequest(
+			meta,
+			req,
+			func(openAIReq *relaymodel.GeneralOpenAIRequest) error {
+				return patchReasoningRequest(meta, openAIReq)
+			},
+		)
 	case mode.Gemini:
-		return openai.ConvertGeminiRequest(meta, req, func(openAIReq *relaymodel.GeneralOpenAIRequest) error {
-			return patchReasoningRequest(meta, openAIReq)
-		})
+		return openai.ConvertGeminiRequest(
+			meta,
+			req,
+			func(openAIReq *relaymodel.GeneralOpenAIRequest) error {
+				return patchReasoningRequest(meta, openAIReq)
+			},
+		)
 	case mode.Responses:
 		return openai.ConvertResponseRequest(meta, req, func(node *ast.Node) error {
 			return patchResponsesReasoningFromNode(meta, node)
@@ -289,8 +297,15 @@ func applyQianfanReasoningToNode(
 			return nil
 		}
 
-		_, err := node.Set("reasoning_effort", ast.NewString(qianfanReasoningEffort(reasoning)))
-		return err
+		if _, err := node.Set("reasoning_effort", ast.NewString(qianfanReasoningEffort(reasoning))); err != nil {
+			return err
+		}
+
+		if !qianfanModelMatches(meta, qianfanSupportsThinkingBudget) {
+			return nil
+		}
+
+		return setQianfanThinkingBudget(meta, node, reasoning)
 	}
 
 	if qianfanModelMatches(meta, qianfanSupportsEnableThinking) {
@@ -302,7 +317,7 @@ func applyQianfanReasoningToNode(
 			return nil
 		}
 
-		return setQianfanThinkingBudget(node, reasoning)
+		return setQianfanThinkingBudget(meta, node, reasoning)
 	}
 
 	if qianfanModelMatches(meta, qianfanSupportsThinking) {
@@ -311,7 +326,10 @@ func applyQianfanReasoningToNode(
 			thinkingType = relaymodel.ClaudeThinkingTypeDisabled
 		}
 
-		if _, err := node.SetAny("thinking", relaymodel.ClaudeThinking{Type: thinkingType}); err != nil {
+		if _, err := node.SetAny(
+			"thinking",
+			relaymodel.ClaudeThinking{Type: thinkingType},
+		); err != nil {
 			return err
 		}
 
@@ -319,14 +337,14 @@ func applyQianfanReasoningToNode(
 			return nil
 		}
 
-		return setQianfanThinkingBudget(node, reasoning)
+		return setQianfanThinkingBudget(meta, node, reasoning)
 	}
 
 	if disabled || !qianfanModelMatches(meta, qianfanSupportsThinkingBudget) {
 		return nil
 	}
 
-	return setQianfanThinkingBudget(node, reasoning)
+	return setQianfanThinkingBudget(meta, node, reasoning)
 }
 
 func applyQianfanReasoningToRequest(
@@ -349,6 +367,12 @@ func applyQianfanReasoningToRequest(
 
 		effort := qianfanReasoningEffort(reasoning)
 		req.ReasoningEffort = &effort
+
+		if qianfanModelMatches(meta, qianfanSupportsThinkingBudget) {
+			budget := qianfanThinkingBudget(meta, reasoning)
+			req.ThinkingBudget = &budget
+		}
+
 		return
 	}
 
@@ -357,7 +381,7 @@ func applyQianfanReasoningToRequest(
 		req.EnableThinking = &enableThinking
 
 		if !disabled && qianfanModelMatches(meta, qianfanSupportsThinkingBudget) {
-			budget := qianfanThinkingBudget(reasoning)
+			budget := qianfanThinkingBudget(meta, reasoning)
 			req.ThinkingBudget = &budget
 		}
 
@@ -373,7 +397,7 @@ func applyQianfanReasoningToRequest(
 		req.Thinking = &relaymodel.ClaudeThinking{Type: thinkingType}
 
 		if !disabled && qianfanModelMatches(meta, qianfanSupportsThinkingBudget) {
-			budget := qianfanThinkingBudget(reasoning)
+			budget := qianfanThinkingBudget(meta, reasoning)
 			req.ThinkingBudget = &budget
 		}
 
@@ -381,24 +405,32 @@ func applyQianfanReasoningToRequest(
 	}
 
 	if !disabled && qianfanModelMatches(meta, qianfanSupportsThinkingBudget) {
-		budget := qianfanThinkingBudget(reasoning)
+		budget := qianfanThinkingBudget(meta, reasoning)
 		req.ThinkingBudget = &budget
 	}
 }
 
 func setQianfanThinkingBudget(
+	meta *meta.Meta,
 	node *ast.Node,
 	reasoning relaymodel.NormalizedReasoning,
 ) error {
-	budget := qianfanThinkingBudget(reasoning)
+	budget := qianfanThinkingBudget(meta, reasoning)
 	_, err := node.Set("thinking_budget", ast.NewNumber(strconv.Itoa(budget)))
 	return err
 }
 
-func qianfanThinkingBudget(reasoning relaymodel.NormalizedReasoning) int {
+func qianfanThinkingBudget(
+	_ *meta.Meta,
+	reasoning relaymodel.NormalizedReasoning,
+) int {
 	budget := utils.ReasoningToBudget(reasoning)
 	if budget < 100 {
-		return 100
+		budget = 100
+	}
+
+	if budget > 16384 {
+		budget = 16384
 	}
 
 	return budget
@@ -406,12 +438,9 @@ func qianfanThinkingBudget(reasoning relaymodel.NormalizedReasoning) int {
 
 func qianfanSupportsThinking(modelName string) bool {
 	modelName = normalizeModelName(modelName)
-	if modelName == "deepseek-v3.2" ||
-		modelName == "deepseek-v3.1-250821" {
-		return true
-	}
 
-	return strings.HasPrefix(modelName, "kimi-k2.5") ||
+	return strings.HasPrefix(modelName, "deepseek") ||
+		strings.HasPrefix(modelName, "kimi-k2.5") ||
 		strings.HasPrefix(modelName, "glm-5") ||
 		strings.HasPrefix(modelName, "glm-4.7")
 }
@@ -447,6 +476,7 @@ func qianfanSupportsThinkingBudget(modelName string) bool {
 	modelName = normalizeModelName(modelName)
 	if strings.HasPrefix(modelName, "qwen3-") ||
 		strings.HasPrefix(modelName, "ernie-5.0-thinking") ||
+		strings.HasPrefix(modelName, "deepseek-v4-") ||
 		strings.HasPrefix(modelName, "deepseek-r1") ||
 		strings.Contains(modelName, "think") ||
 		strings.Contains(modelName, "thinking") {
@@ -475,12 +505,7 @@ func qianfanSupportsThinkingBudget(modelName string) bool {
 }
 
 func qianfanSupportsReasoningEffort(modelName string) bool {
-	modelName = normalizeModelName(modelName)
-	if modelName == "deepseek-v4-pro" || modelName == "deepseek-v4-flash" {
-		return true
-	}
-
-	return strings.HasPrefix(modelName, "deepseek-v4-")
+	return false
 }
 
 func parseReasoningEffort(effort string) relaymodel.NormalizedReasoning {

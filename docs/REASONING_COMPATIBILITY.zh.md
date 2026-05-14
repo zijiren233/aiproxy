@@ -417,7 +417,7 @@ adaptive 能力判断：
 | `low` | `enable_thinking=true`, `thinking_budget=2048` | `enable_thinking=true`；无 `thinking_budget` |
 | `medium` | `enable_thinking=true`, `thinking_budget=8192` | `enable_thinking=true`；无 `thinking_budget` |
 | `high` | `enable_thinking=true`, `thinking_budget=16384` | `enable_thinking=true`；无 `thinking_budget` |
-| `xhigh` | `enable_thinking=true`, `thinking_budget=32768` | `enable_thinking=true`；无 `thinking_budget` |
+| `xhigh` | `enable_thinking=true`, `thinking_budget=16384` | `enable_thinking=true`；无 `thinking_budget` |
 
 当前认为支持 `thinking_budget` 的模型包括：
 
@@ -487,8 +487,8 @@ Ali 特殊规则：
 - 如果存在 `thinking`，会移除冲突的 `reasoning_effort`、`enable_thinking`、`thinking_budget`
 - 没有原生 `thinking` 时，会按模型能力选择字段族：
   - 支持 `reasoning_effort` 的模型：开启态写 `reasoning_effort=high|max`；关闭态不写推理字段
-  - 支持 `enable_thinking` 的模型：写 `enable_thinking=true|false`；支持 budget 时开启态额外写 `thinking_budget`
-  - 支持 `thinking` 的模型：写 `thinking.type=enabled|disabled`；支持 budget 时开启态额外写 `thinking_budget`
+  - 支持 `enable_thinking` 的模型：写 `enable_thinking=true|false`；支持 budget 时开启态额外写 `thinking_budget`，并夹到千帆文档范围 `[100, 16384]`
+  - 支持 `thinking` 的模型：写 `thinking.type=enabled|disabled`；支持 budget 时开启态额外写 `thinking_budget`，并夹到千帆文档范围 `[100, 16384]`
   - 只支持 `thinking_budget` 的专用思考模型：开启态只写 `thinking_budget`；关闭态不写推理字段
 - 模型能力判断先精确匹配官方模型名，失败后回退到系列 / 关键词匹配，例如 `qwen3-*`、`deepseek-v4-*`、`*think*` / `*thinking*`、`*vl*`
 - 没有命中任何千帆推理参数能力的模型，会移除归一化推理字段，避免给不支持的模型发送非法参数
@@ -502,7 +502,7 @@ Ali 特殊规则：
 | `low` | `reasoning_effort=high` | `enable_thinking=true`；支持时 `thinking_budget=2048` | `thinking.type=enabled`；支持时 `thinking_budget=2048` | `thinking_budget=2048` |
 | `medium` | `reasoning_effort=high` | `enable_thinking=true`；支持时 `thinking_budget=8192` | `thinking.type=enabled`；支持时 `thinking_budget=8192` | `thinking_budget=8192` |
 | `high` | `reasoning_effort=high` | `enable_thinking=true`；支持时 `thinking_budget=16384` | `thinking.type=enabled`；支持时 `thinking_budget=16384` | `thinking_budget=16384` |
-| `xhigh` | `reasoning_effort=max` | `enable_thinking=true`；支持时 `thinking_budget=32768` | `thinking.type=enabled`；支持时 `thinking_budget=32768` | `thinking_budget=32768` |
+| `xhigh` | `reasoning_effort=max` | `enable_thinking=true`；支持时 `thinking_budget=16384` | `thinking.type=enabled`；支持时 `thinking_budget=16384` | `thinking_budget=16384` |
 
 对于 OpenAI Responses 入参，Qianfan 也会把 `reasoning.effort`
 归一化成同一套千帆上游字段。
@@ -546,9 +546,9 @@ Moonshot / Kimi 只会对支持 thinking 开关的上游模型写 Kimi `thinking
 
 | 模式 | 原生输入字段 | 写给上游的字段 | effort 精确映射 |
 | --- | --- | --- | --- |
-| Chat Completions | `reasoning_effort` | `reasoning_effort` | 统一 effort 原样写出 |
-| Completions | `reasoning_effort` | `reasoning_effort` | 统一 effort 原样写出 |
-| Responses | `reasoning.effort` | `reasoning.effort` | 统一 effort 原样写出 |
+| Chat Completions | `reasoning_effort` | `reasoning_effort` | 除非命中已知 GPT 模型族且该值不支持，否则原样写出 |
+| Completions | `reasoning_effort` | `reasoning_effort` | 除非命中已知 GPT 模型族且该值不支持，否则原样写出 |
+| Responses | `reasoning.effort` | `reasoning.effort` | 除非命中已知 GPT 模型族且该值不支持，否则原样写出 |
 
 跨协议转换：
 
@@ -564,6 +564,21 @@ Moonshot / Kimi 只会对支持 thinking 开关的上游模型写 Kimi `thinking
 
 - OpenAI Chat / Completions 模式只解析 `reasoning_effort`。
 - OpenAI Chat / Completions 不解析 Gemini 风格 `thinkingConfig`、Claude 风格 `thinking`、Ali `enable_thinking` 或 Ali `thinking_budget`。
+- GPT reasoning effort 兼容是 OpenAI adaptor 专属规则。它会作用于 OpenAI Chat / Completions / Responses 原生请求，也会作用于 Gemini / Claude / Chat 转成 OpenAI Chat 或 Responses 的请求体。
+- 兼容判断先用 `OriginModel`，未命中再回退 `ActualModel`。匹配只识别明确已知的 GPT 模型 ID / 系列，同时允许 provider 前缀和官方风格后缀，例如带日期的 snapshot 名称。
+- 如果两个模型名都没有命中已知 GPT reasoning-effort 模型族，包括未知的 GPT-like 模型名，则 adaptor 不做操作，保留请求中的原始 effort。
+- 对已知 GPT 模型族，不支持的 effort 会迁移到最接近的受支持值。距离相同则偏向更高的开启态，因此一个支持 `none` 和 `low` 但不支持 `minimal` 的模型会把 `minimal` 迁移为 `low`。
+
+当前 adaptor 使用的 GPT effort 支持表：
+
+| 模型匹配 | 支持的 `reasoning_effort` / `reasoning.effort` 值 | 迁移示例 |
+| --- | --- | --- |
+| `gpt-5.5*` | `none`, `low`, `medium`, `high`, `xhigh` | `minimal` -> `low` |
+| `gpt-5.4*`, `gpt-5.2*` | `none`, `low`, `medium`, `high`, `xhigh` | `minimal` -> `low` |
+| `gpt-5.4-pro*`, `gpt-5.2-pro*` | `medium`, `high`, `xhigh` | `none` / `minimal` / `low` -> `medium` |
+| `gpt-5.1*` | `none`, `low`, `medium`, `high` | `minimal` -> `low`；`xhigh` -> `high` |
+| `gpt-5-pro*` | `high` | 任意不支持的值 -> `high` |
+| `gpt-5*` | `minimal`, `low`, `medium`, `high` | `none` -> `minimal`；`xhigh` -> `high` |
 
 ## 5.2 Google Gemini
 
@@ -678,7 +693,7 @@ Ali 各档 effort 的精确映射：
 | `low` | `enable_thinking=true`；`thinking_budget=2048` | `enable_thinking=true`；无 `thinking_budget` |
 | `medium` | `enable_thinking=true`；`thinking_budget=8192` | `enable_thinking=true`；无 `thinking_budget` |
 | `high` | `enable_thinking=true`；`thinking_budget=16384` | `enable_thinking=true`；无 `thinking_budget` |
-| `xhigh` | `enable_thinking=true`；`thinking_budget=32768` | `enable_thinking=true`；无 `thinking_budget` |
+| `xhigh` | `enable_thinking=true`；`thinking_budget=16384` | `enable_thinking=true`；无 `thinking_budget` |
 
 Ali 支持 `thinking_budget` 的模型判断：
 
@@ -796,7 +811,7 @@ Zhipu 当前在 hooked 路径只保留 enabled / disabled。
 | `low` | `reasoning_effort=high` | `enable_thinking=true`；支持时 `thinking_budget=2048` | `thinking.type=enabled`；支持时 `thinking_budget=2048` | `thinking_budget=2048` |
 | `medium` | `reasoning_effort=high` | `enable_thinking=true`；支持时 `thinking_budget=8192` | `thinking.type=enabled`；支持时 `thinking_budget=8192` | `thinking_budget=8192` |
 | `high` | `reasoning_effort=high` | `enable_thinking=true`；支持时 `thinking_budget=16384` | `thinking.type=enabled`；支持时 `thinking_budget=16384` | `thinking_budget=16384` |
-| `xhigh` | `reasoning_effort=max` | `enable_thinking=true`；支持时 `thinking_budget=32768` | `thinking.type=enabled`；支持时 `thinking_budget=32768` | `thinking_budget=32768` |
+| `xhigh` | `reasoning_effort=max` | `enable_thinking=true`；支持时 `thinking_budget=16384` | `thinking.type=enabled`；支持时 `thinking_budget=16384` | `thinking_budget=16384` |
 
 说明：
 
@@ -1390,7 +1405,7 @@ Moonshot adaptor 当前把以下 actual upstream model name 视为支持 thinkin
 - `reasoning_effort:none` 会被移除
 - Qianfan adaptor 会按目标模型字段族表达关闭；`qwen3-*` 系列使用 `enable_thinking=false`
 
-### 7.1.21 OpenAI Chat -> Qianfan，`reasoning_effort` 模型开启推理
+### 7.1.21 OpenAI Chat -> Qianfan DeepSeek v4，开启推理
 
 输入：
 
@@ -1406,15 +1421,18 @@ Moonshot adaptor 当前把以下 actual upstream model name 视为支持 thinkin
 
 ```json
 {
-  "reasoning_effort": "max"
+  "thinking": {
+    "type": "enabled"
+  },
+  "thinking_budget": 16384
 }
 ```
 
 说明：
 
-- 支持 Qianfan `reasoning_effort` 的模型只接受 `high` / `max`
-- `low` / `medium` / `high` 都会变成 `high`，`xhigh` / `max` 会变成 `max`
-- 除非调用方提供了 Qianfan 原生 `thinking`，否则不会额外写 `thinking`
+- DeepSeek 模型统一使用 Qianfan `thinking.type`。
+- DeepSeek v4 也支持 `thinking_budget`，因此开启推理时会按 effort 派生 budget，并夹到 `[100, 16384]`。
+- 转换后会移除 `reasoning_effort`。
 
 ### 7.1.22 OpenAI Chat -> Qianfan，带原生 `thinking`
 

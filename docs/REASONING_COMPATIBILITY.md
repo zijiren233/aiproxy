@@ -407,7 +407,7 @@ Rules:
 
 - `none` -> `enable_thinking=false`, and `thinking_budget` is removed
 - enabled reasoning -> `enable_thinking=true`
-- if the model supports budgets, `thinking_budget` is written
+- if the model supports budgets, `thinking_budget` is written and clamped to the Qianfan documented range `[100, 16384]`
 
 Exact mapping:
 
@@ -418,7 +418,7 @@ Exact mapping:
 | `low` | `enable_thinking=true`, `thinking_budget=2048` | `enable_thinking=true`; no `thinking_budget` |
 | `medium` | `enable_thinking=true`, `thinking_budget=8192` | `enable_thinking=true`; no `thinking_budget` |
 | `high` | `enable_thinking=true`, `thinking_budget=16384` | `enable_thinking=true`; no `thinking_budget` |
-| `xhigh` | `enable_thinking=true`, `thinking_budget=32768` | `enable_thinking=true`; no `thinking_budget` |
+| `xhigh` | `enable_thinking=true`, `thinking_budget=16384` | `enable_thinking=true`; no `thinking_budget` |
 
 Models currently considered to support `thinking_budget` include:
 
@@ -504,7 +504,7 @@ Exact mapping by field family when the input does not already contain native `th
 | `low` | `reasoning_effort=high` | `enable_thinking=true`; `thinking_budget=2048` when supported | `thinking.type=enabled`; `thinking_budget=2048` when supported | `thinking_budget=2048` |
 | `medium` | `reasoning_effort=high` | `enable_thinking=true`; `thinking_budget=8192` when supported | `thinking.type=enabled`; `thinking_budget=8192` when supported | `thinking_budget=8192` |
 | `high` | `reasoning_effort=high` | `enable_thinking=true`; `thinking_budget=16384` when supported | `thinking.type=enabled`; `thinking_budget=16384` when supported | `thinking_budget=16384` |
-| `xhigh` | `reasoning_effort=max` | `enable_thinking=true`; `thinking_budget=32768` when supported | `thinking.type=enabled`; `thinking_budget=32768` when supported | `thinking_budget=32768` |
+| `xhigh` | `reasoning_effort=max` | `enable_thinking=true`; `thinking_budget=16384` when supported | `thinking.type=enabled`; `thinking_budget=16384` when supported | `thinking_budget=16384` |
 
 For OpenAI Responses input, Qianfan also normalizes `reasoning.effort` into
 the same upstream Qianfan fields.
@@ -550,9 +550,9 @@ Native fields:
 
 | mode | native source field | emitted upstream field | exact effort mapping |
 | --- | --- | --- | --- |
-| Chat Completions | `reasoning_effort` | `reasoning_effort` | unchanged normalized effort |
-| Completions | `reasoning_effort` | `reasoning_effort` | unchanged normalized effort |
-| Responses | `reasoning.effort` | `reasoning.effort` | unchanged normalized effort |
+| Chat Completions | `reasoning_effort` | `reasoning_effort` | unchanged unless a known GPT model family does not support the requested value |
+| Completions | `reasoning_effort` | `reasoning_effort` | unchanged unless a known GPT model family does not support the requested value |
+| Responses | `reasoning.effort` | `reasoning.effort` | unchanged unless a known GPT model family does not support the requested value |
 
 Cross-protocol conversions:
 
@@ -568,6 +568,21 @@ Notes:
 
 - OpenAI Chat / Completions only parse `reasoning_effort`.
 - OpenAI Chat / Completions do not parse Gemini-style `thinkingConfig`, Claude-style `thinking`, Ali `enable_thinking`, or Ali `thinking_budget` in this mode.
+- GPT reasoning effort compatibility is an OpenAI-adaptor-specific rule. It applies to native OpenAI Chat / Completions / Responses payloads and to Gemini / Claude / Chat requests converted into OpenAI Chat or Responses payloads.
+- The compatibility check uses `OriginModel` first and falls back to `ActualModel`. Matching recognizes only explicit known GPT model IDs / families, while allowing provider prefixes and official-style suffixes such as dated snapshots.
+- If neither model name matches a known GPT reasoning-effort family, including unknown GPT-like model names, the adaptor leaves the requested effort unchanged.
+- For known GPT families, unsupported efforts are migrated to the nearest supported effort. Ties prefer the higher enabled effort, so `minimal` on a model that supports `none` and `low` becomes `low`.
+
+Known GPT effort support used by the adaptor:
+
+| model match | supported `reasoning_effort` / `reasoning.effort` values | migration examples |
+| --- | --- | --- |
+| `gpt-5.5*` | `none`, `low`, `medium`, `high`, `xhigh` | `minimal` -> `low` |
+| `gpt-5.4*`, `gpt-5.2*` | `none`, `low`, `medium`, `high`, `xhigh` | `minimal` -> `low` |
+| `gpt-5.4-pro*`, `gpt-5.2-pro*` | `medium`, `high`, `xhigh` | `none` / `minimal` / `low` -> `medium` |
+| `gpt-5.1*` | `none`, `low`, `medium`, `high` | `minimal` -> `low`; `xhigh` -> `high` |
+| `gpt-5-pro*` | `high` | any unsupported value -> `high` |
+| `gpt-5*` | `minimal`, `low`, `medium`, `high` | `none` -> `minimal`; `xhigh` -> `high` |
 
 ## 5.2 Google Gemini
 
@@ -682,7 +697,7 @@ Ali exact effort mapping:
 | `low` | `enable_thinking=true`; `thinking_budget=2048` | `enable_thinking=true`; no `thinking_budget` |
 | `medium` | `enable_thinking=true`; `thinking_budget=8192` | `enable_thinking=true`; no `thinking_budget` |
 | `high` | `enable_thinking=true`; `thinking_budget=16384` | `enable_thinking=true`; no `thinking_budget` |
-| `xhigh` | `enable_thinking=true`; `thinking_budget=32768` | `enable_thinking=true`; no `thinking_budget` |
+| `xhigh` | `enable_thinking=true`; `thinking_budget=16384` | `enable_thinking=true`; no `thinking_budget` |
 
 Ali budget-capable model detection:
 
@@ -800,7 +815,7 @@ Exact effort mapping by field family when native `thinking` is not already prese
 | `low` | `reasoning_effort=high` | `enable_thinking=true`; `thinking_budget=2048` when supported | `thinking.type=enabled`; `thinking_budget=2048` when supported | `thinking_budget=2048` |
 | `medium` | `reasoning_effort=high` | `enable_thinking=true`; `thinking_budget=8192` when supported | `thinking.type=enabled`; `thinking_budget=8192` when supported | `thinking_budget=8192` |
 | `high` | `reasoning_effort=high` | `enable_thinking=true`; `thinking_budget=16384` when supported | `thinking.type=enabled`; `thinking_budget=16384` when supported | `thinking_budget=16384` |
-| `xhigh` | `reasoning_effort=max` | `enable_thinking=true`; `thinking_budget=32768` when supported | `thinking.type=enabled`; `thinking_budget=32768` when supported | `thinking_budget=32768` |
+| `xhigh` | `reasoning_effort=max` | `enable_thinking=true`; `thinking_budget=16384` when supported | `thinking.type=enabled`; `thinking_budget=16384` when supported | `thinking_budget=16384` |
 
 Notes:
 
@@ -1395,7 +1410,7 @@ Notes:
 - `reasoning_effort:none` is removed
 - the Qianfan adaptor expresses disabled reasoning according to the target model's field family; `qwen3-*` uses `enable_thinking=false`
 
-### 7.1.21 OpenAI Chat -> Qianfan, enabled reasoning on a `reasoning_effort` model
+### 7.1.21 OpenAI Chat -> Qianfan DeepSeek v4 with enabled reasoning
 
 Input:
 
@@ -1411,15 +1426,18 @@ Output:
 
 ```json
 {
-  "reasoning_effort": "max"
+  "thinking": {
+    "type": "enabled"
+  },
+  "thinking_budget": 16384
 }
 ```
 
 Notes:
 
-- models that support Qianfan `reasoning_effort` only accept `high` / `max`
-- `low`, `medium`, and `high` all become `high`; `xhigh` / `max` become `max`
-- `thinking` is omitted unless the caller provided native Qianfan `thinking`
+- DeepSeek models use Qianfan `thinking.type`.
+- DeepSeek v4 also supports `thinking_budget`, so enabled reasoning includes the budget derived from effort and clamped to `[100, 16384]`.
+- `reasoning_effort` is removed after conversion.
 
 ### 7.1.22 OpenAI Chat -> Qianfan with native `thinking`
 

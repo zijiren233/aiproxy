@@ -169,6 +169,66 @@ func TestConvertClaudeToResponsesRequest(t *testing.T) {
 	}
 }
 
+func TestConvertClaudeRequest_ReasoningEffortCompatibility(t *testing.T) {
+	t.Parallel()
+
+	requestJSON := `{
+		"model": "claude",
+		"messages": [{"role": "user", "content": "Hello"}],
+		"max_tokens": 1024,
+		"thinking": {"type": "enabled", "budget_tokens": 512}
+	}`
+	httpReq := httptest.NewRequest(
+		http.MethodPost,
+		"/v1/messages",
+		bytes.NewReader([]byte(requestJSON)),
+	)
+	httpReq.Header.Set("Content-Type", "application/json")
+
+	m := &meta.Meta{
+		ActualModel: "gpt-5.5",
+	}
+
+	result, err := openai.ConvertClaudeRequest(m, httpReq)
+	require.NoError(t, err)
+
+	var openAIReq relaymodel.GeneralOpenAIRequest
+	require.NoError(t, json.NewDecoder(result.Body).Decode(&openAIReq))
+	require.NotNil(t, openAIReq.ReasoningEffort)
+	assert.Equal(t, "low", *openAIReq.ReasoningEffort)
+}
+
+func TestConvertClaudeToResponsesRequest_ReasoningEffortCompatibility(t *testing.T) {
+	t.Parallel()
+
+	requestJSON := `{
+		"model": "claude",
+		"messages": [{"role": "user", "content": "Hello"}],
+		"max_tokens": 1024,
+		"thinking": {"type": "enabled"},
+		"output_config": {"effort": "max"}
+	}`
+	httpReq := httptest.NewRequest(
+		http.MethodPost,
+		"/v1/messages",
+		bytes.NewReader([]byte(requestJSON)),
+	)
+	httpReq.Header.Set("Content-Type", "application/json")
+
+	m := &meta.Meta{
+		ActualModel: "gpt-5.1",
+	}
+
+	result, err := openai.ConvertClaudeToResponsesRequest(m, httpReq)
+	require.NoError(t, err)
+
+	var responsesReq relaymodel.CreateResponseRequest
+	require.NoError(t, json.NewDecoder(result.Body).Decode(&responsesReq))
+	require.NotNil(t, responsesReq.Reasoning)
+	require.NotNil(t, responsesReq.Reasoning.Effort)
+	assert.Equal(t, "high", *responsesReq.Reasoning.Effort)
+}
+
 func TestConvertClaudeToResponsesRequest_WithToolsRequiredField(t *testing.T) {
 	tests := []struct {
 		name      string

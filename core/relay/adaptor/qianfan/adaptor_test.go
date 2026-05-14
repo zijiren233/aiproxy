@@ -258,7 +258,7 @@ func TestAdaptorConvertRequestReasoning(t *testing.T) {
 		assert.NotContains(t, payload, "thinking")
 	})
 
-	t.Run("chat xhigh reasoning_effort is normalized to qianfan max for effort models", func(t *testing.T) {
+	t.Run("chat xhigh reasoning_effort maps to deepseek v4 thinking budget", func(t *testing.T) {
 		m := meta.NewMeta(nil, mode.ChatCompletions, "deepseek-v4-pro", coremodel.ModelConfig{})
 		req, err := http.NewRequestWithContext(
 			context.Background(),
@@ -280,7 +280,11 @@ func TestAdaptorConvertRequestReasoning(t *testing.T) {
 
 		var payload map[string]any
 		require.NoError(t, json.Unmarshal(body, &payload))
-		assert.Equal(t, "max", payload["reasoning_effort"])
+		thinking, ok := payload["thinking"].(map[string]any)
+		require.True(t, ok)
+		assert.Equal(t, relaymodel.ClaudeThinkingTypeEnabled, thinking["type"])
+		assert.Equal(t, float64(16384), payload["thinking_budget"])
+		assert.NotContains(t, payload, "reasoning_effort")
 	})
 
 	t.Run("native thinking wins over reasoning_effort", func(t *testing.T) {
@@ -551,28 +555,31 @@ func TestQianfanReasoningNodeFieldFamilies(t *testing.T) {
 		absent    []string
 	}{
 		{
-			name:   "reasoning effort model high",
+			name:   "deepseek v4 thinking model high with budget",
 			origin: "deepseek-v4-pro",
 			effort: "high",
 			want: map[string]any{
-				"reasoning_effort": "high",
+				"thinking_budget": float64(16384),
 			},
-			absent: []string{"enable_thinking", "thinking_budget", "thinking", "reasoning"},
+			wantThink: relaymodel.ClaudeThinkingTypeEnabled,
+			absent:    []string{"reasoning_effort", "enable_thinking", "reasoning"},
 		},
 		{
-			name:   "reasoning effort model max via family fallback",
+			name:   "deepseek v4 family fallback thinking model xhigh with budget",
 			origin: "deepseek-v4-lite-260101",
 			effort: "xhigh",
 			want: map[string]any{
-				"reasoning_effort": "max",
+				"thinking_budget": float64(16384),
 			},
-			absent: []string{"enable_thinking", "thinking_budget", "thinking", "reasoning"},
+			wantThink: relaymodel.ClaudeThinkingTypeEnabled,
+			absent:    []string{"reasoning_effort", "enable_thinking", "reasoning"},
 		},
 		{
-			name:   "reasoning effort model disabled emits no controls",
-			origin: "deepseek-v4-flash",
-			effort: "none",
-			absent: noPayloadKeys,
+			name:      "deepseek v4 thinking model disabled",
+			origin:    "deepseek-v4-flash",
+			effort:    "none",
+			wantThink: relaymodel.ClaudeThinkingTypeDisabled,
+			absent:    []string{"reasoning_effort", "enable_thinking", "thinking_budget", "reasoning"},
 		},
 		{
 			name:   "enable thinking model enabled with budget",
@@ -627,26 +634,28 @@ func TestQianfanReasoningNodeFieldFamilies(t *testing.T) {
 			absent:    []string{"reasoning_effort", "enable_thinking", "reasoning"},
 		},
 		{
-			name:   "budget only model enabled",
+			name:   "deepseek r1 thinking model with budget enabled",
 			origin: "deepseek-r1-250528",
 			effort: "minimal",
 			want: map[string]any{
 				"thinking_budget": float64(1024),
 			},
-			absent: []string{"reasoning_effort", "enable_thinking", "thinking", "reasoning"},
+			wantThink: relaymodel.ClaudeThinkingTypeEnabled,
+			absent:    []string{"reasoning_effort", "enable_thinking", "reasoning"},
 		},
 		{
-			name:   "budget only model disabled emits no controls",
-			origin: "deepseek-r1-250528",
-			effort: "none",
-			absent: noPayloadKeys,
+			name:      "deepseek r1 thinking model disabled",
+			origin:    "deepseek-r1-250528",
+			effort:    "none",
+			wantThink: relaymodel.ClaudeThinkingTypeDisabled,
+			absent:    []string{"reasoning_effort", "enable_thinking", "thinking_budget", "reasoning"},
 		},
 		{
 			name:   "thinking keyword fallback budget only",
 			origin: "custom-thinking-model",
 			effort: "xhigh",
 			want: map[string]any{
-				"thinking_budget": float64(32768),
+				"thinking_budget": float64(16384),
 			},
 			absent: []string{"reasoning_effort", "enable_thinking", "thinking", "reasoning"},
 		},
@@ -662,14 +671,15 @@ func TestQianfanReasoningNodeFieldFamilies(t *testing.T) {
 			absent: []string{"reasoning_effort", "thinking", "reasoning"},
 		},
 		{
-			name:   "origin match wins over actual fallback",
-			origin: "deepseek-v4-pro",
-			actual: "qwen3-14b",
+			name:   "actual fallback selects thinking capability",
+			origin: "alias-model",
+			actual: "deepseek-v4-pro",
 			effort: "medium",
 			want: map[string]any{
-				"reasoning_effort": "high",
+				"thinking_budget": float64(8192),
 			},
-			absent: []string{"enable_thinking", "thinking_budget", "thinking", "reasoning"},
+			wantThink: relaymodel.ClaudeThinkingTypeEnabled,
+			absent:    []string{"reasoning_effort", "enable_thinking", "reasoning"},
 		},
 		{
 			name:   "unsupported model strips controls",
@@ -720,57 +730,76 @@ func TestQianfanReasoningRequestFieldFamilies(t *testing.T) {
 		name         string
 		model        string
 		reasoning    relaymodel.NormalizedReasoning
-		wantEffort   *string
-		wantEnable   *bool
-		wantBudget   *int
-		wantThinking *string
+		wantEffort   string
+		hasEffort    bool
+		wantEnable   bool
+		hasEnable    bool
+		wantBudget   int
+		hasBudget    bool
+		wantThinking string
+		hasThinking  bool
 	}{
 		{
-			name:       "request reasoning_effort model enabled",
-			model:      "deepseek-v4-pro",
-			reasoning:  enabledReasoning,
-			wantEffort: stringPtr("high"),
+			name:         "request deepseek v4 thinking model enabled with budget",
+			model:        "deepseek-v4-pro",
+			reasoning:    enabledReasoning,
+			wantBudget:   16384,
+			hasBudget:    true,
+			wantThinking: relaymodel.ClaudeThinkingTypeEnabled,
+			hasThinking:  true,
 		},
 		{
-			name:      "request reasoning_effort model disabled",
-			model:     "deepseek-v4-pro",
-			reasoning: disabledReasoning,
+			name:         "request deepseek v4 thinking model disabled",
+			model:        "deepseek-v4-pro",
+			reasoning:    disabledReasoning,
+			wantThinking: relaymodel.ClaudeThinkingTypeDisabled,
+			hasThinking:  true,
 		},
 		{
 			name:       "request enable_thinking model enabled",
 			model:      "qwen3-14b",
 			reasoning:  enabledReasoning,
-			wantEnable: boolPtr(true),
-			wantBudget: intPtr(16384),
+			wantEnable: true,
+			hasEnable:  true,
+			wantBudget: 16384,
+			hasBudget:  true,
 		},
 		{
 			name:       "request enable_thinking model disabled",
 			model:      "qwen3-14b",
 			reasoning:  disabledReasoning,
-			wantEnable: boolPtr(false),
+			wantEnable: false,
+			hasEnable:  true,
 		},
 		{
 			name:         "request thinking model enabled",
 			model:        "deepseek-v3.2",
 			reasoning:    enabledReasoning,
-			wantThinking: stringPtr(relaymodel.ClaudeThinkingTypeEnabled),
+			wantThinking: relaymodel.ClaudeThinkingTypeEnabled,
+			hasThinking:  true,
 		},
 		{
 			name:         "request thinking model disabled",
 			model:        "deepseek-v3.2",
 			reasoning:    disabledReasoning,
-			wantThinking: stringPtr(relaymodel.ClaudeThinkingTypeDisabled),
+			wantThinking: relaymodel.ClaudeThinkingTypeDisabled,
+			hasThinking:  true,
 		},
 		{
-			name:       "request budget only model enabled",
-			model:      "deepseek-r1-250528",
-			reasoning:  enabledReasoning,
-			wantBudget: intPtr(16384),
+			name:         "request deepseek r1 thinking model with budget enabled",
+			model:        "deepseek-r1-250528",
+			reasoning:    enabledReasoning,
+			wantBudget:   16384,
+			hasBudget:    true,
+			wantThinking: relaymodel.ClaudeThinkingTypeEnabled,
+			hasThinking:  true,
 		},
 		{
-			name:      "request budget only model disabled",
-			model:     "deepseek-r1-250528",
-			reasoning: disabledReasoning,
+			name:         "request deepseek r1 thinking model disabled",
+			model:        "deepseek-r1-250528",
+			reasoning:    disabledReasoning,
+			wantThinking: relaymodel.ClaudeThinkingTypeDisabled,
+			hasThinking:  true,
 		},
 	}
 
@@ -781,32 +810,32 @@ func TestQianfanReasoningRequestFieldFamilies(t *testing.T) {
 
 			applyQianfanReasoningToRequest(m, req, tt.reasoning)
 
-			if tt.wantEffort == nil {
+			if !tt.hasEffort {
 				assert.Nil(t, req.ReasoningEffort)
 			} else {
 				require.NotNil(t, req.ReasoningEffort)
-				assert.Equal(t, *tt.wantEffort, *req.ReasoningEffort)
+				assert.Equal(t, tt.wantEffort, *req.ReasoningEffort)
 			}
 
-			if tt.wantEnable == nil {
+			if !tt.hasEnable {
 				assert.Nil(t, req.EnableThinking)
 			} else {
 				require.NotNil(t, req.EnableThinking)
-				assert.Equal(t, *tt.wantEnable, *req.EnableThinking)
+				assert.Equal(t, tt.wantEnable, *req.EnableThinking)
 			}
 
-			if tt.wantBudget == nil {
+			if !tt.hasBudget {
 				assert.Nil(t, req.ThinkingBudget)
 			} else {
 				require.NotNil(t, req.ThinkingBudget)
-				assert.Equal(t, *tt.wantBudget, *req.ThinkingBudget)
+				assert.Equal(t, tt.wantBudget, *req.ThinkingBudget)
 			}
 
-			if tt.wantThinking == nil {
+			if !tt.hasThinking {
 				assert.Nil(t, req.Thinking)
 			} else {
 				require.NotNil(t, req.Thinking)
-				assert.Equal(t, *tt.wantThinking, req.Thinking.Type)
+				assert.Equal(t, tt.wantThinking, req.Thinking.Type)
 			}
 		})
 	}
@@ -822,11 +851,11 @@ func TestQianfanReasoningEffortAndBudgetMapping(t *testing.T) {
 		{effort: "low", wantEffort: "high", wantBudget: 2048},
 		{effort: "medium", wantEffort: "high", wantBudget: 8192},
 		{effort: "high", wantEffort: "high", wantBudget: 16384},
-		{effort: "xhigh", wantEffort: "max", wantBudget: 32768},
+		{effort: "xhigh", wantEffort: "max", wantBudget: 16384},
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.effort+" maps reasoning_effort", func(t *testing.T) {
+		t.Run(tt.effort+" maps deepseek v4 thinking budget", func(t *testing.T) {
 			payload := convertQianfanChatPayload(
 				t,
 				"deepseek-v4-pro",
@@ -834,8 +863,11 @@ func TestQianfanReasoningEffortAndBudgetMapping(t *testing.T) {
 				`"reasoning_effort":"`+tt.effort+`"`,
 			)
 
-			assert.Equal(t, tt.wantEffort, payload["reasoning_effort"])
-			assert.NotContains(t, payload, "thinking_budget")
+			thinking, ok := payload["thinking"].(map[string]any)
+			require.True(t, ok)
+			assert.Equal(t, relaymodel.ClaudeThinkingTypeEnabled, thinking["type"])
+			assert.NotContains(t, payload, "reasoning_effort")
+			assert.Equal(t, tt.wantBudget, payload["thinking_budget"])
 		})
 
 		t.Run(tt.effort+" maps budget", func(t *testing.T) {
@@ -986,9 +1018,12 @@ func TestQianfanReasoningResponsesEnabled(t *testing.T) {
 	require.NoError(t, err)
 
 	payload := readJSONMap(t, result.Body)
-	assert.Equal(t, "max", payload["reasoning_effort"])
+	thinking, ok := payload["thinking"].(map[string]any)
+	require.True(t, ok)
+	assert.Equal(t, relaymodel.ClaudeThinkingTypeEnabled, thinking["type"])
+	assert.Equal(t, float64(16384), payload["thinking_budget"])
 	assert.NotContains(t, payload, "reasoning")
-	assert.NotContains(t, payload, "thinking")
+	assert.NotContains(t, payload, "reasoning_effort")
 }
 
 func TestQianfanReasoningResponsesInvalidEffortPassesThrough(t *testing.T) {
@@ -1057,18 +1092,6 @@ func readJSONMap(t *testing.T, r io.Reader) map[string]any {
 	require.NoError(t, json.NewDecoder(r).Decode(&payload))
 
 	return payload
-}
-
-func stringPtr(v string) *string {
-	return &v
-}
-
-func boolPtr(v bool) *bool {
-	return &v
-}
-
-func intPtr(v int) *int {
-	return &v
 }
 
 func TestAdaptorDoResponseResponsesDeleteNoContent(t *testing.T) {
