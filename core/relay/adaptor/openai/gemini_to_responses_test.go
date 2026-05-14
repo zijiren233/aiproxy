@@ -181,7 +181,7 @@ func TestConvertGeminiToResponsesRequest_ReasoningEffortCompatibility(t *testing
 		},
 		"contents": [{"role":"user","parts":[{"text":"hello"}]}]
 	}`
-	httpReq := httptest.NewRequest(
+	httpReq := httptest.NewRequestWithContext(t.Context(),
 		http.MethodPost,
 		"/v1beta/models/gemini-pro:generateContent",
 		bytes.NewReader([]byte(requestJSON)),

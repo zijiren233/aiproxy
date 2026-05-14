@@ -200,7 +200,7 @@ func TestConvertRequest_OpenAIReasoningEffortCompatibility(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			httpReq := httptest.NewRequest(
+			httpReq := httptest.NewRequestWithContext(t.Context(),
 				http.MethodPost,
 				"/v1/test",
 				strings.NewReader(tt.body),
@@ -236,7 +236,7 @@ func TestConvertRequest_OpenAIReasoningEffortCompatibility(t *testing.T) {
 func TestConvertChatCompletionToResponsesRequest_ReasoningEffortCompatibility(t *testing.T) {
 	t.Parallel()
 
-	req := httptest.NewRequest(
+	req := httptest.NewRequestWithContext(t.Context(),
 		http.MethodPost,
 		"/v1/chat/completions",
 		strings.NewReader(

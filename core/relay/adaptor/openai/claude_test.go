@@ -178,7 +178,7 @@ func TestConvertClaudeRequest_ReasoningEffortCompatibility(t *testing.T) {
 		"max_tokens": 1024,
 		"thinking": {"type": "enabled", "budget_tokens": 512}
 	}`
-	httpReq := httptest.NewRequest(
+	httpReq := httptest.NewRequestWithContext(t.Context(),
 		http.MethodPost,
 		"/v1/messages",
 		bytes.NewReader([]byte(requestJSON)),
@@ -208,7 +208,7 @@ func TestConvertClaudeToResponsesRequest_ReasoningEffortCompatibility(t *testing
 		"thinking": {"type": "enabled"},
 		"output_config": {"effort": "max"}
 	}`
-	httpReq := httptest.NewRequest(
+	httpReq := httptest.NewRequestWithContext(t.Context(),
 		http.MethodPost,
 		"/v1/messages",
 		bytes.NewReader([]byte(requestJSON)),

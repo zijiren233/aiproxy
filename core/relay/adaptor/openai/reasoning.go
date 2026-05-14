@@ -4,6 +4,7 @@ import (
 	"errors"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/bytedance/sonic/ast"
 	"github.com/labring/aiproxy/core/relay/meta"
@@ -105,7 +106,7 @@ func applyReasoningToOpenAIRequestForModel(
 		return
 	}
 
-	effortString := string(openAIReasoningEffortForMeta(m, effort))
+	effortString := openAIReasoningEffortForMeta(m, effort)
 	req.ReasoningEffort = &effortString
 	req.Thinking = nil
 }
@@ -124,7 +125,7 @@ func applyReasoningToResponsesRequestForModel(
 		return
 	}
 
-	effortString := string(openAIReasoningEffortForMeta(m, effort))
+	effortString := openAIReasoningEffortForMeta(m, effort)
 	req.Reasoning = &relaymodel.ResponseReasoning{
 		Effort: &effortString,
 	}
@@ -153,7 +154,7 @@ func patchOpenAIReasoningEffort(m *meta.Meta) func(node *ast.Node) error {
 
 		_, err = node.Set(
 			"reasoning_effort",
-			ast.NewString(string(openAIReasoningEffortForMeta(m, effort))),
+			ast.NewString(openAIReasoningEffortForMeta(m, effort)),
 		)
 
 		return err
@@ -188,13 +189,14 @@ func patchOpenAIResponsesReasoningEffort(m *meta.Meta) func(node *ast.Node) erro
 
 		_, err = reasoningNode.Set(
 			"effort",
-			ast.NewString(string(openAIReasoningEffortForMeta(m, effort))),
+			ast.NewString(openAIReasoningEffortForMeta(m, effort)),
 		)
 		if err != nil {
 			return err
 		}
 
 		_, err = node.Set("reasoning", *reasoningNode)
+
 		return err
 	}
 }
@@ -293,7 +295,7 @@ func openAIReasoningEffortsForName(modelName string) ([]relaymodel.ReasoningEffo
 	}
 }
 
-func matchesOpenAIModelFamily(modelName string, family string) bool {
+func matchesOpenAIModelFamily(modelName, family string) bool {
 	if modelName == family {
 		return true
 	}
@@ -304,7 +306,11 @@ func matchesOpenAIModelFamily(modelName string, family string) bool {
 
 	for _, separator := range []string{"/", ":"} {
 		if strings.Contains(modelName, separator+family) {
-			suffix := strings.TrimPrefix(modelName[strings.LastIndex(modelName, separator)+1:], family)
+			suffix := strings.TrimPrefix(
+				modelName[strings.LastIndex(modelName, separator)+1:],
+				family,
+			)
+
 			return suffix == "" || isKnownOpenAIModelSuffix(suffix)
 		}
 	}
@@ -312,7 +318,7 @@ func matchesOpenAIModelFamily(modelName string, family string) bool {
 	return false
 }
 
-func hasKnownOpenAIModelSuffix(modelName string, family string) bool {
+func hasKnownOpenAIModelSuffix(modelName, family string) bool {
 	if !strings.HasPrefix(modelName, family) {
 		return false
 	}
@@ -333,7 +339,7 @@ func isKnownOpenAIModelSuffix(suffix string) bool {
 }
 
 func isDateSuffix(value string) bool {
-	if len(value) != len("2006-01-02") {
+	if len(value) != len(time.DateOnly) {
 		return false
 	}
 
@@ -367,6 +373,7 @@ func closestOpenAIReasoningEffort(
 	}
 
 	best := supported[0]
+
 	bestRank, ok := openAIReasoningEffortRank(best)
 	if !ok {
 		return best

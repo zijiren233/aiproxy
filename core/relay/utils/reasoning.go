@@ -184,7 +184,7 @@ func ApplyReasoningToOpenAIRequest(
 		return
 	}
 
-	effortString := string(effort)
+	effortString := effort
 	req.ReasoningEffort = &effortString
 	req.Thinking = nil
 }
@@ -202,7 +202,7 @@ func ApplyReasoningToResponsesRequest(
 		return
 	}
 
-	effortString := string(effort)
+	effortString := effort
 	req.Reasoning = &relaymodel.ResponseReasoning{
 		Effort: &effortString,
 	}

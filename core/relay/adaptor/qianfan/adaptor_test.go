@@ -201,34 +201,37 @@ func TestAdaptorConvertRequestResponses(t *testing.T) {
 func TestAdaptorConvertRequestReasoning(t *testing.T) {
 	adaptor := &Adaptor{}
 
-	t.Run("chat reasoning_effort none maps to disabled thinking for thinking models", func(t *testing.T) {
-		m := meta.NewMeta(nil, mode.ChatCompletions, "deepseek-v3.2", coremodel.ModelConfig{})
-		req, err := http.NewRequestWithContext(
-			context.Background(),
-			http.MethodPost,
-			"/v1/chat/completions",
-			strings.NewReader(`{
+	t.Run(
+		"chat reasoning_effort none maps to disabled thinking for thinking models",
+		func(t *testing.T) {
+			m := meta.NewMeta(nil, mode.ChatCompletions, "deepseek-v3.2", coremodel.ModelConfig{})
+			req, err := http.NewRequestWithContext(
+				context.Background(),
+				http.MethodPost,
+				"/v1/chat/completions",
+				strings.NewReader(`{
 				"model":"deepseek-v3.2",
 				"reasoning_effort":"none",
 				"messages":[{"role":"user","content":"hello"}]
 			}`),
-		)
-		require.NoError(t, err)
+			)
+			require.NoError(t, err)
 
-		result, err := adaptor.ConvertRequest(m, nil, req)
-		require.NoError(t, err)
+			result, err := adaptor.ConvertRequest(m, nil, req)
+			require.NoError(t, err)
 
-		body, err := io.ReadAll(result.Body)
-		require.NoError(t, err)
+			body, err := io.ReadAll(result.Body)
+			require.NoError(t, err)
 
-		var payload map[string]any
-		require.NoError(t, json.Unmarshal(body, &payload))
-		assert.NotContains(t, payload, "reasoning_effort")
+			var payload map[string]any
+			require.NoError(t, json.Unmarshal(body, &payload))
+			assert.NotContains(t, payload, "reasoning_effort")
 
-		thinking, ok := payload["thinking"].(map[string]any)
-		require.True(t, ok)
-		assert.Equal(t, "disabled", thinking["type"])
-	})
+			thinking, ok := payload["thinking"].(map[string]any)
+			require.True(t, ok)
+			assert.Equal(t, "disabled", thinking["type"])
+		},
+	)
 
 	t.Run("chat low reasoning_effort maps to enable_thinking with budget", func(t *testing.T) {
 		m := meta.NewMeta(nil, mode.ChatCompletions, "qwen3-14b", coremodel.ModelConfig{})
@@ -464,7 +467,12 @@ func TestAdaptorConvertRequestReasoning(t *testing.T) {
 	})
 
 	t.Run("model family fallback handles versioned qwen3 models", func(t *testing.T) {
-		m := meta.NewMeta(nil, mode.ChatCompletions, "qwen3-14b-thinking-260101", coremodel.ModelConfig{})
+		m := meta.NewMeta(
+			nil,
+			mode.ChatCompletions,
+			"qwen3-14b-thinking-260101",
+			coremodel.ModelConfig{},
+		)
 		req, err := http.NewRequestWithContext(
 			context.Background(),
 			http.MethodPost,
@@ -516,7 +524,12 @@ func TestAdaptorConvertRequestReasoning(t *testing.T) {
 	})
 
 	t.Run("unsupported model strips normalized reasoning controls", func(t *testing.T) {
-		m := meta.NewMeta(nil, mode.ChatCompletions, "ernie-4.5-turbo-128k", coremodel.ModelConfig{})
+		m := meta.NewMeta(
+			nil,
+			mode.ChatCompletions,
+			"ernie-4.5-turbo-128k",
+			coremodel.ModelConfig{},
+		)
 		req, err := http.NewRequestWithContext(
 			context.Background(),
 			http.MethodPost,
@@ -579,7 +592,12 @@ func TestQianfanReasoningNodeFieldFamilies(t *testing.T) {
 			origin:    "deepseek-v4-flash",
 			effort:    "none",
 			wantThink: relaymodel.ClaudeThinkingTypeDisabled,
-			absent:    []string{"reasoning_effort", "enable_thinking", "thinking_budget", "reasoning"},
+			absent: []string{
+				"reasoning_effort",
+				"enable_thinking",
+				"thinking_budget",
+				"reasoning",
+			},
 		},
 		{
 			name:   "enable thinking model enabled with budget",
@@ -614,14 +632,24 @@ func TestQianfanReasoningNodeFieldFamilies(t *testing.T) {
 			origin:    "deepseek-v3.2",
 			effort:    "high",
 			wantThink: relaymodel.ClaudeThinkingTypeEnabled,
-			absent:    []string{"reasoning_effort", "enable_thinking", "thinking_budget", "reasoning"},
+			absent: []string{
+				"reasoning_effort",
+				"enable_thinking",
+				"thinking_budget",
+				"reasoning",
+			},
 		},
 		{
 			name:      "thinking model disabled",
 			origin:    "deepseek-v3.2",
 			effort:    "none",
 			wantThink: relaymodel.ClaudeThinkingTypeDisabled,
-			absent:    []string{"reasoning_effort", "enable_thinking", "thinking_budget", "reasoning"},
+			absent: []string{
+				"reasoning_effort",
+				"enable_thinking",
+				"thinking_budget",
+				"reasoning",
+			},
 		},
 		{
 			name:   "thinking model with budget enabled",
@@ -648,7 +676,12 @@ func TestQianfanReasoningNodeFieldFamilies(t *testing.T) {
 			origin:    "deepseek-r1-250528",
 			effort:    "none",
 			wantThink: relaymodel.ClaudeThinkingTypeDisabled,
-			absent:    []string{"reasoning_effort", "enable_thinking", "thinking_budget", "reasoning"},
+			absent: []string{
+				"reasoning_effort",
+				"enable_thinking",
+				"thinking_budget",
+				"reasoning",
+			},
 		},
 		{
 			name:   "thinking keyword fallback budget only",
@@ -1061,6 +1094,7 @@ func convertQianfanChatPayload(
 	t.Helper()
 
 	adaptor := &Adaptor{}
+
 	m := meta.NewMeta(nil, mode.ChatCompletions, originModel, coremodel.ModelConfig{})
 	if actualModel != "" {
 		m.ActualModel = actualModel

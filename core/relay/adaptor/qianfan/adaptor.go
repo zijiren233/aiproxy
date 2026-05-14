@@ -266,6 +266,7 @@ func patchReasoningRequest(meta *meta.Meta, openAIReq *relaymodel.GeneralOpenAIR
 	openAIReq.ThinkingBudget = nil
 
 	applyQianfanReasoningToRequest(meta, openAIReq, reasoning)
+
 	return nil
 }
 
@@ -297,7 +298,10 @@ func applyQianfanReasoningToNode(
 			return nil
 		}
 
-		if _, err := node.Set("reasoning_effort", ast.NewString(qianfanReasoningEffort(reasoning))); err != nil {
+		if _, err := node.Set(
+			"reasoning_effort",
+			ast.NewString(qianfanReasoningEffort(reasoning)),
+		); err != nil {
 			return err
 		}
 
@@ -424,14 +428,7 @@ func qianfanThinkingBudget(
 	_ *meta.Meta,
 	reasoning relaymodel.NormalizedReasoning,
 ) int {
-	budget := utils.ReasoningToBudget(reasoning)
-	if budget < 100 {
-		budget = 100
-	}
-
-	if budget > 16384 {
-		budget = 16384
-	}
+	budget := min(max(utils.ReasoningToBudget(reasoning), 100), 16384)
 
 	return budget
 }
