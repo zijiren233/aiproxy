@@ -97,6 +97,24 @@ func TestModelConfigLoadFromGroupModelConfigBodyStorageMaxSize(t *testing.T) {
 	}
 }
 
+func TestModelConfigLoadFromGroupModelConfigMaxImageGenerationCount(t *testing.T) {
+	base := (&model.ModelConfig{
+		MaxImageGenerationCount: 4,
+	}).LoadFromGroupModelConfig(
+		model.GroupModelConfig{
+			OverrideMaxImageGenerationCount: true,
+			MaxImageGenerationCount:         2,
+		},
+	)
+
+	if base.MaxImageGenerationCount != 2 {
+		t.Fatalf(
+			"expected max_image_generation_count to be overridden to 2, got %d",
+			base.MaxImageGenerationCount,
+		)
+	}
+}
+
 func TestModelConfigLoadFromGroupModelConfigTimeoutConfig(t *testing.T) {
 	base := (&model.ModelConfig{
 		Type: mode.ChatCompletions,
@@ -266,5 +284,127 @@ func TestGetModelConfigLoadsFastJSONFields(t *testing.T) {
 
 	if got.ImageQualityPrices["1024x1024"]["hd"] != 0.34 {
 		t.Fatalf("expected image quality price 0.34, got %#v", got.ImageQualityPrices)
+	}
+}
+
+func TestUpdateGroupModelConfigClearsMaxImageGenerationCount(t *testing.T) {
+	prevDB := model.DB
+	prevUsingSQLite := common.UsingSQLite
+
+	dbPath := filepath.Join(t.TempDir(), "group-model-config.db")
+
+	testDB, err := model.OpenSQLite(dbPath)
+	if err != nil {
+		t.Fatalf("failed to open sqlite db: %v", err)
+	}
+
+	model.DB = testDB
+	common.UsingSQLite = true
+	t.Cleanup(func() {
+		model.DB = prevDB
+		common.UsingSQLite = prevUsingSQLite
+	})
+
+	if err := testDB.AutoMigrate(&model.GroupModelConfig{}); err != nil {
+		t.Fatalf("failed to migrate group model config: %v", err)
+	}
+
+	initial := model.GroupModelConfig{
+		GroupID:                         "test-group",
+		Model:                           "gpt-image-1",
+		OverrideMaxImageGenerationCount: true,
+		MaxImageGenerationCount:         5,
+	}
+	if err := model.SaveGroupModelConfig(initial); err != nil {
+		t.Fatalf("failed to save group model config: %v", err)
+	}
+
+	updated := model.GroupModelConfig{
+		GroupID:                         initial.GroupID,
+		Model:                           initial.Model,
+		OverrideMaxImageGenerationCount: false,
+		MaxImageGenerationCount:         0,
+	}
+	if err := model.UpdateGroupModelConfig(updated); err != nil {
+		t.Fatalf("failed to update group model config: %v", err)
+	}
+
+	got, err := model.GetGroupModelConfig(initial.GroupID, initial.Model)
+	if err != nil {
+		t.Fatalf("failed to get group model config: %v", err)
+	}
+
+	if got.OverrideMaxImageGenerationCount {
+		t.Fatal("expected override_max_image_generation_count to be cleared")
+	}
+
+	if got.MaxImageGenerationCount != 0 {
+		t.Fatalf(
+			"expected max_image_generation_count to be cleared, got %d",
+			got.MaxImageGenerationCount,
+		)
+	}
+}
+
+func TestUpdateGroupModelConfigsClearsMaxImageGenerationCount(t *testing.T) {
+	prevDB := model.DB
+	prevUsingSQLite := common.UsingSQLite
+
+	dbPath := filepath.Join(t.TempDir(), "group-model-configs.db")
+
+	testDB, err := model.OpenSQLite(dbPath)
+	if err != nil {
+		t.Fatalf("failed to open sqlite db: %v", err)
+	}
+
+	model.DB = testDB
+	common.UsingSQLite = true
+	t.Cleanup(func() {
+		model.DB = prevDB
+		common.UsingSQLite = prevUsingSQLite
+	})
+
+	if err := testDB.AutoMigrate(&model.GroupModelConfig{}); err != nil {
+		t.Fatalf("failed to migrate group model config: %v", err)
+	}
+
+	groupID := "test-group"
+
+	initial := []model.GroupModelConfig{
+		{
+			Model:                           "gpt-image-1",
+			OverrideMaxImageGenerationCount: true,
+			MaxImageGenerationCount:         5,
+		},
+	}
+	if err := model.SaveGroupModelConfigs(groupID, initial); err != nil {
+		t.Fatalf("failed to save group model configs: %v", err)
+	}
+
+	updated := []model.GroupModelConfig{
+		{
+			Model:                           initial[0].Model,
+			OverrideMaxImageGenerationCount: false,
+			MaxImageGenerationCount:         0,
+		},
+	}
+	if err := model.UpdateGroupModelConfigs(groupID, updated); err != nil {
+		t.Fatalf("failed to update group model configs: %v", err)
+	}
+
+	got, err := model.GetGroupModelConfig(groupID, initial[0].Model)
+	if err != nil {
+		t.Fatalf("failed to get group model config: %v", err)
+	}
+
+	if got.OverrideMaxImageGenerationCount {
+		t.Fatal("expected override_max_image_generation_count to be cleared")
+	}
+
+	if got.MaxImageGenerationCount != 0 {
+		t.Fatalf(
+			"expected max_image_generation_count to be cleared, got %d",
+			got.MaxImageGenerationCount,
+		)
 	}
 }

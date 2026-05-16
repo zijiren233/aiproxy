@@ -249,7 +249,11 @@ func setupRedisForControllerTest(t *testing.T, ctx context.Context) (*redis.Clie
 		Addr: host + ":" + mappedPort.Port(),
 		DB:   0,
 	})
-	require.NoError(t, client.Ping(ctx).Err())
+	if err := client.Ping(ctx).Err(); err != nil {
+		_ = client.Close()
+		_ = container.Terminate(ctx)
+		t.Skipf("skipping redis integration test: redis ping failed: %v", err)
+	}
 
 	cleanup := func() {
 		_ = client.Close()

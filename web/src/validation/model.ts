@@ -160,6 +160,7 @@ export const modelCreateSchema = z.object({
     timeout: z.number().nonnegative('Timeout must be a non-negative number').optional(),
     stream_timeout: z.number().nonnegative('Stream timeout must be a non-negative number').optional(),
     force_save_detail: z.boolean().optional(),
+    max_image_generation_count: z.number().nonnegative('Max image generation count must be a non-negative number').optional(),
     request_body_storage_max_size: z.number().optional(),
     response_body_storage_max_size: z.number().optional(),
     summary_service_tier: z.boolean().optional(),
