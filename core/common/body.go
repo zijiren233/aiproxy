@@ -33,8 +33,8 @@ func (b *reusableRequestBody) Bytes() []byte {
 }
 
 const (
-	MaxRequestBodySize  = 1024 * 1024 * 50 // 50MB
-	MaxResponseBodySize = 1024 * 1024 * 50 // 50MB
+	MaxRequestBodySize  = 1024 * 1024 * 50  // 50MB
+	MaxResponseBodySize = 1024 * 1024 * 200 // 200MB
 
 	multipartFormMemoryLimit = 4 * 1024 * 1024
 )
@@ -59,6 +59,25 @@ func ParseMultipartFormWithLimit(req *http.Request) error {
 
 	// #nosec G120 -- ContentLength is checked above and Body is capped by MaxBytesReader.
 	return req.ParseMultipartForm(multipartFormMemoryLimit)
+}
+
+func ParseFormWithLimit(req *http.Request) error {
+	if req.ContentLength > 0 && req.ContentLength > MaxRequestBodySize {
+		return fmt.Errorf(
+			"request body too large: %d, max: %d",
+			req.ContentLength,
+			MaxRequestBodySize,
+		)
+	}
+
+	originalBody := req.Body
+
+	req.Body = http.MaxBytesReader(nil, req.Body, MaxRequestBodySize)
+	defer func() {
+		req.Body = originalBody
+	}()
+
+	return req.ParseForm()
 }
 
 type LimitedReader struct {
@@ -216,7 +235,33 @@ func UnmarshalRequest2NodeReusable(req *http.Request, path ...any) (ast.Node, er
 }
 
 func GetResponseBodyLimit(resp *http.Response, n int64) ([]byte, error) {
-	return GetBodyLimit(resp.Body, resp.ContentLength, n)
+	var (
+		buf []byte
+		err error
+	)
+
+	if resp.ContentLength <= 0 {
+		buf, err = io.ReadAll(LimitReader(resp.Body, n))
+		if err != nil {
+			if errors.Is(err, ErrLimitedReaderExceeded) {
+				return nil, errors.New("response body too large")
+			}
+			return nil, fmt.Errorf("response body read failed: %w", err)
+		}
+	} else {
+		if resp.ContentLength > n {
+			return nil, errors.New("response body too large")
+		}
+
+		buf = make([]byte, resp.ContentLength)
+		_, err = io.ReadFull(resp.Body, buf)
+	}
+
+	if err != nil {
+		return nil, fmt.Errorf("response body read failed: %w", err)
+	}
+
+	return buf, nil
 }
 
 func GetResponseBody(resp *http.Response) ([]byte, error) {

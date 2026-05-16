@@ -44,6 +44,7 @@ type ModelConfig struct {
 	RetryTimes                 int64              `                                     json:"retry_times,omitempty"                    yaml:"retry_times,omitempty"`
 	TimeoutConfig              TimeoutConfig      `gorm:"embedded"                      json:"timeout_config,omitempty"                 yaml:"timeout_config,omitempty"`
 	ForceSaveDetail            bool               `                                     json:"force_save_detail,omitempty"              yaml:"force_save_detail,omitempty"`
+	MaxImageGenerationCount    int                `                                     json:"max_image_generation_count,omitempty"     yaml:"max_image_generation_count,omitempty"`
 	RequestBodyStorageMaxSize  int64              `                                     json:"request_body_storage_max_size,omitempty"  yaml:"request_body_storage_max_size,omitempty"`
 	ResponseBodyStorageMaxSize int64              `                                     json:"response_body_storage_max_size,omitempty" yaml:"response_body_storage_max_size,omitempty"`
 	SummaryServiceTier         bool               `                                     json:"summary_service_tier,omitempty"           yaml:"summary_service_tier,omitempty"`
@@ -154,6 +155,10 @@ func (c *ModelConfig) LoadFromGroupModelConfig(groupModelConfig GroupModelConfig
 
 	if groupModelConfig.OverrideForceSaveDetail {
 		newC.ForceSaveDetail = groupModelConfig.ForceSaveDetail
+	}
+
+	if groupModelConfig.OverrideMaxImageGenerationCount {
+		newC.MaxImageGenerationCount = groupModelConfig.MaxImageGenerationCount
 	}
 
 	if groupModelConfig.OverrideRequestBodyStorageMaxSize {

@@ -11,6 +11,11 @@ const (
 	GroupModelConfigCacheKey = "group_model_config"
 )
 
+var groupModelConfigZeroValueUpdateFields = []string{
+	"override_max_image_generation_count",
+	"max_image_generation_count",
+}
+
 type GroupModelConfig struct {
 	GroupID string `gorm:"primaryKey"         json:"group_id"`
 	Group   *Group `gorm:"foreignKey:GroupID" json:"-"`
@@ -32,6 +37,9 @@ type GroupModelConfig struct {
 
 	OverrideForceSaveDetail bool `json:"override_force_save_detail"`
 	ForceSaveDetail         bool `json:"force_save_detail"`
+
+	OverrideMaxImageGenerationCount bool `json:"override_max_image_generation_count"`
+	MaxImageGenerationCount         int  `json:"max_image_generation_count"`
 
 	OverrideRequestBodyStorageMaxSize bool  `json:"override_request_body_storage_max_size"`
 	RequestBodyStorageMaxSize         int64 `json:"request_body_storage_max_size"`
@@ -79,10 +87,19 @@ func UpdateGroupModelConfig(groupModelConfig GroupModelConfig) (err error) {
 		}
 	}()
 
-	return HandleNotFound(
-		DB.Model(&groupModelConfig).Updates(groupModelConfig).Error,
-		GroupModelConfigCacheKey,
-	)
+	return DB.Transaction(func(tx *gorm.DB) error {
+		if err := HandleNotFound(
+			tx.Model(&groupModelConfig).Updates(groupModelConfig).Error,
+			GroupModelConfigCacheKey,
+		); err != nil {
+			return err
+		}
+
+		return tx.Model(&groupModelConfig).
+			Select(groupModelConfigZeroValueUpdateFields).
+			Updates(groupModelConfig).
+			Error
+	})
 }
 
 func SaveGroupModelConfigs(groupID string, groupModelConfigs []GroupModelConfig) (err error) {
@@ -122,6 +139,13 @@ func UpdateGroupModelConfigs(groupID string, groupModelConfigs []GroupModelConfi
 				tx.Model(&groupModelConfig).Updates(groupModelConfig).Error,
 				GroupModelConfigCacheKey,
 			); err != nil {
+				return err
+			}
+
+			if err := tx.Model(&groupModelConfig).
+				Select(groupModelConfigZeroValueUpdateFields).
+				Updates(groupModelConfig).
+				Error; err != nil {
 				return err
 			}
 		}

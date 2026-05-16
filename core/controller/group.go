@@ -472,6 +472,9 @@ type SaveGroupModelConfigRequest struct {
 	OverrideForceSaveDetail bool `json:"override_force_save_detail"`
 	ForceSaveDetail         bool `json:"force_save_detail"`
 
+	OverrideMaxImageGenerationCount bool `json:"override_max_image_generation_count"`
+	MaxImageGenerationCount         int  `json:"max_image_generation_count"`
+
 	OverrideRequestBodyStorageMaxSize bool  `json:"override_request_body_storage_max_size"`
 	RequestBodyStorageMaxSize         int64 `json:"request_body_storage_max_size"`
 
@@ -506,6 +509,8 @@ func (r *SaveGroupModelConfigRequest) ToGroupModelConfig(groupID string) model.G
 
 		OverrideForceSaveDetail:            r.OverrideForceSaveDetail,
 		ForceSaveDetail:                    r.ForceSaveDetail,
+		OverrideMaxImageGenerationCount:    r.OverrideMaxImageGenerationCount,
+		MaxImageGenerationCount:            r.MaxImageGenerationCount,
 		OverrideRequestBodyStorageMaxSize:  r.OverrideRequestBodyStorageMaxSize,
 		RequestBodyStorageMaxSize:          r.RequestBodyStorageMaxSize,
 		OverrideResponseBodyStorageMaxSize: r.OverrideResponseBodyStorageMaxSize,

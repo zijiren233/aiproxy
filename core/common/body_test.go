@@ -3,6 +3,7 @@ package common_test
 import (
 	"context"
 	"io"
+	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
@@ -63,5 +64,57 @@ func TestSetRequestBodySyncsBodyAndContentLength(t *testing.T) {
 
 	if req.GetBody != nil {
 		t.Fatal("expected GetBody to be cleared")
+	}
+}
+
+func TestParseFormWithLimitRejectsTooLargeContentLength(t *testing.T) {
+	req := httptest.NewRequestWithContext(
+		context.Background(),
+		"POST",
+		"/v1/images/edits",
+		strings.NewReader("n=1"),
+	)
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.ContentLength = common.MaxRequestBodySize + 1
+
+	err := common.ParseFormWithLimit(req)
+	if err == nil {
+		t.Fatal("expected error")
+	}
+
+	if !strings.Contains(err.Error(), "request body too large") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestGetResponseBodyLimitKnownLengthTooLargeHidesLimit(t *testing.T) {
+	resp := &http.Response{
+		Body:          io.NopCloser(strings.NewReader("abcd")),
+		ContentLength: 4,
+	}
+
+	_, err := common.GetResponseBodyLimit(resp, 3)
+	if err == nil {
+		t.Fatal("expected error")
+	}
+
+	if got := err.Error(); got != "response body too large" {
+		t.Fatalf("unexpected error: %q", got)
+	}
+}
+
+func TestGetResponseBodyLimitUnknownLengthTooLargeHidesLimit(t *testing.T) {
+	resp := &http.Response{
+		Body:          io.NopCloser(strings.NewReader("abcd")),
+		ContentLength: -1,
+	}
+
+	_, err := common.GetResponseBodyLimit(resp, 3)
+	if err == nil {
+		t.Fatal("expected error")
+	}
+
+	if got := err.Error(); got != "response body too large" {
+		t.Fatalf("unexpected error: %q", got)
 	}
 }

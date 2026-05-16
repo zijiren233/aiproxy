@@ -39,6 +39,7 @@ import { useGroupModelConfigs } from '../hooks'
 import { useModels } from '@/feature/model/hooks'
 import type { GroupModelConfig, GroupModelConfigSaveRequest } from '@/types/group'
 import type { ModelPrice, TimeoutConfig } from '@/types/model'
+import { IMAGE_GENERATION_COUNT_LIMIT_SUPPORTED_MODEL_TYPES } from '@/types/model'
 import { PriceFormFields } from '@/components/price/PriceFormFields'
 import { PriceDisplay } from '@/components/price/PriceDisplay'
 import { Combobox } from '@/components/ui/combobox'
@@ -46,6 +47,13 @@ import { toast } from 'sonner'
 
 interface GroupModelConfigsTabProps {
     groupId: string
+}
+
+const IMAGE_GENERATION_COUNT_LIMIT_SUPPORTED_TYPES = new Set<number>(IMAGE_GENERATION_COUNT_LIMIT_SUPPORTED_MODEL_TYPES)
+
+const omitKeys = (obj: object, keys: string[]) => {
+    const omitted = new Set(keys)
+    return Object.fromEntries(Object.entries(obj).filter(([key]) => !omitted.has(key)))
 }
 
 // Default empty config for creating
@@ -59,6 +67,8 @@ const getDefaultConfig = (): Omit<GroupModelConfigSaveRequest, 'model'> => ({
     timeout_config: {},
     override_force_save_detail: false,
     force_save_detail: false,
+    override_max_image_generation_count: false,
+    max_image_generation_count: 0,
     override_request_body_storage_max_size: false,
     request_body_storage_max_size: 0,
     override_response_body_storage_max_size: false,
@@ -96,6 +106,10 @@ export function GroupModelConfigsTab({ groupId }: GroupModelConfigsTabProps) {
             .filter(o => !existingModels.has(o.value))
     }, [systemModels, data])
 
+    const systemModelTypeByName = useMemo(() => {
+        return new Map(systemModels?.map((model) => [model.model, model.type]) || [])
+    }, [systemModels])
+
     const [editDialogOpen, setEditDialogOpen] = useState(false)
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
     const [isRefreshAnimating, setIsRefreshAnimating] = useState(false)
@@ -115,6 +129,8 @@ export function GroupModelConfigsTab({ groupId }: GroupModelConfigsTabProps) {
     const [formTimeoutConfig, setFormTimeoutConfig] = useState<TimeoutConfig>({})
     const [formOverrideForceSaveDetail, setFormOverrideForceSaveDetail] = useState(false)
     const [formForceSaveDetail, setFormForceSaveDetail] = useState(false)
+    const [formOverrideMaxImageGenerationCount, setFormOverrideMaxImageGenerationCount] = useState(false)
+    const [formMaxImageGenerationCount, setFormMaxImageGenerationCount] = useState(0)
     const [formOverrideRequestBodyStorageMaxSize, setFormOverrideRequestBodyStorageMaxSize] = useState(false)
     const [formRequestBodyStorageMaxSize, setFormRequestBodyStorageMaxSize] = useState(0)
     const [formOverrideResponseBodyStorageMaxSize, setFormOverrideResponseBodyStorageMaxSize] = useState(false)
@@ -126,6 +142,11 @@ export function GroupModelConfigsTab({ groupId }: GroupModelConfigsTabProps) {
     const [formOverridePrice, setFormOverridePrice] = useState(false)
     const [formPrice, setFormPrice] = useState<ModelPrice>({})
     const [formImagePrices, setFormImagePrices] = useState<Record<string, number>>({})
+
+    const selectedModelType = systemModelTypeByName.get(isCreating ? formModel : editingConfig?.model || formModel)
+    const imageGenerationCountLimitTypeKnown = selectedModelType !== undefined
+    const supportImageGenerationCountLimit = selectedModelType !== undefined &&
+        IMAGE_GENERATION_COUNT_LIMIT_SUPPORTED_TYPES.has(selectedModelType)
 
     // Save mutation
     const saveMutation = useMutation({
@@ -167,6 +188,8 @@ export function GroupModelConfigsTab({ groupId }: GroupModelConfigsTabProps) {
             setFormTimeoutConfig(config.timeout_config || {})
             setFormOverrideForceSaveDetail(config.override_force_save_detail)
             setFormForceSaveDetail(config.force_save_detail)
+            setFormOverrideMaxImageGenerationCount(config.override_max_image_generation_count)
+            setFormMaxImageGenerationCount(config.max_image_generation_count)
             setFormOverrideRequestBodyStorageMaxSize(config.override_request_body_storage_max_size)
             setFormRequestBodyStorageMaxSize(config.request_body_storage_max_size)
             setFormOverrideResponseBodyStorageMaxSize(config.override_response_body_storage_max_size)
@@ -190,6 +213,8 @@ export function GroupModelConfigsTab({ groupId }: GroupModelConfigsTabProps) {
             setFormTimeoutConfig(defaults.timeout_config || {})
             setFormOverrideForceSaveDetail(defaults.override_force_save_detail!)
             setFormForceSaveDetail(defaults.force_save_detail!)
+            setFormOverrideMaxImageGenerationCount(defaults.override_max_image_generation_count!)
+            setFormMaxImageGenerationCount(defaults.max_image_generation_count!)
             setFormOverrideRequestBodyStorageMaxSize(defaults.override_request_body_storage_max_size!)
             setFormRequestBodyStorageMaxSize(defaults.request_body_storage_max_size!)
             setFormOverrideResponseBodyStorageMaxSize(defaults.override_response_body_storage_max_size!)
@@ -235,6 +260,8 @@ export function GroupModelConfigsTab({ groupId }: GroupModelConfigsTabProps) {
         setFormTimeoutConfig(config.timeout_config || {})
         setFormOverrideForceSaveDetail(config.override_force_save_detail)
         setFormForceSaveDetail(config.force_save_detail)
+        setFormOverrideMaxImageGenerationCount(config.override_max_image_generation_count)
+        setFormMaxImageGenerationCount(config.max_image_generation_count)
         setFormOverrideRequestBodyStorageMaxSize(config.override_request_body_storage_max_size)
         setFormRequestBodyStorageMaxSize(config.request_body_storage_max_size)
         setFormOverrideResponseBodyStorageMaxSize(config.override_response_body_storage_max_size)
@@ -258,6 +285,27 @@ export function GroupModelConfigsTab({ groupId }: GroupModelConfigsTabProps) {
         const model = isCreating ? formModel.trim() : editingConfig?.model
         if (!model) return
 
+        const maxImageGenerationCountConfig = (() => {
+            if (supportImageGenerationCountLimit) {
+                return {
+                    override_max_image_generation_count: formOverrideMaxImageGenerationCount,
+                    max_image_generation_count: formMaxImageGenerationCount,
+                }
+            }
+
+            if (!imageGenerationCountLimitTypeKnown && editingConfig) {
+                return {
+                    override_max_image_generation_count: editingConfig.override_max_image_generation_count,
+                    max_image_generation_count: editingConfig.max_image_generation_count,
+                }
+            }
+
+            return {
+                override_max_image_generation_count: false,
+                max_image_generation_count: 0,
+            }
+        })()
+
         const config: GroupModelConfigSaveRequest = {
             model,
             override_limit: formOverrideLimit,
@@ -269,6 +317,7 @@ export function GroupModelConfigsTab({ groupId }: GroupModelConfigsTabProps) {
             ...(formOverrideTimeoutConfig && { timeout_config: formTimeoutConfig }),
             override_force_save_detail: formOverrideForceSaveDetail,
             force_save_detail: formForceSaveDetail,
+            ...maxImageGenerationCountConfig,
             override_request_body_storage_max_size: formOverrideRequestBodyStorageMaxSize,
             request_body_storage_max_size: formRequestBodyStorageMaxSize,
             override_response_body_storage_max_size: formOverrideResponseBodyStorageMaxSize,
@@ -297,7 +346,7 @@ export function GroupModelConfigsTab({ groupId }: GroupModelConfigsTabProps) {
             return
         }
 
-        const exportData = data.map(({ group_id, ...config }) => config)
+        const exportData = data.map((config) => omitKeys(config, ['group_id']))
 
         const blob = new Blob([JSON.stringify(exportData, null, 2)], {
             type: 'application/json',
@@ -450,6 +499,7 @@ export function GroupModelConfigsTab({ groupId }: GroupModelConfigsTabProps) {
                                     <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">{t('model.retryTimes')}</th>
                                     <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">{t('group.modelConfig.overrideTimeoutConfig')}</th>
                                     <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">{t('model.forceSaveDetail')}</th>
+                                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">{t('model.maxImageGenerationCount')}</th>
                                     <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">{t('model.requestBodyStorageMaxSize')}</th>
                                     <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">{t('model.responseBodyStorageMaxSize')}</th>
                                     <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">{t('model.recordServiceTier')}</th>
@@ -496,6 +546,9 @@ export function GroupModelConfigsTab({ groupId }: GroupModelConfigsTabProps) {
                                                     {config.force_save_detail ? t('common.yes') : t('common.no')}
                                                 </Badge>
                                             ) : '-'}
+                                        </td>
+                                        <td className="px-4 py-3 text-sm font-mono">
+                                            {config.override_max_image_generation_count ? config.max_image_generation_count : '-'}
                                         </td>
                                         <td className="px-4 py-3 text-sm font-mono">
                                             {config.override_request_body_storage_max_size ? config.request_body_storage_max_size : '-'}
@@ -559,7 +612,7 @@ export function GroupModelConfigsTab({ groupId }: GroupModelConfigsTabProps) {
                                 ))}
                                 {filteredData.length === 0 && (
                                     <tr>
-                                        <td colSpan={14} className="px-4 py-12 text-center text-muted-foreground">
+                                        <td colSpan={15} className="px-4 py-12 text-center text-muted-foreground">
                                             {t('common.noResult')}
                                         </td>
                                     </tr>
@@ -708,6 +761,36 @@ export function GroupModelConfigsTab({ groupId }: GroupModelConfigsTabProps) {
                                 <Label>{t('model.forceSaveDetail')}</Label>
                                 <Switch checked={formForceSaveDetail} onCheckedChange={setFormForceSaveDetail} />
                             </div>
+                        )}
+
+                        {supportImageGenerationCountLimit && (
+                            <>
+                                <div className="flex items-center justify-between rounded-lg border p-3">
+                                    <div className="space-y-0.5">
+                                        <Label>{t('group.modelConfig.overrideMaxImageGenerationCount')}</Label>
+                                        <p className="text-xs text-muted-foreground">{t('group.modelConfig.overrideMaxImageGenerationCountDesc')}</p>
+                                    </div>
+                                    <Switch
+                                        checked={formOverrideMaxImageGenerationCount}
+                                        onCheckedChange={setFormOverrideMaxImageGenerationCount}
+                                    />
+                                </div>
+
+                                {formOverrideMaxImageGenerationCount && (
+                                    <div className="pl-4">
+                                        <div className="space-y-2">
+                                            <Label>{t('model.maxImageGenerationCount')}</Label>
+                                            <Input
+                                                type="number"
+                                                min={0}
+                                                value={formMaxImageGenerationCount}
+                                                onChange={(e) => setFormMaxImageGenerationCount(Number(e.target.value))}
+                                            />
+                                            <p className="text-xs text-muted-foreground">{t('group.modelConfig.maxImageGenerationCountHint')}</p>
+                                        </div>
+                                    </div>
+                                )}
+                            </>
                         )}
 
                         <div className="flex items-center justify-between rounded-lg border p-3">

@@ -319,6 +319,8 @@ type GroupModel struct {
 	ImagePrices    map[string]float64 `json:"image_prices,omitempty"`
 	Price          model.Price        `json:"price,omitempty"`
 	EnabledPlugins []string           `json:"enabled_plugins,omitempty"`
+
+	MaxImageGenerationCount int `json:"max_image_generation_count,omitempty"`
 }
 
 func getEnabledPlugins(plugin map[string]map[string]any) []string {
@@ -350,6 +352,8 @@ func NewGroupModel(mc model.ModelConfig) GroupModel {
 		ImagePrices:        mc.ImagePrices,
 		Price:              mc.Price,
 		EnabledPlugins:     getEnabledPlugins(mc.Plugin),
+
+		MaxImageGenerationCount: mc.MaxImageGenerationCount,
 	}
 	if !mc.CreatedAt.IsZero() {
 		gm.CreatedAt = mc.CreatedAt.Unix()

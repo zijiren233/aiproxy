@@ -31,6 +31,8 @@ export interface GroupModelConfig {
     timeout_config?: TimeoutConfig
     override_force_save_detail: boolean
     force_save_detail: boolean
+    override_max_image_generation_count: boolean
+    max_image_generation_count: number
     override_request_body_storage_max_size: boolean
     request_body_storage_max_size: number
     override_response_body_storage_max_size: boolean
@@ -124,6 +126,7 @@ export interface GroupDashboardModel {
     image_prices?: Record<string, number>
     price?: ModelPrice
     enabled_plugins?: string[]
+    max_image_generation_count?: number
 }
 
 // Group model config save request
@@ -141,6 +144,8 @@ export interface GroupModelConfigSaveRequest {
     timeout_config?: TimeoutConfig
     override_force_save_detail?: boolean
     force_save_detail?: boolean
+    override_max_image_generation_count?: boolean
+    max_image_generation_count?: number
     override_request_body_storage_max_size?: boolean
     request_body_storage_max_size?: number
     override_response_body_storage_max_size?: boolean
