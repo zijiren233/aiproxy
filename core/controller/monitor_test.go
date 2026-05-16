@@ -252,6 +252,7 @@ func setupRedisForControllerTest(t *testing.T, ctx context.Context) (*redis.Clie
 	if err := client.Ping(ctx).Err(); err != nil {
 		_ = client.Close()
 		_ = container.Terminate(ctx)
+
 		t.Skipf("skipping redis integration test: redis ping failed: %v", err)
 	}
 
