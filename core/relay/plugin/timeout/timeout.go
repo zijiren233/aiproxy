@@ -35,13 +35,13 @@ func (t *Timeout) ConvertRequest(
 	case mode.Embeddings:
 		meta.RequestTimeout = time.Second * 30
 	case mode.Moderations:
-		meta.RequestTimeout = time.Minute * 3
+		meta.RequestTimeout = time.Minute * 5
 	case mode.ImagesGenerations,
 		mode.ImagesEdits:
-		meta.RequestTimeout = time.Minute * 5
+		meta.RequestTimeout = time.Minute * 10
 	case mode.AudioTranscription,
 		mode.AudioTranslation:
-		meta.RequestTimeout = time.Minute * 3
+		meta.RequestTimeout = time.Minute * 5
 	case mode.Rerank:
 		meta.RequestTimeout = time.Second * 30
 	case mode.ParsePdf:
@@ -92,12 +92,11 @@ func (t *Timeout) ConvertRequest(
 		}
 	}
 
+	if timeout := meta.ModelConfig.RequestTimeout(); timeout != 0 {
+		meta.RequestTimeout = timeout
+	}
 	if stream {
 		if timeout := meta.ModelConfig.StreamRequestTimeout(); timeout != 0 {
-			meta.RequestTimeout = timeout
-		}
-	} else {
-		if timeout := meta.ModelConfig.RequestTimeout(); timeout != 0 {
 			meta.RequestTimeout = timeout
 		}
 	}
