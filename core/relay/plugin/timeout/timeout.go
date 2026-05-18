@@ -95,6 +95,7 @@ func (t *Timeout) ConvertRequest(
 	if timeout := meta.ModelConfig.RequestTimeout(); timeout != 0 {
 		meta.RequestTimeout = timeout
 	}
+
 	if stream {
 		if timeout := meta.ModelConfig.StreamRequestTimeout(); timeout != 0 {
 			meta.RequestTimeout = timeout
