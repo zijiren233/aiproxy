@@ -10,8 +10,10 @@ export interface DashboardAggregates {
     input_amount: number
     image_input_amount: number
     audio_input_amount: number
+    video_input_amount: number
     output_amount: number
     image_output_amount: number
+    audio_output_amount: number
     cached_amount: number
     cache_creation_amount: number
     web_search_amount: number
@@ -21,8 +23,10 @@ export interface DashboardAggregates {
     input_tokens: number
     image_input_tokens: number
     audio_input_tokens: number
+    video_input_tokens: number
     output_tokens: number
     image_output_tokens: number
+    audio_output_tokens: number
     cached_tokens: number
     cache_creation_tokens: number
     cache_hit_count: number
@@ -64,8 +68,10 @@ function withSummaryDefaults(summary?: ModelSummary): ModelSummary {
         input_amount: summary?.input_amount || 0,
         image_input_amount: summary?.image_input_amount || 0,
         audio_input_amount: summary?.audio_input_amount || 0,
+        video_input_amount: summary?.video_input_amount || 0,
         output_amount: summary?.output_amount || 0,
         image_output_amount: summary?.image_output_amount || 0,
+        audio_output_amount: summary?.audio_output_amount || 0,
         cached_amount: summary?.cached_amount || 0,
         cache_creation_amount: summary?.cache_creation_amount || 0,
         web_search_amount: summary?.web_search_amount || 0,
@@ -87,8 +93,10 @@ function withSummaryDefaults(summary?: ModelSummary): ModelSummary {
         input_tokens: summary?.input_tokens || 0,
         image_input_tokens: summary?.image_input_tokens || 0,
         audio_input_tokens: summary?.audio_input_tokens || 0,
+        video_input_tokens: summary?.video_input_tokens || 0,
         output_tokens: summary?.output_tokens || 0,
         image_output_tokens: summary?.image_output_tokens || 0,
+        audio_output_tokens: summary?.audio_output_tokens || 0,
         cached_tokens: summary?.cached_tokens || 0,
         cache_creation_tokens: summary?.cache_creation_tokens || 0,
         reasoning_tokens: summary?.reasoning_tokens || 0,
@@ -161,8 +169,10 @@ function toChartData(timeSeries: TimeSeriesPoint[], timespan?: string, hasModelF
         const inputTokens = summary.reduce((acc, s) => acc + (s?.input_tokens || 0), 0)
         const imageInputTokens = summary.reduce((acc, s) => acc + (s?.image_input_tokens || 0), 0)
         const audioInputTokens = summary.reduce((acc, s) => acc + (s?.audio_input_tokens || 0), 0)
+        const videoInputTokens = summary.reduce((acc, s) => acc + (s?.video_input_tokens || 0), 0)
         const outputTokens = summary.reduce((acc, s) => acc + (s?.output_tokens || 0), 0)
         const imageOutputTokens = summary.reduce((acc, s) => acc + (s?.image_output_tokens || 0), 0)
+        const audioOutputTokens = summary.reduce((acc, s) => acc + (s?.audio_output_tokens || 0), 0)
         const cachedTokens = summary.reduce((acc, s) => acc + (s?.cached_tokens || 0), 0)
         const cacheCreationTokens = summary.reduce((acc, s) => acc + (s?.cache_creation_tokens || 0), 0)
         const cacheHitCount = summary.reduce((acc, s) => acc + (s?.cache_hit_count || 0), 0)
@@ -175,18 +185,20 @@ function toChartData(timeSeries: TimeSeriesPoint[], timespan?: string, hasModelF
         const inputAmount = summary.reduce((acc, s) => acc + (s?.input_amount || 0), 0)
         const imageInputAmount = summary.reduce((acc, s) => acc + (s?.image_input_amount || 0), 0)
         const audioInputAmount = summary.reduce((acc, s) => acc + (s?.audio_input_amount || 0), 0)
+        const videoInputAmount = summary.reduce((acc, s) => acc + (s?.video_input_amount || 0), 0)
         const outputAmount = summary.reduce((acc, s) => acc + (s?.output_amount || 0), 0)
         const imageOutputAmount = summary.reduce((acc, s) => acc + (s?.image_output_amount || 0), 0)
+        const audioOutputAmount = summary.reduce((acc, s) => acc + (s?.audio_output_amount || 0), 0)
         const cachedAmount = summary.reduce((acc, s) => acc + (s?.cached_amount || 0), 0)
         const cacheCreationAmount = summary.reduce((acc, s) => acc + (s?.cache_creation_amount || 0), 0)
         const webSearchAmount = summary.reduce((acc, s) => acc + (s?.web_search_amount || 0), 0)
         const usedAmount = summary.reduce((acc, s) => acc + (s?.used_amount || 0), 0)
-        const totalInputAmount = inputAmount + imageInputAmount + audioInputAmount + cachedAmount + cacheCreationAmount
-        const totalOutputAmount = outputAmount + imageOutputAmount
+        const totalInputAmount = inputAmount + imageInputAmount + audioInputAmount + videoInputAmount + cachedAmount + cacheCreationAmount
+        const totalOutputAmount = outputAmount + imageOutputAmount + audioOutputAmount
 
         // Non-overlapping text portions (subtract sub-categories from totals)
-        const textInputTokens = Math.max(0, inputTokens - imageInputTokens - audioInputTokens - cachedTokens - cacheCreationTokens)
-        const textOutputTokens = Math.max(0, outputTokens - imageOutputTokens)
+        const textInputTokens = Math.max(0, inputTokens - imageInputTokens - audioInputTokens - videoInputTokens - cachedTokens - cacheCreationTokens)
+        const textOutputTokens = Math.max(0, outputTokens - imageOutputTokens - audioOutputTokens)
 
         const status2xxCount = summary.reduce((acc, s) => acc + (s?.status_2xx_count || 0), 0)
         const status4xxCount = summary.reduce((acc, s) => acc + (s?.status_4xx_count || 0), 0)
@@ -246,9 +258,11 @@ function toChartData(timeSeries: TimeSeriesPoint[], timespan?: string, hasModelF
             textInputTokens,
             imageInputTokens,
             audioInputTokens,
+            videoInputTokens,
             outputTokens,
             textOutputTokens,
             imageOutputTokens,
+            audioOutputTokens,
             cachedTokens,
             cacheCreationTokens,
             cacheHitCount,
@@ -261,9 +275,11 @@ function toChartData(timeSeries: TimeSeriesPoint[], timespan?: string, hasModelF
             totalInputAmount,
             imageInputAmount,
             audioInputAmount,
+            videoInputAmount,
             outputAmount,
             totalOutputAmount,
             imageOutputAmount,
+            audioOutputAmount,
             cachedAmount,
             cacheCreationAmount,
             webSearchAmount,
@@ -285,7 +301,7 @@ function computeDashboardResult(
 
     // Transform time series based on data source
     let timeSeries = originalTimeSeries
-    let isTransformedDataSource = dataSource && dataSource !== 'total'
+    const isTransformedDataSource = dataSource && dataSource !== 'total'
 
     if (isTransformedDataSource) {
         timeSeries = originalTimeSeries.map(ts => {
@@ -317,36 +333,39 @@ function computeDashboardResult(
                     exception_count: dataSet.exception_count || 0,
                     retry_count: dataSet.retry_count || 0,
                     input_tokens: dataSet.input_tokens || 0,
+                    image_input_tokens: dataSet.image_input_tokens || 0,
+                    audio_input_tokens: dataSet.audio_input_tokens || 0,
+                    video_input_tokens: dataSet.video_input_tokens || 0,
                     output_tokens: dataSet.output_tokens || 0,
+                    image_output_tokens: dataSet.image_output_tokens || 0,
+                    audio_output_tokens: dataSet.audio_output_tokens || 0,
+                    cached_tokens: dataSet.cached_tokens || 0,
+                    cache_creation_tokens: dataSet.cache_creation_tokens || 0,
+                    reasoning_tokens: dataSet.reasoning_tokens || 0,
                     total_tokens: dataSet.total_tokens || 0,
+                    web_search_count: dataSet.web_search_count || 0,
                     used_amount: dataSet.used_amount || 0,
                     input_amount: dataSet.input_amount || 0,
+                    image_input_amount: dataSet.image_input_amount || 0,
+                    audio_input_amount: dataSet.audio_input_amount || 0,
+                    video_input_amount: dataSet.video_input_amount || 0,
                     output_amount: dataSet.output_amount || 0,
+                    image_output_amount: dataSet.image_output_amount || 0,
+                    audio_output_amount: dataSet.audio_output_amount || 0,
+                    cached_amount: dataSet.cached_amount || 0,
+                    cache_creation_amount: dataSet.cache_creation_amount || 0,
+                    web_search_amount: dataSet.web_search_amount || 0,
                     status_2xx_count: dataSet.status_2xx_count || 0,
                     status_4xx_count: dataSet.status_4xx_count || 0,
                     status_5xx_count: dataSet.status_5xx_count || 0,
+                    status_other_count: dataSet.status_other_count || 0,
+                    status_400_count: dataSet.status_400_count || 0,
+                    status_429_count: dataSet.status_429_count || 0,
+                    status_500_count: dataSet.status_500_count || 0,
                     cache_hit_count: dataSet.cache_hit_count || 0,
-                    cached_tokens: dataSet.cached_tokens || 0,
-                    // Reset other fields that aren't in SummaryDataSet
-                    image_input_tokens: 0,
-                    audio_input_tokens: 0,
-                    image_output_tokens: 0,
-                    cache_creation_tokens: 0,
-                    reasoning_tokens: 0,
-                    image_input_amount: 0,
-                    audio_input_amount: 0,
-                    image_output_amount: 0,
-                    cached_amount: 0,
-                    cache_creation_amount: 0,
-                    web_search_amount: 0,
-                    total_time_milliseconds: 0,
-                    total_ttfb_milliseconds: 0,
-                    status_other_count: 0,
-                    status_400_count: 0,
-                    status_429_count: 0,
-                    status_500_count: 0,
-                    cache_creation_count: 0,
-                    web_search_count: 0,
+                    cache_creation_count: dataSet.cache_creation_count || 0,
+                    total_time_milliseconds: dataSet.total_time_milliseconds || 0,
+                    total_ttfb_milliseconds: dataSet.total_ttfb_milliseconds || 0,
                     max_rpm: 0,
                     max_tpm: 0,
                 }
@@ -365,8 +384,10 @@ function computeDashboardResult(
         input_amount: 0,
         image_input_amount: 0,
         audio_input_amount: 0,
+        video_input_amount: 0,
         output_amount: 0,
         image_output_amount: 0,
+        audio_output_amount: 0,
         cached_amount: 0,
         cache_creation_amount: 0,
         web_search_amount: 0,
@@ -376,8 +397,10 @@ function computeDashboardResult(
         input_tokens: 0,
         image_input_tokens: 0,
         audio_input_tokens: 0,
+        video_input_tokens: 0,
         output_tokens: 0,
         image_output_tokens: 0,
+        audio_output_tokens: 0,
         cached_tokens: 0,
         cache_creation_tokens: 0,
         cache_hit_count: 0,
@@ -408,17 +431,29 @@ function computeDashboardResult(
             existing.input_amount = (existing?.input_amount || 0) + (normalized?.input_amount || 0)
             existing.image_input_amount = (existing?.image_input_amount || 0) + (normalized?.image_input_amount || 0)
             existing.audio_input_amount = (existing?.audio_input_amount || 0) + (normalized?.audio_input_amount || 0)
+            existing.video_input_amount = (existing?.video_input_amount || 0) + (normalized?.video_input_amount || 0)
             existing.output_amount = (existing?.output_amount || 0) + (normalized?.output_amount || 0)
             existing.image_output_amount = (existing?.image_output_amount || 0) + (normalized?.image_output_amount || 0)
+            existing.audio_output_amount = (existing?.audio_output_amount || 0) + (normalized?.audio_output_amount || 0)
             existing.cached_amount = (existing?.cached_amount || 0) + (normalized?.cached_amount || 0)
             existing.cache_creation_amount = (existing?.cache_creation_amount || 0) + (normalized?.cache_creation_amount || 0)
             existing.web_search_amount = (existing?.web_search_amount || 0) + (normalized?.web_search_amount || 0)
             existing.total_time_milliseconds = (existing?.total_time_milliseconds || 0) + (normalized?.total_time_milliseconds || 0)
             existing.total_ttfb_milliseconds = (existing?.total_ttfb_milliseconds || 0) + (normalized?.total_ttfb_milliseconds || 0)
             existing.input_tokens = (existing?.input_tokens || 0) + (normalized?.input_tokens || 0)
+            existing.image_input_tokens = (existing?.image_input_tokens || 0) + (normalized?.image_input_tokens || 0)
+            existing.audio_input_tokens = (existing?.audio_input_tokens || 0) + (normalized?.audio_input_tokens || 0)
+            existing.video_input_tokens = (existing?.video_input_tokens || 0) + (normalized?.video_input_tokens || 0)
             existing.output_tokens = (existing?.output_tokens || 0) + (normalized?.output_tokens || 0)
+            existing.image_output_tokens = (existing?.image_output_tokens || 0) + (normalized?.image_output_tokens || 0)
+            existing.audio_output_tokens = (existing?.audio_output_tokens || 0) + (normalized?.audio_output_tokens || 0)
             existing.cached_tokens = (existing?.cached_tokens || 0) + (normalized?.cached_tokens || 0)
+            existing.cache_creation_tokens = (existing?.cache_creation_tokens || 0) + (normalized?.cache_creation_tokens || 0)
+            existing.cache_hit_count = (existing?.cache_hit_count || 0) + (normalized?.cache_hit_count || 0)
+            existing.cache_creation_count = (existing?.cache_creation_count || 0) + (normalized?.cache_creation_count || 0)
+            existing.reasoning_tokens = (existing?.reasoning_tokens || 0) + (normalized?.reasoning_tokens || 0)
             existing.total_tokens = (existing?.total_tokens || 0) + (normalized?.total_tokens || 0)
+            existing.web_search_count = (existing?.web_search_count || 0) + (normalized?.web_search_count || 0)
             if ((normalized?.max_rpm || 0) > (existing?.max_rpm || 0)) existing.max_rpm = normalized?.max_rpm || 0
             if ((normalized?.max_tpm || 0) > (existing?.max_tpm || 0)) existing.max_tpm = normalized?.max_tpm || 0
         } else {
@@ -437,12 +472,37 @@ function computeDashboardResult(
             status_2xx_count: (target.status_2xx_count || 0) + (source.status_2xx_count || 0),
             status_4xx_count: (target.status_4xx_count || 0) + (source.status_4xx_count || 0),
             status_5xx_count: (target.status_5xx_count || 0) + (source.status_5xx_count || 0),
+            status_other_count: (target.status_other_count || 0) + (source.status_other_count || 0),
+            status_400_count: (target.status_400_count || 0) + (source.status_400_count || 0),
+            status_429_count: (target.status_429_count || 0) + (source.status_429_count || 0),
+            status_500_count: (target.status_500_count || 0) + (source.status_500_count || 0),
+            cache_hit_count: (target.cache_hit_count || 0) + (source.cache_hit_count || 0),
+            cache_creation_count: (target.cache_creation_count || 0) + (source.cache_creation_count || 0),
             input_tokens: (target.input_tokens || 0) + (source.input_tokens || 0),
+            image_input_tokens: (target.image_input_tokens || 0) + (source.image_input_tokens || 0),
+            audio_input_tokens: (target.audio_input_tokens || 0) + (source.audio_input_tokens || 0),
+            video_input_tokens: (target.video_input_tokens || 0) + (source.video_input_tokens || 0),
             output_tokens: (target.output_tokens || 0) + (source.output_tokens || 0),
+            image_output_tokens: (target.image_output_tokens || 0) + (source.image_output_tokens || 0),
+            audio_output_tokens: (target.audio_output_tokens || 0) + (source.audio_output_tokens || 0),
+            cached_tokens: (target.cached_tokens || 0) + (source.cached_tokens || 0),
+            cache_creation_tokens: (target.cache_creation_tokens || 0) + (source.cache_creation_tokens || 0),
+            reasoning_tokens: (target.reasoning_tokens || 0) + (source.reasoning_tokens || 0),
             total_tokens: (target.total_tokens || 0) + (source.total_tokens || 0),
+            web_search_count: (target.web_search_count || 0) + (source.web_search_count || 0),
             used_amount: (target.used_amount || 0) + (source.used_amount || 0),
             input_amount: (target.input_amount || 0) + (source.input_amount || 0),
+            image_input_amount: (target.image_input_amount || 0) + (source.image_input_amount || 0),
+            audio_input_amount: (target.audio_input_amount || 0) + (source.audio_input_amount || 0),
+            video_input_amount: (target.video_input_amount || 0) + (source.video_input_amount || 0),
             output_amount: (target.output_amount || 0) + (source.output_amount || 0),
+            image_output_amount: (target.image_output_amount || 0) + (source.image_output_amount || 0),
+            audio_output_amount: (target.audio_output_amount || 0) + (source.audio_output_amount || 0),
+            cached_amount: (target.cached_amount || 0) + (source.cached_amount || 0),
+            cache_creation_amount: (target.cache_creation_amount || 0) + (source.cache_creation_amount || 0),
+            web_search_amount: (target.web_search_amount || 0) + (source.web_search_amount || 0),
+            total_time_milliseconds: (target.total_time_milliseconds || 0) + (source.total_time_milliseconds || 0),
+            total_ttfb_milliseconds: (target.total_ttfb_milliseconds || 0) + (source.total_ttfb_milliseconds || 0),
         }
     }
 
@@ -480,8 +540,10 @@ function computeDashboardResult(
             agg.input_amount += normalized?.input_amount || 0
             agg.image_input_amount += normalized?.image_input_amount || 0
             agg.audio_input_amount += normalized?.audio_input_amount || 0
+            agg.video_input_amount += normalized?.video_input_amount || 0
             agg.output_amount += normalized?.output_amount || 0
             agg.image_output_amount += normalized?.image_output_amount || 0
+            agg.audio_output_amount += normalized?.audio_output_amount || 0
             agg.cached_amount += normalized?.cached_amount || 0
             agg.cache_creation_amount += normalized?.cache_creation_amount || 0
             agg.web_search_amount += normalized?.web_search_amount || 0
@@ -490,8 +552,10 @@ function computeDashboardResult(
             agg.input_tokens += normalized?.input_tokens || 0
             agg.image_input_tokens += normalized?.image_input_tokens || 0
             agg.audio_input_tokens += normalized?.audio_input_tokens || 0
+            agg.video_input_tokens += normalized?.video_input_tokens || 0
             agg.output_tokens += normalized?.output_tokens || 0
             agg.image_output_tokens += normalized?.image_output_tokens || 0
+            agg.audio_output_tokens += normalized?.audio_output_tokens || 0
             agg.cached_tokens += normalized?.cached_tokens || 0
             agg.cache_creation_tokens += normalized?.cache_creation_tokens || 0
             agg.cache_hit_count += normalized?.cache_hit_count || 0

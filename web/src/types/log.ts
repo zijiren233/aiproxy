@@ -8,10 +8,18 @@ export interface LogPrice {
   cached_price_unit: number
   image_input_price: number
   image_input_price_unit: number
+  audio_input_price: number
+  audio_input_price_unit: number
+  video_input_price: number
+  video_input_price_unit: number
   input_price: number
   input_price_unit: number
   output_price: number
   output_price_unit: number
+  image_output_price: number
+  image_output_price_unit: number
+  audio_output_price: number
+  audio_output_price_unit: number
   per_request_price: number
   thinking_mode_output_price: number
   thinking_mode_output_price_unit: number
@@ -24,8 +32,12 @@ export interface LogUsage {
   cache_creation_tokens: number
   cached_tokens: number
   image_input_tokens: number
+  audio_input_tokens: number
+  video_input_tokens: number
   input_tokens: number
   output_tokens: number
+  image_output_tokens: number
+  audio_output_tokens: number
   reasoning_tokens: number
   total_tokens: number
   web_search_count: number
@@ -36,8 +48,10 @@ export interface LogAmount {
   input_amount?: number
   image_input_amount?: number
   audio_input_amount?: number
+  video_input_amount?: number
   output_amount?: number
   image_output_amount?: number
+  audio_output_amount?: number
   cached_amount?: number
   cache_creation_amount?: number
   web_search_amount?: number

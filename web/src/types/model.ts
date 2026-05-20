@@ -48,6 +48,10 @@ export interface ModelPrice {
     image_output_price_unit?: number
     audio_input_price?: number
     audio_input_price_unit?: number
+    video_input_price?: number
+    video_input_price_unit?: number
+    audio_output_price?: number
+    audio_output_price_unit?: number
     thinking_mode_output_price?: number
     thinking_mode_output_price_unit?: number
     web_search_price?: number

@@ -562,8 +562,10 @@ export function MonitorCharts({ chartData, modelRanking, detailRanking = [], has
                                 { key: 'cacheCreationTokens', name: t('monitor.charts.tokensBreakdown.cacheCreation'), color: '#a78bfa' },
                                 { key: 'imageInputTokens', name: t('monitor.charts.tokensBreakdown.imageInput'), color: '#06b6d4' },
                                 { key: 'audioInputTokens', name: t('monitor.charts.tokensBreakdown.audioInput'), color: '#8b5cf6' },
+                                { key: 'videoInputTokens', name: t('monitor.charts.tokensBreakdown.videoInput'), color: '#ec4899' },
                                 { key: 'textOutputTokens', name: t('monitor.charts.tokensBreakdown.textOutput'), color: '#10b981' },
                                 { key: 'imageOutputTokens', name: t('monitor.charts.tokensBreakdown.imageOutput'), color: '#14b8a6' },
+                                { key: 'audioOutputTokens', name: t('monitor.charts.tokensBreakdown.audioOutput'), color: '#f97316' },
                             ]
                             // Filter out series that have no data at all
                             const activeSeries = tokenSeries.filter(s =>
@@ -661,8 +663,10 @@ export function MonitorCharts({ chartData, modelRanking, detailRanking = [], has
                             { key: 'cacheCreationAmount', name: t('monitor.charts.costBreakdownTypes.cacheCreation'), color: '#a78bfa' },
                             { key: 'imageInputAmount', name: t('monitor.charts.costBreakdownTypes.imageInput'), color: '#06b6d4' },
                             { key: 'audioInputAmount', name: t('monitor.charts.costBreakdownTypes.audioInput'), color: '#8b5cf6' },
+                            { key: 'videoInputAmount', name: t('monitor.charts.costBreakdownTypes.videoInput'), color: '#ec4899' },
                             { key: 'outputAmount', name: t('monitor.charts.costBreakdownTypes.textOutput'), color: '#10b981' },
                             { key: 'imageOutputAmount', name: t('monitor.charts.costBreakdownTypes.imageOutput'), color: '#14b8a6' },
+                            { key: 'audioOutputAmount', name: t('monitor.charts.costBreakdownTypes.audioOutput'), color: '#f97316' },
                             { key: 'webSearchAmount', name: t('monitor.charts.costBreakdownTypes.webSearch'), color: '#0ea5e9' },
                         ]
                         // Filter out series that have no data at all
