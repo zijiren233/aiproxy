@@ -982,6 +982,78 @@ var ModelList = []model.ModelConfig{
 		Owner: model.ModelOwnerAlibaba,
 		RPM:   60,
 	},
+	{
+		Model: "qwen-mt-image",
+		Type:  mode.ImagesEdits,
+		Owner: model.ModelOwnerAlibaba,
+		RPM:   60,
+	},
+	{
+		Model: "z-image-turbo",
+		Type:  mode.ImagesGenerations,
+		Owner: model.ModelOwnerAlibaba,
+		RPM:   60,
+	},
+	{
+		Model: "wan2.7-image",
+		Type:  mode.ImagesGenerations,
+		Owner: model.ModelOwnerAlibaba,
+		RPM:   60,
+	},
+	{
+		Model: "wan2.7-image-pro",
+		Type:  mode.ImagesGenerations,
+		Owner: model.ModelOwnerAlibaba,
+		RPM:   60,
+	},
+	{
+		Model: "wan2.6-t2i",
+		Type:  mode.ImagesGenerations,
+		Owner: model.ModelOwnerAlibaba,
+		RPM:   60,
+	},
+	{
+		Model: "wan2.5-t2i-preview",
+		Type:  mode.ImagesGenerations,
+		Owner: model.ModelOwnerAlibaba,
+		RPM:   60,
+	},
+	{
+		Model: "wan2.2-t2i-flash",
+		Type:  mode.ImagesGenerations,
+		Owner: model.ModelOwnerAlibaba,
+		RPM:   60,
+	},
+	{
+		Model: "wan2.2-t2i-plus",
+		Type:  mode.ImagesGenerations,
+		Owner: model.ModelOwnerAlibaba,
+		RPM:   60,
+	},
+	{
+		Model: "wanx2.1-t2i-turbo",
+		Type:  mode.ImagesGenerations,
+		Owner: model.ModelOwnerAlibaba,
+		RPM:   60,
+	},
+	{
+		Model: "wanx2.1-t2i-plus",
+		Type:  mode.ImagesGenerations,
+		Owner: model.ModelOwnerAlibaba,
+		RPM:   60,
+	},
+	{
+		Model: "wanx2.0-t2i-turbo",
+		Type:  mode.ImagesGenerations,
+		Owner: model.ModelOwnerAlibaba,
+		RPM:   60,
+	},
+	{
+		Model: "wanx-v1",
+		Type:  mode.ImagesGenerations,
+		Owner: model.ModelOwnerAlibaba,
+		RPM:   60,
+	},
 
 	{
 		Model: "sambert-v1",

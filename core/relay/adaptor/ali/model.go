@@ -6,14 +6,21 @@ type ImageRequest struct {
 	Input struct {
 		Prompt         string `json:"prompt"`
 		NegativePrompt string `json:"negative_prompt,omitempty"`
+		RefImage       string `json:"ref_image,omitempty"`
 	} `json:"input"`
 	Model          string `json:"model"`
 	ResponseFormat string `json:"response_format,omitempty"`
 	Parameters     struct {
-		Size  string `json:"size,omitempty"`
-		Steps string `json:"steps,omitempty"`
-		Scale string `json:"scale,omitempty"`
-		N     int    `json:"n,omitempty"`
+		Size         string   `json:"size,omitempty"`
+		Steps        string   `json:"steps,omitempty"`
+		Scale        string   `json:"scale,omitempty"`
+		N            int      `json:"n,omitempty"`
+		PromptExtend *bool    `json:"prompt_extend,omitempty"`
+		Watermark    *bool    `json:"watermark,omitempty"`
+		Seed         *int64   `json:"seed,omitempty"`
+		Style        string   `json:"style,omitempty"`
+		RefStrength  *float64 `json:"ref_strength,omitempty"`
+		RefMode      string   `json:"ref_mode,omitempty"`
 	} `json:"parameters,omitempty"`
 }
 
@@ -32,14 +39,26 @@ type TaskResponse struct {
 			Code     string `json:"code,omitempty"`
 			Message  string `json:"message,omitempty"`
 		} `json:"results,omitempty"`
+		ImageURL    string `json:"image_url,omitempty"`
+		B64Image    string `json:"b64_image,omitempty"`
 		TaskMetrics struct {
 			Total     int `json:"TOTAL,omitempty"`
 			Succeeded int `json:"SUCCEEDED,omitempty"`
 			Failed    int `json:"FAILED,omitempty"`
 		} `json:"task_metrics,omitempty"`
 	} `json:"output,omitempty"`
-	Usage      model.ChatUsage `json:"usage"`
-	StatusCode int             `json:"status_code,omitempty"`
+	Usage      AliImageUsage `json:"usage"`
+	StatusCode int           `json:"status_code,omitempty"`
+}
+
+type AliImageUsage struct {
+	ImageCount   int64  `json:"image_count,omitempty"`
+	Width        int64  `json:"width,omitempty"`
+	Height       int64  `json:"height,omitempty"`
+	Size         string `json:"size,omitempty"`
+	InputTokens  int64  `json:"input_tokens,omitempty"`
+	OutputTokens int64  `json:"output_tokens,omitempty"`
+	TotalTokens  int64  `json:"total_tokens,omitempty"`
 }
 
 type MultimodalImageRequest struct {
@@ -84,11 +103,7 @@ type MultimodalImageResponse struct {
 			Message      string `json:"message,omitempty"`
 		} `json:"results,omitempty"`
 	} `json:"output,omitempty"`
-	Usage struct {
-		ImageCount int64 `json:"image_count,omitempty"`
-		Width      int64 `json:"width,omitempty"`
-		Height     int64 `json:"height,omitempty"`
-	} `json:"usage,omitempty"`
+	Usage AliImageUsage `json:"usage,omitempty"`
 }
 
 type EmbeddingRequest struct {

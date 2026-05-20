@@ -62,8 +62,10 @@ func (a *Adaptor) GetRequestURL(
 	switch meta.Mode {
 	case mode.ImagesGenerations:
 		path := "/api/v1/services/aigc/text2image/image-synthesis"
-		if isQwenImageModel(meta) {
+		if isAliMultimodalImageModel(meta) {
 			path = "/api/v1/services/aigc/multimodal-generation/generation"
+		} else if isQwenMTImageModel(meta) {
+			path = "/api/v1/services/aigc/image2image/image-synthesis"
 		}
 
 		url, err := url.JoinPath(u, path)
@@ -76,14 +78,14 @@ func (a *Adaptor) GetRequestURL(
 			URL:    url,
 		}, nil
 	case mode.ImagesEdits:
-		targetURL, err := url.JoinPath(u, "/api/v1/services/aigc/text2image/image-synthesis")
-		if isQwenImageModel(meta) {
-			targetURL, err = url.JoinPath(
-				u,
-				"/api/v1/services/aigc/multimodal-generation/generation",
-			)
+		path := "/api/v1/services/aigc/text2image/image-synthesis"
+		if isAliMultimodalImageModel(meta) {
+			path = "/api/v1/services/aigc/multimodal-generation/generation"
+		} else if isQwenMTImageModel(meta) {
+			path = "/api/v1/services/aigc/image2image/image-synthesis"
 		}
 
+		targetURL, err := url.JoinPath(u, path)
 		if err != nil {
 			return adaptor.RequestURL{}, err
 		}
@@ -243,7 +245,7 @@ func (a *Adaptor) ConvertRequest(
 	case mode.ImagesGenerations:
 		return ConvertImageRequest(meta, req)
 	case mode.ImagesEdits:
-		return ConvertQwenImageEditRequest(meta, req)
+		return ConvertAliImageEditRequest(meta, req)
 	case mode.Rerank:
 		return ConvertRerankRequest(meta, req)
 	case mode.ChatCompletions:
