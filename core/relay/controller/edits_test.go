@@ -2,7 +2,10 @@
 package controller
 
 import (
+	"bytes"
 	"context"
+	"mime/multipart"
+	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
@@ -99,4 +102,36 @@ func TestValidateImagesEditsRequestWrapsParseError(t *testing.T) {
 	var requestParamErr *RequestParamError
 	require.ErrorAs(t, err, &requestParamErr)
 	require.Equal(t, 400, requestParamErr.StatusCode)
+}
+
+func TestGetImagesEditsRequestUsageCountsImageArrayField(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+	require.NoError(t, writer.WriteField("prompt", "edit image"))
+
+	for _, filename := range []string{"input1.png", "input2.png"} {
+		part, err := writer.CreateFormFile("image[]", filename)
+		require.NoError(t, err)
+
+		_, _ = part.Write([]byte("fake image"))
+	}
+
+	require.NoError(t, writer.Close())
+
+	req := httptest.NewRequestWithContext(
+		context.Background(),
+		http.MethodPost,
+		"/v1/images/edits",
+		body,
+	)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+
+	c, _ := gin.CreateTestContext(httptest.NewRecorder())
+	c.Request = req
+
+	usage, err := GetImagesEditsRequestUsage(c, model.ModelConfig{Model: "gpt-image-1"})
+	require.NoError(t, err)
+	require.Equal(t, model.ZeroNullInt64(2), usage.ImageInputTokens)
 }
