@@ -61,39 +61,9 @@ func (a *Adaptor) GetRequestURL(
 
 	switch meta.Mode {
 	case mode.ImagesGenerations:
-		path := "/api/v1/services/aigc/text2image/image-synthesis"
-		if isAliMultimodalImageModel(meta) {
-			path = "/api/v1/services/aigc/multimodal-generation/generation"
-		} else if isQwenMTImageModel(meta) {
-			path = "/api/v1/services/aigc/image2image/image-synthesis"
-		}
-
-		url, err := url.JoinPath(u, path)
-		if err != nil {
-			return adaptor.RequestURL{}, err
-		}
-
-		return adaptor.RequestURL{
-			Method: http.MethodPost,
-			URL:    url,
-		}, nil
+		return getAliImageRequestURL(u, meta)
 	case mode.ImagesEdits:
-		path := "/api/v1/services/aigc/text2image/image-synthesis"
-		if isAliMultimodalImageModel(meta) {
-			path = "/api/v1/services/aigc/multimodal-generation/generation"
-		} else if isQwenMTImageModel(meta) {
-			path = "/api/v1/services/aigc/image2image/image-synthesis"
-		}
-
-		targetURL, err := url.JoinPath(u, path)
-		if err != nil {
-			return adaptor.RequestURL{}, err
-		}
-
-		return adaptor.RequestURL{
-			Method: http.MethodPost,
-			URL:    targetURL,
-		}, nil
+		return getAliImageRequestURL(u, meta)
 	case mode.ChatCompletions:
 		url, err := url.JoinPath(u, "/compatible-mode/v1/chat/completions")
 		if err != nil {
@@ -222,6 +192,25 @@ func (a *Adaptor) GetRequestURL(
 	default:
 		return adaptor.RequestURL{}, fmt.Errorf("unsupported mode: %s", meta.Mode)
 	}
+}
+
+func getAliImageRequestURL(baseURL string, meta *meta.Meta) (adaptor.RequestURL, error) {
+	path := "/api/v1/services/aigc/text2image/image-synthesis"
+	if isAliMultimodalImageModel(meta) {
+		path = "/api/v1/services/aigc/multimodal-generation/generation"
+	} else if isQwenMTImageModel(meta) {
+		path = "/api/v1/services/aigc/image2image/image-synthesis"
+	}
+
+	targetURL, err := url.JoinPath(baseURL, path)
+	if err != nil {
+		return adaptor.RequestURL{}, err
+	}
+
+	return adaptor.RequestURL{
+		Method: http.MethodPost,
+		URL:    targetURL,
+	}, nil
 }
 
 func (a *Adaptor) SetupRequestHeader(

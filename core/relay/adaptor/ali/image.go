@@ -91,14 +91,6 @@ func isWanMultimodalImageModelName(modelName string) bool {
 	return modelName == "wan2.6-t2i" || strings.HasPrefix(modelName, "wan2.7-image")
 }
 
-func isZImageModel(meta *meta.Meta) bool {
-	if meta == nil {
-		return false
-	}
-
-	return isZImageModelName(meta.OriginModel) || isZImageModelName(meta.ActualModel)
-}
-
 func isZImageModelName(modelName string) bool {
 	return strings.EqualFold(modelName, "z-image-turbo")
 }
@@ -236,7 +228,10 @@ func ConvertAliImageEditRequest(
 		return adaptor.ConvertResult{}, errors.New("image is required")
 	}
 
-	if maxImages := multimodalImageEditMaxImages(meta); maxImages > 0 && len(fileHeaders) > maxImages {
+	if maxImages := multimodalImageEditMaxImages(
+		meta,
+	); maxImages > 0 &&
+		len(fileHeaders) > maxImages {
 		return adaptor.ConvertResult{}, fmt.Errorf("image supports at most %d files", maxImages)
 	}
 
@@ -322,19 +317,21 @@ func ConvertQwenMTImageRequest(
 
 	body := map[string]any{
 		"model": meta.ActualModel,
-		"input": map[string]any{
-			"image_url":   imageRequest.ImageURL,
-			"source_lang": imageRequest.SourceLang,
-			"target_lang": imageRequest.TargetLang,
-		},
 	}
 
-	input := body["input"].(map[string]any)
+	input := map[string]any{
+		"image_url":   imageRequest.ImageURL,
+		"source_lang": imageRequest.SourceLang,
+		"target_lang": imageRequest.TargetLang,
+	}
+	body["input"] = input
+
 	if imageRequest.Ext != nil {
 		var ext any
 		if err := sonic.Unmarshal(imageRequest.Ext, &ext); err != nil {
 			return adaptor.ConvertResult{}, fmt.Errorf("invalid ext: %w", err)
 		}
+
 		input["ext"] = ext
 	} else if imageRequest.ImageSegment != nil {
 		input["ext"] = map[string]any{
@@ -390,6 +387,7 @@ func buildMultimodalImageRequest(
 			if err := validateMultimodalImageN(meta, request.N); err != nil {
 				return imageRequest, err
 			}
+
 			parameters["n"] = request.N
 		} else if request.N > 1 {
 			return imageRequest, errors.New("n must be 1 for this model")

@@ -333,13 +333,13 @@ func TestAdaptorConvertRequestQwenImageGeneration(t *testing.T) {
 		t.Fatalf("expected mapped model, got %#v", payload["model"])
 	}
 
-	input := payload["input"].(map[string]any)
-	messages := input["messages"].([]any)
-	message := messages[0].(map[string]any)
-	contents := message["content"].([]any)
+	input := mustMap(t, payload["input"])
+	messages := mustSlice(t, input["messages"])
+	message := mustMap(t, messages[0])
+	contents := mustSlice(t, message["content"])
 	assertContentString(t, contents[0], "text", "draw a cat")
 
-	parameters := payload["parameters"].(map[string]any)
+	parameters := mustMap(t, payload["parameters"])
 	if parameters["size"] != "1024*1024" {
 		t.Fatalf("expected size 1024*1024, got %#v", parameters["size"])
 	}
@@ -356,7 +356,7 @@ func TestAdaptorConvertRequestQwenImageGeneration(t *testing.T) {
 		t.Fatalf("expected watermark false, got %#v", parameters["watermark"])
 	}
 
-	if int64(parameters["seed"].(float64)) != 123 {
+	if int64(mustFloat64(t, parameters["seed"])) != 123 {
 		t.Fatalf("expected seed 123, got %#v", parameters["seed"])
 	}
 
@@ -428,8 +428,8 @@ func TestAdaptorConvertRequestQwenImageGenerationSupportsN(t *testing.T) {
 		t.Fatalf("failed to unmarshal converted body %s: %v", string(body), err)
 	}
 
-	parameters := payload["parameters"].(map[string]any)
-	if int(parameters["n"].(float64)) != 2 {
+	parameters := mustMap(t, payload["parameters"])
+	if int(mustFloat64(t, parameters["n"])) != 2 {
 		t.Fatalf("expected n 2, got %#v", parameters["n"])
 	}
 }
@@ -474,31 +474,37 @@ func TestAdaptorConvertRequestWan27ImageGeneration(t *testing.T) {
 		t.Fatalf("failed to unmarshal converted body %s: %v", string(body), err)
 	}
 
-	input := payload["input"].(map[string]any)
-	messages := input["messages"].([]any)
-	message := messages[0].(map[string]any)
-	contents := message["content"].([]any)
+	input := mustMap(t, payload["input"])
+	messages := mustSlice(t, input["messages"])
+	message := mustMap(t, messages[0])
+	contents := mustSlice(t, message["content"])
 	assertContentString(t, contents[0], "text", "create a product render")
 
-	parameters := payload["parameters"].(map[string]any)
+	parameters := mustMap(t, payload["parameters"])
 	if parameters["size"] != "2K" {
 		t.Fatalf("expected size 2K, got %#v", parameters["size"])
 	}
-	if int(parameters["n"].(float64)) != 4 {
+
+	if int(mustFloat64(t, parameters["n"])) != 4 {
 		t.Fatalf("expected n 4, got %#v", parameters["n"])
 	}
+
 	if parameters["watermark"] != false {
 		t.Fatalf("expected watermark false, got %#v", parameters["watermark"])
 	}
+
 	if parameters["thinking_mode"] != true {
 		t.Fatalf("expected thinking_mode true, got %#v", parameters["thinking_mode"])
 	}
+
 	if parameters["enable_sequential"] != true {
 		t.Fatalf("expected enable_sequential true, got %#v", parameters["enable_sequential"])
 	}
+
 	if _, ok := parameters["prompt_extend"]; ok {
 		t.Fatalf("expected prompt_extend not to be forwarded, got %#v", parameters)
 	}
+
 	if _, ok := parameters["seed"]; ok {
 		t.Fatalf("expected seed not to be forwarded, got %#v", parameters)
 	}
@@ -543,23 +549,28 @@ func TestAdaptorConvertRequestWan26ImageGeneration(t *testing.T) {
 		t.Fatalf("failed to unmarshal converted body %s: %v", string(body), err)
 	}
 
-	parameters := payload["parameters"].(map[string]any)
+	parameters := mustMap(t, payload["parameters"])
 	if parameters["size"] != "1280*1280" {
 		t.Fatalf("expected size 1280*1280, got %#v", parameters["size"])
 	}
-	if int(parameters["n"].(float64)) != 2 {
+
+	if int(mustFloat64(t, parameters["n"])) != 2 {
 		t.Fatalf("expected n 2, got %#v", parameters["n"])
 	}
+
 	if parameters["negative_prompt"] != "low quality" {
 		t.Fatalf("expected negative_prompt, got %#v", parameters["negative_prompt"])
 	}
+
 	if parameters["prompt_extend"] != true {
 		t.Fatalf("expected prompt_extend true, got %#v", parameters["prompt_extend"])
 	}
+
 	if parameters["watermark"] != false {
 		t.Fatalf("expected watermark false, got %#v", parameters["watermark"])
 	}
-	if int64(parameters["seed"].(float64)) != 12345 {
+
+	if int64(mustFloat64(t, parameters["seed"])) != 12345 {
 		t.Fatalf("expected seed 12345, got %#v", parameters["seed"])
 	}
 }
@@ -599,13 +610,15 @@ func TestAdaptorConvertRequestZImageGeneration(t *testing.T) {
 		t.Fatalf("failed to unmarshal converted body %s: %v", string(body), err)
 	}
 
-	parameters := payload["parameters"].(map[string]any)
+	parameters := mustMap(t, payload["parameters"])
 	if parameters["size"] != "1024*1024" {
 		t.Fatalf("expected size 1024*1024, got %#v", parameters["size"])
 	}
+
 	if parameters["prompt_extend"] != true {
 		t.Fatalf("expected prompt_extend true, got %#v", parameters["prompt_extend"])
 	}
+
 	if _, ok := parameters["n"]; ok {
 		t.Fatalf("expected n not to be forwarded, got %#v", parameters)
 	}
@@ -658,34 +671,41 @@ func TestAdaptorConvertRequestLegacyWanImageGeneration(t *testing.T) {
 		t.Fatalf("failed to unmarshal converted body %s: %v", string(body), err)
 	}
 
-	input := payload["input"].(map[string]any)
+	input := mustMap(t, payload["input"])
 	if input["prompt"] != "create a scene" {
 		t.Fatalf("expected prompt, got %#v", input["prompt"])
 	}
+
 	if input["negative_prompt"] != "low quality" {
 		t.Fatalf("expected negative_prompt, got %#v", input["negative_prompt"])
 	}
+
 	if input["ref_image"] != "https://example.com/ref.png" {
 		t.Fatalf("expected ref_image, got %#v", input["ref_image"])
 	}
 
-	parameters := payload["parameters"].(map[string]any)
+	parameters := mustMap(t, payload["parameters"])
 	if parameters["size"] != "1024*1024" {
 		t.Fatalf("expected size 1024*1024, got %#v", parameters["size"])
 	}
+
 	if parameters["style"] != "<auto>" {
 		t.Fatalf("expected style, got %#v", parameters["style"])
 	}
+
 	if parameters["ref_mode"] != "repaint" {
 		t.Fatalf("expected ref_mode, got %#v", parameters["ref_mode"])
 	}
+
 	if parameters["prompt_extend"] != true {
 		t.Fatalf("expected prompt_extend true, got %#v", parameters["prompt_extend"])
 	}
+
 	if parameters["watermark"] != false {
 		t.Fatalf("expected watermark false, got %#v", parameters["watermark"])
 	}
-	if int64(parameters["seed"].(float64)) != 12345 {
+
+	if int64(mustFloat64(t, parameters["seed"])) != 12345 {
 		t.Fatalf("expected seed 12345, got %#v", parameters["seed"])
 	}
 }
@@ -771,14 +791,14 @@ func TestAdaptorConvertRequestQwenImageEdit(t *testing.T) {
 		t.Fatalf("expected mapped model, got %#v", payload["model"])
 	}
 
-	input := payload["input"].(map[string]any)
-	messages := input["messages"].([]any)
-	message := messages[0].(map[string]any)
-	contents := message["content"].([]any)
-	assertContentHasPrefix(t, contents[0], "image", "data:image/png;base64,")
+	input := mustMap(t, payload["input"])
+	messages := mustSlice(t, input["messages"])
+	message := mustMap(t, messages[0])
+	contents := mustSlice(t, message["content"])
+	assertImageContentHasPNGPrefix(t, contents[0])
 	assertContentString(t, contents[1], "text", "add a hat")
 
-	parameters := payload["parameters"].(map[string]any)
+	parameters := mustMap(t, payload["parameters"])
 	if parameters["size"] != "1024*1024" {
 		t.Fatalf("expected size 1024*1024, got %#v", parameters["size"])
 	}
@@ -795,7 +815,7 @@ func TestAdaptorConvertRequestQwenImageEdit(t *testing.T) {
 		t.Fatalf("expected watermark false, got %#v", parameters["watermark"])
 	}
 
-	if int64(parameters["seed"].(float64)) != 456 {
+	if int64(mustFloat64(t, parameters["seed"])) != 456 {
 		t.Fatalf("expected seed 456, got %#v", parameters["seed"])
 	}
 }
@@ -855,17 +875,17 @@ func TestAdaptorConvertRequestQwenImageEditAcceptsImageArrayField(t *testing.T) 
 		t.Fatalf("failed to unmarshal converted body %s: %v", string(convertedBody), err)
 	}
 
-	input := payload["input"].(map[string]any)
-	messages := input["messages"].([]any)
-	message := messages[0].(map[string]any)
-	contents := message["content"].([]any)
+	input := mustMap(t, payload["input"])
+	messages := mustSlice(t, input["messages"])
+	message := mustMap(t, messages[0])
+	contents := mustSlice(t, message["content"])
 
 	if len(contents) != 3 {
 		t.Fatalf("expected 2 images and 1 text content, got %d", len(contents))
 	}
 
-	assertContentHasPrefix(t, contents[0], "image", "data:image/png;base64,")
-	assertContentHasPrefix(t, contents[1], "image", "data:image/png;base64,")
+	assertImageContentHasPNGPrefix(t, contents[0])
+	assertImageContentHasPNGPrefix(t, contents[1])
 	assertContentString(t, contents[2], "text", "blend two images")
 }
 
@@ -971,6 +991,7 @@ func TestAdaptorConvertRequestWan27ImageEdit(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create request: %v", err)
 	}
+
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 
 	result, err := adaptor.ConvertRequest(m, nil, req)
@@ -988,26 +1009,28 @@ func TestAdaptorConvertRequestWan27ImageEdit(t *testing.T) {
 		t.Fatalf("failed to unmarshal converted body %s: %v", string(convertedBody), err)
 	}
 
-	input := payload["input"].(map[string]any)
-	messages := input["messages"].([]any)
-	message := messages[0].(map[string]any)
-	contents := message["content"].([]any)
-	assertContentHasPrefix(t, contents[0], "image", "data:image/png;base64,")
+	input := mustMap(t, payload["input"])
+	messages := mustSlice(t, input["messages"])
+	message := mustMap(t, messages[0])
+	contents := mustSlice(t, message["content"])
+	assertImageContentHasPNGPrefix(t, contents[0])
 	assertContentString(t, contents[1], "text", "edit the product image")
 
-	parameters := payload["parameters"].(map[string]any)
+	parameters := mustMap(t, payload["parameters"])
 	if parameters["size"] != "2K" {
 		t.Fatalf("expected size 2K, got %#v", parameters["size"])
 	}
-	if int(parameters["n"].(float64)) != 2 {
+
+	if int(mustFloat64(t, parameters["n"])) != 2 {
 		t.Fatalf("expected n 2, got %#v", parameters["n"])
 	}
+
 	if parameters["watermark"] != false {
 		t.Fatalf("expected watermark false, got %#v", parameters["watermark"])
 	}
 
-	bboxList, ok := parameters["bbox_list"].([]any)
-	if !ok || len(bboxList) != 1 {
+	bboxList := mustSlice(t, parameters["bbox_list"])
+	if len(bboxList) != 1 {
 		t.Fatalf("expected bbox_list, got %#v", parameters["bbox_list"])
 	}
 }
@@ -1023,6 +1046,7 @@ func TestAdaptorConvertRequestQwenMTImage(t *testing.T) {
 	_ = writer.WriteField("source_lang", "en")
 	_ = writer.WriteField("target_lang", "zh")
 	_ = writer.WriteField("imageSegment", "false")
+
 	_ = writer.WriteField("response_format", "url")
 	if err := writer.Close(); err != nil {
 		t.Fatalf("failed to close writer: %v", err)
@@ -1037,6 +1061,7 @@ func TestAdaptorConvertRequestQwenMTImage(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create request: %v", err)
 	}
+
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 
 	result, err := adaptor.ConvertRequest(m, nil, req)
@@ -1058,18 +1083,22 @@ func TestAdaptorConvertRequestQwenMTImage(t *testing.T) {
 		t.Fatalf("failed to unmarshal converted body %s: %v", string(convertedBody), err)
 	}
 
-	input := payload["input"].(map[string]any)
+	input := mustMap(t, payload["input"])
 	if input["image_url"] != "https://example.com/input.png" {
 		t.Fatalf("expected image_url, got %#v", input["image_url"])
 	}
+
 	if input["source_lang"] != "en" {
 		t.Fatalf("expected source_lang en, got %#v", input["source_lang"])
 	}
+
 	if input["target_lang"] != "zh" {
 		t.Fatalf("expected target_lang zh, got %#v", input["target_lang"])
 	}
-	ext := input["ext"].(map[string]any)
-	config := ext["config"].(map[string]any)
+
+	ext := mustMap(t, input["ext"])
+
+	config := mustMap(t, ext["config"])
 	if config["imageSegment"] != false {
 		t.Fatalf("expected imageSegment false, got %#v", config["imageSegment"])
 	}
@@ -1108,6 +1137,7 @@ func TestAdaptorConvertRequestQwenMTImageAcceptsUploadedImage(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create request: %v", err)
 	}
+
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 
 	result, err := adaptor.ConvertRequest(m, nil, req)
@@ -1125,11 +1155,13 @@ func TestAdaptorConvertRequestQwenMTImageAcceptsUploadedImage(t *testing.T) {
 		t.Fatalf("failed to unmarshal converted body %s: %v", string(convertedBody), err)
 	}
 
-	input := payload["input"].(map[string]any)
+	input := mustMap(t, payload["input"])
+
 	imageURL, ok := input["image_url"].(string)
 	if !ok {
 		t.Fatalf("expected image_url string, got %#v", input["image_url"])
 	}
+
 	if !strings.HasPrefix(imageURL, "data:image/png;base64,") {
 		t.Fatalf("expected image_url data URL, got %#v", imageURL)
 	}
@@ -1202,24 +1234,13 @@ func TestAdaptorConvertRequestMultimodalEmbeddings(t *testing.T) {
 		t.Fatal("expected dimensions to be removed")
 	}
 
-	parameters, ok := payload["parameters"].(map[string]any)
-	if !ok {
-		t.Fatalf("expected parameters object, got %#v", payload["parameters"])
-	}
-
-	if dimension, ok := parameters["dimension"].(float64); !ok || int(dimension) != 1024 {
+	parameters := mustMap(t, payload["parameters"])
+	if dimension := mustFloat64(t, parameters["dimension"]); int(dimension) != 1024 {
 		t.Fatalf("expected parameters.dimension=1024, got %#v", parameters["dimension"])
 	}
 
-	input, ok := payload["input"].(map[string]any)
-	if !ok {
-		t.Fatalf("expected input object, got %#v", payload["input"])
-	}
-
-	contents, ok := input["contents"].([]any)
-	if !ok {
-		t.Fatalf("expected input.contents array, got %#v", input["contents"])
-	}
+	input := mustMap(t, payload["input"])
+	contents := mustSlice(t, input["contents"])
 
 	if len(contents) != 4 {
 		t.Fatalf("expected 4 contents, got %d", len(contents))
@@ -1237,7 +1258,12 @@ func TestAdaptorDoResponseQwenImage(t *testing.T) {
 	adaptor := &Adaptor{}
 	recorder := httptest.NewRecorder()
 	ctx, _ := gin.CreateTestContext(recorder)
-	ctx.Request = httptest.NewRequest(http.MethodPost, "/v1/images/generations", nil)
+	ctx.Request = httptest.NewRequestWithContext(
+		context.Background(),
+		http.MethodPost,
+		"/v1/images/generations",
+		nil,
+	)
 
 	m := meta.NewMeta(nil, mode.ImagesGenerations, "qwen-image-2.0-pro", coremodel.ModelConfig{})
 	m.Set(MetaResponseFormat, "url")
@@ -1305,7 +1331,12 @@ func TestAdaptorDoResponseQwenImageB64DownloadFailureFallsBackToURL(t *testing.T
 	adaptor := &Adaptor{}
 	recorder := httptest.NewRecorder()
 	ctx, _ := gin.CreateTestContext(recorder)
-	ctx.Request = httptest.NewRequest(http.MethodPost, "/v1/images/generations", nil)
+	ctx.Request = httptest.NewRequestWithContext(
+		context.Background(),
+		http.MethodPost,
+		"/v1/images/generations",
+		nil,
+	)
 
 	m := meta.NewMeta(nil, mode.ImagesGenerations, "qwen-image-2.0-pro", coremodel.ModelConfig{})
 	m.Set(MetaResponseFormat, "b64_json")
@@ -1370,7 +1401,12 @@ func TestAdaptorDoResponseWanImageUsesImageCountForUsage(t *testing.T) {
 	adaptor := &Adaptor{}
 	recorder := httptest.NewRecorder()
 	ctx, _ := gin.CreateTestContext(recorder)
-	ctx.Request = httptest.NewRequest(http.MethodPost, "/v1/images/generations", nil)
+	ctx.Request = httptest.NewRequestWithContext(
+		context.Background(),
+		http.MethodPost,
+		"/v1/images/generations",
+		nil,
+	)
 
 	m := meta.NewMeta(nil, mode.ImagesGenerations, "wan2.7-image-pro", coremodel.ModelConfig{})
 	m.Set(MetaResponseFormat, "url")
@@ -1424,9 +1460,11 @@ func TestResponseAli2OpenAIImageUsesImageURLOutput(t *testing.T) {
 	if len(imageResponse.Data) != 1 {
 		t.Fatalf("expected 1 image, got %d", len(imageResponse.Data))
 	}
+
 	if imageResponse.Data[0].URL != "https://example.com/translated.jpg" {
 		t.Fatalf("expected translated image URL, got %#v", imageResponse.Data[0].URL)
 	}
+
 	if imageResponse.Usage.OutputTokens != 1 ||
 		imageResponse.Usage.OutputTokensDetails == nil ||
 		imageResponse.Usage.OutputTokensDetails.ImageTokens != 1 ||
@@ -1440,6 +1478,7 @@ func TestAsyncTaskUsesBaseURL(t *testing.T) {
 		if r.URL.Path != "/custom/api/v1/tasks/task-123" {
 			t.Fatalf("expected task path, got %s", r.URL.Path)
 		}
+
 		if r.Header.Get("Authorization") != "Bearer test-key" {
 			t.Fatalf("expected authorization header, got %#v", r.Header.Get("Authorization"))
 		}
@@ -1466,9 +1505,11 @@ func TestAsyncTaskUsesBaseURL(t *testing.T) {
 	if response.RequestID != "req-1" {
 		t.Fatalf("expected request_id req-1, got %#v", response.RequestID)
 	}
+
 	if response.Output.ImageURL != "https://example.com/out.png" {
 		t.Fatalf("expected image_url, got %#v", response.Output.ImageURL)
 	}
+
 	if response.Usage.ImageCount != 1 {
 		t.Fatalf("expected image_count 1, got %#v", response.Usage.ImageCount)
 	}
@@ -1689,7 +1730,7 @@ func assertContentString(t *testing.T, got any, key, want string) {
 	}
 }
 
-func assertContentHasPrefix(t *testing.T, got any, key, prefix string) {
+func assertImageContentHasPNGPrefix(t *testing.T, got any) {
 	t.Helper()
 
 	gotMap, ok := got.(map[string]any)
@@ -1701,14 +1742,48 @@ func assertContentHasPrefix(t *testing.T, got any, key, prefix string) {
 		t.Fatalf("expected content to have 1 key, got %#v", gotMap)
 	}
 
-	value, ok := gotMap[key].(string)
+	value, ok := gotMap["image"].(string)
 	if !ok {
-		t.Fatalf("expected %s string, got %#v", key, gotMap[key])
+		t.Fatalf("expected image string, got %#v", gotMap["image"])
 	}
 
+	const prefix = "data:image/png;base64,"
 	if !strings.HasPrefix(value, prefix) {
-		t.Fatalf("expected %s prefix %q, got %#v", key, prefix, value)
+		t.Fatalf("expected image prefix %q, got %#v", prefix, value)
 	}
+}
+
+func mustMap(t *testing.T, value any) map[string]any {
+	t.Helper()
+
+	got, ok := value.(map[string]any)
+	if !ok {
+		t.Fatalf("expected object, got %T: %#v", value, value)
+	}
+
+	return got
+}
+
+func mustSlice(t *testing.T, value any) []any {
+	t.Helper()
+
+	got, ok := value.([]any)
+	if !ok {
+		t.Fatalf("expected array, got %T: %#v", value, value)
+	}
+
+	return got
+}
+
+func mustFloat64(t *testing.T, value any) float64 {
+	t.Helper()
+
+	got, ok := value.(float64)
+	if !ok {
+		t.Fatalf("expected float64, got %T: %#v", value, value)
+	}
+
+	return got
 }
 
 func TestAdaptorConvertChatCompletionsReasoningNotClampedByMaxTokens(t *testing.T) {
