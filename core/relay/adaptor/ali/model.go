@@ -42,6 +42,55 @@ type TaskResponse struct {
 	StatusCode int             `json:"status_code,omitempty"`
 }
 
+type MultimodalImageRequest struct {
+	Input struct {
+		Messages []MultimodalImageMessage `json:"messages"`
+	} `json:"input"`
+	Model      string         `json:"model"`
+	Parameters map[string]any `json:"parameters,omitempty"`
+}
+
+type MultimodalImageMessage struct {
+	Role    string           `json:"role"`
+	Content []map[string]any `json:"content"`
+}
+
+type MultimodalImageResponse struct {
+	RequestID string `json:"request_id,omitempty"`
+	Code      string `json:"code,omitempty"`
+	Message   string `json:"message,omitempty"`
+	Output    struct {
+		Choices []struct {
+			FinishReason string `json:"finish_reason,omitempty"`
+			Message      struct {
+				Role    string `json:"role,omitempty"`
+				Content []struct {
+					Image        string `json:"image,omitempty"`
+					URL          string `json:"url,omitempty"`
+					B64Image     string `json:"b64_image,omitempty"`
+					Text         string `json:"text,omitempty"`
+					OrigPrompt   string `json:"orig_prompt,omitempty"`
+					ActualPrompt string `json:"actual_prompt,omitempty"`
+				} `json:"content,omitempty"`
+			} `json:"message,omitempty"`
+		} `json:"choices,omitempty"`
+		Results []struct {
+			B64Image     string `json:"b64_image,omitempty"`
+			URL          string `json:"url,omitempty"`
+			Image        string `json:"image,omitempty"`
+			OrigPrompt   string `json:"orig_prompt,omitempty"`
+			ActualPrompt string `json:"actual_prompt,omitempty"`
+			Code         string `json:"code,omitempty"`
+			Message      string `json:"message,omitempty"`
+		} `json:"results,omitempty"`
+	} `json:"output,omitempty"`
+	Usage struct {
+		ImageCount int64 `json:"image_count,omitempty"`
+		Width      int64 `json:"width,omitempty"`
+		Height     int64 `json:"height,omitempty"`
+	} `json:"usage,omitempty"`
+}
+
 type EmbeddingRequest struct {
 	Parameters *struct {
 		TextType string `json:"text_type,omitempty"`

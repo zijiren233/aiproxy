@@ -38,6 +38,7 @@ func (a *Adaptor) SupportMode(mt *meta.Meta) bool {
 		m == mode.Completions ||
 		m == mode.Embeddings ||
 		m == mode.ImagesGenerations ||
+		m == mode.ImagesEdits ||
 		m == mode.Rerank ||
 		m == mode.AudioSpeech ||
 		m == mode.AudioTranscription ||
@@ -60,7 +61,12 @@ func (a *Adaptor) GetRequestURL(
 
 	switch meta.Mode {
 	case mode.ImagesGenerations:
-		url, err := url.JoinPath(u, "/api/v1/services/aigc/text2image/image-synthesis")
+		path := "/api/v1/services/aigc/text2image/image-synthesis"
+		if isQwenImageModel(meta) {
+			path = "/api/v1/services/aigc/multimodal-generation/generation"
+		}
+
+		url, err := url.JoinPath(u, path)
 		if err != nil {
 			return adaptor.RequestURL{}, err
 		}
@@ -68,6 +74,23 @@ func (a *Adaptor) GetRequestURL(
 		return adaptor.RequestURL{
 			Method: http.MethodPost,
 			URL:    url,
+		}, nil
+	case mode.ImagesEdits:
+		targetURL, err := url.JoinPath(u, "/api/v1/services/aigc/text2image/image-synthesis")
+		if isQwenImageModel(meta) {
+			targetURL, err = url.JoinPath(
+				u,
+				"/api/v1/services/aigc/multimodal-generation/generation",
+			)
+		}
+
+		if err != nil {
+			return adaptor.RequestURL{}, err
+		}
+
+		return adaptor.RequestURL{
+			Method: http.MethodPost,
+			URL:    targetURL,
 		}, nil
 	case mode.ChatCompletions:
 		url, err := url.JoinPath(u, "/compatible-mode/v1/chat/completions")
@@ -219,6 +242,8 @@ func (a *Adaptor) ConvertRequest(
 	switch meta.Mode {
 	case mode.ImagesGenerations:
 		return ConvertImageRequest(meta, req)
+	case mode.ImagesEdits:
+		return ConvertQwenImageEditRequest(meta, req)
 	case mode.Rerank:
 		return ConvertRerankRequest(meta, req)
 	case mode.ChatCompletions:
@@ -273,7 +298,7 @@ func (a *Adaptor) DoResponse(
 	resp *http.Response,
 ) (adaptor.DoResponseResult, adaptor.Error) {
 	switch meta.Mode {
-	case mode.ImagesGenerations:
+	case mode.ImagesGenerations, mode.ImagesEdits:
 		return ImageHandler(meta, c, resp)
 	case mode.Embeddings:
 		return EmbeddingsHandler(meta, store, c, resp)
@@ -312,7 +337,7 @@ func (a *Adaptor) DoResponse(
 
 func (a *Adaptor) Metadata() adaptor.Metadata {
 	return adaptor.Metadata{
-		Readme: "OpenAI compatibility\nNative Responses API support\nNetwork search metering support\nRerank support: https://help.aliyun.com/zh/model-studio/text-rerank-api\nSTT support: https://help.aliyun.com/zh/model-studio/sambert-speech-synthesis/\nAnthropic support: /api/v2/apps/claude-code-proxy\nGemini support",
+		Readme: "OpenAI compatibility\nNative Responses API support\nNetwork search metering support\nImage generation/edit support: https://help.aliyun.com/zh/model-studio/qwen-image-api and https://help.aliyun.com/zh/model-studio/qwen-image-edit-api\nRerank support: https://help.aliyun.com/zh/model-studio/text-rerank-api\nSTT support: https://help.aliyun.com/zh/model-studio/sambert-speech-synthesis/\nAnthropic support: /api/v2/apps/claude-code-proxy\nGemini support",
 		Models: ModelList,
 	}
 }

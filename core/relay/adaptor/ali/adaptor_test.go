@@ -2,9 +2,11 @@
 package ali
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"io"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -170,6 +172,56 @@ func TestAdaptorGetRequestURLMultimodalEmbeddings(t *testing.T) {
 	}
 }
 
+func TestAdaptorGetRequestURLQwenImage(t *testing.T) {
+	adaptor := &Adaptor{}
+	channel := &coremodel.Channel{BaseURL: "https://dashscope.aliyuncs.com"}
+
+	tests := []struct {
+		name    string
+		mode    mode.Mode
+		model   string
+		wantURL string
+	}{
+		{
+			name:    "qwen image generations uses multimodal generation endpoint",
+			mode:    mode.ImagesGenerations,
+			model:   "qwen-image-2.0-pro",
+			wantURL: "https://dashscope.aliyuncs.com/api/v1/services/aigc/multimodal-generation/generation",
+		},
+		{
+			name:    "qwen image edits uses multimodal generation endpoint",
+			mode:    mode.ImagesEdits,
+			model:   "qwen-image-edit-plus",
+			wantURL: "https://dashscope.aliyuncs.com/api/v1/services/aigc/multimodal-generation/generation",
+		},
+		{
+			name:    "legacy image generation keeps async endpoint",
+			mode:    mode.ImagesGenerations,
+			model:   "stable-diffusion-xl",
+			wantURL: "https://dashscope.aliyuncs.com/api/v1/services/aigc/text2image/image-synthesis",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := meta.NewMeta(channel, tt.mode, tt.model, coremodel.ModelConfig{})
+
+			got, err := adaptor.GetRequestURL(m, nil, nil)
+			if err != nil {
+				t.Fatalf("GetRequestURL returned error: %v", err)
+			}
+
+			if got.Method != http.MethodPost {
+				t.Fatalf("expected method %s, got %s", http.MethodPost, got.Method)
+			}
+
+			if got.URL != tt.wantURL {
+				t.Fatalf("expected URL %s, got %s", tt.wantURL, got.URL)
+			}
+		})
+	}
+}
+
 func TestAdaptorConvertRequestResponses(t *testing.T) {
 	adaptor := &Adaptor{}
 	m := meta.NewMeta(
@@ -213,6 +265,396 @@ func TestAdaptorConvertRequestResponses(t *testing.T) {
 	}
 }
 
+func TestAdaptorConvertRequestQwenImageGeneration(t *testing.T) {
+	adaptor := &Adaptor{}
+	m := meta.NewMeta(nil, mode.ImagesGenerations, "qwen-image-plus", coremodel.ModelConfig{})
+	m.ActualModel = "mapped-qwen-image"
+
+	req, err := http.NewRequestWithContext(
+		context.Background(),
+		http.MethodPost,
+		"/v1/images/generations",
+		strings.NewReader(`{
+			"model": "qwen-image-plus",
+			"prompt": "draw a cat",
+			"size": "1024x1024",
+			"negative_prompt": "low quality",
+			"prompt_extend": true,
+			"watermark": false,
+			"seed": 123,
+			"quality": "high",
+			"response_format": "b64_json"
+		}`),
+	)
+	if err != nil {
+		t.Fatalf("failed to create request: %v", err)
+	}
+
+	result, err := adaptor.ConvertRequest(m, nil, req)
+	if err != nil {
+		t.Fatalf("ConvertRequest returned error: %v", err)
+	}
+
+	body, err := io.ReadAll(result.Body)
+	if err != nil {
+		t.Fatalf("failed to read converted body: %v", err)
+	}
+
+	var payload map[string]any
+	if err := json.Unmarshal(body, &payload); err != nil {
+		t.Fatalf("failed to unmarshal converted body %s: %v", string(body), err)
+	}
+
+	if payload["model"] != "mapped-qwen-image" {
+		t.Fatalf("expected mapped model, got %#v", payload["model"])
+	}
+
+	input := payload["input"].(map[string]any)
+	messages := input["messages"].([]any)
+	message := messages[0].(map[string]any)
+	contents := message["content"].([]any)
+	assertContentString(t, contents[0], "text", "draw a cat")
+
+	parameters := payload["parameters"].(map[string]any)
+	if parameters["size"] != "1024*1024" {
+		t.Fatalf("expected size 1024*1024, got %#v", parameters["size"])
+	}
+
+	if parameters["negative_prompt"] != "low quality" {
+		t.Fatalf("expected negative_prompt, got %#v", parameters["negative_prompt"])
+	}
+
+	if parameters["prompt_extend"] != true {
+		t.Fatalf("expected prompt_extend true, got %#v", parameters["prompt_extend"])
+	}
+
+	if parameters["watermark"] != false {
+		t.Fatalf("expected watermark false, got %#v", parameters["watermark"])
+	}
+
+	if int64(parameters["seed"].(float64)) != 123 {
+		t.Fatalf("expected seed 123, got %#v", parameters["seed"])
+	}
+
+	if _, ok := parameters["quality"]; ok {
+		t.Fatalf("expected quality not to be forwarded, got %#v", parameters["quality"])
+	}
+
+	if _, ok := parameters["n"]; ok {
+		t.Fatalf("expected n not to be forwarded for this model, got %#v", parameters["n"])
+	}
+}
+
+func TestAdaptorConvertRequestQwenImageGenerationRejectsUnsupportedN(t *testing.T) {
+	adaptor := &Adaptor{}
+	m := meta.NewMeta(nil, mode.ImagesGenerations, "qwen-image-plus", coremodel.ModelConfig{})
+	m.ActualModel = "qwen-image-plus"
+
+	req, err := http.NewRequestWithContext(
+		context.Background(),
+		http.MethodPost,
+		"/v1/images/generations",
+		strings.NewReader(`{
+			"model": "qwen-image-plus",
+			"prompt": "draw a cat",
+			"n": 2
+		}`),
+	)
+	if err != nil {
+		t.Fatalf("failed to create request: %v", err)
+	}
+
+	_, err = adaptor.ConvertRequest(m, nil, req)
+	if err == nil || !strings.Contains(err.Error(), "n must be 1") {
+		t.Fatalf("expected unsupported n error, got %v", err)
+	}
+}
+
+func TestAdaptorConvertRequestQwenImageGenerationSupportsN(t *testing.T) {
+	adaptor := &Adaptor{}
+	m := meta.NewMeta(nil, mode.ImagesGenerations, "qwen-image-2.0-pro", coremodel.ModelConfig{})
+	m.ActualModel = "qwen-image-2.0-pro"
+
+	req, err := http.NewRequestWithContext(
+		context.Background(),
+		http.MethodPost,
+		"/v1/images/generations",
+		strings.NewReader(`{
+			"model": "qwen-image-2.0-pro",
+			"prompt": "draw a cat",
+			"n": 2
+		}`),
+	)
+	if err != nil {
+		t.Fatalf("failed to create request: %v", err)
+	}
+
+	result, err := adaptor.ConvertRequest(m, nil, req)
+	if err != nil {
+		t.Fatalf("ConvertRequest returned error: %v", err)
+	}
+
+	body, err := io.ReadAll(result.Body)
+	if err != nil {
+		t.Fatalf("failed to read converted body: %v", err)
+	}
+
+	var payload map[string]any
+	if err := json.Unmarshal(body, &payload); err != nil {
+		t.Fatalf("failed to unmarshal converted body %s: %v", string(body), err)
+	}
+
+	parameters := payload["parameters"].(map[string]any)
+	if int(parameters["n"].(float64)) != 2 {
+		t.Fatalf("expected n 2, got %#v", parameters["n"])
+	}
+}
+
+func TestAdaptorConvertRequestQwenImageEdit(t *testing.T) {
+	adaptor := &Adaptor{}
+	m := meta.NewMeta(nil, mode.ImagesEdits, "qwen-image-edit-plus", coremodel.ModelConfig{})
+	m.ActualModel = "mapped-qwen-edit"
+
+	body := &bytes.Buffer{}
+
+	writer := multipart.NewWriter(body)
+	if err := writer.WriteField("prompt", "add a hat"); err != nil {
+		t.Fatalf("failed to write prompt: %v", err)
+	}
+
+	if err := writer.WriteField("size", "1024x1024"); err != nil {
+		t.Fatalf("failed to write size: %v", err)
+	}
+
+	if err := writer.WriteField("negative_prompt", "blurry"); err != nil {
+		t.Fatalf("failed to write negative_prompt: %v", err)
+	}
+
+	if err := writer.WriteField("prompt_extend", "true"); err != nil {
+		t.Fatalf("failed to write prompt_extend: %v", err)
+	}
+
+	if err := writer.WriteField("watermark", "false"); err != nil {
+		t.Fatalf("failed to write watermark: %v", err)
+	}
+
+	if err := writer.WriteField("seed", "456"); err != nil {
+		t.Fatalf("failed to write seed: %v", err)
+	}
+
+	if err := writer.WriteField("response_format", "url"); err != nil {
+		t.Fatalf("failed to write response_format: %v", err)
+	}
+
+	part, err := writer.CreateFormFile("image", "input.png")
+	if err != nil {
+		t.Fatalf("failed to create file part: %v", err)
+	}
+
+	_, _ = part.Write([]byte{
+		0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+		0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52,
+	})
+
+	if err := writer.Close(); err != nil {
+		t.Fatalf("failed to close writer: %v", err)
+	}
+
+	req, err := http.NewRequestWithContext(
+		context.Background(),
+		http.MethodPost,
+		"/v1/images/edits",
+		body,
+	)
+	if err != nil {
+		t.Fatalf("failed to create request: %v", err)
+	}
+
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+
+	result, err := adaptor.ConvertRequest(m, nil, req)
+	if err != nil {
+		t.Fatalf("ConvertRequest returned error: %v", err)
+	}
+
+	convertedBody, err := io.ReadAll(result.Body)
+	if err != nil {
+		t.Fatalf("failed to read converted body: %v", err)
+	}
+
+	var payload map[string]any
+	if err := json.Unmarshal(convertedBody, &payload); err != nil {
+		t.Fatalf("failed to unmarshal converted body %s: %v", string(convertedBody), err)
+	}
+
+	if payload["model"] != "mapped-qwen-edit" {
+		t.Fatalf("expected mapped model, got %#v", payload["model"])
+	}
+
+	input := payload["input"].(map[string]any)
+	messages := input["messages"].([]any)
+	message := messages[0].(map[string]any)
+	contents := message["content"].([]any)
+	assertContentHasPrefix(t, contents[0], "image", "data:image/png;base64,")
+	assertContentString(t, contents[1], "text", "add a hat")
+
+	parameters := payload["parameters"].(map[string]any)
+	if parameters["size"] != "1024*1024" {
+		t.Fatalf("expected size 1024*1024, got %#v", parameters["size"])
+	}
+
+	if parameters["negative_prompt"] != "blurry" {
+		t.Fatalf("expected negative_prompt, got %#v", parameters["negative_prompt"])
+	}
+
+	if parameters["prompt_extend"] != true {
+		t.Fatalf("expected prompt_extend true, got %#v", parameters["prompt_extend"])
+	}
+
+	if parameters["watermark"] != false {
+		t.Fatalf("expected watermark false, got %#v", parameters["watermark"])
+	}
+
+	if int64(parameters["seed"].(float64)) != 456 {
+		t.Fatalf("expected seed 456, got %#v", parameters["seed"])
+	}
+}
+
+func TestAdaptorConvertRequestQwenImageEditAcceptsImageArrayField(t *testing.T) {
+	adaptor := &Adaptor{}
+	m := meta.NewMeta(nil, mode.ImagesEdits, "qwen-image-edit-plus", coremodel.ModelConfig{})
+	m.ActualModel = "qwen-image-edit-plus"
+
+	body := &bytes.Buffer{}
+
+	writer := multipart.NewWriter(body)
+	if err := writer.WriteField("prompt", "blend two images"); err != nil {
+		t.Fatalf("failed to write prompt: %v", err)
+	}
+
+	for _, filename := range []string{"input1.png", "input2.png"} {
+		part, err := writer.CreateFormFile("image[]", filename)
+		if err != nil {
+			t.Fatalf("failed to create file part: %v", err)
+		}
+
+		_, _ = part.Write([]byte{
+			0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+			0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52,
+		})
+	}
+
+	if err := writer.Close(); err != nil {
+		t.Fatalf("failed to close writer: %v", err)
+	}
+
+	req, err := http.NewRequestWithContext(
+		context.Background(),
+		http.MethodPost,
+		"/v1/images/edits",
+		body,
+	)
+	if err != nil {
+		t.Fatalf("failed to create request: %v", err)
+	}
+
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+
+	result, err := adaptor.ConvertRequest(m, nil, req)
+	if err != nil {
+		t.Fatalf("ConvertRequest returned error: %v", err)
+	}
+
+	convertedBody, err := io.ReadAll(result.Body)
+	if err != nil {
+		t.Fatalf("failed to read converted body: %v", err)
+	}
+
+	var payload map[string]any
+	if err := json.Unmarshal(convertedBody, &payload); err != nil {
+		t.Fatalf("failed to unmarshal converted body %s: %v", string(convertedBody), err)
+	}
+
+	input := payload["input"].(map[string]any)
+	messages := input["messages"].([]any)
+	message := messages[0].(map[string]any)
+	contents := message["content"].([]any)
+
+	if len(contents) != 3 {
+		t.Fatalf("expected 2 images and 1 text content, got %d", len(contents))
+	}
+
+	assertContentHasPrefix(t, contents[0], "image", "data:image/png;base64,")
+	assertContentHasPrefix(t, contents[1], "image", "data:image/png;base64,")
+	assertContentString(t, contents[2], "text", "blend two images")
+}
+
+func TestAdaptorConvertRequestQwenImageEditBaseModelFiltersUnsupportedParams(t *testing.T) {
+	adaptor := &Adaptor{}
+	m := meta.NewMeta(nil, mode.ImagesEdits, "qwen-image-edit", coremodel.ModelConfig{})
+	m.ActualModel = "qwen-image-edit"
+
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+	_ = writer.WriteField("prompt", "add a hat")
+	_ = writer.WriteField("size", "1024x1024")
+	_ = writer.WriteField("prompt_extend", "true")
+
+	part, err := writer.CreateFormFile("image", "input.png")
+	if err != nil {
+		t.Fatalf("failed to create file part: %v", err)
+	}
+
+	_, _ = part.Write([]byte{
+		0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+		0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52,
+	})
+
+	if err := writer.Close(); err != nil {
+		t.Fatalf("failed to close writer: %v", err)
+	}
+
+	req, err := http.NewRequestWithContext(
+		context.Background(),
+		http.MethodPost,
+		"/v1/images/edits",
+		body,
+	)
+	if err != nil {
+		t.Fatalf("failed to create request: %v", err)
+	}
+
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+
+	result, err := adaptor.ConvertRequest(m, nil, req)
+	if err != nil {
+		t.Fatalf("ConvertRequest returned error: %v", err)
+	}
+
+	convertedBody, err := io.ReadAll(result.Body)
+	if err != nil {
+		t.Fatalf("failed to read converted body: %v", err)
+	}
+
+	var payload map[string]any
+	if err := json.Unmarshal(convertedBody, &payload); err != nil {
+		t.Fatalf("failed to unmarshal converted body %s: %v", string(convertedBody), err)
+	}
+
+	if parameters, ok := payload["parameters"].(map[string]any); ok {
+		if _, ok := parameters["size"]; ok {
+			t.Fatalf("expected size not to be forwarded for qwen-image-edit, got %#v", parameters)
+		}
+
+		if _, ok := parameters["prompt_extend"]; ok {
+			t.Fatalf(
+				"expected prompt_extend not to be forwarded for qwen-image-edit, got %#v",
+				parameters,
+			)
+		}
+	}
+}
+
 func TestAdaptorConvertRequestMultimodalEmbeddings(t *testing.T) {
 	adaptor := &Adaptor{}
 	m := meta.NewMeta(
@@ -238,7 +680,7 @@ func TestAdaptorConvertRequestMultimodalEmbeddings(t *testing.T) {
 				},
 				{
 					"type": "text",
-					"text": "请描述这张图片"
+					"text": "describe this image"
 				},
 				"plain text",
 				{
@@ -304,9 +746,142 @@ func TestAdaptorConvertRequestMultimodalEmbeddings(t *testing.T) {
 	}
 
 	assertContentString(t, contents[0], "image", "data:image/png;base64,iVBORw0KGgoAAAANSUhEUg")
-	assertContentString(t, contents[1], "text", "请描述这张图片")
+	assertContentString(t, contents[1], "text", "describe this image")
 	assertContentString(t, contents[2], "text", "plain text")
 	assertContentString(t, contents[3], "image", "https://example.com/image.jpg")
+}
+
+func TestAdaptorDoResponseQwenImage(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	adaptor := &Adaptor{}
+	recorder := httptest.NewRecorder()
+	ctx, _ := gin.CreateTestContext(recorder)
+	ctx.Request = httptest.NewRequest(http.MethodPost, "/v1/images/generations", nil)
+
+	m := meta.NewMeta(nil, mode.ImagesGenerations, "qwen-image-2.0-pro", coremodel.ModelConfig{})
+	m.Set(MetaResponseFormat, "url")
+
+	resp := &http.Response{
+		StatusCode: http.StatusOK,
+		Header:     make(http.Header),
+		Body: io.NopCloser(strings.NewReader(`{
+			"request_id": "req-1",
+			"output": {
+				"choices": [
+					{
+						"message": {
+							"content": [
+								{"image": "https://example.com/out.png"}
+							]
+						}
+					}
+				]
+			},
+			"usage": {
+				"height": 2048,
+				"image_count": 1,
+				"width": 2048
+			}
+		}`)),
+	}
+
+	result, adaptorErr := adaptor.DoResponse(m, nil, ctx, resp)
+	if adaptorErr != nil {
+		t.Fatalf("DoResponse returned error: %v", adaptorErr)
+	}
+
+	var imageResponse relaymodel.ImageResponse
+	if err := json.Unmarshal(recorder.Body.Bytes(), &imageResponse); err != nil {
+		t.Fatalf("failed to unmarshal response: %v", err)
+	}
+
+	if len(imageResponse.Data) != 1 {
+		t.Fatalf("expected 1 image, got %d", len(imageResponse.Data))
+	}
+
+	if imageResponse.Data[0].URL != "https://example.com/out.png" {
+		t.Fatalf("expected image URL, got %#v", imageResponse.Data[0].URL)
+	}
+
+	if int64(result.Usage.InputTokens) != 0 ||
+		int64(result.Usage.OutputTokens) != 1 ||
+		int64(result.Usage.ImageOutputTokens) != 1 ||
+		int64(result.Usage.TotalTokens) != 1 {
+		t.Fatalf("unexpected usage: %#v", result.Usage)
+	}
+}
+
+func TestAdaptorDoResponseQwenImageB64DownloadFailureFallsBackToURL(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	imageServer := httptest.NewServer(
+		http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			http.Error(w, "not found", http.StatusNotFound)
+		}),
+	)
+	defer imageServer.Close()
+
+	adaptor := &Adaptor{}
+	recorder := httptest.NewRecorder()
+	ctx, _ := gin.CreateTestContext(recorder)
+	ctx.Request = httptest.NewRequest(http.MethodPost, "/v1/images/generations", nil)
+
+	m := meta.NewMeta(nil, mode.ImagesGenerations, "qwen-image-2.0-pro", coremodel.ModelConfig{})
+	m.Set(MetaResponseFormat, "b64_json")
+
+	resp := &http.Response{
+		StatusCode: http.StatusOK,
+		Header:     make(http.Header),
+		Body: io.NopCloser(strings.NewReader(`{
+			"request_id": "req-1",
+			"output": {
+				"choices": [
+					{
+						"message": {
+							"content": [
+								{"image": "` + imageServer.URL + `/missing.png"}
+							]
+						}
+					}
+				]
+			},
+			"usage": {
+				"image_count": 1
+			}
+		}`)),
+	}
+
+	result, adaptorErr := adaptor.DoResponse(m, nil, ctx, resp)
+	if adaptorErr != nil {
+		t.Fatalf("DoResponse returned error: %v", adaptorErr)
+	}
+
+	var imageResponse relaymodel.ImageResponse
+	if err := json.Unmarshal(recorder.Body.Bytes(), &imageResponse); err != nil {
+		t.Fatalf("failed to unmarshal response: %v", err)
+	}
+
+	if len(imageResponse.Data) != 1 {
+		t.Fatalf("expected 1 image, got %d", len(imageResponse.Data))
+	}
+
+	if imageResponse.Data[0].URL != imageServer.URL+"/missing.png" {
+		t.Fatalf("expected fallback image URL, got %#v", imageResponse.Data[0].URL)
+	}
+
+	if imageResponse.Data[0].B64Json != "" {
+		t.Fatalf(
+			"expected empty b64_json on download failure, got %#v",
+			imageResponse.Data[0].B64Json,
+		)
+	}
+
+	if int64(result.Usage.OutputTokens) != 1 ||
+		int64(result.Usage.ImageOutputTokens) != 1 ||
+		int64(result.Usage.TotalTokens) != 1 {
+		t.Fatalf("unexpected usage: %#v", result.Usage)
+	}
 }
 
 func TestAdaptorDoResponseResponsesDeleteNoContent(t *testing.T) {
@@ -521,6 +1096,28 @@ func assertContentString(t *testing.T, got any, key, want string) {
 
 	if gotMap[key] != want {
 		t.Fatalf("expected %s=%q, got %#v", key, want, gotMap[key])
+	}
+}
+
+func assertContentHasPrefix(t *testing.T, got any, key, prefix string) {
+	t.Helper()
+
+	gotMap, ok := got.(map[string]any)
+	if !ok {
+		t.Fatalf("expected content object, got %T", got)
+	}
+
+	if len(gotMap) != 1 {
+		t.Fatalf("expected content to have 1 key, got %#v", gotMap)
+	}
+
+	value, ok := gotMap[key].(string)
+	if !ok {
+		t.Fatalf("expected %s string, got %#v", key, gotMap[key])
+	}
+
+	if !strings.HasPrefix(value, prefix) {
+		t.Fatalf("expected %s prefix %q, got %#v", key, prefix, value)
 	}
 }
 

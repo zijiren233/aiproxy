@@ -2,6 +2,7 @@ package controller
 
 import (
 	"fmt"
+	"mime/multipart"
 	"strconv"
 	"strings"
 
@@ -81,7 +82,7 @@ func GetImagesEditsRequestUsage(c *gin.Context, mc model.ModelConfig) (model.Usa
 		return model.Usage{}, err
 	}
 
-	images := int64(len(mutliForms.File["image"]))
+	images := countImagesEditFiles(mutliForms.File)
 
 	prompt := c.PostForm("prompt")
 
@@ -100,4 +101,8 @@ func GetImagesEditsRequestUsage(c *gin.Context, mc model.ModelConfig) (model.Usa
 		ImageInputTokens: model.ZeroNullInt64(images),
 		OutputTokens:     model.ZeroNullInt64(n),
 	}, nil
+}
+
+func countImagesEditFiles(files map[string][]*multipart.FileHeader) int64 {
+	return int64(len(files["image"]) + len(files["image[]"]))
 }
