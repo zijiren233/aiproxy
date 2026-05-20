@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"maps"
 	"net/http"
 	"slices"
 	"strconv"
@@ -190,6 +191,8 @@ type fakeStreamResponseWriter struct {
 	toolCalls        []*relaymodel.ToolCall
 	contentParts     []relaymodel.MessageContent // for image/multimodal content
 	signature        string                      // for thought signature
+	audio            map[string]*bytes.Buffer
+	audioFields      map[string]any
 
 	// Azure OpenAI content filtering fields
 	promptFilterResults  *ast.Node // prompt-level filter results (from first chunk)
@@ -306,6 +309,8 @@ func (rw *fakeStreamResponseWriter) parseStreamingData(data []byte) error {
 			rw.signature = signature
 		}
 
+		rw.processAudioDelta(deltaNode.Get("audio"))
+
 		_ = deltaNode.Get("tool_calls").
 			ForEach(func(_ ast.Sequence, toolCallNode *ast.Node) bool {
 				if toolCallNode == nil || toolCallNode.TypeSafe() == ast.V_NULL {
@@ -390,6 +395,10 @@ func (rw *fakeStreamResponseWriter) convertToNonStream() ([]byte, error) {
 		message["signature"] = rw.signature
 	}
 
+	if audio := rw.buildAudio(); len(audio) > 0 {
+		message["audio"] = audio
+	}
+
 	if len(rw.toolCalls) > 0 {
 		message["tool_calls"] = rw.buildToolCalls()
 	}
@@ -437,6 +446,74 @@ func (rw *fakeStreamResponseWriter) convertToNonStream() ([]byte, error) {
 	}
 
 	return lastChunk.MarshalJSON()
+}
+
+func (rw *fakeStreamResponseWriter) processAudioDelta(audioNode *ast.Node) {
+	if audioNode == nil || audioNode.TypeSafe() != ast.V_OBJECT {
+		return
+	}
+
+	if err := audioNode.Check(); err != nil {
+		return
+	}
+
+	_ = audioNode.ForEach(func(seq ast.Sequence, fieldNode *ast.Node) bool {
+		if seq.Key == nil || fieldNode == nil {
+			return true
+		}
+
+		key := *seq.Key
+
+		if shouldAppendAudioField(key) && fieldNode.TypeSafe() == ast.V_STRING {
+			value, err := fieldNode.String()
+			if err != nil {
+				return true
+			}
+
+			if rw.audio == nil {
+				rw.audio = make(map[string]*bytes.Buffer)
+			}
+
+			builder := rw.audio[key]
+			if builder == nil {
+				builder = &bytes.Buffer{}
+				rw.audio[key] = builder
+			}
+
+			builder.WriteString(value)
+
+			return true
+		}
+
+		value, err := fieldNode.Interface()
+		if err != nil {
+			return true
+		}
+
+		if rw.audioFields == nil {
+			rw.audioFields = make(map[string]any)
+		}
+
+		rw.audioFields[key] = value
+
+		return true
+	})
+}
+
+func shouldAppendAudioField(key string) bool {
+	return key == "data" || key == "transcript"
+}
+
+func (rw *fakeStreamResponseWriter) buildAudio() map[string]any {
+	audio := make(map[string]any, len(rw.audio)+len(rw.audioFields))
+
+	maps.Copy(audio, rw.audioFields)
+
+	for key, builder := range rw.audio {
+		audio[key] = builder.String()
+	}
+
+	return audio
 }
 
 func (rw *fakeStreamResponseWriter) buildToolCalls() []*relaymodel.ToolCall {

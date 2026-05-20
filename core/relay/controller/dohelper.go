@@ -461,12 +461,20 @@ func updateUsageMetrics(result adaptor.DoResponseResult, log *log.Entry) {
 		log.Data["t_audio_input"] = usage.AudioInputTokens
 	}
 
+	if usage.VideoInputTokens > 0 {
+		log.Data["t_video_input"] = usage.VideoInputTokens
+	}
+
 	if usage.OutputTokens > 0 {
 		log.Data["t_output"] = usage.OutputTokens
 	}
 
 	if usage.ImageOutputTokens > 0 {
 		log.Data["t_image_output"] = usage.ImageOutputTokens
+	}
+
+	if usage.AudioOutputTokens > 0 {
+		log.Data["t_audio_output"] = usage.AudioOutputTokens
 	}
 
 	if usage.TotalTokens > 0 {

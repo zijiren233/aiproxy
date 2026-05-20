@@ -213,6 +213,10 @@ export const ExpandedLogContent = ({ log }: { log: LogRecord }) => {
                         <div><span className="font-medium">{t('log.cacheCreation')}:</span> {log.usage?.cache_creation_tokens?.toLocaleString() || 0}</div>
                         <div><span className="font-medium">{t('log.cached')}:</span> {log.usage?.cached_tokens?.toLocaleString() || 0}</div>
                         <div><span className="font-medium">{t('log.imageInput')}:</span> {log.usage?.image_input_tokens?.toLocaleString() || 0}</div>
+                        <div><span className="font-medium">{t('log.audioInput')}:</span> {log.usage?.audio_input_tokens?.toLocaleString() || 0}</div>
+                        <div><span className="font-medium">{t('log.videoInput')}:</span> {log.usage?.video_input_tokens?.toLocaleString() || 0}</div>
+                        <div><span className="font-medium">{t('log.imageOutput')}:</span> {log.usage?.image_output_tokens?.toLocaleString() || 0}</div>
+                        <div><span className="font-medium">{t('log.audioOutput')}:</span> {log.usage?.audio_output_tokens?.toLocaleString() || 0}</div>
                         <div><span className="font-medium">{t('log.reasoning')}:</span> {log.usage?.reasoning_tokens?.toLocaleString() || 0}</div>
                         <div><span className="font-medium">{t('log.webSearchCount')}:</span> {log.usage?.web_search_count || 0}</div>
                     </div>
@@ -227,6 +231,10 @@ export const ExpandedLogContent = ({ log }: { log: LogRecord }) => {
                         <div><span className="font-medium">{t('log.cacheCreationPrice')}:</span> {formatPrice(log.price?.cache_creation_price, log.price?.cache_creation_price_unit)}</div>
                         <div><span className="font-medium">{t('log.cachedPrice')}:</span> {formatPrice(log.price?.cached_price, log.price?.cached_price_unit)}</div>
                         <div><span className="font-medium">{t('log.imageInputPrice')}:</span> {formatPrice(log.price?.image_input_price, log.price?.image_input_price_unit)}</div>
+                        <div><span className="font-medium">{t('log.audioInputPrice')}:</span> {formatPrice(log.price?.audio_input_price, log.price?.audio_input_price_unit)}</div>
+                        <div><span className="font-medium">{t('log.videoInputPrice')}:</span> {formatPrice(log.price?.video_input_price, log.price?.video_input_price_unit)}</div>
+                        <div><span className="font-medium">{t('log.imageOutputPrice')}:</span> {formatPrice(log.price?.image_output_price, log.price?.image_output_price_unit)}</div>
+                        <div><span className="font-medium">{t('log.audioOutputPrice')}:</span> {formatPrice(log.price?.audio_output_price, log.price?.audio_output_price_unit)}</div>
                         <div><span className="font-medium">{t('log.perRequestPrice')}:</span> {log.price?.per_request_price || '-'}</div>
                         <div><span className="font-medium">{t('log.thinkingPrice')}:</span> {formatPrice(log.price?.thinking_mode_output_price, log.price?.thinking_mode_output_price_unit)}</div>
                         <div><span className="font-medium">{t('log.webSearchPrice')}:</span> {formatPrice(log.price?.web_search_price, log.price?.web_search_price_unit)}</div>
@@ -243,8 +251,10 @@ export const ExpandedLogContent = ({ log }: { log: LogRecord }) => {
                         <div><span className="font-medium">{t('log.costBreakdown.cacheCreation')}:</span> {formatAmount(amount?.cache_creation_amount)}</div>
                         <div><span className="font-medium">{t('log.costBreakdown.imageInput')}:</span> {formatAmount(amount?.image_input_amount)}</div>
                         <div><span className="font-medium">{t('log.costBreakdown.audioInput')}:</span> {formatAmount(amount?.audio_input_amount)}</div>
+                        <div><span className="font-medium">{t('log.costBreakdown.videoInput')}:</span> {formatAmount(amount?.video_input_amount)}</div>
                         <div><span className="font-medium">{t('log.costBreakdown.output')}:</span> {formatAmount(amount?.output_amount)}</div>
                         <div><span className="font-medium">{t('log.costBreakdown.imageOutput')}:</span> {formatAmount(amount?.image_output_amount)}</div>
+                        <div><span className="font-medium">{t('log.costBreakdown.audioOutput')}:</span> {formatAmount(amount?.audio_output_amount)}</div>
                         <div><span className="font-medium">{t('log.costBreakdown.webSearch')}:</span> {formatAmount(amount?.web_search_amount)}</div>
                     </div>
                 </div>

@@ -52,6 +52,8 @@ definitions:
         items:
           type: string
         type: array
+      skip_tls_verify:
+        type: boolean
       status:
         type: integer
       type:
@@ -127,6 +129,8 @@ definitions:
           type: object
         description: map[size]map[quality]price_per_image
         type: object
+      max_image_generation_count:
+        type: integer
       model:
         type: string
       owner:
@@ -289,6 +293,8 @@ definitions:
           type: object
         description: map[size]map[quality]price_per_image
         type: object
+      max_image_generation_count:
+        type: integer
       model:
         type: string
       owner:
@@ -722,11 +728,15 @@ definitions:
           format: float64
           type: number
         type: object
+      max_image_generation_count:
+        type: integer
       model:
         type: string
       override_force_save_detail:
         type: boolean
       override_limit:
+        type: boolean
+      override_max_image_generation_count:
         type: boolean
       override_price:
         type: boolean
@@ -786,6 +796,8 @@ definitions:
           type: object
         description: map[size]map[quality]price_per_image
         type: object
+      max_image_generation_count:
+        type: integer
       model:
         type: string
       owner:
@@ -844,6 +856,8 @@ definitions:
         type: string
       proxy_url:
         type: string
+      skip_tls_verify:
+        type: boolean
       type:
         type: integer
     required:
@@ -878,6 +892,8 @@ definitions:
         type: string
       proxy_url:
         type: string
+      skip_tls_verify:
+        type: boolean
       type:
         type: integer
     required:
@@ -989,7 +1005,21 @@ definitions:
       src:
         description: URI pointing to the icon resource (HTTPS URL or data URI)
         type: string
+      theme:
+        allOf:
+        - $ref: '#/definitions/mcp.IconTheme'
+        description: |-
+          Theme is an optional specifier for the background theme this icon is designed for.
+          Use IconThemeLight for light backgrounds or IconThemeDark for dark backgrounds.
     type: object
+  mcp.IconTheme:
+    enum:
+    - light
+    - dark
+    type: string
+    x-enum-varnames:
+    - IconThemeLight
+    - IconThemeDark
   mcp.Meta:
     properties:
       additionalFields:
@@ -1056,6 +1086,11 @@ definitions:
         - $ref: '#/definitions/mcp.ToolOutputSchema'
         description: A JSON Schema object defining the expected output returned by
           the tool .
+      title:
+        description: |-
+          Title is an optional human-readable, UI-friendly display name for the tool.
+          If not provided, clients should use Annotations.Title (if set) and fall back to Name.
+        type: string
     type: object
   mcp.ToolAnnotation:
     properties:
@@ -1174,6 +1209,8 @@ definitions:
     properties:
       audio_input_amount:
         type: number
+      audio_output_amount:
+        type: number
       cache_creation_amount:
         type: number
       cached_amount:
@@ -1188,6 +1225,8 @@ definitions:
         type: number
       used_amount:
         type: number
+      video_input_amount:
+        type: number
       web_search_amount:
         type: number
     type: object
@@ -1200,6 +1239,18 @@ definitions:
       model:
         type: string
     type: object
+  model.AsyncUsageStatus:
+    enum:
+    - 0
+    - 1
+    - 2
+    - 3
+    type: integer
+    x-enum-varnames:
+    - AsyncUsageStatusNone
+    - AsyncUsageStatusPending
+    - AsyncUsageStatusCompleted
+    - AsyncUsageStatusFailed
   model.Channel:
     properties:
       balance:
@@ -1252,6 +1303,8 @@ definitions:
         items:
           type: string
         type: array
+      skip_tls_verify:
+        type: boolean
       status:
         type: integer
       type:
@@ -1341,6 +1394,8 @@ definitions:
     - 51
     - 52
     - 53
+    - 54
+    - 55
     type: integer
     x-enum-varnames:
     - ChannelTypeOpenAI
@@ -1384,11 +1439,17 @@ definitions:
     - ChannelTypeStreamlake
     - ChannelTypeZhipuCoding
     - ChannelTypeFake
+    - ChannelTypeAntLing
+    - ChannelTypeFakeError
   model.ChartData:
     properties:
       audio_input_amount:
         type: number
       audio_input_tokens:
+        type: integer
+      audio_output_amount:
+        type: number
+      audio_output_tokens:
         type: integer
       cache_creation_amount:
         type: number
@@ -1456,6 +1517,10 @@ definitions:
         type: integer
       used_amount:
         type: number
+      video_input_amount:
+        type: number
+      video_input_tokens:
+        type: integer
       web_search_amount:
         type: number
       web_search_count:
@@ -1479,10 +1544,12 @@ definitions:
   model.ClaudeThinkingType:
     enum:
     - enabled
+    - adaptive
     - disabled
     type: string
     x-enum-varnames:
     - ClaudeThinkingTypeEnabled
+    - ClaudeThinkingTypeAdaptive
     - ClaudeThinkingTypeDisabled
   model.CompletionTokensDetails:
     properties:
@@ -1534,6 +1601,8 @@ definitions:
         type: string
       prompt_cache_retention:
         type: string
+      reasoning:
+        $ref: '#/definitions/model.ResponseReasoning'
       safety_identifier:
         type: string
       service_tier:
@@ -1566,6 +1635,10 @@ definitions:
       audio_input_amount:
         type: number
       audio_input_tokens:
+        type: integer
+      audio_output_amount:
+        type: number
+      audio_output_tokens:
         type: integer
       cache_creation_amount:
         type: number
@@ -1629,6 +1702,8 @@ definitions:
         $ref: '#/definitions/model.SummaryDataSet'
       status_2xx_count:
         type: integer
+      status_5xx_count:
+        type: integer
       status_400_count:
         type: integer
       status_429_count:
@@ -1636,8 +1711,6 @@ definitions:
       status_4xx_count:
         type: integer
       status_500_count:
-        type: integer
-      status_5xx_count:
         type: integer
       status_other_count:
         type: integer
@@ -1654,6 +1727,10 @@ definitions:
         type: integer
       used_amount:
         type: number
+      video_input_amount:
+        type: number
+      video_input_tokens:
+        type: integer
       web_search_amount:
         type: number
       web_search_count:
@@ -1688,6 +1765,8 @@ definitions:
       image_tokens:
         type: integer
       text_tokens:
+        type: integer
+      video_tokens:
         type: integer
     type: object
   model.EmbeddingRequest:
@@ -1765,6 +1844,8 @@ definitions:
     type: object
   model.GeneralOpenAIRequest:
     properties:
+      enable_thinking:
+        type: boolean
       frequency_penalty:
         type: number
       function_call: {}
@@ -1793,6 +1874,8 @@ definitions:
         type: string
       prompt_cache_retention:
         type: string
+      reasoning_effort:
+        type: string
       response_format:
         $ref: '#/definitions/model.ResponseFormat'
       seed:
@@ -1812,6 +1895,8 @@ definitions:
         allOf:
         - $ref: '#/definitions/model.GeneralThinking'
         description: aiproxy control field
+      thinking_budget:
+        type: integer
       tool_choice: {}
       tools:
         items:
@@ -1908,6 +1993,10 @@ definitions:
         type: number
       audio_input_tokens:
         type: integer
+      audio_output_amount:
+        type: number
+      audio_output_tokens:
+        type: integer
       cache_creation_amount:
         type: number
       cache_creation_count:
@@ -1999,6 +2088,10 @@ definitions:
         type: integer
       used_amount:
         type: number
+      video_input_amount:
+        type: number
+      video_input_tokens:
+        type: integer
       web_search_amount:
         type: number
       web_search_count:
@@ -2069,11 +2162,15 @@ definitions:
           format: float64
           type: number
         type: object
+      max_image_generation_count:
+        type: integer
       model:
         type: string
       override_force_save_detail:
         type: boolean
       override_limit:
+        type: boolean
+      override_max_image_generation_count:
         type: boolean
       override_price:
         type: boolean
@@ -2281,6 +2378,8 @@ definitions:
     properties:
       amount:
         $ref: '#/definitions/model.Amount'
+      async_usage_status:
+        $ref: '#/definitions/model.AsyncUsageStatus'
       channel:
         type: integer
       code:
@@ -2412,6 +2511,8 @@ definitions:
           type: object
         description: map[size]map[quality]price_per_image
         type: object
+      max_image_generation_count:
+        type: integer
       model:
         type: string
       owner:
@@ -2478,6 +2579,7 @@ definitions:
     - xai
     - doc2x
     - jina
+    - antgroup
     type: string
     x-enum-varnames:
     - ModelOwnerOpenAI
@@ -2512,6 +2614,7 @@ definitions:
     - ModelOwnerXAI
     - ModelOwnerDoc2x
     - ModelOwnerJina
+    - ModelOwnerAntGroup
   model.Option:
     properties:
       key:
@@ -2572,6 +2675,10 @@ definitions:
         type: number
       audio_input_price_unit:
         type: integer
+      audio_output_price:
+        type: number
+      audio_output_price_unit:
+        type: integer
       cache_creation_price:
         type: number
       cache_creation_price_unit:
@@ -2609,6 +2716,10 @@ definitions:
         type: number
       thinking_mode_output_price_unit:
         type: integer
+      video_input_price:
+        type: number
+      video_input_price_unit:
+        type: integer
       web_search_price:
         type: number
       web_search_price_unit:
@@ -2640,6 +2751,8 @@ definitions:
       cache_creation_tokens:
         type: integer
       cached_tokens:
+        type: integer
+      image_tokens:
         type: integer
     type: object
   model.ProxyParamType:
@@ -2842,6 +2955,8 @@ definitions:
     type: object
   model.Response:
     properties:
+      background:
+        type: boolean
       created_at:
         type: integer
       error:
@@ -2884,6 +2999,8 @@ definitions:
       text:
         $ref: '#/definitions/model.ResponseText'
       tool_choice: {}
+      tool_usage:
+        $ref: '#/definitions/model.ResponseToolUsage'
       tools:
         items:
           $ref: '#/definitions/model.ResponseTool'
@@ -2921,6 +3038,7 @@ definitions:
   model.ResponseStatus:
     enum:
     - in_progress
+    - queued
     - completed
     - failed
     - incomplete
@@ -2928,6 +3046,7 @@ definitions:
     type: string
     x-enum-varnames:
     - ResponseStatusInProgress
+    - ResponseStatusQueued
     - ResponseStatusCompleted
     - ResponseStatusFailed
     - ResponseStatusIncomplete
@@ -2952,6 +3071,38 @@ definitions:
       type:
         type: string
     type: object
+  model.ResponseToolUsage:
+    properties:
+      image_gen:
+        $ref: '#/definitions/model.ResponseToolUsageImageGen'
+      web_search:
+        $ref: '#/definitions/model.ResponseToolUsageWebSearch'
+    type: object
+  model.ResponseToolUsageImageGen:
+    properties:
+      input_tokens:
+        type: integer
+      input_tokens_details:
+        $ref: '#/definitions/model.ResponseToolUsageTokensDetails'
+      output_tokens:
+        type: integer
+      output_tokens_details:
+        $ref: '#/definitions/model.ResponseToolUsageTokensDetails'
+      total_tokens:
+        type: integer
+    type: object
+  model.ResponseToolUsageTokensDetails:
+    properties:
+      image_tokens:
+        type: integer
+      text_tokens:
+        type: integer
+    type: object
+  model.ResponseToolUsageWebSearch:
+    properties:
+      num_requests:
+        type: integer
+    type: object
   model.ResponseUsage:
     properties:
       input_tokens:
@@ -2967,7 +3118,11 @@ definitions:
     type: object
   model.ResponseUsageDetails:
     properties:
+      audio_tokens:
+        type: integer
       cached_tokens:
+        type: integer
+      image_tokens:
         type: integer
       reasoning_tokens:
         type: integer
@@ -2996,6 +3151,10 @@ definitions:
       audio_input_amount:
         type: number
       audio_input_tokens:
+        type: integer
+      audio_output_amount:
+        type: number
+      audio_output_tokens:
         type: integer
       cache_creation_amount:
         type: number
@@ -3055,6 +3214,10 @@ definitions:
         type: integer
       used_amount:
         type: number
+      video_input_amount:
+        type: number
+      video_input_tokens:
+        type: integer
       web_search_amount:
         type: number
       web_search_count:
@@ -3065,6 +3228,10 @@ definitions:
       audio_input_amount:
         type: number
       audio_input_tokens:
+        type: integer
+      audio_output_amount:
+        type: number
+      audio_output_tokens:
         type: integer
       cache_creation_amount:
         type: number
@@ -3144,6 +3311,10 @@ definitions:
         type: integer
       used_amount:
         type: number
+      video_input_amount:
+        type: number
+      video_input_tokens:
+        type: integer
       web_search_amount:
         type: number
       web_search_count:
@@ -3284,6 +3455,8 @@ definitions:
     properties:
       audio_input_tokens:
         type: integer
+      audio_output_tokens:
+        type: integer
       cache_creation_tokens:
         type: integer
       cached_tokens:
@@ -3299,6 +3472,8 @@ definitions:
       reasoning_tokens:
         type: integer
       total_tokens:
+        type: integer
+      video_input_tokens:
         type: integer
       web_search_count:
         type: integer
@@ -4087,7 +4262,7 @@ paths:
         name: timespan
         type: string
       - description: 'Comma-separated list of fields to select (e.g., request_count,exception_count,cache_hit_count).
-          Available: request_count,retry_count,exception_count,status4xx_count,status5xx_count,status400_count,status429_count,status500_count,cache_hit_count,input_tokens,image_input_tokens,audio_input_tokens,output_tokens,image_output_tokens,cached_tokens,cache_creation_tokens,total_tokens,web_search_count,used_amount,total_time,total_ttfb.
+          Available: request_count,retry_count,exception_count,status4xx_count,status5xx_count,status400_count,status429_count,status500_count,cache_hit_count,input_tokens,image_input_tokens,audio_input_tokens,video_input_tokens,output_tokens,image_output_tokens,audio_output_tokens,cached_tokens,cache_creation_tokens,total_tokens,web_search_count,used_amount,total_time,total_ttfb.
           Groups: count,usage,time,all'
         in: query
         name: fields
@@ -4145,7 +4320,7 @@ paths:
         name: timespan
         type: string
       - description: 'Comma-separated list of fields to select (e.g., request_count,exception_count,cache_hit_count).
-          Available: request_count,retry_count,exception_count,status4xx_count,status5xx_count,status400_count,status429_count,status500_count,cache_hit_count,input_tokens,image_input_tokens,audio_input_tokens,output_tokens,image_output_tokens,cached_tokens,cache_creation_tokens,total_tokens,web_search_count,used_amount,total_time,total_ttfb.
+          Available: request_count,retry_count,exception_count,status4xx_count,status5xx_count,status400_count,status429_count,status500_count,cache_hit_count,input_tokens,image_input_tokens,audio_input_tokens,video_input_tokens,output_tokens,image_output_tokens,audio_output_tokens,cached_tokens,cache_creation_tokens,total_tokens,web_search_count,used_amount,total_time,total_ttfb.
           Groups: count,usage,time,all'
         in: query
         name: fields
@@ -4226,7 +4401,7 @@ paths:
         name: timespan
         type: string
       - description: 'Comma-separated list of fields to select (e.g., request_count,exception_count,cache_hit_count).
-          Available: request_count,retry_count,exception_count,status4xx_count,status5xx_count,status400_count,status429_count,status500_count,cache_hit_count,input_tokens,image_input_tokens,audio_input_tokens,output_tokens,image_output_tokens,cached_tokens,cache_creation_tokens,total_tokens,web_search_count,used_amount,total_time,total_ttfb.
+          Available: request_count,retry_count,exception_count,status4xx_count,status5xx_count,status400_count,status429_count,status500_count,cache_hit_count,input_tokens,image_input_tokens,audio_input_tokens,video_input_tokens,output_tokens,image_output_tokens,audio_output_tokens,cached_tokens,cache_creation_tokens,total_tokens,web_search_count,used_amount,total_time,total_ttfb.
           Groups: count,usage,time,all'
         in: query
         name: fields
@@ -4286,7 +4461,7 @@ paths:
         name: timespan
         type: string
       - description: 'Comma-separated list of fields to select (e.g., request_count,exception_count,cache_hit_count).
-          Available: request_count,retry_count,exception_count,status4xx_count,status5xx_count,status400_count,status429_count,status500_count,cache_hit_count,input_tokens,image_input_tokens,audio_input_tokens,output_tokens,image_output_tokens,cached_tokens,cache_creation_tokens,total_tokens,web_search_count,used_amount,total_time,total_ttfb.
+          Available: request_count,retry_count,exception_count,status4xx_count,status5xx_count,status400_count,status429_count,status500_count,cache_hit_count,input_tokens,image_input_tokens,audio_input_tokens,video_input_tokens,output_tokens,image_output_tokens,audio_output_tokens,cached_tokens,cache_creation_tokens,total_tokens,web_search_count,used_amount,total_time,total_ttfb.
           Groups: count,usage,time,all'
         in: query
         name: fields
@@ -4342,7 +4517,7 @@ paths:
         name: timespan
         type: string
       - description: 'Comma-separated list of fields to select (e.g., request_count,exception_count,cache_hit_count).
-          Available: request_count,retry_count,exception_count,status4xx_count,status5xx_count,status400_count,status429_count,status500_count,cache_hit_count,input_tokens,image_input_tokens,audio_input_tokens,output_tokens,image_output_tokens,cached_tokens,cache_creation_tokens,total_tokens,web_search_count,used_amount,total_time,total_ttfb.
+          Available: request_count,retry_count,exception_count,status4xx_count,status5xx_count,status400_count,status429_count,status500_count,cache_hit_count,input_tokens,image_input_tokens,audio_input_tokens,video_input_tokens,output_tokens,image_output_tokens,audio_output_tokens,cached_tokens,cache_creation_tokens,total_tokens,web_search_count,used_amount,total_time,total_ttfb.
           Groups: count,usage,time,all'
         in: query
         name: fields
@@ -4401,7 +4576,7 @@ paths:
         name: timespan
         type: string
       - description: 'Comma-separated list of fields to select (e.g., request_count,exception_count,cache_hit_count).
-          Available: request_count,retry_count,exception_count,status4xx_count,status5xx_count,status400_count,status429_count,status500_count,cache_hit_count,input_tokens,image_input_tokens,audio_input_tokens,output_tokens,image_output_tokens,cached_tokens,cache_creation_tokens,total_tokens,web_search_count,used_amount,total_time,total_ttfb.
+          Available: request_count,retry_count,exception_count,status4xx_count,status5xx_count,status400_count,status429_count,status500_count,cache_hit_count,input_tokens,image_input_tokens,audio_input_tokens,video_input_tokens,output_tokens,image_output_tokens,audio_output_tokens,cached_tokens,cache_creation_tokens,total_tokens,web_search_count,used_amount,total_time,total_ttfb.
           Groups: count,usage,time,all'
         in: query
         name: fields
@@ -6863,6 +7038,8 @@ paths:
         - 51
         - 52
         - 53
+        - 54
+        - 55
         in: path
         name: type
         required: true

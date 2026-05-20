@@ -8,8 +8,10 @@ export interface ModelSummary {
     input_amount?: number
     image_input_amount?: number
     audio_input_amount?: number
+    video_input_amount?: number
     output_amount?: number
     image_output_amount?: number
+    audio_output_amount?: number
     cached_amount?: number
     cache_creation_amount?: number
     web_search_amount?: number
@@ -31,8 +33,10 @@ export interface ModelSummary {
     input_tokens?: number
     image_input_tokens?: number
     audio_input_tokens?: number
+    video_input_tokens?: number
     output_tokens?: number
     image_output_tokens?: number
+    audio_output_tokens?: number
     cached_tokens?: number
     cache_creation_tokens?: number
     reasoning_tokens?: number
@@ -62,8 +66,10 @@ export interface SummaryDataSet {
     input_tokens?: number
     image_input_tokens?: number
     audio_input_tokens?: number
+    video_input_tokens?: number
     output_tokens?: number
     image_output_tokens?: number
+    audio_output_tokens?: number
     cached_tokens?: number
     cache_creation_tokens?: number
     reasoning_tokens?: number
@@ -72,8 +78,10 @@ export interface SummaryDataSet {
     input_amount?: number
     image_input_amount?: number
     audio_input_amount?: number
+    video_input_amount?: number
     output_amount?: number
     image_output_amount?: number
+    audio_output_amount?: number
     cached_amount?: number
     cache_creation_amount?: number
     web_search_amount?: number
@@ -106,9 +114,11 @@ export interface ChartDataPoint {
     textInputTokens: number
     imageInputTokens: number
     audioInputTokens: number
+    videoInputTokens: number
     outputTokens: number
     textOutputTokens: number
     imageOutputTokens: number
+    audioOutputTokens: number
     cachedTokens: number
     cacheCreationTokens: number
     cacheHitCount: number
@@ -121,9 +131,11 @@ export interface ChartDataPoint {
     totalInputAmount: number
     imageInputAmount: number
     audioInputAmount: number
+    videoInputAmount: number
     outputAmount: number
     totalOutputAmount: number
     imageOutputAmount: number
+    audioOutputAmount: number
     cachedAmount: number
     cacheCreationAmount: number
     webSearchAmount: number

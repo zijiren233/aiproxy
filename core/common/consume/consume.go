@@ -205,6 +205,10 @@ func CalculateAmountDetail(
 		inputTokens -= usage.AudioInputTokens
 	}
 
+	if modelPrice.VideoInputPrice > 0 {
+		inputTokens -= usage.VideoInputTokens
+	}
+
 	if modelPrice.CachedPrice > 0 {
 		inputTokens -= usage.CachedTokens
 	}
@@ -216,6 +220,10 @@ func CalculateAmountDetail(
 	outputTokens := usage.OutputTokens
 	if modelPrice.ImageOutputPrice > 0 {
 		outputTokens -= usage.ImageOutputTokens
+	}
+
+	if modelPrice.AudioOutputPrice > 0 {
+		outputTokens -= usage.AudioOutputTokens
 	}
 
 	outputPrice := float64(modelPrice.OutputPrice)
@@ -240,6 +248,10 @@ func CalculateAmountDetail(
 		Mul(decimal.NewFromFloat(float64(modelPrice.AudioInputPrice))).
 		Div(decimal.NewFromInt(modelPrice.GetAudioInputPriceUnit()))
 
+	videoInputAmount := decimal.NewFromInt(int64(usage.VideoInputTokens)).
+		Mul(decimal.NewFromFloat(float64(modelPrice.VideoInputPrice))).
+		Div(decimal.NewFromInt(modelPrice.GetVideoInputPriceUnit()))
+
 	cachedAmount := decimal.NewFromInt(int64(usage.CachedTokens)).
 		Mul(decimal.NewFromFloat(float64(modelPrice.CachedPrice))).
 		Div(decimal.NewFromInt(modelPrice.GetCachedPriceUnit()))
@@ -260,22 +272,30 @@ func CalculateAmountDetail(
 		Mul(decimal.NewFromFloat(float64(modelPrice.ImageOutputPrice))).
 		Div(decimal.NewFromInt(modelPrice.GetImageOutputPriceUnit()))
 
+	audioOutputAmount := decimal.NewFromInt(int64(usage.AudioOutputTokens)).
+		Mul(decimal.NewFromFloat(float64(modelPrice.AudioOutputPrice))).
+		Div(decimal.NewFromInt(modelPrice.GetAudioOutputPriceUnit()))
+
 	usedAmount := inputAmount.
 		Add(imageInputAmount).
 		Add(audioInputAmount).
+		Add(videoInputAmount).
 		Add(cachedAmount).
 		Add(cacheCreationAmount).
 		Add(webSearchAmount).
 		Add(outputAmount).
 		Add(imageOutputAmount).
+		Add(audioOutputAmount).
 		InexactFloat64()
 
 	return model.Amount{
 		InputAmount:         inputAmount.InexactFloat64(),
 		ImageInputAmount:    imageInputAmount.InexactFloat64(),
 		AudioInputAmount:    audioInputAmount.InexactFloat64(),
+		VideoInputAmount:    videoInputAmount.InexactFloat64(),
 		OutputAmount:        outputAmount.InexactFloat64(),
 		ImageOutputAmount:   imageOutputAmount.InexactFloat64(),
+		AudioOutputAmount:   audioOutputAmount.InexactFloat64(),
 		CachedAmount:        cachedAmount.InexactFloat64(),
 		CacheCreationAmount: cacheCreationAmount.InexactFloat64(),
 		WebSearchAmount:     webSearchAmount.InexactFloat64(),

@@ -14,10 +14,15 @@ func TestChatUsageConversions(t *testing.T) {
 		CompletionTokens: 50,
 		TotalTokens:      150,
 		PromptTokensDetails: &model.PromptTokensDetails{
+			AudioTokens:         5,
+			ImageTokens:         6,
+			VideoTokens:         9,
 			CachedTokens:        20,
 			CacheCreationTokens: 10,
 		},
 		CompletionTokensDetails: &model.CompletionTokensDetails{
+			AudioTokens:     7,
+			ImageTokens:     8,
 			ReasoningTokens: 30,
 		},
 	}
@@ -28,9 +33,25 @@ func TestChatUsageConversions(t *testing.T) {
 		assert.Equal(t, int64(50), responseUsage.OutputTokens)
 		assert.Equal(t, int64(150), responseUsage.TotalTokens)
 		assert.NotNil(t, responseUsage.InputTokensDetails)
+		assert.Equal(t, int64(5), responseUsage.InputTokensDetails.AudioTokens)
+		assert.Equal(t, int64(6), responseUsage.InputTokensDetails.ImageTokens)
+		assert.Equal(t, int64(9), responseUsage.InputTokensDetails.VideoTokens)
 		assert.Equal(t, int64(20), responseUsage.InputTokensDetails.CachedTokens)
 		assert.NotNil(t, responseUsage.OutputTokensDetails)
+		assert.Equal(t, int64(7), responseUsage.OutputTokensDetails.AudioTokens)
+		assert.Equal(t, int64(8), responseUsage.OutputTokensDetails.ImageTokens)
 		assert.Equal(t, int64(30), responseUsage.OutputTokensDetails.ReasoningTokens)
+	})
+
+	t.Run("ChatUsage to model Usage", func(t *testing.T) {
+		modelUsage := chatUsage.ToModelUsage()
+		assert.Equal(t, coremodel.ZeroNullInt64(100), modelUsage.InputTokens)
+		assert.Equal(t, coremodel.ZeroNullInt64(6), modelUsage.ImageInputTokens)
+		assert.Equal(t, coremodel.ZeroNullInt64(5), modelUsage.AudioInputTokens)
+		assert.Equal(t, coremodel.ZeroNullInt64(9), modelUsage.VideoInputTokens)
+		assert.Equal(t, coremodel.ZeroNullInt64(50), modelUsage.OutputTokens)
+		assert.Equal(t, coremodel.ZeroNullInt64(8), modelUsage.ImageOutputTokens)
+		assert.Equal(t, coremodel.ZeroNullInt64(7), modelUsage.AudioOutputTokens)
 	})
 
 	t.Run("ChatUsage to ClaudeUsage", func(t *testing.T) {
@@ -57,9 +78,14 @@ func TestResponseUsageConversions(t *testing.T) {
 		OutputTokens: 50,
 		TotalTokens:  150,
 		InputTokensDetails: &model.ResponseUsageDetails{
+			AudioTokens:  5,
+			ImageTokens:  6,
+			VideoTokens:  9,
 			CachedTokens: 20,
 		},
 		OutputTokensDetails: &model.ResponseUsageDetails{
+			AudioTokens:     7,
+			ImageTokens:     8,
 			ReasoningTokens: 30,
 		},
 	}
@@ -70,9 +96,25 @@ func TestResponseUsageConversions(t *testing.T) {
 		assert.Equal(t, int64(50), chatUsage.CompletionTokens)
 		assert.Equal(t, int64(150), chatUsage.TotalTokens)
 		assert.NotNil(t, chatUsage.PromptTokensDetails)
+		assert.Equal(t, int64(5), chatUsage.PromptTokensDetails.AudioTokens)
+		assert.Equal(t, int64(6), chatUsage.PromptTokensDetails.ImageTokens)
+		assert.Equal(t, int64(9), chatUsage.PromptTokensDetails.VideoTokens)
 		assert.Equal(t, int64(20), chatUsage.PromptTokensDetails.CachedTokens)
 		assert.NotNil(t, chatUsage.CompletionTokensDetails)
+		assert.Equal(t, int64(7), chatUsage.CompletionTokensDetails.AudioTokens)
+		assert.Equal(t, int64(8), chatUsage.CompletionTokensDetails.ImageTokens)
 		assert.Equal(t, int64(30), chatUsage.CompletionTokensDetails.ReasoningTokens)
+	})
+
+	t.Run("ResponseUsage to model Usage", func(t *testing.T) {
+		modelUsage := responseUsage.ToModelUsage()
+		assert.Equal(t, coremodel.ZeroNullInt64(100), modelUsage.InputTokens)
+		assert.Equal(t, coremodel.ZeroNullInt64(6), modelUsage.ImageInputTokens)
+		assert.Equal(t, coremodel.ZeroNullInt64(5), modelUsage.AudioInputTokens)
+		assert.Equal(t, coremodel.ZeroNullInt64(9), modelUsage.VideoInputTokens)
+		assert.Equal(t, coremodel.ZeroNullInt64(50), modelUsage.OutputTokens)
+		assert.Equal(t, coremodel.ZeroNullInt64(8), modelUsage.ImageOutputTokens)
+		assert.Equal(t, coremodel.ZeroNullInt64(7), modelUsage.AudioOutputTokens)
 	})
 
 	t.Run("ResponseUsage to ClaudeUsage", func(t *testing.T) {
@@ -135,6 +177,15 @@ func TestGeminiUsageConversions(t *testing.T) {
 		TotalTokenCount:         150,
 		ThoughtsTokenCount:      30,
 		CachedContentTokenCount: 20,
+		PromptTokensDetails: []model.GeminiTokensDetail{
+			{Modality: model.GeminiModalityImage, TokenCount: 6},
+			{Modality: model.GeminiModalityAudio, TokenCount: 5},
+			{Modality: model.GeminiModalityVideo, TokenCount: 9},
+		},
+		CandidatesTokensDetails: []model.GeminiTokensDetail{
+			{Modality: model.GeminiModalityImage, TokenCount: 8},
+			{Modality: model.GeminiModalityAudio, TokenCount: 7},
+		},
 	}
 
 	t.Run("GeminiUsage to ChatUsage", func(t *testing.T) {
@@ -143,8 +194,13 @@ func TestGeminiUsageConversions(t *testing.T) {
 		assert.Equal(t, int64(80), chatUsage.CompletionTokens) // 50 + 30
 		assert.Equal(t, int64(150), chatUsage.TotalTokens)
 		assert.NotNil(t, chatUsage.PromptTokensDetails)
+		assert.Equal(t, int64(5), chatUsage.PromptTokensDetails.AudioTokens)
+		assert.Equal(t, int64(6), chatUsage.PromptTokensDetails.ImageTokens)
+		assert.Equal(t, int64(9), chatUsage.PromptTokensDetails.VideoTokens)
 		assert.Equal(t, int64(20), chatUsage.PromptTokensDetails.CachedTokens)
 		assert.NotNil(t, chatUsage.CompletionTokensDetails)
+		assert.Equal(t, int64(7), chatUsage.CompletionTokensDetails.AudioTokens)
+		assert.Equal(t, int64(8), chatUsage.CompletionTokensDetails.ImageTokens)
 		assert.Equal(t, int64(30), chatUsage.CompletionTokensDetails.ReasoningTokens)
 	})
 
@@ -154,10 +210,31 @@ func TestGeminiUsageConversions(t *testing.T) {
 		assert.Equal(t, int64(50), responseUsage.OutputTokens)
 		assert.Equal(t, int64(150), responseUsage.TotalTokens)
 		assert.NotNil(t, responseUsage.InputTokensDetails)
+		assert.Equal(t, int64(5), responseUsage.InputTokensDetails.AudioTokens)
+		assert.Equal(t, int64(6), responseUsage.InputTokensDetails.ImageTokens)
+		assert.Equal(t, int64(9), responseUsage.InputTokensDetails.VideoTokens)
 		assert.Equal(t, int64(20), responseUsage.InputTokensDetails.CachedTokens)
 		assert.NotNil(t, responseUsage.OutputTokensDetails)
+		assert.Equal(t, int64(7), responseUsage.OutputTokensDetails.AudioTokens)
+		assert.Equal(t, int64(8), responseUsage.OutputTokensDetails.ImageTokens)
 		assert.Equal(t, int64(30), responseUsage.OutputTokensDetails.ReasoningTokens)
 	})
+
+	t.Run(
+		"GeminiUsage to ChatUsage to model Usage preserves multimodal input details",
+		func(t *testing.T) {
+			modelUsage := geminiUsage.ToUsage().ToModelUsage()
+			assert.Equal(t, coremodel.ZeroNullInt64(100), modelUsage.InputTokens)
+			assert.Equal(t, coremodel.ZeroNullInt64(6), modelUsage.ImageInputTokens)
+			assert.Equal(t, coremodel.ZeroNullInt64(5), modelUsage.AudioInputTokens)
+			assert.Equal(t, coremodel.ZeroNullInt64(9), modelUsage.VideoInputTokens)
+			assert.Equal(t, coremodel.ZeroNullInt64(80), modelUsage.OutputTokens)
+			assert.Equal(t, coremodel.ZeroNullInt64(8), modelUsage.ImageOutputTokens)
+			assert.Equal(t, coremodel.ZeroNullInt64(7), modelUsage.AudioOutputTokens)
+			assert.Equal(t, coremodel.ZeroNullInt64(30), modelUsage.ReasoningTokens)
+			assert.Equal(t, coremodel.ZeroNullInt64(150), modelUsage.TotalTokens)
+		},
+	)
 
 	t.Run("GeminiUsage to ClaudeUsage", func(t *testing.T) {
 		claudeUsage := geminiUsage.ToClaudeUsage()

@@ -49,6 +49,8 @@ export function PriceDisplay({ price }: PriceDisplayProps) {
             { label: t('group.price.imageInputPrice'), value: formatPriceValue(target.image_input_price, target.image_input_price_unit) },
             { label: t('group.price.imageOutputPrice'), value: formatPriceValue(target.image_output_price, target.image_output_price_unit) },
             { label: t('group.price.audioInputPrice'), value: formatPriceValue(target.audio_input_price, target.audio_input_price_unit) },
+            { label: t('group.price.videoInputPrice'), value: formatPriceValue(target.video_input_price, target.video_input_price_unit) },
+            { label: t('group.price.audioOutputPrice'), value: formatPriceValue(target.audio_output_price, target.audio_output_price_unit) },
             { label: t('group.price.thinkingOutputPrice'), value: formatPriceValue(target.thinking_mode_output_price, target.thinking_mode_output_price_unit) },
             { label: t('group.price.webSearchPrice'), value: formatPriceValue(target.web_search_price, target.web_search_price_unit) },
         ].filter((row) => row.value !== null)
@@ -93,6 +95,8 @@ export function PriceDisplay({ price }: PriceDisplayProps) {
         formatPriceValue(price.image_input_price, price.image_input_price_unit) && `Img In: ${formatPriceValue(price.image_input_price, price.image_input_price_unit)}`,
         formatPriceValue(price.image_output_price, price.image_output_price_unit) && `Img Out: ${formatPriceValue(price.image_output_price, price.image_output_price_unit)}`,
         formatPriceValue(price.audio_input_price, price.audio_input_price_unit) && `Audio In: ${formatPriceValue(price.audio_input_price, price.audio_input_price_unit)}`,
+        formatPriceValue(price.video_input_price, price.video_input_price_unit) && `Video In: ${formatPriceValue(price.video_input_price, price.video_input_price_unit)}`,
+        formatPriceValue(price.audio_output_price, price.audio_output_price_unit) && `Audio Out: ${formatPriceValue(price.audio_output_price, price.audio_output_price_unit)}`,
         formatPriceValue(price.thinking_mode_output_price, price.thinking_mode_output_price_unit) && `Think Out: ${formatPriceValue(price.thinking_mode_output_price, price.thinking_mode_output_price_unit)}`,
         formatPriceValue(price.web_search_price, price.web_search_price_unit) && `Search: ${formatPriceValue(price.web_search_price, price.web_search_price_unit)}`,
     ].filter(Boolean)

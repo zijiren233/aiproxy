@@ -204,6 +204,22 @@ function BasePriceFields({ price, onChange }: { price: ModelPrice; onChange: (pr
                 onUnitChange={(v) => updateField('audio_input_price_unit', v)}
             />
             <PriceField
+                label={t('group.price.videoInputPrice')}
+                unitLabel={t('group.price.videoInputPriceUnit')}
+                value={price.video_input_price}
+                unitValue={price.video_input_price_unit}
+                onValueChange={(v) => updateField('video_input_price', v)}
+                onUnitChange={(v) => updateField('video_input_price_unit', v)}
+            />
+            <PriceField
+                label={t('group.price.audioOutputPrice')}
+                unitLabel={t('group.price.audioOutputPriceUnit')}
+                value={price.audio_output_price}
+                unitValue={price.audio_output_price_unit}
+                onValueChange={(v) => updateField('audio_output_price', v)}
+                onUnitChange={(v) => updateField('audio_output_price_unit', v)}
+            />
+            <PriceField
                 label={t('group.price.thinkingOutputPrice')}
                 unitLabel={t('group.price.thinkingOutputPriceUnit')}
                 value={price.thinking_mode_output_price}
