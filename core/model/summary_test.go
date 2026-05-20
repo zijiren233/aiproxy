@@ -850,8 +850,8 @@ func TestParseSummaryFields_AllValidFields(t *testing.T) {
 		"request_count", "retry_count", "exception_count",
 		"status4xx_count", "status5xx_count", "status400_count",
 		"status429_count", "status500_count", "cache_hit_count",
-		"input_tokens", "image_input_tokens", "audio_input_tokens",
-		"output_tokens", "image_output_tokens", "cached_tokens",
+		"input_tokens", "image_input_tokens", "audio_input_tokens", "video_input_tokens",
+		"output_tokens", "image_output_tokens", "audio_output_tokens", "cached_tokens",
 		"cache_creation_tokens", "total_tokens", "web_search_count",
 		"used_amount", "total_time_milliseconds", "total_ttfb_milliseconds",
 	}

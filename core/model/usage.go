@@ -36,11 +36,17 @@ type Price struct {
 	AudioInputPrice     ZeroNullFloat64 `json:"audio_input_price,omitempty"`
 	AudioInputPriceUnit ZeroNullInt64   `json:"audio_input_price_unit,omitempty"`
 
+	VideoInputPrice     ZeroNullFloat64 `json:"video_input_price,omitempty"`
+	VideoInputPriceUnit ZeroNullInt64   `json:"video_input_price_unit,omitempty"`
+
 	OutputPrice     ZeroNullFloat64 `json:"output_price,omitempty"`
 	OutputPriceUnit ZeroNullInt64   `json:"output_price_unit,omitempty"`
 
 	ImageOutputPrice     ZeroNullFloat64 `json:"image_output_price,omitempty"`
 	ImageOutputPriceUnit ZeroNullInt64   `json:"image_output_price_unit,omitempty"`
+
+	AudioOutputPrice     ZeroNullFloat64 `json:"audio_output_price,omitempty"`
+	AudioOutputPriceUnit ZeroNullInt64   `json:"audio_output_price_unit,omitempty"`
 
 	// when ThinkingModeOutputPrice and ReasoningTokens are not 0, OutputPrice and OutputPriceUnit
 	// will be overwritten
@@ -360,6 +366,13 @@ func (p *Price) GetAudioInputPriceUnit() int64 {
 	return PriceUnit
 }
 
+func (p *Price) GetVideoInputPriceUnit() int64 {
+	if p.VideoInputPriceUnit > 0 {
+		return int64(p.VideoInputPriceUnit)
+	}
+	return PriceUnit
+}
+
 func (p *Price) GetOutputPriceUnit() int64 {
 	if p.OutputPriceUnit > 0 {
 		return int64(p.OutputPriceUnit)
@@ -370,6 +383,13 @@ func (p *Price) GetOutputPriceUnit() int64 {
 func (p *Price) GetImageOutputPriceUnit() int64 {
 	if p.ImageOutputPriceUnit > 0 {
 		return int64(p.ImageOutputPriceUnit)
+	}
+	return PriceUnit
+}
+
+func (p *Price) GetAudioOutputPriceUnit() int64 {
+	if p.AudioOutputPriceUnit > 0 {
+		return int64(p.AudioOutputPriceUnit)
 	}
 	return PriceUnit
 }
@@ -399,8 +419,10 @@ type Usage struct {
 	InputTokens         ZeroNullInt64 `json:"input_tokens,omitempty"`
 	ImageInputTokens    ZeroNullInt64 `json:"image_input_tokens,omitempty"`
 	AudioInputTokens    ZeroNullInt64 `json:"audio_input_tokens,omitempty"`
+	VideoInputTokens    ZeroNullInt64 `json:"video_input_tokens,omitempty"`
 	OutputTokens        ZeroNullInt64 `json:"output_tokens,omitempty"`
 	ImageOutputTokens   ZeroNullInt64 `json:"image_output_tokens,omitempty"`
+	AudioOutputTokens   ZeroNullInt64 `json:"audio_output_tokens,omitempty"`
 	CachedTokens        ZeroNullInt64 `json:"cached_tokens,omitempty"`
 	CacheCreationTokens ZeroNullInt64 `json:"cache_creation_tokens,omitempty"`
 	ReasoningTokens     ZeroNullInt64 `json:"reasoning_tokens,omitempty"`
@@ -412,8 +434,10 @@ func (u *Usage) Add(other Usage) {
 	u.InputTokens += other.InputTokens
 	u.ImageInputTokens += other.ImageInputTokens
 	u.AudioInputTokens += other.AudioInputTokens
+	u.VideoInputTokens += other.VideoInputTokens
 	u.OutputTokens += other.OutputTokens
 	u.ImageOutputTokens += other.ImageOutputTokens
+	u.AudioOutputTokens += other.AudioOutputTokens
 	u.CachedTokens += other.CachedTokens
 	u.CacheCreationTokens += other.CacheCreationTokens
 	u.ReasoningTokens += other.ReasoningTokens
@@ -425,8 +449,10 @@ type Amount struct {
 	InputAmount         float64 `json:"input_amount,omitempty"`
 	ImageInputAmount    float64 `json:"image_input_amount,omitempty"`
 	AudioInputAmount    float64 `json:"audio_input_amount,omitempty"`
+	VideoInputAmount    float64 `json:"video_input_amount,omitempty"`
 	OutputAmount        float64 `json:"output_amount,omitempty"`
 	ImageOutputAmount   float64 `json:"image_output_amount,omitempty"`
+	AudioOutputAmount   float64 `json:"audio_output_amount,omitempty"`
 	CachedAmount        float64 `json:"cached_amount,omitempty"`
 	CacheCreationAmount float64 `json:"cache_creation_amount,omitempty"`
 	WebSearchAmount     float64 `json:"web_search_amount,omitempty"`
@@ -443,11 +469,17 @@ func (a *Amount) Add(other Amount) {
 	a.AudioInputAmount = decimal.NewFromFloat(a.AudioInputAmount).
 		Add(decimal.NewFromFloat(other.AudioInputAmount)).
 		InexactFloat64()
+	a.VideoInputAmount = decimal.NewFromFloat(a.VideoInputAmount).
+		Add(decimal.NewFromFloat(other.VideoInputAmount)).
+		InexactFloat64()
 	a.OutputAmount = decimal.NewFromFloat(a.OutputAmount).
 		Add(decimal.NewFromFloat(other.OutputAmount)).
 		InexactFloat64()
 	a.ImageOutputAmount = decimal.NewFromFloat(a.ImageOutputAmount).
 		Add(decimal.NewFromFloat(other.ImageOutputAmount)).
+		InexactFloat64()
+	a.AudioOutputAmount = decimal.NewFromFloat(a.AudioOutputAmount).
+		Add(decimal.NewFromFloat(other.AudioOutputAmount)).
 		InexactFloat64()
 	a.CachedAmount = decimal.NewFromFloat(a.CachedAmount).
 		Add(decimal.NewFromFloat(other.CachedAmount)).

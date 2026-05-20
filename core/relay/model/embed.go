@@ -31,6 +31,7 @@ type EmbeddingUsage struct {
 type EmbeddingPromptTokensDetails struct {
 	TextTokens  int64 `json:"text_tokens,omitempty"`
 	ImageTokens int64 `json:"image_tokens,omitempty"`
+	VideoTokens int64 `json:"video_tokens,omitempty"`
 }
 
 func (u EmbeddingUsage) ToModelUsage() model.Usage {
@@ -40,6 +41,7 @@ func (u EmbeddingUsage) ToModelUsage() model.Usage {
 	}
 	if u.PromptTokensDetails != nil {
 		usage.ImageInputTokens = model.ZeroNullInt64(u.PromptTokensDetails.ImageTokens)
+		usage.VideoInputTokens = model.ZeroNullInt64(u.PromptTokensDetails.VideoTokens)
 	}
 
 	return usage

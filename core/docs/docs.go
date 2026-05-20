@@ -1158,7 +1158,7 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "Comma-separated list of fields to select (e.g., request_count,exception_count,cache_hit_count). Available: request_count,retry_count,exception_count,status4xx_count,status5xx_count,status400_count,status429_count,status500_count,cache_hit_count,input_tokens,image_input_tokens,audio_input_tokens,output_tokens,image_output_tokens,cached_tokens,cache_creation_tokens,total_tokens,web_search_count,used_amount,total_time,total_ttfb. Groups: count,usage,time,all",
+                        "description": "Comma-separated list of fields to select (e.g., request_count,exception_count,cache_hit_count). Available: request_count,retry_count,exception_count,status4xx_count,status5xx_count,status400_count,status429_count,status500_count,cache_hit_count,input_tokens,image_input_tokens,audio_input_tokens,video_input_tokens,output_tokens,image_output_tokens,audio_output_tokens,cached_tokens,cache_creation_tokens,total_tokens,web_search_count,used_amount,total_time,total_ttfb. Groups: count,usage,time,all",
                         "name": "fields",
                         "in": "query"
                     }
@@ -1248,7 +1248,7 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "Comma-separated list of fields to select (e.g., request_count,exception_count,cache_hit_count). Available: request_count,retry_count,exception_count,status4xx_count,status5xx_count,status400_count,status429_count,status500_count,cache_hit_count,input_tokens,image_input_tokens,audio_input_tokens,output_tokens,image_output_tokens,cached_tokens,cache_creation_tokens,total_tokens,web_search_count,used_amount,total_time,total_ttfb. Groups: count,usage,time,all",
+                        "description": "Comma-separated list of fields to select (e.g., request_count,exception_count,cache_hit_count). Available: request_count,retry_count,exception_count,status4xx_count,status5xx_count,status400_count,status429_count,status500_count,cache_hit_count,input_tokens,image_input_tokens,audio_input_tokens,video_input_tokens,output_tokens,image_output_tokens,audio_output_tokens,cached_tokens,cache_creation_tokens,total_tokens,web_search_count,used_amount,total_time,total_ttfb. Groups: count,usage,time,all",
                         "name": "fields",
                         "in": "query"
                     }
@@ -1380,7 +1380,7 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "Comma-separated list of fields to select (e.g., request_count,exception_count,cache_hit_count). Available: request_count,retry_count,exception_count,status4xx_count,status5xx_count,status400_count,status429_count,status500_count,cache_hit_count,input_tokens,image_input_tokens,audio_input_tokens,output_tokens,image_output_tokens,cached_tokens,cache_creation_tokens,total_tokens,web_search_count,used_amount,total_time,total_ttfb. Groups: count,usage,time,all",
+                        "description": "Comma-separated list of fields to select (e.g., request_count,exception_count,cache_hit_count). Available: request_count,retry_count,exception_count,status4xx_count,status5xx_count,status400_count,status429_count,status500_count,cache_hit_count,input_tokens,image_input_tokens,audio_input_tokens,video_input_tokens,output_tokens,image_output_tokens,audio_output_tokens,cached_tokens,cache_creation_tokens,total_tokens,web_search_count,used_amount,total_time,total_ttfb. Groups: count,usage,time,all",
                         "name": "fields",
                         "in": "query"
                     }
@@ -1473,7 +1473,7 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "Comma-separated list of fields to select (e.g., request_count,exception_count,cache_hit_count). Available: request_count,retry_count,exception_count,status4xx_count,status5xx_count,status400_count,status429_count,status500_count,cache_hit_count,input_tokens,image_input_tokens,audio_input_tokens,output_tokens,image_output_tokens,cached_tokens,cache_creation_tokens,total_tokens,web_search_count,used_amount,total_time,total_ttfb. Groups: count,usage,time,all",
+                        "description": "Comma-separated list of fields to select (e.g., request_count,exception_count,cache_hit_count). Available: request_count,retry_count,exception_count,status4xx_count,status5xx_count,status400_count,status429_count,status500_count,cache_hit_count,input_tokens,image_input_tokens,audio_input_tokens,video_input_tokens,output_tokens,image_output_tokens,audio_output_tokens,cached_tokens,cache_creation_tokens,total_tokens,web_search_count,used_amount,total_time,total_ttfb. Groups: count,usage,time,all",
                         "name": "fields",
                         "in": "query"
                     }
@@ -1559,7 +1559,7 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "Comma-separated list of fields to select (e.g., request_count,exception_count,cache_hit_count). Available: request_count,retry_count,exception_count,status4xx_count,status5xx_count,status400_count,status429_count,status500_count,cache_hit_count,input_tokens,image_input_tokens,audio_input_tokens,output_tokens,image_output_tokens,cached_tokens,cache_creation_tokens,total_tokens,web_search_count,used_amount,total_time,total_ttfb. Groups: count,usage,time,all",
+                        "description": "Comma-separated list of fields to select (e.g., request_count,exception_count,cache_hit_count). Available: request_count,retry_count,exception_count,status4xx_count,status5xx_count,status400_count,status429_count,status500_count,cache_hit_count,input_tokens,image_input_tokens,audio_input_tokens,video_input_tokens,output_tokens,image_output_tokens,audio_output_tokens,cached_tokens,cache_creation_tokens,total_tokens,web_search_count,used_amount,total_time,total_ttfb. Groups: count,usage,time,all",
                         "name": "fields",
                         "in": "query"
                     }
@@ -1649,7 +1649,7 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "Comma-separated list of fields to select (e.g., request_count,exception_count,cache_hit_count). Available: request_count,retry_count,exception_count,status4xx_count,status5xx_count,status400_count,status429_count,status500_count,cache_hit_count,input_tokens,image_input_tokens,audio_input_tokens,output_tokens,image_output_tokens,cached_tokens,cache_creation_tokens,total_tokens,web_search_count,used_amount,total_time,total_ttfb. Groups: count,usage,time,all",
+                        "description": "Comma-separated list of fields to select (e.g., request_count,exception_count,cache_hit_count). Available: request_count,retry_count,exception_count,status4xx_count,status5xx_count,status400_count,status429_count,status500_count,cache_hit_count,input_tokens,image_input_tokens,audio_input_tokens,video_input_tokens,output_tokens,image_output_tokens,audio_output_tokens,cached_tokens,cache_creation_tokens,total_tokens,web_search_count,used_amount,total_time,total_ttfb. Groups: count,usage,time,all",
                         "name": "fields",
                         "in": "query"
                     }
@@ -5649,7 +5649,9 @@ const docTemplate = `{
                             50,
                             51,
                             52,
-                            53
+                            53,
+                            54,
+                            55
                         ],
                         "type": "integer",
                         "description": "Channel type",
@@ -9535,6 +9537,9 @@ const docTemplate = `{
                         "type": "string"
                     }
                 },
+                "skip_tls_verify": {
+                    "type": "boolean"
+                },
                 "status": {
                     "type": "integer"
                 },
@@ -9646,6 +9651,9 @@ const docTemplate = `{
                             "format": "float64"
                         }
                     }
+                },
+                "max_image_generation_count": {
+                    "type": "integer"
                 },
                 "model": {
                     "type": "string"
@@ -9889,6 +9897,9 @@ const docTemplate = `{
                             "format": "float64"
                         }
                     }
+                },
+                "max_image_generation_count": {
+                    "type": "integer"
                 },
                 "model": {
                     "type": "string"
@@ -10555,6 +10566,9 @@ const docTemplate = `{
                         "format": "float64"
                     }
                 },
+                "max_image_generation_count": {
+                    "type": "integer"
+                },
                 "model": {
                     "type": "string"
                 },
@@ -10562,6 +10576,9 @@ const docTemplate = `{
                     "type": "boolean"
                 },
                 "override_limit": {
+                    "type": "boolean"
+                },
+                "override_max_image_generation_count": {
                     "type": "boolean"
                 },
                 "override_price": {
@@ -10648,6 +10665,9 @@ const docTemplate = `{
                             "format": "float64"
                         }
                     }
+                },
+                "max_image_generation_count": {
+                    "type": "integer"
                 },
                 "model": {
                     "type": "string"
@@ -10740,6 +10760,9 @@ const docTemplate = `{
                 "proxy_url": {
                     "type": "string"
                 },
+                "skip_tls_verify": {
+                    "type": "boolean"
+                },
                 "type": {
                     "type": "integer"
                 }
@@ -10791,6 +10814,9 @@ const docTemplate = `{
                 },
                 "proxy_url": {
                     "type": "string"
+                },
+                "skip_tls_verify": {
+                    "type": "boolean"
                 },
                 "type": {
                     "type": "integer"
@@ -10954,8 +10980,27 @@ const docTemplate = `{
                 "src": {
                     "description": "URI pointing to the icon resource (HTTPS URL or data URI)",
                     "type": "string"
+                },
+                "theme": {
+                    "description": "Theme is an optional specifier for the background theme this icon is designed for.\nUse IconThemeLight for light backgrounds or IconThemeDark for dark backgrounds.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/mcp.IconTheme"
+                        }
+                    ]
                 }
             }
+        },
+        "mcp.IconTheme": {
+            "type": "string",
+            "enum": [
+                "light",
+                "dark"
+            ],
+            "x-enum-varnames": [
+                "IconThemeLight",
+                "IconThemeDark"
+            ]
         },
         "mcp.Meta": {
             "type": "object",
@@ -11044,6 +11089,10 @@ const docTemplate = `{
                             "$ref": "#/definitions/mcp.ToolOutputSchema"
                         }
                     ]
+                },
+                "title": {
+                    "description": "Title is an optional human-readable, UI-friendly display name for the tool.\nIf not provided, clients should use Annotations.Title (if set) and fall back to Name.",
+                    "type": "string"
                 }
             }
         },
@@ -11200,6 +11249,9 @@ const docTemplate = `{
                 "audio_input_amount": {
                     "type": "number"
                 },
+                "audio_output_amount": {
+                    "type": "number"
+                },
                 "cache_creation_amount": {
                     "type": "number"
                 },
@@ -11221,6 +11273,9 @@ const docTemplate = `{
                 "used_amount": {
                     "type": "number"
                 },
+                "video_input_amount": {
+                    "type": "number"
+                },
                 "web_search_amount": {
                     "type": "number"
                 }
@@ -11239,6 +11294,21 @@ const docTemplate = `{
                     "type": "string"
                 }
             }
+        },
+        "model.AsyncUsageStatus": {
+            "type": "integer",
+            "enum": [
+                0,
+                1,
+                2,
+                3
+            ],
+            "x-enum-varnames": [
+                "AsyncUsageStatusNone",
+                "AsyncUsageStatusPending",
+                "AsyncUsageStatusCompleted",
+                "AsyncUsageStatusFailed"
+            ]
         },
         "model.Channel": {
             "type": "object",
@@ -11317,6 +11387,9 @@ const docTemplate = `{
                     "items": {
                         "type": "string"
                     }
+                },
+                "skip_tls_verify": {
+                    "type": "boolean"
                 },
                 "status": {
                     "type": "integer"
@@ -11431,7 +11504,9 @@ const docTemplate = `{
                 50,
                 51,
                 52,
-                53
+                53,
+                54,
+                55
             ],
             "x-enum-varnames": [
                 "ChannelTypeOpenAI",
@@ -11474,7 +11549,9 @@ const docTemplate = `{
                 "ChannelTypeSangforAICP",
                 "ChannelTypeStreamlake",
                 "ChannelTypeZhipuCoding",
-                "ChannelTypeFake"
+                "ChannelTypeFake",
+                "ChannelTypeAntLing",
+                "ChannelTypeFakeError"
             ]
         },
         "model.ChartData": {
@@ -11484,6 +11561,12 @@ const docTemplate = `{
                     "type": "number"
                 },
                 "audio_input_tokens": {
+                    "type": "integer"
+                },
+                "audio_output_amount": {
+                    "type": "number"
+                },
+                "audio_output_tokens": {
                     "type": "integer"
                 },
                 "cache_creation_amount": {
@@ -11585,6 +11668,12 @@ const docTemplate = `{
                 "used_amount": {
                     "type": "number"
                 },
+                "video_input_amount": {
+                    "type": "number"
+                },
+                "video_input_tokens": {
+                    "type": "integer"
+                },
                 "web_search_amount": {
                     "type": "number"
                 },
@@ -11620,10 +11709,12 @@ const docTemplate = `{
             "type": "string",
             "enum": [
                 "enabled",
+                "adaptive",
                 "disabled"
             ],
             "x-enum-varnames": [
                 "ClaudeThinkingTypeEnabled",
+                "ClaudeThinkingTypeAdaptive",
                 "ClaudeThinkingTypeDisabled"
             ]
         },
@@ -11702,6 +11793,9 @@ const docTemplate = `{
                 "prompt_cache_retention": {
                     "type": "string"
                 },
+                "reasoning": {
+                    "$ref": "#/definitions/model.ResponseReasoning"
+                },
                 "safety_identifier": {
                     "type": "string"
                 },
@@ -11749,6 +11843,12 @@ const docTemplate = `{
                     "type": "number"
                 },
                 "audio_input_tokens": {
+                    "type": "integer"
+                },
+                "audio_output_amount": {
+                    "type": "number"
+                },
+                "audio_output_tokens": {
                     "type": "integer"
                 },
                 "cache_creation_amount": {
@@ -11881,6 +11981,12 @@ const docTemplate = `{
                 "used_amount": {
                     "type": "number"
                 },
+                "video_input_amount": {
+                    "type": "number"
+                },
+                "video_input_tokens": {
+                    "type": "integer"
+                },
                 "web_search_amount": {
                     "type": "number"
                 },
@@ -11933,6 +12039,9 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "text_tokens": {
+                    "type": "integer"
+                },
+                "video_tokens": {
                     "type": "integer"
                 }
             }
@@ -12048,6 +12157,9 @@ const docTemplate = `{
         "model.GeneralOpenAIRequest": {
             "type": "object",
             "properties": {
+                "enable_thinking": {
+                    "type": "boolean"
+                },
                 "frequency_penalty": {
                     "type": "number"
                 },
@@ -12087,6 +12199,9 @@ const docTemplate = `{
                 "prompt_cache_retention": {
                     "type": "string"
                 },
+                "reasoning_effort": {
+                    "type": "string"
+                },
                 "response_format": {
                     "$ref": "#/definitions/model.ResponseFormat"
                 },
@@ -12116,6 +12231,9 @@ const docTemplate = `{
                             "$ref": "#/definitions/model.GeneralThinking"
                         }
                     ]
+                },
+                "thinking_budget": {
+                    "type": "integer"
                 },
                 "tool_choice": {},
                 "tools": {
@@ -12263,6 +12381,12 @@ const docTemplate = `{
                 "audio_input_tokens": {
                     "type": "integer"
                 },
+                "audio_output_amount": {
+                    "type": "number"
+                },
+                "audio_output_tokens": {
+                    "type": "integer"
+                },
                 "cache_creation_amount": {
                     "type": "number"
                 },
@@ -12399,6 +12523,12 @@ const docTemplate = `{
                 "used_amount": {
                     "type": "number"
                 },
+                "video_input_amount": {
+                    "type": "number"
+                },
+                "video_input_tokens": {
+                    "type": "integer"
+                },
                 "web_search_amount": {
                     "type": "number"
                 },
@@ -12502,6 +12632,9 @@ const docTemplate = `{
                         "format": "float64"
                     }
                 },
+                "max_image_generation_count": {
+                    "type": "integer"
+                },
                 "model": {
                     "type": "string"
                 },
@@ -12509,6 +12642,9 @@ const docTemplate = `{
                     "type": "boolean"
                 },
                 "override_limit": {
+                    "type": "boolean"
+                },
+                "override_max_image_generation_count": {
                     "type": "boolean"
                 },
                 "override_price": {
@@ -12819,6 +12955,9 @@ const docTemplate = `{
                 "amount": {
                     "$ref": "#/definitions/model.Amount"
                 },
+                "async_usage_status": {
+                    "$ref": "#/definitions/model.AsyncUsageStatus"
+                },
                 "channel": {
                     "type": "integer"
                 },
@@ -13014,6 +13153,9 @@ const docTemplate = `{
                         }
                     }
                 },
+                "max_image_generation_count": {
+                    "type": "integer"
+                },
                 "model": {
                     "type": "string"
                 },
@@ -13096,7 +13238,8 @@ const docTemplate = `{
                 "stepfun",
                 "xai",
                 "doc2x",
-                "jina"
+                "jina",
+                "antgroup"
             ],
             "x-enum-varnames": [
                 "ModelOwnerOpenAI",
@@ -13130,7 +13273,8 @@ const docTemplate = `{
                 "ModelOwnerStepFun",
                 "ModelOwnerXAI",
                 "ModelOwnerDoc2x",
-                "ModelOwnerJina"
+                "ModelOwnerJina",
+                "ModelOwnerAntGroup"
             ]
         },
         "model.Option": {
@@ -13223,6 +13367,12 @@ const docTemplate = `{
                 "audio_input_price_unit": {
                     "type": "integer"
                 },
+                "audio_output_price": {
+                    "type": "number"
+                },
+                "audio_output_price_unit": {
+                    "type": "integer"
+                },
                 "cache_creation_price": {
                     "type": "number"
                 },
@@ -13275,6 +13425,12 @@ const docTemplate = `{
                 "thinking_mode_output_price_unit": {
                     "type": "integer"
                 },
+                "video_input_price": {
+                    "type": "number"
+                },
+                "video_input_price_unit": {
+                    "type": "integer"
+                },
                 "web_search_price": {
                     "type": "number"
                 },
@@ -13321,6 +13477,9 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "cached_tokens": {
+                    "type": "integer"
+                },
+                "image_tokens": {
                     "type": "integer"
                 }
             }
@@ -13623,6 +13782,9 @@ const docTemplate = `{
         "model.Response": {
             "type": "object",
             "properties": {
+                "background": {
+                    "type": "boolean"
+                },
                 "created_at": {
                     "type": "integer"
                 },
@@ -13685,6 +13847,9 @@ const docTemplate = `{
                     "$ref": "#/definitions/model.ResponseText"
                 },
                 "tool_choice": {},
+                "tool_usage": {
+                    "$ref": "#/definitions/model.ResponseToolUsage"
+                },
                 "tools": {
                     "type": "array",
                     "items": {
@@ -13742,6 +13907,7 @@ const docTemplate = `{
             "type": "string",
             "enum": [
                 "in_progress",
+                "queued",
                 "completed",
                 "failed",
                 "incomplete",
@@ -13749,6 +13915,7 @@ const docTemplate = `{
             ],
             "x-enum-varnames": [
                 "ResponseStatusInProgress",
+                "ResponseStatusQueued",
                 "ResponseStatusCompleted",
                 "ResponseStatusFailed",
                 "ResponseStatusIncomplete",
@@ -13786,6 +13953,56 @@ const docTemplate = `{
                 }
             }
         },
+        "model.ResponseToolUsage": {
+            "type": "object",
+            "properties": {
+                "image_gen": {
+                    "$ref": "#/definitions/model.ResponseToolUsageImageGen"
+                },
+                "web_search": {
+                    "$ref": "#/definitions/model.ResponseToolUsageWebSearch"
+                }
+            }
+        },
+        "model.ResponseToolUsageImageGen": {
+            "type": "object",
+            "properties": {
+                "input_tokens": {
+                    "type": "integer"
+                },
+                "input_tokens_details": {
+                    "$ref": "#/definitions/model.ResponseToolUsageTokensDetails"
+                },
+                "output_tokens": {
+                    "type": "integer"
+                },
+                "output_tokens_details": {
+                    "$ref": "#/definitions/model.ResponseToolUsageTokensDetails"
+                },
+                "total_tokens": {
+                    "type": "integer"
+                }
+            }
+        },
+        "model.ResponseToolUsageTokensDetails": {
+            "type": "object",
+            "properties": {
+                "image_tokens": {
+                    "type": "integer"
+                },
+                "text_tokens": {
+                    "type": "integer"
+                }
+            }
+        },
+        "model.ResponseToolUsageWebSearch": {
+            "type": "object",
+            "properties": {
+                "num_requests": {
+                    "type": "integer"
+                }
+            }
+        },
         "model.ResponseUsage": {
             "type": "object",
             "properties": {
@@ -13809,7 +14026,13 @@ const docTemplate = `{
         "model.ResponseUsageDetails": {
             "type": "object",
             "properties": {
+                "audio_tokens": {
+                    "type": "integer"
+                },
                 "cached_tokens": {
+                    "type": "integer"
+                },
+                "image_tokens": {
                     "type": "integer"
                 },
                 "reasoning_tokens": {
@@ -13854,6 +14077,12 @@ const docTemplate = `{
                     "type": "number"
                 },
                 "audio_input_tokens": {
+                    "type": "integer"
+                },
+                "audio_output_amount": {
+                    "type": "number"
+                },
+                "audio_output_tokens": {
                     "type": "integer"
                 },
                 "cache_creation_amount": {
@@ -13943,6 +14172,12 @@ const docTemplate = `{
                 "used_amount": {
                     "type": "number"
                 },
+                "video_input_amount": {
+                    "type": "number"
+                },
+                "video_input_tokens": {
+                    "type": "integer"
+                },
                 "web_search_amount": {
                     "type": "number"
                 },
@@ -13958,6 +14193,12 @@ const docTemplate = `{
                     "type": "number"
                 },
                 "audio_input_tokens": {
+                    "type": "integer"
+                },
+                "audio_output_amount": {
+                    "type": "number"
+                },
+                "audio_output_tokens": {
                     "type": "integer"
                 },
                 "cache_creation_amount": {
@@ -14076,6 +14317,12 @@ const docTemplate = `{
                 },
                 "used_amount": {
                     "type": "number"
+                },
+                "video_input_amount": {
+                    "type": "number"
+                },
+                "video_input_tokens": {
+                    "type": "integer"
                 },
                 "web_search_amount": {
                     "type": "number"
@@ -14291,6 +14538,9 @@ const docTemplate = `{
                 "audio_input_tokens": {
                     "type": "integer"
                 },
+                "audio_output_tokens": {
+                    "type": "integer"
+                },
                 "cache_creation_tokens": {
                     "type": "integer"
                 },
@@ -14313,6 +14563,9 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "total_tokens": {
+                    "type": "integer"
+                },
+                "video_input_tokens": {
                     "type": "integer"
                 },
                 "web_search_count": {

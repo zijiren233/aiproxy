@@ -24,11 +24,16 @@ func (u ChatUsage) ToModelUsage() model.Usage {
 		WebSearchCount: model.ZeroNullInt64(u.WebSearchCount),
 	}
 	if u.PromptTokensDetails != nil {
+		usage.ImageInputTokens = model.ZeroNullInt64(u.PromptTokensDetails.ImageTokens)
+		usage.AudioInputTokens = model.ZeroNullInt64(u.PromptTokensDetails.AudioTokens)
+		usage.VideoInputTokens = model.ZeroNullInt64(u.PromptTokensDetails.VideoTokens)
 		usage.CachedTokens = model.ZeroNullInt64(u.PromptTokensDetails.CachedTokens)
 		usage.CacheCreationTokens = model.ZeroNullInt64(u.PromptTokensDetails.CacheCreationTokens)
 	}
 
 	if u.CompletionTokensDetails != nil {
+		usage.ImageOutputTokens = model.ZeroNullInt64(u.CompletionTokensDetails.ImageTokens)
+		usage.AudioOutputTokens = model.ZeroNullInt64(u.CompletionTokensDetails.AudioTokens)
 		usage.ReasoningTokens = model.ZeroNullInt64(u.CompletionTokensDetails.ReasoningTokens)
 	}
 
@@ -50,6 +55,14 @@ func (u *ChatUsage) Add(other *ChatUsage) {
 		}
 
 		u.PromptTokensDetails.Add(other.PromptTokensDetails)
+	}
+
+	if other.CompletionTokensDetails != nil {
+		if u.CompletionTokensDetails == nil {
+			u.CompletionTokensDetails = &CompletionTokensDetails{}
+		}
+
+		u.CompletionTokensDetails.Add(other.CompletionTokensDetails)
 	}
 }
 
@@ -76,15 +89,27 @@ func (u ChatUsage) ToResponseUsage() ResponseUsage {
 	}
 
 	if u.PromptTokensDetails != nil &&
-		(u.PromptTokensDetails.CachedTokens > 0 || u.PromptTokensDetails.CacheCreationTokens > 0) {
+		(u.PromptTokensDetails.CachedTokens > 0 ||
+			u.PromptTokensDetails.CacheCreationTokens > 0 ||
+			u.PromptTokensDetails.ImageTokens > 0 ||
+			u.PromptTokensDetails.VideoTokens > 0 ||
+			u.PromptTokensDetails.AudioTokens > 0) {
 		usage.InputTokensDetails = &ResponseUsageDetails{
+			AudioTokens:  u.PromptTokensDetails.AudioTokens,
 			CachedTokens: u.PromptTokensDetails.CachedTokens,
+			ImageTokens:  u.PromptTokensDetails.ImageTokens,
+			VideoTokens:  u.PromptTokensDetails.VideoTokens,
 		}
 	}
 
-	if u.CompletionTokensDetails != nil && u.CompletionTokensDetails.ReasoningTokens > 0 {
+	if u.CompletionTokensDetails != nil &&
+		(u.CompletionTokensDetails.ReasoningTokens > 0 ||
+			u.CompletionTokensDetails.AudioTokens > 0 ||
+			u.CompletionTokensDetails.ImageTokens > 0) {
 		usage.OutputTokensDetails = &ResponseUsageDetails{
+			AudioTokens:     u.CompletionTokensDetails.AudioTokens,
 			ReasoningTokens: u.CompletionTokensDetails.ReasoningTokens,
+			ImageTokens:     u.CompletionTokensDetails.ImageTokens,
 		}
 	}
 
@@ -113,6 +138,8 @@ func (u ChatUsage) ToGeminiUsage() GeminiUsageMetadata {
 type PromptTokensDetails struct {
 	CachedTokens        int64 `json:"cached_tokens"`
 	AudioTokens         int64 `json:"audio_tokens"`
+	ImageTokens         int64 `json:"image_tokens,omitempty"`
+	VideoTokens         int64 `json:"video_tokens,omitempty"`
 	CacheCreationTokens int64 `json:"cache_creation_tokens,omitempty"`
 }
 
@@ -123,6 +150,8 @@ func (d *PromptTokensDetails) Add(other *PromptTokensDetails) {
 
 	d.CachedTokens += other.CachedTokens
 	d.AudioTokens += other.AudioTokens
+	d.ImageTokens += other.ImageTokens
+	d.VideoTokens += other.VideoTokens
 	d.CacheCreationTokens += other.CacheCreationTokens
 }
 
@@ -132,6 +161,18 @@ type CompletionTokensDetails struct {
 	AcceptedPredictionTokens int64 `json:"accepted_prediction_tokens"`
 	RejectedPredictionTokens int64 `json:"rejected_prediction_tokens"`
 	ImageTokens              int64 `json:"image_tokens"`
+}
+
+func (d *CompletionTokensDetails) Add(other *CompletionTokensDetails) {
+	if other == nil {
+		return
+	}
+
+	d.ReasoningTokens += other.ReasoningTokens
+	d.AudioTokens += other.AudioTokens
+	d.AcceptedPredictionTokens += other.AcceptedPredictionTokens
+	d.RejectedPredictionTokens += other.RejectedPredictionTokens
+	d.ImageTokens += other.ImageTokens
 }
 
 type OpenAIErrorResponse struct {

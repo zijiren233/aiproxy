@@ -218,6 +218,48 @@ func TestConvertToNonStreamWithAllFields(t *testing.T) {
 	assert.Equal(t, float64(101), usage["total_tokens"])
 }
 
+func TestParseStreamingDataWithAudioDelta(t *testing.T) {
+	rw := &fakeStreamResponseWriter{}
+
+	chunks := []string{
+		`{"choices":[{"delta":{"role":"assistant","audio":{"id":"audio-","data":"AAAA","transcript":"hel","expires_at":100}},"finish_reason":null,"index":0}],"created":1767597874,"id":"chatcmpl-test","model":"gpt-4o-audio-preview","object":"chat.completion.chunk"}`,
+		`{"choices":[{"delta":{"audio":{"id":"test","data":"BBBB","transcript":"lo","expires_at":200}},"finish_reason":null,"index":0}],"created":1767597874,"id":"chatcmpl-test","model":"gpt-4o-audio-preview","object":"chat.completion.chunk"}`,
+		`{"choices":[{"delta":{},"finish_reason":"stop","index":0}],"created":1767597874,"id":"chatcmpl-test","model":"gpt-4o-audio-preview","object":"chat.completion.chunk","usage":{"completion_tokens":10,"completion_tokens_details":{"audio_tokens":8},"prompt_tokens":2,"total_tokens":12}}`,
+	}
+
+	for _, chunk := range chunks {
+		err := rw.parseStreamingData([]byte(chunk))
+		require.NoError(t, err)
+	}
+
+	result, err := rw.convertToNonStream()
+	require.NoError(t, err)
+
+	var response map[string]any
+
+	err = sonic.Unmarshal(result, &response)
+	require.NoError(t, err)
+
+	choices, ok := response["choices"].([]any)
+	require.True(t, ok)
+	require.Len(t, choices, 1)
+
+	choice, ok := choices[0].(map[string]any)
+	require.True(t, ok)
+
+	message, ok := choice["message"].(map[string]any)
+	require.True(t, ok)
+
+	audio, ok := message["audio"].(map[string]any)
+	require.True(t, ok)
+
+	assert.Equal(t, "test", audio["id"])
+	assert.Equal(t, "AAAABBBB", audio["data"])
+	assert.Equal(t, "hello", audio["transcript"])
+	assert.Equal(t, float64(200), audio["expires_at"])
+	assert.Equal(t, "stop", choice["finish_reason"])
+}
+
 func TestParseStreamingDataIgnoresSSEData(t *testing.T) {
 	rw := &fakeStreamResponseWriter{}
 

@@ -100,6 +100,42 @@ func TestCalculateAmount(t *testing.T) {
 			want: 0.019, // 0.001 * 1000/1000 + 0.004 * (3000-1000)/1000 + 0.01 * 1000/1000
 		},
 		{
+			name: "Audio Input and Output Pricing",
+			code: http.StatusOK,
+			usage: model.Usage{
+				InputTokens:       2000,
+				AudioInputTokens:  500,
+				OutputTokens:      3000,
+				AudioOutputTokens: 1000,
+			},
+			price: model.Price{
+				InputPrice:       0.001,
+				AudioInputPrice:  0.003,
+				OutputPrice:      0.004,
+				AudioOutputPrice: 0.01,
+			},
+			want: 0.021, // text in 0.0015 + audio in 0.0015 + text out 0.008 + audio out 0.01
+		},
+		{
+			name: "Video Input Pricing",
+			code: http.StatusOK,
+			usage: model.Usage{
+				InputTokens:      3000,
+				ImageInputTokens: 500,
+				AudioInputTokens: 600,
+				VideoInputTokens: 1000,
+				OutputTokens:     2000,
+			},
+			price: model.Price{
+				InputPrice:      0.001,
+				ImageInputPrice: 0.003,
+				AudioInputPrice: 0.004,
+				VideoInputPrice: 0.008,
+				OutputPrice:     0.002,
+			},
+			want: 0.0168, // text in 0.0009 + image in 0.0015 + audio in 0.0024 + video in 0.008 + text out 0.004
+		},
+		{
 			name: "Cached Token Pricing",
 			code: http.StatusOK,
 			usage: model.Usage{

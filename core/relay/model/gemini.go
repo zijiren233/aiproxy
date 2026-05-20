@@ -186,6 +186,39 @@ func (u *GeminiUsageMetadata) GetImageOutputTokens() int64 {
 	return 0
 }
 
+// GetAudioInputTokens returns the number of audio input tokens from PromptTokensDetails.
+func (u *GeminiUsageMetadata) GetAudioInputTokens() int64 {
+	for _, detail := range u.PromptTokensDetails {
+		if detail.Modality == GeminiModalityAudio {
+			return detail.TokenCount
+		}
+	}
+
+	return 0
+}
+
+// GetVideoInputTokens returns the number of video input tokens from PromptTokensDetails.
+func (u *GeminiUsageMetadata) GetVideoInputTokens() int64 {
+	for _, detail := range u.PromptTokensDetails {
+		if detail.Modality == GeminiModalityVideo {
+			return detail.TokenCount
+		}
+	}
+
+	return 0
+}
+
+// GetAudioOutputTokens returns the number of audio output tokens from CandidatesTokensDetails.
+func (u *GeminiUsageMetadata) GetAudioOutputTokens() int64 {
+	for _, detail := range u.CandidatesTokensDetails {
+		if detail.Modality == GeminiModalityAudio {
+			return detail.TokenCount
+		}
+	}
+
+	return 0
+}
+
 // ToUsage converts GeminiUsageMetadata to ChatUsage format
 func (u *GeminiUsageMetadata) ToUsage() ChatUsage {
 	chatUsage := ChatUsage{
@@ -194,9 +227,13 @@ func (u *GeminiUsageMetadata) ToUsage() ChatUsage {
 			u.ThoughtsTokenCount,
 		TotalTokens: u.TotalTokenCount,
 		PromptTokensDetails: &PromptTokensDetails{
+			AudioTokens:  u.GetAudioInputTokens(),
 			CachedTokens: u.CachedContentTokenCount,
+			ImageTokens:  u.GetImageInputTokens(),
+			VideoTokens:  u.GetVideoInputTokens(),
 		},
 		CompletionTokensDetails: &CompletionTokensDetails{
+			AudioTokens:     u.GetAudioOutputTokens(),
 			ReasoningTokens: u.ThoughtsTokenCount,
 			ImageTokens:     u.GetImageOutputTokens(),
 		},
@@ -213,8 +250,11 @@ func (u *GeminiUsageMetadata) ToModelUsage() model.Usage {
 	usage := model.Usage{
 		InputTokens:       model.ZeroNullInt64(inputTokens),
 		ImageInputTokens:  model.ZeroNullInt64(u.GetImageInputTokens()),
+		AudioInputTokens:  model.ZeroNullInt64(u.GetAudioInputTokens()),
+		VideoInputTokens:  model.ZeroNullInt64(u.GetVideoInputTokens()),
 		OutputTokens:      model.ZeroNullInt64(u.CandidatesTokenCount + u.ThoughtsTokenCount),
 		ImageOutputTokens: model.ZeroNullInt64(u.GetImageOutputTokens()),
+		AudioOutputTokens: model.ZeroNullInt64(u.GetAudioOutputTokens()),
 		CachedTokens:      model.ZeroNullInt64(u.CachedContentTokenCount),
 		ReasoningTokens:   model.ZeroNullInt64(u.ThoughtsTokenCount),
 		TotalTokens:       model.ZeroNullInt64(u.TotalTokenCount),
@@ -231,14 +271,29 @@ func (u *GeminiUsageMetadata) ToResponseUsage() ResponseUsage {
 		TotalTokens:  u.TotalTokenCount,
 	}
 
-	if u.CachedContentTokenCount > 0 {
+	audioInputTokens := u.GetAudioInputTokens()
+	imageInputTokens := u.GetImageInputTokens()
+
+	videoInputTokens := u.GetVideoInputTokens()
+	if u.CachedContentTokenCount > 0 ||
+		audioInputTokens > 0 ||
+		imageInputTokens > 0 ||
+		videoInputTokens > 0 {
 		usage.InputTokensDetails = &ResponseUsageDetails{
+			AudioTokens:  audioInputTokens,
 			CachedTokens: u.CachedContentTokenCount,
+			ImageTokens:  imageInputTokens,
+			VideoTokens:  videoInputTokens,
 		}
 	}
 
-	if u.ThoughtsTokenCount > 0 {
+	audioOutputTokens := u.GetAudioOutputTokens()
+
+	imageOutputTokens := u.GetImageOutputTokens()
+	if u.ThoughtsTokenCount > 0 || audioOutputTokens > 0 || imageOutputTokens > 0 {
 		usage.OutputTokensDetails = &ResponseUsageDetails{
+			AudioTokens:     audioOutputTokens,
+			ImageTokens:     imageOutputTokens,
 			ReasoningTokens: u.ThoughtsTokenCount,
 		}
 	}
