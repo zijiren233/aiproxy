@@ -1,6 +1,8 @@
 package model
 
 import (
+	"fmt"
+
 	"github.com/labring/aiproxy/core/relay/adaptor"
 )
 
@@ -9,6 +11,7 @@ type VideoGenerationJobRequest struct {
 	Model     string `json:"model"`
 	Width     int    `json:"width"`
 	Height    int    `json:"height"`
+	Size      string `json:"size,omitempty"`
 	NVariants int    `json:"n_variants"`
 	NSeconds  int    `json:"n_seconds"`
 }
@@ -50,6 +53,38 @@ type VideoGenerations struct {
 	NSeconds  int    `json:"n_seconds"`
 }
 
+type VideoStatus = string
+
+const (
+	VideoStatusQueued     VideoStatus = "queued"
+	VideoStatusInProgress VideoStatus = "in_progress"
+	VideoStatusCompleted  VideoStatus = "completed"
+	VideoStatusSucceeded  VideoStatus = "succeeded"
+	VideoStatusFailed     VideoStatus = "failed"
+	VideoStatusCancelled  VideoStatus = "cancelled"
+)
+
+type VideoRequest struct {
+	Prompt         string `json:"prompt,omitempty"`
+	Model          string `json:"model,omitempty"`
+	Seconds        any    `json:"seconds,omitempty"`
+	Size           string `json:"size,omitempty"`
+	InputReference string `json:"input_reference,omitempty"`
+}
+
+type Video struct {
+	ID        string         `json:"id"`
+	Object    string         `json:"object"`
+	CreatedAt int64          `json:"created_at,omitempty"`
+	Status    VideoStatus    `json:"status,omitempty"`
+	Progress  int            `json:"progress,omitempty"`
+	Model     string         `json:"model,omitempty"`
+	Prompt    string         `json:"prompt,omitempty"`
+	Seconds   int            `json:"seconds,omitempty"`
+	Size      string         `json:"size,omitempty"`
+	Error     map[string]any `json:"error,omitempty"`
+}
+
 type OpenAIVideoError struct {
 	Detail string `json:"detail"`
 }
@@ -66,4 +101,29 @@ func WrapperOpenAIVideoErrorWithMessage(message string, statusCode int) adaptor.
 	return NewOpenAIVideoError(statusCode, OpenAIVideoError{
 		Detail: message,
 	})
+}
+
+func VideoPriceSizeFromDimensions(width, height int) string {
+	if width <= 0 || height <= 0 {
+		return ""
+	}
+
+	if resolution := VideoResolutionFromHeight(height); resolution != "" {
+		return resolution
+	}
+
+	return fmt.Sprintf("%dx%d", width, height)
+}
+
+func VideoResolutionFromHeight(height int) string {
+	switch {
+	case height >= 1000:
+		return "1080p"
+	case height >= 700:
+		return "720p"
+	case height >= 400:
+		return "480p"
+	default:
+		return ""
+	}
 }

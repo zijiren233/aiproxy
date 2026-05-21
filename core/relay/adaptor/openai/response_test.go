@@ -488,3 +488,43 @@ func TestVideoHandlerMarksAsyncUsage(t *testing.T) {
 	assert.Equal(t, "video_job_async", result.UpstreamID)
 	assert.True(t, result.AsyncUsage)
 }
+
+func TestVideosHandlerStoresVideoAndMarksAsyncUsage(t *testing.T) {
+	t.Parallel()
+	gin.SetMode(gin.TestMode)
+
+	recorder := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(recorder)
+	c.Request = httptest.NewRequestWithContext(
+		t.Context(),
+		http.MethodPost,
+		"/v1/videos",
+		nil,
+	)
+
+	m := &meta.Meta{
+		OriginModel: "sora-2",
+		ActualModel: "sora-2",
+		Group:       model.GroupCache{ID: "group-1"},
+		Token:       model.TokenCache{ID: 7},
+		Channel:     meta.ChannelMeta{ID: 9},
+	}
+	store := &responseTestStore{}
+	resp := &http.Response{
+		StatusCode: http.StatusCreated,
+		Body: io.NopCloser(bytes.NewBufferString(`{
+			"id":"video_async",
+			"object":"video",
+			"status":"queued",
+			"model":"sora-2"
+		}`)),
+		Header: make(http.Header),
+	}
+
+	result, err := VideosHandler(m, store, c, resp)
+	require.Nil(t, err)
+	assert.Equal(t, "video_async", result.UpstreamID)
+	assert.True(t, result.AsyncUsage)
+	require.Len(t, store.saved, 1)
+	assert.Equal(t, model.VideoGenerationStoreID("video_async"), store.saved[0].ID)
+}

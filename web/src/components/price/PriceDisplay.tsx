@@ -32,6 +32,14 @@ function formatTimestamp(value?: number): string | null {
     return new Date(value * 1000).toLocaleString()
 }
 
+function formatConditionValues(values?: string[]): string | null {
+    if (!values?.length) {
+        return null
+    }
+
+    return values.join(', ')
+}
+
 export function PriceDisplay({ price }: PriceDisplayProps) {
     const { t } = useTranslation()
 
@@ -69,6 +77,16 @@ export function PriceDisplay({ price }: PriceDisplayProps) {
 
         if (condition.output_token_min || condition.output_token_max) {
             parts.push(`${t('group.price.outputPrice')}: ${condition.output_token_min || 0} - ${condition.output_token_max || '∞'}`)
+        }
+
+        const sizes = formatConditionValues(condition.size)
+        if (sizes) {
+            parts.push(`${t('group.price.size')}: ${sizes}`)
+        }
+
+        const qualities = formatConditionValues(condition.quality)
+        if (qualities) {
+            parts.push(`${t('group.price.quality')}: ${qualities}`)
         }
 
         if (condition.start_time || condition.end_time) {

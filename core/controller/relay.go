@@ -356,6 +356,103 @@ func VideoGenerationsContent() []gin.HandlerFunc {
 	}
 }
 
+// Videos godoc
+//
+//	@Summary		Create video
+//	@Description	Create a video generation job
+//	@Tags			relay
+//	@Produce		json
+//	@Security		ApiKeyAuth
+//	@Param			request			body		model.VideoRequest	true	"Request"
+//	@Param			Aiproxy-Channel	header		string				false	"Optional Aiproxy-Channel header"
+//	@Success		200				{object}	model.Video
+//	@Header			all				{integer}	X-RateLimit-Limit-Requests		"X-RateLimit-Limit-Requests"
+//	@Header			all				{integer}	X-RateLimit-Limit-Tokens		"X-RateLimit-Limit-Tokens"
+//	@Header			all				{integer}	X-RateLimit-Remaining-Requests	"X-RateLimit-Remaining-Requests"
+//	@Header			all				{integer}	X-RateLimit-Remaining-Tokens	"X-RateLimit-Remaining-Tokens"
+//	@Header			all				{string}	X-RateLimit-Reset-Requests		"X-RateLimit-Reset-Requests"
+//	@Header			all				{string}	X-RateLimit-Reset-Tokens		"X-RateLimit-Reset-Tokens"
+//	@Router			/v1/videos [post]
+func Videos() []gin.HandlerFunc {
+	return []gin.HandlerFunc{
+		middleware.NewDistribute(mode.Videos),
+		NewRelay(mode.Videos),
+	}
+}
+
+// GetVideo godoc
+//
+//	@Summary		Get video
+//	@Description	Get a video by ID
+//	@Tags			relay
+//	@Produce		json
+//	@Security		ApiKeyAuth
+//	@Param			video_id		path		string	true	"Video ID"
+//	@Param			Aiproxy-Channel	header		string	false	"Optional Aiproxy-Channel header"
+//	@Success		200				{object}	model.Video
+//	@Router			/v1/videos/{video_id} [get]
+func GetVideo() []gin.HandlerFunc {
+	return []gin.HandlerFunc{
+		middleware.NewDistribute(mode.VideosGet),
+		NewRelay(mode.VideosGet),
+	}
+}
+
+// GetVideoContent godoc
+//
+//	@Summary		Get video content
+//	@Description	Get generated video binary content
+//	@Tags			relay
+//	@Produce		application/octet-stream
+//	@Security		ApiKeyAuth
+//	@Param			video_id		path	string	true	"Video ID"
+//	@Param			Aiproxy-Channel	header	string	false	"Optional Aiproxy-Channel header"
+//	@Success		200				{file}	file	"video binary"
+//	@Router			/v1/videos/{video_id}/content [get]
+func GetVideoContent() []gin.HandlerFunc {
+	return []gin.HandlerFunc{
+		middleware.NewDistribute(mode.VideosContent),
+		NewRelay(mode.VideosContent),
+	}
+}
+
+// DeleteVideo godoc
+//
+//	@Summary		Delete video
+//	@Description	Delete a video by ID
+//	@Tags			relay
+//	@Produce		json
+//	@Security		ApiKeyAuth
+//	@Param			video_id		path	string	true	"Video ID"
+//	@Param			Aiproxy-Channel	header	string	false	"Optional Aiproxy-Channel header"
+//	@Success		204
+//	@Router			/v1/videos/{video_id} [delete]
+func DeleteVideo() []gin.HandlerFunc {
+	return []gin.HandlerFunc{
+		middleware.NewDistribute(mode.VideosDelete),
+		NewRelay(mode.VideosDelete),
+	}
+}
+
+// RemixVideo godoc
+//
+//	@Summary		Remix video
+//	@Description	Create a new video from an existing video
+//	@Tags			relay
+//	@Produce		json
+//	@Security		ApiKeyAuth
+//	@Param			video_id		path		string				true	"Video ID"
+//	@Param			request			body		model.VideoRequest	true	"Request"
+//	@Param			Aiproxy-Channel	header		string				false	"Optional Aiproxy-Channel header"
+//	@Success		200				{object}	model.Video
+//	@Router			/v1/videos/{video_id}/remix [post]
+func RemixVideo() []gin.HandlerFunc {
+	return []gin.HandlerFunc{
+		middleware.NewDistribute(mode.VideosRemix),
+		NewRelay(mode.VideosRemix),
+	}
+}
+
 // CreateResponse godoc
 //
 //	@Summary		Create response

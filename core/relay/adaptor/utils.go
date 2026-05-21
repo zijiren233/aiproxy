@@ -35,9 +35,9 @@ func NewError[T any](statusCode int, err T) Error {
 
 func IsSuccessfulResponseStatus(m mode.Mode, statusCode int) bool {
 	switch m {
-	case mode.Responses:
+	case mode.Responses, mode.Videos, mode.VideosRemix:
 		return statusCode == http.StatusOK || statusCode == http.StatusCreated
-	case mode.ResponsesDelete:
+	case mode.ResponsesDelete, mode.VideosDelete:
 		return statusCode == http.StatusOK || statusCode == http.StatusNoContent
 	default:
 		return statusCode == http.StatusOK

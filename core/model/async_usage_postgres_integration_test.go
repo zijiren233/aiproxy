@@ -107,6 +107,7 @@ func TestAsyncUsageClaimPostgresLeaseExpiryAndTokenGuard(t *testing.T) {
 		completed, err := CompleteClaimedAsyncUsageInfo(
 			&AsyncUsageInfo{ID: info.ID, ProcessingToken: "token-old"},
 			Usage{InputTokens: 1, TotalTokens: 1},
+			UsageContext{},
 			Amount{UsedAmount: 1},
 		)
 		require.NoError(t, err)
@@ -115,6 +116,7 @@ func TestAsyncUsageClaimPostgresLeaseExpiryAndTokenGuard(t *testing.T) {
 		completed, err = CompleteClaimedAsyncUsageInfo(
 			&AsyncUsageInfo{ID: info.ID, ProcessingToken: "token-new"},
 			Usage{InputTokens: 2, TotalTokens: 2},
+			UsageContext{},
 			Amount{UsedAmount: 2},
 		)
 		require.NoError(t, err)

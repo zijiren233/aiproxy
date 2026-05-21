@@ -41,14 +41,16 @@ type Meta struct {
 
 	RequestTimeout time.Duration
 
-	RequestUsage       model.Usage
-	RequestServiceTier string
-	PromptCacheKey     string
-	User               string
+	RequestUsage        model.Usage
+	RequestUsageContext model.UsageContext
+	RequestServiceTier  string
+	PromptCacheKey      string
+	User                string
 
 	JobID        string
 	GenerationID string
 	ResponseID   string
+	VideoID      string
 }
 
 type Option func(meta *Meta)
@@ -95,6 +97,12 @@ func WithRequestUsage(requestUsage model.Usage) Option {
 	}
 }
 
+func WithRequestUsageContext(requestUsageContext model.UsageContext) Option {
+	return func(meta *Meta) {
+		meta.RequestUsageContext = requestUsageContext
+	}
+}
+
 func WithRequestServiceTier(requestServiceTier string) Option {
 	return func(meta *Meta) {
 		meta.RequestServiceTier = requestServiceTier
@@ -116,6 +124,12 @@ func WithGenerationID(generationID string) Option {
 func WithResponseID(responseID string) Option {
 	return func(meta *Meta) {
 		meta.ResponseID = responseID
+	}
+}
+
+func WithVideoID(videoID string) Option {
+	return func(meta *Meta) {
+		meta.VideoID = videoID
 	}
 }
 

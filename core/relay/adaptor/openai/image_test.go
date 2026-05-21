@@ -216,3 +216,51 @@ func TestImagesStreamHandlerPassesEventsAndExtractsUsage(t *testing.T) {
 	assert.NotContains(t, body, `event: image_generation.completed`)
 	assert.Equal(t, "text/event-stream", recorder.Header().Get("Content-Type"))
 }
+
+func TestConvertVideoRequestMultipartRewritesModel(t *testing.T) {
+	meta := meta.NewMeta(nil, mode.Videos, "sora-2", model.ModelConfig{})
+
+	var body bytes.Buffer
+
+	writer := multipart.NewWriter(&body)
+	require.NoError(t, writer.WriteField("model", "ignored"))
+	require.NoError(t, writer.WriteField("prompt", "Animate the reference"))
+	part, err := writer.CreateFormFile("input_reference", "reference.png")
+	require.NoError(t, err)
+	_, err = part.Write([]byte("png-bytes"))
+	require.NoError(t, err)
+	require.NoError(t, writer.Close())
+
+	req, err := http.NewRequestWithContext(
+		context.Background(),
+		http.MethodPost,
+		"http://example.com/v1/videos",
+		bytes.NewReader(body.Bytes()),
+	)
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	req.ContentLength = int64(body.Len())
+
+	result, err := ConvertVideoRequest(meta, req)
+	require.NoError(t, err)
+
+	convertedBody, err := io.ReadAll(result.Body)
+	require.NoError(t, err)
+
+	convertedReq, err := http.NewRequestWithContext(
+		context.Background(),
+		http.MethodPost,
+		"http://example.com",
+		bytes.NewReader(convertedBody),
+	)
+	require.NoError(t, err)
+	convertedReq.Header.Set("Content-Type", result.Header.Get("Content-Type"))
+	convertedReq.ContentLength = int64(len(convertedBody))
+
+	err = convertedReq.ParseMultipartForm(1024 * 1024 * 4)
+	require.NoError(t, err)
+
+	assert.Equal(t, "sora-2", convertedReq.MultipartForm.Value["model"][0])
+	assert.Equal(t, "Animate the reference", convertedReq.MultipartForm.Value["prompt"][0])
+	require.Len(t, convertedReq.MultipartForm.File["input_reference"], 1)
+}

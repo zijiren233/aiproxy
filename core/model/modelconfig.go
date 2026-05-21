@@ -26,29 +26,26 @@ type TimeoutConfig struct {
 }
 
 type ModelConfig struct {
-	CreatedAt        time.Time                 `gorm:"index;autoCreateTime"          json:"created_at"                   yaml:"-"`
-	UpdatedAt        time.Time                 `gorm:"index;autoUpdateTime"          json:"updated_at"                   yaml:"-"`
-	Config           map[ModelConfigKey]any    `gorm:"serializer:fastjson;type:text" json:"config,omitempty"             yaml:"config,omitempty"`
-	Plugin           map[string]map[string]any `gorm:"serializer:fastjson;type:text" json:"plugin,omitempty"             yaml:"plugin,omitempty"`
-	Model            string                    `gorm:"size:128;primaryKey"           json:"model"                        yaml:"model,omitempty"`
-	Owner            ModelOwner                `gorm:"type:varchar(32);index"        json:"owner"                        yaml:"owner,omitempty"`
-	Type             mode.Mode                 `                                     json:"type"                         yaml:"type,omitempty"`
-	ExcludeFromTests bool                      `                                     json:"exclude_from_tests,omitempty" yaml:"exclude_from_tests,omitempty"`
-	RPM              int64                     `                                     json:"rpm,omitempty"                yaml:"rpm,omitempty"`
-	TPM              int64                     `                                     json:"tpm,omitempty"                yaml:"tpm,omitempty"`
-	// map[size]map[quality]price_per_image
-	ImageQualityPrices map[string]map[string]float64 `gorm:"serializer:fastjson;type:text" json:"image_quality_prices,omitempty" yaml:"image_quality_prices,omitempty"`
-	// map[size]price_per_image
-	ImagePrices                map[string]float64 `gorm:"serializer:fastjson;type:text" json:"image_prices,omitempty"                   yaml:"image_prices,omitempty"`
-	Price                      Price              `gorm:"embedded"                      json:"price,omitempty"                          yaml:"price,omitempty"`
-	RetryTimes                 int64              `                                     json:"retry_times,omitempty"                    yaml:"retry_times,omitempty"`
-	TimeoutConfig              TimeoutConfig      `gorm:"embedded"                      json:"timeout_config,omitempty"                 yaml:"timeout_config,omitempty"`
-	ForceSaveDetail            bool               `                                     json:"force_save_detail,omitempty"              yaml:"force_save_detail,omitempty"`
-	MaxImageGenerationCount    int                `                                     json:"max_image_generation_count,omitempty"     yaml:"max_image_generation_count,omitempty"`
-	RequestBodyStorageMaxSize  int64              `                                     json:"request_body_storage_max_size,omitempty"  yaml:"request_body_storage_max_size,omitempty"`
-	ResponseBodyStorageMaxSize int64              `                                     json:"response_body_storage_max_size,omitempty" yaml:"response_body_storage_max_size,omitempty"`
-	SummaryServiceTier         bool               `                                     json:"summary_service_tier,omitempty"           yaml:"summary_service_tier,omitempty"`
-	SummaryClaudeLongContext   bool               `                                     json:"summary_claude_long_context,omitempty"    yaml:"summary_claude_long_context,omitempty"`
+	CreatedAt                  time.Time                 `gorm:"index;autoCreateTime"          json:"created_at"                               yaml:"-"`
+	UpdatedAt                  time.Time                 `gorm:"index;autoUpdateTime"          json:"updated_at"                               yaml:"-"`
+	Config                     map[ModelConfigKey]any    `gorm:"serializer:fastjson;type:text" json:"config,omitempty"                         yaml:"config,omitempty"`
+	Plugin                     map[string]map[string]any `gorm:"serializer:fastjson;type:text" json:"plugin,omitempty"                         yaml:"plugin,omitempty"`
+	Model                      string                    `gorm:"size:128;primaryKey"           json:"model"                                    yaml:"model,omitempty"`
+	Owner                      ModelOwner                `gorm:"type:varchar(32);index"        json:"owner"                                    yaml:"owner,omitempty"`
+	Type                       mode.Mode                 `                                     json:"type"                                     yaml:"type,omitempty"`
+	ExcludeFromTests           bool                      `                                     json:"exclude_from_tests,omitempty"             yaml:"exclude_from_tests,omitempty"`
+	RPM                        int64                     `                                     json:"rpm,omitempty"                            yaml:"rpm,omitempty"`
+	TPM                        int64                     `                                     json:"tpm,omitempty"                            yaml:"tpm,omitempty"`
+	Price                      Price                     `gorm:"embedded"                      json:"price,omitempty"                          yaml:"price,omitempty"`
+	RetryTimes                 int64                     `                                     json:"retry_times,omitempty"                    yaml:"retry_times,omitempty"`
+	TimeoutConfig              TimeoutConfig             `gorm:"embedded"                      json:"timeout_config,omitempty"                 yaml:"timeout_config,omitempty"`
+	ForceSaveDetail            bool                      `                                     json:"force_save_detail,omitempty"              yaml:"force_save_detail,omitempty"`
+	MaxImageGenerationCount    int                       `                                     json:"max_image_generation_count,omitempty"     yaml:"max_image_generation_count,omitempty"`
+	MaxVideoGenerationSeconds  int                       `                                     json:"max_video_generation_seconds,omitempty"   yaml:"max_video_generation_seconds,omitempty"`
+	RequestBodyStorageMaxSize  int64                     `                                     json:"request_body_storage_max_size,omitempty"  yaml:"request_body_storage_max_size,omitempty"`
+	ResponseBodyStorageMaxSize int64                     `                                     json:"response_body_storage_max_size,omitempty" yaml:"response_body_storage_max_size,omitempty"`
+	SummaryServiceTier         bool                      `                                     json:"summary_service_tier,omitempty"           yaml:"summary_service_tier,omitempty"`
+	SummaryClaudeLongContext   bool                      `                                     json:"summary_claude_long_context,omitempty"    yaml:"summary_claude_long_context,omitempty"`
 }
 
 func (c *ModelConfig) BeforeSave(_ *gorm.DB) (err error) {
@@ -138,7 +135,6 @@ func (c *ModelConfig) LoadFromGroupModelConfig(groupModelConfig GroupModelConfig
 	}
 
 	if groupModelConfig.OverridePrice {
-		newC.ImagePrices = groupModelConfig.ImagePrices
 		newC.Price = groupModelConfig.Price
 	}
 
@@ -159,6 +155,10 @@ func (c *ModelConfig) LoadFromGroupModelConfig(groupModelConfig GroupModelConfig
 
 	if groupModelConfig.OverrideMaxImageGenerationCount {
 		newC.MaxImageGenerationCount = groupModelConfig.MaxImageGenerationCount
+	}
+
+	if groupModelConfig.OverrideMaxVideoGenerationSeconds {
+		newC.MaxVideoGenerationSeconds = groupModelConfig.MaxVideoGenerationSeconds
 	}
 
 	if groupModelConfig.OverrideRequestBodyStorageMaxSize {

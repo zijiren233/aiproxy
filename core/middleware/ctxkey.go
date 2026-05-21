@@ -18,6 +18,7 @@ const (
 	JobID              = "job_id"
 	GenerationID       = "generation_id"
 	ResponseID         = "response_id"
+	VideoID            = "video_id"
 
 	requestBodyNode = "request_body_node"
 )

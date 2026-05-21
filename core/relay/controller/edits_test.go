@@ -16,7 +16,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestValidateImagesEditsRequestSkipsMissingN(t *testing.T) {
+func TestValidateImagesEditsRequestRejectsNonMultipart(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	req := httptest.NewRequestWithContext(
@@ -31,19 +31,26 @@ func TestValidateImagesEditsRequestSkipsMissingN(t *testing.T) {
 	c.Request = req
 
 	err := ValidateImagesEditsRequest(c, model.ModelConfig{MaxImageGenerationCount: 1})
-	require.NoError(t, err)
+	require.Error(t, err)
+	require.Equal(t, "images edits requests must use multipart/form-data", err.Error())
+
+	var requestParamErr *RequestParamError
+	require.ErrorAs(t, err, &requestParamErr)
+	require.Equal(t, 400, requestParamErr.StatusCode)
 }
 
 func TestValidateImagesEditsRequestRejectsTooLargeN(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
-	req := httptest.NewRequestWithContext(
-		context.Background(),
-		"POST",
-		"/v1/images/edits",
-		strings.NewReader("model=gpt-image-1&prompt=test&n=2"),
-	)
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+	require.NoError(t, writer.WriteField("model", "gpt-image-1"))
+	require.NoError(t, writer.WriteField("prompt", "test"))
+	require.NoError(t, writer.WriteField("n", "2"))
+	require.NoError(t, writer.Close())
+
+	req := httptest.NewRequestWithContext(context.Background(), "POST", "/v1/images/edits", body)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
 
 	c, _ := gin.CreateTestContext(httptest.NewRecorder())
 	c.Request = req
@@ -60,13 +67,16 @@ func TestValidateImagesEditsRequestRejectsTooLargeN(t *testing.T) {
 func TestValidateImagesEditsRequestRejectsDuplicateN(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
-	req := httptest.NewRequestWithContext(
-		context.Background(),
-		"POST",
-		"/v1/images/edits",
-		strings.NewReader("model=gpt-image-1&prompt=test&n=1&n=100"),
-	)
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+	require.NoError(t, writer.WriteField("model", "gpt-image-1"))
+	require.NoError(t, writer.WriteField("prompt", "test"))
+	require.NoError(t, writer.WriteField("n", "1"))
+	require.NoError(t, writer.WriteField("n", "100"))
+	require.NoError(t, writer.Close())
+
+	req := httptest.NewRequestWithContext(context.Background(), "POST", "/v1/images/edits", body)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
 
 	c, _ := gin.CreateTestContext(httptest.NewRecorder())
 	c.Request = req
@@ -87,9 +97,9 @@ func TestValidateImagesEditsRequestWrapsParseError(t *testing.T) {
 		context.Background(),
 		"POST",
 		"/v1/images/edits",
-		strings.NewReader("model=gpt-image-1&prompt=test"),
+		strings.NewReader("--test\r\n"),
 	)
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("Content-Type", "multipart/form-data; boundary=test")
 	req.ContentLength = common.MaxRequestBodySize + 1
 
 	c, _ := gin.CreateTestContext(httptest.NewRecorder())
@@ -98,6 +108,33 @@ func TestValidateImagesEditsRequestWrapsParseError(t *testing.T) {
 	err := ValidateImagesEditsRequest(c, model.ModelConfig{MaxImageGenerationCount: 1})
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "request body too large")
+
+	var requestParamErr *RequestParamError
+	require.ErrorAs(t, err, &requestParamErr)
+	require.Equal(t, 400, requestParamErr.StatusCode)
+}
+
+func TestValidateImagesEditsRequestRejectsUnsupportedSize(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+	require.NoError(t, writer.WriteField("model", "gpt-image-1"))
+	require.NoError(t, writer.WriteField("prompt", "test"))
+	require.NoError(t, writer.WriteField("size", "512x512"))
+	require.NoError(t, writer.Close())
+
+	req := httptest.NewRequestWithContext(context.Background(), "POST", "/v1/images/edits", body)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+
+	c, _ := gin.CreateTestContext(httptest.NewRecorder())
+	c.Request = req
+
+	err := ValidateImagesEditsRequest(c, model.ModelConfig{
+		Config: model.NewModelConfig(model.WithModelConfigImageSizes("1024x1024")),
+	})
+	require.Error(t, err)
+	require.Equal(t, "unsupported image size `512x512`", err.Error())
 
 	var requestParamErr *RequestParamError
 	require.ErrorAs(t, err, &requestParamErr)
@@ -133,5 +170,5 @@ func TestGetImagesEditsRequestUsageCountsImageArrayField(t *testing.T) {
 
 	usage, err := GetImagesEditsRequestUsage(c, model.ModelConfig{Model: "gpt-image-1"})
 	require.NoError(t, err)
-	require.Equal(t, model.ZeroNullInt64(2), usage.ImageInputTokens)
+	require.Equal(t, model.ZeroNullInt64(2), usage.Usage.ImageInputTokens)
 }

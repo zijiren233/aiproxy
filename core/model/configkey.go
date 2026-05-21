@@ -17,6 +17,7 @@ const (
 	ModelConfigSupportVoicesKey    ModelConfigKey = "support_voices"
 	ModelConfigImageSizes          ModelConfigKey = "image_sizes"
 	ModelConfigImageQualitys       ModelConfigKey = "image_qualitys"
+	ModelConfigVideoSizes          ModelConfigKey = "video_sizes"
 )
 
 type ModelConfigOption func(config map[ModelConfigKey]any)

@@ -13,6 +13,7 @@ func recordConsume(
 	code int,
 	firstByteAt time.Time,
 	usage model.Usage,
+	usageContext model.UsageContext,
 	modelPrice model.Price,
 	content string,
 	ip string,
@@ -24,7 +25,7 @@ func recordConsume(
 	upstreamID string,
 	asyncUsageStatus model.AsyncUsageStatus,
 ) error {
-	summaryServiceTier := meta.RequestServiceTier
+	summaryServiceTier := usageContext.ServiceTier
 	if !meta.ModelConfig.ShouldSummaryServiceTier() {
 		summaryServiceTier = ""
 	}
@@ -52,13 +53,14 @@ func recordConsume(
 		requestDetail,
 		downstreamResult,
 		usage,
+		usageContext,
 		modelPrice,
 		amount,
 		meta.User,
 		metadata,
 		meta.PromptCacheKey,
 		upstreamID,
-		meta.RequestServiceTier,
+		usageContext.ServiceTier,
 		asyncUsageStatus,
 		summaryServiceTier,
 		summaryClaudeLongContext,

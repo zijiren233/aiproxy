@@ -459,9 +459,8 @@ type SaveGroupModelConfigRequest struct {
 	RPM           int64 `json:"rpm"`
 	TPM           int64 `json:"tpm"`
 
-	OverridePrice bool               `json:"override_price"`
-	ImagePrices   map[string]float64 `json:"image_prices"`
-	Price         model.Price        `json:"price"`
+	OverridePrice bool        `json:"override_price"`
+	Price         model.Price `json:"price"`
 
 	OverrideRetryTimes bool  `json:"override_retry_times"`
 	RetryTimes         int64 `json:"retry_times"`
@@ -474,6 +473,9 @@ type SaveGroupModelConfigRequest struct {
 
 	OverrideMaxImageGenerationCount bool `json:"override_max_image_generation_count"`
 	MaxImageGenerationCount         int  `json:"max_image_generation_count"`
+
+	OverrideMaxVideoGenerationSeconds bool `json:"override_max_video_generation_seconds"`
+	MaxVideoGenerationSeconds         int  `json:"max_video_generation_seconds"`
 
 	OverrideRequestBodyStorageMaxSize bool  `json:"override_request_body_storage_max_size"`
 	RequestBodyStorageMaxSize         int64 `json:"request_body_storage_max_size"`
@@ -498,7 +500,6 @@ func (r *SaveGroupModelConfigRequest) ToGroupModelConfig(groupID string) model.G
 		TPM:           r.TPM,
 
 		OverridePrice: r.OverridePrice,
-		ImagePrices:   r.ImagePrices,
 		Price:         r.Price,
 
 		OverrideRetryTimes: r.OverrideRetryTimes,
@@ -511,6 +512,8 @@ func (r *SaveGroupModelConfigRequest) ToGroupModelConfig(groupID string) model.G
 		ForceSaveDetail:                    r.ForceSaveDetail,
 		OverrideMaxImageGenerationCount:    r.OverrideMaxImageGenerationCount,
 		MaxImageGenerationCount:            r.MaxImageGenerationCount,
+		OverrideMaxVideoGenerationSeconds:  r.OverrideMaxVideoGenerationSeconds,
+		MaxVideoGenerationSeconds:          r.MaxVideoGenerationSeconds,
 		OverrideRequestBodyStorageMaxSize:  r.OverrideRequestBodyStorageMaxSize,
 		RequestBodyStorageMaxSize:          r.RequestBodyStorageMaxSize,
 		OverrideResponseBodyStorageMaxSize: r.OverrideResponseBodyStorageMaxSize,

@@ -9454,6 +9454,238 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/v1/videos": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Create a video generation job",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "relay"
+                ],
+                "summary": "Create video",
+                "parameters": [
+                    {
+                        "description": "Request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.VideoRequest"
+                        }
+                    },
+                    {
+                        "type": "string",
+                        "description": "Optional Aiproxy-Channel header",
+                        "name": "Aiproxy-Channel",
+                        "in": "header"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.Video"
+                        },
+                        "headers": {
+                            "X-RateLimit-Limit-Requests": {
+                                "type": "integer",
+                                "description": "X-RateLimit-Limit-Requests"
+                            },
+                            "X-RateLimit-Limit-Tokens": {
+                                "type": "integer",
+                                "description": "X-RateLimit-Limit-Tokens"
+                            },
+                            "X-RateLimit-Remaining-Requests": {
+                                "type": "integer",
+                                "description": "X-RateLimit-Remaining-Requests"
+                            },
+                            "X-RateLimit-Remaining-Tokens": {
+                                "type": "integer",
+                                "description": "X-RateLimit-Remaining-Tokens"
+                            },
+                            "X-RateLimit-Reset-Requests": {
+                                "type": "string",
+                                "description": "X-RateLimit-Reset-Requests"
+                            },
+                            "X-RateLimit-Reset-Tokens": {
+                                "type": "string",
+                                "description": "X-RateLimit-Reset-Tokens"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/videos/{video_id}": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Get a video by ID",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "relay"
+                ],
+                "summary": "Get video",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Video ID",
+                        "name": "video_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Optional Aiproxy-Channel header",
+                        "name": "Aiproxy-Channel",
+                        "in": "header"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.Video"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Delete a video by ID",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "relay"
+                ],
+                "summary": "Delete video",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Video ID",
+                        "name": "video_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Optional Aiproxy-Channel header",
+                        "name": "Aiproxy-Channel",
+                        "in": "header"
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    }
+                }
+            }
+        },
+        "/v1/videos/{video_id}/content": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Get generated video binary content",
+                "produces": [
+                    "application/octet-stream"
+                ],
+                "tags": [
+                    "relay"
+                ],
+                "summary": "Get video content",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Video ID",
+                        "name": "video_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Optional Aiproxy-Channel header",
+                        "name": "Aiproxy-Channel",
+                        "in": "header"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "video binary",
+                        "schema": {
+                            "type": "file"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/videos/{video_id}/remix": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Create a new video from an existing video",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "relay"
+                ],
+                "summary": "Remix video",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Video ID",
+                        "name": "video_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.VideoRequest"
+                        }
+                    },
+                    {
+                        "type": "string",
+                        "description": "Optional Aiproxy-Channel header",
+                        "name": "Aiproxy-Channel",
+                        "in": "header"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.Video"
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
@@ -9633,26 +9865,10 @@ const docTemplate = `{
                 "force_save_detail": {
                     "type": "boolean"
                 },
-                "image_prices": {
-                    "description": "map[size]price_per_image",
-                    "type": "object",
-                    "additionalProperties": {
-                        "type": "number",
-                        "format": "float64"
-                    }
-                },
-                "image_quality_prices": {
-                    "description": "map[size]map[quality]price_per_image",
-                    "type": "object",
-                    "additionalProperties": {
-                        "type": "object",
-                        "additionalProperties": {
-                            "type": "number",
-                            "format": "float64"
-                        }
-                    }
-                },
                 "max_image_generation_count": {
+                    "type": "integer"
+                },
+                "max_video_generation_seconds": {
                     "type": "integer"
                 },
                 "model": {
@@ -9879,26 +10095,10 @@ const docTemplate = `{
                         "type": "string"
                     }
                 },
-                "image_prices": {
-                    "description": "map[size]price_per_image",
-                    "type": "object",
-                    "additionalProperties": {
-                        "type": "number",
-                        "format": "float64"
-                    }
-                },
-                "image_quality_prices": {
-                    "description": "map[size]map[quality]price_per_image",
-                    "type": "object",
-                    "additionalProperties": {
-                        "type": "object",
-                        "additionalProperties": {
-                            "type": "number",
-                            "format": "float64"
-                        }
-                    }
-                },
                 "max_image_generation_count": {
+                    "type": "integer"
+                },
+                "max_video_generation_seconds": {
                     "type": "integer"
                 },
                 "model": {
@@ -10559,14 +10759,10 @@ const docTemplate = `{
                 "force_save_detail": {
                     "type": "boolean"
                 },
-                "image_prices": {
-                    "type": "object",
-                    "additionalProperties": {
-                        "type": "number",
-                        "format": "float64"
-                    }
-                },
                 "max_image_generation_count": {
+                    "type": "integer"
+                },
+                "max_video_generation_seconds": {
                     "type": "integer"
                 },
                 "model": {
@@ -10579,6 +10775,9 @@ const docTemplate = `{
                     "type": "boolean"
                 },
                 "override_max_image_generation_count": {
+                    "type": "boolean"
+                },
+                "override_max_video_generation_seconds": {
                     "type": "boolean"
                 },
                 "override_price": {
@@ -10647,26 +10846,10 @@ const docTemplate = `{
                 "force_save_detail": {
                     "type": "boolean"
                 },
-                "image_prices": {
-                    "description": "map[size]price_per_image",
-                    "type": "object",
-                    "additionalProperties": {
-                        "type": "number",
-                        "format": "float64"
-                    }
-                },
-                "image_quality_prices": {
-                    "description": "map[size]map[quality]price_per_image",
-                    "type": "object",
-                    "additionalProperties": {
-                        "type": "object",
-                        "additionalProperties": {
-                            "type": "number",
-                            "format": "float64"
-                        }
-                    }
-                },
                 "max_image_generation_count": {
+                    "type": "integer"
+                },
+                "max_video_generation_seconds": {
                     "type": "integer"
                 },
                 "model": {
@@ -11216,7 +11399,12 @@ const docTemplate = `{
                 18,
                 19,
                 20,
-                21
+                21,
+                22,
+                23,
+                24,
+                25,
+                26
             ],
             "x-enum-varnames": [
                 "Unknown",
@@ -11240,7 +11428,12 @@ const docTemplate = `{
                 "ResponsesDelete",
                 "ResponsesCancel",
                 "ResponsesInputItems",
-                "Gemini"
+                "Gemini",
+                "Videos",
+                "VideosGet",
+                "VideosContent",
+                "VideosDelete",
+                "VideosRemix"
             ]
         },
         "model.Amount": {
@@ -12625,14 +12818,10 @@ const docTemplate = `{
                 "group_id": {
                     "type": "string"
                 },
-                "image_prices": {
-                    "type": "object",
-                    "additionalProperties": {
-                        "type": "number",
-                        "format": "float64"
-                    }
-                },
                 "max_image_generation_count": {
+                    "type": "integer"
+                },
+                "max_video_generation_seconds": {
                     "type": "integer"
                 },
                 "model": {
@@ -12645,6 +12834,9 @@ const docTemplate = `{
                     "type": "boolean"
                 },
                 "override_max_image_generation_count": {
+                    "type": "boolean"
+                },
+                "override_max_video_generation_seconds": {
                     "type": "boolean"
                 },
                 "override_price": {
@@ -13033,6 +13225,9 @@ const docTemplate = `{
                 "usage": {
                     "$ref": "#/definitions/model.Usage"
                 },
+                "usage_context": {
+                    "$ref": "#/definitions/model.UsageContext"
+                },
                 "user": {
                     "description": "https://platform.openai.com/docs/guides/safety-best-practices#end-user-ids",
                     "type": "string"
@@ -13134,26 +13329,10 @@ const docTemplate = `{
                 "force_save_detail": {
                     "type": "boolean"
                 },
-                "image_prices": {
-                    "description": "map[size]price_per_image",
-                    "type": "object",
-                    "additionalProperties": {
-                        "type": "number",
-                        "format": "float64"
-                    }
-                },
-                "image_quality_prices": {
-                    "description": "map[size]map[quality]price_per_image",
-                    "type": "object",
-                    "additionalProperties": {
-                        "type": "object",
-                        "additionalProperties": {
-                            "type": "number",
-                            "format": "float64"
-                        }
-                    }
-                },
                 "max_image_generation_count": {
+                    "type": "integer"
+                },
+                "max_video_generation_seconds": {
                     "type": "integer"
                 },
                 "model": {
@@ -13458,7 +13637,13 @@ const docTemplate = `{
                 "output_token_min": {
                     "type": "integer"
                 },
+                "quality": {
+                    "type": "string"
+                },
                 "service_tier": {
+                    "type": "string"
+                },
+                "size": {
                     "type": "string"
                 },
                 "start_time": {
@@ -13480,6 +13665,9 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "image_tokens": {
+                    "type": "integer"
+                },
+                "video_tokens": {
                     "type": "integer"
                 }
             }
@@ -14037,6 +14225,9 @@ const docTemplate = `{
                 },
                 "reasoning_tokens": {
                     "type": "integer"
+                },
+                "video_tokens": {
+                    "type": "integer"
                 }
             }
         },
@@ -14573,6 +14764,64 @@ const docTemplate = `{
                 }
             }
         },
+        "model.UsageContext": {
+            "type": "object",
+            "properties": {
+                "price_condition": {
+                    "$ref": "#/definitions/model.UsagePriceCondition"
+                },
+                "service_tier": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.UsagePriceCondition": {
+            "type": "object",
+            "properties": {
+                "quality": {
+                    "type": "string"
+                },
+                "size": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.Video": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "integer"
+                },
+                "error": {
+                    "type": "object",
+                    "additionalProperties": {}
+                },
+                "id": {
+                    "type": "string"
+                },
+                "model": {
+                    "type": "string"
+                },
+                "object": {
+                    "type": "string"
+                },
+                "progress": {
+                    "type": "integer"
+                },
+                "prompt": {
+                    "type": "string"
+                },
+                "seconds": {
+                    "type": "integer"
+                },
+                "size": {
+                    "type": "string"
+                },
+                "status": {
+                    "$ref": "#/definitions/model.VideoStatus"
+                }
+            }
+        },
         "model.VideoGenerationJob": {
             "type": "object",
             "properties": {
@@ -14641,6 +14890,9 @@ const docTemplate = `{
                 "prompt": {
                     "type": "string"
                 },
+                "size": {
+                    "type": "string"
+                },
                 "width": {
                     "type": "integer"
                 }
@@ -14689,6 +14941,43 @@ const docTemplate = `{
                     "type": "integer"
                 }
             }
+        },
+        "model.VideoRequest": {
+            "type": "object",
+            "properties": {
+                "input_reference": {
+                    "type": "string"
+                },
+                "model": {
+                    "type": "string"
+                },
+                "prompt": {
+                    "type": "string"
+                },
+                "seconds": {},
+                "size": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.VideoStatus": {
+            "type": "string",
+            "enum": [
+                "queued",
+                "in_progress",
+                "completed",
+                "succeeded",
+                "failed",
+                "cancelled"
+            ],
+            "x-enum-varnames": [
+                "VideoStatusQueued",
+                "VideoStatusInProgress",
+                "VideoStatusCompleted",
+                "VideoStatusSucceeded",
+                "VideoStatusFailed",
+                "VideoStatusCancelled"
+            ]
         },
         "openai.SubscriptionResponse": {
             "type": "object",

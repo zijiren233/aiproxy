@@ -70,9 +70,10 @@ type DoRequest interface {
 
 // DoResponseResult contains the result of DoResponse
 type DoResponseResult struct {
-	Usage      model.Usage
-	UpstreamID string // ID from response body or x-request-id header
-	AsyncUsage bool   // usage will be fetched asynchronously by upstream ID
+	Usage        model.Usage
+	UsageContext model.UsageContext
+	UpstreamID   string // ID from response body or x-request-id header
+	AsyncUsage   bool   // usage will be fetched asynchronously by upstream ID
 }
 
 type DoResponse interface {
@@ -84,12 +85,16 @@ type DoResponse interface {
 	) (DoResponseResult, Error)
 }
 
+type AsyncUsageRequest struct {
+	Channel *model.Channel
+	Info    *model.AsyncUsageInfo
+}
+
 type AsyncUsageFetcher interface {
 	FetchAsyncUsage(
 		ctx context.Context,
-		channel *model.Channel,
-		info *model.AsyncUsageInfo,
-	) (usage model.Usage, completed bool, err error)
+		request AsyncUsageRequest,
+	) (usage model.Usage, usageContext model.UsageContext, completed bool, err error)
 }
 
 type Adaptor interface {

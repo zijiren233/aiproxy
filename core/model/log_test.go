@@ -100,6 +100,7 @@ func TestRecordConsumeLogPersistsWebSearchCount(t *testing.T) {
 			TotalTokens:    15,
 			WebSearchCount: 1,
 		},
+		model.UsageContext{},
 		model.Price{},
 		model.Amount{},
 		"",

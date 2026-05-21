@@ -3,6 +3,7 @@ package model
 import (
 	"fmt"
 	"math"
+	"slices"
 	"strings"
 	"time"
 
@@ -10,13 +11,15 @@ import (
 )
 
 type PriceCondition struct {
-	InputTokenMin  int64  `json:"input_token_min,omitempty"`
-	InputTokenMax  int64  `json:"input_token_max,omitempty"`
-	OutputTokenMin int64  `json:"output_token_min,omitempty"`
-	OutputTokenMax int64  `json:"output_token_max,omitempty"`
-	StartTime      int64  `json:"start_time,omitempty"` // Unix timestamp, 0 means no start limit
-	EndTime        int64  `json:"end_time,omitempty"`   // Unix timestamp, 0 means no end limit
-	ServiceTier    string `json:"service_tier,omitempty"`
+	InputTokenMin  int64    `json:"input_token_min,omitempty"`
+	InputTokenMax  int64    `json:"input_token_max,omitempty"`
+	OutputTokenMin int64    `json:"output_token_min,omitempty"`
+	OutputTokenMax int64    `json:"output_token_max,omitempty"`
+	StartTime      int64    `json:"start_time,omitempty"` // Unix timestamp, 0 means no start limit
+	EndTime        int64    `json:"end_time,omitempty"`   // Unix timestamp, 0 means no end limit
+	Size           []string `json:"size,omitempty"`
+	Quality        []string `json:"quality,omitempty"`
+	ServiceTier    string   `json:"service_tier,omitempty"`
 }
 
 type ConditionalPrice struct {
@@ -90,6 +93,53 @@ func serviceTierOverlap(serviceTier1, serviceTier2 string) bool {
 	return normalized1 == normalized2
 }
 
+func conditionValueOverlap(values1, values2 []string) bool {
+	normalized1 := normalizeConditionValues(values1)
+	normalized2 := normalizeConditionValues(values2)
+
+	if len(normalized1) == 0 || len(normalized2) == 0 {
+		return true
+	}
+
+	for _, value1 := range normalized1 {
+		if slices.Contains(normalized2, value1) {
+			return true
+		}
+	}
+
+	return false
+}
+
+func conditionValueMatches(conditionValues []string, value string) bool {
+	normalizedConditionValues := normalizeConditionValues(conditionValues)
+	if len(normalizedConditionValues) == 0 {
+		return true
+	}
+
+	normalizedValue := normalizeConditionValue(value)
+
+	return slices.Contains(normalizedConditionValues, normalizedValue)
+}
+
+func normalizeConditionValues(values []string) []string {
+	normalized := make([]string, 0, len(values))
+	for _, value := range values {
+		value = normalizeConditionValue(value)
+		if value != "" {
+			normalized = append(normalized, value)
+		}
+	}
+
+	return normalized
+}
+
+func normalizeConditionValue(value string) string {
+	value = strings.TrimSpace(strings.ToLower(value))
+	value = strings.ReplaceAll(value, "*", "x")
+
+	return strings.ReplaceAll(value, " ", "")
+}
+
 func (p *Price) ValidateConditionalPrices() error {
 	if len(p.ConditionalPrices) == 0 {
 		return nil
@@ -145,6 +195,11 @@ func (p *Price) ValidateConditionalPrices() error {
 		for j := i + 1; j < len(p.ConditionalPrices); j++ {
 			otherCondition := p.ConditionalPrices[j].Condition
 			if !serviceTierOverlap(condition.ServiceTier, otherCondition.ServiceTier) {
+				continue
+			}
+
+			if !conditionValueOverlap(condition.Size, otherCondition.Size) ||
+				!conditionValueOverlap(condition.Quality, otherCondition.Quality) {
 				continue
 			}
 
@@ -257,6 +312,11 @@ func (p *Price) validateConditionalPriceOrdering() error {
 			continue
 		}
 
+		if !conditionValueOverlap(current.Size, next.Size) ||
+			!conditionValueOverlap(current.Quality, next.Quality) {
+			continue
+		}
+
 		// Check if input token ranges are in ascending order
 		// Compare the starting points of ranges
 		currentInputMin := current.InputTokenMin
@@ -294,14 +354,17 @@ func (p *Price) validateConditionalPriceOrdering() error {
 	return nil
 }
 
-func (p *Price) SelectConditionalPrice(usage Usage, serviceTier string) Price {
+func (p *Price) SelectConditionalPrice(
+	usage Usage,
+	usageContext UsageContext,
+) Price {
 	if len(p.ConditionalPrices) == 0 {
 		return *p
 	}
 
 	inputTokens := int64(usage.InputTokens)
 	outputTokens := int64(usage.OutputTokens)
-	usageServiceTier := normalizeServiceTier(serviceTier)
+	usageServiceTier := normalizeServiceTier(usageContext.ServiceTier)
 	currentTime := time.Now().Unix()
 
 	for _, conditionalPrice := range p.ConditionalPrices {
@@ -310,6 +373,10 @@ func (p *Price) SelectConditionalPrice(usage Usage, serviceTier string) Price {
 
 		// If condition specifies service tier, it must match usage tier.
 		if conditionServiceTier != "" && usageServiceTier != conditionServiceTier {
+			continue
+		}
+
+		if !usageContext.PriceConditionMatches(condition) {
 			continue
 		}
 
@@ -443,6 +510,44 @@ func (u *Usage) Add(other Usage) {
 	u.ReasoningTokens += other.ReasoningTokens
 	u.TotalTokens += other.TotalTokens
 	u.WebSearchCount += other.WebSearchCount
+}
+
+type UsagePriceCondition struct {
+	Size    string `json:"size,omitempty"`
+	Quality string `json:"quality,omitempty"`
+}
+
+type UsageContext struct {
+	PriceCondition UsagePriceCondition `json:"price_condition,omitempty"`
+	ServiceTier    string              `json:"service_tier,omitempty"`
+}
+
+func (c UsageContext) PriceConditionMatches(condition PriceCondition) bool {
+	if !conditionValueMatches(condition.Size, c.PriceCondition.Size) {
+		return false
+	}
+
+	if !conditionValueMatches(condition.Quality, c.PriceCondition.Quality) {
+		return false
+	}
+
+	return true
+}
+
+func (c UsageContext) WithFallback(fallback UsageContext) UsageContext {
+	if c.ServiceTier == "" {
+		c.ServiceTier = fallback.ServiceTier
+	}
+
+	if c.PriceCondition.Size == "" {
+		c.PriceCondition.Size = fallback.PriceCondition.Size
+	}
+
+	if c.PriceCondition.Quality == "" {
+		c.PriceCondition.Quality = fallback.PriceCondition.Quality
+	}
+
+	return c
 }
 
 type Amount struct {

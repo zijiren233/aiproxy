@@ -68,6 +68,7 @@ type Log struct {
 	RetryTimes       ZeroNullInt64    `                                                                      json:"retry_times,omitempty"`
 	Price            Price            `gorm:"embedded"                                                       json:"price,omitempty"`
 	Usage            Usage            `gorm:"embedded"                                                       json:"usage,omitempty"`
+	UsageContext     UsageContext     `gorm:"serializer:fastjson;type:text"                                  json:"usage_context,omitempty"`
 	Amount           Amount           `gorm:"embedded"                                                       json:"amount,omitempty"`
 	ServiceTier      string           `gorm:"size:16"                                                        json:"service_tier,omitempty"`
 	PromptCacheKey   EmptyNullString  `gorm:"type:text"                                                      json:"prompt_cache_key,omitempty"`
@@ -354,6 +355,7 @@ func RecordConsumeLog(
 	retryTimes int,
 	requestDetail *RequestDetail,
 	usage Usage,
+	usageContext UsageContext,
 	modelPrice Price,
 	amountDetail Amount,
 	user string,
@@ -401,6 +403,7 @@ func RecordConsumeLog(
 		RequestDetail:    requestDetail,
 		Price:            modelPrice,
 		Usage:            usage,
+		UsageContext:     usageContext,
 		Amount:           amountDetail,
 		User:             EmptyNullString(user),
 		Metadata:         metadata,

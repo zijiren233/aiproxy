@@ -187,7 +187,6 @@ func clonePrice(price Price) Price {
 
 func cloneGroupModelConfig(config GroupModelConfig) GroupModelConfig {
 	cloned := config
-	cloned.ImagePrices = cloneStringFloat64Map(config.ImagePrices)
 	cloned.Price = clonePrice(config.Price)
 
 	return cloned

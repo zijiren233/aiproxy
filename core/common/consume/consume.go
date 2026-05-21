@@ -27,6 +27,7 @@ func AsyncConsume(
 	firstByteAt time.Time,
 	meta *meta.Meta,
 	usage model.Usage,
+	usageContext model.UsageContext,
 	modelPrice model.Price,
 	content string,
 	ip string,
@@ -58,6 +59,7 @@ func AsyncConsume(
 		code,
 		meta,
 		usage,
+		usageContext,
 		modelPrice,
 		content,
 		ip,
@@ -78,6 +80,7 @@ func Consume(
 	code int,
 	meta *meta.Meta,
 	usage model.Usage,
+	usageContext model.UsageContext,
 	modelPrice model.Price,
 	content string,
 	ip string,
@@ -92,7 +95,12 @@ func Consume(
 		return
 	}
 
-	amountDetail := CalculateAmountDetail(code, usage, modelPrice, meta.RequestServiceTier)
+	amountDetail := CalculateAmountDetail(
+		code,
+		usage,
+		usageContext,
+		modelPrice,
+	)
 	if downstreamResult {
 		// TODO: add record actual consume amount
 		_ = consumeAmount(ctx, amountDetail.UsedAmount, postGroupConsumer, meta)
@@ -104,7 +112,10 @@ func Consume(
 		)
 	}
 
-	selectedModelPrice := modelPrice.SelectConditionalPrice(usage, meta.RequestServiceTier)
+	selectedModelPrice := modelPrice.SelectConditionalPrice(
+		usage,
+		usageContext,
+	)
 	selectedModelPrice.ConditionalPrices = nil
 
 	err := recordConsume(
@@ -113,6 +124,7 @@ func Consume(
 		code,
 		firstByteAt,
 		usage,
+		usageContext,
 		selectedModelPrice,
 		content,
 		ip,
@@ -135,10 +147,16 @@ func Summary(
 	firstByteAt time.Time,
 	meta *meta.Meta,
 	usage model.Usage,
+	usageContext model.UsageContext,
 	modelPrice model.Price,
 	downstreamResult bool,
 ) {
-	amountDetail := CalculateAmountDetail(code, usage, modelPrice, meta.RequestServiceTier)
+	amountDetail := CalculateAmountDetail(
+		code,
+		usage,
+		usageContext,
+		modelPrice,
+	)
 
 	recordSummary(
 		time.Now(),
@@ -148,14 +166,21 @@ func Summary(
 		usage,
 		amountDetail,
 		downstreamResult,
-		meta.RequestServiceTier,
+		usageContext.ServiceTier,
 	)
 }
 
 func checkNeedRecordConsume(code int, meta *meta.Meta) bool {
+	if meta == nil {
+		return true
+	}
+
 	switch meta.Mode {
 	case mode.VideoGenerationsGetJobs,
 		mode.VideoGenerationsContent,
+		mode.VideosGet,
+		mode.VideosContent,
+		mode.VideosDelete,
 		mode.ResponsesGet,
 		mode.ResponsesDelete,
 		mode.ResponsesCancel,
@@ -164,6 +189,10 @@ func checkNeedRecordConsume(code int, meta *meta.Meta) bool {
 	default:
 		return true
 	}
+}
+
+func NeedRecordConsumeForTest(code int, meta *meta.Meta) bool {
+	return checkNeedRecordConsume(code, meta)
 }
 
 func consumeAmount(
@@ -181,8 +210,8 @@ func consumeAmount(
 func CalculateAmountDetail(
 	code int,
 	usage model.Usage,
+	usageContext model.UsageContext,
 	modelPrice model.Price,
-	serviceTier string,
 ) model.Amount {
 	if modelPrice.PerRequestPrice != 0 {
 		if code != http.StatusOK {
@@ -194,7 +223,7 @@ func CalculateAmountDetail(
 		}
 	}
 
-	modelPrice = modelPrice.SelectConditionalPrice(usage, serviceTier)
+	modelPrice = modelPrice.SelectConditionalPrice(usage, usageContext)
 
 	inputTokens := usage.InputTokens
 	if modelPrice.ImageInputPrice > 0 {
@@ -306,10 +335,10 @@ func CalculateAmountDetail(
 func CalculateAmount(
 	code int,
 	usage model.Usage,
+	usageContext model.UsageContext,
 	modelPrice model.Price,
-	serviceTier string,
 ) float64 {
-	return CalculateAmountDetail(code, usage, modelPrice, serviceTier).UsedAmount
+	return CalculateAmountDetail(code, usage, usageContext, modelPrice).UsedAmount
 }
 
 func processGroupConsume(

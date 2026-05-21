@@ -44,7 +44,7 @@ import (
 
 type (
 	RelayHandler    func(*gin.Context, *meta.Meta) *controller.HandleResult
-	GetRequestUsage func(*gin.Context, model.ModelConfig) (model.Usage, error)
+	GetRequestUsage func(*gin.Context, model.ModelConfig) (controller.RequestUsage, error)
 	GetRequestPrice func(*gin.Context, model.ModelConfig) (model.Price, error)
 	ValidateRequest func(*gin.Context, model.ModelConfig) error
 )
@@ -192,7 +192,8 @@ func relayController(m mode.Mode) RelayController {
 		c.GetRequestUsage = controller.GetEmbedRequestUsage
 	case mode.Completions:
 		c.GetRequestUsage = controller.GetCompletionsRequestUsage
-	case mode.VideoGenerationsJobs:
+	case mode.VideoGenerationsJobs, mode.Videos, mode.VideosRemix:
+		c.GetRequestPrice = controller.GetVideoGenerationJobRequestPrice
 		c.GetRequestUsage = controller.GetVideoGenerationJobRequestUsage
 	case mode.Responses:
 		c.GetRequestUsage = controller.GetResponsesRequestUsage
@@ -289,13 +290,21 @@ func relay(c *gin.Context, mode mode.Mode, relayController RelayController) {
 			return
 		}
 
-		meta.RequestUsage = requestUsage
+		meta.RequestUsage = requestUsage.Usage
+		meta.RequestUsageContext = requestUsage.Context
 	}
+
+	meta.RequestUsageContext.ServiceTier = meta.RequestServiceTier
 
 	gbc := middleware.GetGroupBalanceConsumerFromContext(c)
 
 	requiredBalance := math.Max(
-		consume.CalculateAmount(http.StatusOK, meta.RequestUsage, price, meta.RequestServiceTier),
+		consume.CalculateAmount(
+			http.StatusOK,
+			meta.RequestUsage,
+			meta.RequestUsageContext,
+			price,
+		),
 		middleware.GroupMinimumBalance,
 	)
 	if !gbc.CheckBalance(requiredBalance) {
@@ -390,12 +399,13 @@ func recordResult(
 	}
 
 	gbc := middleware.GetGroupBalanceConsumerFromContext(c)
+	usageContext := result.UsageContext.WithFallback(meta.RequestUsageContext)
 
 	amount := consume.CalculateAmount(
 		code,
 		result.Usage,
+		usageContext,
 		price,
-		meta.RequestServiceTier,
 	)
 	if amount > 0 {
 		log := common.GetLogger(c)
@@ -413,6 +423,7 @@ func recordResult(
 		firstByteAt,
 		meta,
 		result.Usage,
+		usageContext,
 		price,
 		content,
 		c.ClientIP(),
@@ -452,6 +463,8 @@ func saveAsyncUsageInfo(
 		Price:          price,
 		ServiceTier:    meta.RequestServiceTier,
 		UpstreamID:     result.UpstreamID,
+		Usage:          meta.RequestUsage,
+		UsageContext:   meta.RequestUsageContext,
 		DownstreamDone: true,
 	}); err != nil {
 		log.Errorf("failed to save async usage info: %v", err)
@@ -492,12 +505,13 @@ type retryState struct {
 	exhausted                            bool
 	failedChannelIDs                     map[int64]struct{} // Track all failed channels in this request
 
-	meta             *meta.Meta
-	price            model.Price
-	requestUsage     model.Usage
-	result           *controller.HandleResult
-	migratedChannels []*model.Channel
-	channelRetryInfo map[int]channelRetryInfo
+	meta                *meta.Meta
+	price               model.Price
+	requestUsage        model.Usage
+	requestUsageContext model.UsageContext
+	result              *controller.HandleResult
+	migratedChannels    []*model.Channel
+	channelRetryInfo    map[int]channelRetryInfo
 }
 
 type channelRetryInfo struct {
@@ -540,16 +554,17 @@ func initRetryState(
 	initialEndAt time.Time,
 ) *retryState {
 	state := &retryState{
-		retryTimes:       retryTimes,
-		preferChannelIDs: channel.preferChannelIDs,
-		ignoreChannelIDs: channel.ignoreChannelIDs,
-		meta:             meta,
-		result:           result,
-		price:            price,
-		requestUsage:     meta.RequestUsage,
-		migratedChannels: channel.migratedChannels,
-		failedChannelIDs: make(map[int64]struct{}),
-		channelRetryInfo: make(map[int]channelRetryInfo),
+		retryTimes:          retryTimes,
+		preferChannelIDs:    channel.preferChannelIDs,
+		ignoreChannelIDs:    channel.ignoreChannelIDs,
+		meta:                meta,
+		result:              result,
+		price:               price,
+		requestUsage:        meta.RequestUsage,
+		requestUsageContext: meta.RequestUsageContext,
+		migratedChannels:    channel.migratedChannels,
+		failedChannelIDs:    make(map[int64]struct{}),
+		channelRetryInfo:    make(map[int]channelRetryInfo),
 	}
 
 	// Record initial failed channel
@@ -689,6 +704,7 @@ func retryLoop(c *gin.Context, mode mode.Mode, state *retryState, relayControlle
 			newChannel,
 			mode,
 			meta.WithRequestUsage(state.requestUsage),
+			meta.WithRequestUsageContext(state.requestUsageContext),
 			meta.WithRetryAt(time.Now()),
 		)
 

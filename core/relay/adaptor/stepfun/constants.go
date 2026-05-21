@@ -174,13 +174,26 @@ var ModelList = []model.ModelConfig{
 		Type:  mode.ImagesGenerations,
 		Owner: model.ModelOwnerStepFun,
 		RPM:   60,
-		ImagePrices: map[string]float64{
-			"256x256":   0.1,
-			"512x512":   0.1,
-			"768x768":   0.1,
-			"1024x1024": 0.1,
-			"1280x800":  0.1,
-			"800x1280":  0.1,
+		Price: model.Price{
+			OutputPriceUnit: 1,
+			ConditionalPrices: []model.ConditionalPrice{
+				imageOutputPrice("256x256"),
+				imageOutputPrice("512x512"),
+				imageOutputPrice("768x768"),
+				imageOutputPrice("1024x1024"),
+				imageOutputPrice("1280x800"),
+				imageOutputPrice("800x1280"),
+			},
 		},
 	},
+}
+
+func imageOutputPrice(size string) model.ConditionalPrice {
+	return model.ConditionalPrice{
+		Condition: model.PriceCondition{Size: []string{size}},
+		Price: model.Price{
+			OutputPrice:     0.1,
+			OutputPriceUnit: 1,
+		},
+	}
 }

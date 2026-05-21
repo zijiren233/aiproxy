@@ -115,6 +115,24 @@ func TestModelConfigLoadFromGroupModelConfigMaxImageGenerationCount(t *testing.T
 	}
 }
 
+func TestModelConfigLoadFromGroupModelConfigMaxVideoGenerationSeconds(t *testing.T) {
+	base := (&model.ModelConfig{
+		MaxVideoGenerationSeconds: 10,
+	}).LoadFromGroupModelConfig(
+		model.GroupModelConfig{
+			OverrideMaxVideoGenerationSeconds: true,
+			MaxVideoGenerationSeconds:         5,
+		},
+	)
+
+	if base.MaxVideoGenerationSeconds != 5 {
+		t.Fatalf(
+			"expected max_video_generation_seconds to be overridden to 5, got %d",
+			base.MaxVideoGenerationSeconds,
+		)
+	}
+}
+
 func TestModelConfigLoadFromGroupModelConfigTimeoutConfig(t *testing.T) {
 	base := (&model.ModelConfig{
 		Type: mode.ChatCompletions,
@@ -177,6 +195,7 @@ func TestModelConfigSupportStreamTimeout(t *testing.T) {
 			mode.Rerank,
 			mode.ParsePdf,
 			mode.VideoGenerationsJobs,
+			mode.Videos,
 		}
 
 		for _, m := range modes {
@@ -251,12 +270,18 @@ func TestGetModelConfigLoadsFastJSONFields(t *testing.T) {
 				"enable": true,
 			},
 		},
-		ImagePrices: map[string]float64{
-			"1024x1024": 0.12,
-		},
-		ImageQualityPrices: map[string]map[string]float64{
-			"1024x1024": {
-				"hd": 0.34,
+		Price: model.Price{
+			OutputPrice: 0.12,
+			ConditionalPrices: []model.ConditionalPrice{
+				{
+					Condition: model.PriceCondition{
+						Size:    []string{"1024x1024"},
+						Quality: []string{"hd"},
+					},
+					Price: model.Price{
+						OutputPrice: 0.34,
+					},
+				},
 			},
 		},
 	}
@@ -278,12 +303,12 @@ func TestGetModelConfigLoadsFastJSONFields(t *testing.T) {
 		t.Fatalf("expected plugin cache.enable to be true, got %#v", got.Plugin)
 	}
 
-	if got.ImagePrices["1024x1024"] != 0.12 {
-		t.Fatalf("expected image price 0.12, got %#v", got.ImagePrices)
+	if got.Price.OutputPrice != 0.12 {
+		t.Fatalf("expected output price 0.12, got %#v", got.Price.OutputPrice)
 	}
 
-	if got.ImageQualityPrices["1024x1024"]["hd"] != 0.34 {
-		t.Fatalf("expected image quality price 0.34, got %#v", got.ImageQualityPrices)
+	if got.Price.ConditionalPrices[0].Price.OutputPrice != 0.34 {
+		t.Fatalf("expected conditional output price 0.34, got %#v", got.Price.ConditionalPrices)
 	}
 }
 
@@ -405,6 +430,65 @@ func TestUpdateGroupModelConfigsClearsMaxImageGenerationCount(t *testing.T) {
 		t.Fatalf(
 			"expected max_image_generation_count to be cleared, got %d",
 			got.MaxImageGenerationCount,
+		)
+	}
+}
+
+func TestUpdateGroupModelConfigClearsMaxVideoGenerationSeconds(t *testing.T) {
+	prevDB := model.DB
+	prevUsingSQLite := common.UsingSQLite
+
+	dbPath := filepath.Join(t.TempDir(), "group-model-config-video.db")
+
+	testDB, err := model.OpenSQLite(dbPath)
+	if err != nil {
+		t.Fatalf("failed to open sqlite db: %v", err)
+	}
+
+	model.DB = testDB
+	common.UsingSQLite = true
+	t.Cleanup(func() {
+		model.DB = prevDB
+		common.UsingSQLite = prevUsingSQLite
+	})
+
+	if err := testDB.AutoMigrate(&model.GroupModelConfig{}); err != nil {
+		t.Fatalf("failed to migrate group model config: %v", err)
+	}
+
+	initial := model.GroupModelConfig{
+		GroupID:                           "test-group",
+		Model:                             "sora-2",
+		OverrideMaxVideoGenerationSeconds: true,
+		MaxVideoGenerationSeconds:         10,
+	}
+	if err := model.SaveGroupModelConfig(initial); err != nil {
+		t.Fatalf("failed to save group model config: %v", err)
+	}
+
+	updated := model.GroupModelConfig{
+		GroupID:                           initial.GroupID,
+		Model:                             initial.Model,
+		OverrideMaxVideoGenerationSeconds: false,
+		MaxVideoGenerationSeconds:         0,
+	}
+	if err := model.UpdateGroupModelConfig(updated); err != nil {
+		t.Fatalf("failed to update group model config: %v", err)
+	}
+
+	got, err := model.GetGroupModelConfig(initial.GroupID, initial.Model)
+	if err != nil {
+		t.Fatalf("failed to get group model config: %v", err)
+	}
+
+	if got.OverrideMaxVideoGenerationSeconds {
+		t.Fatal("expected override_max_video_generation_seconds to be cleared")
+	}
+
+	if got.MaxVideoGenerationSeconds != 0 {
+		t.Fatalf(
+			"expected max_video_generation_seconds to be cleared, got %d",
+			got.MaxVideoGenerationSeconds,
 		)
 	}
 }

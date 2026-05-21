@@ -40,13 +40,13 @@ func rerankPromptTokens(rerankRequest *relaymodel.RerankRequest) int64 {
 	return tokens
 }
 
-func GetRerankRequestUsage(c *gin.Context, _ model.ModelConfig) (model.Usage, error) {
+func GetRerankRequestUsage(c *gin.Context, _ model.ModelConfig) (RequestUsage, error) {
 	rerankRequest, err := getRerankRequest(c)
 	if err != nil {
-		return model.Usage{}, err
+		return RequestUsage{}, err
 	}
 
-	return model.Usage{
+	return NewRequestUsage(model.Usage{
 		InputTokens: model.ZeroNullInt64(rerankPromptTokens(rerankRequest)),
-	}, nil
+	}), nil
 }

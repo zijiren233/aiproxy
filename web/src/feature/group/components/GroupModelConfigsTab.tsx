@@ -39,7 +39,10 @@ import { useGroupModelConfigs } from '../hooks'
 import { useModels } from '@/feature/model/hooks'
 import type { GroupModelConfig, GroupModelConfigSaveRequest } from '@/types/group'
 import type { ModelPrice, TimeoutConfig } from '@/types/model'
-import { IMAGE_GENERATION_COUNT_LIMIT_SUPPORTED_MODEL_TYPES } from '@/types/model'
+import {
+    IMAGE_GENERATION_COUNT_LIMIT_SUPPORTED_MODEL_TYPES,
+    VIDEO_GENERATION_SECONDS_LIMIT_SUPPORTED_MODEL_TYPES,
+} from '@/types/model'
 import { PriceFormFields } from '@/components/price/PriceFormFields'
 import { PriceDisplay } from '@/components/price/PriceDisplay'
 import { Combobox } from '@/components/ui/combobox'
@@ -50,6 +53,7 @@ interface GroupModelConfigsTabProps {
 }
 
 const IMAGE_GENERATION_COUNT_LIMIT_SUPPORTED_TYPES = new Set<number>(IMAGE_GENERATION_COUNT_LIMIT_SUPPORTED_MODEL_TYPES)
+const VIDEO_GENERATION_SECONDS_LIMIT_SUPPORTED_TYPES = new Set<number>(VIDEO_GENERATION_SECONDS_LIMIT_SUPPORTED_MODEL_TYPES)
 
 const omitKeys = (obj: object, keys: string[]) => {
     const omitted = new Set(keys)
@@ -69,6 +73,8 @@ const getDefaultConfig = (): Omit<GroupModelConfigSaveRequest, 'model'> => ({
     force_save_detail: false,
     override_max_image_generation_count: false,
     max_image_generation_count: 0,
+    override_max_video_generation_seconds: false,
+    max_video_generation_seconds: 0,
     override_request_body_storage_max_size: false,
     request_body_storage_max_size: 0,
     override_response_body_storage_max_size: false,
@@ -131,6 +137,8 @@ export function GroupModelConfigsTab({ groupId }: GroupModelConfigsTabProps) {
     const [formForceSaveDetail, setFormForceSaveDetail] = useState(false)
     const [formOverrideMaxImageGenerationCount, setFormOverrideMaxImageGenerationCount] = useState(false)
     const [formMaxImageGenerationCount, setFormMaxImageGenerationCount] = useState(0)
+    const [formOverrideMaxVideoGenerationSeconds, setFormOverrideMaxVideoGenerationSeconds] = useState(false)
+    const [formMaxVideoGenerationSeconds, setFormMaxVideoGenerationSeconds] = useState(0)
     const [formOverrideRequestBodyStorageMaxSize, setFormOverrideRequestBodyStorageMaxSize] = useState(false)
     const [formRequestBodyStorageMaxSize, setFormRequestBodyStorageMaxSize] = useState(0)
     const [formOverrideResponseBodyStorageMaxSize, setFormOverrideResponseBodyStorageMaxSize] = useState(false)
@@ -141,12 +149,14 @@ export function GroupModelConfigsTab({ groupId }: GroupModelConfigsTabProps) {
     const [formSummaryClaudeLongContext, setFormSummaryClaudeLongContext] = useState(false)
     const [formOverridePrice, setFormOverridePrice] = useState(false)
     const [formPrice, setFormPrice] = useState<ModelPrice>({})
-    const [formImagePrices, setFormImagePrices] = useState<Record<string, number>>({})
 
     const selectedModelType = systemModelTypeByName.get(isCreating ? formModel : editingConfig?.model || formModel)
     const imageGenerationCountLimitTypeKnown = selectedModelType !== undefined
     const supportImageGenerationCountLimit = selectedModelType !== undefined &&
         IMAGE_GENERATION_COUNT_LIMIT_SUPPORTED_TYPES.has(selectedModelType)
+    const videoGenerationSecondsLimitTypeKnown = selectedModelType !== undefined
+    const supportVideoGenerationSecondsLimit = selectedModelType !== undefined &&
+        VIDEO_GENERATION_SECONDS_LIMIT_SUPPORTED_TYPES.has(selectedModelType)
 
     // Save mutation
     const saveMutation = useMutation({
@@ -190,6 +200,8 @@ export function GroupModelConfigsTab({ groupId }: GroupModelConfigsTabProps) {
             setFormForceSaveDetail(config.force_save_detail)
             setFormOverrideMaxImageGenerationCount(config.override_max_image_generation_count)
             setFormMaxImageGenerationCount(config.max_image_generation_count)
+            setFormOverrideMaxVideoGenerationSeconds(config.override_max_video_generation_seconds)
+            setFormMaxVideoGenerationSeconds(config.max_video_generation_seconds)
             setFormOverrideRequestBodyStorageMaxSize(config.override_request_body_storage_max_size)
             setFormRequestBodyStorageMaxSize(config.request_body_storage_max_size)
             setFormOverrideResponseBodyStorageMaxSize(config.override_response_body_storage_max_size)
@@ -200,7 +212,6 @@ export function GroupModelConfigsTab({ groupId }: GroupModelConfigsTabProps) {
             setFormSummaryClaudeLongContext(config.summary_claude_long_context)
             setFormOverridePrice(config.override_price)
             setFormPrice(config.price || {})
-            setFormImagePrices(config.image_prices || {})
         } else {
             const defaults = getDefaultConfig()
             setFormModel('')
@@ -215,6 +226,8 @@ export function GroupModelConfigsTab({ groupId }: GroupModelConfigsTabProps) {
             setFormForceSaveDetail(defaults.force_save_detail!)
             setFormOverrideMaxImageGenerationCount(defaults.override_max_image_generation_count!)
             setFormMaxImageGenerationCount(defaults.max_image_generation_count!)
+            setFormOverrideMaxVideoGenerationSeconds(defaults.override_max_video_generation_seconds!)
+            setFormMaxVideoGenerationSeconds(defaults.max_video_generation_seconds!)
             setFormOverrideRequestBodyStorageMaxSize(defaults.override_request_body_storage_max_size!)
             setFormRequestBodyStorageMaxSize(defaults.request_body_storage_max_size!)
             setFormOverrideResponseBodyStorageMaxSize(defaults.override_response_body_storage_max_size!)
@@ -225,7 +238,6 @@ export function GroupModelConfigsTab({ groupId }: GroupModelConfigsTabProps) {
             setFormSummaryClaudeLongContext(defaults.summary_claude_long_context!)
             setFormOverridePrice(false)
             setFormPrice({})
-            setFormImagePrices({})
         }
     }
 
@@ -262,6 +274,8 @@ export function GroupModelConfigsTab({ groupId }: GroupModelConfigsTabProps) {
         setFormForceSaveDetail(config.force_save_detail)
         setFormOverrideMaxImageGenerationCount(config.override_max_image_generation_count)
         setFormMaxImageGenerationCount(config.max_image_generation_count)
+        setFormOverrideMaxVideoGenerationSeconds(config.override_max_video_generation_seconds)
+        setFormMaxVideoGenerationSeconds(config.max_video_generation_seconds)
         setFormOverrideRequestBodyStorageMaxSize(config.override_request_body_storage_max_size)
         setFormRequestBodyStorageMaxSize(config.request_body_storage_max_size)
         setFormOverrideResponseBodyStorageMaxSize(config.override_response_body_storage_max_size)
@@ -272,7 +286,6 @@ export function GroupModelConfigsTab({ groupId }: GroupModelConfigsTabProps) {
         setFormSummaryClaudeLongContext(config.summary_claude_long_context)
         setFormOverridePrice(config.override_price)
         setFormPrice(config.price || {})
-        setFormImagePrices(config.image_prices || {})
         setEditDialogOpen(true)
     }
 
@@ -306,6 +319,27 @@ export function GroupModelConfigsTab({ groupId }: GroupModelConfigsTabProps) {
             }
         })()
 
+        const maxVideoGenerationSecondsConfig = (() => {
+            if (supportVideoGenerationSecondsLimit) {
+                return {
+                    override_max_video_generation_seconds: formOverrideMaxVideoGenerationSeconds,
+                    max_video_generation_seconds: formMaxVideoGenerationSeconds,
+                }
+            }
+
+            if (!videoGenerationSecondsLimitTypeKnown && editingConfig) {
+                return {
+                    override_max_video_generation_seconds: editingConfig.override_max_video_generation_seconds,
+                    max_video_generation_seconds: editingConfig.max_video_generation_seconds,
+                }
+            }
+
+            return {
+                override_max_video_generation_seconds: false,
+                max_video_generation_seconds: 0,
+            }
+        })()
+
         const config: GroupModelConfigSaveRequest = {
             model,
             override_limit: formOverrideLimit,
@@ -318,6 +352,7 @@ export function GroupModelConfigsTab({ groupId }: GroupModelConfigsTabProps) {
             override_force_save_detail: formOverrideForceSaveDetail,
             force_save_detail: formForceSaveDetail,
             ...maxImageGenerationCountConfig,
+            ...maxVideoGenerationSecondsConfig,
             override_request_body_storage_max_size: formOverrideRequestBodyStorageMaxSize,
             request_body_storage_max_size: formRequestBodyStorageMaxSize,
             override_response_body_storage_max_size: formOverrideResponseBodyStorageMaxSize,
@@ -328,7 +363,6 @@ export function GroupModelConfigsTab({ groupId }: GroupModelConfigsTabProps) {
             summary_claude_long_context: formSummaryClaudeLongContext,
             override_price: formOverridePrice,
             ...(formOverridePrice && { price: formPrice }),
-            ...(formOverridePrice && Object.keys(formImagePrices).length > 0 && { image_prices: formImagePrices }),
         }
         saveMutation.mutate({ model, config })
     }
@@ -397,17 +431,6 @@ export function GroupModelConfigsTab({ groupId }: GroupModelConfigsTabProps) {
     // Trigger file input click
     const triggerImport = () => {
         fileInputRef.current?.click()
-    }
-
-    const formatImagePriceSummary = (imagePrices?: Record<string, number>) => {
-        if (!imagePrices || Object.keys(imagePrices).length === 0) {
-            return null
-        }
-
-        return Object.entries(imagePrices)
-            .slice(0, 2)
-            .map(([size, value]) => `${size}: ${value}`)
-            .join(' | ')
     }
 
     if (isLoading) {
@@ -500,6 +523,7 @@ export function GroupModelConfigsTab({ groupId }: GroupModelConfigsTabProps) {
                                     <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">{t('group.modelConfig.overrideTimeoutConfig')}</th>
                                     <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">{t('model.forceSaveDetail')}</th>
                                     <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">{t('model.maxImageGenerationCount')}</th>
+                                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">{t('model.maxVideoGenerationSeconds')}</th>
                                     <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">{t('model.requestBodyStorageMaxSize')}</th>
                                     <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">{t('model.responseBodyStorageMaxSize')}</th>
                                     <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">{t('model.recordServiceTier')}</th>
@@ -551,6 +575,9 @@ export function GroupModelConfigsTab({ groupId }: GroupModelConfigsTabProps) {
                                             {config.override_max_image_generation_count ? config.max_image_generation_count : '-'}
                                         </td>
                                         <td className="px-4 py-3 text-sm font-mono">
+                                            {config.override_max_video_generation_seconds ? config.max_video_generation_seconds : '-'}
+                                        </td>
+                                        <td className="px-4 py-3 text-sm font-mono">
                                             {config.override_request_body_storage_max_size ? config.request_body_storage_max_size : '-'}
                                         </td>
                                         <td className="px-4 py-3 text-sm font-mono">
@@ -572,14 +599,7 @@ export function GroupModelConfigsTab({ groupId }: GroupModelConfigsTabProps) {
                                         </td>
                                         <td className="px-4 py-3 text-sm">
                                             {config.override_price ? (
-                                                <div className="space-y-1">
-                                                    <PriceDisplay price={config.price} />
-                                                    {formatImagePriceSummary(config.image_prices) && (
-                                                        <div className="text-xs text-muted-foreground font-mono">
-                                                            {formatImagePriceSummary(config.image_prices)}
-                                                        </div>
-                                                    )}
-                                                </div>
+                                                <PriceDisplay price={config.price} />
                                             ) : '-'}
                                         </td>
                                         <td className="px-4 py-3 text-sm text-right" onClick={(e) => e.stopPropagation()}>
@@ -787,6 +807,36 @@ export function GroupModelConfigsTab({ groupId }: GroupModelConfigsTabProps) {
                                                 onChange={(e) => setFormMaxImageGenerationCount(Number(e.target.value))}
                                             />
                                             <p className="text-xs text-muted-foreground">{t('group.modelConfig.maxImageGenerationCountHint')}</p>
+                                        </div>
+                                    </div>
+                                )}
+                            </>
+                        )}
+
+                        {supportVideoGenerationSecondsLimit && (
+                            <>
+                                <div className="flex items-center justify-between rounded-lg border p-3">
+                                    <div className="space-y-0.5">
+                                        <Label>{t('group.modelConfig.overrideMaxVideoGenerationSeconds')}</Label>
+                                        <p className="text-xs text-muted-foreground">{t('group.modelConfig.overrideMaxVideoGenerationSecondsDesc')}</p>
+                                    </div>
+                                    <Switch
+                                        checked={formOverrideMaxVideoGenerationSeconds}
+                                        onCheckedChange={setFormOverrideMaxVideoGenerationSeconds}
+                                    />
+                                </div>
+
+                                {formOverrideMaxVideoGenerationSeconds && (
+                                    <div className="pl-4">
+                                        <div className="space-y-2">
+                                            <Label>{t('model.maxVideoGenerationSeconds')}</Label>
+                                            <Input
+                                                type="number"
+                                                min={0}
+                                                value={formMaxVideoGenerationSeconds}
+                                                onChange={(e) => setFormMaxVideoGenerationSeconds(Number(e.target.value))}
+                                            />
+                                            <p className="text-xs text-muted-foreground">{t('group.modelConfig.maxVideoGenerationSecondsHint')}</p>
                                         </div>
                                     </div>
                                 )}

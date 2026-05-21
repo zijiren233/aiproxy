@@ -278,7 +278,12 @@ func TestCalculateAmount(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		got := consume.CalculateAmount(tt.code, tt.usage, tt.price, tt.serviceTier)
+		got := consume.CalculateAmount(
+			tt.code,
+			tt.usage,
+			model.UsageContext{ServiceTier: tt.serviceTier},
+			tt.price,
+		)
 		if got != tt.want {
 			t.Errorf("CalculateAmount()\n%s\n\tgot: %v\n\twant: %v\n\t", tt.name, got, tt.want)
 		}
@@ -518,7 +523,12 @@ func TestCalculateAmountWithConditionalPricing(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		got := consume.CalculateAmount(tt.code, tt.usage, tt.price, tt.serviceTier)
+		got := consume.CalculateAmount(
+			tt.code,
+			tt.usage,
+			model.UsageContext{ServiceTier: tt.serviceTier},
+			tt.price,
+		)
 		if got != tt.want {
 			t.Errorf("CalculateAmount()\n%s\n\tgot: %v\n\twant: %v\n\t", tt.name, got, tt.want)
 		}

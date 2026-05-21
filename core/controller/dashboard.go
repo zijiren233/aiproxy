@@ -305,22 +305,19 @@ func GetGroupDashboard(c *gin.Context) {
 }
 
 type GroupModel struct {
-	CreatedAt int64                        `json:"created_at,omitempty"`
-	UpdatedAt int64                        `json:"updated_at,omitempty"`
-	Config    map[model.ModelConfigKey]any `json:"config,omitempty"`
-	Model     string                       `json:"model"`
-	Owner     model.ModelOwner             `json:"owner"`
-	Type      mode.Mode                    `json:"type"`
-	RPM       int64                        `json:"rpm,omitempty"`
-	TPM       int64                        `json:"tpm,omitempty"`
-	// map[size]map[quality]price_per_image
-	ImageQualityPrices map[string]map[string]float64 `json:"image_quality_prices,omitempty"`
-	// map[size]price_per_image
-	ImagePrices    map[string]float64 `json:"image_prices,omitempty"`
-	Price          model.Price        `json:"price,omitempty"`
-	EnabledPlugins []string           `json:"enabled_plugins,omitempty"`
+	CreatedAt      int64                        `json:"created_at,omitempty"`
+	UpdatedAt      int64                        `json:"updated_at,omitempty"`
+	Config         map[model.ModelConfigKey]any `json:"config,omitempty"`
+	Model          string                       `json:"model"`
+	Owner          model.ModelOwner             `json:"owner"`
+	Type           mode.Mode                    `json:"type"`
+	RPM            int64                        `json:"rpm,omitempty"`
+	TPM            int64                        `json:"tpm,omitempty"`
+	Price          model.Price                  `json:"price,omitempty"`
+	EnabledPlugins []string                     `json:"enabled_plugins,omitempty"`
 
-	MaxImageGenerationCount int `json:"max_image_generation_count,omitempty"`
+	MaxImageGenerationCount   int `json:"max_image_generation_count,omitempty"`
+	MaxVideoGenerationSeconds int `json:"max_video_generation_seconds,omitempty"`
 }
 
 func getEnabledPlugins(plugin map[string]map[string]any) []string {
@@ -342,18 +339,17 @@ func getEnabledPlugins(plugin map[string]map[string]any) []string {
 
 func NewGroupModel(mc model.ModelConfig) GroupModel {
 	gm := GroupModel{
-		Config:             mc.Config,
-		Model:              mc.Model,
-		Owner:              mc.Owner,
-		Type:               mc.Type,
-		RPM:                mc.RPM,
-		TPM:                mc.TPM,
-		ImageQualityPrices: mc.ImageQualityPrices,
-		ImagePrices:        mc.ImagePrices,
-		Price:              mc.Price,
-		EnabledPlugins:     getEnabledPlugins(mc.Plugin),
+		Config:         mc.Config,
+		Model:          mc.Model,
+		Owner:          mc.Owner,
+		Type:           mc.Type,
+		RPM:            mc.RPM,
+		TPM:            mc.TPM,
+		Price:          mc.Price,
+		EnabledPlugins: getEnabledPlugins(mc.Plugin),
 
-		MaxImageGenerationCount: mc.MaxImageGenerationCount,
+		MaxImageGenerationCount:   mc.MaxImageGenerationCount,
+		MaxVideoGenerationSeconds: mc.MaxVideoGenerationSeconds,
 	}
 	if !mc.CreatedAt.IsZero() {
 		gm.CreatedAt = mc.CreatedAt.Unix()

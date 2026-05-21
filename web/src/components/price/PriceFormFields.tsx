@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
+import { Textarea } from '@/components/ui/textarea'
 import { Plus, Trash2 } from 'lucide-react'
 import type { ModelPrice, ConditionalPrice, PriceCondition } from '@/types/model'
 import {
@@ -58,6 +59,19 @@ function PriceField({ label, unitLabel, value, unitValue, onValueChange, onUnitC
     )
 }
 
+function listToText(values?: string[]): string {
+    return (values || []).join('\n')
+}
+
+function textToList(value: string): string[] | undefined {
+    const values = value
+        .split(/[\n,]/)
+        .map((item) => item.trim())
+        .filter(Boolean)
+
+    return values.length > 0 ? values : undefined
+}
+
 function ConditionFields({ condition, onChange }: {
     condition: PriceCondition
     onChange: (c: PriceCondition) => void
@@ -86,6 +100,26 @@ function ConditionFields({ condition, onChange }: {
                 <Label className="text-xs">{t('group.price.outputTokenMax')}</Label>
                 <Input type="number" min={0} value={condition.output_token_max || ''} className="h-8 text-sm"
                     onChange={(e) => onChange({ ...condition, output_token_max: parseInt(e.target.value) || 0 })} />
+            </div>
+            <div className="space-y-1">
+                <Label className="text-xs">{t('group.price.size')}</Label>
+                <Textarea
+                    value={listToText(condition.size)}
+                    placeholder={t('group.price.sizePlaceholder')}
+                    className="min-h-[72px] text-sm"
+                    onChange={(e) => onChange({ ...condition, size: textToList(e.target.value) })}
+                />
+                <p className="text-xs text-muted-foreground">{t('group.price.multiValueHint')}</p>
+            </div>
+            <div className="space-y-1">
+                <Label className="text-xs">{t('group.price.quality')}</Label>
+                <Textarea
+                    value={listToText(condition.quality)}
+                    placeholder={t('group.price.qualityPlaceholder')}
+                    className="min-h-[72px] text-sm"
+                    onChange={(e) => onChange({ ...condition, quality: textToList(e.target.value) })}
+                />
+                <p className="text-xs text-muted-foreground">{t('group.price.multiValueHint')}</p>
             </div>
             <div className="space-y-1 col-span-2">
                 <Label className="text-xs">{t('group.price.serviceTier')}</Label>

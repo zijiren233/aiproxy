@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"slices"
+	"strings"
 
 	"github.com/bytedance/sonic/ast"
 	"github.com/gin-gonic/gin"
@@ -98,6 +100,15 @@ func getImagesRequest(c *gin.Context) (*relaymodel.ImageRequest, error) {
 }
 
 func ValidateImagesRequest(c *gin.Context, mc model.ModelConfig) error {
+	imageRequest, err := getImagesRequest(c)
+	if err != nil {
+		return err
+	}
+
+	if err := validateSupportedImageSize(imageRequest.Size, mc); err != nil {
+		return err
+	}
+
 	n, ok, err := getImagesRequestN(c)
 	if err != nil {
 		return err
@@ -110,34 +121,81 @@ func ValidateImagesRequest(c *gin.Context, mc model.ModelConfig) error {
 	return validateImageGenerationCount(n, mc.MaxImageGenerationCount)
 }
 
-func GetImagesOutputPrice(modelConfig model.ModelConfig, size, quality string) (float64, bool) {
-	switch {
-	case len(modelConfig.ImagePrices) == 0 && len(modelConfig.ImageQualityPrices) == 0:
-		return float64(modelConfig.Price.OutputPrice), true
-	case len(modelConfig.ImageQualityPrices) != 0:
-		price, ok := modelConfig.ImageQualityPrices[size][quality]
-		return price, ok
-	case len(modelConfig.ImagePrices) != 0:
-		price, ok := modelConfig.ImagePrices[size]
-		return price, ok
-	default:
+func validateSupportedImageSize(size string, mc model.ModelConfig) error {
+	if size == "" {
+		return nil
+	}
+
+	sizes, ok := model.GetModelConfigStringSlice(mc.Config, model.ModelConfigImageSizes)
+	if !ok || len(sizes) == 0 {
+		return nil
+	}
+
+	if slices.Contains(normalizeSupportedSizeValues(sizes), normalizeSupportedSizeValue(size)) {
+		return nil
+	}
+
+	return NewBadRequestParamError(fmt.Sprintf("unsupported image size `%s`", size))
+}
+
+func normalizeSupportedSizeValues(sizes []string) []string {
+	normalized := make([]string, 0, len(sizes))
+	for _, size := range sizes {
+		size = normalizeSupportedSizeValue(size)
+		if size != "" {
+			normalized = append(normalized, size)
+		}
+	}
+
+	return normalized
+}
+
+func normalizeSupportedSizeValue(size string) string {
+	return strings.ToLower(strings.ReplaceAll(strings.TrimSpace(size), " ", ""))
+}
+
+func GetConditionalImagesOutputPrice(price model.Price, size, quality string) (float64, bool) {
+	if len(price.ConditionalPrices) == 0 {
 		return 0, false
+	}
+
+	selectedPrice := price.SelectConditionalPrice(model.Usage{}, model.UsageContext{
+		PriceCondition: model.UsagePriceCondition{
+			Size:    size,
+			Quality: quality,
+		},
+	})
+	if len(selectedPrice.ConditionalPrices) != 0 {
+		return 0, false
+	}
+
+	return float64(selectedPrice.OutputPrice), true
+}
+
+func setImageOutputPriceUnit(price *model.Price, force bool) {
+	if price == nil {
+		return
+	}
+
+	if (force || len(price.ConditionalPrices) != 0) && price.OutputPriceUnit == 0 {
+		price.OutputPriceUnit = 1
+	}
+
+	for i := range price.ConditionalPrices {
+		setImageOutputPriceUnit(&price.ConditionalPrices[i].Price, true)
 	}
 }
 
 func GetImagesRequestPrice(c *gin.Context, mc model.ModelConfig) (model.Price, error) {
-	imageRequest, err := getImagesRequest(c)
-	if err != nil {
+	if _, err := getImagesRequest(c); err != nil {
 		return model.Price{}, err
 	}
 
-	imageCostPrice, ok := GetImagesOutputPrice(mc, imageRequest.Size, imageRequest.Quality)
-	if !ok {
-		return model.Price{}, fmt.Errorf(
-			"invalid image size `%s` or quality `%s`",
-			imageRequest.Size,
-			imageRequest.Quality,
-		)
+	if len(mc.Price.ConditionalPrices) != 0 {
+		price := mc.Price
+		setImageOutputPriceUnit(&price, false)
+
+		return price, nil
 	}
 
 	return model.Price{
@@ -146,22 +204,28 @@ func GetImagesRequestPrice(c *gin.Context, mc model.ModelConfig) (model.Price, e
 		InputPriceUnit:      mc.Price.InputPriceUnit,
 		ImageInputPrice:     mc.Price.ImageInputPrice,
 		ImageInputPriceUnit: mc.Price.ImageInputPriceUnit,
-		OutputPrice:         model.ZeroNullFloat64(imageCostPrice),
+		OutputPrice:         mc.Price.OutputPrice,
 		OutputPriceUnit:     mc.Price.OutputPriceUnit,
 	}, nil
 }
 
-func GetImagesRequestUsage(c *gin.Context, _ model.ModelConfig) (model.Usage, error) {
+func GetImagesRequestUsage(c *gin.Context, _ model.ModelConfig) (RequestUsage, error) {
 	imageRequest, err := getImagesRequest(c)
 	if err != nil {
-		return model.Usage{}, err
+		return RequestUsage{}, err
 	}
 
-	return model.Usage{
-		InputTokens: model.ZeroNullInt64(openai.CountTokenInput(
-			imageRequest.Prompt,
-			imageRequest.Model,
-		)),
-		OutputTokens: model.ZeroNullInt64(imageRequest.N),
+	return RequestUsage{
+		Usage: model.Usage{
+			InputTokens: model.ZeroNullInt64(openai.CountTokenInput(
+				imageRequest.Prompt,
+				imageRequest.Model,
+			)),
+			OutputTokens: model.ZeroNullInt64(imageRequest.N),
+		},
+		Context: model.UsageContext{PriceCondition: model.UsagePriceCondition{
+			Size:    imageRequest.Size,
+			Quality: imageRequest.Quality,
+		}},
 	}, nil
 }
