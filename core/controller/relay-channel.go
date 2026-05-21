@@ -115,6 +115,9 @@ func needPinChannel(m mode.Mode) bool {
 	switch m {
 	case mode.VideoGenerationsGetJobs,
 		mode.VideoGenerationsContent,
+		mode.VideosGet,
+		mode.VideosContent,
+		mode.VideosDelete,
 		mode.ResponsesGet,
 		mode.ResponsesDelete,
 		mode.ResponsesCancel,

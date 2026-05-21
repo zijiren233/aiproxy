@@ -38,6 +38,16 @@ func (m Mode) String() string {
 		return "VideoGenerationsGetJobs"
 	case VideoGenerationsContent:
 		return "VideoGenerationsContent"
+	case Videos:
+		return "Videos"
+	case VideosGet:
+		return "VideosGet"
+	case VideosContent:
+		return "VideosContent"
+	case VideosDelete:
+		return "VideosDelete"
+	case VideosRemix:
+		return "VideosRemix"
 	case Responses:
 		return "Responses"
 	case ResponsesGet:
@@ -78,4 +88,9 @@ const (
 	ResponsesCancel
 	ResponsesInputItems
 	Gemini
+	Videos
+	VideosGet
+	VideosContent
+	VideosDelete
+	VideosRemix
 )

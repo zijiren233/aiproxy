@@ -45,11 +45,28 @@ func (a *Adaptor) SupportMode(mt *meta.Meta) bool {
 		m == mode.AudioTranslation ||
 		m == mode.Anthropic ||
 		m == mode.Gemini ||
+		m == mode.VideoGenerationsJobs ||
+		m == mode.VideoGenerationsGetJobs ||
+		m == mode.VideoGenerationsContent ||
+		m == mode.Videos ||
+		m == mode.VideosGet ||
+		m == mode.VideosContent ||
+		m == mode.VideosRemix ||
 		m == mode.Responses ||
 		m == mode.ResponsesGet ||
 		m == mode.ResponsesDelete ||
 		m == mode.ResponsesCancel ||
 		m == mode.ResponsesInputItems
+}
+
+func isAliVideoMode(m mode.Mode) bool {
+	return m == mode.VideoGenerationsJobs ||
+		m == mode.VideoGenerationsGetJobs ||
+		m == mode.VideoGenerationsContent ||
+		m == mode.Videos ||
+		m == mode.VideosGet ||
+		m == mode.VideosContent ||
+		m == mode.VideosRemix
 }
 
 func (a *Adaptor) GetRequestURL(
@@ -58,6 +75,10 @@ func (a *Adaptor) GetRequestURL(
 	_ *gin.Context,
 ) (adaptor.RequestURL, error) {
 	u := meta.Channel.BaseURL
+
+	if isAliVideoMode(meta.Mode) {
+		return getAliVideoRequestURL(u, meta)
+	}
 
 	switch meta.Mode {
 	case mode.ImagesGenerations:
@@ -251,6 +272,11 @@ func (a *Adaptor) ConvertRequest(
 		return ConvertTTSRequest(meta, req)
 	case mode.AudioTranscription:
 		return ConvertSTTRequest(meta, req)
+	case mode.VideoGenerationsJobs, mode.Videos, mode.VideosRemix:
+		return ConvertAliVideoRequest(meta, req)
+	case mode.VideoGenerationsGetJobs, mode.VideoGenerationsContent,
+		mode.VideosGet, mode.VideosContent:
+		return adaptor.ConvertResult{}, nil
 	case mode.Anthropic:
 		return anthropic.ConvertRequest(meta, req)
 	case mode.Gemini:
@@ -289,6 +315,18 @@ func (a *Adaptor) DoResponse(
 	resp *http.Response,
 ) (adaptor.DoResponseResult, adaptor.Error) {
 	switch meta.Mode {
+	case mode.VideoGenerationsJobs:
+		return AliVideoHandler(meta, store, c, resp)
+	case mode.VideoGenerationsGetJobs:
+		return AliVideoGetJobsHandler(meta, store, c, resp)
+	case mode.VideoGenerationsContent:
+		return AliVideoContentHandler(meta, c, resp)
+	case mode.Videos, mode.VideosRemix:
+		return AliVideosHandler(meta, store, c, resp)
+	case mode.VideosGet:
+		return AliVideoGetHandler(meta, store, c, resp)
+	case mode.VideosContent:
+		return AliVideoContentHandler(meta, c, resp)
 	case mode.ImagesGenerations, mode.ImagesEdits:
 		return ImageHandler(meta, c, resp)
 	case mode.Embeddings:
@@ -328,7 +366,7 @@ func (a *Adaptor) DoResponse(
 
 func (a *Adaptor) Metadata() adaptor.Metadata {
 	return adaptor.Metadata{
-		Readme: "OpenAI compatibility\nNative Responses API support\nNetwork search metering support\nImage generation/edit support: https://help.aliyun.com/zh/model-studio/qwen-image-api and https://help.aliyun.com/zh/model-studio/qwen-image-edit-api\nRerank support: https://help.aliyun.com/zh/model-studio/text-rerank-api\nSTT support: https://help.aliyun.com/zh/model-studio/sambert-speech-synthesis/\nAnthropic support: /api/v2/apps/claude-code-proxy\nGemini support",
+		Readme: "OpenAI compatibility\nNative Responses API support\nNetwork search metering support\nImage generation/edit support: https://help.aliyun.com/zh/model-studio/qwen-image-api and https://help.aliyun.com/zh/model-studio/qwen-image-edit-api\nVideo generation support: DashScope /api/v1/services/aigc/video-generation/video-synthesis\nRerank support: https://help.aliyun.com/zh/model-studio/text-rerank-api\nSTT support: https://help.aliyun.com/zh/model-studio/sambert-speech-synthesis/\nAnthropic support: /api/v2/apps/claude-code-proxy\nGemini support",
 		Models: ModelList,
 	}
 }

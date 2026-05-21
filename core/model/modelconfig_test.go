@@ -177,6 +177,7 @@ func TestModelConfigSupportStreamTimeout(t *testing.T) {
 			mode.Rerank,
 			mode.ParsePdf,
 			mode.VideoGenerationsJobs,
+			mode.Videos,
 		}
 
 		for _, m := range modes {

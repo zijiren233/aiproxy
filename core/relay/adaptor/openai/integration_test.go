@@ -205,6 +205,12 @@ func TestIntegrationGetRequestURL(t *testing.T) {
 			mode:        mode.Gemini,
 			expectedURL: "/responses",
 		},
+		{
+			name:        "sora-2 with Videos mode should use /videos",
+			model:       "sora-2",
+			mode:        mode.Videos,
+			expectedURL: "/videos",
+		},
 	}
 
 	for _, tt := range tests {

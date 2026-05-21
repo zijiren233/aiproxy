@@ -196,3 +196,35 @@ func TestTouchAsyncUsagePollCursorAdvancesUpdatedAtAndNextPollAt(t *testing.T) {
 	require.Empty(t, got.Error)
 	require.Empty(t, got.ProcessingToken)
 }
+
+func TestMarkAsyncUsageFailedWritesLogMessage(t *testing.T) {
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	require.NoError(t, err)
+	require.NoError(t, db.AutoMigrate(&model.Log{}, &model.AsyncUsageInfo{}))
+
+	oldLogDB := model.LogDB
+	model.LogDB = db
+	t.Cleanup(func() {
+		model.LogDB = oldLogDB
+	})
+
+	requestID := "async_fail_log"
+	require.NoError(t, db.Create(&model.Log{
+		RequestID:        model.EmptyNullString(requestID),
+		AsyncUsageStatus: model.AsyncUsageStatusPending,
+	}).Error)
+
+	info := &model.AsyncUsageInfo{
+		RequestID:       requestID,
+		Status:          model.AsyncUsageStatusPending,
+		ProcessingToken: "claim-token",
+	}
+	require.NoError(t, db.Create(info).Error)
+
+	markAsyncUsageFailed(info, "upstream task failed")
+
+	var got model.Log
+	require.NoError(t, db.Where("request_id = ?", requestID).First(&got).Error)
+	require.Equal(t, model.AsyncUsageStatusFailed, got.AsyncUsageStatus)
+	require.Equal(t, "upstream task failed", string(got.Content))
+}

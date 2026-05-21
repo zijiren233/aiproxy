@@ -9,15 +9,43 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
+	"net/textproto"
 	"strings"
 	"testing"
 
 	"github.com/gin-gonic/gin"
 	coremodel "github.com/labring/aiproxy/core/model"
+	"github.com/labring/aiproxy/core/relay/adaptor"
 	"github.com/labring/aiproxy/core/relay/meta"
 	"github.com/labring/aiproxy/core/relay/mode"
 	relaymodel "github.com/labring/aiproxy/core/relay/model"
 )
+
+type aliTestStore struct {
+	saved []adaptor.StoreCache
+}
+
+func (s *aliTestStore) GetStore(string, int, string) (adaptor.StoreCache, error) {
+	return adaptor.StoreCache{}, nil
+}
+
+func (s *aliTestStore) SaveStore(cache adaptor.StoreCache) error {
+	s.saved = append(s.saved, cache)
+	return nil
+}
+
+func (s *aliTestStore) SaveStoreWithOption(
+	cache adaptor.StoreCache,
+	_ adaptor.SaveStoreOption,
+) error {
+	s.saved = append(s.saved, cache)
+	return nil
+}
+
+func (s *aliTestStore) SaveIfNotExistStore(cache adaptor.StoreCache) error {
+	s.saved = append(s.saved, cache)
+	return nil
+}
 
 func TestAdaptorSupportModeResponses(t *testing.T) {
 	adaptor := &Adaptor{}
@@ -246,6 +274,88 @@ func TestAdaptorGetRequestURLAliImage(t *testing.T) {
 	}
 }
 
+func TestAdaptorGetRequestURLAliVideo(t *testing.T) {
+	adaptor := &Adaptor{}
+	channel := &coremodel.Channel{BaseURL: "https://dashscope.aliyuncs.com/custom"}
+
+	tests := []struct {
+		name       string
+		mode       mode.Mode
+		jobID      string
+		generation string
+		wantMethod string
+		wantURL    string
+	}{
+		{
+			name:       "create job uses video synthesis endpoint",
+			mode:       mode.VideoGenerationsJobs,
+			wantMethod: http.MethodPost,
+			wantURL:    "https://dashscope.aliyuncs.com/custom/api/v1/services/aigc/video-generation/video-synthesis",
+		},
+		{
+			name:       "get job uses task endpoint",
+			mode:       mode.VideoGenerationsGetJobs,
+			jobID:      "task-123",
+			wantMethod: http.MethodGet,
+			wantURL:    "https://dashscope.aliyuncs.com/custom/api/v1/tasks/task-123",
+		},
+		{
+			name:       "content uses task endpoint",
+			mode:       mode.VideoGenerationsContent,
+			generation: "task-123",
+			wantMethod: http.MethodGet,
+			wantURL:    "https://dashscope.aliyuncs.com/custom/api/v1/tasks/task-123",
+		},
+		{
+			name:       "official videos create uses video synthesis endpoint",
+			mode:       mode.Videos,
+			wantMethod: http.MethodPost,
+			wantURL:    "https://dashscope.aliyuncs.com/custom/api/v1/services/aigc/video-generation/video-synthesis",
+		},
+		{
+			name:       "official videos get uses task endpoint",
+			mode:       mode.VideosGet,
+			generation: "task-123",
+			wantMethod: http.MethodGet,
+			wantURL:    "https://dashscope.aliyuncs.com/custom/api/v1/tasks/task-123",
+		},
+		{
+			name:       "official videos content uses task endpoint",
+			mode:       mode.VideosContent,
+			generation: "task-123",
+			wantMethod: http.MethodGet,
+			wantURL:    "https://dashscope.aliyuncs.com/custom/api/v1/tasks/task-123",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := meta.NewMeta(
+				channel,
+				tt.mode,
+				"wan2.5-t2v-preview",
+				coremodel.ModelConfig{},
+				meta.WithJobID(tt.jobID),
+				meta.WithGenerationID(tt.generation),
+				meta.WithVideoID(tt.generation),
+			)
+
+			got, err := adaptor.GetRequestURL(m, nil, nil)
+			if err != nil {
+				t.Fatalf("GetRequestURL returned error: %v", err)
+			}
+
+			if got.Method != tt.wantMethod {
+				t.Fatalf("expected method %s, got %s", tt.wantMethod, got.Method)
+			}
+
+			if got.URL != tt.wantURL {
+				t.Fatalf("expected URL %s, got %s", tt.wantURL, got.URL)
+			}
+		})
+	}
+}
+
 func TestAdaptorConvertRequestResponses(t *testing.T) {
 	adaptor := &Adaptor{}
 	m := meta.NewMeta(
@@ -286,6 +396,263 @@ func TestAdaptorConvertRequestResponses(t *testing.T) {
 
 	if !responseReq.Stream {
 		t.Fatal("expected stream to remain enabled")
+	}
+}
+
+func TestAdaptorConvertRequestAliTextToVideo(t *testing.T) {
+	adaptor := &Adaptor{}
+	m := meta.NewMeta(nil, mode.VideoGenerationsJobs, "wan2.5-t2v-preview", coremodel.ModelConfig{})
+	m.ActualModel = "wan2.5-t2v-preview"
+
+	body := `{
+		"model":"wan2.5-t2v-preview",
+		"prompt":"A camera moves through a quiet city street",
+		"n_seconds":5,
+		"width":1280,
+		"height":720,
+		"metadata":{
+			"prompt_extend":true,
+			"seed":123,
+			"shot_type":"orbit"
+		}
+	}`
+
+	req, err := http.NewRequestWithContext(
+		context.Background(),
+		http.MethodPost,
+		"/v1/video/generations/jobs",
+		strings.NewReader(body),
+	)
+	if err != nil {
+		t.Fatalf("NewRequest returned error: %v", err)
+	}
+
+	result, err := adaptor.ConvertRequest(m, nil, req)
+	if err != nil {
+		t.Fatalf("ConvertRequest returned error: %v", err)
+	}
+
+	if result.Header.Get("X-Dashscope-Async") != "enable" {
+		t.Fatalf("expected async header, got %#v", result.Header)
+	}
+
+	payload := readJSONMap(t, result.Body)
+	if payload["model"] != "wan2.5-t2v-preview" {
+		t.Fatalf("expected model wan2.5-t2v-preview, got %#v", payload["model"])
+	}
+
+	input := mustMap(t, payload["input"])
+	if input["prompt"] != "A camera moves through a quiet city street" {
+		t.Fatalf("unexpected prompt: %#v", input["prompt"])
+	}
+
+	parameters := mustMap(t, payload["parameters"])
+	if int(mustFloat64(t, parameters["duration"])) != 5 {
+		t.Fatalf("expected duration 5, got %#v", parameters["duration"])
+	}
+
+	if parameters["size"] != "1280*720" {
+		t.Fatalf("expected size 1280*720, got %#v", parameters["size"])
+	}
+
+	if parameters["prompt_extend"] != true {
+		t.Fatalf("expected prompt_extend true, got %#v", parameters["prompt_extend"])
+	}
+
+	if int64(mustFloat64(t, parameters["seed"])) != 123 {
+		t.Fatalf("expected seed 123, got %#v", parameters["seed"])
+	}
+
+	if parameters["shot_type"] != "orbit" {
+		t.Fatalf("expected shot_type orbit, got %#v", parameters["shot_type"])
+	}
+}
+
+func TestAdaptorConvertRequestAliWan27ImageToVideoUsesMedia(t *testing.T) {
+	adaptor := &Adaptor{}
+	m := meta.NewMeta(nil, mode.VideoGenerationsJobs, "wan2.7-i2v", coremodel.ModelConfig{})
+	m.ActualModel = "wan2.7-i2v"
+
+	body := `{
+		"model":"wan2.7-i2v",
+		"prompt":"Make the scene move slowly",
+		"image_url":"https://example.com/start.png",
+		"last_frame_url":"https://example.com/end.png",
+		"n_seconds":10,
+		"resolution":"1080P",
+		"audio_url":"https://example.com/music.wav"
+	}`
+
+	req, err := http.NewRequestWithContext(
+		context.Background(),
+		http.MethodPost,
+		"/v1/video/generations/jobs",
+		strings.NewReader(body),
+	)
+	if err != nil {
+		t.Fatalf("NewRequest returned error: %v", err)
+	}
+
+	result, err := adaptor.ConvertRequest(m, nil, req)
+	if err != nil {
+		t.Fatalf("ConvertRequest returned error: %v", err)
+	}
+
+	payload := readJSONMap(t, result.Body)
+	input := mustMap(t, payload["input"])
+
+	media := mustSlice(t, input["media"])
+	if len(media) != 3 {
+		t.Fatalf("expected 3 media items, got %#v", media)
+	}
+
+	firstFrame := mustMap(t, media[0])
+	if firstFrame["type"] != "first_frame" || firstFrame["url"] != "https://example.com/start.png" {
+		t.Fatalf("unexpected first media: %#v", firstFrame)
+	}
+
+	lastFrame := mustMap(t, media[1])
+	if lastFrame["type"] != "last_frame" || lastFrame["url"] != "https://example.com/end.png" {
+		t.Fatalf("unexpected second media: %#v", lastFrame)
+	}
+
+	audio := mustMap(t, media[2])
+	if audio["type"] != "driving_audio" || audio["url"] != "https://example.com/music.wav" {
+		t.Fatalf("unexpected third media: %#v", audio)
+	}
+
+	parameters := mustMap(t, payload["parameters"])
+	if parameters["duration"] != float64(10) {
+		t.Fatalf("expected duration 10, got %#v", parameters["duration"])
+	}
+
+	if parameters["resolution"] != "1080P" {
+		t.Fatalf("expected resolution 1080P, got %#v", parameters["resolution"])
+	}
+}
+
+func TestAdaptorConvertRequestAliVideoPrefersOpenAIFields(t *testing.T) {
+	adaptor := &Adaptor{}
+	m := meta.NewMeta(nil, mode.VideoGenerationsJobs, "wan2.7-i2v", coremodel.ModelConfig{})
+	m.ActualModel = "wan2.7-i2v"
+
+	body := `{
+		"model":"wan2.7-i2v",
+		"prompt":"Animate this reference",
+		"input_reference":"https://example.com/openai-reference.png",
+		"image_url":"https://example.com/ali-image.png",
+		"seconds":"4",
+		"n_seconds":10,
+		"duration":8,
+		"size":"1080p",
+		"width":1280,
+		"height":720
+	}`
+
+	req, err := http.NewRequestWithContext(
+		context.Background(),
+		http.MethodPost,
+		"/v1/video/generations/jobs",
+		strings.NewReader(body),
+	)
+	if err != nil {
+		t.Fatalf("NewRequest returned error: %v", err)
+	}
+
+	result, err := adaptor.ConvertRequest(m, nil, req)
+	if err != nil {
+		t.Fatalf("ConvertRequest returned error: %v", err)
+	}
+
+	payload := readJSONMap(t, result.Body)
+	input := mustMap(t, payload["input"])
+	media := mustSlice(t, input["media"])
+
+	firstFrame := mustMap(t, media[0])
+	if firstFrame["url"] != "https://example.com/openai-reference.png" {
+		t.Fatalf("expected input_reference to win, got %#v", firstFrame["url"])
+	}
+
+	parameters := mustMap(t, payload["parameters"])
+	if int(mustFloat64(t, parameters["duration"])) != 4 {
+		t.Fatalf("expected seconds to win, got %#v", parameters["duration"])
+	}
+
+	if parameters["resolution"] != "1080P" {
+		t.Fatalf("expected OpenAI size to map to resolution, got %#v", parameters["resolution"])
+	}
+
+	if _, ok := parameters["size"]; ok {
+		t.Fatalf("expected size not to be set for 1080p, got %#v", parameters["size"])
+	}
+}
+
+func TestAdaptorConvertRequestAliVideoMultipartInputReference(t *testing.T) {
+	adaptor := &Adaptor{}
+	m := meta.NewMeta(nil, mode.VideoGenerationsJobs, "wan2.7-i2v", coremodel.ModelConfig{})
+	m.ActualModel = "wan2.7-i2v"
+
+	var body bytes.Buffer
+
+	writer := multipart.NewWriter(&body)
+	_ = writer.WriteField("model", "wan2.7-i2v")
+	_ = writer.WriteField("prompt", "Animate the uploaded reference")
+	_ = writer.WriteField("seconds", "3")
+
+	header := make(textproto.MIMEHeader)
+	header.Set("Content-Disposition", `form-data; name="input_reference"; filename="reference.png"`)
+	header.Set("Content-Type", "image/png")
+
+	part, err := writer.CreatePart(header)
+	if err != nil {
+		t.Fatalf("CreateFormFile returned error: %v", err)
+	}
+
+	if _, err := part.Write([]byte{
+		0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+		0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52,
+	}); err != nil {
+		t.Fatalf("failed to write test image: %v", err)
+	}
+
+	if err := writer.Close(); err != nil {
+		t.Fatalf("writer close returned error: %v", err)
+	}
+
+	req, err := http.NewRequestWithContext(
+		context.Background(),
+		http.MethodPost,
+		"/v1/video/generations/jobs",
+		&body,
+	)
+	if err != nil {
+		t.Fatalf("NewRequest returned error: %v", err)
+	}
+
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+
+	result, err := adaptor.ConvertRequest(m, nil, req)
+	if err != nil {
+		t.Fatalf("ConvertRequest returned error: %v", err)
+	}
+
+	payload := readJSONMap(t, result.Body)
+	input := mustMap(t, payload["input"])
+	media := mustSlice(t, input["media"])
+	firstFrame := mustMap(t, media[0])
+
+	url, ok := firstFrame["url"].(string)
+	if !ok {
+		t.Fatalf("expected reference url string, got %#v", firstFrame["url"])
+	}
+
+	if !strings.HasPrefix(url, "data:image/png;base64,") {
+		t.Fatalf("expected png data url, got %#v", url)
+	}
+
+	parameters := mustMap(t, payload["parameters"])
+	if int(mustFloat64(t, parameters["duration"])) != 3 {
+		t.Fatalf("expected duration 3, got %#v", parameters["duration"])
 	}
 }
 
@@ -1515,6 +1882,295 @@ func TestAsyncTaskUsesBaseURL(t *testing.T) {
 	}
 }
 
+func TestAliVideoHandlersConvertTaskToOpenAIJob(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	adaptor := &Adaptor{}
+	recorder := httptest.NewRecorder()
+	ctx, _ := gin.CreateTestContext(recorder)
+	ctx.Request = httptest.NewRequestWithContext(
+		context.Background(),
+		http.MethodGet,
+		"/v1/video/generations/jobs/task-123",
+		nil,
+	)
+
+	m := meta.NewMeta(
+		nil,
+		mode.VideoGenerationsGetJobs,
+		"wan2.5-t2v-preview",
+		coremodel.ModelConfig{},
+	)
+	m.Channel.ID = 9
+	m.Group = coremodel.GroupCache{ID: "group-1"}
+	m.Token = coremodel.TokenCache{ID: 7}
+
+	store := &aliTestStore{}
+	resp := &http.Response{
+		StatusCode: http.StatusOK,
+		Header:     make(http.Header),
+		Body: io.NopCloser(strings.NewReader(`{
+			"request_id":"req-1",
+			"output":{
+				"task_id":"task-123",
+				"task_status":"SUCCEEDED",
+				"submit_time":"2026-05-20 10:00:00.000",
+				"end_time":"2026-05-20 10:02:00.000",
+				"video_url":"https://example.com/video.mp4",
+				"orig_prompt":"A quiet street"
+			},
+			"usage":{
+				"duration":5,
+				"video_count":1,
+				"SR":720,
+				"ratio":"16:9"
+			}
+		}`)),
+	}
+
+	result, adaptorErr := adaptor.DoResponse(m, store, ctx, resp)
+	if adaptorErr != nil {
+		t.Fatalf("DoResponse returned error: %v", adaptorErr)
+	}
+
+	if result.UpstreamID != "task-123" {
+		t.Fatalf("expected upstream task-123, got %#v", result.UpstreamID)
+	}
+
+	if len(store.saved) != 1 {
+		t.Fatalf("expected 1 saved generation, got %#v", store.saved)
+	}
+
+	if store.saved[0].ID != coremodel.VideoGenerationStoreID("task-123") {
+		t.Fatalf("unexpected generation store id: %#v", store.saved[0].ID)
+	}
+
+	var job relaymodel.VideoGenerationJob
+	if err := json.Unmarshal(recorder.Body.Bytes(), &job); err != nil {
+		t.Fatalf("failed to unmarshal job: %v", err)
+	}
+
+	if job.Object != relaymodel.VideoGenerationJobObject ||
+		job.ID != "task-123" ||
+		job.Status != relaymodel.VideoGenerationJobStatusSucceeded {
+		t.Fatalf("unexpected job: %#v", job)
+	}
+
+	if len(job.Generations) != 1 || job.Generations[0].ID != "task-123" {
+		t.Fatalf("unexpected generations: %#v", job.Generations)
+	}
+
+	if job.Width != 1280 || job.Height != 720 || job.NSeconds != 5 {
+		t.Fatalf("unexpected dimensions or duration: %#v", job)
+	}
+}
+
+func TestAliVideoCreateJobUsesRequestMetadataFallback(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	adaptor := &Adaptor{}
+	m := meta.NewMeta(
+		nil,
+		mode.VideoGenerationsJobs,
+		"happyhorse-1.0-i2v",
+		coremodel.ModelConfig{},
+	)
+	m.ActualModel = "happyhorse-1.0-i2v"
+	m.Channel.ID = 9
+	m.Group = coremodel.GroupCache{ID: "group-1"}
+	m.Token = coremodel.TokenCache{ID: 7}
+
+	req, err := http.NewRequestWithContext(
+		context.Background(),
+		http.MethodPost,
+		"/v1/video/generations/jobs",
+		strings.NewReader(`{
+			"model":"happyhorse-1.0-i2v",
+			"prompt":"Animate the horse",
+			"input_reference":"https://example.com/reference.png",
+			"seconds":5,
+			"size":"1280x720"
+		}`),
+	)
+	if err != nil {
+		t.Fatalf("NewRequest returned error: %v", err)
+	}
+
+	if _, err := adaptor.ConvertRequest(m, nil, req); err != nil {
+		t.Fatalf("ConvertRequest returned error: %v", err)
+	}
+
+	recorder := httptest.NewRecorder()
+	ctx, _ := gin.CreateTestContext(recorder)
+	ctx.Request = httptest.NewRequestWithContext(
+		context.Background(),
+		http.MethodPost,
+		"/v1/video/generations/jobs",
+		nil,
+	)
+
+	resp := &http.Response{
+		StatusCode: http.StatusOK,
+		Header:     make(http.Header),
+		Body: io.NopCloser(strings.NewReader(`{
+			"request_id":"req-1",
+			"output":{
+				"task_id":"task-123",
+				"task_status":"PENDING"
+			}
+		}`)),
+	}
+
+	_, adaptorErr := adaptor.DoResponse(m, &aliTestStore{}, ctx, resp)
+	if adaptorErr != nil {
+		t.Fatalf("DoResponse returned error: %v", adaptorErr)
+	}
+
+	var job relaymodel.VideoGenerationJob
+	if err := json.Unmarshal(recorder.Body.Bytes(), &job); err != nil {
+		t.Fatalf("failed to unmarshal job: %v", err)
+	}
+
+	if job.Prompt != "Animate the horse" ||
+		job.NSeconds != 5 ||
+		job.Width != 1280 ||
+		job.Height != 720 {
+		t.Fatalf("expected request metadata fallback, got %#v", job)
+	}
+}
+
+func TestAliVideosHandlerConvertsTaskToOpenAIVideo(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	adaptor := &Adaptor{}
+	recorder := httptest.NewRecorder()
+	ctx, _ := gin.CreateTestContext(recorder)
+	ctx.Request = httptest.NewRequestWithContext(
+		context.Background(),
+		http.MethodPost,
+		"/v1/videos",
+		nil,
+	)
+
+	m := meta.NewMeta(
+		nil,
+		mode.Videos,
+		"wan2.5-t2v-preview",
+		coremodel.ModelConfig{},
+	)
+	m.Channel.ID = 9
+	m.Group = coremodel.GroupCache{ID: "group-1"}
+	m.Token = coremodel.TokenCache{ID: 7}
+
+	store := &aliTestStore{}
+	resp := &http.Response{
+		StatusCode: http.StatusOK,
+		Header:     make(http.Header),
+		Body: io.NopCloser(strings.NewReader(`{
+			"request_id":"req-1",
+			"output":{
+				"task_id":"task-123",
+				"task_status":"PENDING",
+				"submit_time":"2026-05-20 10:00:00.000",
+				"orig_prompt":"A quiet street"
+			},
+			"usage":{
+				"duration":5,
+				"video_count":1,
+				"SR":720,
+				"ratio":"16:9"
+			}
+		}`)),
+	}
+
+	result, adaptorErr := adaptor.DoResponse(m, store, ctx, resp)
+	if adaptorErr != nil {
+		t.Fatalf("DoResponse returned error: %v", adaptorErr)
+	}
+
+	if result.UpstreamID != "task-123" || !result.AsyncUsage {
+		t.Fatalf("unexpected result: %#v", result)
+	}
+
+	if len(store.saved) != 1 {
+		t.Fatalf("expected 1 saved video, got %#v", store.saved)
+	}
+
+	if store.saved[0].ID != coremodel.VideoGenerationStoreID("task-123") {
+		t.Fatalf("unexpected video store id: %#v", store.saved[0].ID)
+	}
+
+	var video relaymodel.Video
+	if err := json.Unmarshal(recorder.Body.Bytes(), &video); err != nil {
+		t.Fatalf("failed to unmarshal video: %v", err)
+	}
+
+	if video.Object != relaymodel.VideoObject ||
+		video.ID != "task-123" ||
+		video.Status != relaymodel.VideoStatusQueued ||
+		video.Model != "wan2.5-t2v-preview" {
+		t.Fatalf("unexpected video: %#v", video)
+	}
+
+	if video.Seconds != 5 || video.Size != "1280x720" {
+		t.Fatalf("unexpected video usage fields: %#v", video)
+	}
+}
+
+func TestAliVideoAsyncUsageUsesBaseURL(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/custom/api/v1/tasks/task-123" {
+			t.Fatalf("expected task path, got %s", r.URL.Path)
+		}
+
+		if r.Header.Get("Authorization") != "Bearer test-key" {
+			t.Fatalf("expected authorization header, got %#v", r.Header.Get("Authorization"))
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{
+			"output": {
+				"task_id": "task-123",
+				"task_status": "SUCCEEDED"
+			},
+			"usage": {
+				"duration": 8,
+				"input_video_duration": 3,
+				"output_video_duration": 5
+			}
+		}`))
+	}))
+	defer server.Close()
+
+	adaptor := &Adaptor{}
+
+	usage, completed, err := adaptor.FetchAsyncUsage(
+		context.Background(),
+		&coremodel.Channel{
+			BaseURL: server.URL + "/fallback",
+			Key:     "test-key",
+		},
+		&coremodel.AsyncUsageInfo{
+			Mode:       int(mode.VideoGenerationsJobs),
+			BaseURL:    server.URL + "/custom",
+			UpstreamID: "task-123",
+		},
+	)
+	if err != nil {
+		t.Fatalf("FetchAsyncUsage returned error: %v", err)
+	}
+
+	if !completed {
+		t.Fatal("expected async usage to be completed")
+	}
+
+	if usage.VideoInputTokens != coremodel.ZeroNullInt64(3) ||
+		usage.OutputTokens != coremodel.ZeroNullInt64(5) ||
+		usage.TotalTokens != coremodel.ZeroNullInt64(8) {
+		t.Fatalf("unexpected usage: %#v", usage)
+	}
+}
+
 func TestAdaptorDoResponseResponsesDeleteNoContent(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
@@ -1762,6 +2418,22 @@ func mustMap(t *testing.T, value any) map[string]any {
 	}
 
 	return got
+}
+
+func readJSONMap(t *testing.T, r io.Reader) map[string]any {
+	t.Helper()
+
+	body, err := io.ReadAll(r)
+	if err != nil {
+		t.Fatalf("failed to read body: %v", err)
+	}
+
+	var payload map[string]any
+	if err := json.Unmarshal(body, &payload); err != nil {
+		t.Fatalf("failed to unmarshal body %s: %v", string(body), err)
+	}
+
+	return payload
 }
 
 func mustSlice(t *testing.T, value any) []any {

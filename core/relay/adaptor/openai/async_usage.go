@@ -24,8 +24,8 @@ func (a *Adaptor) FetchAsyncUsage(
 	info *model.AsyncUsageInfo,
 ) (model.Usage, bool, error) {
 	switch mode.Mode(info.Mode) {
-	case mode.VideoGenerationsJobs:
-		return a.fetchVideoJobUsage(ctx, channel, info)
+	case mode.VideoGenerationsJobs, mode.Videos, mode.VideosRemix:
+		return a.fetchVideoUsage(ctx, channel, info)
 	case mode.Responses, mode.ChatCompletions, mode.Anthropic, mode.Gemini:
 		return a.fetchResponseUsage(ctx, channel, info)
 	default:
@@ -33,13 +33,17 @@ func (a *Adaptor) FetchAsyncUsage(
 	}
 }
 
-func (a *Adaptor) fetchVideoJobUsage(
+func (a *Adaptor) fetchVideoUsage(
 	ctx context.Context,
 	channel *model.Channel,
 	info *model.AsyncUsageInfo,
 ) (model.Usage, bool, error) {
 	if info.UpstreamID == "" {
 		return model.Usage{}, false, errors.New("upstream id is empty")
+	}
+
+	if mode.Mode(info.Mode) == mode.Videos || mode.Mode(info.Mode) == mode.VideosRemix {
+		return a.fetchVideoObjectUsage(ctx, channel, info)
 	}
 
 	resp, err := a.fetchAsyncUsageObject(ctx, channel, info, "/video/generations/jobs")
@@ -66,6 +70,36 @@ func (a *Adaptor) fetchVideoJobUsage(
 		return model.Usage{}, false, nil
 	default:
 		return model.Usage{}, true, fmt.Errorf("video job ended with status %q", job.Status)
+	}
+}
+
+func (a *Adaptor) fetchVideoObjectUsage(
+	ctx context.Context,
+	channel *model.Channel,
+	info *model.AsyncUsageInfo,
+) (model.Usage, bool, error) {
+	resp, err := a.fetchAsyncUsageObject(ctx, channel, info, "/videos")
+	if err != nil {
+		return model.Usage{}, false, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return model.Usage{}, false, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+	}
+
+	var video relaymodel.Video
+	if err := sonic.ConfigDefault.NewDecoder(resp.Body).Decode(&video); err != nil {
+		return model.Usage{}, false, fmt.Errorf("decode video: %w", err)
+	}
+
+	switch video.Status {
+	case relaymodel.VideoStatusCompleted, relaymodel.VideoStatusSucceeded:
+		return calculateOfficialVideoUsage(&video), true, nil
+	case relaymodel.VideoStatusQueued, relaymodel.VideoStatusInProgress, "":
+		return model.Usage{}, false, nil
+	default:
+		return model.Usage{}, true, fmt.Errorf("video ended with status %q", video.Status)
 	}
 }
 
@@ -179,5 +213,12 @@ func calculateVideoUsage(job *relaymodel.VideoGenerationJob) model.Usage {
 	return model.Usage{
 		OutputTokens: model.ZeroNullInt64(totalSeconds),
 		TotalTokens:  model.ZeroNullInt64(totalSeconds),
+	}
+}
+
+func calculateOfficialVideoUsage(video *relaymodel.Video) model.Usage {
+	return model.Usage{
+		OutputTokens: model.ZeroNullInt64(video.Seconds),
+		TotalTokens:  model.ZeroNullInt64(video.Seconds),
 	}
 }

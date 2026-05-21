@@ -153,9 +153,16 @@ func Summary(
 }
 
 func checkNeedRecordConsume(code int, meta *meta.Meta) bool {
+	if meta == nil {
+		return true
+	}
+
 	switch meta.Mode {
 	case mode.VideoGenerationsGetJobs,
 		mode.VideoGenerationsContent,
+		mode.VideosGet,
+		mode.VideosContent,
+		mode.VideosDelete,
 		mode.ResponsesGet,
 		mode.ResponsesDelete,
 		mode.ResponsesCancel,
@@ -164,6 +171,10 @@ func checkNeedRecordConsume(code int, meta *meta.Meta) bool {
 	default:
 		return true
 	}
+}
+
+func NeedRecordConsumeForTest(code int, meta *meta.Meta) bool {
+	return checkNeedRecordConsume(code, meta)
 }
 
 func consumeAmount(

@@ -785,12 +785,12 @@ func markAsyncUsageFailed(info *model.AsyncUsageInfo, errMsg string) {
 	}
 
 	if err := model.IgnoreNotFound(
-		model.UpdateLogAsyncUsageStatusByRequestID(info.RequestID, model.AsyncUsageStatusFailed),
+		model.UpdateLogAsyncUsageFailedByRequestID(info.RequestID, errMsg),
 	); err != nil {
 		notify.ErrorThrottle(
 			"asyncUsageUpdateLogStatus",
 			time.Minute*5,
-			"update async usage log status failed",
+			"update async usage log failure failed",
 			err.Error(),
 		)
 	}

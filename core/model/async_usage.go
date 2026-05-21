@@ -317,6 +317,29 @@ func UpdateLogAsyncUsageStatusByRequestID(
 	return nil
 }
 
+func UpdateLogAsyncUsageFailedByRequestID(requestID, message string) error {
+	if requestID == "" {
+		return nil
+	}
+
+	tx := LogDB.
+		Model(&Log{}).
+		Where("request_id = ?", requestID).
+		Updates(map[string]any{
+			"async_usage_status": AsyncUsageStatusFailed,
+			"content":            message,
+		})
+	if tx.Error != nil {
+		return tx.Error
+	}
+
+	if tx.RowsAffected == 0 {
+		return NotFoundError("log")
+	}
+
+	return nil
+}
+
 func CleanupFinishedAsyncUsages(olderThan time.Duration, batchSize int) error {
 	if batchSize <= 0 {
 		batchSize = defaultCleanLogBatchSize

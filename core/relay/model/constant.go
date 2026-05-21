@@ -19,6 +19,7 @@ const (
 	ChatCompletionObject      = "chat.completion"
 	VideoGenerationJobObject  = "video.generation.job"
 	VideoGenerationObject     = "video.generation"
+	VideoObject               = "video"
 )
 
 type FinishReason = string

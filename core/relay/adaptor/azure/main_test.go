@@ -240,6 +240,11 @@ func TestGetRequestURL_OtherModes(t *testing.T) {
 			mode:            mode.AudioSpeech,
 			expectedContain: "/audio/speech",
 		},
+		{
+			name:            "Videos mode",
+			mode:            mode.Videos,
+			expectedContain: "/openai/v1/videos",
+		},
 	}
 
 	for _, tt := range tests {
@@ -254,6 +259,70 @@ func TestGetRequestURL_OtherModes(t *testing.T) {
 			result, err := adaptor.GetRequestURL(meta, nil, nil)
 			require.NoError(t, err)
 
+			assert.Contains(t, result.URL, tt.expectedContain)
+		})
+	}
+}
+
+func TestGetRequestURL_Videos(t *testing.T) {
+	adaptor := &azure.Adaptor{}
+
+	tests := []struct {
+		name            string
+		mode            mode.Mode
+		videoID         string
+		expectedMethod  string
+		expectedContain string
+	}{
+		{
+			name:            "create video",
+			mode:            mode.Videos,
+			expectedMethod:  http.MethodPost,
+			expectedContain: "/openai/v1/videos?api-version=preview",
+		},
+		{
+			name:            "get video",
+			mode:            mode.VideosGet,
+			videoID:         "video_123",
+			expectedMethod:  http.MethodGet,
+			expectedContain: "/openai/v1/videos/video_123?api-version=preview",
+		},
+		{
+			name:            "get video content",
+			mode:            mode.VideosContent,
+			videoID:         "video_123",
+			expectedMethod:  http.MethodGet,
+			expectedContain: "/openai/v1/videos/video_123/content?api-version=preview",
+		},
+		{
+			name:            "delete video",
+			mode:            mode.VideosDelete,
+			videoID:         "video_123",
+			expectedMethod:  http.MethodDelete,
+			expectedContain: "/openai/v1/videos/video_123?api-version=preview",
+		},
+		{
+			name:            "remix video",
+			mode:            mode.VideosRemix,
+			videoID:         "video_123",
+			expectedMethod:  http.MethodPost,
+			expectedContain: "/openai/v1/videos/video_123/remix?api-version=preview",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			meta := &meta.Meta{
+				ActualModel: "sora",
+				Mode:        tt.mode,
+				VideoID:     tt.videoID,
+			}
+			meta.Channel.BaseURL = "https://test.openai.azure.com"
+			meta.Channel.Key = "test-key|2024-02-01"
+
+			result, err := adaptor.GetRequestURL(meta, nil, nil)
+			require.NoError(t, err)
+			assert.Equal(t, tt.expectedMethod, result.Method)
 			assert.Contains(t, result.URL, tt.expectedContain)
 		})
 	}

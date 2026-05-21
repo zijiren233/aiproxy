@@ -1181,6 +1181,11 @@ definitions:
     - 19
     - 20
     - 21
+    - 22
+    - 23
+    - 24
+    - 25
+    - 26
     type: integer
     x-enum-varnames:
     - Unknown
@@ -1205,6 +1210,11 @@ definitions:
     - ResponsesCancel
     - ResponsesInputItems
     - Gemini
+    - Videos
+    - VideosGet
+    - VideosContent
+    - VideosDelete
+    - VideosRemix
   model.Amount:
     properties:
       audio_input_amount:
@@ -1495,15 +1505,15 @@ definitions:
         $ref: '#/definitions/model.SummaryDataSet'
       status_2xx_count:
         type: integer
+      status_400_count:
+        type: integer
+      status_429_count:
+        type: integer
       status_4xx_count:
         type: integer
       status_500_count:
         type: integer
       status_5xx_count:
-        type: integer
-      status_400_count:
-        type: integer
-      status_429_count:
         type: integer
       status_other_count:
         type: integer
@@ -1702,8 +1712,6 @@ definitions:
         $ref: '#/definitions/model.SummaryDataSet'
       status_2xx_count:
         type: integer
-      status_5xx_count:
-        type: integer
       status_400_count:
         type: integer
       status_429_count:
@@ -1711,6 +1719,8 @@ definitions:
       status_4xx_count:
         type: integer
       status_500_count:
+        type: integer
+      status_5xx_count:
         type: integer
       status_other_count:
         type: integer
@@ -2059,6 +2069,8 @@ definitions:
         $ref: '#/definitions/model.SummaryDataSet'
       status_2xx_count:
         type: integer
+      status_5xx_count:
+        type: integer
       status_400_count:
         type: integer
       status_429_count:
@@ -2066,8 +2078,6 @@ definitions:
       status_4xx_count:
         type: integer
       status_500_count:
-        type: integer
-      status_5xx_count:
         type: integer
       status_other_count:
         type: integer
@@ -2754,6 +2764,8 @@ definitions:
         type: integer
       image_tokens:
         type: integer
+      video_tokens:
+        type: integer
     type: object
   model.ProxyParamType:
     enum:
@@ -3126,6 +3138,8 @@ definitions:
         type: integer
       reasoning_tokens:
         type: integer
+      video_tokens:
+        type: integer
     type: object
   model.ReusingParam:
     properties:
@@ -3287,15 +3301,15 @@ definitions:
         $ref: '#/definitions/model.SummaryDataSet'
       status_2xx_count:
         type: integer
-      status_4xx_count:
-        type: integer
-      status_500_count:
-        type: integer
       status_5xx_count:
         type: integer
       status_400_count:
         type: integer
       status_429_count:
+        type: integer
+      status_4xx_count:
+        type: integer
+      status_500_count:
         type: integer
       status_other_count:
         type: integer
@@ -3478,6 +3492,30 @@ definitions:
       web_search_count:
         type: integer
     type: object
+  model.Video:
+    properties:
+      created_at:
+        type: integer
+      error:
+        additionalProperties: {}
+        type: object
+      id:
+        type: string
+      model:
+        type: string
+      object:
+        type: string
+      progress:
+        type: integer
+      prompt:
+        type: string
+      seconds:
+        type: integer
+      size:
+        type: string
+      status:
+        $ref: '#/definitions/model.VideoStatus'
+    type: object
   model.VideoGenerationJob:
     properties:
       created_at:
@@ -3557,6 +3595,34 @@ definitions:
       width:
         type: integer
     type: object
+  model.VideoRequest:
+    properties:
+      input_reference:
+        type: string
+      model:
+        type: string
+      prompt:
+        type: string
+      seconds: {}
+      size:
+        type: string
+    type: object
+  model.VideoStatus:
+    enum:
+    - queued
+    - in_progress
+    - completed
+    - succeeded
+    - failed
+    - cancelled
+    type: string
+    x-enum-varnames:
+    - VideoStatusQueued
+    - VideoStatusInProgress
+    - VideoStatusCompleted
+    - VideoStatusSucceeded
+    - VideoStatusFailed
+    - VideoStatusCancelled
   openai.SubscriptionResponse:
     properties:
       access_until:
@@ -9386,6 +9452,154 @@ paths:
       security:
       - ApiKeyAuth: []
       summary: VideoGenerationsGetJobs
+      tags:
+      - relay
+  /v1/videos:
+    post:
+      description: Create a video generation job
+      parameters:
+      - description: Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.VideoRequest'
+      - description: Optional Aiproxy-Channel header
+        in: header
+        name: Aiproxy-Channel
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-RateLimit-Limit-Requests:
+              description: X-RateLimit-Limit-Requests
+              type: integer
+            X-RateLimit-Limit-Tokens:
+              description: X-RateLimit-Limit-Tokens
+              type: integer
+            X-RateLimit-Remaining-Requests:
+              description: X-RateLimit-Remaining-Requests
+              type: integer
+            X-RateLimit-Remaining-Tokens:
+              description: X-RateLimit-Remaining-Tokens
+              type: integer
+            X-RateLimit-Reset-Requests:
+              description: X-RateLimit-Reset-Requests
+              type: string
+            X-RateLimit-Reset-Tokens:
+              description: X-RateLimit-Reset-Tokens
+              type: string
+          schema:
+            $ref: '#/definitions/model.Video'
+      security:
+      - ApiKeyAuth: []
+      summary: Create video
+      tags:
+      - relay
+  /v1/videos/{video_id}:
+    delete:
+      description: Delete a video by ID
+      parameters:
+      - description: Video ID
+        in: path
+        name: video_id
+        required: true
+        type: string
+      - description: Optional Aiproxy-Channel header
+        in: header
+        name: Aiproxy-Channel
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+      security:
+      - ApiKeyAuth: []
+      summary: Delete video
+      tags:
+      - relay
+    get:
+      description: Get a video by ID
+      parameters:
+      - description: Video ID
+        in: path
+        name: video_id
+        required: true
+        type: string
+      - description: Optional Aiproxy-Channel header
+        in: header
+        name: Aiproxy-Channel
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Video'
+      security:
+      - ApiKeyAuth: []
+      summary: Get video
+      tags:
+      - relay
+  /v1/videos/{video_id}/content:
+    get:
+      description: Get generated video binary content
+      parameters:
+      - description: Video ID
+        in: path
+        name: video_id
+        required: true
+        type: string
+      - description: Optional Aiproxy-Channel header
+        in: header
+        name: Aiproxy-Channel
+        type: string
+      produces:
+      - application/octet-stream
+      responses:
+        "200":
+          description: video binary
+          schema:
+            type: file
+      security:
+      - ApiKeyAuth: []
+      summary: Get video content
+      tags:
+      - relay
+  /v1/videos/{video_id}/remix:
+    post:
+      description: Create a new video from an existing video
+      parameters:
+      - description: Video ID
+        in: path
+        name: video_id
+        required: true
+        type: string
+      - description: Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.VideoRequest'
+      - description: Optional Aiproxy-Channel header
+        in: header
+        name: Aiproxy-Channel
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Video'
+      security:
+      - ApiKeyAuth: []
+      summary: Remix video
       tags:
       - relay
 securityDefinitions:

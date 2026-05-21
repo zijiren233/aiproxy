@@ -9454,6 +9454,238 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/v1/videos": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Create a video generation job",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "relay"
+                ],
+                "summary": "Create video",
+                "parameters": [
+                    {
+                        "description": "Request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.VideoRequest"
+                        }
+                    },
+                    {
+                        "type": "string",
+                        "description": "Optional Aiproxy-Channel header",
+                        "name": "Aiproxy-Channel",
+                        "in": "header"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.Video"
+                        },
+                        "headers": {
+                            "X-RateLimit-Limit-Requests": {
+                                "type": "integer",
+                                "description": "X-RateLimit-Limit-Requests"
+                            },
+                            "X-RateLimit-Limit-Tokens": {
+                                "type": "integer",
+                                "description": "X-RateLimit-Limit-Tokens"
+                            },
+                            "X-RateLimit-Remaining-Requests": {
+                                "type": "integer",
+                                "description": "X-RateLimit-Remaining-Requests"
+                            },
+                            "X-RateLimit-Remaining-Tokens": {
+                                "type": "integer",
+                                "description": "X-RateLimit-Remaining-Tokens"
+                            },
+                            "X-RateLimit-Reset-Requests": {
+                                "type": "string",
+                                "description": "X-RateLimit-Reset-Requests"
+                            },
+                            "X-RateLimit-Reset-Tokens": {
+                                "type": "string",
+                                "description": "X-RateLimit-Reset-Tokens"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/videos/{video_id}": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Get a video by ID",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "relay"
+                ],
+                "summary": "Get video",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Video ID",
+                        "name": "video_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Optional Aiproxy-Channel header",
+                        "name": "Aiproxy-Channel",
+                        "in": "header"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.Video"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Delete a video by ID",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "relay"
+                ],
+                "summary": "Delete video",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Video ID",
+                        "name": "video_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Optional Aiproxy-Channel header",
+                        "name": "Aiproxy-Channel",
+                        "in": "header"
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    }
+                }
+            }
+        },
+        "/v1/videos/{video_id}/content": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Get generated video binary content",
+                "produces": [
+                    "application/octet-stream"
+                ],
+                "tags": [
+                    "relay"
+                ],
+                "summary": "Get video content",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Video ID",
+                        "name": "video_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Optional Aiproxy-Channel header",
+                        "name": "Aiproxy-Channel",
+                        "in": "header"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "video binary",
+                        "schema": {
+                            "type": "file"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/videos/{video_id}/remix": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Create a new video from an existing video",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "relay"
+                ],
+                "summary": "Remix video",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Video ID",
+                        "name": "video_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.VideoRequest"
+                        }
+                    },
+                    {
+                        "type": "string",
+                        "description": "Optional Aiproxy-Channel header",
+                        "name": "Aiproxy-Channel",
+                        "in": "header"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.Video"
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
@@ -11216,7 +11448,12 @@ const docTemplate = `{
                 18,
                 19,
                 20,
-                21
+                21,
+                22,
+                23,
+                24,
+                25,
+                26
             ],
             "x-enum-varnames": [
                 "Unknown",
@@ -11240,7 +11477,12 @@ const docTemplate = `{
                 "ResponsesDelete",
                 "ResponsesCancel",
                 "ResponsesInputItems",
-                "Gemini"
+                "Gemini",
+                "Videos",
+                "VideosGet",
+                "VideosContent",
+                "VideosDelete",
+                "VideosRemix"
             ]
         },
         "model.Amount": {
@@ -13481,6 +13723,9 @@ const docTemplate = `{
                 },
                 "image_tokens": {
                     "type": "integer"
+                },
+                "video_tokens": {
+                    "type": "integer"
                 }
             }
         },
@@ -14037,6 +14282,9 @@ const docTemplate = `{
                 },
                 "reasoning_tokens": {
                     "type": "integer"
+                },
+                "video_tokens": {
+                    "type": "integer"
                 }
             }
         },
@@ -14573,6 +14821,42 @@ const docTemplate = `{
                 }
             }
         },
+        "model.Video": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "integer"
+                },
+                "error": {
+                    "type": "object",
+                    "additionalProperties": {}
+                },
+                "id": {
+                    "type": "string"
+                },
+                "model": {
+                    "type": "string"
+                },
+                "object": {
+                    "type": "string"
+                },
+                "progress": {
+                    "type": "integer"
+                },
+                "prompt": {
+                    "type": "string"
+                },
+                "seconds": {
+                    "type": "integer"
+                },
+                "size": {
+                    "type": "string"
+                },
+                "status": {
+                    "$ref": "#/definitions/model.VideoStatus"
+                }
+            }
+        },
         "model.VideoGenerationJob": {
             "type": "object",
             "properties": {
@@ -14689,6 +14973,43 @@ const docTemplate = `{
                     "type": "integer"
                 }
             }
+        },
+        "model.VideoRequest": {
+            "type": "object",
+            "properties": {
+                "input_reference": {
+                    "type": "string"
+                },
+                "model": {
+                    "type": "string"
+                },
+                "prompt": {
+                    "type": "string"
+                },
+                "seconds": {},
+                "size": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.VideoStatus": {
+            "type": "string",
+            "enum": [
+                "queued",
+                "in_progress",
+                "completed",
+                "succeeded",
+                "failed",
+                "cancelled"
+            ],
+            "x-enum-varnames": [
+                "VideoStatusQueued",
+                "VideoStatusInProgress",
+                "VideoStatusCompleted",
+                "VideoStatusSucceeded",
+                "VideoStatusFailed",
+                "VideoStatusCancelled"
+            ]
         },
         "openai.SubscriptionResponse": {
             "type": "object",

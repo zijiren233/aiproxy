@@ -48,7 +48,12 @@ func (t *Timeout) ConvertRequest(
 		meta.RequestTimeout = time.Minute * 3
 	case mode.VideoGenerationsJobs,
 		mode.VideoGenerationsGetJobs,
-		mode.VideoGenerationsContent:
+		mode.VideoGenerationsContent,
+		mode.Videos,
+		mode.VideosGet,
+		mode.VideosContent,
+		mode.VideosDelete,
+		mode.VideosRemix:
 		meta.RequestTimeout = time.Second * 30
 	case mode.ResponsesGet,
 		mode.ResponsesDelete,

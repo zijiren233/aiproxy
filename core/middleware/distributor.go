@@ -341,6 +341,15 @@ func CheckRelayMode(requestMode, modelMode mode.Mode) bool {
 		return modelMode == mode.VideoGenerationsJobs ||
 			modelMode == mode.VideoGenerationsGetJobs ||
 			modelMode == mode.VideoGenerationsContent
+	case mode.Videos, mode.VideosGet, mode.VideosContent, mode.VideosDelete, mode.VideosRemix:
+		return modelMode == mode.VideoGenerationsJobs ||
+			modelMode == mode.VideoGenerationsGetJobs ||
+			modelMode == mode.VideoGenerationsContent ||
+			modelMode == mode.Videos ||
+			modelMode == mode.VideosGet ||
+			modelMode == mode.VideosContent ||
+			modelMode == mode.VideosDelete ||
+			modelMode == mode.VideosRemix
 	default:
 		return requestMode == modelMode
 	}
@@ -531,6 +540,10 @@ func GetResponseID(c *gin.Context) string {
 	return c.GetString(ResponseID)
 }
 
+func GetVideoID(c *gin.Context) string {
+	return c.GetString(VideoID)
+}
+
 func GetRequestMetadata(c *gin.Context) map[string]string {
 	return c.GetStringMapString(RequestMetadata)
 }
@@ -558,6 +571,7 @@ func NewMetaByContext(c *gin.Context,
 	jobID := GetJobID(c)
 	generationID := GetGenerationID(c)
 	responseID := GetResponseID(c)
+	videoID := GetVideoID(c)
 	promptCacheKey := GetPromptCacheKey(c)
 	user := GetRequestUser(c)
 	requestServiceTier := GetRequestServiceTier(c)
@@ -572,6 +586,7 @@ func NewMetaByContext(c *gin.Context,
 		meta.WithJobID(jobID),
 		meta.WithGenerationID(generationID),
 		meta.WithResponseID(responseID),
+		meta.WithVideoID(videoID),
 		meta.WithPromptCacheKey(promptCacheKey),
 		meta.WithUser(user),
 		meta.WithRequestServiceTier(requestServiceTier),
@@ -664,6 +679,11 @@ func getRequestModel(c *gin.Context, m mode.Mode, group string, tokenID int) (st
 		m == mode.AudioTranslation,
 		m == mode.ImagesEdits:
 		return c.Request.FormValue("model"), nil
+	case m == mode.VideoGenerationsJobs &&
+		strings.HasPrefix(c.Request.Header.Get("Content-Type"), "multipart/form-data"):
+		return getLimitedMultipartFormValue(c.Request, "model")
+	case isVideosCreateMode(m):
+		return getVideosCreateRequestModel(c, group, tokenID)
 
 	case strings.HasPrefix(path, "/v1/engines") && strings.HasSuffix(path, "/embeddings"):
 		// /engines/:model/embeddings
@@ -697,6 +717,8 @@ func getRequestModel(c *gin.Context, m mode.Mode, group string, tokenID int) (st
 		c.Set(ChannelID, store.ChannelID)
 
 		return store.Model, nil
+	case isVideosStoredMode(m):
+		return getStoredVideoRequestModel(c, group, tokenID)
 	case m == mode.ResponsesGet || m == mode.ResponsesDelete ||
 		m == mode.ResponsesCancel || m == mode.ResponsesInputItems:
 		responseID := c.Param("response_id")
@@ -758,6 +780,78 @@ func getRequestModel(c *gin.Context, m mode.Mode, group string, tokenID int) (st
 
 		return getStringFieldFromNode(node, "model", "get request model failed")
 	}
+}
+
+func isVideosCreateMode(m mode.Mode) bool {
+	return m == mode.Videos || m == mode.VideosRemix
+}
+
+func isVideosStoredMode(m mode.Mode) bool {
+	return m == mode.VideosGet || m == mode.VideosContent || m == mode.VideosDelete
+}
+
+func getVideosCreateRequestModel(c *gin.Context, group string, tokenID int) (string, error) {
+	videoID := c.Param("video_id")
+	if videoID != "" {
+		store, err := model.CacheGetStore(
+			group,
+			tokenID,
+			model.VideoGenerationStoreID(videoID),
+		)
+		if err != nil {
+			return "", fmt.Errorf("get request model failed: %w", err)
+		}
+
+		c.Set(VideoID, videoID)
+		c.Set(ChannelID, store.ChannelID)
+	}
+
+	if strings.HasPrefix(c.Request.Header.Get("Content-Type"), "multipart/form-data") {
+		return getLimitedMultipartFormValue(c.Request, "model")
+	}
+
+	node, err := getRequestBodyNode(c)
+	if err != nil {
+		return "", fmt.Errorf("get request model failed: %w", err)
+	}
+
+	return getStringFieldFromNode(node, "model", "get request model failed")
+}
+
+func getLimitedMultipartFormValue(req *http.Request, key string) (string, error) {
+	if err := common.ParseMultipartFormWithLimit(req); err != nil {
+		return "", fmt.Errorf("parse multipart form: %w", err)
+	}
+
+	if req.MultipartForm == nil || req.MultipartForm.Value == nil {
+		return "", nil
+	}
+
+	values := req.MultipartForm.Value[key]
+	if len(values) == 0 {
+		return "", nil
+	}
+
+	return values[0], nil
+}
+
+func getStoredVideoRequestModel(c *gin.Context, group string, tokenID int) (string, error) {
+	videoID := c.Param("video_id")
+
+	store, err := model.CacheGetStore(
+		group,
+		tokenID,
+		model.VideoGenerationStoreID(videoID),
+	)
+	if err != nil {
+		return "", fmt.Errorf("get request model failed: %w", err)
+	}
+
+	c.Set(VideoID, videoID)
+	c.Set(GenerationID, videoID)
+	c.Set(ChannelID, store.ChannelID)
+
+	return store.Model, nil
 }
 
 func GetModelFromJSON(body []byte) (string, error) {

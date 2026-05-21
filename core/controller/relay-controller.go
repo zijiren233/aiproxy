@@ -192,7 +192,7 @@ func relayController(m mode.Mode) RelayController {
 		c.GetRequestUsage = controller.GetEmbedRequestUsage
 	case mode.Completions:
 		c.GetRequestUsage = controller.GetCompletionsRequestUsage
-	case mode.VideoGenerationsJobs:
+	case mode.VideoGenerationsJobs, mode.Videos, mode.VideosRemix:
 		c.GetRequestUsage = controller.GetVideoGenerationJobRequestUsage
 	case mode.Responses:
 		c.GetRequestUsage = controller.GetResponsesRequestUsage

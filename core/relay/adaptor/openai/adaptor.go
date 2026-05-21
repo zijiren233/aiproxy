@@ -49,6 +49,11 @@ func (a *Adaptor) SupportMode(mt *meta.Meta) bool {
 		m == mode.VideoGenerationsJobs ||
 		m == mode.VideoGenerationsGetJobs ||
 		m == mode.VideoGenerationsContent ||
+		m == mode.Videos ||
+		m == mode.VideosGet ||
+		m == mode.VideosContent ||
+		m == mode.VideosDelete ||
+		m == mode.VideosRemix ||
 		m == mode.Anthropic ||
 		m == mode.Gemini ||
 		m == mode.Responses ||
@@ -251,13 +256,63 @@ func (a *Adaptor) GetRequestURL(
 			URL:    url,
 		}, nil
 	case mode.VideoGenerationsContent:
-		url, err := url.JoinPath(u, "/video/generations", meta.GenerationID, "/content/video")
+		url, err := url.JoinPath(u, "/video/generations", meta.GenerationID, "content/video")
 		if err != nil {
 			return adaptor.RequestURL{}, err
 		}
 
 		return adaptor.RequestURL{
 			Method: http.MethodGet,
+			URL:    url,
+		}, nil
+	case mode.Videos:
+		url, err := url.JoinPath(u, "/videos")
+		if err != nil {
+			return adaptor.RequestURL{}, err
+		}
+
+		return adaptor.RequestURL{
+			Method: http.MethodPost,
+			URL:    url,
+		}, nil
+	case mode.VideosGet:
+		url, err := url.JoinPath(u, "/videos", meta.VideoID)
+		if err != nil {
+			return adaptor.RequestURL{}, err
+		}
+
+		return adaptor.RequestURL{
+			Method: http.MethodGet,
+			URL:    url,
+		}, nil
+	case mode.VideosContent:
+		url, err := url.JoinPath(u, "/videos", meta.VideoID, "content")
+		if err != nil {
+			return adaptor.RequestURL{}, err
+		}
+
+		return adaptor.RequestURL{
+			Method: http.MethodGet,
+			URL:    url,
+		}, nil
+	case mode.VideosDelete:
+		url, err := url.JoinPath(u, "/videos", meta.VideoID)
+		if err != nil {
+			return adaptor.RequestURL{}, err
+		}
+
+		return adaptor.RequestURL{
+			Method: http.MethodDelete,
+			URL:    url,
+		}, nil
+	case mode.VideosRemix:
+		url, err := url.JoinPath(u, "/videos", meta.VideoID, "remix")
+		if err != nil {
+			return adaptor.RequestURL{}, err
+		}
+
+		return adaptor.RequestURL{
+			Method: http.MethodPost,
 			URL:    url,
 		}, nil
 	default:
@@ -332,6 +387,10 @@ func ConvertRequest(
 		return ConvertVideoGetJobsRequest(meta, req)
 	case mode.VideoGenerationsContent:
 		return ConvertVideoGetJobsContentRequest(meta, req)
+	case mode.Videos, mode.VideosRemix:
+		return ConvertVideoRequest(meta, req)
+	case mode.VideosGet, mode.VideosContent, mode.VideosDelete:
+		return ConvertVideoNoBodyRequest(meta, req)
 	case mode.Gemini:
 		// Check if model requires Responses API conversion
 		if IsResponsesOnlyModelAny(&meta.ModelConfig, meta.OriginModel, meta.ActualModel) {
@@ -439,6 +498,12 @@ func DoResponse(
 		result, err = VideoGetJobsHandler(meta, store, c, resp)
 	case mode.VideoGenerationsContent:
 		result, err = VideoGetJobsContentHandler(meta, store, c, resp)
+	case mode.Videos, mode.VideosRemix:
+		result, err = VideosHandler(meta, store, c, resp)
+	case mode.VideosGet, mode.VideosContent:
+		result, err = VideoObjectHandler(meta, c, resp)
+	case mode.VideosDelete:
+		result, err = VideoDeleteHandler(meta, c, resp)
 	case mode.Gemini:
 		// Check if model required Responses API conversion
 		if IsResponsesOnlyModelAny(&meta.ModelConfig, meta.OriginModel, meta.ActualModel) {

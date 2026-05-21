@@ -1054,6 +1054,78 @@ var ModelList = []model.ModelConfig{
 		Owner: model.ModelOwnerAlibaba,
 		RPM:   60,
 	},
+	{
+		Model: "wan2.5-t2v-preview",
+		Type:  mode.VideoGenerationsJobs,
+		Owner: model.ModelOwnerAlibaba,
+		RPM:   60,
+	},
+	{
+		Model: "wan2.5-i2v-preview",
+		Type:  mode.VideoGenerationsJobs,
+		Owner: model.ModelOwnerAlibaba,
+		RPM:   60,
+	},
+	{
+		Model: "wan2.2-t2v-plus",
+		Type:  mode.VideoGenerationsJobs,
+		Owner: model.ModelOwnerAlibaba,
+		RPM:   60,
+	},
+	{
+		Model: "wan2.2-i2v-plus",
+		Type:  mode.VideoGenerationsJobs,
+		Owner: model.ModelOwnerAlibaba,
+		RPM:   60,
+	},
+	{
+		Model: "wan2.2-videoedit",
+		Type:  mode.VideoGenerationsJobs,
+		Owner: model.ModelOwnerAlibaba,
+		RPM:   60,
+	},
+	{
+		Model: "kling-v1",
+		Type:  mode.VideoGenerationsJobs,
+		Owner: model.ModelOwnerAlibaba,
+		RPM:   60,
+	},
+	{
+		Model: "vidu2.0",
+		Type:  mode.VideoGenerationsJobs,
+		Owner: model.ModelOwnerAlibaba,
+		RPM:   60,
+	},
+	{
+		Model: "pixverse-v4.5",
+		Type:  mode.VideoGenerationsJobs,
+		Owner: model.ModelOwnerAlibaba,
+		RPM:   60,
+	},
+	{
+		Model: "happyhorse-1.0-t2v",
+		Type:  mode.VideoGenerationsJobs,
+		Owner: model.ModelOwnerAlibaba,
+		RPM:   60,
+	},
+	{
+		Model: "happyhorse-1.0-i2v",
+		Type:  mode.VideoGenerationsJobs,
+		Owner: model.ModelOwnerAlibaba,
+		RPM:   60,
+	},
+	{
+		Model: "happyhorse-1.0-r2v",
+		Type:  mode.VideoGenerationsJobs,
+		Owner: model.ModelOwnerAlibaba,
+		RPM:   60,
+	},
+	{
+		Model: "happyhorse-1.0-video-edit",
+		Type:  mode.VideoGenerationsJobs,
+		Owner: model.ModelOwnerAlibaba,
+		RPM:   60,
+	},
 
 	{
 		Model: "sambert-v1",

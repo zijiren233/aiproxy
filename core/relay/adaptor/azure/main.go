@@ -249,7 +249,7 @@ func GetRequestURL(meta *meta.Meta, replaceDot bool) (adaptor.RequestURL, error)
 			meta.Channel.BaseURL,
 			"/openai/v1/video/generations",
 			meta.GenerationID,
-			"/content/video",
+			"content/video",
 		)
 		if err != nil {
 			return adaptor.RequestURL{}, err
@@ -258,6 +258,56 @@ func GetRequestURL(meta *meta.Meta, replaceDot bool) (adaptor.RequestURL, error)
 		return adaptor.RequestURL{
 			Method: http.MethodPost,
 			URL:    fmt.Sprintf("%s?api-version=%s", url, apiVersion),
+		}, nil
+	case mode.Videos:
+		url, err := url.JoinPath(meta.Channel.BaseURL, "/openai/v1/videos")
+		if err != nil {
+			return adaptor.RequestURL{}, err
+		}
+
+		return adaptor.RequestURL{
+			Method: http.MethodPost,
+			URL:    fmt.Sprintf("%s?api-version=%s", url, "preview"),
+		}, nil
+	case mode.VideosGet:
+		url, err := url.JoinPath(meta.Channel.BaseURL, "/openai/v1/videos", meta.VideoID)
+		if err != nil {
+			return adaptor.RequestURL{}, err
+		}
+
+		return adaptor.RequestURL{
+			Method: http.MethodGet,
+			URL:    fmt.Sprintf("%s?api-version=%s", url, "preview"),
+		}, nil
+	case mode.VideosContent:
+		url, err := url.JoinPath(meta.Channel.BaseURL, "/openai/v1/videos", meta.VideoID, "content")
+		if err != nil {
+			return adaptor.RequestURL{}, err
+		}
+
+		return adaptor.RequestURL{
+			Method: http.MethodGet,
+			URL:    fmt.Sprintf("%s?api-version=%s", url, "preview"),
+		}, nil
+	case mode.VideosDelete:
+		url, err := url.JoinPath(meta.Channel.BaseURL, "/openai/v1/videos", meta.VideoID)
+		if err != nil {
+			return adaptor.RequestURL{}, err
+		}
+
+		return adaptor.RequestURL{
+			Method: http.MethodDelete,
+			URL:    fmt.Sprintf("%s?api-version=%s", url, "preview"),
+		}, nil
+	case mode.VideosRemix:
+		url, err := url.JoinPath(meta.Channel.BaseURL, "/openai/v1/videos", meta.VideoID, "remix")
+		if err != nil {
+			return adaptor.RequestURL{}, err
+		}
+
+		return adaptor.RequestURL{
+			Method: http.MethodPost,
+			URL:    fmt.Sprintf("%s?api-version=%s", url, "preview"),
 		}, nil
 
 	// Add support for Responses API endpoints
