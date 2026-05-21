@@ -21,8 +21,8 @@ export interface PriceCondition {
     output_token_max?: number
     start_time?: number
     end_time?: number
-    size?: string
-    quality?: string
+    size?: string[]
+    quality?: string[]
     service_tier?: '' | 'auto' | 'default' | 'flex' | 'scale' | 'priority'
 }
 

@@ -95,7 +95,7 @@ func TestGetImagesRequestPriceUsesPerImageUnitForConditionalPrices(t *testing.T)
 		Price: model.Price{
 			ConditionalPrices: []model.ConditionalPrice{
 				{
-					Condition: model.PriceCondition{Size: "1024x1024"},
+					Condition: model.PriceCondition{Size: []string{"1024x1024"}},
 					Price:     model.Price{OutputPrice: 0.12},
 				},
 			},
@@ -126,7 +126,7 @@ func TestGetImagesRequestPriceAllowsUnmatchedConditionalPrice(t *testing.T) {
 		Price: model.Price{
 			ConditionalPrices: []model.ConditionalPrice{
 				{
-					Condition: model.PriceCondition{Size: "1024x1024"},
+					Condition: model.PriceCondition{Size: []string{"1024x1024"}},
 					Price:     model.Price{OutputPrice: 0.12},
 				},
 			},

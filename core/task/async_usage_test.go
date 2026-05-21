@@ -189,7 +189,7 @@ func TestCompleteAsyncUsagePreservesStoredPriceCondition(t *testing.T) {
 			OutputPriceUnit: 1,
 			ConditionalPrices: []model.ConditionalPrice{
 				{
-					Condition: model.PriceCondition{Size: "720p"},
+					Condition: model.PriceCondition{Size: []string{"720p"}},
 					Price: model.Price{
 						OutputPrice:     0.4,
 						OutputPriceUnit: 1,

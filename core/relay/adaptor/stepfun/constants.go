@@ -190,7 +190,7 @@ var ModelList = []model.ModelConfig{
 
 func imageOutputPrice(size string) model.ConditionalPrice {
 	return model.ConditionalPrice{
-		Condition: model.PriceCondition{Size: size},
+		Condition: model.PriceCondition{Size: []string{size}},
 		Price: model.Price{
 			OutputPrice:     0.1,
 			OutputPriceUnit: 1,

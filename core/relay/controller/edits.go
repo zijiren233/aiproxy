@@ -92,11 +92,7 @@ func parseImagesEditsForm(c *gin.Context) error {
 		return nil
 	}
 
-	if err := common.ParseFormWithLimit(c.Request); err != nil {
-		return NewBadRequestParamError(err.Error())
-	}
-
-	return nil
+	return NewBadRequestParamError("images edits requests must use multipart/form-data")
 }
 
 func GetImagesEditsRequestUsage(c *gin.Context, mc model.ModelConfig) (RequestUsage, error) {

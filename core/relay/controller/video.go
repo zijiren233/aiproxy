@@ -1,7 +1,6 @@
 package controller
 
 import (
-	"errors"
 	"fmt"
 	"slices"
 	"strconv"
@@ -58,7 +57,7 @@ func validateSupportedVideoSize(size string, mc model.ModelConfig) error {
 		return nil
 	}
 
-	if slices.Contains(sizes, size) {
+	if slices.Contains(normalizeSupportedSizeValues(sizes), normalizeSupportedSizeValue(size)) {
 		return nil
 	}
 
@@ -117,7 +116,7 @@ func getVideoGenerationJobRequest(c *gin.Context) (*relaymodel.VideoGenerationJo
 	contentType := c.Request.Header.Get("Content-Type")
 	if strings.HasPrefix(contentType, "multipart/form-data") {
 		if err := common.ParseMultipartFormWithLimit(c.Request); err != nil {
-			return nil, err
+			return nil, NewBadRequestParamError(err.Error())
 		}
 
 		return getMultipartVideoGenerationJobRequest(c)
@@ -145,11 +144,11 @@ func getVideoGenerationJobRequest(c *gin.Context) (*relaymodel.VideoGenerationJo
 
 func validateParsedVideoGenerationJobRequest(request *relaymodel.VideoGenerationJobRequest) error {
 	if request.NSeconds < 0 {
-		return errors.New("invalid n_seconds: must be non-negative")
+		return NewBadRequestParamError("invalid n_seconds: must be non-negative")
 	}
 
 	if request.NVariants < 0 {
-		return errors.New("invalid n_variants: must be non-negative")
+		return NewBadRequestParamError("invalid n_variants: must be non-negative")
 	}
 
 	return nil
@@ -158,7 +157,7 @@ func validateParsedVideoGenerationJobRequest(request *relaymodel.VideoGeneration
 func intValueFromReusableRequest(c *gin.Context, name string) (int, bool, error) {
 	node, err := common.UnmarshalRequest2NodeReusable(c.Request)
 	if err != nil {
-		return 0, false, err
+		return 0, false, NewBadRequestParamError(err.Error())
 	}
 
 	valueNode := node.Get(name)
@@ -169,7 +168,9 @@ func intValueFromReusableRequest(c *gin.Context, name string) (int, bool, error)
 	if valueNode.TypeSafe() == ast.V_STRING {
 		value, err := valueNode.String()
 		if err != nil {
-			return 0, true, fmt.Errorf("invalid %s: %w", name, err)
+			return 0, true, NewBadRequestParamError(
+				fmt.Sprintf("invalid %s: %s", name, err.Error()),
+			)
 		}
 
 		parsed, err := parseOptionalPositiveInt(value, name)
@@ -182,11 +183,15 @@ func intValueFromReusableRequest(c *gin.Context, name string) (int, bool, error)
 
 	value, err := valueNode.Int64()
 	if err != nil {
-		return 0, true, fmt.Errorf("invalid %s: %w", name, err)
+		return 0, true, NewBadRequestParamError(
+			fmt.Sprintf("invalid %s: %s", name, err.Error()),
+		)
 	}
 
 	if value < 0 {
-		return 0, true, fmt.Errorf("invalid %s: must be non-negative", name)
+		return 0, true, NewBadRequestParamError(
+			fmt.Sprintf("invalid %s: must be non-negative", name),
+		)
 	}
 
 	return int(value), true, nil
@@ -237,11 +242,13 @@ func parseOptionalPositiveInt(value, name string) (int, error) {
 
 	parsed, err := strconv.Atoi(value)
 	if err != nil {
-		return 0, fmt.Errorf("invalid %s: %w", name, err)
+		return 0, NewBadRequestParamError(
+			fmt.Sprintf("invalid %s: %s", name, err.Error()),
+		)
 	}
 
 	if parsed < 0 {
-		return 0, fmt.Errorf("invalid %s: must be non-negative", name)
+		return 0, NewBadRequestParamError(fmt.Sprintf("invalid %s: must be non-negative", name))
 	}
 
 	return parsed, nil

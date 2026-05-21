@@ -83,8 +83,8 @@ const priceConditionSchema = z.object({
     output_token_max: z.number().optional(),
     start_time: z.number().optional(),
     end_time: z.number().optional(),
-    size: z.string().optional(),
-    quality: z.string().optional(),
+    size: z.array(z.string()).optional(),
+    quality: z.array(z.string()).optional(),
     service_tier: z.enum(['auto', 'default', 'flex', 'scale', 'priority']).or(z.literal('')).optional(),
 })
 

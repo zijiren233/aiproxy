@@ -3,6 +3,7 @@ package model
 import (
 	"fmt"
 	"math"
+	"slices"
 	"strings"
 	"time"
 
@@ -10,15 +11,15 @@ import (
 )
 
 type PriceCondition struct {
-	InputTokenMin  int64  `json:"input_token_min,omitempty"`
-	InputTokenMax  int64  `json:"input_token_max,omitempty"`
-	OutputTokenMin int64  `json:"output_token_min,omitempty"`
-	OutputTokenMax int64  `json:"output_token_max,omitempty"`
-	StartTime      int64  `json:"start_time,omitempty"` // Unix timestamp, 0 means no start limit
-	EndTime        int64  `json:"end_time,omitempty"`   // Unix timestamp, 0 means no end limit
-	Size           string `json:"size,omitempty"`
-	Quality        string `json:"quality,omitempty"`
-	ServiceTier    string `json:"service_tier,omitempty"`
+	InputTokenMin  int64    `json:"input_token_min,omitempty"`
+	InputTokenMax  int64    `json:"input_token_max,omitempty"`
+	OutputTokenMin int64    `json:"output_token_min,omitempty"`
+	OutputTokenMax int64    `json:"output_token_max,omitempty"`
+	StartTime      int64    `json:"start_time,omitempty"` // Unix timestamp, 0 means no start limit
+	EndTime        int64    `json:"end_time,omitempty"`   // Unix timestamp, 0 means no end limit
+	Size           []string `json:"size,omitempty"`
+	Quality        []string `json:"quality,omitempty"`
+	ServiceTier    string   `json:"service_tier,omitempty"`
 }
 
 type ConditionalPrice struct {
@@ -92,23 +93,51 @@ func serviceTierOverlap(serviceTier1, serviceTier2 string) bool {
 	return normalized1 == normalized2
 }
 
-func conditionValueOverlap(value1, value2 string) bool {
-	value1 = normalizeConditionValue(value1)
-	value2 = normalizeConditionValue(value2)
+func conditionValueOverlap(values1, values2 []string) bool {
+	normalized1 := normalizeConditionValues(values1)
+	normalized2 := normalizeConditionValues(values2)
 
-	return value1 == "" || value2 == "" || value1 == value2
+	if len(normalized1) == 0 || len(normalized2) == 0 {
+		return true
+	}
+
+	for _, value1 := range normalized1 {
+		if slices.Contains(normalized2, value1) {
+			return true
+		}
+	}
+
+	return false
+}
+
+func conditionValueMatches(conditionValues []string, value string) bool {
+	normalizedConditionValues := normalizeConditionValues(conditionValues)
+	if len(normalizedConditionValues) == 0 {
+		return true
+	}
+
+	normalizedValue := normalizeConditionValue(value)
+
+	return slices.Contains(normalizedConditionValues, normalizedValue)
+}
+
+func normalizeConditionValues(values []string) []string {
+	normalized := make([]string, 0, len(values))
+	for _, value := range values {
+		value = normalizeConditionValue(value)
+		if value != "" {
+			normalized = append(normalized, value)
+		}
+	}
+
+	return normalized
 }
 
 func normalizeConditionValue(value string) string {
 	value = strings.TrimSpace(strings.ToLower(value))
 	value = strings.ReplaceAll(value, "*", "x")
 
-	value = strings.ReplaceAll(value, " ", "")
-	if value == "auto" {
-		return ""
-	}
-
-	return value
+	return strings.ReplaceAll(value, " ", "")
 }
 
 func (p *Price) ValidateConditionalPrices() error {
@@ -494,17 +523,11 @@ type UsageContext struct {
 }
 
 func (c UsageContext) PriceConditionMatches(condition PriceCondition) bool {
-	if condition.Size != "" &&
-		normalizeConditionValue(condition.Size) != normalizeConditionValue(c.PriceCondition.Size) {
+	if !conditionValueMatches(condition.Size, c.PriceCondition.Size) {
 		return false
 	}
 
-	if condition.Quality != "" &&
-		normalizeConditionValue(
-			condition.Quality,
-		) != normalizeConditionValue(
-			c.PriceCondition.Quality,
-		) {
+	if !conditionValueMatches(condition.Quality, c.PriceCondition.Quality) {
 		return false
 	}
 

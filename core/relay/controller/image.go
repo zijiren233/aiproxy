@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"slices"
+	"strings"
 
 	"github.com/bytedance/sonic/ast"
 	"github.com/gin-gonic/gin"
@@ -130,11 +131,27 @@ func validateSupportedImageSize(size string, mc model.ModelConfig) error {
 		return nil
 	}
 
-	if slices.Contains(sizes, size) {
+	if slices.Contains(normalizeSupportedSizeValues(sizes), normalizeSupportedSizeValue(size)) {
 		return nil
 	}
 
 	return NewBadRequestParamError(fmt.Sprintf("unsupported image size `%s`", size))
+}
+
+func normalizeSupportedSizeValues(sizes []string) []string {
+	normalized := make([]string, 0, len(sizes))
+	for _, size := range sizes {
+		size = normalizeSupportedSizeValue(size)
+		if size != "" {
+			normalized = append(normalized, size)
+		}
+	}
+
+	return normalized
+}
+
+func normalizeSupportedSizeValue(size string) string {
+	return strings.ToLower(strings.ReplaceAll(strings.TrimSpace(size), " ", ""))
 }
 
 func GetConditionalImagesOutputPrice(price model.Price, size, quality string) (float64, bool) {

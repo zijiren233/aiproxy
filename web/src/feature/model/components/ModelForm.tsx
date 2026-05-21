@@ -1047,49 +1047,107 @@ export function ModelForm({
                     )}
 
                     {supportImageGenerationCountLimit && (
-                        <FormField
-                            control={form.control}
-                            name="max_image_generation_count"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>{t("model.dialog.maxImageGenerationCount")}</FormLabel>
-                                    <FormControl>
-                                        <Input
-                                            type="number"
-                                            min={0}
-                                            placeholder={t("model.dialog.maxImageGenerationCountPlaceholder")}
-                                            {...field}
-                                            onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : 0)}
-                                        />
-                                    </FormControl>
-                                    <FormDescription>{t("model.dialog.maxImageGenerationCountDescription")}</FormDescription>
-                                    <FormMessage />
-                                </FormItem>
+                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                            <FormField
+                                control={form.control}
+                                name="max_image_generation_count"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>{t("model.dialog.maxImageGenerationCount")}</FormLabel>
+                                        <FormControl>
+                                            <Input
+                                                type="number"
+                                                min={0}
+                                                placeholder={t("model.dialog.maxImageGenerationCountPlaceholder")}
+                                                {...field}
+                                                onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : 0)}
+                                            />
+                                        </FormControl>
+                                        <FormDescription>{t("model.dialog.maxImageGenerationCountDescription")}</FormDescription>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            {configFieldVisibility.showImageSizes && (
+                                <FormField
+                                    control={form.control}
+                                    name="config.image_sizes"
+                                    render={() => (
+                                        <FormItem>
+                                            <FormLabel>{t("model.dialog.config.imageSizes")}</FormLabel>
+                                            <FormControl>
+                                                <Textarea
+                                                    placeholder={t("model.dialog.config.imageSizesPlaceholder")}
+                                                    value={(imageSizesValue || []).join('\n')}
+                                                    onChange={(e) => {
+                                                        const values = e.target.value
+                                                            .split('\n')
+                                                            .map((item) => item.trim())
+                                                            .filter(Boolean)
+                                                        form.setValue('config.image_sizes', values.length > 0 ? values : undefined, { shouldDirty: true })
+                                                    }}
+                                                    className="min-h-[96px]"
+                                                />
+                                            </FormControl>
+                                            <FormDescription>{t("model.dialog.config.imageSizesDescription")}</FormDescription>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
                             )}
-                        />
+                        </div>
                     )}
 
                     {supportVideoGenerationSecondsLimit && (
-                        <FormField
-                            control={form.control}
-                            name="max_video_generation_seconds"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>{t("model.dialog.maxVideoGenerationSeconds")}</FormLabel>
-                                    <FormControl>
-                                        <Input
-                                            type="number"
-                                            min={0}
-                                            placeholder={t("model.dialog.maxVideoGenerationSecondsPlaceholder")}
-                                            {...field}
-                                            onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : 0)}
-                                        />
-                                    </FormControl>
-                                    <FormDescription>{t("model.dialog.maxVideoGenerationSecondsDescription")}</FormDescription>
-                                    <FormMessage />
-                                </FormItem>
+                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                            <FormField
+                                control={form.control}
+                                name="max_video_generation_seconds"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>{t("model.dialog.maxVideoGenerationSeconds")}</FormLabel>
+                                        <FormControl>
+                                            <Input
+                                                type="number"
+                                                min={0}
+                                                placeholder={t("model.dialog.maxVideoGenerationSecondsPlaceholder")}
+                                                {...field}
+                                                onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : 0)}
+                                            />
+                                        </FormControl>
+                                        <FormDescription>{t("model.dialog.maxVideoGenerationSecondsDescription")}</FormDescription>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            {configFieldVisibility.showVideoSizes && (
+                                <FormField
+                                    control={form.control}
+                                    name="config.video_sizes"
+                                    render={() => (
+                                        <FormItem>
+                                            <FormLabel>{t("model.dialog.config.videoSizes")}</FormLabel>
+                                            <FormControl>
+                                                <Textarea
+                                                    placeholder={t("model.dialog.config.videoSizesPlaceholder")}
+                                                    value={(videoSizesValue || []).join('\n')}
+                                                    onChange={(e) => {
+                                                        const values = e.target.value
+                                                            .split('\n')
+                                                            .map((item) => item.trim())
+                                                            .filter(Boolean)
+                                                        form.setValue('config.video_sizes', values.length > 0 ? values : undefined, { shouldDirty: true })
+                                                    }}
+                                                    className="min-h-[96px]"
+                                                />
+                                            </FormControl>
+                                            <FormDescription>{t("model.dialog.config.videoSizesDescription")}</FormDescription>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
                             )}
-                        />
+                        </div>
                     )}
 
                     {/* Force Save Detail Switch */}
@@ -1403,62 +1461,6 @@ export function ModelForm({
                                                 />
                                             </FormControl>
                                             <FormDescription>{t("model.dialog.config.supportVoicesDescription")}</FormDescription>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                            )}
-
-                            {configFieldVisibility.showImageSizes && (
-                                <FormField
-                                    control={form.control}
-                                    name="config.image_sizes"
-                                    render={() => (
-                                        <FormItem>
-                                            <FormLabel>{t("model.dialog.config.imageSizes")}</FormLabel>
-                                            <FormControl>
-                                                <Textarea
-                                                    placeholder={t("model.dialog.config.imageSizesPlaceholder")}
-                                                    value={(imageSizesValue || []).join('\n')}
-                                                    onChange={(e) => {
-                                                        const values = e.target.value
-                                                            .split('\n')
-                                                            .map((item) => item.trim())
-                                                            .filter(Boolean)
-                                                        form.setValue('config.image_sizes', values.length > 0 ? values : undefined, { shouldDirty: true })
-                                                    }}
-                                                    className="min-h-[96px]"
-                                                />
-                                            </FormControl>
-                                            <FormDescription>{t("model.dialog.config.imageSizesDescription")}</FormDescription>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                            )}
-
-                            {configFieldVisibility.showVideoSizes && (
-                                <FormField
-                                    control={form.control}
-                                    name="config.video_sizes"
-                                    render={() => (
-                                        <FormItem>
-                                            <FormLabel>{t("model.dialog.config.videoSizes")}</FormLabel>
-                                            <FormControl>
-                                                <Textarea
-                                                    placeholder={t("model.dialog.config.videoSizesPlaceholder")}
-                                                    value={(videoSizesValue || []).join('\n')}
-                                                    onChange={(e) => {
-                                                        const values = e.target.value
-                                                            .split('\n')
-                                                            .map((item) => item.trim())
-                                                            .filter(Boolean)
-                                                        form.setValue('config.video_sizes', values.length > 0 ? values : undefined, { shouldDirty: true })
-                                                    }}
-                                                    className="min-h-[96px]"
-                                                />
-                                            </FormControl>
-                                            <FormDescription>{t("model.dialog.config.videoSizesDescription")}</FormDescription>
                                             <FormMessage />
                                         </FormItem>
                                     )}

@@ -161,6 +161,36 @@ func TestGetVideoGenerationJobRequestUsageRejectsUnsupportedSize(t *testing.T) {
 	require.Equal(t, "unsupported video size `720p`", err.Error())
 }
 
+func TestGetVideoGenerationJobRequestUsageNormalizesSupportedSizeCase(t *testing.T) {
+	t.Parallel()
+
+	gin.SetMode(gin.TestMode)
+
+	body := `{
+		"model":"video-model",
+		"prompt":"A city street",
+		"size":"720P",
+		"seconds":5
+	}`
+	req := httptest.NewRequestWithContext(
+		t.Context(),
+		http.MethodPost,
+		"/v1/videos",
+		bytes.NewBufferString(body),
+	)
+	req.Header.Set("Content-Type", "application/json")
+
+	ctx, _ := gin.CreateTestContext(httptest.NewRecorder())
+	ctx.Request = req
+
+	_, err := GetVideoGenerationJobRequestUsage(ctx, model.ModelConfig{
+		Config: map[model.ModelConfigKey]any{
+			model.ModelConfigVideoSizes: []string{"720p"},
+		},
+	})
+	require.NoError(t, err)
+}
+
 func TestGetVideoGenerationJobRequestUsageRejectsTooLongSeconds(t *testing.T) {
 	t.Parallel()
 
@@ -218,6 +248,10 @@ func TestGetVideoGenerationJobRequestUsageRejectsNegativeNSeconds(t *testing.T) 
 	_, err := GetVideoGenerationJobRequestUsage(ctx, model.ModelConfig{})
 	require.Error(t, err)
 	require.Equal(t, "invalid n_seconds: must be non-negative", err.Error())
+
+	var requestParamErr *RequestParamError
+	require.ErrorAs(t, err, &requestParamErr)
+	require.Equal(t, 400, requestParamErr.StatusCode)
 }
 
 func TestGetVideoGenerationJobRequestUsageRejectsNegativeSeconds(t *testing.T) {
@@ -244,6 +278,10 @@ func TestGetVideoGenerationJobRequestUsageRejectsNegativeSeconds(t *testing.T) {
 	_, err := GetVideoGenerationJobRequestUsage(ctx, model.ModelConfig{})
 	require.Error(t, err)
 	require.Equal(t, "invalid seconds: must be non-negative", err.Error())
+
+	var requestParamErr *RequestParamError
+	require.ErrorAs(t, err, &requestParamErr)
+	require.Equal(t, 400, requestParamErr.StatusCode)
 }
 
 func TestGetVideoGenerationJobRequestPriceSetsPerSecondUnitForConditionalPrices(t *testing.T) {
@@ -275,7 +313,7 @@ func TestGetVideoGenerationJobRequestPriceSetsPerSecondUnitForConditionalPrices(
 			OutputPrice: 0.2,
 			ConditionalPrices: []model.ConditionalPrice{
 				{
-					Condition: model.PriceCondition{Size: "1280x720"},
+					Condition: model.PriceCondition{Size: []string{"1280x720"}},
 					Price:     model.Price{OutputPrice: 0.5},
 				},
 			},
