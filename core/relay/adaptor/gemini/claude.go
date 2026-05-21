@@ -53,9 +53,11 @@ func convertClaudeRequest(
 
 	disableAutoImageURLToBase64 := autoImageURLToBase64Disabled(meta, adaptorConfig)
 
-	systemContent, contents, imageTasks := buildContents(
+	systemContent, contents, imageTasks, _, _ := buildContents(
 		textRequest,
 		!disableAutoImageURLToBase64,
+		false,
+		false,
 	)
 
 	// Process image tasks concurrently

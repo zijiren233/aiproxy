@@ -5,6 +5,8 @@ import "github.com/labring/aiproxy/core/relay/meta"
 type Config struct {
 	Safety                      string `json:"safety"`
 	DisableAutoImageURLToBase64 bool   `json:"disable_auto_image_url_to_base64"`
+	DisableAutoAudioURLToBase64 bool   `json:"disable_auto_audio_url_to_base64"`
+	DisableAutoVideoURLToBase64 bool   `json:"disable_auto_video_url_to_base64"`
 }
 
 func loadConfig(meta *meta.Meta) (Config, error) {

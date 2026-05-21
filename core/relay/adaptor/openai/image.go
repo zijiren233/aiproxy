@@ -198,11 +198,8 @@ func ImagesHandler(
 
 			_, data.B64Json, err = image.GetImageFromURL(c.Request.Context(), data.URL)
 			if err != nil {
-				return adaptor.DoResponseResult{Usage: usage}, relaymodel.WrapperOpenAIError(
-					err,
-					"get_image_from_url_failed",
-					http.StatusInternalServerError,
-				)
+				log.Warnf("convert image url to b64_json failed, keep original url: %v", err)
+				continue
 			}
 		}
 	}

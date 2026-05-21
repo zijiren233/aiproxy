@@ -191,6 +191,16 @@ func (a *Adaptor) Metadata() adaptor.Metadata {
 					"title":       "Disable Auto Image URL To Base64",
 					"description": "Keep image URLs unchanged instead of downloading and converting them to base64.",
 				},
+				"disable_auto_audio_url_to_base64": map[string]any{
+					"type":        "boolean",
+					"title":       "Disable Auto Audio URL To Base64",
+					"description": "Keep audio URLs unchanged instead of downloading and converting them to base64 inline data.",
+				},
+				"disable_auto_video_url_to_base64": map[string]any{
+					"type":        "boolean",
+					"title":       "Disable Auto Video URL To Base64",
+					"description": "Keep video URLs unchanged instead of downloading and converting them to base64 inline data.",
+				},
 			},
 		},
 	}

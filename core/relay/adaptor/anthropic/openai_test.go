@@ -232,6 +232,55 @@ func TestOpenAIConvertRequest_DisableAutoImageURLToBase64(t *testing.T) {
 	require.Equal(t, "https://example.com/test.png", claudeReq.Messages[0].Content[0].Source.URL)
 }
 
+func TestOpenAIConvertRequest_KeepsImageURLWhenAutoBase64Fails(t *testing.T) {
+	m := meta.NewMeta(
+		&model.Channel{},
+		mode.ChatCompletions,
+		"claude-sonnet-4-20250514",
+		model.ModelConfig{},
+	)
+
+	reqBody := relaymodel.GeneralOpenAIRequest{
+		Model: "claude-sonnet-4-20250514",
+		Messages: []relaymodel.Message{
+			{
+				Role: relaymodel.RoleUser,
+				Content: []relaymodel.MessageContent{
+					{
+						Type: relaymodel.ContentTypeImageURL,
+						ImageURL: &relaymodel.ImageURL{
+							URL: "data:image/png;bad",
+						},
+					},
+				},
+			},
+		},
+	}
+
+	data, err := sonic.Marshal(reqBody)
+	require.NoError(t, err)
+
+	req, err := http.NewRequestWithContext(
+		t.Context(),
+		http.MethodPost,
+		"http://localhost/v1/chat/completions",
+		bytes.NewBuffer(data),
+	)
+	require.NoError(t, err)
+
+	claudeReq, err := anthropic.OpenAIConvertRequest(m, req)
+	require.NoError(t, err)
+	require.Len(t, claudeReq.Messages, 1)
+	require.Len(t, claudeReq.Messages[0].Content, 1)
+	require.NotNil(t, claudeReq.Messages[0].Content[0].Source)
+	assert.Equal(
+		t,
+		relaymodel.ClaudeImageSourceTypeURL,
+		claudeReq.Messages[0].Content[0].Source.Type,
+	)
+	assert.Equal(t, "data:image/png;bad", claudeReq.Messages[0].Content[0].Source.URL)
+}
+
 func TestOpenAIConvertRequest_AdaptiveThinkingModels(t *testing.T) {
 	t.Run("opus 4.7 rewrites enabled thinking to adaptive", func(t *testing.T) {
 		m := &meta.Meta{
