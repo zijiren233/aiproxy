@@ -3,9 +3,10 @@ package gemini
 import (
 	"bytes"
 	"context"
-	"errors"
+	"encoding/base64"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"sync"
@@ -38,6 +39,38 @@ var mimeTypeMap = map[string]string{
 	"text":        "text/plain",
 }
 
+var geminiAudioMimeTypes = map[string]string{
+	"aac":  "audio/aac",
+	"flac": "audio/flac",
+	"mp3":  "audio/mp3",
+	"m4a":  "audio/mp4",
+	"mp4":  "audio/mp4",
+	"mpeg": "audio/mpeg",
+	"mpga": "audio/mpeg",
+	"oga":  "audio/ogg",
+	"ogg":  "audio/ogg",
+	"opus": "audio/opus",
+	"wav":  "audio/wav",
+	"webm": "audio/webm",
+}
+
+var geminiVideoMimeTypes = map[string]string{
+	"avi":       "video/x-msvideo",
+	"flv":       "video/x-flv",
+	"mov":       "video/quicktime",
+	"mp4":       "video/mp4",
+	"mpeg":      "video/mpeg",
+	"mpg":       "video/mpeg",
+	"mpg4":      "video/mp4",
+	"ogv":       "video/ogg",
+	"webm":      "video/webm",
+	"wmv":       "video/x-ms-wmv",
+	"x-ms-wmv":  "video/x-ms-wmv",
+	"x-msvideo": "video/x-msvideo",
+}
+
+const maxGeminiMediaSize = 1024 * 1024 * 50
+
 func shouldAutoIncludeThoughts(modelName string) bool {
 	modelName = strings.ToLower(modelName)
 
@@ -48,6 +81,10 @@ func shouldAutoIncludeThoughts(modelName string) bool {
 	// Gemini 2.5 Flash Lite defaults to non-thinking mode, so includeThoughts
 	// must not be injected unless thinking is explicitly enabled.
 	if strings.Contains(modelName, "2.5-flash-lite") {
+		return false
+	}
+
+	if strings.Contains(modelName, "tts") {
 		return false
 	}
 
@@ -74,6 +111,10 @@ func resolveGeminiFeatureModel(meta *meta.Meta) string {
 
 func isGeminiImageModel(meta *meta.Meta) bool {
 	return strings.Contains(strings.ToLower(resolveGeminiFeatureModel(meta)), "image")
+}
+
+func isGeminiTTSModel(meta *meta.Meta) bool {
+	return strings.Contains(strings.ToLower(resolveGeminiFeatureModel(meta)), "tts")
 }
 
 func autoImageURLToBase64Disabled(meta *meta.Meta, cfg Config) bool {
@@ -146,6 +187,16 @@ func buildGenerationConfig(
 		}
 	}
 
+	if isGeminiTTSModel(meta) {
+		if len(config.ResponseModalities) == 0 {
+			config.ResponseModalities = []string{relaymodel.GeminiModalityAudio}
+		}
+
+		if config.SpeechConfig == nil {
+			config.SpeechConfig = buildGeminiSpeechConfig(textRequest.Audio)
+		}
+	}
+
 	if config.ResponseMimeType == "" && textRequest.ResponseFormat != nil {
 		if mimeType, ok := mimeTypeMap[textRequest.ResponseFormat.Type]; ok {
 			config.ResponseMimeType = mimeType
@@ -158,7 +209,7 @@ func buildGenerationConfig(
 		}
 	}
 
-	if config.ThinkingConfig == nil {
+	if config.ThinkingConfig == nil && !isGeminiTTSModel(meta) {
 		utils.ApplyReasoningToGeminiConfig(
 			meta.OriginModel,
 			meta.ActualModel,
@@ -179,7 +230,26 @@ func buildGenerationConfig(
 		}
 	}
 
+	if isGeminiTTSModel(meta) {
+		config.ThinkingConfig = nil
+	}
+
 	return &config
+}
+
+func buildGeminiSpeechConfig(audio *relaymodel.Audio) *relaymodel.GeminiSpeechConfig {
+	voiceName := "Kore"
+	if audio != nil && audio.Voice != "" {
+		voiceName = audio.Voice
+	}
+
+	return &relaymodel.GeminiSpeechConfig{
+		VoiceConfig: &relaymodel.GeminiVoiceConfig{
+			PrebuiltVoiceConfig: &relaymodel.GeminiPrebuiltVoiceConfig{
+				VoiceName: voiceName,
+			},
+		},
+	}
 }
 
 func buildTools(textRequest *relaymodel.GeneralOpenAIRequest) []relaymodel.GeminiChatTools {
@@ -326,7 +396,144 @@ func buildMessageParts(
 		}
 	}
 
+	if message.InputAudio != nil {
+		return buildGeminiMediaPart(
+			message.InputAudio.Data,
+			message.InputAudio.URL,
+			message.InputAudio.Format,
+			"audio",
+		)
+	}
+
+	if message.VideoURL != nil {
+		return buildGeminiMediaPart("", message.VideoURL.URL, "", "video")
+	}
+
 	return part
+}
+
+func buildGeminiMediaPart(data, uri, format, mediaType string) *relaymodel.GeminiPart {
+	part := &relaymodel.GeminiPart{}
+
+	if data != "" {
+		if mimeType, base64Data, ok := parseMediaDataURL(data, mediaType); ok {
+			part.InlineData = &relaymodel.GeminiInlineData{
+				MimeType: mimeType,
+				Data:     base64Data,
+			}
+
+			return part
+		}
+
+		mimeType := geminiMediaMIMEType(format, mediaType)
+		part.InlineData = &relaymodel.GeminiInlineData{
+			MimeType: mimeType,
+			Data:     normalizeBase64Data(data),
+		}
+
+		return part
+	}
+
+	if uri == "" {
+		return part
+	}
+
+	if mimeType, data, ok := parseMediaDataURL(uri, mediaType); ok {
+		part.InlineData = &relaymodel.GeminiInlineData{
+			MimeType: mimeType,
+			Data:     data,
+		}
+
+		return part
+	}
+
+	part.FileData = &relaymodel.GeminiFileData{
+		MimeType: firstNonEmpty(
+			geminiMediaMIMEType(format, mediaType),
+			mimeTypeFromURL(uri, mediaType),
+		),
+		FileURI: uri,
+	}
+
+	return part
+}
+
+func normalizeBase64Data(data string) string {
+	if _, base64Data, ok := strings.Cut(data, ";base64,"); ok {
+		return base64Data
+	}
+
+	return data
+}
+
+func parseMediaDataURL(dataURL, mediaType string) (string, string, bool) {
+	prefix := "data:" + mediaType + "/"
+	if !strings.HasPrefix(dataURL, prefix) {
+		return "", "", false
+	}
+
+	mimeType, data, ok := strings.Cut(strings.TrimPrefix(dataURL, "data:"), ";base64,")
+	if !ok || data == "" {
+		return "", "", false
+	}
+
+	return mimeType, data, true
+}
+
+func geminiMediaMIMEType(format, mediaType string) string {
+	format = strings.TrimSpace(strings.ToLower(format))
+	format = strings.TrimPrefix(format, ".")
+
+	if strings.Contains(format, "/") {
+		return format
+	}
+
+	if format == "" {
+		return ""
+	}
+
+	switch mediaType {
+	case "audio":
+		if mimeType, ok := geminiAudioMimeTypes[format]; ok {
+			return mimeType
+		}
+
+		return "audio/" + format
+	case "video":
+		if mimeType, ok := geminiVideoMimeTypes[format]; ok {
+			return mimeType
+		}
+
+		return "video/" + format
+	default:
+		return ""
+	}
+}
+
+func mimeTypeFromURL(rawURL, mediaType string) string {
+	parsedURL, err := url.Parse(rawURL)
+	if err != nil {
+		return ""
+	}
+
+	path := parsedURL.Path
+
+	index := strings.LastIndex(path, ".")
+	if index < 0 || index == len(path)-1 {
+		return ""
+	}
+
+	return geminiMediaMIMEType(path[index+1:], mediaType)
+}
+
+func firstNonEmpty(values ...string) string {
+	for _, value := range values {
+		if value != "" {
+			return value
+		}
+	}
+
+	return ""
 }
 
 func parseToolCallArguments(arguments string) map[string]any {
@@ -425,29 +632,50 @@ func appendToolResponse(
 func buildRegularMessageParts(
 	message relaymodel.Message,
 	collectImageTasks bool,
-) ([]*relaymodel.GeminiPart, []*relaymodel.GeminiPart) {
+	collectAudioTasks bool,
+	collectVideoTasks bool,
+) (
+	[]*relaymodel.GeminiPart,
+	[]*relaymodel.GeminiPart,
+	[]*relaymodel.GeminiPart,
+	[]*relaymodel.GeminiPart,
+) {
 	openaiContent := message.ParseContent()
 	if len(openaiContent) == 0 {
-		return nil, nil
+		return nil, nil, nil, nil
 	}
 
 	parts := make([]*relaymodel.GeminiPart, 0, len(openaiContent))
 
 	imageTasks := make([]*relaymodel.GeminiPart, 0)
+	audioTasks := make([]*relaymodel.GeminiPart, 0)
+	videoTasks := make([]*relaymodel.GeminiPart, 0)
+
 	for _, part := range openaiContent {
 		msgPart := buildMessageParts(part)
 		if msgPart.Text == "" && msgPart.InlineData == nil && msgPart.FileData == nil {
 			continue
 		}
 
-		if collectImageTasks && msgPart.FileData != nil {
-			imageTasks = append(imageTasks, msgPart)
+		switch part.Type {
+		case relaymodel.ContentTypeImageURL:
+			if collectImageTasks && msgPart.FileData != nil {
+				imageTasks = append(imageTasks, msgPart)
+			}
+		case relaymodel.ContentTypeInputAudio:
+			if collectAudioTasks && msgPart.FileData != nil {
+				audioTasks = append(audioTasks, msgPart)
+			}
+		case relaymodel.ContentTypeVideoURL:
+			if collectVideoTasks && msgPart.FileData != nil {
+				videoTasks = append(videoTasks, msgPart)
+			}
 		}
 
 		parts = append(parts, msgPart)
 	}
 
-	return parts, imageTasks
+	return parts, imageTasks, audioTasks, videoTasks
 }
 
 func normalizeGeminiRole(role string) string {
@@ -485,11 +713,21 @@ func mergeConsecutiveContents(
 func buildContents(
 	textRequest *relaymodel.GeneralOpenAIRequest,
 	collectImageTasks bool,
-) (*relaymodel.GeminiChatContent, []*relaymodel.GeminiChatContent, []*relaymodel.GeminiPart) {
+	collectAudioTasks bool,
+	collectVideoTasks bool,
+) (
+	*relaymodel.GeminiChatContent,
+	[]*relaymodel.GeminiChatContent,
+	[]*relaymodel.GeminiPart,
+	[]*relaymodel.GeminiPart,
+	[]*relaymodel.GeminiPart,
+) {
 	contents := make([]*relaymodel.GeminiChatContent, 0, len(textRequest.Messages))
 
 	var (
 		imageTasks    []*relaymodel.GeminiPart
+		audioTasks    []*relaymodel.GeminiPart
+		videoTasks    []*relaymodel.GeminiPart
 		systemContent *relaymodel.GeminiChatContent
 	)
 
@@ -515,9 +753,16 @@ func buildContents(
 
 			continue
 		default:
-			parts, tasks := buildRegularMessageParts(message, collectImageTasks)
+			parts, imageTaskParts, audioTaskParts, videoTaskParts := buildRegularMessageParts(
+				message,
+				collectImageTasks,
+				collectAudioTasks,
+				collectVideoTasks,
+			)
 			content.Parts = append(content.Parts, parts...)
-			imageTasks = append(imageTasks, tasks...)
+			imageTasks = append(imageTasks, imageTaskParts...)
+			audioTasks = append(audioTasks, audioTaskParts...)
+			videoTasks = append(videoTasks, videoTaskParts...)
 		}
 
 		content.Role = normalizeGeminiRole(content.Role)
@@ -527,7 +772,7 @@ func buildContents(
 		}
 	}
 
-	return systemContent, mergeConsecutiveContents(contents), imageTasks
+	return systemContent, mergeConsecutiveContents(contents), imageTasks, audioTasks, videoTasks
 }
 
 func processImageTasks(
@@ -540,11 +785,7 @@ func processImageTasks(
 
 	sem := semaphore.NewWeighted(3)
 
-	var (
-		wg          sync.WaitGroup
-		mu          sync.Mutex
-		processErrs []error
-	)
+	var wg sync.WaitGroup
 
 	for _, task := range imageTasks {
 		if task.FileData == nil || task.FileData.FileURI == "" {
@@ -552,17 +793,15 @@ func processImageTasks(
 		}
 
 		wg.Go(func() {
-			_ = sem.Acquire(ctx, 1)
+			if err := sem.Acquire(ctx, 1); err != nil {
+				log.Warnf("convert gemini image url to base64 skipped, keep original url: %v", err)
+				return
+			}
 			defer sem.Release(1)
 
 			mimeType, data, err := image.GetImageFromURL(ctx, task.FileData.FileURI)
 			if err != nil {
-				mu.Lock()
-
-				processErrs = append(processErrs, err)
-
-				mu.Unlock()
-
+				log.Warnf("convert gemini image url to base64 failed, keep original url: %v", err)
 				return
 			}
 
@@ -576,11 +815,168 @@ func processImageTasks(
 
 	wg.Wait()
 
-	if len(processErrs) != 0 {
-		return errors.Join(processErrs...)
+	return nil
+}
+
+func processMediaTasks(
+	ctx context.Context,
+	mediaType string,
+	mediaTasks []*relaymodel.GeminiPart,
+) {
+	if len(mediaTasks) == 0 {
+		return
 	}
 
-	return nil
+	sem := semaphore.NewWeighted(3)
+
+	var wg sync.WaitGroup
+
+	for _, task := range mediaTasks {
+		if task.FileData == nil || task.FileData.FileURI == "" {
+			continue
+		}
+
+		wg.Go(func() {
+			if err := sem.Acquire(ctx, 1); err != nil {
+				log.Warnf(
+					"convert gemini %s url to base64 skipped, keep original url: %v",
+					mediaType,
+					err,
+				)
+
+				return
+			}
+			defer sem.Release(1)
+
+			mimeType, data, err := getGeminiMediaFromURL(
+				ctx,
+				task.FileData.FileURI,
+				mediaType,
+				task.FileData.MimeType,
+			)
+			if err != nil {
+				log.Warnf(
+					"convert gemini %s url to base64 failed, keep original url: %v",
+					mediaType,
+					err,
+				)
+
+				return
+			}
+
+			task.InlineData = &relaymodel.GeminiInlineData{
+				MimeType: mimeType,
+				Data:     data,
+			}
+			task.FileData = nil
+		})
+	}
+
+	wg.Wait()
+}
+
+func getGeminiMediaFromURL(
+	ctx context.Context,
+	rawURL string,
+	mediaType string,
+	fallbackMimeType string,
+) (string, string, error) {
+	if !strings.HasPrefix(rawURL, "http://") && !strings.HasPrefix(rawURL, "https://") {
+		return "", "", fmt.Errorf("download %s error: not an http url", mediaType)
+	}
+
+	// #nosec G704 -- media URL download is explicit adaptor behavior.
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, rawURL, nil)
+	if err != nil {
+		return "", "", err
+	}
+
+	// #nosec G704 -- media URL download is explicit adaptor behavior.
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return "", "", err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return "", "", fmt.Errorf("download %s error: status code: %d", mediaType, resp.StatusCode)
+	}
+
+	buf, err := common.GetResponseBodyLimit(resp, maxGeminiMediaSize)
+	if err != nil {
+		return "", "", err
+	}
+
+	mimeType := geminiMediaResponseMIMEType(resp.Header.Get("Content-Type"), rawURL, mediaType)
+	if mimeType == "" {
+		mimeType = fallbackMimeType
+	}
+
+	if !strings.HasPrefix(mimeType, mediaType+"/") {
+		return "", "", fmt.Errorf(
+			"download %s error: unsupported content type: %s",
+			mediaType,
+			mimeType,
+		)
+	}
+
+	return mimeType, base64.StdEncoding.EncodeToString(buf), nil
+}
+
+func geminiMediaResponseMIMEType(contentType, rawURL, mediaType string) string {
+	contentType, _, _ = strings.Cut(strings.TrimSpace(strings.ToLower(contentType)), ";")
+	if strings.HasPrefix(contentType, mediaType+"/") {
+		return contentType
+	}
+
+	return mimeTypeFromURL(rawURL, mediaType)
+}
+
+func geminiInlineDataToMessageContent(part *relaymodel.GeminiPart) relaymodel.MessageContent {
+	url := fmt.Sprintf(
+		"data:%s;base64,%s",
+		part.InlineData.MimeType,
+		part.InlineData.Data,
+	)
+
+	switch {
+	case strings.HasPrefix(part.InlineData.MimeType, "audio/"):
+		return relaymodel.MessageContent{
+			Type: relaymodel.ContentTypeInputAudio,
+			InputAudio: &relaymodel.InputAudio{
+				Data:   part.InlineData.Data,
+				Format: strings.TrimPrefix(part.InlineData.MimeType, "audio/"),
+			},
+		}
+	case strings.HasPrefix(part.InlineData.MimeType, "video/"):
+		return relaymodel.MessageContent{
+			Type: relaymodel.ContentTypeVideoURL,
+			VideoURL: &relaymodel.VideoURL{
+				URL: url,
+			},
+		}
+	default:
+		return relaymodel.MessageContent{
+			Type: relaymodel.ContentTypeImageURL,
+			ImageURL: &relaymodel.ImageURL{
+				URL: url,
+			},
+		}
+	}
+}
+
+func geminiInlineDataToOutputAudio(part *relaymodel.GeminiPart) *relaymodel.OutputAudio {
+	if part.InlineData == nil || !strings.HasPrefix(part.InlineData.MimeType, "audio/") {
+		return nil
+	}
+
+	return &relaymodel.OutputAudio{
+		Data: part.InlineData.Data,
+	}
+}
+
+func isGeminiAudioInlineData(part *relaymodel.GeminiPart) bool {
+	return part.InlineData != nil && strings.HasPrefix(part.InlineData.MimeType, "audio/")
 }
 
 // Setting safety to the lowest possible values since Gemini is already powerless enough
@@ -620,9 +1016,11 @@ func convertRequest(
 
 	disableAutoImageURLToBase64 := autoImageURLToBase64Disabled(meta, adaptorConfig)
 
-	systemContent, contents, imageTasks := buildContents(
+	systemContent, contents, imageTasks, audioTasks, videoTasks := buildContents(
 		textRequest,
 		!disableAutoImageURLToBase64,
+		!adaptorConfig.DisableAutoAudioURLToBase64,
+		!adaptorConfig.DisableAutoVideoURLToBase64,
 	)
 
 	// Process image tasks concurrently
@@ -634,6 +1032,9 @@ func convertRequest(
 			common.GetLoggerFromReq(req).Warnf("process gemini image tasks failed: %v", err)
 		}
 	}
+
+	processMediaTasks(req.Context(), "audio", audioTasks)
+	processMediaTasks(req.Context(), "video", videoTasks)
 
 	config := buildGenerationConfig(meta, req, textRequest, textRequest)
 
@@ -735,10 +1136,10 @@ func responseChat2OpenAI(
 				builder          strings.Builder
 			)
 
-			hasImage := false
+			hasStructuredContent := false
 			for _, part := range candidate.Content.Parts {
-				if part.InlineData != nil {
-					hasImage = true
+				if part.InlineData != nil && !isGeminiAudioInlineData(part) {
+					hasStructuredContent = true
 					break
 				}
 			}
@@ -756,7 +1157,7 @@ func responseChat2OpenAI(
 				}
 
 				if part.Text != "" {
-					if hasImage {
+					if hasStructuredContent {
 						if part.Thought {
 							reasoningContent.WriteString(part.Text)
 
@@ -783,20 +1184,15 @@ func responseChat2OpenAI(
 				}
 
 				if part.InlineData != nil {
-					contents = append(contents, relaymodel.MessageContent{
-						Type: relaymodel.ContentTypeImageURL,
-						ImageURL: &relaymodel.ImageURL{
-							URL: fmt.Sprintf(
-								"data:%s;base64,%s",
-								part.InlineData.MimeType,
-								part.InlineData.Data,
-							),
-						},
-					})
+					if outputAudio := geminiInlineDataToOutputAudio(part); outputAudio != nil {
+						choice.Message.Audio = outputAudio
+					} else {
+						contents = append(contents, geminiInlineDataToMessageContent(part))
+					}
 				}
 			}
 
-			if hasImage {
+			if hasStructuredContent {
 				choice.Message.Content = contents
 			} else {
 				choice.Message.Content = builder.String()
@@ -846,10 +1242,10 @@ func streamResponseChat2OpenAI(
 				builder          strings.Builder
 			)
 
-			hasImage := false
+			hasStructuredContent := false
 			for _, part := range candidate.Content.Parts {
-				if part.InlineData != nil {
-					hasImage = true
+				if part.InlineData != nil && !isGeminiAudioInlineData(part) {
+					hasStructuredContent = true
 					break
 				}
 			}
@@ -867,7 +1263,7 @@ func streamResponseChat2OpenAI(
 				}
 
 				if part.Text != "" {
-					if hasImage {
+					if hasStructuredContent {
 						if part.Thought {
 							reasoningContent.WriteString(part.Text)
 
@@ -894,20 +1290,15 @@ func streamResponseChat2OpenAI(
 				}
 
 				if part.InlineData != nil {
-					contents = append(contents, relaymodel.MessageContent{
-						Type: relaymodel.ContentTypeImageURL,
-						ImageURL: &relaymodel.ImageURL{
-							URL: fmt.Sprintf(
-								"data:%s;base64,%s",
-								part.InlineData.MimeType,
-								part.InlineData.Data,
-							),
-						},
-					})
+					if outputAudio := geminiInlineDataToOutputAudio(part); outputAudio != nil {
+						choice.Delta.Audio = outputAudio
+					} else {
+						contents = append(contents, geminiInlineDataToMessageContent(part))
+					}
 				}
 			}
 
-			if hasImage {
+			if hasStructuredContent {
 				choice.Delta.Content = contents
 			} else {
 				choice.Delta.Content = builder.String()

@@ -3,6 +3,7 @@ package gemini_test
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -67,6 +68,73 @@ func TestConvertRequest_JsonObject(t *testing.T) {
 	// Verify GenerationConfig.ResponseMimeType is "application/json"
 	assert.NotNil(t, geminiReq.GenerationConfig)
 	assert.Equal(t, "application/json", geminiReq.GenerationConfig.ResponseMimeType)
+}
+
+func TestConvertRequest_TTSModelSetsAudioModalityAndSpeechConfig(t *testing.T) {
+	t.Parallel()
+
+	channel := &model.Channel{
+		Type: model.ChannelTypeGoogleGemini,
+	}
+	meta := meta.NewMeta(
+		channel,
+		mode.ChatCompletions,
+		"gemini-2.5-flash-tts",
+		model.ModelConfig{},
+	)
+
+	openAIReq := relaymodel.GeneralOpenAIRequest{
+		Model: "gemini-2.5-flash-tts",
+		Messages: []relaymodel.Message{
+			{
+				Role:    relaymodel.RoleUser,
+				Content: "Say hello.",
+			},
+		},
+		Audio: &relaymodel.Audio{
+			Voice: "Puck",
+		},
+	}
+
+	jsonData, err := sonic.Marshal(openAIReq)
+	assert.NoError(t, err)
+
+	req, err := http.NewRequestWithContext(
+		t.Context(),
+		http.MethodPost,
+		"http://localhost/v1/chat/completions",
+		bytes.NewBuffer(jsonData),
+	)
+	assert.NoError(t, err)
+
+	result, err := gemini.ConvertRequest(meta, req)
+	assert.NoError(t, err)
+
+	bodyBytes, err := io.ReadAll(result.Body)
+	assert.NoError(t, err)
+
+	var geminiReq relaymodel.GeminiChatRequest
+
+	err = json.Unmarshal(bodyBytes, &geminiReq)
+	assert.NoError(t, err)
+	assert.NotNil(t, geminiReq.GenerationConfig)
+	assert.Equal(
+		t,
+		[]string{relaymodel.GeminiModalityAudio},
+		geminiReq.GenerationConfig.ResponseModalities,
+	)
+	assert.NotNil(t, geminiReq.GenerationConfig.SpeechConfig)
+	assert.NotNil(t, geminiReq.GenerationConfig.SpeechConfig.VoiceConfig)
+	assert.NotNil(
+		t,
+		geminiReq.GenerationConfig.SpeechConfig.VoiceConfig.PrebuiltVoiceConfig,
+	)
+	assert.Equal(
+		t,
+		"Puck",
+		geminiReq.GenerationConfig.SpeechConfig.VoiceConfig.PrebuiltVoiceConfig.VoiceName,
+	)
+	assert.Nil(t, geminiReq.GenerationConfig.ThinkingConfig)
 }
 
 func TestConvertRequest_JsonSchema(t *testing.T) {
@@ -654,4 +722,440 @@ func TestConvertRequestKeepsFileDataWhenImageConversionFails(t *testing.T) {
 		"data:image/png;bad",
 		geminiReq.Contents[0].Parts[0].FileData.FileURI,
 	)
+}
+
+func TestProcessImageTasksKeepsFileDataWhenConversionFails(t *testing.T) {
+	t.Parallel()
+
+	part := gemini.BuildMessagePartForTest(
+		relaymodel.MessageContent{
+			Type: relaymodel.ContentTypeImageURL,
+			ImageURL: &relaymodel.ImageURL{
+				URL: "data:image/png;bad",
+			},
+		},
+	)
+
+	err := gemini.ProcessImageTasksForTest(context.Background(), []*relaymodel.GeminiPart{part})
+	assert.NoError(t, err)
+	assert.Nil(t, part.InlineData)
+	assert.NotNil(t, part.FileData)
+	assert.Equal(t, "data:image/png;bad", part.FileData.FileURI)
+}
+
+func TestConvertRequest_OpenAIAudioAndVideoParts(t *testing.T) {
+	t.Parallel()
+
+	channel := &model.Channel{
+		Type: model.ChannelTypeGoogleGemini,
+	}
+	meta := meta.NewMeta(
+		channel,
+		mode.ChatCompletions,
+		"gemini-2.5-flash",
+		model.ModelConfig{},
+	)
+
+	audioData := base64.StdEncoding.EncodeToString([]byte("audio bytes"))
+	openAIReq := map[string]any{
+		"model": "gemini-2.5-flash",
+		"messages": []map[string]any{
+			{
+				"role": "user",
+				"content": []map[string]any{
+					{
+						"type": "text",
+						"text": "Describe these files",
+					},
+					{
+						"type": "input_audio",
+						"input_audio": map[string]any{
+							"data":   audioData,
+							"format": "wav",
+						},
+					},
+					{
+						"type": "video_url",
+						"video_url": map[string]any{
+							"url": "gs://bucket/video.mp4",
+						},
+					},
+				},
+			},
+		},
+	}
+
+	jsonData, err := sonic.Marshal(openAIReq)
+	assert.NoError(t, err)
+
+	req, err := http.NewRequestWithContext(
+		t.Context(),
+		http.MethodPost,
+		"http://localhost/v1/chat/completions",
+		bytes.NewBuffer(jsonData),
+	)
+	assert.NoError(t, err)
+
+	result, err := gemini.ConvertRequest(meta, req)
+	assert.NoError(t, err)
+
+	bodyBytes, err := io.ReadAll(result.Body)
+	assert.NoError(t, err)
+
+	var geminiReq relaymodel.GeminiChatRequest
+
+	err = json.Unmarshal(bodyBytes, &geminiReq)
+	assert.NoError(t, err)
+	assert.Len(t, geminiReq.Contents, 1)
+	assert.Len(t, geminiReq.Contents[0].Parts, 3)
+	assert.Equal(t, "Describe these files", geminiReq.Contents[0].Parts[0].Text)
+	assert.NotNil(t, geminiReq.Contents[0].Parts[1].InlineData)
+	assert.Equal(t, "audio/wav", geminiReq.Contents[0].Parts[1].InlineData.MimeType)
+	assert.Equal(t, audioData, geminiReq.Contents[0].Parts[1].InlineData.Data)
+	assert.NotNil(t, geminiReq.Contents[0].Parts[2].FileData)
+	assert.Equal(t, "video/mp4", geminiReq.Contents[0].Parts[2].FileData.MimeType)
+	assert.Equal(t, "gs://bucket/video.mp4", geminiReq.Contents[0].Parts[2].FileData.FileURI)
+}
+
+func TestConvertRequestAutoConvertsAudioAndVideoURLs(t *testing.T) {
+	t.Parallel()
+
+	audioData := []byte("audio bytes")
+	videoData := []byte("video bytes")
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/audio.wav":
+			w.Header().Set("Content-Type", "audio/wav")
+			_, _ = w.Write(audioData)
+		case "/video.mp4":
+			w.Header().Set("Content-Type", "video/mp4")
+			_, _ = w.Write(videoData)
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer ts.Close()
+
+	channel := &model.Channel{
+		Type: model.ChannelTypeGoogleGemini,
+	}
+	meta := meta.NewMeta(
+		channel,
+		mode.ChatCompletions,
+		"gemini-2.5-flash",
+		model.ModelConfig{},
+	)
+
+	openAIReq := map[string]any{
+		"model": "gemini-2.5-flash",
+		"messages": []map[string]any{
+			{
+				"role": "user",
+				"content": []map[string]any{
+					{
+						"type": "input_audio",
+						"input_audio": map[string]any{
+							"url": ts.URL + "/audio.wav",
+						},
+					},
+					{
+						"type": "video_url",
+						"video_url": map[string]any{
+							"url": ts.URL + "/video.mp4",
+						},
+					},
+				},
+			},
+		},
+	}
+
+	jsonData, err := sonic.Marshal(openAIReq)
+	assert.NoError(t, err)
+
+	req, err := http.NewRequestWithContext(
+		t.Context(),
+		http.MethodPost,
+		"http://localhost/v1/chat/completions",
+		bytes.NewBuffer(jsonData),
+	)
+	assert.NoError(t, err)
+
+	result, err := gemini.ConvertRequest(meta, req)
+	assert.NoError(t, err)
+
+	bodyBytes, err := io.ReadAll(result.Body)
+	assert.NoError(t, err)
+
+	var geminiReq relaymodel.GeminiChatRequest
+
+	err = json.Unmarshal(bodyBytes, &geminiReq)
+	assert.NoError(t, err)
+	assert.Len(t, geminiReq.Contents, 1)
+	assert.Len(t, geminiReq.Contents[0].Parts, 2)
+	assert.NotNil(t, geminiReq.Contents[0].Parts[0].InlineData)
+	assert.Equal(t, "audio/wav", geminiReq.Contents[0].Parts[0].InlineData.MimeType)
+	assert.Equal(
+		t,
+		base64.StdEncoding.EncodeToString(audioData),
+		geminiReq.Contents[0].Parts[0].InlineData.Data,
+	)
+	assert.Nil(t, geminiReq.Contents[0].Parts[0].FileData)
+	assert.NotNil(t, geminiReq.Contents[0].Parts[1].InlineData)
+	assert.Equal(t, "video/mp4", geminiReq.Contents[0].Parts[1].InlineData.MimeType)
+	assert.Equal(
+		t,
+		base64.StdEncoding.EncodeToString(videoData),
+		geminiReq.Contents[0].Parts[1].InlineData.Data,
+	)
+	assert.Nil(t, geminiReq.Contents[0].Parts[1].FileData)
+}
+
+func TestConvertRequestCanDisableAudioAndVideoURLAutoBase64(t *testing.T) {
+	t.Parallel()
+
+	channel := &model.Channel{
+		Type: model.ChannelTypeGoogleGemini,
+		Configs: model.ChannelConfigs{
+			"disable_auto_audio_url_to_base64": true,
+			"disable_auto_video_url_to_base64": true,
+		},
+	}
+	meta := meta.NewMeta(
+		channel,
+		mode.ChatCompletions,
+		"gemini-2.5-flash",
+		model.ModelConfig{},
+	)
+
+	openAIReq := map[string]any{
+		"model": "gemini-2.5-flash",
+		"messages": []map[string]any{
+			{
+				"role": "user",
+				"content": []map[string]any{
+					{
+						"type": "input_audio",
+						"input_audio": map[string]any{
+							"url": "https://example.com/audio.wav",
+						},
+					},
+					{
+						"type": "video_url",
+						"video_url": map[string]any{
+							"url": "https://example.com/video.mp4",
+						},
+					},
+				},
+			},
+		},
+	}
+
+	jsonData, err := sonic.Marshal(openAIReq)
+	assert.NoError(t, err)
+
+	req, err := http.NewRequestWithContext(
+		t.Context(),
+		http.MethodPost,
+		"http://localhost/v1/chat/completions",
+		bytes.NewBuffer(jsonData),
+	)
+	assert.NoError(t, err)
+
+	result, err := gemini.ConvertRequest(meta, req)
+	assert.NoError(t, err)
+
+	bodyBytes, err := io.ReadAll(result.Body)
+	assert.NoError(t, err)
+
+	var geminiReq relaymodel.GeminiChatRequest
+
+	err = json.Unmarshal(bodyBytes, &geminiReq)
+	assert.NoError(t, err)
+	assert.Len(t, geminiReq.Contents, 1)
+	assert.Len(t, geminiReq.Contents[0].Parts, 2)
+	assert.Nil(t, geminiReq.Contents[0].Parts[0].InlineData)
+	assert.NotNil(t, geminiReq.Contents[0].Parts[0].FileData)
+	assert.Equal(t, "audio/wav", geminiReq.Contents[0].Parts[0].FileData.MimeType)
+	assert.Equal(
+		t,
+		"https://example.com/audio.wav",
+		geminiReq.Contents[0].Parts[0].FileData.FileURI,
+	)
+	assert.Nil(t, geminiReq.Contents[0].Parts[1].InlineData)
+	assert.NotNil(t, geminiReq.Contents[0].Parts[1].FileData)
+	assert.Equal(t, "video/mp4", geminiReq.Contents[0].Parts[1].FileData.MimeType)
+	assert.Equal(
+		t,
+		"https://example.com/video.mp4",
+		geminiReq.Contents[0].Parts[1].FileData.FileURI,
+	)
+}
+
+func TestProcessMediaTasksKeepsFileDataWhenConversionFails(t *testing.T) {
+	t.Parallel()
+
+	part := gemini.BuildMessagePartForTest(
+		relaymodel.MessageContent{
+			Type: relaymodel.ContentTypeVideoURL,
+			VideoURL: &relaymodel.VideoURL{
+				URL: "https://example.com/video.mp4",
+			},
+		},
+	)
+
+	gemini.ProcessMediaTasksForTest(context.Background(), "video", []*relaymodel.GeminiPart{part})
+	assert.Nil(t, part.InlineData)
+	assert.NotNil(t, part.FileData)
+	assert.Equal(t, "https://example.com/video.mp4", part.FileData.FileURI)
+}
+
+func TestProcessMediaTasksKeepsFileDataWhenContextCanceled(t *testing.T) {
+	t.Parallel()
+
+	part := gemini.BuildMessagePartForTest(
+		relaymodel.MessageContent{
+			Type: relaymodel.ContentTypeVideoURL,
+			VideoURL: &relaymodel.VideoURL{
+				URL: "https://example.com/video.mp4",
+			},
+		},
+	)
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	gemini.ProcessMediaTasksForTest(ctx, "video", []*relaymodel.GeminiPart{part})
+	assert.Nil(t, part.InlineData)
+	assert.NotNil(t, part.FileData)
+	assert.Equal(t, "https://example.com/video.mp4", part.FileData.FileURI)
+}
+
+func TestBuildMessagePartsUsesInlineDataForMediaDataURL(t *testing.T) {
+	t.Parallel()
+
+	t.Run("video_url", func(t *testing.T) {
+		t.Parallel()
+
+		videoData := base64.StdEncoding.EncodeToString([]byte("video bytes"))
+		part := gemini.BuildMessagePartForTest(
+			relaymodel.MessageContent{
+				Type: relaymodel.ContentTypeVideoURL,
+				VideoURL: &relaymodel.VideoURL{
+					URL: "data:video/mp4;base64," + videoData,
+				},
+			},
+		)
+
+		assert.NotNil(t, part.InlineData)
+		assert.Nil(t, part.FileData)
+		assert.Equal(t, "video/mp4", part.InlineData.MimeType)
+		assert.Equal(t, videoData, part.InlineData.Data)
+	})
+
+	t.Run("input_audio", func(t *testing.T) {
+		t.Parallel()
+
+		audioData := base64.StdEncoding.EncodeToString([]byte("audio bytes"))
+		part := gemini.BuildMessagePartForTest(
+			relaymodel.MessageContent{
+				Type: relaymodel.ContentTypeInputAudio,
+				InputAudio: &relaymodel.InputAudio{
+					Data: "data:audio/wav;base64," + audioData,
+				},
+			},
+		)
+
+		assert.NotNil(t, part.InlineData)
+		assert.Nil(t, part.FileData)
+		assert.Equal(t, "audio/wav", part.InlineData.MimeType)
+		assert.Equal(t, audioData, part.InlineData.Data)
+	})
+}
+
+func TestResponseChat2OpenAIConvertsAudioInlineDataAndUsage(t *testing.T) {
+	t.Parallel()
+
+	meta := meta.NewMeta(
+		&model.Channel{Type: model.ChannelTypeGoogleGemini},
+		mode.ChatCompletions,
+		"gemini-2.5-flash-tts",
+		model.ModelConfig{},
+	)
+	audioData := base64.StdEncoding.EncodeToString([]byte("audio bytes"))
+	response := &relaymodel.GeminiChatResponse{
+		Candidates: []*relaymodel.GeminiChatCandidate{
+			{
+				Content: relaymodel.GeminiChatContent{
+					Parts: []*relaymodel.GeminiPart{
+						{
+							InlineData: &relaymodel.GeminiInlineData{
+								MimeType: "audio/wav",
+								Data:     audioData,
+							},
+						},
+					},
+				},
+				FinishReason: relaymodel.GeminiFinishReasonStop,
+			},
+		},
+		UsageMetadata: &relaymodel.GeminiUsageMetadata{
+			PromptTokenCount:     12,
+			CandidatesTokenCount: 34,
+			TotalTokenCount:      46,
+			PromptTokensDetails: []relaymodel.GeminiTokensDetail{
+				{Modality: relaymodel.GeminiModalityText, TokenCount: 12},
+			},
+			CandidatesTokensDetails: []relaymodel.GeminiTokensDetail{
+				{Modality: relaymodel.GeminiModalityAudio, TokenCount: 34},
+			},
+		},
+	}
+
+	openAIResponse := gemini.ResponseChat2OpenAIForTest(meta, response)
+	assert.Len(t, openAIResponse.Choices, 1)
+
+	assert.Equal(t, "", openAIResponse.Choices[0].Message.Content)
+	assert.NotNil(t, openAIResponse.Choices[0].Message.Audio)
+	assert.Equal(t, audioData, openAIResponse.Choices[0].Message.Audio.Data)
+	assert.NotNil(t, openAIResponse.Usage)
+	assert.Equal(t, int64(34), openAIResponse.Usage.CompletionTokensDetails.AudioTokens)
+	assert.Equal(
+		t,
+		model.ZeroNullInt64(34),
+		openAIResponse.Usage.ToModelUsage().AudioOutputTokens,
+	)
+}
+
+func TestStreamResponseChat2OpenAIConvertsAudioInlineDataToDeltaAudio(t *testing.T) {
+	t.Parallel()
+
+	meta := meta.NewMeta(
+		&model.Channel{Type: model.ChannelTypeGoogleGemini},
+		mode.ChatCompletions,
+		"gemini-2.5-flash-tts",
+		model.ModelConfig{},
+	)
+	audioData := base64.StdEncoding.EncodeToString([]byte("audio bytes"))
+	response := &relaymodel.GeminiChatResponse{
+		Candidates: []*relaymodel.GeminiChatCandidate{
+			{
+				Content: relaymodel.GeminiChatContent{
+					Parts: []*relaymodel.GeminiPart{
+						{
+							InlineData: &relaymodel.GeminiInlineData{
+								MimeType: "audio/wav",
+								Data:     audioData,
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	openAIChunk := gemini.StreamResponseChat2OpenAIForTest(meta, response)
+	assert.Len(t, openAIChunk.Choices, 1)
+	assert.Equal(t, "", openAIChunk.Choices[0].Delta.Content)
+	assert.NotNil(t, openAIChunk.Choices[0].Delta.Audio)
+	assert.Equal(t, audioData, openAIChunk.Choices[0].Delta.Audio.Data)
 }

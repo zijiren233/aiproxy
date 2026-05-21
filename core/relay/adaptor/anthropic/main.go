@@ -21,6 +21,7 @@ import (
 	relaymodel "github.com/labring/aiproxy/core/relay/model"
 	"github.com/labring/aiproxy/core/relay/render"
 	"github.com/labring/aiproxy/core/relay/utils"
+	log "github.com/sirupsen/logrus"
 	"golang.org/x/sync/semaphore"
 )
 
@@ -333,7 +334,14 @@ func ConvertImage2Base64(ctx context.Context, node *ast.Node) error {
 		go func(contentItem *ast.Node) {
 			defer wg.Done()
 
-			_ = sem.Acquire(ctx, 1)
+			if err := sem.Acquire(ctx, 1); err != nil {
+				log.Warnf(
+					"convert anthropic image url to base64 skipped, keep original url: %v",
+					err,
+				)
+
+				return
+			}
 			defer sem.Release(1)
 
 			err := convertImageURLToBase64(ctx, contentItem)
@@ -370,6 +378,7 @@ func convertImageURLToBase64(ctx context.Context, contentItem *ast.Node) error {
 
 	mimeType, data, err := image.GetImageFromURL(ctx, url)
 	if err != nil {
+		log.Warnf("convert anthropic image url to base64 failed, keep original url: %v", err)
 		return nil
 	}
 

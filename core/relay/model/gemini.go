@@ -75,11 +75,24 @@ type GeminiChatGenerationConfig struct {
 	ResponseModalities []string              `json:"responseModalities,omitempty"`
 	ThinkingConfig     *GeminiThinkingConfig `json:"thinkingConfig,omitempty"`
 	ImageConfig        *GeminiImageConfig    `json:"imageConfig,omitempty"`
+	SpeechConfig       *GeminiSpeechConfig   `json:"speechConfig,omitempty"`
 }
 
 type GeminiImageConfig struct {
 	AspectRatio string `json:"aspectRatio,omitempty"`
 	ImageSize   string `json:"imageSize,omitempty"`
+}
+
+type GeminiSpeechConfig struct {
+	VoiceConfig *GeminiVoiceConfig `json:"voiceConfig,omitempty"`
+}
+
+type GeminiVoiceConfig struct {
+	PrebuiltVoiceConfig *GeminiPrebuiltVoiceConfig `json:"prebuiltVoiceConfig,omitempty"`
+}
+
+type GeminiPrebuiltVoiceConfig struct {
+	VoiceName string `json:"voiceName,omitempty"`
 }
 
 type GeminiThinkingConfig struct {

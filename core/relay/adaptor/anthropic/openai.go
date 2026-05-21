@@ -2,7 +2,6 @@ package anthropic
 
 import (
 	"context"
-	"errors"
 	"net/http"
 	"strconv"
 	"strings"
@@ -19,6 +18,7 @@ import (
 	relaymodel "github.com/labring/aiproxy/core/relay/model"
 	"github.com/labring/aiproxy/core/relay/render"
 	"github.com/labring/aiproxy/core/relay/utils"
+	log "github.com/sirupsen/logrus"
 	"golang.org/x/sync/semaphore"
 )
 
@@ -284,10 +284,7 @@ func openAIConvertRequest(
 	}
 
 	if len(imageTasks) > 0 {
-		err := batchPatchImage2Base64(req.Context(), imageTasks)
-		if err != nil {
-			return nil, err
-		}
+		batchPatchImage2Base64(req.Context(), imageTasks)
 	}
 
 	if hasToolCalls {
@@ -297,14 +294,10 @@ func openAIConvertRequest(
 	return &claudeRequest, nil
 }
 
-func batchPatchImage2Base64(ctx context.Context, imageTasks []*relaymodel.ClaudeContent) error {
+func batchPatchImage2Base64(ctx context.Context, imageTasks []*relaymodel.ClaudeContent) {
 	sem := semaphore.NewWeighted(3)
 
-	var (
-		wg          sync.WaitGroup
-		mu          sync.Mutex
-		processErrs []error
-	)
+	var wg sync.WaitGroup
 
 	for _, task := range imageTasks {
 		if task.Source.URL == "" {
@@ -312,16 +305,22 @@ func batchPatchImage2Base64(ctx context.Context, imageTasks []*relaymodel.Claude
 		}
 
 		wg.Go(func() {
-			_ = sem.Acquire(ctx, 1)
+			if err := sem.Acquire(ctx, 1); err != nil {
+				log.Warnf(
+					"convert anthropic image url to base64 skipped, keep original url: %v",
+					err,
+				)
+
+				return
+			}
 			defer sem.Release(1)
 
 			mimeType, data, err := image.GetImageFromURL(ctx, task.Source.URL)
 			if err != nil {
-				mu.Lock()
-
-				processErrs = append(processErrs, err)
-
-				mu.Unlock()
+				log.Warnf(
+					"convert anthropic image url to base64 failed, keep original url: %v",
+					err,
+				)
 
 				return
 			}
@@ -334,12 +333,6 @@ func batchPatchImage2Base64(ctx context.Context, imageTasks []*relaymodel.Claude
 	}
 
 	wg.Wait()
-
-	if len(processErrs) != 0 {
-		return errors.Join(processErrs...)
-	}
-
-	return nil
 }
 
 // StreamState maintains state during streaming response conversion
