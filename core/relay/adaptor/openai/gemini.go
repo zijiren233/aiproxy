@@ -3,7 +3,10 @@ package openai
 import (
 	"bytes"
 	"fmt"
+	"mime"
 	"net/http"
+	"net/url"
+	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
@@ -685,19 +688,16 @@ func convertGeminiContentToOpenAI(
 			hasContent = true
 
 		case part.InlineData != nil:
-			// Handle image
-			imageURL := part.InlineData.Data
-			if !strings.HasPrefix(imageURL, "http") && !strings.HasPrefix(imageURL, "data:") {
-				// Base64 data
-				imageURL = "data:" + part.InlineData.MimeType + ";base64," + part.InlineData.Data
-			}
-
-			currentContentParts = append(currentContentParts, relaymodel.MessageContent{
-				Type: relaymodel.ContentTypeImageURL,
-				ImageURL: &relaymodel.ImageURL{
-					URL: imageURL,
-				},
-			})
+			currentContentParts = append(
+				currentContentParts,
+				convertGeminiInlineDataToOpenAIContent(part.InlineData),
+			)
+			hasContent = true
+		case part.FileData != nil:
+			currentContentParts = append(
+				currentContentParts,
+				convertGeminiFileDataToOpenAIContent(part.FileData),
+			)
 			hasContent = true
 		}
 	}
@@ -718,6 +718,96 @@ func convertGeminiContentToOpenAI(
 	}
 
 	return messages
+}
+
+func convertGeminiInlineDataToOpenAIContent(
+	inlineData *relaymodel.GeminiInlineData,
+) relaymodel.MessageContent {
+	dataURL := inlineData.Data
+	if !strings.HasPrefix(dataURL, "http") && !strings.HasPrefix(dataURL, "data:") {
+		dataURL = "data:" + inlineData.MimeType + ";base64," + inlineData.Data
+	}
+
+	switch {
+	case strings.HasPrefix(inlineData.MimeType, "audio/"):
+		return relaymodel.MessageContent{
+			Type: relaymodel.ContentTypeInputAudio,
+			InputAudio: &relaymodel.InputAudio{
+				URL: dataURL,
+			},
+		}
+	case strings.HasPrefix(inlineData.MimeType, "video/"):
+		return relaymodel.MessageContent{
+			Type: relaymodel.ContentTypeVideoURL,
+			VideoURL: &relaymodel.VideoURL{
+				URL: dataURL,
+			},
+		}
+	default:
+		return relaymodel.MessageContent{
+			Type: relaymodel.ContentTypeImageURL,
+			ImageURL: &relaymodel.ImageURL{
+				URL: dataURL,
+			},
+		}
+	}
+}
+
+func convertGeminiFileDataToOpenAIContent(
+	fileData *relaymodel.GeminiFileData,
+) relaymodel.MessageContent {
+	mimeType := fileData.MimeType
+	if mimeType == "" {
+		mimeType = inferGeminiFileDataMimeType(fileData.FileURI)
+	}
+
+	switch {
+	case strings.HasPrefix(mimeType, "audio/"):
+		return relaymodel.MessageContent{
+			Type: relaymodel.ContentTypeInputAudio,
+			InputAudio: &relaymodel.InputAudio{
+				URL: fileData.FileURI,
+			},
+		}
+	case strings.HasPrefix(mimeType, "video/"):
+		return relaymodel.MessageContent{
+			Type: relaymodel.ContentTypeVideoURL,
+			VideoURL: &relaymodel.VideoURL{
+				URL: fileData.FileURI,
+			},
+		}
+	default:
+		return relaymodel.MessageContent{
+			Type: relaymodel.ContentTypeImageURL,
+			ImageURL: &relaymodel.ImageURL{
+				URL: fileData.FileURI,
+			},
+		}
+	}
+}
+
+func inferGeminiFileDataMimeType(fileURI string) string {
+	if after, ok := strings.CutPrefix(fileURI, "data:"); ok {
+		mediaType := after
+		if beforeParams, _, ok := strings.Cut(mediaType, ";"); ok {
+			return beforeParams
+		}
+
+		if beforeData, _, ok := strings.Cut(mediaType, ","); ok {
+			return beforeData
+		}
+	}
+
+	path := fileURI
+	if parsed, err := url.Parse(fileURI); err == nil && parsed.Path != "" {
+		path = parsed.Path
+	}
+
+	if ext := filepath.Ext(path); ext != "" {
+		return mime.TypeByExtension(strings.ToLower(ext))
+	}
+
+	return ""
 }
 
 // ConvertGeminiToResponsesRequest converts a Gemini request to Responses API format
