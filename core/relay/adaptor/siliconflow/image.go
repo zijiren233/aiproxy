@@ -2,11 +2,13 @@ package siliconflow
 
 import (
 	"bytes"
+	"errors"
 	"net/http"
 	"strconv"
 	"time"
 
 	"github.com/bytedance/sonic"
+	"github.com/bytedance/sonic/ast"
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/core/common"
 	"github.com/labring/aiproxy/core/common/image"
@@ -40,37 +42,39 @@ type imageResponseImage struct {
 }
 
 func ConvertImageRequest(meta *meta.Meta, request *http.Request) (adaptor.ConvertResult, error) {
-	var reqMap map[string]any
-
-	err := common.UnmarshalRequestReusable(request, &reqMap)
+	node, err := common.UnmarshalRequest2NodeReusable(request)
 	if err != nil {
 		return adaptor.ConvertResult{}, err
 	}
 
-	meta.Set(openai.MetaResponseFormat, reqMap["response_format"])
-
-	reqMap["model"] = meta.ActualModel
-	if _, ok := reqMap["n"]; ok {
-		reqMap["batch_size"] = reqMap["n"]
-		delete(reqMap, "n")
+	responseFormat, err := node.Get("response_format").String()
+	if err != nil && !errors.Is(err, ast.ErrNotExist) {
+		return adaptor.ConvertResult{}, err
 	}
 
-	if _, ok := reqMap["steps"]; ok {
-		reqMap["num_inference_steps"] = reqMap["steps"]
-		delete(reqMap, "steps")
+	meta.Set(openai.MetaResponseFormat, responseFormat)
+
+	if _, err := node.Set("model", ast.NewString(meta.ActualModel)); err != nil {
+		return adaptor.ConvertResult{}, err
 	}
 
-	if _, ok := reqMap["scale"]; ok {
-		reqMap["guidance_scale"] = reqMap["scale"]
-		delete(reqMap, "scale")
+	if err := renameImageRequestField(&node, "n", "batch_size"); err != nil {
+		return adaptor.ConvertResult{}, err
 	}
 
-	if _, ok := reqMap["size"]; ok {
-		reqMap["image_size"] = reqMap["size"]
-		delete(reqMap, "size")
+	if err := renameImageRequestField(&node, "steps", "num_inference_steps"); err != nil {
+		return adaptor.ConvertResult{}, err
 	}
 
-	data, err := sonic.Marshal(&reqMap)
+	if err := renameImageRequestField(&node, "scale", "guidance_scale"); err != nil {
+		return adaptor.ConvertResult{}, err
+	}
+
+	if err := renameImageRequestField(&node, "size", "image_size"); err != nil {
+		return adaptor.ConvertResult{}, err
+	}
+
+	data, err := node.MarshalJSON()
 	if err != nil {
 		return adaptor.ConvertResult{}, err
 	}
@@ -82,6 +86,21 @@ func ConvertImageRequest(meta *meta.Meta, request *http.Request) (adaptor.Conver
 		},
 		Body: bytes.NewReader(data),
 	}, nil
+}
+
+func renameImageRequestField(node *ast.Node, oldKey, newKey string) error {
+	value := node.Get(oldKey)
+	if !value.Exists() {
+		return nil
+	}
+
+	if _, err := node.Set(newKey, *value); err != nil {
+		return err
+	}
+
+	_, err := node.Unset(oldKey)
+
+	return err
 }
 
 func ImageHandler(
