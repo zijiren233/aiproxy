@@ -171,6 +171,31 @@ func openAIAudioToDoubaoURL(value any) *doubaoVideoURLContent {
 	}
 }
 
+func doubaoVideoResolutionFromSize(size string) string {
+	size = strings.ToLower(strings.TrimSpace(size))
+	switch size {
+	case "480p", "720p", "1080p":
+		return size
+	}
+
+	width, height, ok := dimensionsFromSize(size)
+	if !ok {
+		return ""
+	}
+
+	shortSide := min(width, height)
+	switch {
+	case shortSide >= 1000:
+		return "1080p"
+	case shortSide >= 700:
+		return "720p"
+	case shortSide >= 400:
+		return "480p"
+	default:
+		return ""
+	}
+}
+
 func ratioFromSize(size string) string {
 	size = strings.ToLower(strings.TrimSpace(size))
 	switch size {
@@ -183,13 +208,8 @@ func ratioFromSize(size string) string {
 		return ""
 	}
 
-	w, err := strconv.Atoi(strings.TrimSpace(width))
-	if err != nil {
-		return ""
-	}
-
-	h, err := strconv.Atoi(strings.TrimSpace(height))
-	if err != nil || h == 0 {
+	w, h, ok := dimensionsFromParts(width, height)
+	if !ok || h == 0 {
 		return ""
 	}
 
@@ -207,4 +227,27 @@ func ratioFromSize(size string) string {
 	default:
 		return ""
 	}
+}
+
+func dimensionsFromSize(size string) (int, int, bool) {
+	width, height, ok := strings.Cut(strings.ToLower(strings.TrimSpace(size)), "x")
+	if !ok {
+		return 0, 0, false
+	}
+
+	return dimensionsFromParts(width, height)
+}
+
+func dimensionsFromParts(width, height string) (int, int, bool) {
+	w, err := strconv.Atoi(strings.TrimSpace(width))
+	if err != nil {
+		return 0, 0, false
+	}
+
+	h, err := strconv.Atoi(strings.TrimSpace(height))
+	if err != nil {
+		return 0, 0, false
+	}
+
+	return w, h, true
 }

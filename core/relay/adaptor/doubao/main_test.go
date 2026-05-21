@@ -2,9 +2,11 @@
 package doubao
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"io"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -688,6 +690,170 @@ func TestAdaptorConvertRequestVideoGenerationMapsOpenAIFields(t *testing.T) {
 	assertDoubaoVideoContent(t, content[1], "image_url", "https://example.com/reference.png", "")
 	assertDoubaoVideoContent(t, content[2], "video_url", "https://example.com/reference.mp4", "")
 	assertDoubaoVideoContent(t, content[3], "audio_url", "data:audio/wav;base64,AAAA", "")
+}
+
+func TestAdaptorConvertRequestVideoGenerationMapsPixelSize(t *testing.T) {
+	adaptor := &Adaptor{}
+	m := meta.NewMeta(
+		nil,
+		mode.VideoGenerationsJobs,
+		"doubao-seedance-2-0",
+		coremodel.ModelConfig{},
+	)
+
+	req, err := http.NewRequestWithContext(
+		context.Background(),
+		http.MethodPost,
+		"/v1/video/generations/jobs",
+		strings.NewReader(`{
+			"model": "alias-video",
+			"prompt": "Animate a calm ocean",
+			"size": "1280x720",
+			"seconds": 5
+		}`),
+	)
+	if err != nil {
+		t.Fatalf("failed to create request: %v", err)
+	}
+
+	result, err := adaptor.ConvertRequest(m, nil, req)
+	if err != nil {
+		t.Fatalf("ConvertRequest returned error: %v", err)
+	}
+
+	body, err := io.ReadAll(result.Body)
+	if err != nil {
+		t.Fatalf("failed to read converted body: %v", err)
+	}
+
+	var payload map[string]any
+	if err := json.Unmarshal(body, &payload); err != nil {
+		t.Fatalf("failed to unmarshal converted body %s: %v", string(body), err)
+	}
+
+	if payload["resolution"] != "720p" {
+		t.Fatalf("expected resolution 720p, got %#v", payload["resolution"])
+	}
+
+	if payload["ratio"] != "16:9" {
+		t.Fatalf("expected ratio 16:9, got %#v", payload["ratio"])
+	}
+}
+
+func TestAdaptorConvertRequestVideoGenerationMapsPortraitPixelSize(t *testing.T) {
+	adaptor := &Adaptor{}
+	m := meta.NewMeta(
+		nil,
+		mode.VideoGenerationsJobs,
+		"doubao-seedance-2-0",
+		coremodel.ModelConfig{},
+	)
+
+	req, err := http.NewRequestWithContext(
+		context.Background(),
+		http.MethodPost,
+		"/v1/video/generations/jobs",
+		strings.NewReader(`{
+			"model": "alias-video",
+			"prompt": "Animate a calm ocean",
+			"size": "720x1280",
+			"seconds": 5
+		}`),
+	)
+	if err != nil {
+		t.Fatalf("failed to create request: %v", err)
+	}
+
+	result, err := adaptor.ConvertRequest(m, nil, req)
+	if err != nil {
+		t.Fatalf("ConvertRequest returned error: %v", err)
+	}
+
+	body, err := io.ReadAll(result.Body)
+	if err != nil {
+		t.Fatalf("failed to read converted body: %v", err)
+	}
+
+	var payload map[string]any
+	if err := json.Unmarshal(body, &payload); err != nil {
+		t.Fatalf("failed to unmarshal converted body %s: %v", string(body), err)
+	}
+
+	if payload["resolution"] != "720p" {
+		t.Fatalf("expected resolution 720p, got %#v", payload["resolution"])
+	}
+
+	if payload["ratio"] != "9:16" {
+		t.Fatalf("expected ratio 9:16, got %#v", payload["ratio"])
+	}
+}
+
+func TestAdaptorConvertRequestVideoGenerationMapsMultipartPixelSize(t *testing.T) {
+	adaptor := &Adaptor{}
+	m := meta.NewMeta(
+		nil,
+		mode.VideoGenerationsJobs,
+		"doubao-seedance-2-0",
+		coremodel.ModelConfig{},
+	)
+
+	var body bytes.Buffer
+
+	writer := multipart.NewWriter(&body)
+	if err := writer.WriteField("model", "alias-video"); err != nil {
+		t.Fatalf("failed to write model: %v", err)
+	}
+
+	if err := writer.WriteField("prompt", "Animate a calm ocean"); err != nil {
+		t.Fatalf("failed to write prompt: %v", err)
+	}
+
+	if err := writer.WriteField("size", "1280x720"); err != nil {
+		t.Fatalf("failed to write size: %v", err)
+	}
+
+	if err := writer.WriteField("seconds", "5"); err != nil {
+		t.Fatalf("failed to write seconds: %v", err)
+	}
+
+	if err := writer.Close(); err != nil {
+		t.Fatalf("failed to close multipart writer: %v", err)
+	}
+
+	req, err := http.NewRequestWithContext(
+		context.Background(),
+		http.MethodPost,
+		"/v1/video/generations/jobs",
+		&body,
+	)
+	if err != nil {
+		t.Fatalf("failed to create request: %v", err)
+	}
+
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+
+	result, err := adaptor.ConvertRequest(m, nil, req)
+	if err != nil {
+		t.Fatalf("ConvertRequest returned error: %v", err)
+	}
+
+	convertedBody, err := io.ReadAll(result.Body)
+	if err != nil {
+		t.Fatalf("failed to read converted body: %v", err)
+	}
+
+	var payload map[string]any
+	if err := json.Unmarshal(convertedBody, &payload); err != nil {
+		t.Fatalf("failed to unmarshal converted body %s: %v", string(convertedBody), err)
+	}
+
+	if payload["resolution"] != "720p" {
+		t.Fatalf("expected resolution 720p, got %#v", payload["resolution"])
+	}
+
+	if payload["ratio"] != "16:9" {
+		t.Fatalf("expected ratio 16:9, got %#v", payload["ratio"])
+	}
 }
 
 func TestAdaptorConvertRequestVideoGenerationIgnoresDoubaoDurationField(t *testing.T) {

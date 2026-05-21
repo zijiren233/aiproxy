@@ -158,7 +158,7 @@ func parseDoubaoJSONVideoRequest(raw map[string]any) doubaoVideoRequest {
 		SafetyIdentifier: stringFromAny(raw["safety_identifier"]),
 		Resolution: firstNonEmptyString(
 			stringFromAny(raw["resolution"]),
-			stringFromAny(raw["size"]),
+			doubaoVideoResolutionFromSize(stringFromAny(raw["size"])),
 		),
 		Ratio: firstNonEmptyString(
 			stringFromAny(raw["ratio"]),
@@ -203,7 +203,7 @@ func parseDoubaoMultipartVideoRequest(req *http.Request) (doubaoVideoRequest, er
 		SafetyIdentifier: req.PostFormValue("safety_identifier"),
 		Resolution: firstNonEmptyString(
 			req.PostFormValue("resolution"),
-			req.PostFormValue("size"),
+			doubaoVideoResolutionFromSize(req.PostFormValue("size")),
 		),
 		Ratio: firstNonEmptyString(
 			req.PostFormValue("ratio"),
