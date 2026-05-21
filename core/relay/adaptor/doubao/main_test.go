@@ -2,9 +2,11 @@
 package doubao
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"io"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -13,10 +15,37 @@ import (
 	"github.com/bytedance/sonic"
 	"github.com/gin-gonic/gin"
 	coremodel "github.com/labring/aiproxy/core/model"
+	"github.com/labring/aiproxy/core/relay/adaptor"
 	"github.com/labring/aiproxy/core/relay/meta"
 	"github.com/labring/aiproxy/core/relay/mode"
 	relaymodel "github.com/labring/aiproxy/core/relay/model"
 )
+
+type doubaoTestStore struct {
+	saved []adaptor.StoreCache
+}
+
+func (s *doubaoTestStore) GetStore(string, int, string) (adaptor.StoreCache, error) {
+	return adaptor.StoreCache{}, nil
+}
+
+func (s *doubaoTestStore) SaveStore(cache adaptor.StoreCache) error {
+	s.saved = append(s.saved, cache)
+	return nil
+}
+
+func (s *doubaoTestStore) SaveStoreWithOption(
+	cache adaptor.StoreCache,
+	_ adaptor.SaveStoreOption,
+) error {
+	s.saved = append(s.saved, cache)
+	return nil
+}
+
+func (s *doubaoTestStore) SaveIfNotExistStore(cache adaptor.StoreCache) error {
+	s.saved = append(s.saved, cache)
+	return nil
+}
 
 func TestAdaptorSupportMode(t *testing.T) {
 	adaptor := &Adaptor{}
@@ -26,6 +55,14 @@ func TestAdaptorSupportMode(t *testing.T) {
 		mode.Anthropic,
 		mode.Gemini,
 		mode.Embeddings,
+		mode.ImagesGenerations,
+		mode.VideoGenerationsJobs,
+		mode.VideoGenerationsGetJobs,
+		mode.VideoGenerationsContent,
+		mode.Videos,
+		mode.VideosGet,
+		mode.VideosContent,
+		mode.VideosDelete,
 		mode.Responses,
 		mode.ResponsesGet,
 		mode.ResponsesDelete,
@@ -40,7 +77,7 @@ func TestAdaptorSupportMode(t *testing.T) {
 
 	unsupportedModes := []mode.Mode{
 		mode.Completions,
-		mode.ImagesGenerations,
+		mode.ImagesEdits,
 	}
 	for _, m := range unsupportedModes {
 		if adaptor.SupportMode(&meta.Meta{Mode: m}) {
@@ -56,12 +93,15 @@ func TestAdaptorGetRequestURL(t *testing.T) {
 	}
 
 	tests := []struct {
-		name       string
-		mode       mode.Mode
-		model      string
-		responseID string
-		wantMethod string
-		wantURL    string
+		name         string
+		mode         mode.Mode
+		model        string
+		responseID   string
+		jobID        string
+		videoID      string
+		generationID string
+		wantMethod   string
+		wantURL      string
 	}{
 		{
 			name:       "gemini uses chat completions",
@@ -76,6 +116,52 @@ func TestAdaptorGetRequestURL(t *testing.T) {
 			model:      "bot-123",
 			wantMethod: http.MethodPost,
 			wantURL:    "https://ark.cn-beijing.volces.com/api/v3/bots/chat/completions",
+		},
+		{
+			name:       "image generation",
+			mode:       mode.ImagesGenerations,
+			model:      "doubao-seedream-5-0-lite",
+			wantMethod: http.MethodPost,
+			wantURL:    "https://ark.cn-beijing.volces.com/api/v3/images/generations",
+		},
+		{
+			name:       "video job create",
+			mode:       mode.VideoGenerationsJobs,
+			model:      "doubao-seedance-2-0",
+			wantMethod: http.MethodPost,
+			wantURL:    "https://ark.cn-beijing.volces.com/api/v3/contents/generations/tasks",
+		},
+		{
+			name:       "video job get",
+			mode:       mode.VideoGenerationsGetJobs,
+			model:      "doubao-seedance-2-0",
+			jobID:      "task-123",
+			wantMethod: http.MethodGet,
+			wantURL:    "https://ark.cn-beijing.volces.com/api/v3/contents/generations/tasks/task-123",
+		},
+		{
+			name:         "video job content",
+			mode:         mode.VideoGenerationsContent,
+			model:        "doubao-seedance-2-0",
+			generationID: "task-456",
+			wantMethod:   http.MethodGet,
+			wantURL:      "https://ark.cn-beijing.volces.com/api/v3/contents/generations/tasks/task-456",
+		},
+		{
+			name:       "videos get",
+			mode:       mode.VideosGet,
+			model:      "doubao-seedance-2-0",
+			videoID:    "video-123",
+			wantMethod: http.MethodGet,
+			wantURL:    "https://ark.cn-beijing.volces.com/api/v3/contents/generations/tasks/video-123",
+		},
+		{
+			name:       "videos delete",
+			mode:       mode.VideosDelete,
+			model:      "doubao-seedance-2-0",
+			videoID:    "video-123",
+			wantMethod: http.MethodDelete,
+			wantURL:    "https://ark.cn-beijing.volces.com/api/v3/contents/generations/tasks/video-123",
 		},
 		{
 			name:       "responses create",
@@ -126,6 +212,9 @@ func TestAdaptorGetRequestURL(t *testing.T) {
 				tt.model,
 				coremodel.ModelConfig{},
 				meta.WithResponseID(tt.responseID),
+				meta.WithJobID(tt.jobID),
+				meta.WithGenerationID(tt.generationID),
+				meta.WithVideoID(tt.videoID),
 			)
 
 			got, err := adaptor.GetRequestURL(m, nil, nil)
@@ -343,6 +432,715 @@ func TestAdaptorDoResponseVisionEmbeddings(t *testing.T) {
 	}
 }
 
+func TestAdaptorConvertRequestImageGenerationMapsSequentialCount(t *testing.T) {
+	adaptor := &Adaptor{}
+	m := meta.NewMeta(
+		nil,
+		mode.ImagesGenerations,
+		"doubao-seedream-5-0-lite",
+		coremodel.ModelConfig{},
+	)
+
+	req, err := http.NewRequestWithContext(
+		context.Background(),
+		http.MethodPost,
+		"/v1/images/generations",
+		strings.NewReader(`{
+			"model": "alias-image",
+			"prompt": "Draw a quiet library",
+			"n": 3,
+			"size": "2K",
+			"response_format": "url"
+		}`),
+	)
+	if err != nil {
+		t.Fatalf("failed to create request: %v", err)
+	}
+
+	result, err := adaptor.ConvertRequest(m, nil, req)
+	if err != nil {
+		t.Fatalf("ConvertRequest returned error: %v", err)
+	}
+
+	body, err := io.ReadAll(result.Body)
+	if err != nil {
+		t.Fatalf("failed to read converted body: %v", err)
+	}
+
+	var payload map[string]any
+	if err := json.Unmarshal(body, &payload); err != nil {
+		t.Fatalf("failed to unmarshal converted body %s: %v", string(body), err)
+	}
+
+	if payload["model"] != "doubao-seedream-5-0-lite" {
+		t.Fatalf("expected actual model, got %#v", payload["model"])
+	}
+
+	if _, ok := payload["n"]; ok {
+		t.Fatalf("expected n to be removed, got %#v", payload["n"])
+	}
+
+	if payload["sequential_image_generation"] != "auto" {
+		t.Fatalf(
+			"expected sequential image generation auto, got %#v",
+			payload["sequential_image_generation"],
+		)
+	}
+
+	options, ok := payload["sequential_image_generation_options"].(map[string]any)
+	if !ok {
+		t.Fatalf(
+			"expected sequential options object, got %#v",
+			payload["sequential_image_generation_options"],
+		)
+	}
+
+	if maxImages, ok := options["max_images"].(float64); !ok || int(maxImages) != 3 {
+		t.Fatalf("expected max_images=3, got %#v", options["max_images"])
+	}
+}
+
+func TestAdaptorDoResponseImageGenerationUsesDoubaoUsage(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	adaptor := &Adaptor{}
+	recorder := httptest.NewRecorder()
+	ctx, _ := gin.CreateTestContext(recorder)
+	ctx.Request = httptest.NewRequestWithContext(
+		context.Background(),
+		http.MethodPost,
+		"/v1/images/generations",
+		nil,
+	)
+
+	resp := &http.Response{
+		StatusCode: http.StatusOK,
+		Header:     make(http.Header),
+		Body: io.NopCloser(strings.NewReader(`{
+			"created": 1770000000,
+			"data": [{"url": "https://example.com/image.png", "size": "2048x2048"}],
+			"usage": {
+				"generated_images": 1,
+				"output_tokens": 16384,
+				"total_tokens": 16384,
+				"tool_usage": {"web_search": 2}
+			}
+		}`)),
+	}
+
+	result, err := adaptor.DoResponse(
+		&meta.Meta{Mode: mode.ImagesGenerations},
+		nil,
+		ctx,
+		resp,
+	)
+	if err != nil {
+		t.Fatalf("DoResponse returned error: %v", err)
+	}
+
+	if result.Usage.OutputTokens != coremodel.ZeroNullInt64(1) ||
+		result.Usage.ImageOutputTokens != coremodel.ZeroNullInt64(1) ||
+		result.Usage.TotalTokens != coremodel.ZeroNullInt64(1) ||
+		result.Usage.WebSearchCount != coremodel.ZeroNullInt64(2) {
+		t.Fatalf("unexpected usage: %#v", result.Usage)
+	}
+
+	if result.UsageContext.PriceCondition.Size != "2048x2048" {
+		t.Fatalf("expected size context, got %#v", result.UsageContext)
+	}
+
+	var payload map[string]any
+	if err := json.Unmarshal(recorder.Body.Bytes(), &payload); err != nil {
+		t.Fatalf("failed to unmarshal response body %s: %v", recorder.Body.String(), err)
+	}
+
+	if _, ok := payload["data"].([]any); !ok {
+		t.Fatalf("expected response data array, got %#v", payload["data"])
+	}
+}
+
+func TestAdaptorDoResponseImageGenerationStreamConvertsDoubaoEvents(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	adaptor := &Adaptor{}
+	recorder := httptest.NewRecorder()
+	ctx, _ := gin.CreateTestContext(recorder)
+	ctx.Request = httptest.NewRequestWithContext(
+		context.Background(),
+		http.MethodPost,
+		"/v1/images/generations",
+		nil,
+	)
+
+	resp := &http.Response{
+		StatusCode: http.StatusOK,
+		Header: http.Header{
+			"Content-Type": {"text/event-stream"},
+		},
+		Body: io.NopCloser(strings.NewReader(strings.Join([]string{
+			`event: image_generation.partial_succeeded`,
+			`data: {"type":"image_generation.partial_succeeded","image_index":0,"url":"https://example.com/one.png","size":"2048×2048"}`,
+			"",
+			`event: image_generation.completed`,
+			`data: {"type":"image_generation.completed","usage":{"generated_images":2,"output_tokens":32768,"total_tokens":32768,"tool_usage":{"web_search":1}}}`,
+			"",
+		}, "\n"))),
+	}
+
+	result, err := adaptor.DoResponse(
+		&meta.Meta{Mode: mode.ImagesGenerations},
+		nil,
+		ctx,
+		resp,
+	)
+	if err != nil {
+		t.Fatalf("DoResponse returned error: %v", err)
+	}
+
+	if result.Usage.OutputTokens != coremodel.ZeroNullInt64(2) ||
+		result.Usage.ImageOutputTokens != coremodel.ZeroNullInt64(2) ||
+		result.Usage.TotalTokens != coremodel.ZeroNullInt64(2) ||
+		result.Usage.WebSearchCount != coremodel.ZeroNullInt64(1) {
+		t.Fatalf("unexpected usage: %#v", result.Usage)
+	}
+
+	if result.UsageContext.PriceCondition.Size != "2048x2048" {
+		t.Fatalf("expected size context, got %#v", result.UsageContext)
+	}
+
+	body := recorder.Body.String()
+	if strings.Contains(body, "event: image_generation.partial_succeeded") {
+		t.Fatalf("expected event lines to be omitted, got body: %s", body)
+	}
+
+	if !strings.Contains(body, `"type":"image_generation.partial_image"`) ||
+		!strings.Contains(body, `"partial_image_index":0`) ||
+		!strings.Contains(body, `"type":"image_generation.completed"`) ||
+		!strings.Contains(body, `"output_tokens":2`) {
+		t.Fatalf("unexpected stream body: %s", body)
+	}
+
+	if recorder.Header().Get("Content-Type") != "text/event-stream" {
+		t.Fatalf("expected text/event-stream, got %s", recorder.Header().Get("Content-Type"))
+	}
+}
+
+func TestAdaptorConvertRequestVideoGenerationMapsOpenAIFields(t *testing.T) {
+	adaptor := &Adaptor{}
+	m := meta.NewMeta(
+		nil,
+		mode.VideoGenerationsJobs,
+		"doubao-seedance-2-0",
+		coremodel.ModelConfig{},
+	)
+
+	req, err := http.NewRequestWithContext(
+		context.Background(),
+		http.MethodPost,
+		"/v1/video/generations/jobs",
+		strings.NewReader(`{
+			"model": "alias-video",
+			"prompt": "Animate a calm ocean",
+			"size": "720p",
+			"seconds": 5,
+			"input_reference": "https://example.com/reference.png",
+			"video_url": "https://example.com/reference.mp4",
+			"input_audio": {"data": "AAAA", "format": "wav"},
+			"generate_audio": true,
+			"watermark": false
+		}`),
+	)
+	if err != nil {
+		t.Fatalf("failed to create request: %v", err)
+	}
+
+	result, err := adaptor.ConvertRequest(m, nil, req)
+	if err != nil {
+		t.Fatalf("ConvertRequest returned error: %v", err)
+	}
+
+	body, err := io.ReadAll(result.Body)
+	if err != nil {
+		t.Fatalf("failed to read converted body: %v", err)
+	}
+
+	var payload map[string]any
+	if err := json.Unmarshal(body, &payload); err != nil {
+		t.Fatalf("failed to unmarshal converted body %s: %v", string(body), err)
+	}
+
+	if payload["model"] != "doubao-seedance-2-0" {
+		t.Fatalf("expected actual model, got %#v", payload["model"])
+	}
+
+	if payload["resolution"] != "720p" {
+		t.Fatalf("expected resolution 720p, got %#v", payload["resolution"])
+	}
+
+	if duration, ok := payload["duration"].(float64); !ok || int(duration) != 5 {
+		t.Fatalf("expected duration=5, got %#v", payload["duration"])
+	}
+
+	content, ok := payload["content"].([]any)
+	if !ok || len(content) != 4 {
+		t.Fatalf("expected 4 content items, got %#v", payload["content"])
+	}
+
+	assertDoubaoVideoContent(t, content[0], "text", "", "Animate a calm ocean")
+	assertDoubaoVideoContent(t, content[1], "image_url", "https://example.com/reference.png", "")
+	assertDoubaoVideoContent(t, content[2], "video_url", "https://example.com/reference.mp4", "")
+	assertDoubaoVideoContent(t, content[3], "audio_url", "data:audio/wav;base64,AAAA", "")
+}
+
+func TestAdaptorConvertRequestVideoGenerationMapsPixelSize(t *testing.T) {
+	adaptor := &Adaptor{}
+	m := meta.NewMeta(
+		nil,
+		mode.VideoGenerationsJobs,
+		"doubao-seedance-2-0",
+		coremodel.ModelConfig{},
+	)
+
+	req, err := http.NewRequestWithContext(
+		context.Background(),
+		http.MethodPost,
+		"/v1/video/generations/jobs",
+		strings.NewReader(`{
+			"model": "alias-video",
+			"prompt": "Animate a calm ocean",
+			"size": "1280x720",
+			"seconds": 5
+		}`),
+	)
+	if err != nil {
+		t.Fatalf("failed to create request: %v", err)
+	}
+
+	result, err := adaptor.ConvertRequest(m, nil, req)
+	if err != nil {
+		t.Fatalf("ConvertRequest returned error: %v", err)
+	}
+
+	body, err := io.ReadAll(result.Body)
+	if err != nil {
+		t.Fatalf("failed to read converted body: %v", err)
+	}
+
+	var payload map[string]any
+	if err := json.Unmarshal(body, &payload); err != nil {
+		t.Fatalf("failed to unmarshal converted body %s: %v", string(body), err)
+	}
+
+	if payload["resolution"] != "720p" {
+		t.Fatalf("expected resolution 720p, got %#v", payload["resolution"])
+	}
+
+	if payload["ratio"] != "16:9" {
+		t.Fatalf("expected ratio 16:9, got %#v", payload["ratio"])
+	}
+}
+
+func TestAdaptorConvertRequestVideoGenerationMapsPortraitPixelSize(t *testing.T) {
+	adaptor := &Adaptor{}
+	m := meta.NewMeta(
+		nil,
+		mode.VideoGenerationsJobs,
+		"doubao-seedance-2-0",
+		coremodel.ModelConfig{},
+	)
+
+	req, err := http.NewRequestWithContext(
+		context.Background(),
+		http.MethodPost,
+		"/v1/video/generations/jobs",
+		strings.NewReader(`{
+			"model": "alias-video",
+			"prompt": "Animate a calm ocean",
+			"size": "720x1280",
+			"seconds": 5
+		}`),
+	)
+	if err != nil {
+		t.Fatalf("failed to create request: %v", err)
+	}
+
+	result, err := adaptor.ConvertRequest(m, nil, req)
+	if err != nil {
+		t.Fatalf("ConvertRequest returned error: %v", err)
+	}
+
+	body, err := io.ReadAll(result.Body)
+	if err != nil {
+		t.Fatalf("failed to read converted body: %v", err)
+	}
+
+	var payload map[string]any
+	if err := json.Unmarshal(body, &payload); err != nil {
+		t.Fatalf("failed to unmarshal converted body %s: %v", string(body), err)
+	}
+
+	if payload["resolution"] != "720p" {
+		t.Fatalf("expected resolution 720p, got %#v", payload["resolution"])
+	}
+
+	if payload["ratio"] != "9:16" {
+		t.Fatalf("expected ratio 9:16, got %#v", payload["ratio"])
+	}
+}
+
+func TestAdaptorConvertRequestVideoGenerationMapsMultipartPixelSize(t *testing.T) {
+	adaptor := &Adaptor{}
+	m := meta.NewMeta(
+		nil,
+		mode.VideoGenerationsJobs,
+		"doubao-seedance-2-0",
+		coremodel.ModelConfig{},
+	)
+
+	var body bytes.Buffer
+
+	writer := multipart.NewWriter(&body)
+	if err := writer.WriteField("model", "alias-video"); err != nil {
+		t.Fatalf("failed to write model: %v", err)
+	}
+
+	if err := writer.WriteField("prompt", "Animate a calm ocean"); err != nil {
+		t.Fatalf("failed to write prompt: %v", err)
+	}
+
+	if err := writer.WriteField("size", "1280x720"); err != nil {
+		t.Fatalf("failed to write size: %v", err)
+	}
+
+	if err := writer.WriteField("seconds", "5"); err != nil {
+		t.Fatalf("failed to write seconds: %v", err)
+	}
+
+	if err := writer.Close(); err != nil {
+		t.Fatalf("failed to close multipart writer: %v", err)
+	}
+
+	req, err := http.NewRequestWithContext(
+		context.Background(),
+		http.MethodPost,
+		"/v1/video/generations/jobs",
+		&body,
+	)
+	if err != nil {
+		t.Fatalf("failed to create request: %v", err)
+	}
+
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+
+	result, err := adaptor.ConvertRequest(m, nil, req)
+	if err != nil {
+		t.Fatalf("ConvertRequest returned error: %v", err)
+	}
+
+	convertedBody, err := io.ReadAll(result.Body)
+	if err != nil {
+		t.Fatalf("failed to read converted body: %v", err)
+	}
+
+	var payload map[string]any
+	if err := json.Unmarshal(convertedBody, &payload); err != nil {
+		t.Fatalf("failed to unmarshal converted body %s: %v", string(convertedBody), err)
+	}
+
+	if payload["resolution"] != "720p" {
+		t.Fatalf("expected resolution 720p, got %#v", payload["resolution"])
+	}
+
+	if payload["ratio"] != "16:9" {
+		t.Fatalf("expected ratio 16:9, got %#v", payload["ratio"])
+	}
+}
+
+func TestAdaptorConvertRequestVideoGenerationIgnoresDoubaoDurationField(t *testing.T) {
+	adaptor := &Adaptor{}
+	m := meta.NewMeta(
+		nil,
+		mode.VideoGenerationsJobs,
+		"doubao-seedance-2-0",
+		coremodel.ModelConfig{},
+	)
+
+	req, err := http.NewRequestWithContext(
+		context.Background(),
+		http.MethodPost,
+		"/v1/video/generations/jobs",
+		strings.NewReader(`{
+			"model": "alias-video",
+			"prompt": "Animate a calm ocean",
+			"duration": 12,
+			"seconds": 5
+		}`),
+	)
+	if err != nil {
+		t.Fatalf("failed to create request: %v", err)
+	}
+
+	result, err := adaptor.ConvertRequest(m, nil, req)
+	if err != nil {
+		t.Fatalf("ConvertRequest returned error: %v", err)
+	}
+
+	body, err := io.ReadAll(result.Body)
+	if err != nil {
+		t.Fatalf("failed to read converted body: %v", err)
+	}
+
+	var payload map[string]any
+	if err := json.Unmarshal(body, &payload); err != nil {
+		t.Fatalf("failed to unmarshal converted body %s: %v", string(body), err)
+	}
+
+	if duration, ok := payload["duration"].(float64); !ok || int(duration) != 5 {
+		t.Fatalf("expected duration from seconds=5, got %#v", payload["duration"])
+	}
+}
+
+func TestAdaptorConvertRequestVideoGenerationKeepsNativeContentOnce(t *testing.T) {
+	adaptor := &Adaptor{}
+	m := meta.NewMeta(
+		nil,
+		mode.VideoGenerationsJobs,
+		"doubao-seedance-2-0",
+		coremodel.ModelConfig{},
+	)
+
+	req, err := http.NewRequestWithContext(
+		context.Background(),
+		http.MethodPost,
+		"/v1/video/generations/jobs",
+		strings.NewReader(`{
+			"model": "alias-video",
+			"content": [
+				{"type": "text", "text": "Animate a calm ocean"},
+				{"type": "image_url", "image_url": {"url": "https://example.com/reference.png"}, "role": "first_frame"}
+			],
+			"seconds": 5
+		}`),
+	)
+	if err != nil {
+		t.Fatalf("failed to create request: %v", err)
+	}
+
+	result, err := adaptor.ConvertRequest(m, nil, req)
+	if err != nil {
+		t.Fatalf("ConvertRequest returned error: %v", err)
+	}
+
+	body, err := io.ReadAll(result.Body)
+	if err != nil {
+		t.Fatalf("failed to read converted body: %v", err)
+	}
+
+	var payload map[string]any
+	if err := json.Unmarshal(body, &payload); err != nil {
+		t.Fatalf("failed to unmarshal converted body %s: %v", string(body), err)
+	}
+
+	content, ok := payload["content"].([]any)
+	if !ok || len(content) != 2 {
+		t.Fatalf("expected exactly 2 native content items, got %#v", payload["content"])
+	}
+
+	assertDoubaoVideoContent(t, content[0], "text", "", "Animate a calm ocean")
+	assertDoubaoVideoContent(t, content[1], "image_url", "https://example.com/reference.png", "")
+
+	item, ok := content[1].(map[string]any)
+	if !ok {
+		t.Fatalf("expected image content object, got %#v", content[1])
+	}
+
+	if item["role"] != "first_frame" {
+		t.Fatalf("expected first_frame role, got %#v", item["role"])
+	}
+}
+
+func TestAdaptorDoResponseVideoSubmitStoresJob(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	adaptor := &Adaptor{}
+	store := &doubaoTestStore{}
+	recorder := httptest.NewRecorder()
+	ctx, _ := gin.CreateTestContext(recorder)
+
+	m := meta.NewMeta(
+		&coremodel.Channel{ID: 9},
+		mode.VideoGenerationsJobs,
+		"doubao-seedance-2-0",
+		coremodel.ModelConfig{},
+	)
+	m.Group.ID = "group-1"
+	m.Token.ID = 7
+
+	resp := &http.Response{
+		StatusCode: http.StatusOK,
+		Header:     make(http.Header),
+		Body: io.NopCloser(strings.NewReader(`{
+			"id": "task-123",
+			"status": "queued",
+			"model": "doubao-seedance-2-0",
+			"created_at": 1770000000,
+			"execution_expires_after": 172800
+		}`)),
+	}
+
+	result, err := adaptor.DoResponse(m, store, ctx, resp)
+	if err != nil {
+		t.Fatalf("DoResponse returned error: %v", err)
+	}
+
+	if !result.AsyncUsage || result.UpstreamID != "task-123" {
+		t.Fatalf("unexpected result: %#v", result)
+	}
+
+	if len(store.saved) != 1 || store.saved[0].ID != coremodel.VideoJobStoreID("task-123") {
+		t.Fatalf("expected video job store, got %#v", store.saved)
+	}
+
+	var job relaymodel.VideoGenerationJob
+	if err := json.Unmarshal(recorder.Body.Bytes(), &job); err != nil {
+		t.Fatalf("failed to unmarshal job response %s: %v", recorder.Body.String(), err)
+	}
+
+	if job.ID != "task-123" || job.Status != relaymodel.VideoGenerationJobStatusQueued {
+		t.Fatalf("unexpected job: %#v", job)
+	}
+}
+
+func TestAdaptorDoResponseVideoSubmitStoresCompletedGeneration(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	adaptor := &Adaptor{}
+	store := &doubaoTestStore{}
+	recorder := httptest.NewRecorder()
+	ctx, _ := gin.CreateTestContext(recorder)
+
+	m := meta.NewMeta(
+		&coremodel.Channel{ID: 9},
+		mode.VideoGenerationsJobs,
+		"doubao-seedance-2-0",
+		coremodel.ModelConfig{},
+	)
+	m.Group.ID = "group-1"
+	m.Token.ID = 7
+
+	resp := &http.Response{
+		StatusCode: http.StatusOK,
+		Header:     make(http.Header),
+		Body: io.NopCloser(strings.NewReader(`{
+			"id": "task-123",
+			"status": "succeeded",
+			"model": "doubao-seedance-2-0",
+			"created_at": 1770000000,
+			"updated_at": 1770000100,
+			"execution_expires_after": 172800,
+			"content": {
+				"video_url": "https://example.com/video.mp4"
+			}
+		}`)),
+	}
+
+	result, err := adaptor.DoResponse(m, store, ctx, resp)
+	if err != nil {
+		t.Fatalf("DoResponse returned error: %v", err)
+	}
+
+	if !result.AsyncUsage || result.UpstreamID != "task-123" {
+		t.Fatalf("unexpected result: %#v", result)
+	}
+
+	if len(store.saved) != 2 {
+		t.Fatalf("expected job and generation stores, got %#v", store.saved)
+	}
+
+	if store.saved[0].ID != coremodel.VideoJobStoreID("task-123") {
+		t.Fatalf("expected job store first, got %#v", store.saved[0])
+	}
+
+	if store.saved[1].ID != coremodel.VideoGenerationStoreID("task-123") {
+		t.Fatalf("expected generation store second, got %#v", store.saved[1])
+	}
+
+	var job relaymodel.VideoGenerationJob
+	if err := json.Unmarshal(recorder.Body.Bytes(), &job); err != nil {
+		t.Fatalf("failed to unmarshal job response %s: %v", recorder.Body.String(), err)
+	}
+
+	if job.Status != relaymodel.VideoGenerationJobStatusSucceeded ||
+		len(job.Generations) != 1 ||
+		job.Generations[0].ID != "task-123" {
+		t.Fatalf("unexpected completed job: %#v", job)
+	}
+}
+
+func TestAdaptorFetchAsyncUsageUsesDoubaoCompletionTokens(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/custom/api/v3/contents/generations/tasks/task-123" {
+			t.Fatalf("expected task path, got %s", r.URL.Path)
+		}
+
+		if r.Header.Get("Authorization") != "Bearer test-key" {
+			t.Fatalf("expected authorization header, got %#v", r.Header.Get("Authorization"))
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{
+			"id": "task-123",
+			"status": "succeeded",
+			"resolution": "720p",
+			"service_tier": "default",
+			"usage": {
+				"completion_tokens": 411300,
+				"total_tokens": 411300,
+				"tool_usage": {"web_search": 1}
+			}
+		}`))
+	}))
+	defer server.Close()
+
+	adaptor := &Adaptor{}
+
+	usage, usageContext, completed, err := adaptor.FetchAsyncUsage(
+		context.Background(),
+		doubaoAsyncUsageRequest(server.URL+"/custom", "task-123"),
+	)
+	if err != nil {
+		t.Fatalf("FetchAsyncUsage returned error: %v", err)
+	}
+
+	if !completed {
+		t.Fatal("expected async usage to be completed")
+	}
+
+	if usage.OutputTokens != coremodel.ZeroNullInt64(411300) ||
+		usage.TotalTokens != coremodel.ZeroNullInt64(411300) ||
+		usage.WebSearchCount != coremodel.ZeroNullInt64(1) {
+		t.Fatalf("unexpected usage: %#v", usage)
+	}
+
+	if usageContext.PriceCondition.Size != "720p" || usageContext.ServiceTier != "default" {
+		t.Fatalf("unexpected usage context: %#v", usageContext)
+	}
+}
+
+func doubaoAsyncUsageRequest(baseURL, upstreamID string) adaptor.AsyncUsageRequest {
+	return adaptor.AsyncUsageRequest{
+		Channel: &coremodel.Channel{
+			BaseURL: baseURL + "/fallback",
+			Key:     "test-key",
+		},
+		Info: &coremodel.AsyncUsageInfo{
+			Mode:       int(mode.VideoGenerationsJobs),
+			BaseURL:    baseURL,
+			UpstreamID: upstreamID,
+		},
+	}
+}
+
 func TestAdaptorDoResponseResponsesDeleteNoContent(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
@@ -435,6 +1233,35 @@ func assertDoubaoEmbeddingTextItem(t *testing.T, got any, wantText string) {
 
 	if gotMap["text"] != wantText {
 		t.Fatalf("expected text=%q, got %#v", wantText, gotMap["text"])
+	}
+}
+
+func assertDoubaoVideoContent(t *testing.T, got any, itemType, wantURL, wantText string) {
+	t.Helper()
+
+	gotMap, ok := got.(map[string]any)
+	if !ok {
+		t.Fatalf("expected content item object, got %#v", got)
+	}
+
+	if gotMap["type"] != itemType {
+		t.Fatalf("expected type %q, got %#v", itemType, gotMap["type"])
+	}
+
+	if itemType == "text" {
+		if gotMap["text"] != wantText {
+			t.Fatalf("expected text=%q, got %#v", wantText, gotMap["text"])
+		}
+		return
+	}
+
+	urlObject, ok := gotMap[itemType].(map[string]any)
+	if !ok {
+		t.Fatalf("expected %s object, got %#v", itemType, gotMap[itemType])
+	}
+
+	if urlObject["url"] != wantURL {
+		t.Fatalf("expected %s.url=%q, got %#v", itemType, wantURL, urlObject["url"])
 	}
 }
 
