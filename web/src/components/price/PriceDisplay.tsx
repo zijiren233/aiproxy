@@ -71,6 +71,14 @@ export function PriceDisplay({ price }: PriceDisplayProps) {
             parts.push(`${t('group.price.outputPrice')}: ${condition.output_token_min || 0} - ${condition.output_token_max || '∞'}`)
         }
 
+        if (condition.size) {
+            parts.push(`${t('group.price.size')}: ${condition.size}`)
+        }
+
+        if (condition.quality) {
+            parts.push(`${t('group.price.quality')}: ${condition.quality}`)
+        }
+
         if (condition.start_time || condition.end_time) {
             parts.push(
                 `${t('group.price.startTime')}: ${formatTimestamp(condition.start_time) || '-'} | ` +

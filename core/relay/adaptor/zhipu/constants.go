@@ -229,8 +229,11 @@ var ModelList = []model.ModelConfig{
 		Model: "cogview-3",
 		Type:  mode.ImagesGenerations,
 		Owner: model.ModelOwnerChatGLM,
-		ImagePrices: map[string]float64{
-			"1024x1024": 0.1,
+		Price: model.Price{
+			OutputPriceUnit: 1,
+			ConditionalPrices: []model.ConditionalPrice{
+				imageOutputPrice("1024x1024", 0.1),
+			},
 		},
 		RPM: 60,
 		Config: model.NewModelConfig(
@@ -241,18 +244,31 @@ var ModelList = []model.ModelConfig{
 		Model: "cogview-3-plus",
 		Type:  mode.ImagesGenerations,
 		Owner: model.ModelOwnerChatGLM,
-		ImagePrices: map[string]float64{
-			"1024x1024": 0.06,
-			"768x1344":  0.06,
-			"864x1152":  0.06,
-			"1344x768":  0.06,
-			"1152x864":  0.06,
-			"1440x720":  0.06,
-			"720x1440":  0.06,
+		Price: model.Price{
+			OutputPriceUnit: 1,
+			ConditionalPrices: []model.ConditionalPrice{
+				imageOutputPrice("1024x1024", 0.06),
+				imageOutputPrice("768x1344", 0.06),
+				imageOutputPrice("864x1152", 0.06),
+				imageOutputPrice("1344x768", 0.06),
+				imageOutputPrice("1152x864", 0.06),
+				imageOutputPrice("1440x720", 0.06),
+				imageOutputPrice("720x1440", 0.06),
+			},
 		},
 		RPM: 60,
 		Config: model.NewModelConfig(
 			model.WithModelConfigMaxOutputTokens(1024),
 		),
 	},
+}
+
+func imageOutputPrice(size string, price float64) model.ConditionalPrice {
+	return model.ConditionalPrice{
+		Condition: model.PriceCondition{Size: size},
+		Price: model.Price{
+			OutputPrice:     model.ZeroNullFloat64(price),
+			OutputPriceUnit: 1,
+		},
+	}
 }

@@ -41,10 +41,11 @@ type Meta struct {
 
 	RequestTimeout time.Duration
 
-	RequestUsage       model.Usage
-	RequestServiceTier string
-	PromptCacheKey     string
-	User               string
+	RequestUsage        model.Usage
+	RequestUsageContext model.UsageContext
+	RequestServiceTier  string
+	PromptCacheKey      string
+	User                string
 
 	JobID        string
 	GenerationID string
@@ -93,6 +94,12 @@ func WithToken(token model.TokenCache) Option {
 func WithRequestUsage(requestUsage model.Usage) Option {
 	return func(meta *Meta) {
 		meta.RequestUsage = requestUsage
+	}
+}
+
+func WithRequestUsageContext(requestUsageContext model.UsageContext) Option {
+	return func(meta *Meta) {
+		meta.RequestUsageContext = requestUsageContext
 	}
 }
 

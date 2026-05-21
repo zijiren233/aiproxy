@@ -442,7 +442,13 @@
         "extrasJsonPlaceholder": "Enter a JSON object for extra display fields, for example {\"custom_tag\": true}",
         "extrasJsonDescription": "Use this to preserve or add config fields that do not have dedicated controls above. Must be a JSON object.",
         "extrasJsonInvalid": "Extra display fields JSON is invalid",
-        "extrasJsonObjectError": "Extra display fields must be a JSON object"
+        "extrasJsonObjectError": "Extra display fields must be a JSON object",
+        "imageSizes": "Supported Image Sizes",
+        "imageSizesPlaceholder": "One size per line, for example 1024x1024",
+        "imageSizesDescription": "Enter OpenAI-style image sizes. When this list is not empty, image requests with another size are rejected before relay.",
+        "videoSizes": "Supported Video Sizes",
+        "videoSizesPlaceholder": "One size per line, for example 720p",
+        "videoSizesDescription": "Enter OpenAI-style video sizes. When this list is not empty, video requests with another size are rejected before relay."
       },
       "noSearchEngineConfigured": "Click \"Add Search Engine\" to configure search engines",
       "pluginConfiguration": "Plugin Configuration",
@@ -518,7 +524,10 @@
         "title": "Stream Fake Plugin",
         "description": "Convert non-streaming requests to streaming responses for better user experience",
         "enable": "Enable Stream Fake"
-      }
+      },
+      "maxVideoGenerationSeconds": "Max Video Seconds",
+      "maxVideoGenerationSecondsPlaceholder": "Enter 0 for no limit",
+      "maxVideoGenerationSecondsDescription": "Maximum allowed value for video request seconds. `0` means no limit. Applies to video generation and remix models."
     },
     "deleteDialog": {
       "confirmTitle": "Delete Model",
@@ -526,7 +535,8 @@
       "cancel": "Cancel",
       "delete": "Delete",
       "deleting": "Deleting..."
-    }
+    },
+    "maxVideoGenerationSeconds": "Max Video Seconds"
   },
   "mcp": {
     "management": "MCP Management",
@@ -1128,6 +1138,8 @@
       "inputTokenMax": "Input Token Max",
       "outputTokenMin": "Output Token Min",
       "outputTokenMax": "Output Token Max",
+      "size": "Size / Resolution",
+      "quality": "Quality",
       "serviceTier": "Service Tier",
       "serviceTierAny": "Any",
       "startTime": "Start Time",
@@ -1174,11 +1186,14 @@
       "importing": "Importing...",
       "exportSuccess": "Model configs exported successfully",
       "importSuccess": "{{count}} model configs imported successfully",
-    "importFailed": "Failed to import model configs",
-    "fetchFailed": "Failed to fetch model",
-    "deleted": "Model has been deleted or does not exist",
-    "noDataToExport": "No model configs to export",
-      "invalidFormat": "Invalid file format"
+      "importFailed": "Failed to import model configs",
+      "fetchFailed": "Failed to fetch model",
+      "deleted": "Model has been deleted or does not exist",
+      "noDataToExport": "No model configs to export",
+      "invalidFormat": "Invalid file format",
+      "overrideMaxVideoGenerationSeconds": "Override Max Video Seconds",
+      "overrideMaxVideoGenerationSecondsDesc": "Override the maximum allowed video duration for video generation or remix requests",
+      "maxVideoGenerationSecondsHint": "`0` means no limit. Applies to the request parameter `seconds` or legacy `n_seconds`."
     }
   },
   "consumptionRanking": {

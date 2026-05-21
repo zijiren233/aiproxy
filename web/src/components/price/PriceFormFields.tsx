@@ -87,6 +87,24 @@ function ConditionFields({ condition, onChange }: {
                 <Input type="number" min={0} value={condition.output_token_max || ''} className="h-8 text-sm"
                     onChange={(e) => onChange({ ...condition, output_token_max: parseInt(e.target.value) || 0 })} />
             </div>
+            <div className="space-y-1">
+                <Label className="text-xs">{t('group.price.size')}</Label>
+                <Input
+                    value={condition.size || ''}
+                    placeholder="1024x1024, 720p"
+                    className="h-8 text-sm"
+                    onChange={(e) => onChange({ ...condition, size: e.target.value || undefined })}
+                />
+            </div>
+            <div className="space-y-1">
+                <Label className="text-xs">{t('group.price.quality')}</Label>
+                <Input
+                    value={condition.quality || ''}
+                    placeholder="standard, hd"
+                    className="h-8 text-sm"
+                    onChange={(e) => onChange({ ...condition, quality: e.target.value || undefined })}
+                />
+            </div>
             <div className="space-y-1 col-span-2">
                 <Label className="text-xs">{t('group.price.serviceTier')}</Label>
                 <Select

@@ -14,25 +14,25 @@ import (
 	"github.com/labring/aiproxy/core/relay/adaptor/openai"
 )
 
-func GetSTTRequestUsage(c *gin.Context, mc model.ModelConfig) (model.Usage, error) {
+func GetSTTRequestUsage(c *gin.Context, mc model.ModelConfig) (RequestUsage, error) {
 	audioFile, err := c.FormFile("file")
 	if err != nil {
-		return model.Usage{}, fmt.Errorf("failed to get audio file: %w", err)
+		return RequestUsage{}, fmt.Errorf("failed to get audio file: %w", err)
 	}
 
 	duration, err := getAudioDuration(c.Request.Context(), audioFile)
 	if err != nil {
-		return model.Usage{}, err
+		return RequestUsage{}, err
 	}
 
 	durationInt := int64(math.Ceil(duration))
 
-	return model.Usage{
+	return NewRequestUsage(model.Usage{
 		InputTokens: model.ZeroNullInt64(
 			openai.CountTokenInput(c.PostForm("prompt"), mc.Model) + durationInt,
 		),
 		AudioInputTokens: model.ZeroNullInt64(durationInt),
-	}, nil
+	}), nil
 }
 
 func getAudioDuration(ctx context.Context, audioFile *multipart.FileHeader) (float64, error) {

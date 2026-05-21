@@ -24,7 +24,6 @@ export interface GroupModelConfig {
     tpm: number
     override_price: boolean
     price: GroupModelConfigPrice
-    image_prices: Record<string, number>
     override_retry_times: boolean
     retry_times: number
     override_timeout_config: boolean
@@ -33,6 +32,8 @@ export interface GroupModelConfig {
     force_save_detail: boolean
     override_max_image_generation_count: boolean
     max_image_generation_count: number
+    override_max_video_generation_seconds: boolean
+    max_video_generation_seconds: number
     override_request_body_storage_max_size: boolean
     request_body_storage_max_size: number
     override_response_body_storage_max_size: boolean
@@ -122,11 +123,10 @@ export interface GroupDashboardModel {
     type: number
     rpm?: number
     tpm?: number
-    image_quality_prices?: Record<string, Record<string, number>>
-    image_prices?: Record<string, number>
     price?: ModelPrice
     enabled_plugins?: string[]
     max_image_generation_count?: number
+    max_video_generation_seconds?: number
 }
 
 // Group model config save request
@@ -137,7 +137,6 @@ export interface GroupModelConfigSaveRequest {
     tpm?: number
     override_price?: boolean
     price?: Partial<GroupModelConfigPrice>
-    image_prices?: Record<string, number>
     override_retry_times?: boolean
     retry_times?: number
     override_timeout_config?: boolean
@@ -146,6 +145,8 @@ export interface GroupModelConfigSaveRequest {
     force_save_detail?: boolean
     override_max_image_generation_count?: boolean
     max_image_generation_count?: number
+    override_max_video_generation_seconds?: boolean
+    max_video_generation_seconds?: number
     override_request_body_storage_max_size?: boolean
     request_body_storage_max_size?: number
     override_response_body_storage_max_size?: boolean

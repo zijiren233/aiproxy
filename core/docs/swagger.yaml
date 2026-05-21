@@ -115,21 +115,9 @@ definitions:
         type: boolean
       force_save_detail:
         type: boolean
-      image_prices:
-        additionalProperties:
-          format: float64
-          type: number
-        description: map[size]price_per_image
-        type: object
-      image_quality_prices:
-        additionalProperties:
-          additionalProperties:
-            format: float64
-            type: number
-          type: object
-        description: map[size]map[quality]price_per_image
-        type: object
       max_image_generation_count:
+        type: integer
+      max_video_generation_seconds:
         type: integer
       model:
         type: string
@@ -279,21 +267,9 @@ definitions:
         items:
           type: string
         type: array
-      image_prices:
-        additionalProperties:
-          format: float64
-          type: number
-        description: map[size]price_per_image
-        type: object
-      image_quality_prices:
-        additionalProperties:
-          additionalProperties:
-            format: float64
-            type: number
-          type: object
-        description: map[size]map[quality]price_per_image
-        type: object
       max_image_generation_count:
+        type: integer
+      max_video_generation_seconds:
         type: integer
       model:
         type: string
@@ -723,12 +699,9 @@ definitions:
     properties:
       force_save_detail:
         type: boolean
-      image_prices:
-        additionalProperties:
-          format: float64
-          type: number
-        type: object
       max_image_generation_count:
+        type: integer
+      max_video_generation_seconds:
         type: integer
       model:
         type: string
@@ -737,6 +710,8 @@ definitions:
       override_limit:
         type: boolean
       override_max_image_generation_count:
+        type: boolean
+      override_max_video_generation_seconds:
         type: boolean
       override_price:
         type: boolean
@@ -782,21 +757,9 @@ definitions:
         type: boolean
       force_save_detail:
         type: boolean
-      image_prices:
-        additionalProperties:
-          format: float64
-          type: number
-        description: map[size]price_per_image
-        type: object
-      image_quality_prices:
-        additionalProperties:
-          additionalProperties:
-            format: float64
-            type: number
-          type: object
-        description: map[size]map[quality]price_per_image
-        type: object
       max_image_generation_count:
+        type: integer
+      max_video_generation_seconds:
         type: integer
       model:
         type: string
@@ -2167,12 +2130,9 @@ definitions:
         type: boolean
       group_id:
         type: string
-      image_prices:
-        additionalProperties:
-          format: float64
-          type: number
-        type: object
       max_image_generation_count:
+        type: integer
+      max_video_generation_seconds:
         type: integer
       model:
         type: string
@@ -2181,6 +2141,8 @@ definitions:
       override_limit:
         type: boolean
       override_max_image_generation_count:
+        type: boolean
+      override_max_video_generation_seconds:
         type: boolean
       override_price:
         type: boolean
@@ -2440,6 +2402,8 @@ definitions:
         type: string
       usage:
         $ref: '#/definitions/model.Usage'
+      usage_context:
+        $ref: '#/definitions/model.UsageContext'
       user:
         description: https://platform.openai.com/docs/guides/safety-best-practices#end-user-ids
         type: string
@@ -2507,21 +2471,9 @@ definitions:
         type: boolean
       force_save_detail:
         type: boolean
-      image_prices:
-        additionalProperties:
-          format: float64
-          type: number
-        description: map[size]price_per_image
-        type: object
-      image_quality_prices:
-        additionalProperties:
-          additionalProperties:
-            format: float64
-            type: number
-          type: object
-        description: map[size]map[quality]price_per_image
-        type: object
       max_image_generation_count:
+        type: integer
+      max_video_generation_seconds:
         type: integer
       model:
         type: string
@@ -2748,7 +2700,11 @@ definitions:
         type: integer
       output_token_min:
         type: integer
+      quality:
+        type: string
       service_tier:
+        type: string
+      size:
         type: string
       start_time:
         description: Unix timestamp, 0 means no start limit
@@ -3492,6 +3448,20 @@ definitions:
       web_search_count:
         type: integer
     type: object
+  model.UsageContext:
+    properties:
+      price_condition:
+        $ref: '#/definitions/model.UsagePriceCondition'
+      service_tier:
+        type: string
+    type: object
+  model.UsagePriceCondition:
+    properties:
+      quality:
+        type: string
+      size:
+        type: string
+    type: object
   model.Video:
     properties:
       created_at:
@@ -3560,6 +3530,8 @@ definitions:
       n_variants:
         type: integer
       prompt:
+        type: string
+      size:
         type: string
       width:
         type: integer

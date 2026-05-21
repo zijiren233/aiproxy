@@ -9865,26 +9865,10 @@ const docTemplate = `{
                 "force_save_detail": {
                     "type": "boolean"
                 },
-                "image_prices": {
-                    "description": "map[size]price_per_image",
-                    "type": "object",
-                    "additionalProperties": {
-                        "type": "number",
-                        "format": "float64"
-                    }
-                },
-                "image_quality_prices": {
-                    "description": "map[size]map[quality]price_per_image",
-                    "type": "object",
-                    "additionalProperties": {
-                        "type": "object",
-                        "additionalProperties": {
-                            "type": "number",
-                            "format": "float64"
-                        }
-                    }
-                },
                 "max_image_generation_count": {
+                    "type": "integer"
+                },
+                "max_video_generation_seconds": {
                     "type": "integer"
                 },
                 "model": {
@@ -10111,26 +10095,10 @@ const docTemplate = `{
                         "type": "string"
                     }
                 },
-                "image_prices": {
-                    "description": "map[size]price_per_image",
-                    "type": "object",
-                    "additionalProperties": {
-                        "type": "number",
-                        "format": "float64"
-                    }
-                },
-                "image_quality_prices": {
-                    "description": "map[size]map[quality]price_per_image",
-                    "type": "object",
-                    "additionalProperties": {
-                        "type": "object",
-                        "additionalProperties": {
-                            "type": "number",
-                            "format": "float64"
-                        }
-                    }
-                },
                 "max_image_generation_count": {
+                    "type": "integer"
+                },
+                "max_video_generation_seconds": {
                     "type": "integer"
                 },
                 "model": {
@@ -10791,14 +10759,10 @@ const docTemplate = `{
                 "force_save_detail": {
                     "type": "boolean"
                 },
-                "image_prices": {
-                    "type": "object",
-                    "additionalProperties": {
-                        "type": "number",
-                        "format": "float64"
-                    }
-                },
                 "max_image_generation_count": {
+                    "type": "integer"
+                },
+                "max_video_generation_seconds": {
                     "type": "integer"
                 },
                 "model": {
@@ -10811,6 +10775,9 @@ const docTemplate = `{
                     "type": "boolean"
                 },
                 "override_max_image_generation_count": {
+                    "type": "boolean"
+                },
+                "override_max_video_generation_seconds": {
                     "type": "boolean"
                 },
                 "override_price": {
@@ -10879,26 +10846,10 @@ const docTemplate = `{
                 "force_save_detail": {
                     "type": "boolean"
                 },
-                "image_prices": {
-                    "description": "map[size]price_per_image",
-                    "type": "object",
-                    "additionalProperties": {
-                        "type": "number",
-                        "format": "float64"
-                    }
-                },
-                "image_quality_prices": {
-                    "description": "map[size]map[quality]price_per_image",
-                    "type": "object",
-                    "additionalProperties": {
-                        "type": "object",
-                        "additionalProperties": {
-                            "type": "number",
-                            "format": "float64"
-                        }
-                    }
-                },
                 "max_image_generation_count": {
+                    "type": "integer"
+                },
+                "max_video_generation_seconds": {
                     "type": "integer"
                 },
                 "model": {
@@ -12867,14 +12818,10 @@ const docTemplate = `{
                 "group_id": {
                     "type": "string"
                 },
-                "image_prices": {
-                    "type": "object",
-                    "additionalProperties": {
-                        "type": "number",
-                        "format": "float64"
-                    }
-                },
                 "max_image_generation_count": {
+                    "type": "integer"
+                },
+                "max_video_generation_seconds": {
                     "type": "integer"
                 },
                 "model": {
@@ -12887,6 +12834,9 @@ const docTemplate = `{
                     "type": "boolean"
                 },
                 "override_max_image_generation_count": {
+                    "type": "boolean"
+                },
+                "override_max_video_generation_seconds": {
                     "type": "boolean"
                 },
                 "override_price": {
@@ -13275,6 +13225,9 @@ const docTemplate = `{
                 "usage": {
                     "$ref": "#/definitions/model.Usage"
                 },
+                "usage_context": {
+                    "$ref": "#/definitions/model.UsageContext"
+                },
                 "user": {
                     "description": "https://platform.openai.com/docs/guides/safety-best-practices#end-user-ids",
                     "type": "string"
@@ -13376,26 +13329,10 @@ const docTemplate = `{
                 "force_save_detail": {
                     "type": "boolean"
                 },
-                "image_prices": {
-                    "description": "map[size]price_per_image",
-                    "type": "object",
-                    "additionalProperties": {
-                        "type": "number",
-                        "format": "float64"
-                    }
-                },
-                "image_quality_prices": {
-                    "description": "map[size]map[quality]price_per_image",
-                    "type": "object",
-                    "additionalProperties": {
-                        "type": "object",
-                        "additionalProperties": {
-                            "type": "number",
-                            "format": "float64"
-                        }
-                    }
-                },
                 "max_image_generation_count": {
+                    "type": "integer"
+                },
+                "max_video_generation_seconds": {
                     "type": "integer"
                 },
                 "model": {
@@ -13700,7 +13637,13 @@ const docTemplate = `{
                 "output_token_min": {
                     "type": "integer"
                 },
+                "quality": {
+                    "type": "string"
+                },
                 "service_tier": {
+                    "type": "string"
+                },
+                "size": {
                     "type": "string"
                 },
                 "start_time": {
@@ -14821,6 +14764,28 @@ const docTemplate = `{
                 }
             }
         },
+        "model.UsageContext": {
+            "type": "object",
+            "properties": {
+                "price_condition": {
+                    "$ref": "#/definitions/model.UsagePriceCondition"
+                },
+                "service_tier": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.UsagePriceCondition": {
+            "type": "object",
+            "properties": {
+                "quality": {
+                    "type": "string"
+                },
+                "size": {
+                    "type": "string"
+                }
+            }
+        },
         "model.Video": {
             "type": "object",
             "properties": {
@@ -14923,6 +14888,9 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "prompt": {
+                    "type": "string"
+                },
+                "size": {
                     "type": "string"
                 },
                 "width": {

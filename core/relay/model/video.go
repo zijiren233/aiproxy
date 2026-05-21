@@ -1,6 +1,8 @@
 package model
 
 import (
+	"fmt"
+
 	"github.com/labring/aiproxy/core/relay/adaptor"
 )
 
@@ -9,6 +11,7 @@ type VideoGenerationJobRequest struct {
 	Model     string `json:"model"`
 	Width     int    `json:"width"`
 	Height    int    `json:"height"`
+	Size      string `json:"size,omitempty"`
 	NVariants int    `json:"n_variants"`
 	NSeconds  int    `json:"n_seconds"`
 }
@@ -98,4 +101,29 @@ func WrapperOpenAIVideoErrorWithMessage(message string, statusCode int) adaptor.
 	return NewOpenAIVideoError(statusCode, OpenAIVideoError{
 		Detail: message,
 	})
+}
+
+func VideoPriceSizeFromDimensions(width, height int) string {
+	if width <= 0 || height <= 0 {
+		return ""
+	}
+
+	if resolution := VideoResolutionFromHeight(height); resolution != "" {
+		return resolution
+	}
+
+	return fmt.Sprintf("%dx%d", width, height)
+}
+
+func VideoResolutionFromHeight(height int) string {
+	switch {
+	case height >= 1000:
+		return "1080p"
+	case height >= 700:
+		return "720p"
+	case height >= 400:
+		return "480p"
+	default:
+		return ""
+	}
 }

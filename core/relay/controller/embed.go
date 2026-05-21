@@ -7,16 +7,16 @@ import (
 	"github.com/labring/aiproxy/core/relay/utils"
 )
 
-func GetEmbedRequestUsage(c *gin.Context, _ model.ModelConfig) (model.Usage, error) {
+func GetEmbedRequestUsage(c *gin.Context, _ model.ModelConfig) (RequestUsage, error) {
 	textRequest, err := utils.UnmarshalGeneralOpenAIRequest(c.Request)
 	if err != nil {
-		return model.Usage{}, err
+		return RequestUsage{}, err
 	}
 
-	return model.Usage{
+	return NewRequestUsage(model.Usage{
 		InputTokens: model.ZeroNullInt64(openai.CountTokenInput(
 			textRequest.Input,
 			textRequest.Model,
 		)),
-	}, nil
+	}), nil
 }

@@ -8,13 +8,13 @@ import (
 	"github.com/labring/aiproxy/core/relay/utils"
 )
 
-func GetTTSRequestUsage(c *gin.Context, _ model.ModelConfig) (model.Usage, error) {
+func GetTTSRequestUsage(c *gin.Context, _ model.ModelConfig) (RequestUsage, error) {
 	ttsRequest, err := utils.UnmarshalTTSRequest(c.Request)
 	if err != nil {
-		return model.Usage{}, err
+		return RequestUsage{}, err
 	}
 
-	return model.Usage{
+	return NewRequestUsage(model.Usage{
 		InputTokens: model.ZeroNullInt64(utf8.RuneCountInString(ttsRequest.Input)),
-	}, nil
+	}), nil
 }

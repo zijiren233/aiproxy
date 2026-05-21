@@ -12,6 +12,7 @@ import (
 	coremodel "github.com/labring/aiproxy/core/model"
 	"github.com/labring/aiproxy/core/relay/adaptor"
 	"github.com/labring/aiproxy/core/relay/mode"
+	relaymodel "github.com/labring/aiproxy/core/relay/model"
 	relayutils "github.com/labring/aiproxy/core/relay/utils"
 )
 
@@ -19,14 +20,19 @@ var _ adaptor.AsyncUsageFetcher = (*Adaptor)(nil)
 
 func (a *Adaptor) FetchAsyncUsage(
 	ctx context.Context,
-	channel *coremodel.Channel,
-	info *coremodel.AsyncUsageInfo,
-) (coremodel.Usage, bool, error) {
+	request adaptor.AsyncUsageRequest,
+) (coremodel.Usage, coremodel.UsageContext, bool, error) {
+	channel := request.Channel
+	info := request.Info
+
 	switch mode.Mode(info.Mode) {
 	case mode.VideoGenerationsJobs, mode.Videos, mode.VideosRemix:
 		return a.fetchAliVideoJobUsage(ctx, channel, info)
 	default:
-		return coremodel.Usage{}, false, fmt.Errorf("unsupported async usage mode: %d", info.Mode)
+		return coremodel.Usage{}, coremodel.UsageContext{}, false, fmt.Errorf(
+			"unsupported async usage mode: %d",
+			info.Mode,
+		)
 	}
 }
 
@@ -34,29 +40,41 @@ func (a *Adaptor) fetchAliVideoJobUsage(
 	ctx context.Context,
 	channel *coremodel.Channel,
 	info *coremodel.AsyncUsageInfo,
-) (coremodel.Usage, bool, error) {
+) (coremodel.Usage, coremodel.UsageContext, bool, error) {
 	if info.UpstreamID == "" {
-		return coremodel.Usage{}, false, errors.New("upstream id is empty")
+		return coremodel.Usage{}, coremodel.UsageContext{}, false, errors.New(
+			"upstream id is empty",
+		)
 	}
 
 	response, err := fetchAliVideoTask(ctx, channel, info.BaseURL, info.UpstreamID)
 	if err != nil {
-		return coremodel.Usage{}, false, err
+		return coremodel.Usage{}, coremodel.UsageContext{}, false, err
 	}
 
 	switch strings.ToUpper(response.Output.TaskStatus) {
 	case "SUCCEEDED":
-		return aliVideoUsageToModelUsage(response.Usage), true, nil
+		usage := aliVideoUsageToModelUsage(response.Usage)
+
+		usageContext := coremodel.UsageContext{}
+		if width, height := aliVideoDimensions(response.Usage); width > 0 && height > 0 {
+			usageContext.PriceCondition.Size = relaymodel.VideoPriceSizeFromDimensions(
+				width,
+				height,
+			)
+		}
+
+		return usage, usageContext, true, nil
 	case "PENDING", "RUNNING", "":
-		return coremodel.Usage{}, false, nil
+		return coremodel.Usage{}, coremodel.UsageContext{}, false, nil
 	case "FAILED", "CANCELED", "CANCELLED", "UNKNOWN":
-		return coremodel.Usage{}, true, fmt.Errorf(
+		return coremodel.Usage{}, coremodel.UsageContext{}, true, fmt.Errorf(
 			"ali video task ended with status %q: %s",
 			response.Output.TaskStatus,
 			firstNonEmpty(response.Output.Message, response.Message),
 		)
 	default:
-		return coremodel.Usage{}, false, nil
+		return coremodel.Usage{}, coremodel.UsageContext{}, false, nil
 	}
 }
 

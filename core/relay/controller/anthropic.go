@@ -7,17 +7,17 @@ import (
 	"github.com/labring/aiproxy/core/relay/utils"
 )
 
-func GetAnthropicRequestUsage(c *gin.Context, _ model.ModelConfig) (model.Usage, error) {
+func GetAnthropicRequestUsage(c *gin.Context, _ model.ModelConfig) (RequestUsage, error) {
 	textRequest, err := utils.UnmarshalAnthropicMessageRequest(c.Request)
 	if err != nil {
-		return model.Usage{}, err
+		return RequestUsage{}, err
 	}
 
-	return model.Usage{
+	return NewRequestUsage(model.Usage{
 		InputTokens: model.ZeroNullInt64(openai.CountTokenMessages(
 			textRequest.Messages,
 			textRequest.Model,
 			false,
 		)),
-	}, nil
+	}), nil
 }

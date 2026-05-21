@@ -469,7 +469,10 @@ func processOneAsyncUsage(ctx context.Context, info *model.AsyncUsageInfo) {
 		return
 	}
 
-	usage, completed, err := fetcher.FetchAsyncUsage(ctx, channel, info)
+	usage, usageContext, completed, err := fetcher.FetchAsyncUsage(ctx, adaptor.AsyncUsageRequest{
+		Channel: channel,
+		Info:    info,
+	})
 	if err != nil {
 		if completed {
 			log.Debugf(
@@ -501,7 +504,7 @@ func processOneAsyncUsage(ctx context.Context, info *model.AsyncUsageInfo) {
 		return
 	}
 
-	if err := completeAsyncUsage(ctx, info, usage); err != nil {
+	if err := completeAsyncUsage(ctx, info, usage, usageContext); err != nil {
 		log.Debugf(
 			"async usage poll: complete_error id=%d request_id=%s upstream_id=%s err=%v",
 			info.ID,
@@ -582,15 +585,25 @@ func startAsyncUsageClaimRenewal(
 	}
 }
 
-func completeAsyncUsage(ctx context.Context, info *model.AsyncUsageInfo, usage model.Usage) error {
+func completeAsyncUsage(
+	ctx context.Context,
+	info *model.AsyncUsageInfo,
+	usage model.Usage,
+	usageContext model.UsageContext,
+) error {
+	usageContext = usageContext.WithFallback(info.UsageContext)
+	if usageContext.ServiceTier == "" {
+		usageContext.ServiceTier = info.ServiceTier
+	}
+
 	price := info.Price
 	price.PerRequestPrice = 0
 
 	amount := consume.CalculateAmountDetail(
 		http.StatusOK,
 		usage,
+		usageContext,
 		price,
-		info.ServiceTier,
 	)
 
 	if amount.UsedAmount > 0 && !info.BalanceConsumed {
@@ -612,7 +625,12 @@ func completeAsyncUsage(ctx context.Context, info *model.AsyncUsageInfo, usage m
 		}
 	}
 
-	if err := model.UpdateLogUsageByRequestID(info.RequestID, usage, amount); err != nil {
+	if err := model.UpdateLogUsageByRequestID(
+		info.RequestID,
+		usage,
+		usageContext,
+		amount,
+	); err != nil {
 		if !errors.Is(err, gorm.ErrRecordNotFound) {
 			notify.ErrorThrottle(
 				"asyncUsageUpdateLog",
@@ -641,10 +659,11 @@ func completeAsyncUsage(ctx context.Context, info *model.AsyncUsageInfo, usage m
 
 	info.Status = model.AsyncUsageStatusCompleted
 	info.Usage = usage
+	info.UsageContext = usageContext
 	info.Amount = amount
 	info.Error = ""
 
-	completed, err := model.CompleteClaimedAsyncUsageInfo(info, usage, amount)
+	completed, err := model.CompleteClaimedAsyncUsageInfo(info, usage, usageContext, amount)
 	if err != nil {
 		return fmt.Errorf("update async usage info: %w", err)
 	}

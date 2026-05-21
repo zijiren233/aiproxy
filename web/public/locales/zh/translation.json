@@ -431,7 +431,13 @@
         "extrasJsonPlaceholder": "输入额外展示字段的 JSON 对象，例如 {\"custom_tag\": true}",
         "extrasJsonDescription": "用于保留或补充未在上方单独提供控件的 config 字段，必须是 JSON 对象。",
         "extrasJsonInvalid": "额外展示字段 JSON 格式无效",
-        "extrasJsonObjectError": "额外展示字段必须是 JSON 对象"
+        "extrasJsonObjectError": "额外展示字段必须是 JSON 对象",
+        "imageSizes": "支持图片尺寸",
+        "imageSizesPlaceholder": "每行一个尺寸，例如 1024x1024",
+        "imageSizesDescription": "填写 OpenAI 风格的图片尺寸。列表非空时，其他尺寸的图片请求会在转发前被拒绝。",
+        "videoSizes": "支持视频尺寸",
+        "videoSizesPlaceholder": "每行一个尺寸，例如 720p",
+        "videoSizesDescription": "填写 OpenAI 风格的视频尺寸。列表非空时，其他尺寸的视频请求会在转发前被拒绝。"
       },
       "noSearchEngineConfigured": "点击\"添加搜索引擎\"来配置搜索引擎",
       "pluginConfiguration": "插件配置",
@@ -506,7 +512,10 @@
         "title": "流式伪装插件",
         "description": "将非流式请求转换为流式处理，提供更好的用户体验",
         "enable": "启用流式伪装"
-      }
+      },
+      "maxVideoGenerationSeconds": "最大视频秒数",
+      "maxVideoGenerationSecondsPlaceholder": "输入 0 表示不限制",
+      "maxVideoGenerationSecondsDescription": "视频请求参数 seconds 的最大允许值。`0` 表示不限制。适用于视频生成和 remix 模型。"
     },
     "deleteDialog": {
       "confirmTitle": "删除模型",
@@ -514,7 +523,8 @@
       "cancel": "取消",
       "delete": "删除",
       "deleting": "删除中..."
-    }
+    },
+    "maxVideoGenerationSeconds": "最大视频秒数"
   },
   "mcp": {
     "management": "MCP 管理",
@@ -1116,6 +1126,8 @@
       "inputTokenMax": "输入 Token 最大值",
       "outputTokenMin": "输出 Token 最小值",
       "outputTokenMax": "输出 Token 最大值",
+      "size": "尺寸 / 分辨率",
+      "quality": "质量",
       "serviceTier": "服务层级",
       "serviceTierAny": "任意",
       "startTime": "开始时间",
@@ -1162,11 +1174,14 @@
       "importing": "导入中...",
       "exportSuccess": "模型配置导出成功",
       "importSuccess": "成功导入 {{count}} 个模型配置",
-    "importFailed": "导入模型配置失败",
-    "fetchFailed": "获取模型信息失败",
-    "deleted": "模型已被删除或不存在",
-    "noDataToExport": "没有可导出的模型配置",
-      "invalidFormat": "文件格式无效"
+      "importFailed": "导入模型配置失败",
+      "fetchFailed": "获取模型信息失败",
+      "deleted": "模型已被删除或不存在",
+      "noDataToExport": "没有可导出的模型配置",
+      "invalidFormat": "文件格式无效",
+      "overrideMaxVideoGenerationSeconds": "覆盖最大视频秒数",
+      "overrideMaxVideoGenerationSecondsDesc": "覆盖视频生成或 remix 请求允许的最大视频时长",
+      "maxVideoGenerationSecondsHint": "`0` 表示不限制。作用于请求参数 `seconds` 或旧版 `n_seconds`。"
     }
   },
   "consumptionRanking": {

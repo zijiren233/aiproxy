@@ -104,6 +104,31 @@ func TestValidateImagesEditsRequestWrapsParseError(t *testing.T) {
 	require.Equal(t, 400, requestParamErr.StatusCode)
 }
 
+func TestValidateImagesEditsRequestRejectsUnsupportedSize(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	req := httptest.NewRequestWithContext(
+		context.Background(),
+		"POST",
+		"/v1/images/edits",
+		strings.NewReader("model=gpt-image-1&prompt=test&size=512x512"),
+	)
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	c, _ := gin.CreateTestContext(httptest.NewRecorder())
+	c.Request = req
+
+	err := ValidateImagesEditsRequest(c, model.ModelConfig{
+		Config: model.NewModelConfig(model.WithModelConfigImageSizes("1024x1024")),
+	})
+	require.Error(t, err)
+	require.Equal(t, "unsupported image size `512x512`", err.Error())
+
+	var requestParamErr *RequestParamError
+	require.ErrorAs(t, err, &requestParamErr)
+	require.Equal(t, 400, requestParamErr.StatusCode)
+}
+
 func TestGetImagesEditsRequestUsageCountsImageArrayField(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
@@ -133,5 +158,5 @@ func TestGetImagesEditsRequestUsageCountsImageArrayField(t *testing.T) {
 
 	usage, err := GetImagesEditsRequestUsage(c, model.ModelConfig{Model: "gpt-image-1"})
 	require.NoError(t, err)
-	require.Equal(t, model.ZeroNullInt64(2), usage.ImageInputTokens)
+	require.Equal(t, model.ZeroNullInt64(2), usage.Usage.ImageInputTokens)
 }

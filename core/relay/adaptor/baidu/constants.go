@@ -70,19 +70,32 @@ var ModelList = []model.ModelConfig{
 		Model: "Stable-Diffusion-XL",
 		Type:  mode.ImagesGenerations,
 		Owner: model.ModelOwnerStabilityAI,
-		ImagePrices: map[string]float64{
-			"768x768":   0.06,
-			"576x1024":  0.06,
-			"1024x576":  0.06,
-			"768x1024":  0.08,
-			"1024x768":  0.08,
-			"1024x1024": 0.08,
-			"1536x1536": 0.12,
-			"1152x2048": 0.12,
-			"2048x1152": 0.12,
-			"1536x2048": 0.16,
-			"2048x1536": 0.16,
-			"2048x2048": 0.16,
+		Price: model.Price{
+			OutputPriceUnit: 1,
+			ConditionalPrices: []model.ConditionalPrice{
+				imageOutputPrice("768x768", 0.06),
+				imageOutputPrice("576x1024", 0.06),
+				imageOutputPrice("1024x576", 0.06),
+				imageOutputPrice("768x1024", 0.08),
+				imageOutputPrice("1024x768", 0.08),
+				imageOutputPrice("1024x1024", 0.08),
+				imageOutputPrice("1536x1536", 0.12),
+				imageOutputPrice("1152x2048", 0.12),
+				imageOutputPrice("2048x1152", 0.12),
+				imageOutputPrice("1536x2048", 0.16),
+				imageOutputPrice("2048x1536", 0.16),
+				imageOutputPrice("2048x2048", 0.16),
+			},
 		},
 	},
+}
+
+func imageOutputPrice(size string, price float64) model.ConditionalPrice {
+	return model.ConditionalPrice{
+		Condition: model.PriceCondition{Size: size},
+		Price: model.Price{
+			OutputPrice:     model.ZeroNullFloat64(price),
+			OutputPriceUnit: 1,
+		},
+	}
 }

@@ -1,7 +1,6 @@
 package controller
 
 import (
-	"fmt"
 	"mime/multipart"
 	"strconv"
 	"strings"
@@ -44,6 +43,14 @@ func getImagesEditsRequestN(c *gin.Context) (int, bool, error) {
 }
 
 func ValidateImagesEditsRequest(c *gin.Context, mc model.ModelConfig) error {
+	if err := parseImagesEditsForm(c); err != nil {
+		return err
+	}
+
+	if err := validateSupportedImageSize(c.PostForm("size"), mc); err != nil {
+		return err
+	}
+
 	n, ok, err := getImagesEditsRequestN(c)
 	if err != nil {
 		return err
@@ -57,12 +64,11 @@ func ValidateImagesEditsRequest(c *gin.Context, mc model.ModelConfig) error {
 }
 
 func GetImagesEditsRequestPrice(c *gin.Context, mc model.ModelConfig) (model.Price, error) {
-	size := c.PostForm("size")
-	quality := c.PostForm("quality")
+	if len(mc.Price.ConditionalPrices) != 0 {
+		price := mc.Price
+		setImageOutputPriceUnit(&price, false)
 
-	imageCostPrice, ok := GetImagesOutputPrice(mc, size, quality)
-	if !ok {
-		return model.Price{}, fmt.Errorf("invalid image size `%s` or quality `%s`", size, quality)
+		return price, nil
 	}
 
 	return model.Price{
@@ -71,15 +77,32 @@ func GetImagesEditsRequestPrice(c *gin.Context, mc model.ModelConfig) (model.Pri
 		InputPriceUnit:      mc.Price.InputPriceUnit,
 		ImageInputPrice:     mc.Price.ImageInputPrice,
 		ImageInputPriceUnit: mc.Price.ImageInputPriceUnit,
-		OutputPrice:         model.ZeroNullFloat64(imageCostPrice),
+		OutputPrice:         mc.Price.OutputPrice,
 		OutputPriceUnit:     mc.Price.OutputPriceUnit,
 	}, nil
 }
 
-func GetImagesEditsRequestUsage(c *gin.Context, mc model.ModelConfig) (model.Usage, error) {
+func parseImagesEditsForm(c *gin.Context) error {
+	contentType := c.Request.Header.Get("Content-Type")
+	if strings.HasPrefix(contentType, "multipart/form-data") {
+		if err := common.ParseMultipartFormWithLimit(c.Request); err != nil {
+			return NewBadRequestParamError(err.Error())
+		}
+
+		return nil
+	}
+
+	if err := common.ParseFormWithLimit(c.Request); err != nil {
+		return NewBadRequestParamError(err.Error())
+	}
+
+	return nil
+}
+
+func GetImagesEditsRequestUsage(c *gin.Context, mc model.ModelConfig) (RequestUsage, error) {
 	mutliForms, err := c.MultipartForm()
 	if err != nil {
-		return model.Usage{}, err
+		return RequestUsage{}, err
 	}
 
 	images := countImagesEditFiles(mutliForms.File)
@@ -88,18 +111,24 @@ func GetImagesEditsRequestUsage(c *gin.Context, mc model.ModelConfig) (model.Usa
 
 	n := 1
 	if parsedN, ok, err := getImagesEditsRequestN(c); err != nil {
-		return model.Usage{}, err
+		return RequestUsage{}, err
 	} else if ok {
 		n = parsedN
 	}
 
-	return model.Usage{
-		InputTokens: model.ZeroNullInt64(openai.CountTokenInput(
-			prompt,
-			mc.Model,
-		)),
-		ImageInputTokens: model.ZeroNullInt64(images),
-		OutputTokens:     model.ZeroNullInt64(n),
+	return RequestUsage{
+		Usage: model.Usage{
+			InputTokens: model.ZeroNullInt64(openai.CountTokenInput(
+				prompt,
+				mc.Model,
+			)),
+			ImageInputTokens: model.ZeroNullInt64(images),
+			OutputTokens:     model.ZeroNullInt64(n),
+		},
+		Context: model.UsageContext{PriceCondition: model.UsagePriceCondition{
+			Size:    c.PostForm("size"),
+			Quality: c.PostForm("quality"),
+		}},
 	}, nil
 }
 

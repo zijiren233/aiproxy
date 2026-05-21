@@ -14,6 +14,8 @@ const (
 var groupModelConfigZeroValueUpdateFields = []string{
 	"override_max_image_generation_count",
 	"max_image_generation_count",
+	"override_max_video_generation_seconds",
+	"max_video_generation_seconds",
 }
 
 type GroupModelConfig struct {
@@ -25,9 +27,8 @@ type GroupModelConfig struct {
 	RPM           int64 `json:"rpm"`
 	TPM           int64 `json:"tpm"`
 
-	OverridePrice bool               `json:"override_price"`
-	ImagePrices   map[string]float64 `json:"image_prices,omitempty" gorm:"serializer:fastjson;type:text"`
-	Price         Price              `json:"price,omitempty"        gorm:"embedded"`
+	OverridePrice bool  `json:"override_price"`
+	Price         Price `json:"price,omitempty" gorm:"embedded"`
 
 	OverrideRetryTimes bool  `json:"override_retry_times"`
 	RetryTimes         int64 `json:"retry_times"`
@@ -40,6 +41,9 @@ type GroupModelConfig struct {
 
 	OverrideMaxImageGenerationCount bool `json:"override_max_image_generation_count"`
 	MaxImageGenerationCount         int  `json:"max_image_generation_count"`
+
+	OverrideMaxVideoGenerationSeconds bool `json:"override_max_video_generation_seconds"`
+	MaxVideoGenerationSeconds         int  `json:"max_video_generation_seconds"`
 
 	OverrideRequestBodyStorageMaxSize bool  `json:"override_request_body_storage_max_size"`
 	RequestBodyStorageMaxSize         int64 `json:"request_body_storage_max_size"`

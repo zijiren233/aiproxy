@@ -59,26 +59,10 @@ var ModelList = []model.ModelConfig{
 		Model: "stabilityai/stable-diffusion-3-5-large",
 		Type:  mode.ImagesGenerations,
 		Owner: model.ModelOwnerStabilityAI,
-		ImagePrices: map[string]float64{
-			"1024x1024": 0,
-			"512x1024":  0,
-			"768x512":   0,
-			"768x1024":  0,
-			"1024x576":  0,
-			"576x1024":  0,
-		},
 	},
 	{
 		Model: "stabilityai/stable-diffusion-3-5-large-turbo",
 		Type:  mode.ImagesGenerations,
 		Owner: model.ModelOwnerStabilityAI,
-		ImagePrices: map[string]float64{
-			"1024x1024": 0,
-			"512x1024":  0,
-			"768x512":   0,
-			"768x1024":  0,
-			"1024x576":  0,
-			"576x1024":  0,
-		},
 	},
 }

@@ -154,10 +154,6 @@ func BuildImagesGenerationsRequest(modelConfig model.ModelConfig) (io.Reader, er
 		Prompt: "hi",
 		Size:   "1024x1024",
 	}
-	for size := range modelConfig.ImagePrices {
-		imagesGenerationsRequest.Size = size
-		break
-	}
 
 	jsonBytes, err := sonic.Marshal(imagesGenerationsRequest)
 	if err != nil {

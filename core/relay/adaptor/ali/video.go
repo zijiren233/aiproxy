@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/bytedance/sonic"
+	"github.com/bytedance/sonic/ast"
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/core/common"
 	"github.com/labring/aiproxy/core/common/image"
@@ -53,9 +54,7 @@ type aliVideoOpenAIRequest struct {
 	VideoURL           string          `json:"video_url,omitempty"`
 	NegativePrompt     string          `json:"negative_prompt,omitempty"`
 	Size               string          `json:"size,omitempty"`
-	Resolution         string          `json:"resolution,omitempty"`
 	Ratio              string          `json:"ratio,omitempty"`
-	Duration           int             `json:"duration,omitempty"`
 	PromptExtend       *bool           `json:"prompt_extend,omitempty"`
 	Watermark          *bool           `json:"watermark,omitempty"`
 	Seed               *int64          `json:"seed,omitempty"`
@@ -269,6 +268,10 @@ func unmarshalAliVideoRequest(req *http.Request) (*aliVideoOpenAIRequest, error)
 			return nil, err
 		}
 
+		if err := rejectAliVideoDangerousAliases(req, &request); err != nil {
+			return nil, err
+		}
+
 		return &request, nil
 	}
 
@@ -280,7 +283,6 @@ func unmarshalAliVideoRequest(req *http.Request) (*aliVideoOpenAIRequest, error)
 	request.Prompt = req.PostFormValue("prompt")
 	request.InputReference = req.PostFormValue("input_reference")
 	request.Size = req.PostFormValue("size")
-	request.Resolution = req.PostFormValue("resolution")
 	request.Ratio = req.PostFormValue("ratio")
 	request.NegativePrompt = req.PostFormValue("negative_prompt")
 	request.ImageURL = req.PostFormValue("image_url")
@@ -297,6 +299,10 @@ func unmarshalAliVideoRequest(req *http.Request) (*aliVideoOpenAIRequest, error)
 		return nil, err
 	}
 
+	if err := rejectAliVideoDangerousAliases(req, &request); err != nil {
+		return nil, err
+	}
+
 	if request.InputReference == "" {
 		value, err := multipartVideoReferenceToDataURL(req.MultipartForm.File)
 		if err != nil {
@@ -307,6 +313,95 @@ func unmarshalAliVideoRequest(req *http.Request) (*aliVideoOpenAIRequest, error)
 	}
 
 	return &request, nil
+}
+
+func rejectAliVideoDangerousAliases(req *http.Request, request *aliVideoOpenAIRequest) error {
+	if request.Parameters != nil {
+		if err := rejectAliVideoDangerousParameterAliases(request.Parameters); err != nil {
+			return err
+		}
+	}
+
+	if err := rejectAliVideoDangerousMetadataAliases(request.Metadata); err != nil {
+		return err
+	}
+
+	if err := rejectAliVideoDangerousMetadataAliases(request.Ext); err != nil {
+		return err
+	}
+
+	if request.Input != nil {
+		if _, ok := request.Input["resolution"]; ok {
+			return errors.New("resolution is not supported, use size")
+		}
+	}
+
+	contentType := req.Header.Get("Content-Type")
+	if strings.HasPrefix(contentType, "multipart/form-data") {
+		if req.PostFormValue("duration") != "" {
+			return errors.New("duration is not supported, use seconds")
+		}
+
+		if req.PostFormValue("resolution") != "" {
+			return errors.New("resolution is not supported, use size")
+		}
+
+		return nil
+	}
+
+	node, err := common.UnmarshalRequest2NodeReusable(req)
+	if err != nil {
+		return err
+	}
+
+	if value := node.Get("duration"); value != nil &&
+		value.Exists() &&
+		value.TypeSafe() != ast.V_NULL {
+		return errors.New("duration is not supported, use seconds")
+	}
+
+	if value := node.Get("resolution"); value != nil &&
+		value.Exists() &&
+		value.TypeSafe() != ast.V_NULL {
+		return errors.New("resolution is not supported, use size")
+	}
+
+	inputNode := node.Get("input")
+	if inputNode != nil && inputNode.Exists() && inputNode.TypeSafe() != ast.V_NULL {
+		if value := inputNode.Get("resolution"); value != nil &&
+			value.Exists() &&
+			value.TypeSafe() != ast.V_NULL {
+			return errors.New("resolution is not supported, use size")
+		}
+	}
+
+	return nil
+}
+
+func rejectAliVideoDangerousMetadataAliases(metadata map[string]any) error {
+	if len(metadata) == 0 {
+		return nil
+	}
+
+	if rawParameters, ok := metadata["parameters"].(map[string]any); ok {
+		if err := rejectAliVideoDangerousParameterAliases(rawParameters); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func rejectAliVideoDangerousParameterAliases(parameters map[string]any) error {
+	if _, ok := parameters["duration"]; ok {
+		return errors.New("duration is not supported in parameters, use seconds")
+	}
+
+	if _, ok := parameters["resolution"]; ok {
+		return errors.New("resolution is not supported in parameters, use size")
+	}
+
+	return nil
 }
 
 func parseAliVideoFormFields(req *http.Request, request *aliVideoOpenAIRequest) error {
@@ -320,13 +415,6 @@ func parseAliVideoFormFields(req *http.Request, request *aliVideoOpenAIRequest) 
 		request.NSeconds, err = strconv.Atoi(nSeconds)
 		if err != nil {
 			return fmt.Errorf("invalid n_seconds: %w", err)
-		}
-	}
-
-	if duration := req.PostFormValue("duration"); duration != "" {
-		request.Duration, err = strconv.Atoi(duration)
-		if err != nil {
-			return fmt.Errorf("invalid duration: %w", err)
 		}
 	}
 
@@ -593,8 +681,6 @@ func buildAliVideoParameters(
 
 	if seconds := aliVideoRequestSeconds(request); seconds > 0 {
 		parameters["duration"] = seconds
-	} else if request.Duration > 0 {
-		parameters["duration"] = request.Duration
 	} else if request.NSeconds > 0 {
 		parameters["duration"] = request.NSeconds
 	}
@@ -603,8 +689,6 @@ func buildAliVideoParameters(
 		setAliVideoSize(meta, parameters, request.Size)
 	} else if size := sizeFromOpenAIRequest(request); size != "" {
 		setAliVideoSize(meta, parameters, size)
-	} else if request.Resolution != "" {
-		parameters["resolution"] = request.Resolution
 	} else if resolution := resolutionFromOpenAIRequest(request); resolution != "" {
 		parameters["resolution"] = resolution
 	}

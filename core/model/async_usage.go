@@ -36,6 +36,7 @@ type AsyncUsageInfo struct {
 	UpstreamID      string           `gorm:"type:varchar(256);index"       json:"upstream_id"`
 	Status          AsyncUsageStatus `gorm:"index;default:1"               json:"status"`
 	Usage           Usage            `gorm:"serializer:fastjson;type:text" json:"usage"`
+	UsageContext    UsageContext     `gorm:"serializer:fastjson;type:text" json:"usage_context,omitempty"`
 	Amount          Amount           `gorm:"embedded"                      json:"amount,omitempty"`
 	Error           string           `gorm:"type:text"                     json:"error,omitempty"`
 	RetryCount      int              `                                     json:"retry_count"`
@@ -212,11 +213,13 @@ func FailClaimedAsyncUsageInfo(info *AsyncUsageInfo) (bool, error) {
 func CompleteClaimedAsyncUsageInfo(
 	info *AsyncUsageInfo,
 	usage Usage,
+	usageContext UsageContext,
 	amount Amount,
 ) (bool, error) {
 	updates := &AsyncUsageInfo{
 		Status:          AsyncUsageStatusCompleted,
 		Usage:           usage,
+		UsageContext:    usageContext,
 		Amount:          amount,
 		Error:           "",
 		ProcessingToken: "",
@@ -229,6 +232,7 @@ func CompleteClaimedAsyncUsageInfo(
 		Select(
 			"Status",
 			"Usage",
+			"UsageContext",
 			"InputAmount",
 			"ImageInputAmount",
 			"AudioInputAmount",
@@ -280,6 +284,7 @@ func updateClaimedAsyncUsageInfo(
 func UpdateLogUsageByRequestID(
 	requestID string,
 	usage Usage,
+	usageContext UsageContext,
 	amount Amount,
 ) error {
 	var logEntry Log
@@ -288,6 +293,7 @@ func UpdateLogUsageByRequestID(
 	}
 
 	logEntry.Usage = usage
+	logEntry.UsageContext = usageContext
 	logEntry.Amount.Add(amount)
 	logEntry.AsyncUsageStatus = AsyncUsageStatusCompleted
 

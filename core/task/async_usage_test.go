@@ -69,7 +69,7 @@ func TestCompleteAsyncUsageIgnoresMissingLog(t *testing.T) {
 		TotalTokens: 10,
 	}
 
-	require.NoError(t, completeAsyncUsage(context.Background(), info, usage))
+	require.NoError(t, completeAsyncUsage(context.Background(), info, usage, model.UsageContext{}))
 	require.Equal(t, model.AsyncUsageStatusCompleted, info.Status)
 	require.Equal(t, usage.InputTokens, info.Usage.InputTokens)
 }
@@ -100,7 +100,7 @@ func TestCompleteAsyncUsageReturnsLogUpdateError(t *testing.T) {
 		TotalTokens: 10,
 	}
 
-	require.Error(t, completeAsyncUsage(context.Background(), info, usage))
+	require.Error(t, completeAsyncUsage(context.Background(), info, usage, model.UsageContext{}))
 	require.Equal(t, model.AsyncUsageStatusPending, info.Status)
 	require.Equal(t, model.ZeroNullInt64(0), info.Usage.InputTokens)
 }
@@ -150,7 +150,7 @@ func TestCompleteAsyncUsageReturnsBalanceConsumeError(t *testing.T) {
 	err = completeAsyncUsage(context.Background(), info, model.Usage{
 		InputTokens: 10,
 		TotalTokens: 10,
-	})
+	}, model.UsageContext{})
 	require.ErrorContains(t, err, "consume async usage balance")
 	require.Equal(t, model.AsyncUsageStatusPending, info.Status)
 	require.False(t, info.BalanceConsumed)
@@ -160,6 +160,62 @@ func TestCompleteAsyncUsageReturnsBalanceConsumeError(t *testing.T) {
 	require.Len(t, consumeErrors, 1)
 	require.Equal(t, "balance_error", consumeErrors[0].RequestID)
 	require.Equal(t, float64(10), consumeErrors[0].UsedAmount)
+}
+
+func TestCompleteAsyncUsagePreservesStoredPriceCondition(t *testing.T) {
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	require.NoError(t, err)
+	require.NoError(t, db.AutoMigrate(&model.Log{}, &model.AsyncUsageInfo{}))
+
+	oldLogDB := model.LogDB
+	model.LogDB = db
+	t.Cleanup(func() {
+		model.LogDB = oldLogDB
+	})
+
+	requestID := "async_condition"
+	require.NoError(t, db.Create(&model.Log{
+		RequestID:        model.EmptyNullString(requestID),
+		AsyncUsageStatus: model.AsyncUsageStatusPending,
+	}).Error)
+
+	info := &model.AsyncUsageInfo{
+		RequestID: requestID,
+		RequestAt: time.Now(),
+		Status:    model.AsyncUsageStatusPending,
+		Model:     "video-model",
+		Price: model.Price{
+			OutputPrice:     0.1,
+			OutputPriceUnit: 1,
+			ConditionalPrices: []model.ConditionalPrice{
+				{
+					Condition: model.PriceCondition{Size: "720p"},
+					Price: model.Price{
+						OutputPrice:     0.4,
+						OutputPriceUnit: 1,
+					},
+				},
+			},
+		},
+		UsageContext: model.UsageContext{
+			PriceCondition: model.UsagePriceCondition{Size: "720P"},
+		},
+		ProcessingToken: "claim-token",
+	}
+	require.NoError(t, model.CreateAsyncUsageInfo(info))
+
+	require.NoError(t, completeAsyncUsage(context.Background(), info, model.Usage{
+		OutputTokens: 5,
+		TotalTokens:  5,
+	}, model.UsageContext{}))
+	require.Equal(t, model.AsyncUsageStatusCompleted, info.Status)
+	require.Equal(t, "720P", info.UsageContext.PriceCondition.Size)
+	require.Equal(t, 2.0, info.Amount.UsedAmount)
+
+	var got model.Log
+	require.NoError(t, db.Where("request_id = ?", requestID).First(&got).Error)
+	require.Equal(t, "720P", got.UsageContext.PriceCondition.Size)
+	require.Equal(t, 2.0, got.Amount.UsedAmount)
 }
 
 func TestTouchAsyncUsagePollCursorAdvancesUpdatedAtAndNextPollAt(t *testing.T) {

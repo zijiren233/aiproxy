@@ -5,6 +5,6 @@ import (
 	"github.com/labring/aiproxy/core/model"
 )
 
-func GetResponsesRequestUsage(c *gin.Context, _ model.ModelConfig) (model.Usage, error) {
-	return model.Usage{}, nil
+func GetResponsesRequestUsage(c *gin.Context, _ model.ModelConfig) (RequestUsage, error) {
+	return NewRequestUsage(model.Usage{}), nil
 }

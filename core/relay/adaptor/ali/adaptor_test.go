@@ -47,6 +47,44 @@ func (s *aliTestStore) SaveIfNotExistStore(cache adaptor.StoreCache) error {
 	return nil
 }
 
+func TestFetchAliVideoJobUsageNormalizesSize(t *testing.T) {
+	t.Parallel()
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/v1/tasks/task-123" {
+			t.Fatalf("unexpected path %s", r.URL.Path)
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{
+			"output":{"task_id":"task-123","task_status":"SUCCEEDED"},
+			"usage":{"duration":5,"video_count":1,"SR":720,"ratio":"16:9"}
+		}`))
+	}))
+	defer server.Close()
+
+	usage, usageContext, completed, err := (&Adaptor{}).fetchAliVideoJobUsage(
+		t.Context(),
+		&coremodel.Channel{BaseURL: server.URL},
+		&coremodel.AsyncUsageInfo{UpstreamID: "task-123"},
+	)
+	if err != nil {
+		t.Fatalf("fetchAliVideoJobUsage returned error: %v", err)
+	}
+
+	if !completed {
+		t.Fatal("expected async usage to be completed")
+	}
+
+	if usage.OutputTokens != coremodel.ZeroNullInt64(5) {
+		t.Fatalf("expected output tokens 5, got %#v", usage.OutputTokens)
+	}
+
+	if usageContext.PriceCondition.Size != "720p" {
+		t.Fatalf("expected normalized video size 720p, got %q", usageContext.PriceCondition.Size)
+	}
+}
+
 func TestAdaptorSupportModeResponses(t *testing.T) {
 	adaptor := &Adaptor{}
 
@@ -479,7 +517,7 @@ func TestAdaptorConvertRequestAliWan27ImageToVideoUsesMedia(t *testing.T) {
 		"image_url":"https://example.com/start.png",
 		"last_frame_url":"https://example.com/end.png",
 		"n_seconds":10,
-		"resolution":"1080P",
+		"size":"1080p",
 		"audio_url":"https://example.com/music.wav"
 	}`
 
@@ -527,7 +565,10 @@ func TestAdaptorConvertRequestAliWan27ImageToVideoUsesMedia(t *testing.T) {
 	}
 
 	if parameters["resolution"] != "1080P" {
-		t.Fatalf("expected resolution 1080P, got %#v", parameters["resolution"])
+		t.Fatalf(
+			"expected OpenAI size to map to resolution 1080P, got %#v",
+			parameters["resolution"],
+		)
 	}
 }
 
@@ -543,7 +584,6 @@ func TestAdaptorConvertRequestAliVideoPrefersOpenAIFields(t *testing.T) {
 		"image_url":"https://example.com/ali-image.png",
 		"seconds":"4",
 		"n_seconds":10,
-		"duration":8,
 		"size":"1080p",
 		"width":1280,
 		"height":720
@@ -584,6 +624,39 @@ func TestAdaptorConvertRequestAliVideoPrefersOpenAIFields(t *testing.T) {
 
 	if _, ok := parameters["size"]; ok {
 		t.Fatalf("expected size not to be set for 1080p, got %#v", parameters["size"])
+	}
+}
+
+func TestAdaptorConvertRequestAliVideoRejectsDangerousAliAliases(t *testing.T) {
+	adaptor := &Adaptor{}
+	m := meta.NewMeta(nil, mode.VideoGenerationsJobs, "wan2.7-i2v", coremodel.ModelConfig{})
+	m.ActualModel = "wan2.7-i2v"
+
+	body := `{
+		"model":"wan2.7-i2v",
+		"prompt":"Animate this reference",
+		"input_reference":"https://example.com/openai-reference.png",
+		"duration":8,
+		"resolution":"1080P"
+	}`
+
+	req, err := http.NewRequestWithContext(
+		context.Background(),
+		http.MethodPost,
+		"/v1/video/generations/jobs",
+		strings.NewReader(body),
+	)
+	if err != nil {
+		t.Fatalf("NewRequest returned error: %v", err)
+	}
+
+	_, err = adaptor.ConvertRequest(m, nil, req)
+	if err == nil {
+		t.Fatal("expected ConvertRequest to reject Ali aliases")
+	}
+
+	if !strings.Contains(err.Error(), "duration is not supported") {
+		t.Fatalf("expected duration alias error, got %v", err)
 	}
 }
 
@@ -2142,18 +2215,20 @@ func TestAliVideoAsyncUsageUsesBaseURL(t *testing.T) {
 	}))
 	defer server.Close()
 
-	adaptor := &Adaptor{}
+	aliAdaptor := &Adaptor{}
 
-	usage, completed, err := adaptor.FetchAsyncUsage(
+	usage, usageContext, completed, err := aliAdaptor.FetchAsyncUsage(
 		context.Background(),
-		&coremodel.Channel{
-			BaseURL: server.URL + "/fallback",
-			Key:     "test-key",
-		},
-		&coremodel.AsyncUsageInfo{
-			Mode:       int(mode.VideoGenerationsJobs),
-			BaseURL:    server.URL + "/custom",
-			UpstreamID: "task-123",
+		adaptor.AsyncUsageRequest{
+			Channel: &coremodel.Channel{
+				BaseURL: server.URL + "/fallback",
+				Key:     "test-key",
+			},
+			Info: &coremodel.AsyncUsageInfo{
+				Mode:       int(mode.VideoGenerationsJobs),
+				BaseURL:    server.URL + "/custom",
+				UpstreamID: "task-123",
+			},
 		},
 	)
 	if err != nil {
@@ -2162,6 +2237,10 @@ func TestAliVideoAsyncUsageUsesBaseURL(t *testing.T) {
 
 	if !completed {
 		t.Fatal("expected async usage to be completed")
+	}
+
+	if usageContext != (coremodel.UsageContext{}) {
+		t.Fatalf("unexpected usage context: %#v", usageContext)
 	}
 
 	if usage.VideoInputTokens != coremodel.ZeroNullInt64(3) ||

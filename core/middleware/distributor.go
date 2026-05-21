@@ -500,6 +500,7 @@ func distribute(c *gin.Context, mode mode.Mode) {
 			time.Time{},
 			NewMetaByContext(c, nil, mode),
 			model.Usage{},
+			model.UsageContext{ServiceTier: requestServiceTier},
 			model.Price{},
 			true,
 		)
