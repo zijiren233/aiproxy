@@ -89,6 +89,61 @@ func GetRequestURL(meta *meta.Meta) (adaptor.RequestURL, error) {
 			Method: http.MethodPost,
 			URL:    url,
 		}, nil
+	case mode.ImagesGenerations:
+		url, err := url.JoinPath(u, "/api/v3/images/generations")
+		if err != nil {
+			return adaptor.RequestURL{}, err
+		}
+
+		return adaptor.RequestURL{
+			Method: http.MethodPost,
+			URL:    url,
+		}, nil
+	case mode.VideoGenerationsJobs, mode.Videos:
+		url, err := url.JoinPath(u, "/api/v3/contents/generations/tasks")
+		if err != nil {
+			return adaptor.RequestURL{}, err
+		}
+
+		return adaptor.RequestURL{
+			Method: http.MethodPost,
+			URL:    url,
+		}, nil
+	case mode.VideoGenerationsGetJobs:
+		url, err := url.JoinPath(u, "/api/v3/contents/generations/tasks", meta.JobID)
+		if err != nil {
+			return adaptor.RequestURL{}, err
+		}
+
+		return adaptor.RequestURL{
+			Method: http.MethodGet,
+			URL:    url,
+		}, nil
+	case mode.VideoGenerationsContent:
+		url, err := url.JoinPath(u, "/api/v3/contents/generations/tasks", meta.GenerationID)
+		if err != nil {
+			return adaptor.RequestURL{}, err
+		}
+
+		return adaptor.RequestURL{
+			Method: http.MethodGet,
+			URL:    url,
+		}, nil
+	case mode.VideosGet, mode.VideosContent, mode.VideosDelete:
+		url, err := url.JoinPath(u, "/api/v3/contents/generations/tasks", meta.VideoID)
+		if err != nil {
+			return adaptor.RequestURL{}, err
+		}
+
+		method := http.MethodGet
+		if meta.Mode == mode.VideosDelete {
+			method = http.MethodDelete
+		}
+
+		return adaptor.RequestURL{
+			Method: method,
+			URL:    url,
+		}, nil
 	case mode.Responses:
 		url, err := url.JoinPath(u, "/api/v3/responses")
 		if err != nil {
@@ -161,6 +216,14 @@ func (a *Adaptor) SupportMode(mt *meta.Meta) bool {
 		m == mode.Anthropic ||
 		m == mode.Gemini ||
 		m == mode.Embeddings ||
+		m == mode.ImagesGenerations ||
+		m == mode.VideoGenerationsJobs ||
+		m == mode.VideoGenerationsGetJobs ||
+		m == mode.VideoGenerationsContent ||
+		m == mode.Videos ||
+		m == mode.VideosGet ||
+		m == mode.VideosContent ||
+		m == mode.VideosDelete ||
 		m == mode.Responses ||
 		m == mode.ResponsesGet ||
 		m == mode.ResponsesDelete ||
@@ -195,6 +258,13 @@ func (a *Adaptor) ConvertRequest(
 	}
 
 	switch meta.Mode {
+	case mode.ImagesGenerations:
+		return ConvertImageRequest(meta, req)
+	case mode.VideoGenerationsJobs, mode.Videos:
+		return ConvertVideoRequest(meta, req)
+	case mode.VideoGenerationsGetJobs, mode.VideoGenerationsContent,
+		mode.VideosGet, mode.VideosContent, mode.VideosDelete:
+		return adaptor.ConvertResult{}, nil
 	case mode.Embeddings:
 		if strings.Contains(strings.ToLower(featureModel(meta)), "vision") {
 			return openai.ConvertEmbeddingsRequest(meta, req, false, patchEmbeddingsVisionInput)
@@ -218,6 +288,20 @@ func (a *Adaptor) DoResponse(
 	resp *http.Response,
 ) (adaptor.DoResponseResult, adaptor.Error) {
 	switch meta.Mode {
+	case mode.ImagesGenerations:
+		if utils.IsStreamResponse(resp) {
+			return ImageStreamHandler(meta, c, resp)
+		}
+
+		return ImageHandler(meta, c, resp)
+	case mode.VideoGenerationsJobs, mode.Videos:
+		return VideoSubmitHandler(meta, store, c, resp)
+	case mode.VideoGenerationsGetJobs, mode.VideosGet:
+		return VideoStatusHandler(meta, store, c, resp)
+	case mode.VideoGenerationsContent, mode.VideosContent:
+		return VideoContentHandler(meta, c, resp)
+	case mode.VideosDelete:
+		return openai.VideoDeleteHandler(meta, c, resp)
 	case mode.ChatCompletions:
 		websearchCount := int64(0)
 
