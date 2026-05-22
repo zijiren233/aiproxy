@@ -139,8 +139,8 @@ const KNOWN_CONFIG_KEYS = new Set([
     'limited_time_free',
     'support_formats',
     'support_voices',
-    'image_sizes',
-    'video_sizes',
+    'image_resolutions',
+    'video_resolutions',
 ])
 
 const STREAM_TIMEOUT_SUPPORTED_TYPES = new Set<number>(STREAM_TIMEOUT_SUPPORTED_MODEL_TYPES)
@@ -243,8 +243,8 @@ export function ModelForm({
                 limited_time_free: defaultValues.config?.limited_time_free ?? false,
                 support_formats: defaultValues.config?.support_formats,
                 support_voices: defaultValues.config?.support_voices,
-                image_sizes: defaultValues.config?.image_sizes,
-                video_sizes: defaultValues.config?.video_sizes,
+                image_resolutions: defaultValues.config?.image_resolutions,
+                video_resolutions: defaultValues.config?.video_resolutions,
             },
             owner: defaultValues.owner ?? '',
             type: defaultValues.type || 1,
@@ -281,8 +281,8 @@ export function ModelForm({
 
     const supportFormatsValue = form.watch('config.support_formats')
     const supportVoicesValue = form.watch('config.support_voices')
-    const imageSizesValue = form.watch('config.image_sizes')
-    const videoSizesValue = form.watch('config.video_sizes')
+    const imageResolutionsValue = form.watch('config.image_resolutions')
+    const videoResolutionsValue = form.watch('config.video_resolutions')
     const supportStreamTimeout = STREAM_TIMEOUT_SUPPORTED_TYPES.has(watchedType)
     const supportImageGenerationCountLimit = IMAGE_GENERATION_COUNT_LIMIT_SUPPORTED_TYPES.has(watchedType)
     const supportVideoGenerationSecondsLimit = VIDEO_GENERATION_SECONDS_LIMIT_SUPPORTED_TYPES.has(watchedType)
@@ -299,8 +299,8 @@ export function ModelForm({
                     showLimitedTimeFree: true,
                     showSupportFormats: true,
                     showSupportVoices: true,
-                    showImageSizes: false,
-                    showVideoSizes: false,
+                    showImageResolutions: false,
+                    showVideoResolutions: false,
                 }
             case 8:
                 return {
@@ -311,8 +311,8 @@ export function ModelForm({
                     showLimitedTimeFree: true,
                     showSupportFormats: true,
                     showSupportVoices: false,
-                    showImageSizes: false,
-                    showVideoSizes: false,
+                    showImageResolutions: false,
+                    showVideoResolutions: false,
                 }
             case 3:
             case 10:
@@ -325,8 +325,8 @@ export function ModelForm({
                     showLimitedTimeFree: true,
                     showSupportFormats: false,
                     showSupportVoices: false,
-                    showImageSizes: false,
-                    showVideoSizes: false,
+                    showImageResolutions: false,
+                    showVideoResolutions: false,
                 }
             case 5:
             case 9:
@@ -338,8 +338,8 @@ export function ModelForm({
                     showLimitedTimeFree: true,
                     showSupportFormats: true,
                     showSupportVoices: false,
-                    showImageSizes: true,
-                    showVideoSizes: false,
+                    showImageResolutions: true,
+                    showVideoResolutions: false,
                 }
             case 13:
             case 22:
@@ -353,8 +353,8 @@ export function ModelForm({
                     showLimitedTimeFree: true,
                     showSupportFormats: false,
                     showSupportVoices: false,
-                    showImageSizes: false,
-                    showVideoSizes: true,
+                    showImageResolutions: false,
+                    showVideoResolutions: true,
                 }
             case 21:
                 return {
@@ -365,8 +365,8 @@ export function ModelForm({
                     showLimitedTimeFree: true,
                     showSupportFormats: false,
                     showSupportVoices: false,
-                    showImageSizes: false,
-                    showVideoSizes: false,
+                    showImageResolutions: false,
+                    showVideoResolutions: false,
                 }
             case 1:
             case 2:
@@ -381,8 +381,8 @@ export function ModelForm({
                     showLimitedTimeFree: true,
                     showSupportFormats: false,
                     showSupportVoices: false,
-                    showImageSizes: false,
-                    showVideoSizes: false,
+                    showImageResolutions: false,
+                    showVideoResolutions: false,
                 }
         }
     })()
@@ -1081,28 +1081,28 @@ export function ModelForm({
                                     </FormItem>
                                 )}
                             />
-                            {configFieldVisibility.showImageSizes && (
+                            {configFieldVisibility.showImageResolutions && (
                                 <FormField
                                     control={form.control}
-                                    name="config.image_sizes"
+                                    name="config.image_resolutions"
                                     render={() => (
                                         <FormItem>
-                                            <FormLabel>{t("model.dialog.config.imageSizes")}</FormLabel>
+                                            <FormLabel>{t("model.dialog.config.imageResolutions")}</FormLabel>
                                             <FormControl>
                                                 <Textarea
-                                                    placeholder={t("model.dialog.config.imageSizesPlaceholder")}
-                                                    value={(imageSizesValue || []).join('\n')}
+                                                    placeholder={t("model.dialog.config.imageResolutionsPlaceholder")}
+                                                    value={(imageResolutionsValue || []).join('\n')}
                                                     onChange={(e) => {
                                                         const values = e.target.value
                                                             .split('\n')
                                                             .map((item) => item.trim())
                                                             .filter(Boolean)
-                                                        form.setValue('config.image_sizes', values.length > 0 ? values : undefined, { shouldDirty: true })
+                                                        form.setValue('config.image_resolutions', values.length > 0 ? values : undefined, { shouldDirty: true })
                                                     }}
                                                     className="min-h-[96px]"
                                                 />
                                             </FormControl>
-                                            <FormDescription>{t("model.dialog.config.imageSizesDescription")}</FormDescription>
+                                            <FormDescription>{t("model.dialog.config.imageResolutionsDescription")}</FormDescription>
                                             <FormMessage />
                                         </FormItem>
                                     )}
@@ -1133,28 +1133,28 @@ export function ModelForm({
                                     </FormItem>
                                 )}
                             />
-                            {configFieldVisibility.showVideoSizes && (
+                            {configFieldVisibility.showVideoResolutions && (
                                 <FormField
                                     control={form.control}
-                                    name="config.video_sizes"
+                                    name="config.video_resolutions"
                                     render={() => (
                                         <FormItem>
-                                            <FormLabel>{t("model.dialog.config.videoSizes")}</FormLabel>
+                                            <FormLabel>{t("model.dialog.config.videoResolutions")}</FormLabel>
                                             <FormControl>
                                                 <Textarea
-                                                    placeholder={t("model.dialog.config.videoSizesPlaceholder")}
-                                                    value={(videoSizesValue || []).join('\n')}
+                                                    placeholder={t("model.dialog.config.videoResolutionsPlaceholder")}
+                                                    value={(videoResolutionsValue || []).join('\n')}
                                                     onChange={(e) => {
                                                         const values = e.target.value
                                                             .split('\n')
                                                             .map((item) => item.trim())
                                                             .filter(Boolean)
-                                                        form.setValue('config.video_sizes', values.length > 0 ? values : undefined, { shouldDirty: true })
+                                                        form.setValue('config.video_resolutions', values.length > 0 ? values : undefined, { shouldDirty: true })
                                                     }}
                                                     className="min-h-[96px]"
                                                 />
                                             </FormControl>
-                                            <FormDescription>{t("model.dialog.config.videoSizesDescription")}</FormDescription>
+                                            <FormDescription>{t("model.dialog.config.videoResolutionsDescription")}</FormDescription>
                                             <FormMessage />
                                         </FormItem>
                                     )}

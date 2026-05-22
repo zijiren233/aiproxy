@@ -80,8 +80,11 @@ func TestFetchAliVideoJobUsageNormalizesSize(t *testing.T) {
 		t.Fatalf("expected output tokens 5, got %#v", usage.OutputTokens)
 	}
 
-	if usageContext.PriceCondition.Size != "720p" {
-		t.Fatalf("expected normalized video size 720p, got %q", usageContext.PriceCondition.Size)
+	if usageContext.PriceCondition.Resolution != "720p" {
+		t.Fatalf(
+			"expected normalized video resolution 720p, got %q",
+			usageContext.PriceCondition.Resolution,
+		)
 	}
 }
 

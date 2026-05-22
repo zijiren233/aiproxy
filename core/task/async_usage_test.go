@@ -189,7 +189,7 @@ func TestCompleteAsyncUsagePreservesStoredPriceCondition(t *testing.T) {
 			OutputPriceUnit: 1,
 			ConditionalPrices: []model.ConditionalPrice{
 				{
-					Condition: model.PriceCondition{Size: []string{"720p"}},
+					Condition: model.PriceCondition{Resolution: []string{"720p"}},
 					Price: model.Price{
 						OutputPrice:     0.4,
 						OutputPriceUnit: 1,
@@ -198,7 +198,7 @@ func TestCompleteAsyncUsagePreservesStoredPriceCondition(t *testing.T) {
 			},
 		},
 		UsageContext: model.UsageContext{
-			PriceCondition: model.UsagePriceCondition{Size: "720P"},
+			PriceCondition: model.UsagePriceCondition{Resolution: "720P"},
 		},
 		ProcessingToken: "claim-token",
 	}
@@ -209,12 +209,12 @@ func TestCompleteAsyncUsagePreservesStoredPriceCondition(t *testing.T) {
 		TotalTokens:  5,
 	}, model.UsageContext{}))
 	require.Equal(t, model.AsyncUsageStatusCompleted, info.Status)
-	require.Equal(t, "720P", info.UsageContext.PriceCondition.Size)
+	require.Equal(t, "720P", info.UsageContext.PriceCondition.Resolution)
 	require.Equal(t, 2.0, info.Amount.UsedAmount)
 
 	var got model.Log
 	require.NoError(t, db.Where("request_id = ?", requestID).First(&got).Error)
-	require.Equal(t, "720P", got.UsageContext.PriceCondition.Size)
+	require.Equal(t, "720P", got.UsageContext.PriceCondition.Resolution)
 	require.Equal(t, 2.0, got.Amount.UsedAmount)
 }
 

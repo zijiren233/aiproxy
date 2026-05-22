@@ -83,7 +83,7 @@ const priceConditionSchema = z.object({
     output_token_max: z.number().optional(),
     start_time: z.number().optional(),
     end_time: z.number().optional(),
-    size: z.array(z.string()).optional(),
+    resolution: z.array(z.string()).optional(),
     quality: z.array(z.string()).optional(),
     service_tier: z.enum(['auto', 'default', 'flex', 'scale', 'priority']).or(z.literal('')).optional(),
 })
@@ -157,8 +157,8 @@ const modelConfigSchema = z.object({
     limited_time_free: z.boolean().optional(),
     support_formats: z.array(z.string()).optional(),
     support_voices: z.array(z.string()).optional(),
-    image_sizes: z.array(z.string()).optional(),
-    video_sizes: z.array(z.string()).optional(),
+    image_resolutions: z.array(z.string()).optional(),
+    video_resolutions: z.array(z.string()).optional(),
 }).optional()
 
 export const modelCreateSchema = z.object({

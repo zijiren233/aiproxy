@@ -899,7 +899,7 @@ func doubaoVideoUsageContext(response *doubaoVideoTaskResponse) coremodel.UsageC
 
 	return coremodel.UsageContext{
 		PriceCondition: coremodel.UsagePriceCondition{
-			Size: response.Resolution,
+			Resolution: response.Resolution,
 		},
 		ServiceTier: response.ServiceTier,
 	}

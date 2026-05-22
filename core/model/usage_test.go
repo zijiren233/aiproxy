@@ -822,8 +822,8 @@ func TestPrice_SelectConditionalPrice_WithMediaConditions(t *testing.T) {
 		ConditionalPrices: []model.ConditionalPrice{
 			{
 				Condition: model.PriceCondition{
-					Size:    []string{"1024x1024"},
-					Quality: []string{"hd"},
+					Resolution: []string{"1024x1024"},
+					Quality:    []string{"hd"},
 				},
 				Price: model.Price{
 					OutputPrice: 0.34,
@@ -831,7 +831,7 @@ func TestPrice_SelectConditionalPrice_WithMediaConditions(t *testing.T) {
 			},
 			{
 				Condition: model.PriceCondition{
-					Size: []string{"720p"},
+					Resolution: []string{"720p"},
 				},
 				Price: model.Price{
 					OutputPrice: 0.40,
@@ -842,8 +842,8 @@ func TestPrice_SelectConditionalPrice_WithMediaConditions(t *testing.T) {
 
 	imagePrice := price.SelectConditionalPrice(model.Usage{}, model.UsageContext{
 		PriceCondition: model.UsagePriceCondition{
-			Size:    "1024*1024",
-			Quality: "HD",
+			Resolution: "1024*1024",
+			Quality:    "HD",
 		},
 	})
 	if float64(imagePrice.OutputPrice) != 0.34 {
@@ -851,7 +851,7 @@ func TestPrice_SelectConditionalPrice_WithMediaConditions(t *testing.T) {
 	}
 
 	videoPrice := price.SelectConditionalPrice(model.Usage{}, model.UsageContext{
-		PriceCondition: model.UsagePriceCondition{Size: "720P"},
+		PriceCondition: model.UsagePriceCondition{Resolution: "720P"},
 	})
 	if float64(videoPrice.OutputPrice) != 0.40 {
 		t.Fatalf("expected video conditional price 0.40, got %v", videoPrice.OutputPrice)
@@ -859,8 +859,8 @@ func TestPrice_SelectConditionalPrice_WithMediaConditions(t *testing.T) {
 
 	fallbackPrice := price.SelectConditionalPrice(model.Usage{}, model.UsageContext{
 		PriceCondition: model.UsagePriceCondition{
-			Size:    "1024x1024",
-			Quality: "standard",
+			Resolution: "1024x1024",
+			Quality:    "standard",
 		},
 	})
 	if float64(fallbackPrice.OutputPrice) != 0.08 {
@@ -874,8 +874,8 @@ func TestPrice_SelectConditionalPrice_AutoMediaConditionMatchesOnlyAuto(t *testi
 		ConditionalPrices: []model.ConditionalPrice{
 			{
 				Condition: model.PriceCondition{
-					Size:    []string{"auto"},
-					Quality: []string{"auto"},
+					Resolution: []string{"auto"},
+					Quality:    []string{"auto"},
 				},
 				Price: model.Price{
 					OutputPrice: 0.12,
@@ -886,8 +886,8 @@ func TestPrice_SelectConditionalPrice_AutoMediaConditionMatchesOnlyAuto(t *testi
 
 	selectedPrice := price.SelectConditionalPrice(model.Usage{}, model.UsageContext{
 		PriceCondition: model.UsagePriceCondition{
-			Size:    "1024x1024",
-			Quality: "standard",
+			Resolution: "1024x1024",
+			Quality:    "standard",
 		},
 	})
 	if float64(selectedPrice.OutputPrice) != 0.08 {
@@ -896,8 +896,8 @@ func TestPrice_SelectConditionalPrice_AutoMediaConditionMatchesOnlyAuto(t *testi
 
 	autoPrice := price.SelectConditionalPrice(model.Usage{}, model.UsageContext{
 		PriceCondition: model.UsagePriceCondition{
-			Size:    "auto",
-			Quality: "auto",
+			Resolution: "auto",
+			Quality:    "auto",
 		},
 	})
 	if float64(autoPrice.OutputPrice) != 0.12 {
@@ -911,8 +911,8 @@ func TestPrice_SelectConditionalPrice_WithMultipleMediaConditionValues(t *testin
 		ConditionalPrices: []model.ConditionalPrice{
 			{
 				Condition: model.PriceCondition{
-					Size:    []string{"1024x1024", "1024x1536"},
-					Quality: []string{"standard", "medium"},
+					Resolution: []string{"1024x1024", "1024x1536"},
+					Quality:    []string{"standard", "medium"},
 				},
 				Price: model.Price{
 					OutputPrice: 0.12,
@@ -923,8 +923,8 @@ func TestPrice_SelectConditionalPrice_WithMultipleMediaConditionValues(t *testin
 
 	selectedPrice := price.SelectConditionalPrice(model.Usage{}, model.UsageContext{
 		PriceCondition: model.UsagePriceCondition{
-			Size:    "1024x1536",
-			Quality: "medium",
+			Resolution: "1024x1536",
+			Quality:    "medium",
 		},
 	})
 	if float64(selectedPrice.OutputPrice) != 0.12 {
@@ -1048,15 +1048,15 @@ func TestPrice_ValidateConditionalPrices_WithMediaConditions(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name: "same ranges with different sizes are allowed",
+			name: "same ranges with different resolutions are allowed",
 			price: model.Price{
 				ConditionalPrices: []model.ConditionalPrice{
 					{
-						Condition: model.PriceCondition{Size: []string{"720p"}},
+						Condition: model.PriceCondition{Resolution: []string{"720p"}},
 						Price:     model.Price{OutputPrice: 0.4},
 					},
 					{
-						Condition: model.PriceCondition{Size: []string{"1080p"}},
+						Condition: model.PriceCondition{Resolution: []string{"1080p"}},
 						Price:     model.Price{OutputPrice: 0.8},
 					},
 				},
@@ -1068,15 +1068,15 @@ func TestPrice_ValidateConditionalPrices_WithMediaConditions(t *testing.T) {
 				ConditionalPrices: []model.ConditionalPrice{
 					{
 						Condition: model.PriceCondition{
-							Size:    []string{"1024x1024"},
-							Quality: []string{"standard"},
+							Resolution: []string{"1024x1024"},
+							Quality:    []string{"standard"},
 						},
 						Price: model.Price{OutputPrice: 0.08},
 					},
 					{
 						Condition: model.PriceCondition{
-							Size:    []string{"1024*1024"},
-							Quality: []string{"hd"},
+							Resolution: []string{"1024*1024"},
+							Quality:    []string{"hd"},
 						},
 						Price: model.Price{OutputPrice: 0.34},
 					},
@@ -1089,13 +1089,13 @@ func TestPrice_ValidateConditionalPrices_WithMediaConditions(t *testing.T) {
 				ConditionalPrices: []model.ConditionalPrice{
 					{
 						Condition: model.PriceCondition{
-							Size: []string{"720p", "1080p"},
+							Resolution: []string{"720p", "1080p"},
 						},
 						Price: model.Price{OutputPrice: 0.08},
 					},
 					{
 						Condition: model.PriceCondition{
-							Size: []string{"480p"},
+							Resolution: []string{"480p"},
 						},
 						Price: model.Price{OutputPrice: 0.04},
 					},
@@ -1108,13 +1108,13 @@ func TestPrice_ValidateConditionalPrices_WithMediaConditions(t *testing.T) {
 				ConditionalPrices: []model.ConditionalPrice{
 					{
 						Condition: model.PriceCondition{
-							Size: []string{"720p", "1080p"},
+							Resolution: []string{"720p", "1080p"},
 						},
 						Price: model.Price{OutputPrice: 0.08},
 					},
 					{
 						Condition: model.PriceCondition{
-							Size: []string{"1080P"},
+							Resolution: []string{"1080P"},
 						},
 						Price: model.Price{OutputPrice: 0.12},
 					},
@@ -1127,11 +1127,11 @@ func TestPrice_ValidateConditionalPrices_WithMediaConditions(t *testing.T) {
 			price: model.Price{
 				ConditionalPrices: []model.ConditionalPrice{
 					{
-						Condition: model.PriceCondition{Size: []string{"1024x1024"}},
+						Condition: model.PriceCondition{Resolution: []string{"1024x1024"}},
 						Price:     model.Price{OutputPrice: 0.08},
 					},
 					{
-						Condition: model.PriceCondition{Size: []string{"1024*1024"}},
+						Condition: model.PriceCondition{Resolution: []string{"1024*1024"}},
 						Price:     model.Price{OutputPrice: 0.12},
 					},
 				},
@@ -1147,7 +1147,7 @@ func TestPrice_ValidateConditionalPrices_WithMediaConditions(t *testing.T) {
 						Price:     model.Price{OutputPrice: 0.08},
 					},
 					{
-						Condition: model.PriceCondition{Size: []string{"720p"}},
+						Condition: model.PriceCondition{Resolution: []string{"720p"}},
 						Price:     model.Price{OutputPrice: 0.4},
 					},
 				},

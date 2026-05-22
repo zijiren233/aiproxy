@@ -94,12 +94,20 @@ func geminiImageAspectRatioFromSize(size string) string {
 		return size
 	}
 
-	width, height, ok := parseGeminiVideoDimensions(size)
+	width, height, ok := relaymodel.ParseVideoDimensions(size)
 	if !ok || width <= 0 || height <= 0 {
 		return ""
 	}
 
 	return closestGeminiImageAspectRatio(width, height)
+}
+
+func absFloat64(value float64) float64 {
+	if value < 0 {
+		return -value
+	}
+
+	return value
 }
 
 func geminiImageSizeFromSize(size string) string {
@@ -137,10 +145,10 @@ func closestGeminiImageAspectRatio(width, height int) string {
 	}
 
 	best := candidates[0]
-	bestDelta := absFloat(ratio - best.ratio)
+	bestDelta := absFloat64(ratio - best.ratio)
 
 	for _, item := range candidates[1:] {
-		delta := absFloat(ratio - item.ratio)
+		delta := absFloat64(ratio - item.ratio)
 		if delta < bestDelta {
 			best = item
 			bestDelta = delta

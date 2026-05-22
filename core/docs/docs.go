@@ -13873,7 +13873,7 @@ const docTemplate = `{
                 "service_tier": {
                     "type": "string"
                 },
-                "size": {
+                "resolution": {
                     "type": "array",
                     "items": {
                         "type": "string"
@@ -15014,7 +15014,7 @@ const docTemplate = `{
                 "quality": {
                     "type": "string"
                 },
-                "size": {
+                "resolution": {
                     "type": "string"
                 }
             }

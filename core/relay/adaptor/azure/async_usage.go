@@ -76,9 +76,13 @@ func (a *Adaptor) fetchVideoJobUsage(
 		totalSeconds := job.NSeconds * job.NVariants
 
 		return model.Usage{
-			OutputTokens: model.ZeroNullInt64(totalSeconds),
-			TotalTokens:  model.ZeroNullInt64(totalSeconds),
-		}, model.UsageContext{PriceCondition: model.UsagePriceCondition{Size: videoGenerationJobPriceSize(&job)}}, true, nil
+				OutputTokens: model.ZeroNullInt64(totalSeconds),
+				TotalTokens:  model.ZeroNullInt64(totalSeconds),
+			}, model.UsageContext{
+				PriceCondition: model.UsagePriceCondition{
+					Resolution: videoGenerationJobPriceResolution(&job),
+				},
+			}, true, nil
 	case relaymodel.VideoGenerationJobStatusQueued,
 		relaymodel.VideoGenerationJobStatusProcessing,
 		relaymodel.VideoGenerationJobStatusRunning:
@@ -119,7 +123,7 @@ func (a *Adaptor) fetchVideoUsage(
 		return model.Usage{
 			OutputTokens: model.ZeroNullInt64(video.Seconds),
 			TotalTokens:  model.ZeroNullInt64(video.Seconds),
-		}, model.UsageContext{PriceCondition: model.UsagePriceCondition{Size: video.Size}}, true, nil
+		}, model.UsageContext{PriceCondition: model.UsagePriceCondition{Resolution: video.Size}}, true, nil
 	case relaymodel.VideoStatusQueued, relaymodel.VideoStatusInProgress, "":
 		return model.Usage{}, model.UsageContext{}, false, nil
 	default:
@@ -239,10 +243,10 @@ func (a *Adaptor) fetchAsyncUsageObject(
 	return resp, nil
 }
 
-func videoGenerationJobPriceSize(job *relaymodel.VideoGenerationJob) string {
+func videoGenerationJobPriceResolution(job *relaymodel.VideoGenerationJob) string {
 	if job == nil {
 		return ""
 	}
 
-	return relaymodel.VideoPriceSizeFromDimensions(job.Width, job.Height)
+	return relaymodel.VideoResolutionFromDimensions(job.Width, job.Height)
 }

@@ -2756,7 +2756,7 @@ definitions:
         type: array
       service_tier:
         type: string
-      size:
+      resolution:
         items:
           type: string
         type: array
@@ -3513,7 +3513,7 @@ definitions:
     properties:
       quality:
         type: string
-      size:
+      resolution:
         type: string
     type: object
   model.Video:

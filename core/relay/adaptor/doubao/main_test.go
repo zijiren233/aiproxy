@@ -545,7 +545,7 @@ func TestAdaptorDoResponseImageGenerationUsesDoubaoUsage(t *testing.T) {
 		t.Fatalf("unexpected usage: %#v", result.Usage)
 	}
 
-	if result.UsageContext.PriceCondition.Size != "2048x2048" {
+	if result.UsageContext.PriceCondition.Resolution != "2048x2048" {
 		t.Fatalf("expected size context, got %#v", result.UsageContext)
 	}
 
@@ -604,7 +604,7 @@ func TestAdaptorDoResponseImageGenerationStreamConvertsDoubaoEvents(t *testing.T
 		t.Fatalf("unexpected usage: %#v", result.Usage)
 	}
 
-	if result.UsageContext.PriceCondition.Size != "2048x2048" {
+	if result.UsageContext.PriceCondition.Resolution != "2048x2048" {
 		t.Fatalf("expected size context, got %#v", result.UsageContext)
 	}
 
@@ -1219,7 +1219,7 @@ func TestAdaptorFetchAsyncUsageUsesDoubaoCompletionTokens(t *testing.T) {
 		t.Fatalf("unexpected usage: %#v", usage)
 	}
 
-	if usageContext.PriceCondition.Size != "720p" || usageContext.ServiceTier != "default" {
+	if usageContext.PriceCondition.Resolution != "720p" || usageContext.ServiceTier != "default" {
 		t.Fatalf("unexpected usage context: %#v", usageContext)
 	}
 }

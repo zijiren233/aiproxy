@@ -13864,7 +13864,7 @@
                 "service_tier": {
                     "type": "string"
                 },
-                "size": {
+                "resolution": {
                     "type": "array",
                     "items": {
                         "type": "string"
@@ -15005,7 +15005,7 @@
                 "quality": {
                     "type": "string"
                 },
-                "size": {
+                "resolution": {
                     "type": "string"
                 }
             }

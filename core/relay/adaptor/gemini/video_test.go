@@ -682,7 +682,7 @@ func TestFetchAsyncUsageKeepsRequestUsageAndResolution(t *testing.T) {
 					TotalTokens:  12,
 				},
 				UsageContext: coremodel.UsageContext{
-					PriceCondition: coremodel.UsagePriceCondition{Size: "1080p"},
+					PriceCondition: coremodel.UsagePriceCondition{Resolution: "1080p"},
 				},
 			},
 		},
@@ -691,5 +691,5 @@ func TestFetchAsyncUsageKeepsRequestUsageAndResolution(t *testing.T) {
 	require.True(t, done)
 	require.Equal(t, coremodel.ZeroNullInt64(12), usage.OutputTokens)
 	require.Equal(t, coremodel.ZeroNullInt64(12), usage.TotalTokens)
-	require.Equal(t, "1080p", usageContext.PriceCondition.Size)
+	require.Equal(t, "1080p", usageContext.PriceCondition.Resolution)
 }

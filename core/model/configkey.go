@@ -15,22 +15,22 @@ const (
 	ModelConfigToolChoiceKey       ModelConfigKey = "tool_choice"
 	ModelConfigSupportFormatsKey   ModelConfigKey = "support_formats"
 	ModelConfigSupportVoicesKey    ModelConfigKey = "support_voices"
-	ModelConfigImageSizes          ModelConfigKey = "image_sizes"
+	ModelConfigImageResolutions    ModelConfigKey = "image_resolutions"
 	ModelConfigImageQualitys       ModelConfigKey = "image_qualitys"
-	ModelConfigVideoSizes          ModelConfigKey = "video_sizes"
+	ModelConfigVideoResolutions    ModelConfigKey = "video_resolutions"
 )
 
 type ModelConfigOption func(config map[ModelConfigKey]any)
 
-func WithModelConfigImageSizes(sizes ...string) ModelConfigOption {
-	for _, size := range sizes {
-		if !strings.Contains(size, "x") {
-			panic("image size format error")
+func WithModelConfigImageResolutions(resolutions ...string) ModelConfigOption {
+	for _, resolution := range resolutions {
+		if !strings.Contains(resolution, "x") {
+			panic("image resolution format error")
 		}
 	}
 
 	return func(config map[ModelConfigKey]any) {
-		config[ModelConfigImageSizes] = sizes
+		config[ModelConfigImageResolutions] = resolutions
 	}
 }
 

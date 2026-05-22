@@ -295,7 +295,7 @@ func convertDoubaoImageStreamEvent(
 
 	usageContext := coremodel.UsageContext{}
 	if openAIEvent.Size != "" {
-		usageContext.PriceCondition.Size = openAIEvent.Size
+		usageContext.PriceCondition.Resolution = openAIEvent.Size
 	}
 
 	switch event.Type {
@@ -378,7 +378,7 @@ func doubaoImageUsageContext(data []*doubaoImageData) coremodel.UsageContext {
 
 		return coremodel.UsageContext{
 			PriceCondition: coremodel.UsagePriceCondition{
-				Size: normalizeDoubaoImageSize(item.Size),
+				Resolution: normalizeDoubaoImageSize(item.Size),
 			},
 		}
 	}

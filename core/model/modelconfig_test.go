@@ -293,8 +293,8 @@ func TestGetModelConfigLoadsFastJSONFields(t *testing.T) {
 			ConditionalPrices: []model.ConditionalPrice{
 				{
 					Condition: model.PriceCondition{
-						Size:    []string{"1024x1024"},
-						Quality: []string{"hd"},
+						Resolution: []string{"1024x1024"},
+						Quality:    []string{"hd"},
 					},
 					Price: model.Price{
 						OutputPrice: 0.34,

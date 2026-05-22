@@ -699,76 +699,7 @@ func multipartGeminiVideoMedia(
 }
 
 func geminiVideoAspectRatioFromSize(size string) string {
-	size = strings.ToLower(strings.TrimSpace(size))
-	switch size {
-	case "16:9", "9:16", "1:1", "4:3", "3:4":
-		return size
-	}
-
-	width, height, ok := parseGeminiVideoDimensions(size)
-	if !ok || width <= 0 || height <= 0 {
-		return ""
-	}
-
-	return closestGeminiVideoAspectRatio(width, height)
-}
-
-func parseGeminiVideoDimensions(size string) (int, int, bool) {
-	size = strings.ReplaceAll(strings.ToLower(strings.TrimSpace(size)), "×", "x")
-	parts := strings.Split(size, "x")
-
-	if len(parts) != 2 {
-		return 0, 0, false
-	}
-
-	width, err := strconv.Atoi(strings.TrimSpace(parts[0]))
-	if err != nil {
-		return 0, 0, false
-	}
-
-	height, err := strconv.Atoi(strings.TrimSpace(parts[1]))
-	if err != nil {
-		return 0, 0, false
-	}
-
-	return width, height, true
-}
-
-func closestGeminiVideoAspectRatio(width, height int) string {
-	type candidate struct {
-		label string
-		ratio float64
-	}
-
-	ratio := float64(width) / float64(height)
-	candidates := []candidate{
-		{"16:9", 16.0 / 9.0},
-		{"9:16", 9.0 / 16.0},
-		{"1:1", 1},
-		{"4:3", 4.0 / 3.0},
-		{"3:4", 3.0 / 4.0},
-	}
-
-	best := candidates[0]
-	bestDelta := absFloat(ratio - best.ratio)
-
-	for _, item := range candidates[1:] {
-		delta := absFloat(ratio - item.ratio)
-		if delta < bestDelta {
-			best = item
-			bestDelta = delta
-		}
-	}
-
-	return best.label
-}
-
-func absFloat(value float64) float64 {
-	if value < 0 {
-		return -value
-	}
-
-	return value
+	return relaymodel.VideoAspectRatioFromSize(size)
 }
 
 func NativeVideoHandler(

@@ -112,21 +112,24 @@ func validateVideoGenerationCount(count, maxCount int) error {
 	)
 }
 
-func validateSupportedVideoSize(size string, mc model.ModelConfig) error {
-	if size == "" {
+func validateSupportedVideoResolution(resolution string, mc model.ModelConfig) error {
+	if resolution == "" {
 		return nil
 	}
 
-	sizes, ok := model.GetModelConfigStringSlice(mc.Config, model.ModelConfigVideoSizes)
-	if !ok || len(sizes) == 0 {
+	resolutions, ok := model.GetModelConfigStringSlice(mc.Config, model.ModelConfigVideoResolutions)
+	if !ok || len(resolutions) == 0 {
 		return nil
 	}
 
-	if slices.Contains(normalizeSupportedSizeValues(sizes), normalizeSupportedSizeValue(size)) {
+	if slices.Contains(
+		normalizeSupportedResolutionValues(resolutions),
+		normalizeSupportedResolutionValue(resolution),
+	) {
 		return nil
 	}
 
-	return NewBadRequestParamError(fmt.Sprintf("unsupported video size `%s`", size))
+	return NewBadRequestParamError(fmt.Sprintf("unsupported video resolution `%s`", resolution))
 }
 
 func setVideoOutputPriceUnit(price *model.Price, force bool) {
@@ -164,7 +167,9 @@ func GetVideoGenerationJobRequestUsage(c *gin.Context, mc model.ModelConfig) (Re
 			TotalTokens:  model.ZeroNullInt64(seconds),
 		},
 		Context: model.UsageContext{
-			PriceCondition: model.UsagePriceCondition{Size: videoRequestPriceSize(request)},
+			PriceCondition: model.UsagePriceCondition{
+				Resolution: videoRequestPriceResolution(request),
+			},
 		},
 	}, nil
 }
@@ -187,7 +192,7 @@ func GetGeminiVideoRequestUsage(c *gin.Context, mc model.ModelConfig) (RequestUs
 			TotalTokens:  model.ZeroNullInt64(tokens),
 		},
 		Context: model.UsageContext{
-			PriceCondition: model.UsagePriceCondition{Size: params.resolution},
+			PriceCondition: model.UsagePriceCondition{Resolution: params.resolution},
 		},
 	}, nil
 }
@@ -212,7 +217,7 @@ func GetVideosRequestUsage(c *gin.Context, mc model.ModelConfig) (RequestUsage, 
 			TotalTokens:  model.ZeroNullInt64(params.seconds),
 		},
 		Context: model.UsageContext{
-			PriceCondition: model.UsagePriceCondition{Size: params.size},
+			PriceCondition: model.UsagePriceCondition{Resolution: params.size},
 		},
 	}, nil
 }
@@ -235,7 +240,7 @@ func validateVideoGenerationJobRequest(
 		return err
 	}
 
-	return validateSupportedVideoSize(videoRequestPriceSize(request), mc)
+	return validateSupportedVideoResolution(videoRequestPriceResolution(request), mc)
 }
 
 func getVideosRequestUsageParams(c *gin.Context) (videosRequestUsageParams, error) {
@@ -279,7 +284,7 @@ func validateVideosRequestUsageParams(params videosRequestUsageParams, mc model.
 		return err
 	}
 
-	return validateSupportedVideoSize(params.size, mc)
+	return validateSupportedVideoResolution(params.size, mc)
 }
 
 func getGeminiVideoRequestUsageParams(c *gin.Context) (geminiVideoRequestUsageParams, error) {
@@ -295,11 +300,9 @@ func getGeminiVideoRequestUsageParams(c *gin.Context) (geminiVideoRequestUsagePa
 		resolution: defaultGeminiVideoResolution,
 	}
 
-	if parameters != nil && parameters.Exists() && parameters.TypeSafe() != ast.V_NULL {
-		parsedResolution := stringValueFromNode(parameters, "resolution")
-		if parsedResolution != "" {
-			params.resolution = parsedResolution
-		}
+	parsedResolution := geminiVideoStringValueFromNode(&node, parameters, "resolution")
+	if parsedResolution != "" {
+		params.resolution = parsedResolution
 	}
 
 	parsedSeconds, ok, err := geminiVideoIntValueFromNode(&node, parameters, "durationSeconds")
@@ -341,6 +344,18 @@ func geminiVideoIntValueFromNode(
 	return value, ok, nil
 }
 
+func geminiVideoStringValueFromNode(
+	node *ast.Node,
+	parameters *ast.Node,
+	name string,
+) string {
+	if value := stringValueFromNode(node, name); value != "" {
+		return value
+	}
+
+	return stringValueFromNode(parameters, name)
+}
+
 func validateGeminiVideoRequestUsageParams(
 	params geminiVideoRequestUsageParams,
 	mc model.ModelConfig,
@@ -359,7 +374,7 @@ func validateGeminiVideoRequestUsageParams(
 		return err
 	}
 
-	return validateSupportedVideoSize(params.resolution, mc)
+	return validateSupportedVideoResolution(params.resolution, mc)
 }
 
 func getVideoGenerationJobRequest(c *gin.Context) (*relaymodel.VideoGenerationJobRequest, error) {
@@ -525,7 +540,7 @@ func videoRequestSeconds(request *relaymodel.VideoGenerationJobRequest) int64 {
 	return int64(seconds * variants)
 }
 
-func videoRequestPriceSize(request *relaymodel.VideoGenerationJobRequest) string {
+func videoRequestPriceResolution(request *relaymodel.VideoGenerationJobRequest) string {
 	if request == nil {
 		return ""
 	}
@@ -535,7 +550,7 @@ func videoRequestPriceSize(request *relaymodel.VideoGenerationJobRequest) string
 	}
 
 	if request.Width > 0 && request.Height > 0 {
-		return relaymodel.VideoPriceSizeFromDimensions(request.Width, request.Height)
+		return relaymodel.VideoResolutionFromDimensions(request.Width, request.Height)
 	}
 
 	return ""

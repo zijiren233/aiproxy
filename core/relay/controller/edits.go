@@ -47,7 +47,7 @@ func ValidateImagesEditsRequest(c *gin.Context, mc model.ModelConfig) error {
 		return err
 	}
 
-	if err := validateSupportedImageSize(c.PostForm("size"), mc); err != nil {
+	if err := validateSupportedImageResolution(c.PostForm("size"), mc); err != nil {
 		return err
 	}
 
@@ -122,8 +122,8 @@ func GetImagesEditsRequestUsage(c *gin.Context, mc model.ModelConfig) (RequestUs
 			OutputTokens:     model.ZeroNullInt64(n),
 		},
 		Context: model.UsageContext{PriceCondition: model.UsagePriceCondition{
-			Size:    c.PostForm("size"),
-			Quality: c.PostForm("quality"),
+			Resolution: c.PostForm("size"),
+			Quality:    c.PostForm("quality"),
 		}},
 	}, nil
 }
