@@ -604,6 +604,8 @@ func completeAsyncUsage(
 		usageContext,
 		price,
 	)
+	selectedPrice := price.SelectConditionalPrice(usage, usageContext)
+	selectedPrice.ConditionalPrices = nil
 
 	if amount.UsedAmount > 0 && !info.BalanceConsumed {
 		if err := consumeAsyncUsageGroupBalance(ctx, info, amount.UsedAmount); err != nil {
@@ -628,6 +630,7 @@ func completeAsyncUsage(
 		info.RequestID,
 		usage,
 		usageContext,
+		selectedPrice,
 		amount,
 	); err != nil {
 		if !errors.Is(err, gorm.ErrRecordNotFound) {
