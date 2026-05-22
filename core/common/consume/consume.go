@@ -120,11 +120,14 @@ func Consume(
 		)
 	}
 
-	selectedModelPrice := modelPrice.SelectConditionalPrice(
-		usage,
-		usageContext,
-	)
-	selectedModelPrice.ConditionalPrices = nil
+	selectedModelPrice := model.Price{}
+	if asyncUsageStatus != model.AsyncUsageStatusPending {
+		selectedModelPrice = modelPrice.SelectConditionalPrice(
+			usage,
+			usageContext,
+		)
+		selectedModelPrice.ConditionalPrices = nil
+	}
 
 	err := recordConsume(
 		now,

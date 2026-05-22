@@ -1,11 +1,18 @@
 package consume_test
 
 import (
+	"context"
 	"net/http"
 	"testing"
+	"time"
 
+	"github.com/glebarez/sqlite"
 	"github.com/labring/aiproxy/core/common/consume"
 	"github.com/labring/aiproxy/core/model"
+	"github.com/labring/aiproxy/core/relay/meta"
+	"github.com/labring/aiproxy/core/relay/mode"
+	"github.com/stretchr/testify/require"
+	"gorm.io/gorm"
 )
 
 func TestCalculateAmount(t *testing.T) {
@@ -533,4 +540,75 @@ func TestCalculateAmountWithConditionalPricing(t *testing.T) {
 			t.Errorf("CalculateAmount()\n%s\n\tgot: %v\n\twant: %v\n\t", tt.name, got, tt.want)
 		}
 	}
+}
+
+func TestConsumePendingAsyncUsageDoesNotRecordPriceUsageOrAmount(t *testing.T) {
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	require.NoError(t, err)
+	require.NoError(t, db.AutoMigrate(&model.Log{}))
+
+	oldLogDB := model.LogDB
+	model.LogDB = db
+	t.Cleanup(func() {
+		model.LogDB = oldLogDB
+	})
+
+	requestMeta := &meta.Meta{
+		RequestID:   "async_pending",
+		RequestAt:   time.Now(),
+		Group:       model.GroupCache{ID: "group"},
+		Token:       model.TokenCache{ID: 1, Name: "token"},
+		Channel:     meta.ChannelMeta{ID: 2},
+		OriginModel: "video-model",
+		Mode:        mode.VideoGenerationsJobs,
+	}
+
+	price := model.Price{
+		OutputPrice:     0.1,
+		OutputPriceUnit: 1,
+		ConditionalPrices: []model.ConditionalPrice{
+			{
+				Condition: model.PriceCondition{Resolution: []string{"720p"}},
+				Price: model.Price{
+					OutputPrice:     0.4,
+					OutputPriceUnit: 1,
+				},
+			},
+		},
+	}
+	usage := model.Usage{
+		OutputTokens: 5,
+		TotalTokens:  5,
+	}
+	usageContext := model.UsageContext{
+		PriceCondition: model.UsagePriceCondition{Resolution: "720p"},
+	}
+
+	consume.Consume(
+		context.Background(),
+		time.Now(),
+		nil,
+		time.Now(),
+		http.StatusOK,
+		requestMeta,
+		usage,
+		usageContext,
+		price,
+		"",
+		"127.0.0.1",
+		0,
+		nil,
+		true,
+		nil,
+		"upstream-id",
+		model.AsyncUsageStatusPending,
+	)
+
+	var logEntry model.Log
+	require.NoError(t, db.Where("request_id = ?", requestMeta.RequestID).First(&logEntry).Error)
+	require.Equal(t, model.AsyncUsageStatusPending, logEntry.AsyncUsageStatus)
+	require.Equal(t, model.ZeroNullInt64(0), logEntry.Usage.OutputTokens)
+	require.Zero(t, logEntry.Amount.UsedAmount)
+	require.Zero(t, logEntry.Price.OutputPrice)
+	require.Empty(t, logEntry.Price.ConditionalPrices)
 }

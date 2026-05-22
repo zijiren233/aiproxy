@@ -285,6 +285,7 @@ func UpdateLogUsageByRequestID(
 	requestID string,
 	usage Usage,
 	usageContext UsageContext,
+	price Price,
 	amount Amount,
 ) error {
 	var logEntry Log
@@ -294,7 +295,8 @@ func UpdateLogUsageByRequestID(
 
 	logEntry.Usage = usage
 	logEntry.UsageContext = usageContext
-	logEntry.Amount.Add(amount)
+	logEntry.Price = price
+	logEntry.Amount = amount
 	logEntry.AsyncUsageStatus = AsyncUsageStatusCompleted
 
 	return LogDB.Save(&logEntry).Error
