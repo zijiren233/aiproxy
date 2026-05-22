@@ -336,6 +336,7 @@
     "maxErrorRate": "Max Error Rate",
     "forceSaveDetail": "Force Save Detail",
     "maxImageGenerationCount": "Max Image Count",
+    "maxVideoGenerationCount": "Max Video Count",
     "requestBodyStorageMaxSize": "Request Body Storage Max Size",
     "responseBodyStorageMaxSize": "Response Body Storage Max Size",
     "recordServiceTier": "Record Service Tier",
@@ -527,7 +528,10 @@
       },
       "maxVideoGenerationSeconds": "Max Video Seconds",
       "maxVideoGenerationSecondsPlaceholder": "Enter 0 for no limit",
-      "maxVideoGenerationSecondsDescription": "Maximum allowed value for video request seconds. `0` means no limit. Applies to video generation and remix models."
+      "maxVideoGenerationSecondsDescription": "Maximum allowed value for video request seconds. `0` means no limit. Applies to video generation and remix models.",
+      "maxVideoGenerationCount": "Max Video Count",
+      "maxVideoGenerationCountPlaceholder": "Enter 0 for no limit",
+      "maxVideoGenerationCountDescription": "Maximum allowed value for video count. `0` means no limit. Applies to OpenAI video job variants and Gemini native numberOfVideos."
     },
     "deleteDialog": {
       "confirmTitle": "Delete Model",
@@ -1012,7 +1016,11 @@
     "12": "Anthropic",
     "13": "Video Generation",
     "16": "Responses",
-    "21": "Gemini"
+    "21": "Gemini",
+    "27": "Gemini Video",
+    "28": "Gemini Video Operations",
+    "29": "Gemini TTS",
+    "30": "Gemini Image"
   },
   "group": {
     "management": "Group Management",
@@ -1196,7 +1204,10 @@
       "invalidFormat": "Invalid file format",
       "overrideMaxVideoGenerationSeconds": "Override Max Video Seconds",
       "overrideMaxVideoGenerationSecondsDesc": "Override the maximum allowed video duration for video generation or remix requests",
-      "maxVideoGenerationSecondsHint": "`0` means no limit. Applies to the request parameter `seconds` or legacy `n_seconds`."
+      "maxVideoGenerationSecondsHint": "`0` means no limit. Applies to the request parameter `seconds` or legacy `n_seconds`.",
+      "overrideMaxVideoGenerationCount": "Override Max Video Count",
+      "overrideMaxVideoGenerationCountDesc": "Override the maximum allowed generated video count for video requests",
+      "maxVideoGenerationCountHint": "`0` means no limit. Applies to OpenAI `n_variants` and Gemini native `numberOfVideos`."
     }
   },
   "consumptionRanking": {

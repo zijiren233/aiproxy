@@ -50,6 +50,7 @@ type StoreV2 struct {
 	TokenID   int       `gorm:"primaryKey:2"`
 	ChannelID int
 	Model     string `gorm:"size:128"`
+	Metadata  string `gorm:"type:text"`
 }
 
 func (s *StoreV2) BeforeSave(_ *gorm.DB) error {
@@ -141,6 +142,7 @@ func SaveIfNotExistStore(s *StoreV2) (*StoreV2, error) {
 			"expires_at": s.ExpiresAt,
 			"channel_id": s.ChannelID,
 			"model":      s.Model,
+			"metadata":   s.Metadata,
 		})
 	if tx.Error != nil {
 		return nil, tx.Error
@@ -198,6 +200,7 @@ func saveStoreWithMinUpdateInterval(s *StoreV2, opt SaveStoreOption) (*StoreV2, 
 			"expires_at": s.ExpiresAt,
 			"channel_id": s.ChannelID,
 			"model":      s.Model,
+			"metadata":   s.Metadata,
 		}),
 		Where: storeUpsertUpdateWhere(cutoff, now),
 	}).Create(s)
@@ -227,6 +230,7 @@ func upsertStore(s *StoreV2, opt SaveStoreOption) (*StoreV2, error) {
 			"expires_at": s.ExpiresAt,
 			"channel_id": s.ChannelID,
 			"model":      s.Model,
+			"metadata":   s.Metadata,
 		}),
 	}).Create(s)
 	if tx.Error != nil {

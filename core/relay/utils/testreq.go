@@ -53,7 +53,7 @@ func BuildRequest(modelConfig model.ModelConfig) (io.Reader, mode.Mode, error) {
 		}
 
 		return body, mode.Moderations, nil
-	case mode.ImagesGenerations:
+	case mode.ImagesGenerations, mode.GeminiImage:
 		body, err := BuildImagesGenerationsRequest(modelConfig)
 		if err != nil {
 			return nil, mode.Unknown, err
@@ -62,7 +62,7 @@ func BuildRequest(modelConfig model.ModelConfig) (io.Reader, mode.Mode, error) {
 		return body, mode.ImagesGenerations, nil
 	case mode.ImagesEdits:
 		return nil, mode.Unknown, NewErrUnsupportedModelType("edits")
-	case mode.AudioSpeech:
+	case mode.AudioSpeech, mode.GeminiTTS:
 		body, err := BuildAudioSpeechRequest(modelConfig.Model)
 		if err != nil {
 			return nil, mode.Unknown, err
@@ -82,6 +82,13 @@ func BuildRequest(modelConfig model.ModelConfig) (io.Reader, mode.Mode, error) {
 		return body, mode.Rerank, nil
 	case mode.ParsePdf:
 		return nil, mode.Unknown, NewErrUnsupportedModelType("parse pdf")
+	case mode.GeminiVideo:
+		body, err := BuildGeminiVideoRequest(modelConfig.Model)
+		if err != nil {
+			return nil, mode.Unknown, err
+		}
+
+		return body, mode.GeminiVideo, nil
 	default:
 		return nil, mode.Unknown, NewErrUnsupportedModelType(modelConfig.Type.String())
 	}
@@ -185,6 +192,28 @@ func BuildRerankRequest(model string) (io.Reader, error) {
 	}
 
 	jsonBytes, err := sonic.Marshal(rerankRequest)
+	if err != nil {
+		return nil, err
+	}
+
+	return bytes.NewReader(jsonBytes), nil
+}
+
+func BuildGeminiVideoRequest(_ string) (io.Reader, error) {
+	testRequest := map[string]any{
+		"instances": []map[string]any{
+			{
+				"prompt": "A calm cinematic shot of clouds moving over a mountain.",
+			},
+		},
+		"parameters": map[string]any{
+			"durationSeconds": 5,
+			"numberOfVideos":  1,
+			"aspectRatio":     "16:9",
+		},
+	}
+
+	jsonBytes, err := sonic.Marshal(testRequest)
 	if err != nil {
 		return nil, err
 	}

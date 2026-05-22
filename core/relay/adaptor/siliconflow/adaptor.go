@@ -82,10 +82,17 @@ func (a *Adaptor) GetRequestURL(
 		path = "/audio/transcriptions"
 	case mode.Rerank:
 		path = "/rerank"
-	case mode.VideoGenerationsJobs, mode.Videos:
+	case mode.VideoGenerationsJobs:
 		path = "/video/submit"
-	case mode.VideoGenerationsGetJobs, mode.VideoGenerationsContent,
-		mode.VideosGet, mode.VideosContent:
+	case mode.Videos:
+		path = "/video/submit"
+	case mode.VideoGenerationsGetJobs:
+		path = "/video/status"
+	case mode.VideoGenerationsContent:
+		path = "/video/status"
+	case mode.VideosGet:
+		path = "/video/status"
+	case mode.VideosContent:
 		path = "/video/status"
 	default:
 		return adaptor.RequestURL{}, fmt.Errorf("unsupported mode: %s", meta.Mode)
@@ -124,9 +131,9 @@ func (a *Adaptor) ConvertRequest(
 	case mode.ImagesGenerations:
 		return ConvertImageRequest(meta, req)
 	case mode.VideoGenerationsJobs:
-		return ConvertVideoRequest(meta, req)
+		return ConvertVideoGenerationJobRequest(meta, req)
 	case mode.Videos:
-		return ConvertVideoRequest(meta, req)
+		return ConvertVideosRequest(meta, req)
 	case mode.VideoGenerationsGetJobs:
 		return ConvertVideoStatusRequest(meta, req)
 	case mode.VideoGenerationsContent:
@@ -194,12 +201,18 @@ func (a *Adaptor) DoResponse(
 		return a.Adaptor.DoResponse(meta, store, c, resp)
 	case mode.ImagesGenerations:
 		return ImageHandler(meta, c, resp)
-	case mode.VideoGenerationsJobs, mode.Videos:
-		return VideoSubmitHandler(meta, store, c, resp)
-	case mode.VideoGenerationsGetJobs, mode.VideosGet:
-		return VideoStatusHandler(meta, store, c, resp)
-	case mode.VideoGenerationsContent, mode.VideosContent:
-		return VideoContentHandler(meta, c, resp)
+	case mode.VideoGenerationsJobs:
+		return VideoGenerationJobSubmitHandler(meta, store, c, resp)
+	case mode.Videos:
+		return VideosSubmitHandler(meta, store, c, resp)
+	case mode.VideoGenerationsGetJobs:
+		return VideoGenerationJobStatusHandler(meta, store, c, resp)
+	case mode.VideoGenerationsContent:
+		return VideoGenerationJobContentHandler(meta, c, resp)
+	case mode.VideosGet:
+		return VideosStatusHandler(meta, store, c, resp)
+	case mode.VideosContent:
+		return VideosContentHandler(meta, c, resp)
 	default:
 		if !adaptor.IsSuccessfulResponseStatus(meta.Mode, resp.StatusCode) {
 			return adaptor.DoResponseResult{}, ErrorHandler(resp)

@@ -382,14 +382,20 @@ func ConvertRequest(
 	case mode.Rerank:
 		return ConvertRerankRequest(meta, req)
 	case mode.VideoGenerationsJobs:
-		return ConvertVideoRequest(meta, req)
+		return ConvertVideoGenerationJobRequest(meta, req)
 	case mode.VideoGenerationsGetJobs:
 		return ConvertVideoGetJobsRequest(meta, req)
 	case mode.VideoGenerationsContent:
 		return ConvertVideoGetJobsContentRequest(meta, req)
-	case mode.Videos, mode.VideosRemix:
-		return ConvertVideoRequest(meta, req)
-	case mode.VideosGet, mode.VideosContent, mode.VideosDelete:
+	case mode.Videos:
+		return ConvertVideosRequest(meta, req)
+	case mode.VideosRemix:
+		return ConvertVideosRemixRequest(meta, req)
+	case mode.VideosGet:
+		return ConvertVideosGetRequest(meta, req)
+	case mode.VideosContent:
+		return ConvertVideosContentRequest(meta, req)
+	case mode.VideosDelete:
 		return ConvertVideoNoBodyRequest(meta, req)
 	case mode.Gemini:
 		// Check if model requires Responses API conversion
@@ -498,10 +504,14 @@ func DoResponse(
 		result, err = VideoGetJobsHandler(meta, store, c, resp)
 	case mode.VideoGenerationsContent:
 		result, err = VideoGetJobsContentHandler(meta, store, c, resp)
-	case mode.Videos, mode.VideosRemix:
+	case mode.Videos:
 		result, err = VideosHandler(meta, store, c, resp)
-	case mode.VideosGet, mode.VideosContent:
-		result, err = VideoObjectHandler(meta, c, resp)
+	case mode.VideosRemix:
+		result, err = VideosRemixHandler(meta, store, c, resp)
+	case mode.VideosGet:
+		result, err = VideosGetHandler(meta, c, resp)
+	case mode.VideosContent:
+		result, err = VideosContentHandler(meta, c, resp)
 	case mode.VideosDelete:
 		result, err = VideoDeleteHandler(meta, c, resp)
 	case mode.Gemini:

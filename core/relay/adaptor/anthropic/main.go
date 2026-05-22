@@ -9,7 +9,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/bytedance/sonic"
 	"github.com/bytedance/sonic/ast"
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/core/common"
@@ -482,7 +481,7 @@ func StreamHandler(
 			}
 		}
 
-		node, parseErr := sonic.GetWithOptions(data, ast.SearchOptions{})
+		node, parseErr := common.GetJSONNodeNoCopy(data)
 		if parseErr != nil {
 			log.Error("error unmarshalling stream response: " + parseErr.Error())
 		} else {
@@ -561,7 +560,7 @@ func Handler(
 	log := common.GetLogger(c)
 
 	// Set model to OriginModel in response body
-	node, err := sonic.Get(respBody)
+	node, err := common.GetJSONNodeNoCopy(respBody)
 	if err != nil {
 		log.Error("error unmarshalling stream response: " + err.Error())
 	} else {

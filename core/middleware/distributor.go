@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -322,34 +323,92 @@ func CheckRelayMode(requestMode, modelMode mode.Mode) bool {
 		return true
 	}
 
+	containsMode := func(modes ...mode.Mode) bool {
+		return slices.Contains(modes, modelMode)
+	}
+
 	switch requestMode {
-	case mode.ChatCompletions, mode.Completions, mode.Anthropic, mode.Gemini,
-		mode.Responses, mode.ResponsesGet, mode.ResponsesDelete, mode.ResponsesCancel, mode.ResponsesInputItems:
-		return modelMode == mode.ChatCompletions ||
-			modelMode == mode.Completions ||
-			modelMode == mode.Anthropic ||
-			modelMode == mode.Gemini ||
-			modelMode == mode.Responses ||
-			modelMode == mode.ResponsesGet ||
-			modelMode == mode.ResponsesDelete ||
-			modelMode == mode.ResponsesCancel ||
-			modelMode == mode.ResponsesInputItems
-	case mode.ImagesGenerations, mode.ImagesEdits:
-		return modelMode == mode.ImagesGenerations ||
-			modelMode == mode.ImagesEdits
+	case mode.GeminiVideo:
+		return modelMode == mode.GeminiVideo
+	case mode.GeminiVideoOperations:
+		return containsMode(mode.GeminiVideo, mode.GeminiVideoOperations)
+	case mode.AudioSpeech:
+		return containsMode(mode.AudioSpeech, mode.GeminiTTS)
+	case mode.ChatCompletions, mode.Anthropic, mode.Gemini:
+		return containsMode(
+			mode.ChatCompletions,
+			mode.Completions,
+			mode.Anthropic,
+			mode.Gemini,
+			mode.GeminiTTS,
+			mode.GeminiImage,
+			mode.Responses,
+		)
+	case mode.Completions:
+		return containsMode(
+			mode.ChatCompletions,
+			mode.Completions,
+			mode.Anthropic,
+			mode.Gemini,
+			mode.GeminiTTS,
+			mode.GeminiImage,
+		)
+	case mode.Responses:
+		return containsMode(
+			mode.ChatCompletions,
+			mode.Anthropic,
+			mode.Gemini,
+			mode.GeminiTTS,
+			mode.GeminiImage,
+			mode.Responses,
+		)
+	case mode.ResponsesGet, mode.ResponsesDelete, mode.ResponsesCancel, mode.ResponsesInputItems:
+		return containsMode(
+			mode.ChatCompletions,
+			mode.Anthropic,
+			mode.Gemini,
+			mode.GeminiTTS,
+			mode.GeminiImage,
+			mode.Responses,
+			mode.ResponsesGet,
+			mode.ResponsesDelete,
+			mode.ResponsesCancel,
+			mode.ResponsesInputItems,
+		)
+	case mode.ImagesGenerations:
+		return containsMode(mode.ImagesGenerations, mode.ImagesEdits, mode.GeminiImage)
+	case mode.ImagesEdits:
+		return containsMode(mode.ImagesGenerations, mode.ImagesEdits)
 	case mode.VideoGenerationsJobs, mode.VideoGenerationsGetJobs, mode.VideoGenerationsContent:
-		return modelMode == mode.VideoGenerationsJobs ||
-			modelMode == mode.VideoGenerationsGetJobs ||
-			modelMode == mode.VideoGenerationsContent
-	case mode.Videos, mode.VideosGet, mode.VideosContent, mode.VideosDelete, mode.VideosRemix:
-		return modelMode == mode.VideoGenerationsJobs ||
-			modelMode == mode.VideoGenerationsGetJobs ||
-			modelMode == mode.VideoGenerationsContent ||
-			modelMode == mode.Videos ||
-			modelMode == mode.VideosGet ||
-			modelMode == mode.VideosContent ||
-			modelMode == mode.VideosDelete ||
-			modelMode == mode.VideosRemix
+		return containsMode(
+			mode.VideoGenerationsJobs,
+			mode.VideoGenerationsGetJobs,
+			mode.VideoGenerationsContent,
+			mode.GeminiVideo,
+		)
+	case mode.Videos, mode.VideosGet, mode.VideosContent, mode.VideosRemix:
+		return containsMode(
+			mode.VideoGenerationsJobs,
+			mode.VideoGenerationsGetJobs,
+			mode.VideoGenerationsContent,
+			mode.Videos,
+			mode.VideosGet,
+			mode.VideosContent,
+			mode.VideosDelete,
+			mode.VideosRemix,
+			mode.GeminiVideo,
+		)
+	case mode.VideosDelete:
+		return containsMode(
+			mode.VideoGenerationsJobs,
+			mode.VideoGenerationsGetJobs,
+			mode.VideoGenerationsContent,
+			mode.Videos,
+			mode.VideosGet,
+			mode.VideosContent,
+			mode.VideosDelete,
+			mode.VideosRemix,
+		)
 	default:
 		return requestMode == modelMode
 	}
@@ -537,6 +596,10 @@ func GetGenerationID(c *gin.Context) string {
 	return c.GetString(GenerationID)
 }
 
+func GetOperationID(c *gin.Context) string {
+	return c.GetString(OperationID)
+}
+
 func GetResponseID(c *gin.Context) string {
 	return c.GetString(ResponseID)
 }
@@ -571,6 +634,7 @@ func NewMetaByContext(c *gin.Context,
 	requestAt := GetRequestAt(c)
 	jobID := GetJobID(c)
 	generationID := GetGenerationID(c)
+	operationID := GetOperationID(c)
 	responseID := GetResponseID(c)
 	videoID := GetVideoID(c)
 	promptCacheKey := GetPromptCacheKey(c)
@@ -586,6 +650,7 @@ func NewMetaByContext(c *gin.Context,
 		meta.WithEndpoint(c.Request.URL.Path),
 		meta.WithJobID(jobID),
 		meta.WithGenerationID(generationID),
+		meta.WithOperationID(operationID),
 		meta.WithResponseID(responseID),
 		meta.WithVideoID(videoID),
 		meta.WithPromptCacheKey(promptCacheKey),
@@ -768,11 +833,8 @@ func getRequestModel(c *gin.Context, m mode.Mode, group string, tokenID int) (st
 		}
 
 		return modelName, nil
-	case m == mode.Gemini:
-		modelName := strings.TrimPrefix(c.Param("model"), "/")
-		modelName, _, _ = strings.Cut(modelName, ":")
-
-		return modelName, nil
+	case m == mode.Gemini || m == mode.GeminiVideo || m == mode.GeminiVideoOperations:
+		return getGeminiRequestModel(c, group, tokenID)
 	default:
 		node, err := getRequestBodyNode(c)
 		if err != nil {
@@ -781,6 +843,60 @@ func getRequestModel(c *gin.Context, m mode.Mode, group string, tokenID int) (st
 
 		return getStringFieldFromNode(node, "model", "get request model failed")
 	}
+}
+
+func getGeminiRequestModel(c *gin.Context, group string, tokenID int) (string, error) {
+	modelName, operationID := getGeminiPathModelAndOperationID(c)
+
+	if operationID != "" {
+		store, err := model.CacheGetStore(
+			group,
+			tokenID,
+			model.VideoJobStoreID(operationID),
+		)
+		if err != nil {
+			return "", fmt.Errorf("get request model failed: %w", err)
+		}
+
+		c.Set(OperationID, operationID)
+		c.Set(ChannelID, store.ChannelID)
+
+		return store.Model, nil
+	}
+
+	modelName, _, _ = strings.Cut(modelName, ":")
+
+	return modelName, nil
+}
+
+func getGeminiPathModel(c *gin.Context) string {
+	modelName, operationID := getGeminiPathModelAndOperationID(c)
+	if operationID == "" {
+		return modelName
+	}
+
+	if modelName == "" {
+		return "operations/" + operationID
+	}
+
+	return "models/" + modelName + "/operations/" + operationID
+}
+
+func getGeminiPathModelAndOperationID(c *gin.Context) (string, string) {
+	modelName := strings.TrimPrefix(c.Param("model"), "/")
+	if operationID := strings.TrimPrefix(c.Param("operation_id"), "/"); operationID != "" {
+		return modelName, operationID
+	}
+
+	if operationID, ok := strings.CutPrefix(modelName, "operations/"); ok {
+		return "", operationID
+	}
+
+	if before, after, ok := strings.Cut(modelName, "/operations/"); ok {
+		return strings.TrimPrefix(strings.TrimPrefix(before, "models/"), "/"), after
+	}
+
+	return modelName, ""
 }
 
 func isVideosCreateMode(m mode.Mode) bool {
@@ -856,7 +972,7 @@ func getStoredVideoRequestModel(c *gin.Context, group string, tokenID int) (stri
 }
 
 func GetModelFromJSON(body []byte) (string, error) {
-	node, err := sonic.Get(body)
+	node, err := common.GetJSONNodeNoCopy(body)
 	if err != nil {
 		return "", fmt.Errorf("get request model failed: %w", err)
 	}
@@ -865,7 +981,7 @@ func GetModelFromJSON(body []byte) (string, error) {
 }
 
 func GetPreviousResponseIDFromJSON(body []byte) (string, error) {
-	node, err := sonic.Get(body)
+	node, err := common.GetJSONNodeNoCopy(body)
 	if err != nil {
 		return "", fmt.Errorf("get request model failed: %w", err)
 	}
@@ -889,7 +1005,7 @@ func getPromptCacheKey(c *gin.Context, m mode.Mode) (string, error) {
 }
 
 func GetPromptCacheKeyFromJSON(body []byte) (string, error) {
-	node, err := sonic.Get(body)
+	node, err := common.GetJSONNodeNoCopy(body)
 	if err != nil {
 		return "", fmt.Errorf("get request prompt_cache_key failed: %w", err)
 	}
@@ -951,7 +1067,7 @@ func getRequestUser(c *gin.Context, m mode.Mode) (string, error) {
 }
 
 func GetRequestUserFromJSON(body []byte, m mode.Mode) (string, error) {
-	node, err := sonic.Get(body)
+	node, err := common.GetJSONNodeNoCopy(body)
 	if err != nil {
 		return "", fmt.Errorf("get request user failed: %w", err)
 	}
@@ -999,7 +1115,7 @@ func getRequestMetadata(c *gin.Context, m mode.Mode) (map[string]string, error) 
 }
 
 func GetRequestMetadataFromJSON(body []byte) (map[string]string, error) {
-	node, err := sonic.Get(body)
+	node, err := common.GetJSONNodeNoCopy(body)
 	if err != nil {
 		return nil, fmt.Errorf("get request metadata failed: %w", err)
 	}

@@ -40,6 +40,7 @@ import {
     STREAM_TIMEOUT_SUPPORTED_MODEL_TYPES,
     IMAGE_GENERATION_COUNT_LIMIT_SUPPORTED_MODEL_TYPES,
     VIDEO_GENERATION_SECONDS_LIMIT_SUPPORTED_MODEL_TYPES,
+    VIDEO_GENERATION_COUNT_LIMIT_SUPPORTED_MODEL_TYPES,
 } from '@/types/model'
 import { AdvancedErrorDisplay } from '@/components/common/error/errorDisplay'
 import { AnimatedButton } from '@/components/ui/animation/components/animated-button'
@@ -86,6 +87,7 @@ const MANAGED_MODEL_KEYS = new Set([
     'force_save_detail',
     'max_image_generation_count',
     'max_video_generation_seconds',
+    'max_video_generation_count',
     'request_body_storage_max_size',
     'response_body_storage_max_size',
     'summary_service_tier',
@@ -144,6 +146,7 @@ const KNOWN_CONFIG_KEYS = new Set([
 const STREAM_TIMEOUT_SUPPORTED_TYPES = new Set<number>(STREAM_TIMEOUT_SUPPORTED_MODEL_TYPES)
 const IMAGE_GENERATION_COUNT_LIMIT_SUPPORTED_TYPES = new Set<number>(IMAGE_GENERATION_COUNT_LIMIT_SUPPORTED_MODEL_TYPES)
 const VIDEO_GENERATION_SECONDS_LIMIT_SUPPORTED_TYPES = new Set<number>(VIDEO_GENERATION_SECONDS_LIMIT_SUPPORTED_MODEL_TYPES)
+const VIDEO_GENERATION_COUNT_LIMIT_SUPPORTED_TYPES = new Set<number>(VIDEO_GENERATION_COUNT_LIMIT_SUPPORTED_MODEL_TYPES)
 
 const omitKeys = (obj: object, keys: string[]) => {
     const omitted = new Set(keys)
@@ -169,6 +172,7 @@ interface ModelFormProps {
         force_save_detail?: boolean
         max_image_generation_count?: number
         max_video_generation_seconds?: number
+        max_video_generation_count?: number
         request_body_storage_max_size?: number
         response_body_storage_max_size?: number
         summary_service_tier?: boolean
@@ -252,6 +256,7 @@ export function ModelForm({
             force_save_detail: defaultValues.force_save_detail ?? false,
             max_image_generation_count: defaultValues.max_image_generation_count,
             max_video_generation_seconds: defaultValues.max_video_generation_seconds,
+            max_video_generation_count: defaultValues.max_video_generation_count,
             request_body_storage_max_size: defaultValues.request_body_storage_max_size,
             response_body_storage_max_size: defaultValues.response_body_storage_max_size,
             summary_service_tier: defaultValues.summary_service_tier ?? false,
@@ -281,6 +286,7 @@ export function ModelForm({
     const supportStreamTimeout = STREAM_TIMEOUT_SUPPORTED_TYPES.has(watchedType)
     const supportImageGenerationCountLimit = IMAGE_GENERATION_COUNT_LIMIT_SUPPORTED_TYPES.has(watchedType)
     const supportVideoGenerationSecondsLimit = VIDEO_GENERATION_SECONDS_LIMIT_SUPPORTED_TYPES.has(watchedType)
+    const supportVideoGenerationCountLimit = VIDEO_GENERATION_COUNT_LIMIT_SUPPORTED_TYPES.has(watchedType)
 
     const configFieldVisibility = (() => {
         switch (watchedType) {
@@ -338,6 +344,7 @@ export function ModelForm({
             case 13:
             case 22:
             case 26:
+            case 27:
                 return {
                     tokenFields: ['max_input_tokens', 'max_output_tokens', 'max_context_tokens'] as Array<'max_input_tokens' | 'max_output_tokens' | 'max_context_tokens'>,
                     showToolChoice: false,
@@ -782,6 +789,9 @@ export function ModelForm({
             ...(supportVideoGenerationSecondsLimit && data.max_video_generation_seconds !== undefined && {
                 max_video_generation_seconds: Number(data.max_video_generation_seconds),
             }),
+            ...(supportVideoGenerationCountLimit && data.max_video_generation_count !== undefined && {
+                max_video_generation_count: Number(data.max_video_generation_count),
+            }),
             ...(data.request_body_storage_max_size !== undefined && {
                 request_body_storage_max_size: Number(data.request_body_storage_max_size),
             }),
@@ -811,6 +821,9 @@ export function ModelForm({
                 }),
                 ...(supportVideoGenerationSecondsLimit && data.max_video_generation_seconds !== undefined && {
                     max_video_generation_seconds: Number(data.max_video_generation_seconds),
+                }),
+                ...(supportVideoGenerationCountLimit && data.max_video_generation_count !== undefined && {
+                    max_video_generation_count: Number(data.max_video_generation_count),
                 }),
                 ...(data.request_body_storage_max_size !== undefined && {
                     request_body_storage_max_size: Number(data.request_body_storage_max_size),
@@ -1148,6 +1161,29 @@ export function ModelForm({
                                 />
                             )}
                         </div>
+                    )}
+
+                    {supportVideoGenerationCountLimit && (
+                        <FormField
+                            control={form.control}
+                            name="max_video_generation_count"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>{t("model.dialog.maxVideoGenerationCount")}</FormLabel>
+                                    <FormControl>
+                                        <Input
+                                            type="number"
+                                            min={0}
+                                            placeholder={t("model.dialog.maxVideoGenerationCountPlaceholder")}
+                                            {...field}
+                                            onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : 0)}
+                                        />
+                                    </FormControl>
+                                    <FormDescription>{t("model.dialog.maxVideoGenerationCountDescription")}</FormDescription>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
                     )}
 
                     {/* Force Save Detail Switch */}

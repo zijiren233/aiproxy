@@ -14,6 +14,19 @@ type VideoGenerationJobRequest struct {
 	Size      string `json:"size,omitempty"`
 	NVariants int    `json:"n_variants"`
 	NSeconds  int    `json:"n_seconds"`
+	Seconds   int    `json:"seconds,omitempty"`
+}
+
+type VideosRequest struct {
+	Prompt         string `json:"prompt,omitempty"`
+	Model          string `json:"model,omitempty"`
+	Seconds        any    `json:"seconds,omitempty"`
+	Size           string `json:"size,omitempty"`
+	InputReference string `json:"input_reference,omitempty"`
+}
+
+type VideosRemixRequest struct {
+	VideosRequest
 }
 
 type VideoGenerationJobStatus = string
@@ -63,14 +76,6 @@ const (
 	VideoStatusFailed     VideoStatus = "failed"
 	VideoStatusCancelled  VideoStatus = "cancelled"
 )
-
-type VideoRequest struct {
-	Prompt         string `json:"prompt,omitempty"`
-	Model          string `json:"model,omitempty"`
-	Seconds        any    `json:"seconds,omitempty"`
-	Size           string `json:"size,omitempty"`
-	InputReference string `json:"input_reference,omitempty"`
-}
 
 type Video struct {
 	ID        string         `json:"id"`

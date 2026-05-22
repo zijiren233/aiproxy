@@ -597,7 +597,6 @@ func completeAsyncUsage(
 	}
 
 	price := info.Price
-	price.PerRequestPrice = 0
 
 	amount := consume.CalculateAmountDetail(
 		http.StatusOK,

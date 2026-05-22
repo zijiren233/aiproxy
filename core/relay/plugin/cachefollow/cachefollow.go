@@ -5,7 +5,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/bytedance/sonic"
 	"github.com/bytedance/sonic/ast"
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/core/common"
@@ -102,7 +101,7 @@ func (rw *retentionResponseWriter) tryParseRetention(data []byte) {
 		}
 	}
 
-	node, err := sonic.GetWithOptions(data, ast.SearchOptions{})
+	node, err := common.GetJSONNodeNoCopy(data)
 	if err != nil || !node.Valid() {
 		return
 	}

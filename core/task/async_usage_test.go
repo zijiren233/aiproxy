@@ -218,6 +218,45 @@ func TestCompleteAsyncUsagePreservesStoredPriceCondition(t *testing.T) {
 	require.Equal(t, 2.0, got.Amount.UsedAmount)
 }
 
+func TestCompleteAsyncUsageChargesStoredPerRequestPrice(t *testing.T) {
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	require.NoError(t, err)
+	require.NoError(t, db.AutoMigrate(&model.Log{}, &model.AsyncUsageInfo{}))
+
+	oldLogDB := model.LogDB
+	model.LogDB = db
+	t.Cleanup(func() {
+		model.LogDB = oldLogDB
+	})
+
+	requestID := "async_per_request"
+	require.NoError(t, db.Create(&model.Log{
+		RequestID:        model.EmptyNullString(requestID),
+		AsyncUsageStatus: model.AsyncUsageStatusPending,
+	}).Error)
+
+	info := &model.AsyncUsageInfo{
+		RequestID:       requestID,
+		RequestAt:       time.Now(),
+		Status:          model.AsyncUsageStatusPending,
+		Model:           "video-model",
+		Price:           model.Price{PerRequestPrice: 0.25, OutputPrice: 0.5, OutputPriceUnit: 1},
+		ProcessingToken: "claim-token",
+	}
+	require.NoError(t, model.CreateAsyncUsageInfo(info))
+
+	require.NoError(t, completeAsyncUsage(context.Background(), info, model.Usage{
+		OutputTokens: 4,
+		TotalTokens:  4,
+	}, model.UsageContext{}))
+	require.Equal(t, model.AsyncUsageStatusCompleted, info.Status)
+	require.Equal(t, 0.25, info.Amount.UsedAmount)
+
+	var got model.Log
+	require.NoError(t, db.Where("request_id = ?", requestID).First(&got).Error)
+	require.Equal(t, 0.25, got.Amount.UsedAmount)
+}
+
 func TestTouchAsyncUsagePollCursorAdvancesUpdatedAtAndNextPollAt(t *testing.T) {
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
 	require.NoError(t, err)

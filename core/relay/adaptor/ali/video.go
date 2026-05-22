@@ -70,6 +70,15 @@ type aliVideoOpenAIRequest struct {
 	Ext                map[string]any  `json:"ext,omitempty"`
 }
 
+type aliVideoParsedRequest struct {
+	request *aliVideoOpenAIRequest
+	seconds int
+	width   int
+	height  int
+	size    string
+	isRemix bool
+}
+
 type aliVideoMedia struct {
 	Type string `json:"type"`
 	URL  string `json:"url"`
@@ -145,35 +154,91 @@ func aliVideoTaskID(meta *meta.Meta) string {
 		return meta.JobID
 	case mode.VideoGenerationsContent:
 		return meta.GenerationID
-	case mode.VideosGet, mode.VideosContent:
+	case mode.VideosGet:
+		return meta.VideoID
+	case mode.VideosContent:
 		return meta.VideoID
 	default:
 		return ""
 	}
 }
 
-func ConvertAliVideoRequest(meta *meta.Meta, req *http.Request) (adaptor.ConvertResult, error) {
-	request, err := unmarshalAliVideoRequest(req)
+func ConvertAliVideoGenerationJobRequest(
+	meta *meta.Meta,
+	req *http.Request,
+) (adaptor.ConvertResult, error) {
+	parsed, err := parseAliVideoGenerationJobRequest(req)
 	if err != nil {
 		return adaptor.ConvertResult{}, err
 	}
 
-	if request.NVariants > 1 {
+	if parsed.request.NVariants > 1 {
 		return adaptor.ConvertResult{}, errors.New("n_variants must be 1 for Ali video models")
 	}
 
-	if err := hydrateAliVideoRemixReference(meta, req, request); err != nil {
+	return convertAliVideoRequest(meta, req, parsed)
+}
+
+func ConvertAliVideosRequest(meta *meta.Meta, req *http.Request) (adaptor.ConvertResult, error) {
+	parsed, err := parseAliVideosRequest(req)
+	if err != nil {
 		return adaptor.ConvertResult{}, err
 	}
 
-	setAliVideoRequestMetadata(meta, request)
+	return convertAliVideoRequest(meta, req, parsed)
+}
+
+func ConvertAliVideosRemixRequest(
+	meta *meta.Meta,
+	req *http.Request,
+) (adaptor.ConvertResult, error) {
+	parsed, err := parseAliVideosRemixRequest(req)
+	if err != nil {
+		return adaptor.ConvertResult{}, err
+	}
+
+	return convertAliVideoRequest(meta, req, parsed)
+}
+
+func ConvertAliVideoGenerationGetJobsRequest(
+	_ *meta.Meta,
+	_ *http.Request,
+) (adaptor.ConvertResult, error) {
+	return adaptor.ConvertResult{}, nil
+}
+
+func ConvertAliVideoGenerationContentRequest(
+	_ *meta.Meta,
+	_ *http.Request,
+) (adaptor.ConvertResult, error) {
+	return adaptor.ConvertResult{}, nil
+}
+
+func ConvertAliVideosGetRequest(_ *meta.Meta, _ *http.Request) (adaptor.ConvertResult, error) {
+	return adaptor.ConvertResult{}, nil
+}
+
+func ConvertAliVideosContentRequest(_ *meta.Meta, _ *http.Request) (adaptor.ConvertResult, error) {
+	return adaptor.ConvertResult{}, nil
+}
+
+func convertAliVideoRequest(
+	meta *meta.Meta,
+	req *http.Request,
+	parsed aliVideoParsedRequest,
+) (adaptor.ConvertResult, error) {
+	if err := hydrateAliVideoRemixReference(meta, req, parsed); err != nil {
+		return adaptor.ConvertResult{}, err
+	}
+
+	setAliVideoRequestMetadata(meta, parsed)
 
 	body := aliVideoRequest{
 		Model: meta.ActualModel,
-		Input: buildAliVideoInput(meta, request),
+		Input: buildAliVideoInput(meta, parsed.request),
 	}
 
-	parameters := buildAliVideoParameters(meta, request)
+	parameters := buildAliVideoParameters(meta, parsed)
 	if len(parameters) > 0 {
 		body.Parameters = parameters
 	}
@@ -193,31 +258,77 @@ func ConvertAliVideoRequest(meta *meta.Meta, req *http.Request) (adaptor.Convert
 	}, nil
 }
 
-func setAliVideoRequestMetadata(meta *meta.Meta, request *aliVideoOpenAIRequest) {
+func parseAliVideoGenerationJobRequest(req *http.Request) (aliVideoParsedRequest, error) {
+	request, err := unmarshalAliVideoRequest(req)
+	if err != nil {
+		return aliVideoParsedRequest{}, err
+	}
+
+	width, height := aliVideoJobDimensions(request)
+
+	return aliVideoParsedRequest{
+		request: request,
+		seconds: request.NSeconds,
+		width:   width,
+		height:  height,
+		size:    aliVideoJobSize(request),
+	}, nil
+}
+
+func parseAliVideosRequest(req *http.Request) (aliVideoParsedRequest, error) {
+	request, err := unmarshalAliVideoRequest(req)
+	if err != nil {
+		return aliVideoParsedRequest{}, err
+	}
+
+	width, height := dimensionsFromAliVideoSize(request.Size)
+
+	return aliVideoParsedRequest{
+		request: request,
+		seconds: aliVideoVideosSeconds(request),
+		width:   width,
+		height:  height,
+		size:    request.Size,
+	}, nil
+}
+
+func parseAliVideosRemixRequest(req *http.Request) (aliVideoParsedRequest, error) {
+	parsed, err := parseAliVideosRequest(req)
+	if err != nil {
+		return aliVideoParsedRequest{}, err
+	}
+
+	parsed.isRemix = true
+
+	return parsed, nil
+}
+
+func setAliVideoRequestMetadata(meta *meta.Meta, parsed aliVideoParsedRequest) {
+	request := parsed.request
 	if request.Prompt != "" {
 		meta.Set(metaAliVideoPrompt, request.Prompt)
 	}
 
-	if seconds := aliVideoRequestSeconds(request); seconds > 0 {
-		meta.Set(metaAliVideoSeconds, seconds)
+	if parsed.seconds > 0 {
+		meta.Set(metaAliVideoSeconds, parsed.seconds)
 	}
 
-	width, height := aliVideoRequestDimensions(request)
-	if width > 0 && height > 0 {
-		meta.Set(metaAliVideoWidth, width)
-		meta.Set(metaAliVideoHeight, height)
-		meta.Set(metaAliVideoSize, fmt.Sprintf("%dx%d", width, height))
-	} else if request.Size != "" {
-		meta.Set(metaAliVideoSize, request.Size)
+	if parsed.width > 0 && parsed.height > 0 {
+		meta.Set(metaAliVideoWidth, parsed.width)
+		meta.Set(metaAliVideoHeight, parsed.height)
+		meta.Set(metaAliVideoSize, fmt.Sprintf("%dx%d", parsed.width, parsed.height))
+	} else if parsed.size != "" {
+		meta.Set(metaAliVideoSize, parsed.size)
 	}
 }
 
 func hydrateAliVideoRemixReference(
 	meta *meta.Meta,
 	req *http.Request,
-	request *aliVideoOpenAIRequest,
+	parsed aliVideoParsedRequest,
 ) error {
-	if meta.Mode != mode.VideosRemix || requestHasAliVideoReference(request) {
+	request := parsed.request
+	if !parsed.isRemix || requestHasAliVideoReference(request) {
 		return nil
 	}
 
@@ -673,23 +784,22 @@ func buildAliVideoMedia(
 
 func buildAliVideoParameters(
 	meta *meta.Meta,
-	request *aliVideoOpenAIRequest,
+	parsed aliVideoParsedRequest,
 ) map[string]any {
+	request := parsed.request
 	parameters := cloneMap(request.Parameters)
 	mergeAliVideoMetadataParameters(parameters, request.Metadata)
 	mergeAliVideoMetadataParameters(parameters, request.Ext)
 
-	if seconds := aliVideoRequestSeconds(request); seconds > 0 {
-		parameters["duration"] = seconds
-	} else if request.NSeconds > 0 {
-		parameters["duration"] = request.NSeconds
+	if parsed.seconds > 0 {
+		parameters["duration"] = parsed.seconds
 	}
 
 	if request.Size != "" {
 		setAliVideoSize(meta, parameters, request.Size)
-	} else if size := sizeFromOpenAIRequest(request); size != "" {
-		setAliVideoSize(meta, parameters, size)
-	} else if resolution := resolutionFromOpenAIRequest(request); resolution != "" {
+	} else if parsed.size != "" {
+		setAliVideoSize(meta, parameters, parsed.size)
+	} else if resolution := resolutionFromJobDimensions(parsed.width, parsed.height); resolution != "" {
 		parameters["resolution"] = resolution
 	}
 
@@ -724,7 +834,7 @@ func buildAliVideoParameters(
 	return parameters
 }
 
-func aliVideoRequestSeconds(request *aliVideoOpenAIRequest) int {
+func aliVideoVideosSeconds(request *aliVideoOpenAIRequest) int {
 	switch value := request.Seconds.(type) {
 	case int:
 		return value
@@ -743,7 +853,7 @@ func aliVideoRequestSeconds(request *aliVideoOpenAIRequest) int {
 	}
 }
 
-func aliVideoRequestDimensions(request *aliVideoOpenAIRequest) (int, int) {
+func aliVideoJobDimensions(request *aliVideoOpenAIRequest) (int, int) {
 	if request.Width > 0 && request.Height > 0 {
 		return request.Width, request.Height
 	}
@@ -784,20 +894,24 @@ func setAliVideoSize(meta *meta.Meta, parameters map[string]any, size string) {
 	parameters["size"] = size
 }
 
-func resolutionFromOpenAIRequest(request *aliVideoOpenAIRequest) string {
+func resolutionFromJobDimensions(width, height int) string {
+	if width <= 0 || height <= 0 {
+		return ""
+	}
+
 	switch {
-	case request.Height >= 1000:
+	case height >= 1000:
 		return "1080P"
-	case request.Height >= 700:
+	case height >= 700:
 		return "720P"
-	case request.Height >= 400:
+	case height >= 400:
 		return "480P"
 	default:
 		return ""
 	}
 }
 
-func sizeFromOpenAIRequest(request *aliVideoOpenAIRequest) string {
+func aliVideoJobSize(request *aliVideoOpenAIRequest) string {
 	if request.Width <= 0 || request.Height <= 0 {
 		return ""
 	}
@@ -1055,6 +1169,22 @@ func AliVideoContentHandler(
 	c *gin.Context,
 	resp *http.Response,
 ) (adaptor.DoResponseResult, adaptor.Error) {
+	return aliVideoContentHandler(meta, c, resp)
+}
+
+func AliVideosContentHandler(
+	meta *meta.Meta,
+	c *gin.Context,
+	resp *http.Response,
+) (adaptor.DoResponseResult, adaptor.Error) {
+	return aliVideoContentHandler(meta, c, resp)
+}
+
+func aliVideoContentHandler(
+	meta *meta.Meta,
+	c *gin.Context,
+	resp *http.Response,
+) (adaptor.DoResponseResult, adaptor.Error) {
 	if resp.StatusCode != http.StatusOK {
 		return adaptor.DoResponseResult{}, ErrorHanlder(resp)
 	}
@@ -1206,6 +1336,24 @@ func aliVideoTaskToOpenAIJob(
 }
 
 func AliVideosHandler(
+	meta *meta.Meta,
+	store adaptor.Store,
+	c *gin.Context,
+	resp *http.Response,
+) (adaptor.DoResponseResult, adaptor.Error) {
+	return aliVideosHandler(meta, store, c, resp)
+}
+
+func AliVideosRemixHandler(
+	meta *meta.Meta,
+	store adaptor.Store,
+	c *gin.Context,
+	resp *http.Response,
+) (adaptor.DoResponseResult, adaptor.Error) {
+	return aliVideosHandler(meta, store, c, resp)
+}
+
+func aliVideosHandler(
 	meta *meta.Meta,
 	store adaptor.Store,
 	c *gin.Context,

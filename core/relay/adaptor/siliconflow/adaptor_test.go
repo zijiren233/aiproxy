@@ -543,6 +543,29 @@ func TestConvertVideoRequestMapsImageReference(t *testing.T) {
 	assertMapValue(t, got, "image", "https://example.com/input.png")
 }
 
+func TestConvertVideosRequestIgnoresJobOnlyDimensions(t *testing.T) {
+	sfAdaptor := &Adaptor{}
+	m := meta.NewMeta(nil, mode.Videos, "alias-video", coremodel.ModelConfig{})
+	m.ActualModel = "Wan-AI/Wan2.2-T2V-A14B"
+
+	req := newJSONRequest(t, "/v1/videos", `{
+		"model":"alias-video",
+		"prompt":"A calm ocean",
+		"width":1280,
+		"height":720
+	}`)
+
+	result, err := sfAdaptor.ConvertRequest(m, nil, req)
+	if err != nil {
+		t.Fatalf("ConvertRequest returned error: %v", err)
+	}
+
+	got := readJSONBody(t, result.Body)
+	if _, ok := got["image_size"]; ok {
+		t.Fatalf("expected job-only dimensions to be ignored, got %#v", got["image_size"])
+	}
+}
+
 func TestConvertVideoStatusRequestUsesJobID(t *testing.T) {
 	sfAdaptor := &Adaptor{}
 	m := meta.NewMeta(
@@ -618,7 +641,7 @@ func TestVideoSubmitHandlerMapsRequestIDToJob(t *testing.T) {
 		Body:       io.NopCloser(bytes.NewReader([]byte(`{"requestId":"request-123"}`))),
 	}
 
-	result, adaptorErr := VideoSubmitHandler(m, store, ctx, resp)
+	result, adaptorErr := VideoGenerationJobSubmitHandler(m, store, ctx, resp)
 	if adaptorErr != nil {
 		t.Fatalf("VideoSubmitHandler returned error: %v", adaptorErr)
 	}
@@ -627,8 +650,8 @@ func TestVideoSubmitHandlerMapsRequestIDToJob(t *testing.T) {
 		t.Fatalf("unexpected result: %#v", result)
 	}
 
-	if m.RequestUsage.OutputTokens != 1 || m.RequestUsage.TotalTokens != 1 {
-		t.Fatalf("expected submitted video usage to count videos, got %#v", m.RequestUsage)
+	if m.RequestUsage.OutputTokens != 0 || m.RequestUsage.TotalTokens != 0 {
+		t.Fatalf("expected submit handler not to mutate request usage, got %#v", m.RequestUsage)
 	}
 
 	if len(store.saved) != 1 || store.saved[0].ID != coremodel.VideoJobStoreID("request-123") {
@@ -686,9 +709,9 @@ func TestVideoStatusHandlerMapsSucceededResponse(t *testing.T) {
 		}`))),
 	}
 
-	_, adaptorErr := VideoStatusHandler(m, store, ctx, resp)
+	_, adaptorErr := VideoGenerationJobStatusHandler(m, store, ctx, resp)
 	if adaptorErr != nil {
-		t.Fatalf("VideoStatusHandler returned error: %v", adaptorErr)
+		t.Fatalf("VideoGenerationJobStatusHandler returned error: %v", adaptorErr)
 	}
 
 	var job relaymodel.VideoGenerationJob
@@ -740,7 +763,7 @@ func TestVideosHandlerMapsSubmitResponse(t *testing.T) {
 		Body:       io.NopCloser(bytes.NewReader([]byte(`{"requestId":"request-123"}`))),
 	}
 
-	result, adaptorErr := VideoSubmitHandler(m, store, ctx, resp)
+	result, adaptorErr := VideosSubmitHandler(m, store, ctx, resp)
 	if adaptorErr != nil {
 		t.Fatalf("VideoSubmitHandler returned error: %v", adaptorErr)
 	}
@@ -805,9 +828,9 @@ func TestVideosGetHandlerMapsStatusResponse(t *testing.T) {
 		}`))),
 	}
 
-	result, adaptorErr := VideoStatusHandler(m, store, ctx, resp)
+	result, adaptorErr := VideosStatusHandler(m, store, ctx, resp)
 	if adaptorErr != nil {
-		t.Fatalf("VideoStatusHandler returned error: %v", adaptorErr)
+		t.Fatalf("VideosStatusHandler returned error: %v", adaptorErr)
 	}
 
 	if result.UpstreamID != "request-123" {
@@ -864,9 +887,9 @@ func TestVideoContentHandlerDownloadsGeneratedVideo(t *testing.T) {
 		}`))),
 	}
 
-	result, adaptorErr := VideoContentHandler(m, ctx, resp)
+	result, adaptorErr := VideoGenerationJobContentHandler(m, ctx, resp)
 	if adaptorErr != nil {
-		t.Fatalf("VideoContentHandler returned error: %v", adaptorErr)
+		t.Fatalf("VideoGenerationJobContentHandler returned error: %v", adaptorErr)
 	}
 
 	if result.UpstreamID != "request-123" {
@@ -919,9 +942,9 @@ func TestVideosContentHandlerDownloadsGeneratedVideo(t *testing.T) {
 		}`))),
 	}
 
-	result, adaptorErr := VideoContentHandler(m, ctx, resp)
+	result, adaptorErr := VideosContentHandler(m, ctx, resp)
 	if adaptorErr != nil {
-		t.Fatalf("VideoContentHandler returned error: %v", adaptorErr)
+		t.Fatalf("VideosContentHandler returned error: %v", adaptorErr)
 	}
 
 	if result.UpstreamID != "request-123" {

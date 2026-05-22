@@ -116,7 +116,7 @@ func (p *Plugin) ApplyPatches(
 	config *Config,
 ) ([]byte, bool, error) {
 	// Parse JSON using sonic AST
-	node, err := sonic.Get(bodyBytes)
+	node, err := common.GetJSONNodeNoCopy(bodyBytes)
 	if err != nil {
 		// If it's not valid JSON, return as is
 		return bodyBytes, false, nil
@@ -405,7 +405,7 @@ func (p *Plugin) setValueAST(root *ast.Node, key string, value any) bool {
 		default:
 			// Try to marshal and parse
 			if bytes, err := sonic.Marshal(v); err == nil {
-				if node, err := sonic.Get(bytes); err == nil {
+				if node, err := common.GetJSONNodeNoCopy(bytes); err == nil {
 					newNode = node
 				} else {
 					return false
@@ -702,7 +702,7 @@ func (p *Plugin) createASTNode(value any) ast.Node {
 	default:
 		// Try to marshal and parse
 		if bytes, err := sonic.Marshal(v); err == nil {
-			if node, err := sonic.Get(bytes); err == nil {
+			if node, err := common.GetJSONNodeNoCopy(bytes); err == nil {
 				return node
 			}
 		}

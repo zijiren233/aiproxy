@@ -175,7 +175,7 @@ func handleSTTNonStream(
 
 	// Handle JSON response with usage injection
 	if strings.Contains(resp.Header.Get("Content-Type"), "json") {
-		node, err := sonic.Get(responseBody)
+		node, err := common.GetJSONNodeNoCopy(responseBody)
 		if err != nil {
 			return adaptor.DoResponseResult{
 					Usage: usage.ToModelUsage(),
@@ -373,7 +373,7 @@ func injectUsageIntoJSON(node *ast.Node, usage *relaymodel.SttUsage) ([]byte, er
 
 // injectUsageIntoSSE injects usage into SSE response data
 func injectUsageIntoSSE(data []byte, usage *relaymodel.SttUsage) []byte {
-	node, err := sonic.GetWithOptions(data, ast.SearchOptions{})
+	node, err := common.GetJSONNodeNoCopy(data)
 	if err != nil {
 		return nil
 	}

@@ -16,6 +16,7 @@ import (
 	"github.com/labring/aiproxy/core/model"
 	"github.com/labring/aiproxy/core/relay/meta"
 	"github.com/labring/aiproxy/core/relay/mode"
+	relaymodel "github.com/labring/aiproxy/core/relay/model"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -187,11 +188,11 @@ func TestImagesStreamHandlerPassesEventsAndExtractsUsage(t *testing.T) {
 			"Content-Type": {"text/event-stream"},
 		},
 		Body: io.NopCloser(strings.NewReader(strings.Join([]string{
-			`event: image_generation.partial_image`,
-			`data: {"type":"image_generation.partial_image","partial_image_index":0,"b64_json":"partial"}`,
+			"event: " + relaymodel.ImageStreamEventPartialImage,
+			`data: {"type":"` + relaymodel.ImageStreamEventPartialImage + `","partial_image_index":0,"b64_json":"partial"}`,
 			"",
-			`event: image_generation.completed`,
-			`data: {"type":"image_generation.completed","b64_json":"final","usage":{"input_tokens":10,"output_tokens":20,"total_tokens":30,"input_tokens_details":{"text_tokens":4,"image_tokens":6},"output_tokens_details":{"image_tokens":20}}}`,
+			"event: " + relaymodel.ImageStreamEventCompleted,
+			`data: {"type":"` + relaymodel.ImageStreamEventCompleted + `","b64_json":"final","usage":{"input_tokens":10,"output_tokens":20,"total_tokens":30,"input_tokens_details":{"text_tokens":4,"image_tokens":6},"output_tokens_details":{"image_tokens":20}}}`,
 			"",
 		}, "\n"))),
 	}
@@ -210,14 +211,15 @@ func TestImagesStreamHandlerPassesEventsAndExtractsUsage(t *testing.T) {
 	assert.Equal(t, model.ZeroNullInt64(30), result.Usage.TotalTokens)
 
 	body := recorder.Body.String()
-	assert.Contains(t, body, `data: {"type":"image_generation.partial_image"`)
-	assert.Contains(t, body, `data: {"type":"image_generation.completed"`)
-	assert.NotContains(t, body, `event: image_generation.partial_image`)
-	assert.NotContains(t, body, `event: image_generation.completed`)
+	assert.Contains(t, body, "event: "+relaymodel.ImageStreamEventPartialImage+"\n")
+	assert.Contains(t, body, `data: {"type":"`+relaymodel.ImageStreamEventPartialImage+`"`)
+	assert.Contains(t, body, "event: "+relaymodel.ImageStreamEventCompleted+"\n")
+	assert.Contains(t, body, `data: {"type":"`+relaymodel.ImageStreamEventCompleted+`"`)
+	assert.NotContains(t, body, `[DONE]`)
 	assert.Equal(t, "text/event-stream", recorder.Header().Get("Content-Type"))
 }
 
-func TestConvertVideoRequestMultipartRewritesModel(t *testing.T) {
+func TestConvertVideosRequestMultipartRewritesModel(t *testing.T) {
 	meta := meta.NewMeta(nil, mode.Videos, "sora-2", model.ModelConfig{})
 
 	var body bytes.Buffer
@@ -241,7 +243,7 @@ func TestConvertVideoRequestMultipartRewritesModel(t *testing.T) {
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 	req.ContentLength = int64(body.Len())
 
-	result, err := ConvertVideoRequest(meta, req)
+	result, err := ConvertVideosRequest(meta, req)
 	require.NoError(t, err)
 
 	convertedBody, err := io.ReadAll(result.Body)

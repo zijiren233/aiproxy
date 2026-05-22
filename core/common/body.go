@@ -231,7 +231,11 @@ func UnmarshalRequest2NodeReusable(req *http.Request, path ...any) (ast.Node, er
 		return ast.Node{}, err
 	}
 
-	return sonic.GetWithOptions(requestBody, ast.SearchOptions{}, path...)
+	return GetJSONNodeNoCopy(requestBody, path...)
+}
+
+func GetJSONNodeNoCopy(data []byte, path ...any) (ast.Node, error) {
+	return sonic.GetWithOptions(data, ast.SearchOptions{}, path...)
 }
 
 func GetResponseBodyLimit(resp *http.Response, n int64) ([]byte, error) {
@@ -283,5 +287,5 @@ func UnmarshalResponse2Node(resp *http.Response, path ...any) (ast.Node, error) 
 		return ast.Node{}, err
 	}
 
-	return sonic.GetWithOptions(responseBody, ast.SearchOptions{}, path...)
+	return GetJSONNodeNoCopy(responseBody, path...)
 }

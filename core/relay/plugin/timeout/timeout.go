@@ -4,8 +4,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/bytedance/sonic"
-	"github.com/bytedance/sonic/ast"
 	"github.com/labring/aiproxy/core/common"
 	"github.com/labring/aiproxy/core/relay/adaptor"
 	"github.com/labring/aiproxy/core/relay/meta"
@@ -121,7 +119,7 @@ func isStream(req *http.Request) (bool, error) {
 		return false, nil
 	}
 
-	node, err := sonic.GetWithOptions(body, ast.SearchOptions{}, "stream")
+	node, err := common.GetJSONNodeNoCopy(body, "stream")
 	if err != nil {
 		return false, err
 	}

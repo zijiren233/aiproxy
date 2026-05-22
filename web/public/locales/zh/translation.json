@@ -325,6 +325,7 @@
     "maxErrorRate": "最大错误率",
     "forceSaveDetail": "强制保存详情",
     "maxImageGenerationCount": "最大图片数量",
+    "maxVideoGenerationCount": "最大视频数量",
     "requestBodyStorageMaxSize": "请求体存储最大大小",
     "responseBodyStorageMaxSize": "响应体存储最大大小",
     "recordServiceTier": "记录服务层级",
@@ -515,7 +516,10 @@
       },
       "maxVideoGenerationSeconds": "最大视频秒数",
       "maxVideoGenerationSecondsPlaceholder": "输入 0 表示不限制",
-      "maxVideoGenerationSecondsDescription": "视频请求参数 seconds 的最大允许值。`0` 表示不限制。适用于视频生成和 remix 模型。"
+      "maxVideoGenerationSecondsDescription": "视频请求参数 seconds 的最大允许值。`0` 表示不限制。适用于视频生成和 remix 模型。",
+      "maxVideoGenerationCount": "最大视频数量",
+      "maxVideoGenerationCountPlaceholder": "输入 0 表示不限制",
+      "maxVideoGenerationCountDescription": "视频数量的最大允许值。`0` 表示不限制。适用于 OpenAI 视频任务的 variants 和 Gemini 原生 numberOfVideos。"
     },
     "deleteDialog": {
       "confirmTitle": "删除模型",
@@ -1000,7 +1004,11 @@
     "12": "Anthropic",
     "13": "视频生成",
     "16": "Responses",
-    "21": "Gemini"
+    "21": "Gemini",
+    "27": "Gemini 视频",
+    "28": "Gemini 视频 Operations",
+    "29": "Gemini TTS",
+    "30": "Gemini 图片"
   },
   "group": {
     "management": "组别管理",
@@ -1184,7 +1192,10 @@
       "invalidFormat": "文件格式无效",
       "overrideMaxVideoGenerationSeconds": "覆盖最大视频秒数",
       "overrideMaxVideoGenerationSecondsDesc": "覆盖视频生成或 remix 请求允许的最大视频时长",
-      "maxVideoGenerationSecondsHint": "`0` 表示不限制。作用于请求参数 `seconds` 或旧版 `n_seconds`。"
+      "maxVideoGenerationSecondsHint": "`0` 表示不限制。作用于请求参数 `seconds` 或旧版 `n_seconds`。",
+      "overrideMaxVideoGenerationCount": "覆盖最大视频数量",
+      "overrideMaxVideoGenerationCountDesc": "覆盖视频请求允许生成的最大视频数量",
+      "maxVideoGenerationCountHint": "`0` 表示不限制。作用于 OpenAI `n_variants` 和 Gemini 原生 `numberOfVideos`。"
     }
   },
   "consumptionRanking": {

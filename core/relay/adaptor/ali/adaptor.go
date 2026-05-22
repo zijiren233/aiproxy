@@ -272,10 +272,21 @@ func (a *Adaptor) ConvertRequest(
 		return ConvertTTSRequest(meta, req)
 	case mode.AudioTranscription:
 		return ConvertSTTRequest(meta, req)
-	case mode.VideoGenerationsJobs, mode.Videos, mode.VideosRemix:
-		return ConvertAliVideoRequest(meta, req)
-	case mode.VideoGenerationsGetJobs, mode.VideoGenerationsContent,
-		mode.VideosGet, mode.VideosContent:
+	case mode.VideoGenerationsJobs:
+		return ConvertAliVideoGenerationJobRequest(meta, req)
+	case mode.Videos:
+		return ConvertAliVideosRequest(meta, req)
+	case mode.VideosRemix:
+		return ConvertAliVideosRemixRequest(meta, req)
+	case mode.VideoGenerationsGetJobs:
+		return ConvertAliVideoGenerationGetJobsRequest(meta, req)
+	case mode.VideoGenerationsContent:
+		return ConvertAliVideoGenerationContentRequest(meta, req)
+	case mode.VideosGet:
+		return ConvertAliVideosGetRequest(meta, req)
+	case mode.VideosContent:
+		return ConvertAliVideosContentRequest(meta, req)
+	case mode.VideosDelete:
 		return adaptor.ConvertResult{}, nil
 	case mode.Anthropic:
 		return anthropic.ConvertRequest(meta, req)
@@ -321,12 +332,14 @@ func (a *Adaptor) DoResponse(
 		return AliVideoGetJobsHandler(meta, store, c, resp)
 	case mode.VideoGenerationsContent:
 		return AliVideoContentHandler(meta, c, resp)
-	case mode.Videos, mode.VideosRemix:
+	case mode.Videos:
 		return AliVideosHandler(meta, store, c, resp)
+	case mode.VideosRemix:
+		return AliVideosRemixHandler(meta, store, c, resp)
 	case mode.VideosGet:
 		return AliVideoGetHandler(meta, store, c, resp)
 	case mode.VideosContent:
-		return AliVideoContentHandler(meta, c, resp)
+		return AliVideosContentHandler(meta, c, resp)
 	case mode.ImagesGenerations, mode.ImagesEdits:
 		return ImageHandler(meta, c, resp)
 	case mode.Embeddings:

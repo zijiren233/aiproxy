@@ -137,6 +137,51 @@ func TestConvertRequest_TTSModelSetsAudioModalityAndSpeechConfig(t *testing.T) {
 	assert.Nil(t, geminiReq.GenerationConfig.ThinkingConfig)
 }
 
+func TestConvertTTSRequestMapsOpenAISpeechToGemini(t *testing.T) {
+	t.Parallel()
+
+	channel := &model.Channel{Type: model.ChannelTypeGoogleGemini}
+	meta := meta.NewMeta(
+		channel,
+		mode.AudioSpeech,
+		"gemini-2.5-flash-tts",
+		model.ModelConfig{},
+	)
+
+	req, err := http.NewRequestWithContext(
+		t.Context(),
+		http.MethodPost,
+		"http://localhost/v1/audio/speech",
+		bytes.NewBufferString(
+			`{"model":"gemini-2.5-flash-tts","input":"Say hello.","voice":"Kore"}`,
+		),
+	)
+	assert.NoError(t, err)
+
+	result, err := gemini.ConvertTTSRequest(meta, req)
+	assert.NoError(t, err)
+
+	bodyBytes, err := io.ReadAll(result.Body)
+	assert.NoError(t, err)
+
+	var geminiReq relaymodel.GeminiChatRequest
+
+	err = json.Unmarshal(bodyBytes, &geminiReq)
+	assert.NoError(t, err)
+	assert.Len(t, geminiReq.Contents, 1)
+	assert.Equal(t, "Say hello.", geminiReq.Contents[0].Parts[0].Text)
+	assert.Equal(
+		t,
+		[]string{relaymodel.GeminiModalityAudio},
+		geminiReq.GenerationConfig.ResponseModalities,
+	)
+	assert.Equal(
+		t,
+		"Kore",
+		geminiReq.GenerationConfig.SpeechConfig.VoiceConfig.PrebuiltVoiceConfig.VoiceName,
+	)
+}
+
 func TestConvertRequest_JsonSchema(t *testing.T) {
 	// Setup metadata
 	channel := &model.Channel{

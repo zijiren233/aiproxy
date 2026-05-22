@@ -22,7 +22,6 @@ import (
 	"github.com/labring/aiproxy/core/model"
 	"github.com/labring/aiproxy/core/relay/adaptor"
 	"github.com/labring/aiproxy/core/relay/meta"
-	"github.com/labring/aiproxy/core/relay/mode"
 	relaymodel "github.com/labring/aiproxy/core/relay/model"
 	relayutils "github.com/labring/aiproxy/core/relay/utils"
 )
@@ -65,15 +64,25 @@ type videoStatusVideo struct {
 	URL string `json:"url"`
 }
 
-func ConvertVideoRequest(meta *meta.Meta, req *http.Request) (adaptor.ConvertResult, error) {
-	if meta.Mode == mode.VideosRemix {
-		return adaptor.ConvertResult{}, errors.New("siliconflow does not support videos remix")
-	}
+func ConvertVideoGenerationJobRequest(
+	meta *meta.Meta,
+	req *http.Request,
+) (adaptor.ConvertResult, error) {
+	return convertSiliconFlowVideoGenerationJobRequest(meta, req)
+}
 
+func ConvertVideosRequest(meta *meta.Meta, req *http.Request) (adaptor.ConvertResult, error) {
+	return convertSiliconFlowVideosRequest(meta, req)
+}
+
+func convertSiliconFlowVideoGenerationJobRequest(
+	meta *meta.Meta,
+	req *http.Request,
+) (adaptor.ConvertResult, error) {
 	var request videoSubmitRequest
 
 	if strings.HasPrefix(req.Header.Get("Content-Type"), "multipart/form-data") {
-		parsed, err := multipartVideoSubmitRequest(req)
+		parsed, err := multipartVideoGenerationJobSubmitRequest(req)
 		if err != nil {
 			return adaptor.ConvertResult{}, err
 		}
@@ -85,9 +94,41 @@ func ConvertVideoRequest(meta *meta.Meta, req *http.Request) (adaptor.ConvertRes
 			return adaptor.ConvertResult{}, err
 		}
 
-		request = jsonVideoSubmitRequest(reqMap)
+		request = jsonVideoGenerationJobSubmitRequest(reqMap)
 	}
 
+	return convertSiliconFlowVideoRequest(meta, request)
+}
+
+func convertSiliconFlowVideosRequest(
+	meta *meta.Meta,
+	req *http.Request,
+) (adaptor.ConvertResult, error) {
+	var request videoSubmitRequest
+
+	if strings.HasPrefix(req.Header.Get("Content-Type"), "multipart/form-data") {
+		parsed, err := multipartVideosSubmitRequest(req)
+		if err != nil {
+			return adaptor.ConvertResult{}, err
+		}
+
+		request = parsed
+	} else {
+		var reqMap map[string]any
+		if err := common.UnmarshalRequestReusable(req, &reqMap); err != nil {
+			return adaptor.ConvertResult{}, err
+		}
+
+		request = jsonVideosSubmitRequest(reqMap)
+	}
+
+	return convertSiliconFlowVideoRequest(meta, request)
+}
+
+func convertSiliconFlowVideoRequest(
+	meta *meta.Meta,
+	request videoSubmitRequest,
+) (adaptor.ConvertResult, error) {
 	request.Model = meta.ActualModel
 	meta.Set(metaVideoRequest, request)
 
@@ -153,27 +194,33 @@ func ConvertVideosStatusRequest(meta *meta.Meta, _ *http.Request) (adaptor.Conve
 	}, nil
 }
 
-func jsonVideoSubmitRequest(reqMap map[string]any) videoSubmitRequest {
-	request := videoSubmitRequest{
-		Prompt:         stringFromMap(reqMap, "prompt"),
-		ImageSize:      videoImageSize(reqMap),
-		Image:          videoImage(reqMap),
-		NegativePrompt: stringFromMap(reqMap, "negative_prompt"),
-		Seed:           reqMap["seed"],
-	}
+func jsonVideoGenerationJobSubmitRequest(reqMap map[string]any) videoSubmitRequest {
+	request := jsonVideoCommonSubmitRequest(reqMap)
+	request.ImageSize = videoGenerationJobImageSize(reqMap)
 
 	return request
 }
 
-func multipartVideoSubmitRequest(req *http.Request) (videoSubmitRequest, error) {
-	if err := common.ParseMultipartFormWithLimit(req); err != nil {
-		return videoSubmitRequest{}, fmt.Errorf("parse multipart form: %w", err)
-	}
+func jsonVideosSubmitRequest(reqMap map[string]any) videoSubmitRequest {
+	request := jsonVideoCommonSubmitRequest(reqMap)
+	request.ImageSize = stringFromMap(reqMap, "size")
 
-	request := videoSubmitRequest{
-		Prompt:         req.PostFormValue("prompt"),
-		ImageSize:      strings.TrimSpace(req.PostFormValue("size")),
-		NegativePrompt: req.PostFormValue("negative_prompt"),
+	return request
+}
+
+func jsonVideoCommonSubmitRequest(reqMap map[string]any) videoSubmitRequest {
+	return videoSubmitRequest{
+		Prompt:         stringFromMap(reqMap, "prompt"),
+		Image:          videoImage(reqMap),
+		NegativePrompt: stringFromMap(reqMap, "negative_prompt"),
+		Seed:           reqMap["seed"],
+	}
+}
+
+func multipartVideoGenerationJobSubmitRequest(req *http.Request) (videoSubmitRequest, error) {
+	request, err := multipartVideoCommonSubmitRequest(req)
+	if err != nil {
+		return videoSubmitRequest{}, err
 	}
 
 	if request.ImageSize == "" {
@@ -183,6 +230,24 @@ func multipartVideoSubmitRequest(req *http.Request) (videoSubmitRequest, error) 
 		if width != "" && height != "" {
 			request.ImageSize = width + "x" + height
 		}
+	}
+
+	return request, nil
+}
+
+func multipartVideosSubmitRequest(req *http.Request) (videoSubmitRequest, error) {
+	return multipartVideoCommonSubmitRequest(req)
+}
+
+func multipartVideoCommonSubmitRequest(req *http.Request) (videoSubmitRequest, error) {
+	if err := common.ParseMultipartFormWithLimit(req); err != nil {
+		return videoSubmitRequest{}, fmt.Errorf("parse multipart form: %w", err)
+	}
+
+	request := videoSubmitRequest{
+		Prompt:         req.PostFormValue("prompt"),
+		ImageSize:      strings.TrimSpace(req.PostFormValue("size")),
+		NegativePrompt: req.PostFormValue("negative_prompt"),
 	}
 
 	if seed := strings.TrimSpace(req.PostFormValue("seed")); seed != "" {
@@ -209,7 +274,7 @@ func multipartVideoSubmitRequest(req *http.Request) (videoSubmitRequest, error) 
 	return request, nil
 }
 
-func videoImageSize(reqMap map[string]any) string {
+func videoGenerationJobImageSize(reqMap map[string]any) string {
 	if size := stringFromMap(reqMap, "size"); size != "" {
 		return size
 	}
@@ -332,62 +397,15 @@ func multipartImageDataURL(fileHeader *multipart.FileHeader) (string, error) {
 	return "data:" + contentType + ";base64," + base64.StdEncoding.EncodeToString(data), nil
 }
 
-func VideoSubmitHandler(
+func VideoGenerationJobSubmitHandler(
 	meta *meta.Meta,
 	store adaptor.Store,
 	c *gin.Context,
 	resp *http.Response,
 ) (adaptor.DoResponseResult, adaptor.Error) {
-	if resp.StatusCode != http.StatusOK {
-		return adaptor.DoResponseResult{}, ErrorHandler(resp)
-	}
-
-	defer resp.Body.Close()
-
-	var response videoSubmitResponse
-	if err := common.UnmarshalResponse(resp, &response); err != nil {
-		return adaptor.DoResponseResult{}, relaymodel.WrapperOpenAIVideoError(
-			err,
-			http.StatusInternalServerError,
-		)
-	}
-
-	if response.RequestID == "" {
-		return adaptor.DoResponseResult{}, relaymodel.WrapperOpenAIVideoErrorWithMessage(
-			"missing requestId in siliconflow video submit response",
-			http.StatusInternalServerError,
-		)
-	}
-
-	meta.RequestUsage = siliconFlowVideoSubmitUsage()
-
-	if meta.Mode == mode.Videos {
-		video := buildVideo(meta, response.RequestID, relaymodel.VideoStatusQueued, nil)
-		if err := saveVideoGenerationStore(
-			meta,
-			store,
-			response.RequestID,
-			time.Now().Add(siliconFlowVideoTTL),
-		); err != nil {
-			common.GetLogger(c).Errorf("save siliconflow video store failed: %v", err)
-		}
-
-		data, err := sonic.Marshal(video)
-		if err != nil {
-			return adaptor.DoResponseResult{}, relaymodel.WrapperOpenAIVideoError(
-				err,
-				http.StatusInternalServerError,
-			)
-		}
-
-		c.Writer.Header().Set("Content-Type", "application/json")
-		c.Writer.Header().Set("Content-Length", strconv.Itoa(len(data)))
-		_, _ = c.Writer.Write(data)
-
-		return adaptor.DoResponseResult{
-			UpstreamID: response.RequestID,
-			AsyncUsage: true,
-		}, nil
+	response, relayErr := readSiliconFlowVideoSubmitResponse(resp)
+	if relayErr != nil {
+		return adaptor.DoResponseResult{}, relayErr
 	}
 
 	if err := saveVideoJobStore(
@@ -419,14 +437,71 @@ func VideoSubmitHandler(
 	}, nil
 }
 
-func siliconFlowVideoSubmitUsage() model.Usage {
-	return model.Usage{
-		OutputTokens: model.ZeroNullInt64(1),
-		TotalTokens:  model.ZeroNullInt64(1),
+func VideosSubmitHandler(
+	meta *meta.Meta,
+	store adaptor.Store,
+	c *gin.Context,
+	resp *http.Response,
+) (adaptor.DoResponseResult, adaptor.Error) {
+	response, relayErr := readSiliconFlowVideoSubmitResponse(resp)
+	if relayErr != nil {
+		return adaptor.DoResponseResult{}, relayErr
 	}
+
+	video := buildVideo(meta, response.RequestID, relaymodel.VideoStatusQueued, nil)
+	if err := saveVideoGenerationStore(
+		meta,
+		store,
+		response.RequestID,
+		time.Now().Add(siliconFlowVideoTTL),
+	); err != nil {
+		common.GetLogger(c).Errorf("save siliconflow video store failed: %v", err)
+	}
+
+	data, err := sonic.Marshal(video)
+	if err != nil {
+		return adaptor.DoResponseResult{}, relaymodel.WrapperOpenAIVideoError(
+			err,
+			http.StatusInternalServerError,
+		)
+	}
+
+	c.Writer.Header().Set("Content-Type", "application/json")
+	c.Writer.Header().Set("Content-Length", strconv.Itoa(len(data)))
+	_, _ = c.Writer.Write(data)
+
+	return adaptor.DoResponseResult{
+		UpstreamID: response.RequestID,
+		AsyncUsage: true,
+	}, nil
 }
 
-func VideoStatusHandler(
+func readSiliconFlowVideoSubmitResponse(resp *http.Response) (videoSubmitResponse, adaptor.Error) {
+	if resp.StatusCode != http.StatusOK {
+		return videoSubmitResponse{}, ErrorHandler(resp)
+	}
+
+	defer resp.Body.Close()
+
+	var response videoSubmitResponse
+	if err := common.UnmarshalResponse(resp, &response); err != nil {
+		return videoSubmitResponse{}, relaymodel.WrapperOpenAIVideoError(
+			err,
+			http.StatusInternalServerError,
+		)
+	}
+
+	if response.RequestID == "" {
+		return videoSubmitResponse{}, relaymodel.WrapperOpenAIVideoErrorWithMessage(
+			"missing requestId in siliconflow video submit response",
+			http.StatusInternalServerError,
+		)
+	}
+
+	return response, nil
+}
+
+func VideoGenerationJobStatusHandler(
 	meta *meta.Meta,
 	store adaptor.Store,
 	c *gin.Context,
@@ -444,39 +519,6 @@ func VideoStatusHandler(
 			err,
 			http.StatusInternalServerError,
 		)
-	}
-
-	if meta.Mode == mode.VideosGet {
-		video := buildVideo(
-			meta,
-			meta.VideoID,
-			siliconFlowVideoStatusToOpenAI(response.Status),
-			&response,
-		)
-		if video.Status == relaymodel.VideoStatusCompleted {
-			if err := saveVideoGenerationStore(
-				meta,
-				store,
-				video.ID,
-				time.Now().Add(siliconFlowVideoTTL),
-			); err != nil {
-				common.GetLogger(c).Errorf("save siliconflow video store failed: %v", err)
-			}
-		}
-
-		data, err := sonic.Marshal(video)
-		if err != nil {
-			return adaptor.DoResponseResult{}, relaymodel.WrapperOpenAIVideoError(
-				err,
-				http.StatusInternalServerError,
-			)
-		}
-
-		c.Writer.Header().Set("Content-Type", "application/json")
-		c.Writer.Header().Set("Content-Length", strconv.Itoa(len(data)))
-		_, _ = c.Writer.Write(data)
-
-		return adaptor.DoResponseResult{UpstreamID: video.ID}, nil
 	}
 
 	job := buildVideoJob(meta, meta.JobID, siliconFlowVideoStatus(response.Status), &response)
@@ -506,10 +548,79 @@ func VideoStatusHandler(
 	return adaptor.DoResponseResult{}, nil
 }
 
-func VideoContentHandler(
+func VideosStatusHandler(
+	meta *meta.Meta,
+	store adaptor.Store,
+	c *gin.Context,
+	resp *http.Response,
+) (adaptor.DoResponseResult, adaptor.Error) {
+	if resp.StatusCode != http.StatusOK {
+		return adaptor.DoResponseResult{}, ErrorHandler(resp)
+	}
+
+	defer resp.Body.Close()
+
+	var response videoStatusResponse
+	if err := common.UnmarshalResponse(resp, &response); err != nil {
+		return adaptor.DoResponseResult{}, relaymodel.WrapperOpenAIVideoError(
+			err,
+			http.StatusInternalServerError,
+		)
+	}
+
+	video := buildVideo(
+		meta,
+		meta.VideoID,
+		siliconFlowVideoStatusToOpenAI(response.Status),
+		&response,
+	)
+	if video.Status == relaymodel.VideoStatusCompleted {
+		if err := saveVideoGenerationStore(
+			meta,
+			store,
+			video.ID,
+			time.Now().Add(siliconFlowVideoTTL),
+		); err != nil {
+			common.GetLogger(c).Errorf("save siliconflow video store failed: %v", err)
+		}
+	}
+
+	data, err := sonic.Marshal(video)
+	if err != nil {
+		return adaptor.DoResponseResult{}, relaymodel.WrapperOpenAIVideoError(
+			err,
+			http.StatusInternalServerError,
+		)
+	}
+
+	c.Writer.Header().Set("Content-Type", "application/json")
+	c.Writer.Header().Set("Content-Length", strconv.Itoa(len(data)))
+	_, _ = c.Writer.Write(data)
+
+	return adaptor.DoResponseResult{UpstreamID: video.ID}, nil
+}
+
+func VideoGenerationJobContentHandler(
 	meta *meta.Meta,
 	c *gin.Context,
 	resp *http.Response,
+) (adaptor.DoResponseResult, adaptor.Error) {
+	return fetchSiliconFlowVideoContentHandler(meta, c, resp, meta.GenerationID)
+}
+
+func VideosContentHandler(
+	meta *meta.Meta,
+	c *gin.Context,
+	resp *http.Response,
+) (adaptor.DoResponseResult, adaptor.Error) {
+	return fetchSiliconFlowVideoContentHandler(meta, c, resp, meta.VideoID)
+}
+
+func fetchSiliconFlowVideoContentHandler(
+	meta *meta.Meta,
+	c *gin.Context,
+	resp *http.Response,
+	id string,
 ) (adaptor.DoResponseResult, adaptor.Error) {
 	if resp.StatusCode != http.StatusOK {
 		return adaptor.DoResponseResult{}, ErrorHandler(resp)
@@ -554,7 +665,7 @@ func VideoContentHandler(
 	c.Writer.Header().Set("Content-Length", videoResp.Header.Get("Content-Length"))
 	_, _ = io.Copy(c.Writer, videoResp.Body)
 
-	return adaptor.DoResponseResult{UpstreamID: siliconFlowContentUpstreamID(meta)}, nil
+	return adaptor.DoResponseResult{UpstreamID: id}, nil
 }
 
 func fetchSiliconFlowVideoContent(
@@ -602,18 +713,6 @@ func firstNonEmptyString(values ...string) string {
 	}
 
 	return ""
-}
-
-func siliconFlowContentUpstreamID(meta *meta.Meta) string {
-	if meta == nil {
-		return ""
-	}
-
-	if meta.Mode == mode.VideosContent {
-		return meta.VideoID
-	}
-
-	return meta.GenerationID
 }
 
 func buildVideo(

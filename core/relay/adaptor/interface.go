@@ -19,6 +19,7 @@ type StoreCache struct {
 	TokenID   int
 	ChannelID int
 	Model     string
+	Metadata  string
 	CreatedAt time.Time
 	UpdatedAt time.Time
 	ExpiresAt time.Time

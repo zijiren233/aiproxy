@@ -174,6 +174,7 @@ export const modelCreateSchema = z.object({
     force_save_detail: z.boolean().optional(),
     max_image_generation_count: z.number().nonnegative('Max image generation count must be a non-negative number').optional(),
     max_video_generation_seconds: z.number().nonnegative('Max video generation seconds must be a non-negative number').optional(),
+    max_video_generation_count: z.number().nonnegative('Max video generation count must be a non-negative number').optional(),
     request_body_storage_max_size: z.number().optional(),
     response_body_storage_max_size: z.number().optional(),
     summary_service_tier: z.boolean().optional(),

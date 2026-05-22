@@ -519,7 +519,13 @@ func supportsPromptCacheKeyMode(m mode.Mode) bool {
 
 func supportsCacheFollowMode(m mode.Mode) bool {
 	switch m {
-	case mode.Responses, mode.ChatCompletions, mode.Gemini, mode.Anthropic:
+	case mode.Responses,
+		mode.ChatCompletions,
+		mode.Gemini,
+		mode.GeminiVideo,
+		mode.GeminiTTS,
+		mode.GeminiImage,
+		mode.Anthropic:
 		return true
 	default:
 		return false

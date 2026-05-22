@@ -12,8 +12,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/bytedance/sonic"
 	"github.com/gin-gonic/gin"
+	"github.com/labring/aiproxy/core/common"
 	coremodel "github.com/labring/aiproxy/core/model"
 	"github.com/labring/aiproxy/core/relay/adaptor"
 	"github.com/labring/aiproxy/core/relay/meta"
@@ -578,11 +578,11 @@ func TestAdaptorDoResponseImageGenerationStreamConvertsDoubaoEvents(t *testing.T
 			"Content-Type": {"text/event-stream"},
 		},
 		Body: io.NopCloser(strings.NewReader(strings.Join([]string{
-			`event: image_generation.partial_succeeded`,
-			`data: {"type":"image_generation.partial_succeeded","image_index":0,"url":"https://example.com/one.png","size":"2048×2048"}`,
+			"event: " + doubaoImageStreamEventPartialSucceeded,
+			`data: {"type":"` + doubaoImageStreamEventPartialSucceeded + `","image_index":0,"url":"https://example.com/one.png","size":"2048×2048"}`,
 			"",
-			`event: image_generation.completed`,
-			`data: {"type":"image_generation.completed","usage":{"generated_images":2,"output_tokens":32768,"total_tokens":32768,"tool_usage":{"web_search":1}}}`,
+			"event: " + relaymodel.ImageStreamEventCompleted,
+			`data: {"type":"` + relaymodel.ImageStreamEventCompleted + `","usage":{"generated_images":2,"output_tokens":32768,"total_tokens":32768,"tool_usage":{"web_search":1}}}`,
 			"",
 		}, "\n"))),
 	}
@@ -609,15 +609,22 @@ func TestAdaptorDoResponseImageGenerationStreamConvertsDoubaoEvents(t *testing.T
 	}
 
 	body := recorder.Body.String()
-	if strings.Contains(body, "event: image_generation.partial_succeeded") {
-		t.Fatalf("expected event lines to be omitted, got body: %s", body)
+	if strings.Contains(body, "event: "+doubaoImageStreamEventPartialSucceeded) {
+		t.Fatalf("expected upstream event names to be converted, got body: %s", body)
 	}
 
-	if !strings.Contains(body, `"type":"image_generation.partial_image"`) ||
+	if !strings.Contains(body, "event: "+relaymodel.ImageStreamEventPartialImage+"\n") ||
+		!strings.Contains(body, `"type":"`+relaymodel.ImageStreamEventPartialImage+`"`) ||
 		!strings.Contains(body, `"partial_image_index":0`) ||
-		!strings.Contains(body, `"type":"image_generation.completed"`) ||
+		!strings.Contains(body, "event: "+relaymodel.ImageStreamEventCompleted+"\n") ||
+		!strings.Contains(body, `"type":"`+relaymodel.ImageStreamEventCompleted+`"`) ||
+		!strings.Contains(body, `"url":"https://example.com/one.png"`) ||
 		!strings.Contains(body, `"output_tokens":2`) {
 		t.Fatalf("unexpected stream body: %s", body)
+	}
+
+	if strings.Contains(body, "[DONE]") {
+		t.Fatalf("expected DONE to be omitted, got body: %s", body)
 	}
 
 	if recorder.Header().Get("Content-Type") != "text/event-stream" {
@@ -642,7 +649,7 @@ func TestAdaptorConvertRequestVideoGenerationMapsOpenAIFields(t *testing.T) {
 			"model": "alias-video",
 			"prompt": "Animate a calm ocean",
 			"size": "720p",
-			"seconds": 5,
+			"n_seconds": 5,
 			"input_reference": "https://example.com/reference.png",
 			"video_url": "https://example.com/reference.mp4",
 			"input_audio": {"data": "AAAA", "format": "wav"},
@@ -788,6 +795,96 @@ func TestAdaptorConvertRequestVideoGenerationMapsPortraitPixelSize(t *testing.T)
 	}
 }
 
+func TestAdaptorConvertRequestVideosIgnoresJobOnlyDuration(t *testing.T) {
+	adaptor := &Adaptor{}
+	m := meta.NewMeta(
+		nil,
+		mode.Videos,
+		"doubao-seedance-2-0",
+		coremodel.ModelConfig{},
+	)
+
+	req, err := http.NewRequestWithContext(
+		context.Background(),
+		http.MethodPost,
+		"/v1/videos",
+		strings.NewReader(`{
+			"model": "alias-video",
+			"prompt": "Animate a calm ocean",
+			"seconds": 5,
+			"n_seconds": 10
+		}`),
+	)
+	if err != nil {
+		t.Fatalf("failed to create request: %v", err)
+	}
+
+	result, err := adaptor.ConvertRequest(m, nil, req)
+	if err != nil {
+		t.Fatalf("ConvertRequest returned error: %v", err)
+	}
+
+	body, err := io.ReadAll(result.Body)
+	if err != nil {
+		t.Fatalf("failed to read converted body: %v", err)
+	}
+
+	var payload map[string]any
+	if err := json.Unmarshal(body, &payload); err != nil {
+		t.Fatalf("failed to unmarshal converted body %s: %v", string(body), err)
+	}
+
+	if payload["duration"] != float64(5) {
+		t.Fatalf("expected official videos seconds to win, got %#v", payload["duration"])
+	}
+}
+
+func TestAdaptorConvertRequestVideoGenerationIgnoresVideosSeconds(t *testing.T) {
+	adaptor := &Adaptor{}
+	m := meta.NewMeta(
+		nil,
+		mode.VideoGenerationsJobs,
+		"doubao-seedance-2-0",
+		coremodel.ModelConfig{},
+	)
+
+	req, err := http.NewRequestWithContext(
+		context.Background(),
+		http.MethodPost,
+		"/v1/video/generations/jobs",
+		strings.NewReader(`{
+			"model": "alias-video",
+			"prompt": "Animate a calm ocean",
+			"seconds": 5
+		}`),
+	)
+	if err != nil {
+		t.Fatalf("failed to create request: %v", err)
+	}
+
+	result, err := adaptor.ConvertRequest(m, nil, req)
+	if err != nil {
+		t.Fatalf("ConvertRequest returned error: %v", err)
+	}
+
+	body, err := io.ReadAll(result.Body)
+	if err != nil {
+		t.Fatalf("failed to read converted body: %v", err)
+	}
+
+	var payload map[string]any
+	if err := json.Unmarshal(body, &payload); err != nil {
+		t.Fatalf("failed to unmarshal converted body %s: %v", string(body), err)
+	}
+
+	if _, ok := payload["duration"]; ok {
+		t.Fatalf(
+			"expected videos seconds field to be ignored for jobs, got %#v",
+			payload["duration"],
+		)
+	}
+}
+
 func TestAdaptorConvertRequestVideoGenerationMapsMultipartPixelSize(t *testing.T) {
 	adaptor := &Adaptor{}
 	m := meta.NewMeta(
@@ -873,7 +970,7 @@ func TestAdaptorConvertRequestVideoGenerationIgnoresDoubaoDurationField(t *testi
 			"model": "alias-video",
 			"prompt": "Animate a calm ocean",
 			"duration": 12,
-			"seconds": 5
+			"n_seconds": 5
 		}`),
 	)
 	if err != nil {
@@ -896,7 +993,7 @@ func TestAdaptorConvertRequestVideoGenerationIgnoresDoubaoDurationField(t *testi
 	}
 
 	if duration, ok := payload["duration"].(float64); !ok || int(duration) != 5 {
-		t.Fatalf("expected duration from seconds=5, got %#v", payload["duration"])
+		t.Fatalf("expected duration from n_seconds=5, got %#v", payload["duration"])
 	}
 }
 
@@ -1172,7 +1269,7 @@ func TestHandlerPreHandler_UsesOriginModelNameFirst(t *testing.T) {
 	m := meta.NewMeta(nil, mode.ChatCompletions, "bot-123", coremodel.ModelConfig{})
 	m.ActualModel = "mapped-model"
 
-	node, err := sonic.Get([]byte(`{
+	node, err := common.GetJSONNodeNoCopy([]byte(`{
 		"bot_usage": {
 			"model_usage": [{"prompt_tokens": 1, "completion_tokens": 2, "total_tokens": 3}],
 			"action_usage": [{"count": 4}]

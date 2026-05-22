@@ -12,7 +12,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/bytedance/sonic"
 	"github.com/bytedance/sonic/ast"
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/core/common"
@@ -72,6 +71,7 @@ func (s *storeImpl) GetStore(group string, tokenID int, id string) (adaptor.Stor
 		TokenID:   store.TokenID,
 		ChannelID: store.ChannelID,
 		Model:     store.Model,
+		Metadata:  store.Metadata,
 		CreatedAt: store.CreatedAt,
 		UpdatedAt: store.UpdatedAt,
 		ExpiresAt: store.ExpiresAt,
@@ -92,6 +92,7 @@ func (s *storeImpl) SaveStoreWithOption(
 		TokenID:   store.TokenID,
 		ChannelID: store.ChannelID,
 		Model:     store.Model,
+		Metadata:  store.Metadata,
 		CreatedAt: store.CreatedAt,
 		UpdatedAt: store.UpdatedAt,
 		ExpiresAt: store.ExpiresAt,
@@ -109,6 +110,7 @@ func (s *storeImpl) SaveIfNotExistStore(store adaptor.StoreCache) error {
 		TokenID:   store.TokenID,
 		ChannelID: store.ChannelID,
 		Model:     store.Model,
+		Metadata:  store.Metadata,
 		CreatedAt: store.CreatedAt,
 		UpdatedAt: store.UpdatedAt,
 		ExpiresAt: store.ExpiresAt,
@@ -192,9 +194,18 @@ func relayController(m mode.Mode) RelayController {
 		c.GetRequestUsage = controller.GetEmbedRequestUsage
 	case mode.Completions:
 		c.GetRequestUsage = controller.GetCompletionsRequestUsage
-	case mode.VideoGenerationsJobs, mode.Videos, mode.VideosRemix:
+	case mode.VideoGenerationsJobs:
+		c.ValidateRequest = controller.ValidateVideoGenerationJobRequest
 		c.GetRequestPrice = controller.GetVideoGenerationJobRequestPrice
 		c.GetRequestUsage = controller.GetVideoGenerationJobRequestUsage
+	case mode.Videos, mode.VideosRemix:
+		c.ValidateRequest = controller.ValidateVideosRequest
+		c.GetRequestPrice = controller.GetVideosRequestPrice
+		c.GetRequestUsage = controller.GetVideosRequestUsage
+	case mode.GeminiVideo:
+		c.ValidateRequest = controller.ValidateGeminiVideoRequest
+		c.GetRequestPrice = controller.GetGeminiVideoRequestPrice
+		c.GetRequestUsage = controller.GetGeminiVideoRequestUsage
 	case mode.Responses:
 		c.GetRequestUsage = controller.GetResponsesRequestUsage
 	}
@@ -861,7 +872,7 @@ func ErrorWithRequestID(c *gin.Context, relayErr adaptor.Error) {
 		return
 	}
 
-	node, err := sonic.Get(data)
+	node, err := common.GetJSONNodeNoCopy(data)
 	if err != nil {
 		log.Errorf("get node failed: %+v", err)
 		c.JSON(relayErr.StatusCode(), relayErr)

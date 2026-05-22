@@ -582,8 +582,7 @@ func TestAdaptorConvertRequestAliVideoPrefersOpenAIFields(t *testing.T) {
 		"prompt":"Animate this reference",
 		"input_reference":"https://example.com/openai-reference.png",
 		"image_url":"https://example.com/ali-image.png",
-		"seconds":"4",
-		"n_seconds":10,
+		"n_seconds":4,
 		"size":"1080p",
 		"width":1280,
 		"height":720
@@ -615,7 +614,7 @@ func TestAdaptorConvertRequestAliVideoPrefersOpenAIFields(t *testing.T) {
 
 	parameters := mustMap(t, payload["parameters"])
 	if int(mustFloat64(t, parameters["duration"])) != 4 {
-		t.Fatalf("expected seconds to win, got %#v", parameters["duration"])
+		t.Fatalf("expected n_seconds to win, got %#v", parameters["duration"])
 	}
 
 	if parameters["resolution"] != "1080P" {
@@ -670,7 +669,7 @@ func TestAdaptorConvertRequestAliVideoMultipartInputReference(t *testing.T) {
 	writer := multipart.NewWriter(&body)
 	_ = writer.WriteField("model", "wan2.7-i2v")
 	_ = writer.WriteField("prompt", "Animate the uploaded reference")
-	_ = writer.WriteField("seconds", "3")
+	_ = writer.WriteField("n_seconds", "3")
 
 	header := make(textproto.MIMEHeader)
 	header.Set("Content-Disposition", `form-data; name="input_reference"; filename="reference.png"`)
@@ -2061,7 +2060,7 @@ func TestAliVideoCreateJobUsesRequestMetadataFallback(t *testing.T) {
 			"model":"happyhorse-1.0-i2v",
 			"prompt":"Animate the horse",
 			"input_reference":"https://example.com/reference.png",
-			"seconds":5,
+			"n_seconds":5,
 			"size":"1280x720"
 		}`),
 	)
@@ -2187,6 +2186,94 @@ func TestAliVideosHandlerConvertsTaskToOpenAIVideo(t *testing.T) {
 
 	if video.Seconds != 5 || video.Size != "1280x720" {
 		t.Fatalf("unexpected video usage fields: %#v", video)
+	}
+}
+
+func TestAdaptorConvertRequestAliVideosIgnoresJobOnlyFields(t *testing.T) {
+	adaptor := &Adaptor{}
+	m := meta.NewMeta(nil, mode.Videos, "wan2.7-i2v", coremodel.ModelConfig{})
+	m.ActualModel = "wan2.7-i2v"
+
+	body := `{
+		"model":"wan2.7-i2v",
+		"prompt":"Animate this reference",
+		"seconds":4,
+		"n_seconds":10,
+		"n_variants":2,
+		"width":1920,
+		"height":1080,
+		"input_reference":"https://example.com/openai-reference.png"
+	}`
+
+	req, err := http.NewRequestWithContext(
+		context.Background(),
+		http.MethodPost,
+		"/v1/videos",
+		strings.NewReader(body),
+	)
+	if err != nil {
+		t.Fatalf("NewRequest returned error: %v", err)
+	}
+
+	result, err := adaptor.ConvertRequest(m, nil, req)
+	if err != nil {
+		t.Fatalf("ConvertRequest returned error: %v", err)
+	}
+
+	payload := readJSONMap(t, result.Body)
+	parameters := mustMap(t, payload["parameters"])
+
+	if int(mustFloat64(t, parameters["duration"])) != 4 {
+		t.Fatalf("expected official videos seconds to win, got %#v", parameters["duration"])
+	}
+
+	if _, ok := parameters["size"]; ok {
+		t.Fatalf("expected job-only dimensions to be ignored, got size %#v", parameters["size"])
+	}
+
+	if _, ok := parameters["resolution"]; ok {
+		t.Fatalf(
+			"expected job-only dimensions to be ignored, got resolution %#v",
+			parameters["resolution"],
+		)
+	}
+}
+
+func TestAdaptorConvertRequestAliVideoGenerationIgnoresVideosSeconds(t *testing.T) {
+	adaptor := &Adaptor{}
+	m := meta.NewMeta(nil, mode.VideoGenerationsJobs, "wan2.7-i2v", coremodel.ModelConfig{})
+	m.ActualModel = "wan2.7-i2v"
+
+	body := `{
+		"model":"wan2.7-i2v",
+		"prompt":"Animate this reference",
+		"seconds":4,
+		"input_reference":"https://example.com/openai-reference.png"
+	}`
+
+	req, err := http.NewRequestWithContext(
+		context.Background(),
+		http.MethodPost,
+		"/v1/video/generations/jobs",
+		strings.NewReader(body),
+	)
+	if err != nil {
+		t.Fatalf("NewRequest returned error: %v", err)
+	}
+
+	result, err := adaptor.ConvertRequest(m, nil, req)
+	if err != nil {
+		t.Fatalf("ConvertRequest returned error: %v", err)
+	}
+
+	payload := readJSONMap(t, result.Body)
+	parameters, _ := payload["parameters"].(map[string]any)
+
+	if _, ok := parameters["duration"]; ok {
+		t.Fatalf(
+			"expected videos seconds field to be ignored for jobs, got %#v",
+			parameters["duration"],
+		)
 	}
 }
 

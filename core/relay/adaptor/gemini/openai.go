@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -21,6 +22,7 @@ import (
 	"github.com/labring/aiproxy/core/relay/adaptor"
 	"github.com/labring/aiproxy/core/relay/adaptor/openai"
 	"github.com/labring/aiproxy/core/relay/meta"
+	"github.com/labring/aiproxy/core/relay/mode"
 	relaymodel "github.com/labring/aiproxy/core/relay/model"
 	"github.com/labring/aiproxy/core/relay/render"
 	"github.com/labring/aiproxy/core/relay/utils"
@@ -110,11 +112,35 @@ func resolveGeminiFeatureModel(meta *meta.Meta) string {
 }
 
 func isGeminiImageModel(meta *meta.Meta) bool {
+	return isGeminiImageMeta(meta)
+}
+
+func isGeminiImageMeta(meta *meta.Meta) bool {
+	if meta != nil && meta.ModelConfig.Type == mode.GeminiImage {
+		return true
+	}
+
 	return strings.Contains(strings.ToLower(resolveGeminiFeatureModel(meta)), "image")
 }
 
+func IsImageMetaForAdaptor(meta *meta.Meta) bool {
+	return isGeminiImageMeta(meta)
+}
+
 func isGeminiTTSModel(meta *meta.Meta) bool {
+	return isGeminiTTSMeta(meta)
+}
+
+func isGeminiTTSMeta(meta *meta.Meta) bool {
+	if meta != nil && meta.ModelConfig.Type == mode.GeminiTTS {
+		return true
+	}
+
 	return strings.Contains(strings.ToLower(resolveGeminiFeatureModel(meta)), "tts")
+}
+
+func IsTTSMetaForAdaptor(meta *meta.Meta) bool {
+	return isGeminiTTSMeta(meta)
 }
 
 func autoImageURLToBase64Disabled(meta *meta.Meta, cfg Config) bool {
@@ -250,6 +276,10 @@ func buildGeminiSpeechConfig(audio *relaymodel.Audio) *relaymodel.GeminiSpeechCo
 			},
 		},
 	}
+}
+
+func buildTTSSpeechConfig(voice string) *relaymodel.GeminiSpeechConfig {
+	return buildGeminiSpeechConfig(&relaymodel.Audio{Voice: voice})
 }
 
 func buildTools(textRequest *relaymodel.GeneralOpenAIRequest) []relaymodel.GeminiChatTools {
@@ -1060,6 +1090,136 @@ func convertRequest(
 		},
 		Body: bytes.NewReader(data),
 	}, nil
+}
+
+func ConvertTTSRequest(meta *meta.Meta, req *http.Request) (adaptor.ConvertResult, error) {
+	request, err := utils.UnmarshalTTSRequest(req)
+	if err != nil {
+		return adaptor.ConvertResult{}, err
+	}
+
+	if meta != nil {
+		meta.Set("stream_format", request.StreamFormat)
+	}
+
+	geminiRequest := relaymodel.GeminiChatRequest{
+		Contents: []*relaymodel.GeminiChatContent{
+			{
+				Role: relaymodel.GeminiRoleUser,
+				Parts: []*relaymodel.GeminiPart{
+					{Text: request.Input},
+				},
+			},
+		},
+		GenerationConfig: &relaymodel.GeminiChatGenerationConfig{
+			ResponseModalities: []string{relaymodel.GeminiModalityAudio},
+			SpeechConfig:       buildTTSSpeechConfig(request.Voice),
+		},
+	}
+
+	data, err := sonic.Marshal(geminiRequest)
+	if err != nil {
+		return adaptor.ConvertResult{}, err
+	}
+
+	return adaptor.ConvertResult{
+		Header: http.Header{
+			"Content-Type":   {"application/json"},
+			"Content-Length": {strconv.Itoa(len(data))},
+		},
+		Body: bytes.NewReader(data),
+	}, nil
+}
+
+func TTSHandler(
+	meta *meta.Meta,
+	c *gin.Context,
+	resp *http.Response,
+) (adaptor.DoResponseResult, adaptor.Error) {
+	if resp.StatusCode != http.StatusOK {
+		return adaptor.DoResponseResult{}, ErrorHandler(resp)
+	}
+
+	defer resp.Body.Close()
+
+	var geminiResponse relaymodel.GeminiChatResponse
+	if err := sonic.ConfigDefault.NewDecoder(resp.Body).Decode(&geminiResponse); err != nil {
+		return adaptor.DoResponseResult{}, relaymodel.WrapperOpenAIError(
+			err,
+			"unmarshal_response_body_failed",
+			http.StatusInternalServerError,
+		)
+	}
+
+	var (
+		audioData string
+		mimeType  string
+	)
+
+	for _, candidate := range geminiResponse.Candidates {
+		for _, part := range candidate.Content.Parts {
+			if part.InlineData == nil || !strings.HasPrefix(part.InlineData.MimeType, "audio/") {
+				continue
+			}
+
+			audioData = part.InlineData.Data
+			mimeType = part.InlineData.MimeType
+
+			break
+		}
+
+		if audioData != "" {
+			break
+		}
+	}
+
+	usage := relaymodel.TextToSpeechUsage{
+		InputTokens: int64(meta.RequestUsage.InputTokens),
+		TotalTokens: int64(meta.RequestUsage.InputTokens),
+	}
+	if geminiResponse.UsageMetadata != nil {
+		modelUsage := geminiResponse.UsageMetadata.ToModelUsage()
+		usage.InputTokens = int64(modelUsage.InputTokens)
+		usage.OutputTokens = int64(modelUsage.AudioOutputTokens)
+
+		if usage.OutputTokens == 0 {
+			usage.OutputTokens = int64(modelUsage.OutputTokens)
+		}
+
+		usage.TotalTokens = int64(modelUsage.TotalTokens)
+	}
+
+	if audioData == "" {
+		return adaptor.DoResponseResult{Usage: usage.ToModelUsage()},
+			relaymodel.WrapperOpenAIErrorWithMessage(
+				"gemini tts response audio is empty",
+				"empty_audio",
+				http.StatusInternalServerError,
+			)
+	}
+
+	if meta.GetString("stream_format") == "sse" {
+		render.OpenaiAudioData(c, audioData)
+		render.OpenaiAudioDone(c, usage)
+		render.OpenaiDone(c)
+
+		return adaptor.DoResponseResult{Usage: usage.ToModelUsage()}, nil
+	}
+
+	audioBytes, err := base64.StdEncoding.DecodeString(audioData)
+	if err != nil {
+		return adaptor.DoResponseResult{Usage: usage.ToModelUsage()}, relaymodel.WrapperOpenAIError(
+			err,
+			"decode_audio_failed",
+			http.StatusInternalServerError,
+		)
+	}
+
+	c.Writer.Header().Set("Content-Type", firstNonEmpty(mimeType, "audio/wav"))
+	c.Writer.Header().Set("Content-Length", strconv.Itoa(len(audioBytes)))
+	_, _ = io.Copy(c.Writer, bytes.NewReader(audioBytes))
+
+	return adaptor.DoResponseResult{Usage: usage.ToModelUsage()}, nil
 }
 
 // Type aliases for usage-related types to use unified definitions from relaymodel
