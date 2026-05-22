@@ -117,6 +117,8 @@ definitions:
         type: boolean
       max_image_generation_count:
         type: integer
+      max_video_generation_count:
+        type: integer
       max_video_generation_seconds:
         type: integer
       model:
@@ -268,6 +270,8 @@ definitions:
           type: string
         type: array
       max_image_generation_count:
+        type: integer
+      max_video_generation_count:
         type: integer
       max_video_generation_seconds:
         type: integer
@@ -701,6 +705,8 @@ definitions:
         type: boolean
       max_image_generation_count:
         type: integer
+      max_video_generation_count:
+        type: integer
       max_video_generation_seconds:
         type: integer
       model:
@@ -710,6 +716,8 @@ definitions:
       override_limit:
         type: boolean
       override_max_image_generation_count:
+        type: boolean
+      override_max_video_generation_count:
         type: boolean
       override_max_video_generation_seconds:
         type: boolean
@@ -758,6 +766,8 @@ definitions:
       force_save_detail:
         type: boolean
       max_image_generation_count:
+        type: integer
+      max_video_generation_count:
         type: integer
       max_video_generation_seconds:
         type: integer
@@ -1149,6 +1159,10 @@ definitions:
     - 24
     - 25
     - 26
+    - 27
+    - 28
+    - 29
+    - 30
     type: integer
     x-enum-varnames:
     - Unknown
@@ -1178,6 +1192,10 @@ definitions:
     - VideosContent
     - VideosDelete
     - VideosRemix
+    - GeminiVideo
+    - GeminiVideoOperations
+    - GeminiTTS
+    - GeminiImage
   model.Amount:
     properties:
       audio_input_amount:
@@ -1224,6 +1242,13 @@ definitions:
     - AsyncUsageStatusPending
     - AsyncUsageStatusCompleted
     - AsyncUsageStatusFailed
+  model.Audio:
+    properties:
+      format:
+        type: string
+      voice:
+        type: string
+    type: object
   model.Channel:
     properties:
       balance:
@@ -1468,6 +1493,8 @@ definitions:
         $ref: '#/definitions/model.SummaryDataSet'
       status_2xx_count:
         type: integer
+      status_5xx_count:
+        type: integer
       status_400_count:
         type: integer
       status_429_count:
@@ -1475,8 +1502,6 @@ definitions:
       status_4xx_count:
         type: integer
       status_500_count:
-        type: integer
-      status_5xx_count:
         type: integer
       status_other_count:
         type: integer
@@ -1675,8 +1700,6 @@ definitions:
         $ref: '#/definitions/model.SummaryDataSet'
       status_2xx_count:
         type: integer
-      status_400_count:
-        type: integer
       status_429_count:
         type: integer
       status_4xx_count:
@@ -1684,6 +1707,8 @@ definitions:
       status_500_count:
         type: integer
       status_5xx_count:
+        type: integer
+      status_400_count:
         type: integer
       status_other_count:
         type: integer
@@ -1817,6 +1842,8 @@ definitions:
     type: object
   model.GeneralOpenAIRequest:
     properties:
+      audio:
+        $ref: '#/definitions/model.Audio'
       enable_thinking:
         type: boolean
       frequency_penalty:
@@ -2132,6 +2159,8 @@ definitions:
         type: string
       max_image_generation_count:
         type: integer
+      max_video_generation_count:
+        type: integer
       max_video_generation_seconds:
         type: integer
       model:
@@ -2141,6 +2170,8 @@ definitions:
       override_limit:
         type: boolean
       override_max_image_generation_count:
+        type: boolean
+      override_max_video_generation_count:
         type: boolean
       override_max_video_generation_seconds:
         type: boolean
@@ -2219,6 +2250,8 @@ definitions:
       output_format:
         description: png, jpeg, webp
         type: string
+      partial_images:
+        type: integer
       prompt:
         type: string
       quality:
@@ -2231,6 +2264,8 @@ definitions:
         description: 1024x1024, 1536x1024, 1024x1536, auto, 256x256, 512x512, 1792x1024,
           1024x1792
         type: string
+      stream:
+        type: boolean
       style:
         description: vivid, natural
         type: string
@@ -2444,6 +2479,8 @@ definitions:
     type: object
   model.Message:
     properties:
+      audio:
+        $ref: '#/definitions/model.OutputAudio'
       content: {}
       name:
         type: string
@@ -2472,6 +2509,8 @@ definitions:
       force_save_detail:
         type: boolean
       max_image_generation_count:
+        type: integer
+      max_video_generation_count:
         type: integer
       max_video_generation_seconds:
         type: integer
@@ -2582,6 +2621,17 @@ definitions:
       key:
         type: string
       value:
+        type: string
+    type: object
+  model.OutputAudio:
+    properties:
+      data:
+        type: string
+      expires_at:
+        type: integer
+      id:
+        type: string
+      transcript:
         type: string
     type: object
   model.OutputContent:
@@ -2701,11 +2751,15 @@ definitions:
       output_token_min:
         type: integer
       quality:
-        type: string
+        items:
+          type: string
+        type: array
       service_tier:
         type: string
-      size:
-        type: string
+      resolution:
+        items:
+          type: string
+        type: array
       start_time:
         description: Unix timestamp, 0 means no start limit
         type: integer
@@ -3164,15 +3218,15 @@ definitions:
         type: integer
       status_2xx_count:
         type: integer
+      status_4xx_count:
+        type: integer
+      status_500_count:
+        type: integer
       status_5xx_count:
         type: integer
       status_400_count:
         type: integer
       status_429_count:
-        type: integer
-      status_4xx_count:
-        type: integer
-      status_500_count:
         type: integer
       status_other_count:
         type: integer
@@ -3459,7 +3513,7 @@ definitions:
     properties:
       quality:
         type: string
-      size:
+      resolution:
         type: string
     type: object
   model.Video:
@@ -3531,6 +3585,8 @@ definitions:
         type: integer
       prompt:
         type: string
+      seconds:
+        type: integer
       size:
         type: string
       width:
@@ -3567,18 +3623,6 @@ definitions:
       width:
         type: integer
     type: object
-  model.VideoRequest:
-    properties:
-      input_reference:
-        type: string
-      model:
-        type: string
-      prompt:
-        type: string
-      seconds: {}
-      size:
-        type: string
-    type: object
   model.VideoStatus:
     enum:
     - queued
@@ -3595,6 +3639,30 @@ definitions:
     - VideoStatusSucceeded
     - VideoStatusFailed
     - VideoStatusCancelled
+  model.VideosRemixRequest:
+    properties:
+      input_reference:
+        type: string
+      model:
+        type: string
+      prompt:
+        type: string
+      seconds: {}
+      size:
+        type: string
+    type: object
+  model.VideosRequest:
+    properties:
+      input_reference:
+        type: string
+      model:
+        type: string
+      prompt:
+        type: string
+      seconds: {}
+      size:
+        type: string
+    type: object
   openai.SubscriptionResponse:
     properties:
       access_until:
@@ -3623,6 +3691,111 @@ info:
   title: AI Proxy Swagger API
   version: "1.0"
 paths:
+  /{version}/models/{model}:
+    post:
+      description: Gemini Native API
+      parameters:
+      - description: API Version (v1 or v1beta)
+        in: path
+        name: version
+        required: true
+        type: string
+      - description: Model name with action (e.g., gemini-2.0-flash:generateContent)
+        in: path
+        name: model
+        required: true
+        type: string
+      - description: Request
+        in: body
+        name: request
+        required: true
+        schema:
+          type: object
+      - description: Optional Aiproxy-Channel header
+        in: header
+        name: Aiproxy-Channel
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-RateLimit-Limit-Requests:
+              description: X-RateLimit-Limit-Requests
+              type: integer
+            X-RateLimit-Limit-Tokens:
+              description: X-RateLimit-Limit-Tokens
+              type: integer
+            X-RateLimit-Remaining-Requests:
+              description: X-RateLimit-Remaining-Requests
+              type: integer
+            X-RateLimit-Remaining-Tokens:
+              description: X-RateLimit-Remaining-Tokens
+              type: integer
+            X-RateLimit-Reset-Requests:
+              description: X-RateLimit-Reset-Requests
+              type: string
+            X-RateLimit-Reset-Tokens:
+              description: X-RateLimit-Reset-Tokens
+              type: string
+          schema:
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Gemini Native API
+      tags:
+      - relay
+  /{version}/operations/{operation_id}:
+    get:
+      description: Get a Gemini long-running operation, including Gemini video generation
+        operations.
+      parameters:
+      - description: API Version (v1 or v1beta)
+        in: path
+        name: version
+        required: true
+        type: string
+      - description: Operation ID
+        in: path
+        name: operation_id
+        required: true
+        type: string
+      - description: Optional Aiproxy-Channel header
+        in: header
+        name: Aiproxy-Channel
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-RateLimit-Limit-Requests:
+              description: X-RateLimit-Limit-Requests
+              type: integer
+            X-RateLimit-Limit-Tokens:
+              description: X-RateLimit-Limit-Tokens
+              type: integer
+            X-RateLimit-Remaining-Requests:
+              description: X-RateLimit-Remaining-Requests
+              type: integer
+            X-RateLimit-Remaining-Tokens:
+              description: X-RateLimit-Remaining-Tokens
+              type: integer
+            X-RateLimit-Reset-Requests:
+              description: X-RateLimit-Reset-Requests
+              type: string
+            X-RateLimit-Reset-Tokens:
+              description: X-RateLimit-Reset-Tokens
+              type: string
+          schema:
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Gemini Operation API
+      tags:
+      - relay
   /api/channel/:
     post:
       consumes:
@@ -9435,7 +9608,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/model.VideoRequest'
+          $ref: '#/definitions/model.VideosRequest'
       - description: Optional Aiproxy-Channel header
         in: header
         name: Aiproxy-Channel
@@ -9557,7 +9730,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/model.VideoRequest'
+          $ref: '#/definitions/model.VideosRemixRequest'
       - description: Optional Aiproxy-Channel header
         in: header
         name: Aiproxy-Channel

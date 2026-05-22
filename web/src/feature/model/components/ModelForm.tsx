@@ -40,6 +40,7 @@ import {
     STREAM_TIMEOUT_SUPPORTED_MODEL_TYPES,
     IMAGE_GENERATION_COUNT_LIMIT_SUPPORTED_MODEL_TYPES,
     VIDEO_GENERATION_SECONDS_LIMIT_SUPPORTED_MODEL_TYPES,
+    VIDEO_GENERATION_COUNT_LIMIT_SUPPORTED_MODEL_TYPES,
 } from '@/types/model'
 import { AdvancedErrorDisplay } from '@/components/common/error/errorDisplay'
 import { AnimatedButton } from '@/components/ui/animation/components/animated-button'
@@ -86,6 +87,7 @@ const MANAGED_MODEL_KEYS = new Set([
     'force_save_detail',
     'max_image_generation_count',
     'max_video_generation_seconds',
+    'max_video_generation_count',
     'request_body_storage_max_size',
     'response_body_storage_max_size',
     'summary_service_tier',
@@ -137,13 +139,14 @@ const KNOWN_CONFIG_KEYS = new Set([
     'limited_time_free',
     'support_formats',
     'support_voices',
-    'image_sizes',
-    'video_sizes',
+    'image_resolutions',
+    'video_resolutions',
 ])
 
 const STREAM_TIMEOUT_SUPPORTED_TYPES = new Set<number>(STREAM_TIMEOUT_SUPPORTED_MODEL_TYPES)
 const IMAGE_GENERATION_COUNT_LIMIT_SUPPORTED_TYPES = new Set<number>(IMAGE_GENERATION_COUNT_LIMIT_SUPPORTED_MODEL_TYPES)
 const VIDEO_GENERATION_SECONDS_LIMIT_SUPPORTED_TYPES = new Set<number>(VIDEO_GENERATION_SECONDS_LIMIT_SUPPORTED_MODEL_TYPES)
+const VIDEO_GENERATION_COUNT_LIMIT_SUPPORTED_TYPES = new Set<number>(VIDEO_GENERATION_COUNT_LIMIT_SUPPORTED_MODEL_TYPES)
 
 const omitKeys = (obj: object, keys: string[]) => {
     const omitted = new Set(keys)
@@ -169,6 +172,7 @@ interface ModelFormProps {
         force_save_detail?: boolean
         max_image_generation_count?: number
         max_video_generation_seconds?: number
+        max_video_generation_count?: number
         request_body_storage_max_size?: number
         response_body_storage_max_size?: number
         summary_service_tier?: boolean
@@ -239,8 +243,8 @@ export function ModelForm({
                 limited_time_free: defaultValues.config?.limited_time_free ?? false,
                 support_formats: defaultValues.config?.support_formats,
                 support_voices: defaultValues.config?.support_voices,
-                image_sizes: defaultValues.config?.image_sizes,
-                video_sizes: defaultValues.config?.video_sizes,
+                image_resolutions: defaultValues.config?.image_resolutions,
+                video_resolutions: defaultValues.config?.video_resolutions,
             },
             owner: defaultValues.owner ?? '',
             type: defaultValues.type || 1,
@@ -252,6 +256,7 @@ export function ModelForm({
             force_save_detail: defaultValues.force_save_detail ?? false,
             max_image_generation_count: defaultValues.max_image_generation_count,
             max_video_generation_seconds: defaultValues.max_video_generation_seconds,
+            max_video_generation_count: defaultValues.max_video_generation_count,
             request_body_storage_max_size: defaultValues.request_body_storage_max_size,
             response_body_storage_max_size: defaultValues.response_body_storage_max_size,
             summary_service_tier: defaultValues.summary_service_tier ?? false,
@@ -276,11 +281,12 @@ export function ModelForm({
 
     const supportFormatsValue = form.watch('config.support_formats')
     const supportVoicesValue = form.watch('config.support_voices')
-    const imageSizesValue = form.watch('config.image_sizes')
-    const videoSizesValue = form.watch('config.video_sizes')
+    const imageResolutionsValue = form.watch('config.image_resolutions')
+    const videoResolutionsValue = form.watch('config.video_resolutions')
     const supportStreamTimeout = STREAM_TIMEOUT_SUPPORTED_TYPES.has(watchedType)
     const supportImageGenerationCountLimit = IMAGE_GENERATION_COUNT_LIMIT_SUPPORTED_TYPES.has(watchedType)
     const supportVideoGenerationSecondsLimit = VIDEO_GENERATION_SECONDS_LIMIT_SUPPORTED_TYPES.has(watchedType)
+    const supportVideoGenerationCountLimit = VIDEO_GENERATION_COUNT_LIMIT_SUPPORTED_TYPES.has(watchedType)
 
     const configFieldVisibility = (() => {
         switch (watchedType) {
@@ -293,8 +299,8 @@ export function ModelForm({
                     showLimitedTimeFree: true,
                     showSupportFormats: true,
                     showSupportVoices: true,
-                    showImageSizes: false,
-                    showVideoSizes: false,
+                    showImageResolutions: false,
+                    showVideoResolutions: false,
                 }
             case 8:
                 return {
@@ -305,8 +311,8 @@ export function ModelForm({
                     showLimitedTimeFree: true,
                     showSupportFormats: true,
                     showSupportVoices: false,
-                    showImageSizes: false,
-                    showVideoSizes: false,
+                    showImageResolutions: false,
+                    showVideoResolutions: false,
                 }
             case 3:
             case 10:
@@ -319,8 +325,8 @@ export function ModelForm({
                     showLimitedTimeFree: true,
                     showSupportFormats: false,
                     showSupportVoices: false,
-                    showImageSizes: false,
-                    showVideoSizes: false,
+                    showImageResolutions: false,
+                    showVideoResolutions: false,
                 }
             case 5:
             case 9:
@@ -332,12 +338,13 @@ export function ModelForm({
                     showLimitedTimeFree: true,
                     showSupportFormats: true,
                     showSupportVoices: false,
-                    showImageSizes: true,
-                    showVideoSizes: false,
+                    showImageResolutions: true,
+                    showVideoResolutions: false,
                 }
             case 13:
             case 22:
             case 26:
+            case 27:
                 return {
                     tokenFields: ['max_input_tokens', 'max_output_tokens', 'max_context_tokens'] as Array<'max_input_tokens' | 'max_output_tokens' | 'max_context_tokens'>,
                     showToolChoice: false,
@@ -346,8 +353,8 @@ export function ModelForm({
                     showLimitedTimeFree: true,
                     showSupportFormats: false,
                     showSupportVoices: false,
-                    showImageSizes: false,
-                    showVideoSizes: true,
+                    showImageResolutions: false,
+                    showVideoResolutions: true,
                 }
             case 21:
                 return {
@@ -358,8 +365,8 @@ export function ModelForm({
                     showLimitedTimeFree: true,
                     showSupportFormats: false,
                     showSupportVoices: false,
-                    showImageSizes: false,
-                    showVideoSizes: false,
+                    showImageResolutions: false,
+                    showVideoResolutions: false,
                 }
             case 1:
             case 2:
@@ -374,8 +381,8 @@ export function ModelForm({
                     showLimitedTimeFree: true,
                     showSupportFormats: false,
                     showSupportVoices: false,
-                    showImageSizes: false,
-                    showVideoSizes: false,
+                    showImageResolutions: false,
+                    showVideoResolutions: false,
                 }
         }
     })()
@@ -782,6 +789,9 @@ export function ModelForm({
             ...(supportVideoGenerationSecondsLimit && data.max_video_generation_seconds !== undefined && {
                 max_video_generation_seconds: Number(data.max_video_generation_seconds),
             }),
+            ...(supportVideoGenerationCountLimit && data.max_video_generation_count !== undefined && {
+                max_video_generation_count: Number(data.max_video_generation_count),
+            }),
             ...(data.request_body_storage_max_size !== undefined && {
                 request_body_storage_max_size: Number(data.request_body_storage_max_size),
             }),
@@ -811,6 +821,9 @@ export function ModelForm({
                 }),
                 ...(supportVideoGenerationSecondsLimit && data.max_video_generation_seconds !== undefined && {
                     max_video_generation_seconds: Number(data.max_video_generation_seconds),
+                }),
+                ...(supportVideoGenerationCountLimit && data.max_video_generation_count !== undefined && {
+                    max_video_generation_count: Number(data.max_video_generation_count),
                 }),
                 ...(data.request_body_storage_max_size !== undefined && {
                     request_body_storage_max_size: Number(data.request_body_storage_max_size),
@@ -1068,28 +1081,28 @@ export function ModelForm({
                                     </FormItem>
                                 )}
                             />
-                            {configFieldVisibility.showImageSizes && (
+                            {configFieldVisibility.showImageResolutions && (
                                 <FormField
                                     control={form.control}
-                                    name="config.image_sizes"
+                                    name="config.image_resolutions"
                                     render={() => (
                                         <FormItem>
-                                            <FormLabel>{t("model.dialog.config.imageSizes")}</FormLabel>
+                                            <FormLabel>{t("model.dialog.config.imageResolutions")}</FormLabel>
                                             <FormControl>
                                                 <Textarea
-                                                    placeholder={t("model.dialog.config.imageSizesPlaceholder")}
-                                                    value={(imageSizesValue || []).join('\n')}
+                                                    placeholder={t("model.dialog.config.imageResolutionsPlaceholder")}
+                                                    value={(imageResolutionsValue || []).join('\n')}
                                                     onChange={(e) => {
                                                         const values = e.target.value
                                                             .split('\n')
                                                             .map((item) => item.trim())
                                                             .filter(Boolean)
-                                                        form.setValue('config.image_sizes', values.length > 0 ? values : undefined, { shouldDirty: true })
+                                                        form.setValue('config.image_resolutions', values.length > 0 ? values : undefined, { shouldDirty: true })
                                                     }}
                                                     className="min-h-[96px]"
                                                 />
                                             </FormControl>
-                                            <FormDescription>{t("model.dialog.config.imageSizesDescription")}</FormDescription>
+                                            <FormDescription>{t("model.dialog.config.imageResolutionsDescription")}</FormDescription>
                                             <FormMessage />
                                         </FormItem>
                                     )}
@@ -1120,34 +1133,57 @@ export function ModelForm({
                                     </FormItem>
                                 )}
                             />
-                            {configFieldVisibility.showVideoSizes && (
+                            {configFieldVisibility.showVideoResolutions && (
                                 <FormField
                                     control={form.control}
-                                    name="config.video_sizes"
+                                    name="config.video_resolutions"
                                     render={() => (
                                         <FormItem>
-                                            <FormLabel>{t("model.dialog.config.videoSizes")}</FormLabel>
+                                            <FormLabel>{t("model.dialog.config.videoResolutions")}</FormLabel>
                                             <FormControl>
                                                 <Textarea
-                                                    placeholder={t("model.dialog.config.videoSizesPlaceholder")}
-                                                    value={(videoSizesValue || []).join('\n')}
+                                                    placeholder={t("model.dialog.config.videoResolutionsPlaceholder")}
+                                                    value={(videoResolutionsValue || []).join('\n')}
                                                     onChange={(e) => {
                                                         const values = e.target.value
                                                             .split('\n')
                                                             .map((item) => item.trim())
                                                             .filter(Boolean)
-                                                        form.setValue('config.video_sizes', values.length > 0 ? values : undefined, { shouldDirty: true })
+                                                        form.setValue('config.video_resolutions', values.length > 0 ? values : undefined, { shouldDirty: true })
                                                     }}
                                                     className="min-h-[96px]"
                                                 />
                                             </FormControl>
-                                            <FormDescription>{t("model.dialog.config.videoSizesDescription")}</FormDescription>
+                                            <FormDescription>{t("model.dialog.config.videoResolutionsDescription")}</FormDescription>
                                             <FormMessage />
                                         </FormItem>
                                     )}
                                 />
                             )}
                         </div>
+                    )}
+
+                    {supportVideoGenerationCountLimit && (
+                        <FormField
+                            control={form.control}
+                            name="max_video_generation_count"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>{t("model.dialog.maxVideoGenerationCount")}</FormLabel>
+                                    <FormControl>
+                                        <Input
+                                            type="number"
+                                            min={0}
+                                            placeholder={t("model.dialog.maxVideoGenerationCountPlaceholder")}
+                                            {...field}
+                                            onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : 0)}
+                                        />
+                                    </FormControl>
+                                    <FormDescription>{t("model.dialog.maxVideoGenerationCountDescription")}</FormDescription>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
                     )}
 
                     {/* Force Save Detail Switch */}

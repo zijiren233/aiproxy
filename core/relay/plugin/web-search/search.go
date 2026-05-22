@@ -509,7 +509,7 @@ func (p *WebSearch) generateSearchContexts(
 	setRewriteUsage(m, result.Usage)
 
 	// Extract content from response
-	contentNode, err := sonic.Get(w.Body.Bytes(), "choices", 0, "message", "content")
+	contentNode, err := common.GetJSONNodeNoCopy(w.Body.Bytes(), "choices", 0, "message", "content")
 	if err != nil {
 		return nil, err
 	}
@@ -699,7 +699,7 @@ func (rw *responseWriter) Write(b []byte) (int, error) {
 		rw.isStream = true
 	}
 
-	node, err := sonic.GetWithOptions(b, ast.SearchOptions{})
+	node, err := common.GetJSONNodeNoCopy(b)
 	if err != nil || !node.Valid() {
 		return rw.ResponseWriter.Write(b)
 	}

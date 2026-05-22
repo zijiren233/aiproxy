@@ -14,6 +14,7 @@ func TestNeedRecordConsumeSkipsSuccessfulStoredVideoReads(t *testing.T) {
 		mode.VideosGet,
 		mode.VideosContent,
 		mode.VideosDelete,
+		mode.GeminiVideoOperations,
 	}
 
 	for _, relayMode := range tests {

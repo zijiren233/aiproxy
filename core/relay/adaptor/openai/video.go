@@ -17,16 +17,36 @@ import (
 	"github.com/labring/aiproxy/core/model"
 	"github.com/labring/aiproxy/core/relay/adaptor"
 	"github.com/labring/aiproxy/core/relay/meta"
-	"github.com/labring/aiproxy/core/relay/mode"
 	relaymodel "github.com/labring/aiproxy/core/relay/model"
 )
 
-func ConvertVideoRequest(
+func ConvertVideoGenerationJobRequest(
+	meta *meta.Meta,
+	req *http.Request,
+) (adaptor.ConvertResult, error) {
+	return convertOpenAIVideoRequest(meta, req)
+}
+
+func ConvertVideosRequest(
+	meta *meta.Meta,
+	req *http.Request,
+) (adaptor.ConvertResult, error) {
+	return convertOpenAIVideoRequest(meta, req)
+}
+
+func ConvertVideosRemixRequest(
+	meta *meta.Meta,
+	req *http.Request,
+) (adaptor.ConvertResult, error) {
+	return convertOpenAIVideoRequest(meta, req)
+}
+
+func convertOpenAIVideoRequest(
 	meta *meta.Meta,
 	req *http.Request,
 ) (adaptor.ConvertResult, error) {
 	if strings.HasPrefix(req.Header.Get("Content-Type"), "multipart/form-data") {
-		return ConvertMultipartVideoRequest(meta, req)
+		return convertMultipartOpenAIVideoRequest(meta, req)
 	}
 
 	node, err := common.UnmarshalRequest2NodeReusable(req)
@@ -53,7 +73,7 @@ func ConvertVideoRequest(
 	}, nil
 }
 
-func ConvertMultipartVideoRequest(
+func convertMultipartOpenAIVideoRequest(
 	meta *meta.Meta,
 	request *http.Request,
 ) (adaptor.ConvertResult, error) {
@@ -105,6 +125,17 @@ func ConvertVideoNoBodyRequest(
 	return adaptor.ConvertResult{}, nil
 }
 
+func ConvertVideosGetRequest(meta *meta.Meta, req *http.Request) (adaptor.ConvertResult, error) {
+	return ConvertVideoNoBodyRequest(meta, req)
+}
+
+func ConvertVideosContentRequest(
+	meta *meta.Meta,
+	req *http.Request,
+) (adaptor.ConvertResult, error) {
+	return ConvertVideoNoBodyRequest(meta, req)
+}
+
 func VideoHandler(
 	meta *meta.Meta,
 	store adaptor.Store,
@@ -126,7 +157,7 @@ func VideoHandler(
 		)
 	}
 
-	idNode, err := sonic.GetWithOptions(responseBody, ast.SearchOptions{}, "id")
+	idNode, err := common.GetJSONNodeNoCopy(responseBody, "id")
 	if err != nil {
 		return adaptor.DoResponseResult{}, relaymodel.WrapperOpenAIVideoError(
 			err,
@@ -171,6 +202,24 @@ func VideosHandler(
 	c *gin.Context,
 	resp *http.Response,
 ) (adaptor.DoResponseResult, adaptor.Error) {
+	return videosHandler(meta, store, c, resp)
+}
+
+func VideosRemixHandler(
+	meta *meta.Meta,
+	store adaptor.Store,
+	c *gin.Context,
+	resp *http.Response,
+) (adaptor.DoResponseResult, adaptor.Error) {
+	return videosHandler(meta, store, c, resp)
+}
+
+func videosHandler(
+	meta *meta.Meta,
+	store adaptor.Store,
+	c *gin.Context,
+	resp *http.Response,
+) (adaptor.DoResponseResult, adaptor.Error) {
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
 		return adaptor.DoResponseResult{}, VideoErrorHanlder(resp)
 	}
@@ -185,7 +234,7 @@ func VideosHandler(
 		)
 	}
 
-	idNode, err := sonic.GetWithOptions(responseBody, ast.SearchOptions{}, "id")
+	idNode, err := common.GetJSONNodeNoCopy(responseBody, "id")
 	if err != nil {
 		return adaptor.DoResponseResult{}, relaymodel.WrapperOpenAIVideoError(
 			err,
@@ -251,7 +300,7 @@ func VideoGetJobsHandler(
 		)
 	}
 
-	node, err := sonic.Get(responseBody)
+	node, err := common.GetJSONNodeNoCopy(responseBody)
 	if err != nil {
 		return adaptor.DoResponseResult{}, relaymodel.WrapperOpenAIVideoError(
 			err,
@@ -332,8 +381,23 @@ func VideoGetJobsContentHandler(
 	return adaptor.DoResponseResult{}, nil
 }
 
-func VideoObjectHandler(
+func VideosGetHandler(
 	meta *meta.Meta,
+	c *gin.Context,
+	resp *http.Response,
+) (adaptor.DoResponseResult, adaptor.Error) {
+	return videoObjectHandler(c, resp)
+}
+
+func VideosContentHandler(
+	meta *meta.Meta,
+	c *gin.Context,
+	resp *http.Response,
+) (adaptor.DoResponseResult, adaptor.Error) {
+	return videoContentHandler(c, resp)
+}
+
+func videoObjectHandler(
 	c *gin.Context,
 	resp *http.Response,
 ) (adaptor.DoResponseResult, adaptor.Error) {
@@ -342,14 +406,6 @@ func VideoObjectHandler(
 	}
 
 	defer resp.Body.Close()
-
-	if meta.Mode == mode.VideosContent {
-		c.Writer.Header().Set("Content-Type", resp.Header.Get("Content-Type"))
-		c.Writer.Header().Set("Content-Length", resp.Header.Get("Content-Length"))
-		_, _ = io.Copy(c.Writer, resp.Body)
-
-		return adaptor.DoResponseResult{}, nil
-	}
 
 	responseBody, err := common.GetResponseBody(resp)
 	if err != nil {
@@ -365,6 +421,23 @@ func VideoObjectHandler(
 	))
 	c.Writer.Header().Set("Content-Length", strconv.Itoa(len(responseBody)))
 	_, _ = c.Writer.Write(responseBody)
+
+	return adaptor.DoResponseResult{}, nil
+}
+
+func videoContentHandler(
+	c *gin.Context,
+	resp *http.Response,
+) (adaptor.DoResponseResult, adaptor.Error) {
+	if resp.StatusCode != http.StatusOK {
+		return adaptor.DoResponseResult{}, VideoErrorHanlder(resp)
+	}
+
+	defer resp.Body.Close()
+
+	c.Writer.Header().Set("Content-Type", resp.Header.Get("Content-Type"))
+	c.Writer.Header().Set("Content-Length", resp.Header.Get("Content-Length"))
+	_, _ = io.Copy(c.Writer, resp.Body)
 
 	return adaptor.DoResponseResult{}, nil
 }

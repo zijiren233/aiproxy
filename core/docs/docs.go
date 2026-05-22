@@ -9477,7 +9477,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/model.VideoRequest"
+                            "$ref": "#/definitions/model.VideosRequest"
                         }
                     },
                     {
@@ -9667,7 +9667,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/model.VideoRequest"
+                            "$ref": "#/definitions/model.VideosRemixRequest"
                         }
                     },
                     {
@@ -9682,6 +9682,161 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/model.Video"
+                        }
+                    }
+                }
+            }
+        },
+        "/{version}/models/{model}": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Gemini Native API",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "relay"
+                ],
+                "summary": "Gemini Native API",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "API Version (v1 or v1beta)",
+                        "name": "version",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Model name with action (e.g., gemini-2.0-flash:generateContent)",
+                        "name": "model",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    {
+                        "type": "string",
+                        "description": "Optional Aiproxy-Channel header",
+                        "name": "Aiproxy-Channel",
+                        "in": "header"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object"
+                        },
+                        "headers": {
+                            "X-RateLimit-Limit-Requests": {
+                                "type": "integer",
+                                "description": "X-RateLimit-Limit-Requests"
+                            },
+                            "X-RateLimit-Limit-Tokens": {
+                                "type": "integer",
+                                "description": "X-RateLimit-Limit-Tokens"
+                            },
+                            "X-RateLimit-Remaining-Requests": {
+                                "type": "integer",
+                                "description": "X-RateLimit-Remaining-Requests"
+                            },
+                            "X-RateLimit-Remaining-Tokens": {
+                                "type": "integer",
+                                "description": "X-RateLimit-Remaining-Tokens"
+                            },
+                            "X-RateLimit-Reset-Requests": {
+                                "type": "string",
+                                "description": "X-RateLimit-Reset-Requests"
+                            },
+                            "X-RateLimit-Reset-Tokens": {
+                                "type": "string",
+                                "description": "X-RateLimit-Reset-Tokens"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/{version}/operations/{operation_id}": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Get a Gemini long-running operation, including Gemini video generation operations.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "relay"
+                ],
+                "summary": "Gemini Operation API",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "API Version (v1 or v1beta)",
+                        "name": "version",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Operation ID",
+                        "name": "operation_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Optional Aiproxy-Channel header",
+                        "name": "Aiproxy-Channel",
+                        "in": "header"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object"
+                        },
+                        "headers": {
+                            "X-RateLimit-Limit-Requests": {
+                                "type": "integer",
+                                "description": "X-RateLimit-Limit-Requests"
+                            },
+                            "X-RateLimit-Limit-Tokens": {
+                                "type": "integer",
+                                "description": "X-RateLimit-Limit-Tokens"
+                            },
+                            "X-RateLimit-Remaining-Requests": {
+                                "type": "integer",
+                                "description": "X-RateLimit-Remaining-Requests"
+                            },
+                            "X-RateLimit-Remaining-Tokens": {
+                                "type": "integer",
+                                "description": "X-RateLimit-Remaining-Tokens"
+                            },
+                            "X-RateLimit-Reset-Requests": {
+                                "type": "string",
+                                "description": "X-RateLimit-Reset-Requests"
+                            },
+                            "X-RateLimit-Reset-Tokens": {
+                                "type": "string",
+                                "description": "X-RateLimit-Reset-Tokens"
+                            }
                         }
                     }
                 }
@@ -9866,6 +10021,9 @@ const docTemplate = `{
                     "type": "boolean"
                 },
                 "max_image_generation_count": {
+                    "type": "integer"
+                },
+                "max_video_generation_count": {
                     "type": "integer"
                 },
                 "max_video_generation_seconds": {
@@ -10096,6 +10254,9 @@ const docTemplate = `{
                     }
                 },
                 "max_image_generation_count": {
+                    "type": "integer"
+                },
+                "max_video_generation_count": {
                     "type": "integer"
                 },
                 "max_video_generation_seconds": {
@@ -10762,6 +10923,9 @@ const docTemplate = `{
                 "max_image_generation_count": {
                     "type": "integer"
                 },
+                "max_video_generation_count": {
+                    "type": "integer"
+                },
                 "max_video_generation_seconds": {
                     "type": "integer"
                 },
@@ -10775,6 +10939,9 @@ const docTemplate = `{
                     "type": "boolean"
                 },
                 "override_max_image_generation_count": {
+                    "type": "boolean"
+                },
+                "override_max_video_generation_count": {
                     "type": "boolean"
                 },
                 "override_max_video_generation_seconds": {
@@ -10847,6 +11014,9 @@ const docTemplate = `{
                     "type": "boolean"
                 },
                 "max_image_generation_count": {
+                    "type": "integer"
+                },
+                "max_video_generation_count": {
                     "type": "integer"
                 },
                 "max_video_generation_seconds": {
@@ -11404,7 +11574,11 @@ const docTemplate = `{
                 23,
                 24,
                 25,
-                26
+                26,
+                27,
+                28,
+                29,
+                30
             ],
             "x-enum-varnames": [
                 "Unknown",
@@ -11433,7 +11607,11 @@ const docTemplate = `{
                 "VideosGet",
                 "VideosContent",
                 "VideosDelete",
-                "VideosRemix"
+                "VideosRemix",
+                "GeminiVideo",
+                "GeminiVideoOperations",
+                "GeminiTTS",
+                "GeminiImage"
             ]
         },
         "model.Amount": {
@@ -11502,6 +11680,17 @@ const docTemplate = `{
                 "AsyncUsageStatusCompleted",
                 "AsyncUsageStatusFailed"
             ]
+        },
+        "model.Audio": {
+            "type": "object",
+            "properties": {
+                "format": {
+                    "type": "string"
+                },
+                "voice": {
+                    "type": "string"
+                }
+            }
         },
         "model.Channel": {
             "type": "object",
@@ -12350,6 +12539,9 @@ const docTemplate = `{
         "model.GeneralOpenAIRequest": {
             "type": "object",
             "properties": {
+                "audio": {
+                    "$ref": "#/definitions/model.Audio"
+                },
                 "enable_thinking": {
                     "type": "boolean"
                 },
@@ -12821,6 +13013,9 @@ const docTemplate = `{
                 "max_image_generation_count": {
                     "type": "integer"
                 },
+                "max_video_generation_count": {
+                    "type": "integer"
+                },
                 "max_video_generation_seconds": {
                     "type": "integer"
                 },
@@ -12834,6 +13029,9 @@ const docTemplate = `{
                     "type": "boolean"
                 },
                 "override_max_image_generation_count": {
+                    "type": "boolean"
+                },
+                "override_max_video_generation_count": {
                     "type": "boolean"
                 },
                 "override_max_video_generation_seconds": {
@@ -12951,6 +13149,9 @@ const docTemplate = `{
                     "description": "png, jpeg, webp",
                     "type": "string"
                 },
+                "partial_images": {
+                    "type": "integer"
+                },
                 "prompt": {
                     "type": "string"
                 },
@@ -12965,6 +13166,9 @@ const docTemplate = `{
                 "size": {
                     "description": "1024x1024, 1536x1024, 1024x1536, auto, 256x256, 512x512, 1792x1024, 1024x1792",
                     "type": "string"
+                },
+                "stream": {
+                    "type": "boolean"
                 },
                 "style": {
                     "description": "vivid, natural",
@@ -13289,6 +13493,9 @@ const docTemplate = `{
         "model.Message": {
             "type": "object",
             "properties": {
+                "audio": {
+                    "$ref": "#/definitions/model.OutputAudio"
+                },
                 "content": {},
                 "name": {
                     "type": "string"
@@ -13330,6 +13537,9 @@ const docTemplate = `{
                     "type": "boolean"
                 },
                 "max_image_generation_count": {
+                    "type": "integer"
+                },
+                "max_video_generation_count": {
                     "type": "integer"
                 },
                 "max_video_generation_seconds": {
@@ -13463,6 +13673,23 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "value": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.OutputAudio": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "string"
+                },
+                "expires_at": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "transcript": {
                     "type": "string"
                 }
             }
@@ -13638,13 +13865,19 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "quality": {
-                    "type": "string"
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 },
                 "service_tier": {
                     "type": "string"
                 },
-                "size": {
-                    "type": "string"
+                "resolution": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 },
                 "start_time": {
                     "description": "Unix timestamp, 0 means no start limit",
@@ -14781,7 +15014,7 @@ const docTemplate = `{
                 "quality": {
                     "type": "string"
                 },
-                "size": {
+                "resolution": {
                     "type": "string"
                 }
             }
@@ -14890,6 +15123,9 @@ const docTemplate = `{
                 "prompt": {
                     "type": "string"
                 },
+                "seconds": {
+                    "type": "integer"
+                },
                 "size": {
                     "type": "string"
                 },
@@ -14942,24 +15178,6 @@ const docTemplate = `{
                 }
             }
         },
-        "model.VideoRequest": {
-            "type": "object",
-            "properties": {
-                "input_reference": {
-                    "type": "string"
-                },
-                "model": {
-                    "type": "string"
-                },
-                "prompt": {
-                    "type": "string"
-                },
-                "seconds": {},
-                "size": {
-                    "type": "string"
-                }
-            }
-        },
         "model.VideoStatus": {
             "type": "string",
             "enum": [
@@ -14978,6 +15196,42 @@ const docTemplate = `{
                 "VideoStatusFailed",
                 "VideoStatusCancelled"
             ]
+        },
+        "model.VideosRemixRequest": {
+            "type": "object",
+            "properties": {
+                "input_reference": {
+                    "type": "string"
+                },
+                "model": {
+                    "type": "string"
+                },
+                "prompt": {
+                    "type": "string"
+                },
+                "seconds": {},
+                "size": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.VideosRequest": {
+            "type": "object",
+            "properties": {
+                "input_reference": {
+                    "type": "string"
+                },
+                "model": {
+                    "type": "string"
+                },
+                "prompt": {
+                    "type": "string"
+                },
+                "seconds": {},
+                "size": {
+                    "type": "string"
+                }
+            }
         },
         "openai.SubscriptionResponse": {
             "type": "object",

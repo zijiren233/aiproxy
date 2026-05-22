@@ -24,11 +24,27 @@ func SetRelayRouter(router *gin.Engine) {
 	{
 		v1Router.POST(
 			"/models/*model",
-			controller.Gemini()...,
+			controller.GeminiByPath()...,
+		)
+		v1Router.GET(
+			"/operations/*operation_id",
+			controller.GeminiOperation()...,
+		)
+		v1Router.GET(
+			"/models/:model/operations/*operation_id",
+			controller.GeminiOperation()...,
 		)
 		v1betaRouter.POST(
 			"/models/*model",
-			controller.Gemini()...,
+			controller.GeminiByPath()...,
+		)
+		v1betaRouter.GET(
+			"/operations/*operation_id",
+			controller.GeminiOperation()...,
+		)
+		v1betaRouter.GET(
+			"/models/:model/operations/*operation_id",
+			controller.GeminiOperation()...,
 		)
 	}
 

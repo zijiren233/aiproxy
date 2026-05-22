@@ -95,12 +95,20 @@ func Consume(
 		return
 	}
 
-	amountDetail := CalculateAmountDetail(
-		code,
-		usage,
-		usageContext,
-		modelPrice,
-	)
+	recordUsage := usage
+
+	amountDetail := model.Amount{}
+	if asyncUsageStatus == model.AsyncUsageStatusPending {
+		recordUsage = model.Usage{}
+	} else {
+		amountDetail = CalculateAmountDetail(
+			code,
+			recordUsage,
+			usageContext,
+			modelPrice,
+		)
+	}
+
 	if downstreamResult {
 		// TODO: add record actual consume amount
 		_ = consumeAmount(ctx, amountDetail.UsedAmount, postGroupConsumer, meta)
@@ -123,7 +131,7 @@ func Consume(
 		meta,
 		code,
 		firstByteAt,
-		usage,
+		recordUsage,
 		usageContext,
 		selectedModelPrice,
 		content,
@@ -181,6 +189,7 @@ func checkNeedRecordConsume(code int, meta *meta.Meta) bool {
 		mode.VideosGet,
 		mode.VideosContent,
 		mode.VideosDelete,
+		mode.GeminiVideoOperations,
 		mode.ResponsesGet,
 		mode.ResponsesDelete,
 		mode.ResponsesCancel,

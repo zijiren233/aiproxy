@@ -318,6 +318,7 @@ type GroupModel struct {
 
 	MaxImageGenerationCount   int `json:"max_image_generation_count,omitempty"`
 	MaxVideoGenerationSeconds int `json:"max_video_generation_seconds,omitempty"`
+	MaxVideoGenerationCount   int `json:"max_video_generation_count,omitempty"`
 }
 
 func getEnabledPlugins(plugin map[string]map[string]any) []string {
@@ -350,6 +351,7 @@ func NewGroupModel(mc model.ModelConfig) GroupModel {
 
 		MaxImageGenerationCount:   mc.MaxImageGenerationCount,
 		MaxVideoGenerationSeconds: mc.MaxVideoGenerationSeconds,
+		MaxVideoGenerationCount:   mc.MaxVideoGenerationCount,
 	}
 	if !mc.CreatedAt.IsZero() {
 		gm.CreatedAt = mc.CreatedAt.Unix()

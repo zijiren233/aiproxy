@@ -1,8 +1,10 @@
 package gemini
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/core/model"
@@ -31,10 +33,28 @@ func (a *Adaptor) DefaultBaseURL() string {
 func (a *Adaptor) SupportMode(mt *meta.Meta) bool {
 	m := adaptor.ModeFromMeta(mt)
 
+	if m == mode.AudioSpeech {
+		return isGeminiTTSMeta(mt)
+	}
+
+	if m == mode.ImagesGenerations {
+		return isGeminiImageMeta(mt)
+	}
+
 	return m == mode.ChatCompletions ||
 		m == mode.Anthropic ||
 		m == mode.Embeddings ||
-		m == mode.Gemini
+		m == mode.Gemini ||
+		m == mode.GeminiVideo ||
+		m == mode.GeminiVideoOperations ||
+		m == mode.GeminiTTS ||
+		m == mode.GeminiImage ||
+		m == mode.VideoGenerationsJobs ||
+		m == mode.VideoGenerationsGetJobs ||
+		m == mode.VideoGenerationsContent ||
+		m == mode.Videos ||
+		m == mode.VideosGet ||
+		m == mode.VideosContent
 }
 
 var v1ModelMap = map[string]struct{}{}
@@ -75,21 +95,79 @@ func getRequestURL(meta *meta.Meta, action string) adaptor.RequestURL {
 	}
 }
 
+func getOperationRequestURL(meta *meta.Meta, operationName string) (adaptor.RequestURL, error) {
+	if operationName == "" {
+		return adaptor.RequestURL{}, errors.New("operation name is empty")
+	}
+
+	u := meta.Channel.BaseURL
+	if u == "" {
+		u = baseURL
+	}
+
+	version := "v1beta"
+	if _, ok := v1ModelMap[requestVersionModel(meta)]; ok {
+		version = "v1"
+	}
+
+	requestURL, err := url.JoinPath(u, version, operationName)
+	if err != nil {
+		return adaptor.RequestURL{}, err
+	}
+
+	return adaptor.RequestURL{
+		Method: http.MethodGet,
+		URL:    requestURL,
+	}, nil
+}
+
 func (a *Adaptor) GetRequestURL(
 	meta *meta.Meta,
-	_ adaptor.Store,
+	store adaptor.Store,
 	c *gin.Context,
 ) (adaptor.RequestURL, error) {
 	var action string
 	switch meta.Mode {
 	case mode.Embeddings:
 		action = "batchEmbedContents"
+	case mode.GeminiVideo, mode.VideoGenerationsJobs, mode.Videos:
+		action = "predictLongRunning"
+	case mode.GeminiVideoOperations:
+		return getNativeVideoOperationRequestURL(meta, store)
+	case mode.VideoGenerationsGetJobs:
+		operationID, err := ResolveVideoJobOperationID(meta, store, meta.JobID)
+		if err != nil {
+			return adaptor.RequestURL{}, err
+		}
+
+		return getOperationRequestURL(meta, operationID)
+	case mode.VideoGenerationsContent:
+		operationID, err := ResolveVideoGenerationOperationID(meta, store, meta.GenerationID)
+		if err != nil {
+			return adaptor.RequestURL{}, err
+		}
+
+		return getOperationRequestURL(meta, operationID)
+	case mode.VideosGet:
+		operationID, err := ResolveVideoGenerationOperationID(meta, store, meta.VideoID)
+		if err != nil {
+			return adaptor.RequestURL{}, err
+		}
+
+		return getOperationRequestURL(meta, operationID)
+	case mode.VideosContent:
+		operationID, err := ResolveVideoGenerationOperationID(meta, store, meta.VideoID)
+		if err != nil {
+			return adaptor.RequestURL{}, err
+		}
+
+		return getOperationRequestURL(meta, operationID)
 	default:
 		action = "generateContent"
 	}
 
 	if meta.GetBool("stream") ||
-		(meta.Mode == mode.Gemini && utils.IsGeminiStreamRequest(c.Request.URL.Path)) {
+		(meta.Mode == mode.Gemini && c != nil && utils.IsGeminiStreamRequest(c.Request.URL.Path)) {
 		action = "streamGenerateContent?alt=sse"
 	}
 
@@ -120,6 +198,28 @@ func (a *Adaptor) ConvertRequest(
 		return a.convertClaudeRequest(meta, req)
 	case mode.Gemini:
 		return NativeConvertRequest(meta, req)
+	case mode.AudioSpeech:
+		return ConvertTTSRequest(meta, req)
+	case mode.ImagesGenerations:
+		return ConvertImageRequest(meta, req)
+	case mode.GeminiVideo:
+		return NativeVideoConvertRequest(meta, req)
+	case mode.GeminiVideoOperations:
+		return ConvertVideoNoBodyRequest(meta, req)
+	case mode.VideoGenerationsJobs:
+		return ConvertVideoGenerationJobRequest(meta, req)
+	case mode.Videos:
+		return ConvertVideosRequest(meta, req)
+	case mode.VideoGenerationsGetJobs:
+		return ConvertVideoGenerationsGetJobsRequest(meta, req)
+	case mode.VideoGenerationsContent:
+		return ConvertVideoGenerationsContentRequest(meta, req)
+	case mode.VideosGet:
+		return ConvertVideosGetRequest(meta, req)
+	case mode.VideosContent:
+		return ConvertVideosContentRequest(meta, req)
+	case mode.VideosDelete:
+		return ConvertVideoNoBodyRequest(meta, req)
 	default:
 		return adaptor.ConvertResult{}, fmt.Errorf("unsupported mode: %s", meta.Mode)
 	}
@@ -136,7 +236,7 @@ func (a *Adaptor) DoRequest(
 
 func (a *Adaptor) DoResponse(
 	meta *meta.Meta,
-	_ adaptor.Store,
+	store adaptor.Store,
 	c *gin.Context,
 	resp *http.Response,
 ) (adaptor.DoResponseResult, adaptor.Error) {
@@ -159,6 +259,26 @@ func (a *Adaptor) DoResponse(
 			return NativeStreamHandler(meta, c, resp)
 		}
 		return NativeHandler(meta, c, resp)
+	case mode.AudioSpeech:
+		return TTSHandler(meta, c, resp)
+	case mode.ImagesGenerations:
+		return ImageHandler(meta, c, resp)
+	case mode.GeminiVideo:
+		return NativeVideoHandler(meta, store, c, resp)
+	case mode.GeminiVideoOperations:
+		return NativeVideoOperationHandler(meta, c, resp)
+	case mode.VideoGenerationsJobs:
+		return VideoGenerationJobSubmitHandler(meta, store, c, resp)
+	case mode.Videos:
+		return VideosSubmitHandler(meta, store, c, resp)
+	case mode.VideoGenerationsGetJobs:
+		return VideoGenerationJobStatusHandler(meta, store, c, resp)
+	case mode.VideoGenerationsContent:
+		return VideoGenerationJobContentHandler(meta, c, resp)
+	case mode.VideosGet:
+		return VideosStatusHandler(meta, store, c, resp)
+	case mode.VideosContent:
+		return VideosContentHandler(meta, c, resp)
 	default:
 		return adaptor.DoResponseResult{}, relaymodel.WrapperOpenAIErrorWithMessage(
 			fmt.Sprintf("unsupported mode: %s", meta.Mode),
@@ -200,6 +320,11 @@ func (a *Adaptor) Metadata() adaptor.Metadata {
 					"type":        "boolean",
 					"title":       "Disable Auto Video URL To Base64",
 					"description": "Keep video URLs unchanged instead of downloading and converting them to base64 inline data.",
+				},
+				"enable_person_generation_allow_all": map[string]any{
+					"type":        "boolean",
+					"title":       "Enable Person Generation Allow All",
+					"description": "When personGeneration is absent, set it to allow_all for Gemini image/video generation requests that support the field.",
 				},
 			},
 		},

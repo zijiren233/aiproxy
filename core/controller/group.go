@@ -477,6 +477,9 @@ type SaveGroupModelConfigRequest struct {
 	OverrideMaxVideoGenerationSeconds bool `json:"override_max_video_generation_seconds"`
 	MaxVideoGenerationSeconds         int  `json:"max_video_generation_seconds"`
 
+	OverrideMaxVideoGenerationCount bool `json:"override_max_video_generation_count"`
+	MaxVideoGenerationCount         int  `json:"max_video_generation_count"`
+
 	OverrideRequestBodyStorageMaxSize bool  `json:"override_request_body_storage_max_size"`
 	RequestBodyStorageMaxSize         int64 `json:"request_body_storage_max_size"`
 
@@ -514,6 +517,8 @@ func (r *SaveGroupModelConfigRequest) ToGroupModelConfig(groupID string) model.G
 		MaxImageGenerationCount:            r.MaxImageGenerationCount,
 		OverrideMaxVideoGenerationSeconds:  r.OverrideMaxVideoGenerationSeconds,
 		MaxVideoGenerationSeconds:          r.MaxVideoGenerationSeconds,
+		OverrideMaxVideoGenerationCount:    r.OverrideMaxVideoGenerationCount,
+		MaxVideoGenerationCount:            r.MaxVideoGenerationCount,
 		OverrideRequestBodyStorageMaxSize:  r.OverrideRequestBodyStorageMaxSize,
 		RequestBodyStorageMaxSize:          r.RequestBodyStorageMaxSize,
 		OverrideResponseBodyStorageMaxSize: r.OverrideResponseBodyStorageMaxSize,

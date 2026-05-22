@@ -17,6 +17,8 @@ type ImageRequest struct {
 	Style             string `json:"style,omitempty"`           // vivid, natural
 	User              string `json:"user,omitempty"`
 	N                 int    `json:"n,omitempty"`
+	PartialImages     int    `json:"partial_images,omitempty"`
+	Stream            bool   `json:"stream,omitempty"`
 }
 
 type ImageData struct {
@@ -30,6 +32,24 @@ type ImageResponse struct {
 	Data    []*ImageData `json:"data"`
 	// For gpt-image-1 only, the token usage information for the image generation.
 	Usage *ImageUsage `json:"usage"`
+}
+
+type ImageStreamEventType = string
+
+const (
+	ImageStreamEventPartialImage ImageStreamEventType = "image_generation.partial_image"
+	ImageStreamEventCompleted    ImageStreamEventType = "image_generation.completed"
+)
+
+type ImageStreamEvent struct {
+	Type              ImageStreamEventType `json:"type"`
+	B64Json           string               `json:"b64_json,omitempty"`
+	URL               string               `json:"url,omitempty"`
+	CreatedAt         int64                `json:"created_at,omitempty"`
+	Size              string               `json:"size,omitempty"`
+	PartialImageIndex *int                 `json:"partial_image_index,omitempty"`
+	Usage             *ImageUsage          `json:"usage,omitempty"`
+	Error             *OpenAIError         `json:"error,omitempty"`
 }
 
 type ImageUsage struct {

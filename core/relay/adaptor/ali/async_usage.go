@@ -58,7 +58,7 @@ func (a *Adaptor) fetchAliVideoJobUsage(
 
 		usageContext := coremodel.UsageContext{}
 		if width, height := aliVideoDimensions(response.Usage); width > 0 && height > 0 {
-			usageContext.PriceCondition.Size = relaymodel.VideoPriceSizeFromDimensions(
+			usageContext.PriceCondition.Resolution = relaymodel.VideoResolutionFromDimensions(
 				width,
 				height,
 			)

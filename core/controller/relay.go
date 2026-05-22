@@ -1,6 +1,8 @@
 package controller
 
 import (
+	"strings"
+
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/core/middleware"
 	"github.com/labring/aiproxy/core/relay/mode"
@@ -363,7 +365,7 @@ func VideoGenerationsContent() []gin.HandlerFunc {
 //	@Tags			relay
 //	@Produce		json
 //	@Security		ApiKeyAuth
-//	@Param			request			body		model.VideoRequest	true	"Request"
+//	@Param			request			body		model.VideosRequest	true	"Request"
 //	@Param			Aiproxy-Channel	header		string				false	"Optional Aiproxy-Channel header"
 //	@Success		200				{object}	model.Video
 //	@Header			all				{integer}	X-RateLimit-Limit-Requests		"X-RateLimit-Limit-Requests"
@@ -441,9 +443,9 @@ func DeleteVideo() []gin.HandlerFunc {
 //	@Tags			relay
 //	@Produce		json
 //	@Security		ApiKeyAuth
-//	@Param			video_id		path		string				true	"Video ID"
-//	@Param			request			body		model.VideoRequest	true	"Request"
-//	@Param			Aiproxy-Channel	header		string				false	"Optional Aiproxy-Channel header"
+//	@Param			video_id		path		string						true	"Video ID"
+//	@Param			request			body		model.VideosRemixRequest	true	"Request"
+//	@Param			Aiproxy-Channel	header		string						false	"Optional Aiproxy-Channel header"
 //	@Success		200				{object}	model.Video
 //	@Router			/v1/videos/{video_id}/remix [post]
 func RemixVideo() []gin.HandlerFunc {
@@ -568,10 +570,59 @@ func GetResponseInputItems() []gin.HandlerFunc {
 //	@Header			all				{string}	X-RateLimit-Reset-Requests		"X-RateLimit-Reset-Requests"
 //	@Header			all				{string}	X-RateLimit-Reset-Tokens		"X-RateLimit-Reset-Tokens"
 //	@Router			/{version}/models/{model} [post]
-
-func Gemini() []gin.HandlerFunc {
+func GeminiByPath() []gin.HandlerFunc {
 	return []gin.HandlerFunc{
-		middleware.NewDistribute(mode.Gemini),
-		NewRelay(mode.Gemini),
+		func(c *gin.Context) {
+			relayMode := mode.Gemini
+			action := geminiPathAction(c.Param("model"))
+
+			if action == "predictLongRunning" {
+				relayMode = mode.GeminiVideo
+			}
+
+			middleware.NewDistribute(relayMode)(c)
+
+			if c.IsAborted() {
+				return
+			}
+
+			NewRelay(relayMode)(c)
+		},
 	}
+}
+
+// GeminiOperation godoc
+//
+//	@Summary		Gemini Operation API
+//	@Description	Get a Gemini long-running operation, including Gemini video generation operations.
+//	@Tags			relay
+//	@Produce		json
+//	@Security		ApiKeyAuth
+//	@Param			version			path		string	true	"API Version (v1 or v1beta)"
+//	@Param			operation_id	path		string	true	"Operation ID"
+//	@Param			Aiproxy-Channel	header		string	false	"Optional Aiproxy-Channel header"
+//	@Success		200				{object}	object
+//	@Header			all				{integer}	X-RateLimit-Limit-Requests		"X-RateLimit-Limit-Requests"
+//	@Header			all				{integer}	X-RateLimit-Limit-Tokens		"X-RateLimit-Limit-Tokens"
+//	@Header			all				{integer}	X-RateLimit-Remaining-Requests	"X-RateLimit-Remaining-Requests"
+//	@Header			all				{integer}	X-RateLimit-Remaining-Tokens	"X-RateLimit-Remaining-Tokens"
+//	@Header			all				{string}	X-RateLimit-Reset-Requests		"X-RateLimit-Reset-Requests"
+//	@Header			all				{string}	X-RateLimit-Reset-Tokens		"X-RateLimit-Reset-Tokens"
+//	@Router			/{version}/operations/{operation_id} [get]
+func GeminiOperation() []gin.HandlerFunc {
+	return []gin.HandlerFunc{
+		middleware.NewDistribute(mode.GeminiVideoOperations),
+		NewRelay(mode.GeminiVideoOperations),
+	}
+}
+
+func geminiPathAction(modelPath string) string {
+	modelPath = strings.TrimPrefix(modelPath, "/")
+
+	_, action, ok := strings.Cut(modelPath, ":")
+	if !ok {
+		return ""
+	}
+
+	return action
 }

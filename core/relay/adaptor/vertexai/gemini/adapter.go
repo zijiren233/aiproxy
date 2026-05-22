@@ -1,7 +1,10 @@
 package vertexai
 
 import (
+	"bytes"
+	"io"
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/core/relay/adaptor"
@@ -23,9 +26,86 @@ func (a *Adaptor) ConvertRequest(
 		return gemini.ConvertClaudeRequest(meta, request)
 	case mode.Gemini:
 		return gemini.NativeConvertRequest(meta, request, gemini.CleanFunctionResponseID)
+	case mode.AudioSpeech:
+		return gemini.ConvertTTSRequest(meta, request)
+	case mode.ImagesGenerations:
+		return gemini.ConvertImageRequest(meta, request)
+	case mode.GeminiVideo:
+		return convertNativeVideoRequest(meta, request)
+	case mode.GeminiVideoOperations:
+		return gemini.ConvertVideoNoBodyRequest(meta, request)
+	case mode.VideoGenerationsJobs:
+		return convertOpenAIVideoRequest(meta, request, gemini.ConvertVideoGenerationJobRequest)
+	case mode.Videos:
+		return convertOpenAIVideoRequest(meta, request, gemini.ConvertVideosRequest)
+	case mode.VideoGenerationsGetJobs:
+		return gemini.ConvertVideoGenerationsGetJobsRequest(meta, request)
+	case mode.VideoGenerationsContent:
+		return gemini.ConvertVideoGenerationsContentRequest(meta, request)
+	case mode.VideosGet:
+		return gemini.ConvertVideosGetRequest(meta, request)
+	case mode.VideosContent:
+		return gemini.ConvertVideosContentRequest(meta, request)
+	case mode.VideosDelete:
+		return gemini.ConvertVideoNoBodyRequest(meta, request)
 	default:
 		return gemini.ConvertRequest(meta, request)
 	}
+}
+
+func convertOpenAIVideoRequest(
+	meta *meta.Meta,
+	request *http.Request,
+	convert func(*meta.Meta, *http.Request) (adaptor.ConvertResult, error),
+) (adaptor.ConvertResult, error) {
+	result, err := convert(meta, request)
+	if err != nil {
+		return adaptor.ConvertResult{}, err
+	}
+
+	body, err := io.ReadAll(result.Body)
+	if err != nil {
+		return adaptor.ConvertResult{}, err
+	}
+
+	body, err = gemini.ConvertVideoRequestParametersToVertex(body)
+	if err != nil {
+		return adaptor.ConvertResult{}, err
+	}
+
+	result.Body = bytes.NewReader(body)
+	result.Header.Set("Content-Length", strconv.Itoa(len(body)))
+
+	return result, nil
+}
+
+func convertNativeVideoRequest(
+	meta *meta.Meta,
+	request *http.Request,
+) (adaptor.ConvertResult, error) {
+	result, err := gemini.NativeVideoConvertRequest(meta, request)
+	if err != nil {
+		return adaptor.ConvertResult{}, err
+	}
+
+	body, err := io.ReadAll(result.Body)
+	if err != nil {
+		return adaptor.ConvertResult{}, err
+	}
+
+	body, err = geminiVideoRequestBodyToVertex(body)
+	if err != nil {
+		return adaptor.ConvertResult{}, err
+	}
+
+	result.Body = bytes.NewReader(body)
+	result.Header.Set("Content-Length", strconv.Itoa(len(body)))
+
+	return result, nil
+}
+
+func geminiVideoRequestBodyToVertex(body []byte) ([]byte, error) {
+	return gemini.ConvertVideoRequestParametersToVertex(body)
 }
 
 func (a *Adaptor) SetupRequestHeader(
@@ -39,7 +119,7 @@ func (a *Adaptor) SetupRequestHeader(
 
 func (a *Adaptor) DoResponse(
 	meta *meta.Meta,
-	_ adaptor.Store,
+	store adaptor.Store,
 	c *gin.Context,
 	resp *http.Response,
 ) (adaptor.DoResponseResult, adaptor.Error) {
@@ -55,6 +135,26 @@ func (a *Adaptor) DoResponse(
 			return gemini.NativeStreamHandler(meta, c, resp)
 		}
 		return gemini.NativeHandler(meta, c, resp)
+	case mode.AudioSpeech:
+		return gemini.TTSHandler(meta, c, resp)
+	case mode.ImagesGenerations:
+		return gemini.ImageHandler(meta, c, resp)
+	case mode.GeminiVideo:
+		return gemini.NativeVideoHandler(meta, store, c, resp)
+	case mode.GeminiVideoOperations:
+		return gemini.NativeVideoOperationHandler(meta, c, resp)
+	case mode.VideoGenerationsJobs:
+		return gemini.VideoGenerationJobSubmitHandler(meta, store, c, resp)
+	case mode.Videos:
+		return gemini.VideosSubmitHandler(meta, store, c, resp)
+	case mode.VideoGenerationsGetJobs:
+		return gemini.VideoGenerationJobStatusHandler(meta, store, c, resp)
+	case mode.VideoGenerationsContent:
+		return gemini.VideoGenerationJobContentHandler(meta, c, resp)
+	case mode.VideosGet:
+		return gemini.VideosStatusHandler(meta, store, c, resp)
+	case mode.VideosContent:
+		return gemini.VideosContentHandler(meta, c, resp)
 	default:
 		if utils.IsStreamResponse(resp) {
 			return gemini.StreamHandler(meta, c, resp)

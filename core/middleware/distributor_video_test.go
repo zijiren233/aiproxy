@@ -14,6 +14,36 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestGetGeminiPathModelModelScopedOperation(t *testing.T) {
+	t.Parallel()
+
+	gin.SetMode(gin.TestMode)
+
+	req := httptest.NewRequestWithContext(
+		t.Context(),
+		http.MethodGet,
+		"/v1beta/models/veo-3.1-generate-preview/operations/video-123",
+		nil,
+	)
+
+	ctx, _ := gin.CreateTestContext(httptest.NewRecorder())
+	ctx.Request = req
+	ctx.Params = gin.Params{
+		{Key: "model", Value: "veo-3.1-generate-preview"},
+		{Key: "operation_id", Value: "/video-123"},
+	}
+
+	assert.Equal(
+		t,
+		"models/veo-3.1-generate-preview/operations/video-123",
+		getGeminiPathModel(ctx),
+	)
+
+	modelName, operationID := getGeminiPathModelAndOperationID(ctx)
+	assert.Equal(t, "veo-3.1-generate-preview", modelName)
+	assert.Equal(t, "video-123", operationID)
+}
+
 func TestGetRequestModelVideoGenerationsJobsMultipart(t *testing.T) {
 	t.Parallel()
 

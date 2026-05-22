@@ -79,9 +79,9 @@ export function PriceDisplay({ price }: PriceDisplayProps) {
             parts.push(`${t('group.price.outputPrice')}: ${condition.output_token_min || 0} - ${condition.output_token_max || '∞'}`)
         }
 
-        const sizes = formatConditionValues(condition.size)
-        if (sizes) {
-            parts.push(`${t('group.price.size')}: ${sizes}`)
+        const resolutions = formatConditionValues(condition.resolution)
+        if (resolutions) {
+            parts.push(`${t('group.price.resolution')}: ${resolutions}`)
         }
 
         const qualities = formatConditionValues(condition.quality)

@@ -42,6 +42,7 @@ type ModelConfig struct {
 	ForceSaveDetail            bool                      `                                     json:"force_save_detail,omitempty"              yaml:"force_save_detail,omitempty"`
 	MaxImageGenerationCount    int                       `                                     json:"max_image_generation_count,omitempty"     yaml:"max_image_generation_count,omitempty"`
 	MaxVideoGenerationSeconds  int                       `                                     json:"max_video_generation_seconds,omitempty"   yaml:"max_video_generation_seconds,omitempty"`
+	MaxVideoGenerationCount    int                       `                                     json:"max_video_generation_count,omitempty"     yaml:"max_video_generation_count,omitempty"`
 	RequestBodyStorageMaxSize  int64                     `                                     json:"request_body_storage_max_size,omitempty"  yaml:"request_body_storage_max_size,omitempty"`
 	ResponseBodyStorageMaxSize int64                     `                                     json:"response_body_storage_max_size,omitempty" yaml:"response_body_storage_max_size,omitempty"`
 	SummaryServiceTier         bool                      `                                     json:"summary_service_tier,omitempty"           yaml:"summary_service_tier,omitempty"`
@@ -159,6 +160,10 @@ func (c *ModelConfig) LoadFromGroupModelConfig(groupModelConfig GroupModelConfig
 
 	if groupModelConfig.OverrideMaxVideoGenerationSeconds {
 		newC.MaxVideoGenerationSeconds = groupModelConfig.MaxVideoGenerationSeconds
+	}
+
+	if groupModelConfig.OverrideMaxVideoGenerationCount {
+		newC.MaxVideoGenerationCount = groupModelConfig.MaxVideoGenerationCount
 	}
 
 	if groupModelConfig.OverrideRequestBodyStorageMaxSize {

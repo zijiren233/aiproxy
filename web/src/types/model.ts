@@ -9,8 +9,8 @@ export interface ModelConfigDetail {
     limited_time_free?: boolean
     support_formats?: string[]
     support_voices?: string[]
-    image_sizes?: string[]
-    video_sizes?: string[]
+    image_resolutions?: string[]
+    video_resolutions?: string[]
     [key: string]: unknown
 }
 
@@ -21,7 +21,7 @@ export interface PriceCondition {
     output_token_max?: number
     start_time?: number
     end_time?: number
-    size?: string[]
+    resolution?: string[]
     quality?: string[]
     service_tier?: '' | 'auto' | 'default' | 'flex' | 'scale' | 'priority'
 }
@@ -80,6 +80,7 @@ export interface ModelConfig {
     force_save_detail?: boolean
     max_image_generation_count?: number
     max_video_generation_seconds?: number
+    max_video_generation_count?: number
     request_body_storage_max_size?: number
     response_body_storage_max_size?: number
     summary_service_tier?: boolean
@@ -89,11 +90,12 @@ export interface ModelConfig {
 
 export type ModelSaveRequest = Omit<ModelConfig, 'created_at' | 'updated_at'>
 
-export const MODEL_TYPE_OPTIONS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 16, 21, 22, 26] as const
+export const MODEL_TYPE_OPTIONS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 16, 21, 22, 26, 27, 28, 29, 30] as const
 
 export const STREAM_TIMEOUT_SUPPORTED_MODEL_TYPES = [1, 2, 12, 16, 21] as const
 export const IMAGE_GENERATION_COUNT_LIMIT_SUPPORTED_MODEL_TYPES = [5, 6] as const
-export const VIDEO_GENERATION_SECONDS_LIMIT_SUPPORTED_MODEL_TYPES = [13, 22, 26] as const
+export const VIDEO_GENERATION_SECONDS_LIMIT_SUPPORTED_MODEL_TYPES = [13, 22, 26, 27] as const
+export const VIDEO_GENERATION_COUNT_LIMIT_SUPPORTED_MODEL_TYPES = [13, 27] as const
 
 export type ModelTypeOption = (typeof MODEL_TYPE_OPTIONS)[number]
 
@@ -182,6 +184,7 @@ export interface ModelCreateRequest {
     force_save_detail?: boolean
     max_image_generation_count?: number
     max_video_generation_seconds?: number
+    max_video_generation_count?: number
     request_body_storage_max_size?: number
     response_body_storage_max_size?: number
     summary_service_tier?: boolean

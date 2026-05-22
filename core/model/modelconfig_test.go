@@ -133,6 +133,24 @@ func TestModelConfigLoadFromGroupModelConfigMaxVideoGenerationSeconds(t *testing
 	}
 }
 
+func TestModelConfigLoadFromGroupModelConfigMaxVideoGenerationCount(t *testing.T) {
+	base := (&model.ModelConfig{
+		MaxVideoGenerationCount: 4,
+	}).LoadFromGroupModelConfig(
+		model.GroupModelConfig{
+			OverrideMaxVideoGenerationCount: true,
+			MaxVideoGenerationCount:         2,
+		},
+	)
+
+	if base.MaxVideoGenerationCount != 2 {
+		t.Fatalf(
+			"expected max_video_generation_count to be overridden to 2, got %d",
+			base.MaxVideoGenerationCount,
+		)
+	}
+}
+
 func TestModelConfigLoadFromGroupModelConfigTimeoutConfig(t *testing.T) {
 	base := (&model.ModelConfig{
 		Type: mode.ChatCompletions,
@@ -275,8 +293,8 @@ func TestGetModelConfigLoadsFastJSONFields(t *testing.T) {
 			ConditionalPrices: []model.ConditionalPrice{
 				{
 					Condition: model.PriceCondition{
-						Size:    []string{"1024x1024"},
-						Quality: []string{"hd"},
+						Resolution: []string{"1024x1024"},
+						Quality:    []string{"hd"},
 					},
 					Price: model.Price{
 						OutputPrice: 0.34,
@@ -489,6 +507,65 @@ func TestUpdateGroupModelConfigClearsMaxVideoGenerationSeconds(t *testing.T) {
 		t.Fatalf(
 			"expected max_video_generation_seconds to be cleared, got %d",
 			got.MaxVideoGenerationSeconds,
+		)
+	}
+}
+
+func TestUpdateGroupModelConfigClearsMaxVideoGenerationCount(t *testing.T) {
+	prevDB := model.DB
+	prevUsingSQLite := common.UsingSQLite
+
+	dbPath := filepath.Join(t.TempDir(), "group-model-config-video-count.db")
+
+	testDB, err := model.OpenSQLite(dbPath)
+	if err != nil {
+		t.Fatalf("failed to open sqlite db: %v", err)
+	}
+
+	model.DB = testDB
+	common.UsingSQLite = true
+	t.Cleanup(func() {
+		model.DB = prevDB
+		common.UsingSQLite = prevUsingSQLite
+	})
+
+	if err := testDB.AutoMigrate(&model.GroupModelConfig{}); err != nil {
+		t.Fatalf("failed to migrate group model config: %v", err)
+	}
+
+	initial := model.GroupModelConfig{
+		GroupID:                         "test-group",
+		Model:                           "veo",
+		OverrideMaxVideoGenerationCount: true,
+		MaxVideoGenerationCount:         3,
+	}
+	if err := model.SaveGroupModelConfig(initial); err != nil {
+		t.Fatalf("failed to save group model config: %v", err)
+	}
+
+	updated := model.GroupModelConfig{
+		GroupID:                         initial.GroupID,
+		Model:                           initial.Model,
+		OverrideMaxVideoGenerationCount: false,
+		MaxVideoGenerationCount:         0,
+	}
+	if err := model.UpdateGroupModelConfig(updated); err != nil {
+		t.Fatalf("failed to update group model config: %v", err)
+	}
+
+	got, err := model.GetGroupModelConfig(initial.GroupID, initial.Model)
+	if err != nil {
+		t.Fatalf("failed to get group model config: %v", err)
+	}
+
+	if got.OverrideMaxVideoGenerationCount {
+		t.Fatal("expected override_max_video_generation_count to be cleared")
+	}
+
+	if got.MaxVideoGenerationCount != 0 {
+		t.Fatalf(
+			"expected max_video_generation_count to be cleared, got %d",
+			got.MaxVideoGenerationCount,
 		)
 	}
 }

@@ -83,7 +83,7 @@ const priceConditionSchema = z.object({
     output_token_max: z.number().optional(),
     start_time: z.number().optional(),
     end_time: z.number().optional(),
-    size: z.array(z.string()).optional(),
+    resolution: z.array(z.string()).optional(),
     quality: z.array(z.string()).optional(),
     service_tier: z.enum(['auto', 'default', 'flex', 'scale', 'priority']).or(z.literal('')).optional(),
 })
@@ -157,8 +157,8 @@ const modelConfigSchema = z.object({
     limited_time_free: z.boolean().optional(),
     support_formats: z.array(z.string()).optional(),
     support_voices: z.array(z.string()).optional(),
-    image_sizes: z.array(z.string()).optional(),
-    video_sizes: z.array(z.string()).optional(),
+    image_resolutions: z.array(z.string()).optional(),
+    video_resolutions: z.array(z.string()).optional(),
 }).optional()
 
 export const modelCreateSchema = z.object({
@@ -174,6 +174,7 @@ export const modelCreateSchema = z.object({
     force_save_detail: z.boolean().optional(),
     max_image_generation_count: z.number().nonnegative('Max image generation count must be a non-negative number').optional(),
     max_video_generation_seconds: z.number().nonnegative('Max video generation seconds must be a non-negative number').optional(),
+    max_video_generation_count: z.number().nonnegative('Max video generation count must be a non-negative number').optional(),
     request_body_storage_max_size: z.number().optional(),
     response_body_storage_max_size: z.number().optional(),
     summary_service_tier: z.boolean().optional(),

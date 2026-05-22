@@ -49,6 +49,7 @@ type Meta struct {
 
 	JobID        string
 	GenerationID string
+	OperationID  string
 	ResponseID   string
 	VideoID      string
 }
@@ -118,6 +119,12 @@ func WithJobID(jobID string) Option {
 func WithGenerationID(generationID string) Option {
 	return func(meta *Meta) {
 		meta.GenerationID = generationID
+	}
+}
+
+func WithOperationID(operationID string) Option {
+	return func(meta *Meta) {
+		meta.OperationID = operationID
 	}
 }
 

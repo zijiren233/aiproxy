@@ -34,6 +34,8 @@ export interface GroupModelConfig {
     max_image_generation_count: number
     override_max_video_generation_seconds: boolean
     max_video_generation_seconds: number
+    override_max_video_generation_count: boolean
+    max_video_generation_count: number
     override_request_body_storage_max_size: boolean
     request_body_storage_max_size: number
     override_response_body_storage_max_size: boolean
@@ -127,6 +129,7 @@ export interface GroupDashboardModel {
     enabled_plugins?: string[]
     max_image_generation_count?: number
     max_video_generation_seconds?: number
+    max_video_generation_count?: number
 }
 
 // Group model config save request
@@ -147,6 +150,8 @@ export interface GroupModelConfigSaveRequest {
     max_image_generation_count?: number
     override_max_video_generation_seconds?: boolean
     max_video_generation_seconds?: number
+    override_max_video_generation_count?: boolean
+    max_video_generation_count?: number
     override_request_body_storage_max_size?: boolean
     request_body_storage_max_size?: number
     override_response_body_storage_max_size?: boolean

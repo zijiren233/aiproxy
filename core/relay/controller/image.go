@@ -105,7 +105,7 @@ func ValidateImagesRequest(c *gin.Context, mc model.ModelConfig) error {
 		return err
 	}
 
-	if err := validateSupportedImageSize(imageRequest.Size, mc); err != nil {
+	if err := validateSupportedImageResolution(imageRequest.Size, mc); err != nil {
 		return err
 	}
 
@@ -121,48 +121,55 @@ func ValidateImagesRequest(c *gin.Context, mc model.ModelConfig) error {
 	return validateImageGenerationCount(n, mc.MaxImageGenerationCount)
 }
 
-func validateSupportedImageSize(size string, mc model.ModelConfig) error {
-	if size == "" {
+func validateSupportedImageResolution(resolution string, mc model.ModelConfig) error {
+	if resolution == "" {
 		return nil
 	}
 
-	sizes, ok := model.GetModelConfigStringSlice(mc.Config, model.ModelConfigImageSizes)
-	if !ok || len(sizes) == 0 {
+	resolutions, ok := model.GetModelConfigStringSlice(mc.Config, model.ModelConfigImageResolutions)
+	if !ok || len(resolutions) == 0 {
 		return nil
 	}
 
-	if slices.Contains(normalizeSupportedSizeValues(sizes), normalizeSupportedSizeValue(size)) {
+	if slices.Contains(
+		normalizeSupportedResolutionValues(resolutions),
+		normalizeSupportedResolutionValue(resolution),
+	) {
 		return nil
 	}
 
-	return NewBadRequestParamError(fmt.Sprintf("unsupported image size `%s`", size))
+	return NewBadRequestParamError(fmt.Sprintf("unsupported image resolution `%s`", resolution))
 }
 
-func normalizeSupportedSizeValues(sizes []string) []string {
-	normalized := make([]string, 0, len(sizes))
-	for _, size := range sizes {
-		size = normalizeSupportedSizeValue(size)
-		if size != "" {
-			normalized = append(normalized, size)
+func normalizeSupportedResolutionValues(resolutions []string) []string {
+	normalized := make([]string, 0, len(resolutions))
+	for _, resolution := range resolutions {
+		resolution = normalizeSupportedResolutionValue(resolution)
+		if resolution != "" {
+			normalized = append(normalized, resolution)
 		}
 	}
 
 	return normalized
 }
 
-func normalizeSupportedSizeValue(size string) string {
-	return strings.ToLower(strings.ReplaceAll(strings.TrimSpace(size), " ", ""))
+func normalizeSupportedResolutionValue(resolution string) string {
+	return strings.ToLower(strings.ReplaceAll(strings.TrimSpace(resolution), " ", ""))
 }
 
-func GetConditionalImagesOutputPrice(price model.Price, size, quality string) (float64, bool) {
+func GetConditionalImagesOutputPrice(
+	price model.Price,
+	resolution string,
+	quality string,
+) (float64, bool) {
 	if len(price.ConditionalPrices) == 0 {
 		return 0, false
 	}
 
 	selectedPrice := price.SelectConditionalPrice(model.Usage{}, model.UsageContext{
 		PriceCondition: model.UsagePriceCondition{
-			Size:    size,
-			Quality: quality,
+			Resolution: resolution,
+			Quality:    quality,
 		},
 	})
 	if len(selectedPrice.ConditionalPrices) != 0 {
@@ -224,8 +231,8 @@ func GetImagesRequestUsage(c *gin.Context, _ model.ModelConfig) (RequestUsage, e
 			OutputTokens: model.ZeroNullInt64(imageRequest.N),
 		},
 		Context: model.UsageContext{PriceCondition: model.UsagePriceCondition{
-			Size:    imageRequest.Size,
-			Quality: imageRequest.Quality,
+			Resolution: imageRequest.Size,
+			Quality:    imageRequest.Quality,
 		}},
 	}, nil
 }

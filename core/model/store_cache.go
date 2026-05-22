@@ -32,6 +32,7 @@ type StoreCache struct {
 	TokenID   int       `json:"token_id"   redis:"t"`
 	ChannelID int       `json:"channel_id" redis:"c"`
 	Model     string    `json:"model"      redis:"m"`
+	Metadata  string    `json:"metadata"   redis:"d"`
 	CreatedAt time.Time `json:"created_at" redis:"a"`
 	UpdatedAt time.Time `json:"updated_at" redis:"u"`
 	ExpiresAt time.Time `json:"expires_at" redis:"e"`
@@ -49,6 +50,7 @@ func (s *StoreV2) ToStoreCache() *StoreCache {
 		TokenID:   s.TokenID,
 		ChannelID: s.ChannelID,
 		Model:     s.Model,
+		Metadata:  s.Metadata,
 		CreatedAt: s.CreatedAt,
 		UpdatedAt: s.UpdatedAt,
 		ExpiresAt: s.ExpiresAt,
@@ -76,6 +78,7 @@ func (s *StoreCache) ToStoreV2() *StoreV2 {
 		TokenID:   s.TokenID,
 		ChannelID: s.ChannelID,
 		Model:     s.Model,
+		Metadata:  s.Metadata,
 		CreatedAt: s.CreatedAt,
 		UpdatedAt: s.UpdatedAt,
 		ExpiresAt: s.ExpiresAt,

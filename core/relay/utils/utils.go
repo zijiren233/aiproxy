@@ -89,6 +89,28 @@ func UnmarshalVideoGenerationJobRequest(
 	return &request, nil
 }
 
+func UnmarshalVideosRequest(req *http.Request) (*relaymodel.VideosRequest, error) {
+	var request relaymodel.VideosRequest
+
+	err := common.UnmarshalRequestReusable(req, &request)
+	if err != nil {
+		return nil, err
+	}
+
+	return &request, nil
+}
+
+func UnmarshalVideosRemixRequest(req *http.Request) (*relaymodel.VideosRemixRequest, error) {
+	var request relaymodel.VideosRemixRequest
+
+	err := common.UnmarshalRequestReusable(req, &request)
+	if err != nil {
+		return nil, err
+	}
+
+	return &request, nil
+}
+
 func UnmarshalImageRequest(req *http.Request) (*relaymodel.ImageRequest, error) {
 	var request relaymodel.ImageRequest
 

@@ -17,7 +17,7 @@ type PriceCondition struct {
 	OutputTokenMax int64    `json:"output_token_max,omitempty"`
 	StartTime      int64    `json:"start_time,omitempty"` // Unix timestamp, 0 means no start limit
 	EndTime        int64    `json:"end_time,omitempty"`   // Unix timestamp, 0 means no end limit
-	Size           []string `json:"size,omitempty"`
+	Resolution     []string `json:"resolution,omitempty"`
 	Quality        []string `json:"quality,omitempty"`
 	ServiceTier    string   `json:"service_tier,omitempty"`
 }
@@ -198,7 +198,7 @@ func (p *Price) ValidateConditionalPrices() error {
 				continue
 			}
 
-			if !conditionValueOverlap(condition.Size, otherCondition.Size) ||
+			if !conditionValueOverlap(condition.Resolution, otherCondition.Resolution) ||
 				!conditionValueOverlap(condition.Quality, otherCondition.Quality) {
 				continue
 			}
@@ -312,7 +312,7 @@ func (p *Price) validateConditionalPriceOrdering() error {
 			continue
 		}
 
-		if !conditionValueOverlap(current.Size, next.Size) ||
+		if !conditionValueOverlap(current.Resolution, next.Resolution) ||
 			!conditionValueOverlap(current.Quality, next.Quality) {
 			continue
 		}
@@ -513,8 +513,8 @@ func (u *Usage) Add(other Usage) {
 }
 
 type UsagePriceCondition struct {
-	Size    string `json:"size,omitempty"`
-	Quality string `json:"quality,omitempty"`
+	Resolution string `json:"resolution,omitempty"`
+	Quality    string `json:"quality,omitempty"`
 }
 
 type UsageContext struct {
@@ -523,7 +523,7 @@ type UsageContext struct {
 }
 
 func (c UsageContext) PriceConditionMatches(condition PriceCondition) bool {
-	if !conditionValueMatches(condition.Size, c.PriceCondition.Size) {
+	if !conditionValueMatches(condition.Resolution, c.PriceCondition.Resolution) {
 		return false
 	}
 
@@ -539,8 +539,8 @@ func (c UsageContext) WithFallback(fallback UsageContext) UsageContext {
 		c.ServiceTier = fallback.ServiceTier
 	}
 
-	if c.PriceCondition.Size == "" {
-		c.PriceCondition.Size = fallback.PriceCondition.Size
+	if c.PriceCondition.Resolution == "" {
+		c.PriceCondition.Resolution = fallback.PriceCondition.Resolution
 	}
 
 	if c.PriceCondition.Quality == "" {

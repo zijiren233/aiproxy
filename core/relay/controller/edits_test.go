@@ -114,7 +114,7 @@ func TestValidateImagesEditsRequestWrapsParseError(t *testing.T) {
 	require.Equal(t, 400, requestParamErr.StatusCode)
 }
 
-func TestValidateImagesEditsRequestRejectsUnsupportedSize(t *testing.T) {
+func TestValidateImagesEditsRequestRejectsUnsupportedResolution(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	body := &bytes.Buffer{}
@@ -131,10 +131,10 @@ func TestValidateImagesEditsRequestRejectsUnsupportedSize(t *testing.T) {
 	c.Request = req
 
 	err := ValidateImagesEditsRequest(c, model.ModelConfig{
-		Config: model.NewModelConfig(model.WithModelConfigImageSizes("1024x1024")),
+		Config: model.NewModelConfig(model.WithModelConfigImageResolutions("1024x1024")),
 	})
 	require.Error(t, err)
-	require.Equal(t, "unsupported image size `512x512`", err.Error())
+	require.Equal(t, "unsupported image resolution `512x512`", err.Error())
 
 	var requestParamErr *RequestParamError
 	require.ErrorAs(t, err, &requestParamErr)

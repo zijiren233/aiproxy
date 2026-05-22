@@ -22,7 +22,6 @@ import (
 	"github.com/labring/aiproxy/core/relay/adaptor"
 	"github.com/labring/aiproxy/core/relay/adaptor/openai"
 	"github.com/labring/aiproxy/core/relay/meta"
-	"github.com/labring/aiproxy/core/relay/mode"
 	relaymodel "github.com/labring/aiproxy/core/relay/model"
 	relayutils "github.com/labring/aiproxy/core/relay/utils"
 )
@@ -110,12 +109,64 @@ type doubaoVideoToolUsage struct {
 	WebSearch int64 `json:"web_search,omitempty"`
 }
 
-func ConvertVideoRequest(meta *meta.Meta, req *http.Request) (adaptor.ConvertResult, error) {
-	request, err := parseDoubaoVideoRequest(req)
+func ConvertVideoGenerationJobRequest(
+	meta *meta.Meta,
+	req *http.Request,
+) (adaptor.ConvertResult, error) {
+	return convertDoubaoVideoGenerationJobRequest(meta, req)
+}
+
+func ConvertVideosRequest(meta *meta.Meta, req *http.Request) (adaptor.ConvertResult, error) {
+	return convertDoubaoVideosRequest(meta, req)
+}
+
+func ConvertVideoGenerationsGetJobsRequest(
+	_ *meta.Meta,
+	_ *http.Request,
+) (adaptor.ConvertResult, error) {
+	return adaptor.ConvertResult{}, nil
+}
+
+func ConvertVideoGenerationsContentRequest(
+	_ *meta.Meta,
+	_ *http.Request,
+) (adaptor.ConvertResult, error) {
+	return adaptor.ConvertResult{}, nil
+}
+
+func ConvertVideosGetRequest(_ *meta.Meta, _ *http.Request) (adaptor.ConvertResult, error) {
+	return adaptor.ConvertResult{}, nil
+}
+
+func ConvertVideosContentRequest(_ *meta.Meta, _ *http.Request) (adaptor.ConvertResult, error) {
+	return adaptor.ConvertResult{}, nil
+}
+
+func convertDoubaoVideoGenerationJobRequest(
+	meta *meta.Meta,
+	req *http.Request,
+) (adaptor.ConvertResult, error) {
+	request, err := parseDoubaoVideoGenerationJobRequest(req)
 	if err != nil {
 		return adaptor.ConvertResult{}, err
 	}
 
+	return convertDoubaoVideoRequest(meta, request)
+}
+
+func convertDoubaoVideosRequest(meta *meta.Meta, req *http.Request) (adaptor.ConvertResult, error) {
+	request, err := parseDoubaoVideosRequest(req)
+	if err != nil {
+		return adaptor.ConvertResult{}, err
+	}
+
+	return convertDoubaoVideoRequest(meta, request)
+}
+
+func convertDoubaoVideoRequest(
+	meta *meta.Meta,
+	request doubaoVideoRequest,
+) (adaptor.ConvertResult, error) {
 	if len(request.Content) == 0 {
 		return adaptor.ConvertResult{}, errors.New("content is required")
 	}
@@ -137,9 +188,9 @@ func ConvertVideoRequest(meta *meta.Meta, req *http.Request) (adaptor.ConvertRes
 	}, nil
 }
 
-func parseDoubaoVideoRequest(req *http.Request) (doubaoVideoRequest, error) {
+func parseDoubaoVideoGenerationJobRequest(req *http.Request) (doubaoVideoRequest, error) {
 	if strings.HasPrefix(req.Header.Get("Content-Type"), "multipart/form-data") {
-		return parseDoubaoMultipartVideoRequest(req)
+		return parseDoubaoMultipartVideoGenerationJobRequest(req)
 	}
 
 	var raw map[string]any
@@ -147,10 +198,37 @@ func parseDoubaoVideoRequest(req *http.Request) (doubaoVideoRequest, error) {
 		return doubaoVideoRequest{}, err
 	}
 
-	return parseDoubaoJSONVideoRequest(raw), nil
+	return parseDoubaoJSONVideoGenerationJobRequest(raw), nil
 }
 
-func parseDoubaoJSONVideoRequest(raw map[string]any) doubaoVideoRequest {
+func parseDoubaoVideosRequest(req *http.Request) (doubaoVideoRequest, error) {
+	if strings.HasPrefix(req.Header.Get("Content-Type"), "multipart/form-data") {
+		return parseDoubaoMultipartVideosRequest(req)
+	}
+
+	var raw map[string]any
+	if err := common.UnmarshalRequestReusable(req, &raw); err != nil {
+		return doubaoVideoRequest{}, err
+	}
+
+	return parseDoubaoJSONVideosRequest(raw), nil
+}
+
+func parseDoubaoJSONVideoGenerationJobRequest(raw map[string]any) doubaoVideoRequest {
+	request := parseDoubaoJSONOpenAIVideoCommonRequest(raw)
+	request.Duration = intPtrFromAny(raw["n_seconds"])
+
+	return request
+}
+
+func parseDoubaoJSONVideosRequest(raw map[string]any) doubaoVideoRequest {
+	request := parseDoubaoJSONOpenAIVideoCommonRequest(raw)
+	request.Duration = intPtrFromAny(raw["seconds"])
+
+	return request
+}
+
+func parseDoubaoJSONOpenAIVideoCommonRequest(raw map[string]any) doubaoVideoRequest {
 	request := doubaoVideoRequest{
 		Content:          doubaoVideoContentFromAny(raw["content"]),
 		CallbackURL:      stringFromAny(raw["callback_url"]),
@@ -169,7 +247,6 @@ func parseDoubaoJSONVideoRequest(raw map[string]any) doubaoVideoRequest {
 		GenerateAudio:         boolPtrFromAny(raw["generate_audio"]),
 		Draft:                 boolPtrFromAny(raw["draft"]),
 		Priority:              intPtrFromAny(raw["priority"]),
-		Duration:              intPtrFromAny(firstPresent(raw, "seconds", "n_seconds")),
 		Frames:                intPtrFromAny(raw["frames"]),
 		FramesPerSecond:       intPtrFromAny(firstPresent(raw, "framespersecond", "fps")),
 		CameraFixed:           boolPtrFromAny(raw["camera_fixed"]),
@@ -192,7 +269,29 @@ func parseDoubaoJSONVideoRequest(raw map[string]any) doubaoVideoRequest {
 	return request
 }
 
-func parseDoubaoMultipartVideoRequest(req *http.Request) (doubaoVideoRequest, error) {
+func parseDoubaoMultipartVideoGenerationJobRequest(req *http.Request) (doubaoVideoRequest, error) {
+	request, err := parseDoubaoMultipartOpenAIVideoCommonRequest(req)
+	if err != nil {
+		return doubaoVideoRequest{}, err
+	}
+
+	setOptionalInt(&request.Duration, req.PostFormValue("n_seconds"))
+
+	return request, nil
+}
+
+func parseDoubaoMultipartVideosRequest(req *http.Request) (doubaoVideoRequest, error) {
+	request, err := parseDoubaoMultipartOpenAIVideoCommonRequest(req)
+	if err != nil {
+		return doubaoVideoRequest{}, err
+	}
+
+	setOptionalInt(&request.Duration, req.PostFormValue("seconds"))
+
+	return request, nil
+}
+
+func parseDoubaoMultipartOpenAIVideoCommonRequest(req *http.Request) (doubaoVideoRequest, error) {
 	if err := common.ParseMultipartFormWithLimit(req); err != nil {
 		return doubaoVideoRequest{}, fmt.Errorf("parse multipart form: %w", err)
 	}
@@ -216,7 +315,6 @@ func parseDoubaoMultipartVideoRequest(req *http.Request) (doubaoVideoRequest, er
 		request.Content = append(request.Content, doubaoVideoContent{Type: "text", Text: prompt})
 	}
 
-	setOptionalInt(&request.Duration, req.PostFormValue("seconds"), req.PostFormValue("n_seconds"))
 	setOptionalInt(&request.Frames, req.PostFormValue("frames"))
 	setOptionalInt(
 		&request.FramesPerSecond,
@@ -459,51 +557,18 @@ func multipartMediaDataURL(fileHeader *multipart.FileHeader, mediaType string) (
 	return "data:" + contentType + ";base64," + base64.StdEncoding.EncodeToString(data), nil
 }
 
-func VideoSubmitHandler(
+func VideoGenerationJobSubmitHandler(
 	meta *meta.Meta,
 	store adaptor.Store,
 	c *gin.Context,
 	resp *http.Response,
 ) (adaptor.DoResponseResult, adaptor.Error) {
-	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
-		return adaptor.DoResponseResult{}, openai.VideoErrorHanlder(resp)
-	}
-
-	defer resp.Body.Close()
-
-	var response doubaoVideoTaskResponse
-	if err := common.UnmarshalResponse(resp, &response); err != nil {
-		return adaptor.DoResponseResult{}, relaymodel.WrapperOpenAIVideoError(
-			err,
-			http.StatusInternalServerError,
-		)
-	}
-
-	if response.ID == "" {
-		return adaptor.DoResponseResult{}, relaymodel.WrapperOpenAIVideoErrorWithMessage(
-			"missing id in doubao video response",
-			http.StatusInternalServerError,
-		)
-	}
-
-	if response.Status == "" {
-		response.Status = "queued"
+	response, relayErr := readDoubaoVideoTaskResponse(resp)
+	if relayErr != nil {
+		return adaptor.DoResponseResult{}, relayErr
 	}
 
 	expiresAt := doubaoVideoExpiresAt(response)
-	if meta.Mode == mode.Videos {
-		if err := saveDoubaoVideoStore(meta, store, response.ID, expiresAt); err != nil {
-			common.GetLogger(c).Errorf("save doubao video store failed: %v", err)
-		}
-
-		video := buildDoubaoVideo(meta, response.ID, &response)
-
-		return writeDoubaoVideoObject(c, video, adaptor.DoResponseResult{
-			UpstreamID: response.ID,
-			AsyncUsage: true,
-		})
-	}
-
 	if err := saveDoubaoVideoJobStore(meta, store, response.ID, expiresAt); err != nil {
 		common.GetLogger(c).Errorf("save doubao video job store failed: %v", err)
 	}
@@ -524,7 +589,60 @@ func VideoSubmitHandler(
 	})
 }
 
-func VideoStatusHandler(
+func VideosSubmitHandler(
+	meta *meta.Meta,
+	store adaptor.Store,
+	c *gin.Context,
+	resp *http.Response,
+) (adaptor.DoResponseResult, adaptor.Error) {
+	response, relayErr := readDoubaoVideoTaskResponse(resp)
+	if relayErr != nil {
+		return adaptor.DoResponseResult{}, relayErr
+	}
+
+	expiresAt := doubaoVideoExpiresAt(response)
+	if err := saveDoubaoVideoStore(meta, store, response.ID, expiresAt); err != nil {
+		common.GetLogger(c).Errorf("save doubao video store failed: %v", err)
+	}
+
+	video := buildDoubaoVideo(meta, response.ID, &response)
+
+	return writeDoubaoVideoObject(c, video, adaptor.DoResponseResult{
+		UpstreamID: response.ID,
+		AsyncUsage: true,
+	})
+}
+
+func readDoubaoVideoTaskResponse(resp *http.Response) (doubaoVideoTaskResponse, adaptor.Error) {
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
+		return doubaoVideoTaskResponse{}, openai.VideoErrorHanlder(resp)
+	}
+
+	defer resp.Body.Close()
+
+	var response doubaoVideoTaskResponse
+	if err := common.UnmarshalResponse(resp, &response); err != nil {
+		return doubaoVideoTaskResponse{}, relaymodel.WrapperOpenAIVideoError(
+			err,
+			http.StatusInternalServerError,
+		)
+	}
+
+	if response.ID == "" {
+		return doubaoVideoTaskResponse{}, relaymodel.WrapperOpenAIVideoErrorWithMessage(
+			"missing id in doubao video response",
+			http.StatusInternalServerError,
+		)
+	}
+
+	if response.Status == "" {
+		response.Status = "queued"
+	}
+
+	return response, nil
+}
+
+func VideoGenerationJobStatusHandler(
 	meta *meta.Meta,
 	store adaptor.Store,
 	c *gin.Context,
@@ -545,25 +663,12 @@ func VideoStatusHandler(
 	}
 
 	if response.ID == "" {
-		response.ID = firstNonEmptyString(meta.JobID, meta.VideoID)
+		response.ID = meta.JobID
 	}
 
 	expiresAt := doubaoVideoExpiresAt(response)
-	if meta.Mode == mode.VideosGet {
-		if response.Content.VideoURL != "" || response.Content.FileURL != "" {
-			if err := saveDoubaoVideoStore(meta, store, response.ID, expiresAt); err != nil {
-				common.GetLogger(c).Errorf("save doubao video store failed: %v", err)
-			}
-		}
-
-		return writeDoubaoVideoObject(
-			c,
-			buildDoubaoVideo(meta, response.ID, &response),
-			adaptor.DoResponseResult{UpstreamID: response.ID},
-		)
-	}
-
 	job := buildDoubaoVideoJob(meta, response.ID, &response)
+
 	if job.Status == relaymodel.VideoGenerationJobStatusSucceeded {
 		for _, generation := range job.Generations {
 			if err := saveDoubaoVideoStore(meta, store, generation.ID, expiresAt); err != nil {
@@ -575,10 +680,65 @@ func VideoStatusHandler(
 	return writeDoubaoVideoObject(c, job, adaptor.DoResponseResult{})
 }
 
-func VideoContentHandler(
+func VideosStatusHandler(
+	meta *meta.Meta,
+	store adaptor.Store,
+	c *gin.Context,
+	resp *http.Response,
+) (adaptor.DoResponseResult, adaptor.Error) {
+	if resp.StatusCode != http.StatusOK {
+		return adaptor.DoResponseResult{}, openai.VideoErrorHanlder(resp)
+	}
+
+	defer resp.Body.Close()
+
+	var response doubaoVideoTaskResponse
+	if err := common.UnmarshalResponse(resp, &response); err != nil {
+		return adaptor.DoResponseResult{}, relaymodel.WrapperOpenAIVideoError(
+			err,
+			http.StatusInternalServerError,
+		)
+	}
+
+	if response.ID == "" {
+		response.ID = meta.VideoID
+	}
+
+	expiresAt := doubaoVideoExpiresAt(response)
+	if response.Content.VideoURL != "" || response.Content.FileURL != "" {
+		if err := saveDoubaoVideoStore(meta, store, response.ID, expiresAt); err != nil {
+			common.GetLogger(c).Errorf("save doubao video store failed: %v", err)
+		}
+	}
+
+	return writeDoubaoVideoObject(
+		c,
+		buildDoubaoVideo(meta, response.ID, &response),
+		adaptor.DoResponseResult{UpstreamID: response.ID},
+	)
+}
+
+func VideoGenerationJobContentHandler(
 	meta *meta.Meta,
 	c *gin.Context,
 	resp *http.Response,
+) (adaptor.DoResponseResult, adaptor.Error) {
+	return fetchDoubaoVideoContentHandler(meta, c, resp, meta.GenerationID)
+}
+
+func VideosContentHandler(
+	meta *meta.Meta,
+	c *gin.Context,
+	resp *http.Response,
+) (adaptor.DoResponseResult, adaptor.Error) {
+	return fetchDoubaoVideoContentHandler(meta, c, resp, meta.VideoID)
+}
+
+func fetchDoubaoVideoContentHandler(
+	meta *meta.Meta,
+	c *gin.Context,
+	resp *http.Response,
+	id string,
 ) (adaptor.DoResponseResult, adaptor.Error) {
 	if resp.StatusCode != http.StatusOK {
 		return adaptor.DoResponseResult{}, openai.VideoErrorHanlder(resp)
@@ -623,7 +783,7 @@ func VideoContentHandler(
 	c.Writer.Header().Set("Content-Length", videoResp.Header.Get("Content-Length"))
 	_, _ = io.Copy(c.Writer, videoResp.Body)
 
-	return adaptor.DoResponseResult{UpstreamID: doubaoContentUpstreamID(meta)}, nil
+	return adaptor.DoResponseResult{UpstreamID: id}, nil
 }
 
 func buildDoubaoVideoJob(
@@ -739,7 +899,7 @@ func doubaoVideoUsageContext(response *doubaoVideoTaskResponse) coremodel.UsageC
 
 	return coremodel.UsageContext{
 		PriceCondition: coremodel.UsagePriceCondition{
-			Size: response.Resolution,
+			Resolution: response.Resolution,
 		},
 		ServiceTier: response.ServiceTier,
 	}
@@ -919,16 +1079,4 @@ func doubaoVideoStatus(status string) relaymodel.VideoStatus {
 	default:
 		return relaymodel.VideoStatusQueued
 	}
-}
-
-func doubaoContentUpstreamID(meta *meta.Meta) string {
-	if meta == nil {
-		return ""
-	}
-
-	if meta.Mode == mode.VideosContent {
-		return meta.VideoID
-	}
-
-	return meta.GenerationID
 }

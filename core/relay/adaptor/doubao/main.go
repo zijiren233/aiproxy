@@ -99,51 +99,20 @@ func GetRequestURL(meta *meta.Meta) (adaptor.RequestURL, error) {
 			Method: http.MethodPost,
 			URL:    url,
 		}, nil
-	case mode.VideoGenerationsJobs, mode.Videos:
-		url, err := url.JoinPath(u, "/api/v3/contents/generations/tasks")
-		if err != nil {
-			return adaptor.RequestURL{}, err
-		}
-
-		return adaptor.RequestURL{
-			Method: http.MethodPost,
-			URL:    url,
-		}, nil
+	case mode.VideoGenerationsJobs:
+		return doubaoTaskRequestURL(u, http.MethodPost, "")
+	case mode.Videos:
+		return doubaoTaskRequestURL(u, http.MethodPost, "")
 	case mode.VideoGenerationsGetJobs:
-		url, err := url.JoinPath(u, "/api/v3/contents/generations/tasks", meta.JobID)
-		if err != nil {
-			return adaptor.RequestURL{}, err
-		}
-
-		return adaptor.RequestURL{
-			Method: http.MethodGet,
-			URL:    url,
-		}, nil
+		return doubaoTaskRequestURL(u, http.MethodGet, meta.JobID)
 	case mode.VideoGenerationsContent:
-		url, err := url.JoinPath(u, "/api/v3/contents/generations/tasks", meta.GenerationID)
-		if err != nil {
-			return adaptor.RequestURL{}, err
-		}
-
-		return adaptor.RequestURL{
-			Method: http.MethodGet,
-			URL:    url,
-		}, nil
-	case mode.VideosGet, mode.VideosContent, mode.VideosDelete:
-		url, err := url.JoinPath(u, "/api/v3/contents/generations/tasks", meta.VideoID)
-		if err != nil {
-			return adaptor.RequestURL{}, err
-		}
-
-		method := http.MethodGet
-		if meta.Mode == mode.VideosDelete {
-			method = http.MethodDelete
-		}
-
-		return adaptor.RequestURL{
-			Method: method,
-			URL:    url,
-		}, nil
+		return doubaoTaskRequestURL(u, http.MethodGet, meta.GenerationID)
+	case mode.VideosGet:
+		return doubaoTaskRequestURL(u, http.MethodGet, meta.VideoID)
+	case mode.VideosContent:
+		return doubaoTaskRequestURL(u, http.MethodGet, meta.VideoID)
+	case mode.VideosDelete:
+		return doubaoTaskRequestURL(u, http.MethodDelete, meta.VideoID)
 	case mode.Responses:
 		url, err := url.JoinPath(u, "/api/v3/responses")
 		if err != nil {
@@ -197,6 +166,23 @@ func GetRequestURL(meta *meta.Meta) (adaptor.RequestURL, error) {
 	default:
 		return adaptor.RequestURL{}, fmt.Errorf("unsupported relay mode %d for doubao", meta.Mode)
 	}
+}
+
+func doubaoTaskRequestURL(baseURL, method, taskID string) (adaptor.RequestURL, error) {
+	parts := []string{"/api/v3/contents/generations/tasks"}
+	if taskID != "" {
+		parts = append(parts, taskID)
+	}
+
+	url, err := url.JoinPath(baseURL, parts...)
+	if err != nil {
+		return adaptor.RequestURL{}, err
+	}
+
+	return adaptor.RequestURL{
+		Method: method,
+		URL:    url,
+	}, nil
 }
 
 type Adaptor struct {
@@ -260,10 +246,19 @@ func (a *Adaptor) ConvertRequest(
 	switch meta.Mode {
 	case mode.ImagesGenerations:
 		return ConvertImageRequest(meta, req)
-	case mode.VideoGenerationsJobs, mode.Videos:
-		return ConvertVideoRequest(meta, req)
-	case mode.VideoGenerationsGetJobs, mode.VideoGenerationsContent,
-		mode.VideosGet, mode.VideosContent, mode.VideosDelete:
+	case mode.VideoGenerationsJobs:
+		return ConvertVideoGenerationJobRequest(meta, req)
+	case mode.Videos:
+		return ConvertVideosRequest(meta, req)
+	case mode.VideoGenerationsGetJobs:
+		return ConvertVideoGenerationsGetJobsRequest(meta, req)
+	case mode.VideoGenerationsContent:
+		return ConvertVideoGenerationsContentRequest(meta, req)
+	case mode.VideosGet:
+		return ConvertVideosGetRequest(meta, req)
+	case mode.VideosContent:
+		return ConvertVideosContentRequest(meta, req)
+	case mode.VideosDelete:
 		return adaptor.ConvertResult{}, nil
 	case mode.Embeddings:
 		if strings.Contains(strings.ToLower(featureModel(meta)), "vision") {
@@ -294,12 +289,18 @@ func (a *Adaptor) DoResponse(
 		}
 
 		return ImageHandler(meta, c, resp)
-	case mode.VideoGenerationsJobs, mode.Videos:
-		return VideoSubmitHandler(meta, store, c, resp)
-	case mode.VideoGenerationsGetJobs, mode.VideosGet:
-		return VideoStatusHandler(meta, store, c, resp)
-	case mode.VideoGenerationsContent, mode.VideosContent:
-		return VideoContentHandler(meta, c, resp)
+	case mode.VideoGenerationsJobs:
+		return VideoGenerationJobSubmitHandler(meta, store, c, resp)
+	case mode.Videos:
+		return VideosSubmitHandler(meta, store, c, resp)
+	case mode.VideoGenerationsGetJobs:
+		return VideoGenerationJobStatusHandler(meta, store, c, resp)
+	case mode.VideoGenerationsContent:
+		return VideoGenerationJobContentHandler(meta, c, resp)
+	case mode.VideosGet:
+		return VideosStatusHandler(meta, store, c, resp)
+	case mode.VideosContent:
+		return VideosContentHandler(meta, c, resp)
 	case mode.VideosDelete:
 		return openai.VideoDeleteHandler(meta, c, resp)
 	case mode.ChatCompletions:

@@ -7,10 +7,18 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestVideoPriceSizeFromDimensionsNormalizesSize(t *testing.T) {
+func TestVideoResolutionFromDimensionsNormalizesLandscapeResolution(t *testing.T) {
 	t.Parallel()
 
-	size := model.VideoPriceSizeFromDimensions(1280, 720)
+	size := model.VideoResolutionFromDimensions(1280, 720)
+
+	require.Equal(t, "720p", size)
+}
+
+func TestVideoResolutionFromDimensionsNormalizesPortraitResolution(t *testing.T) {
+	t.Parallel()
+
+	size := model.VideoResolutionFromDimensions(720, 1280)
 
 	require.Equal(t, "720p", size)
 }

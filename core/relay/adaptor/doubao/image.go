@@ -23,6 +23,8 @@ import (
 
 const metaDoubaoImageResponseFormat = "doubao_image_response_format"
 
+const doubaoImageStreamEventPartialSucceeded = "image_generation.partial_succeeded"
+
 type doubaoImageResponse struct {
 	Created int64                   `json:"created,omitempty"`
 	Data    []*doubaoImageData      `json:"data,omitempty"`
@@ -59,17 +61,6 @@ type doubaoImageStreamEvent struct {
 	Size       string                  `json:"size,omitempty"`
 	Usage      *doubaoImageUsage       `json:"usage,omitempty"`
 	Error      *relaymodel.OpenAIError `json:"error,omitempty"`
-}
-
-type openAIImageStreamEvent struct {
-	Type              string                  `json:"type"`
-	B64JSON           string                  `json:"b64_json,omitempty"`
-	URL               string                  `json:"url,omitempty"`
-	CreatedAt         int64                   `json:"created_at,omitempty"`
-	Size              string                  `json:"size,omitempty"`
-	PartialImageIndex *int                    `json:"partial_image_index,omitempty"`
-	Usage             *relaymodel.ImageUsage  `json:"usage,omitempty"`
-	Error             *relaymodel.OpenAIError `json:"error,omitempty"`
 }
 
 func ConvertImageRequest(meta *meta.Meta, req *http.Request) (adaptor.ConvertResult, error) {
@@ -235,6 +226,8 @@ func ImageStreamHandler(
 	usage := coremodel.Usage{}
 	usageContext := meta.RequestUsageContext
 
+	var completedData relaymodel.ImageStreamEvent
+
 	for scanner.Scan() {
 		line := scanner.Bytes()
 		if !render.IsValidSSEData(line) {
@@ -243,8 +236,7 @@ func ImageStreamHandler(
 
 		data := render.ExtractSSEData(line)
 		if render.IsSSEDone(data) {
-			render.OpenaiBytesData(c, data)
-			continue
+			break
 		}
 
 		var event doubaoImageStreamEvent
@@ -262,9 +254,21 @@ func ImageStreamHandler(
 			usage = *eventUsage
 		}
 
+		if openAIEvent.Type == relaymodel.ImageStreamEventPartialImage {
+			completedData.B64Json = openAIEvent.B64Json
+			completedData.URL = openAIEvent.URL
+			completedData.Size = openAIEvent.Size
+		}
+
+		if openAIEvent.Type == relaymodel.ImageStreamEventCompleted {
+			openAIEvent.B64Json = firstNonEmptyString(openAIEvent.B64Json, completedData.B64Json)
+			openAIEvent.URL = firstNonEmptyString(openAIEvent.URL, completedData.URL)
+			openAIEvent.Size = firstNonEmptyString(openAIEvent.Size, completedData.Size)
+		}
+
 		usageContext = eventContext.WithFallback(usageContext)
 
-		if err := render.OpenaiObjectData(c, openAIEvent); err != nil {
+		if err := render.ResponsesObjectData(c, openAIEvent); err != nil {
 			log.Errorf("write doubao image stream response failed: %v", err)
 		}
 	}
@@ -279,10 +283,10 @@ func ImageStreamHandler(
 func convertDoubaoImageStreamEvent(
 	event doubaoImageStreamEvent,
 	requestUsage coremodel.Usage,
-) (openAIImageStreamEvent, *coremodel.Usage, coremodel.UsageContext) {
-	openAIEvent := openAIImageStreamEvent{
+) (relaymodel.ImageStreamEvent, *coremodel.Usage, coremodel.UsageContext) {
+	openAIEvent := relaymodel.ImageStreamEvent{
 		Type:      event.Type,
-		B64JSON:   event.B64JSON,
+		B64Json:   event.B64JSON,
 		URL:       event.URL,
 		CreatedAt: event.Created,
 		Size:      normalizeDoubaoImageSize(event.Size),
@@ -291,16 +295,16 @@ func convertDoubaoImageStreamEvent(
 
 	usageContext := coremodel.UsageContext{}
 	if openAIEvent.Size != "" {
-		usageContext.PriceCondition.Size = openAIEvent.Size
+		usageContext.PriceCondition.Resolution = openAIEvent.Size
 	}
 
 	switch event.Type {
-	case "image_generation.partial_succeeded":
+	case doubaoImageStreamEventPartialSucceeded:
 		index := event.ImageIndex
-		openAIEvent.Type = "image_generation.partial_image"
+		openAIEvent.Type = relaymodel.ImageStreamEventPartialImage
 		openAIEvent.PartialImageIndex = &index
-	case "image_generation.completed":
-		openAIEvent.Type = "image_generation.completed"
+	case relaymodel.ImageStreamEventCompleted:
+		openAIEvent.Type = relaymodel.ImageStreamEventCompleted
 		usage := doubaoImageUsageToModelUsage(event.Usage, requestUsage, nil)
 		openAIEvent.Usage = doubaoImageUsageToOpenAIUsage(usage)
 		return openAIEvent, &usage, usageContext
@@ -374,7 +378,7 @@ func doubaoImageUsageContext(data []*doubaoImageData) coremodel.UsageContext {
 
 		return coremodel.UsageContext{
 			PriceCondition: coremodel.UsagePriceCondition{
-				Size: normalizeDoubaoImageSize(item.Size),
+				Resolution: normalizeDoubaoImageSize(item.Size),
 			},
 		}
 	}

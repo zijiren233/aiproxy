@@ -102,12 +102,12 @@ function ConditionFields({ condition, onChange }: {
                     onChange={(e) => onChange({ ...condition, output_token_max: parseInt(e.target.value) || 0 })} />
             </div>
             <div className="space-y-1">
-                <Label className="text-xs">{t('group.price.size')}</Label>
+                <Label className="text-xs">{t('group.price.resolution')}</Label>
                 <Textarea
-                    value={listToText(condition.size)}
-                    placeholder={t('group.price.sizePlaceholder')}
+                    value={listToText(condition.resolution)}
+                    placeholder={t('group.price.resolutionPlaceholder')}
                     className="min-h-[72px] text-sm"
-                    onChange={(e) => onChange({ ...condition, size: textToList(e.target.value) })}
+                    onChange={(e) => onChange({ ...condition, resolution: textToList(e.target.value) })}
                 />
                 <p className="text-xs text-muted-foreground">{t('group.price.multiValueHint')}</p>
             </div>

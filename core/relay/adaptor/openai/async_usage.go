@@ -236,22 +236,26 @@ func calculateVideoUsage(job *relaymodel.VideoGenerationJob) (model.Usage, model
 	totalSeconds := job.NSeconds * job.NVariants
 
 	return model.Usage{
-		OutputTokens: model.ZeroNullInt64(totalSeconds),
-		TotalTokens:  model.ZeroNullInt64(totalSeconds),
-	}, model.UsageContext{PriceCondition: model.UsagePriceCondition{Size: videoGenerationJobPriceSize(job)}}
+			OutputTokens: model.ZeroNullInt64(totalSeconds),
+			TotalTokens:  model.ZeroNullInt64(totalSeconds),
+		}, model.UsageContext{
+			PriceCondition: model.UsagePriceCondition{
+				Resolution: videoGenerationJobPriceResolution(job),
+			},
+		}
 }
 
 func calculateOfficialVideoUsage(video *relaymodel.Video) (model.Usage, model.UsageContext) {
 	return model.Usage{
 		OutputTokens: model.ZeroNullInt64(video.Seconds),
 		TotalTokens:  model.ZeroNullInt64(video.Seconds),
-	}, model.UsageContext{PriceCondition: model.UsagePriceCondition{Size: video.Size}}
+	}, model.UsageContext{PriceCondition: model.UsagePriceCondition{Resolution: video.Size}}
 }
 
-func videoGenerationJobPriceSize(job *relaymodel.VideoGenerationJob) string {
+func videoGenerationJobPriceResolution(job *relaymodel.VideoGenerationJob) string {
 	if job == nil {
 		return ""
 	}
 
-	return relaymodel.VideoPriceSizeFromDimensions(job.Width, job.Height)
+	return relaymodel.VideoResolutionFromDimensions(job.Width, job.Height)
 }

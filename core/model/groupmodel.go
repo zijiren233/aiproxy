@@ -16,6 +16,8 @@ var groupModelConfigZeroValueUpdateFields = []string{
 	"max_image_generation_count",
 	"override_max_video_generation_seconds",
 	"max_video_generation_seconds",
+	"override_max_video_generation_count",
+	"max_video_generation_count",
 }
 
 type GroupModelConfig struct {
@@ -44,6 +46,9 @@ type GroupModelConfig struct {
 
 	OverrideMaxVideoGenerationSeconds bool `json:"override_max_video_generation_seconds"`
 	MaxVideoGenerationSeconds         int  `json:"max_video_generation_seconds"`
+
+	OverrideMaxVideoGenerationCount bool `json:"override_max_video_generation_count"`
+	MaxVideoGenerationCount         int  `json:"max_video_generation_count"`
 
 	OverrideRequestBodyStorageMaxSize bool  `json:"override_request_body_storage_max_size"`
 	RequestBodyStorageMaxSize         int64 `json:"request_body_storage_max_size"`

@@ -14,27 +14,82 @@ import (
 	"github.com/labring/aiproxy/core/relay/utils"
 )
 
+const (
+	defaultGeminiVideoDurationSeconds = 8
+	defaultGeminiVideoResolution      = "720p"
+)
+
+type geminiVideoRequestUsageParams struct {
+	seconds    int
+	variants   int
+	resolution string
+}
+
+type videosRequestUsageParams struct {
+	seconds int
+	size    string
+}
+
+func ValidateVideoGenerationJobRequest(c *gin.Context, mc model.ModelConfig) error {
+	request, err := getVideoGenerationJobRequest(c)
+	if err != nil {
+		return err
+	}
+
+	return validateVideoGenerationJobRequest(request, mc)
+}
+
+func ValidateVideosRequest(c *gin.Context, mc model.ModelConfig) error {
+	params, err := getVideosRequestUsageParams(c)
+	if err != nil {
+		return err
+	}
+
+	return validateVideosRequestUsageParams(params, mc)
+}
+
+func ValidateGeminiVideoRequest(c *gin.Context, mc model.ModelConfig) error {
+	params, err := getGeminiVideoRequestUsageParams(c)
+	if err != nil {
+		return err
+	}
+
+	return validateGeminiVideoRequestUsageParams(params, mc)
+}
+
 func GetVideoGenerationJobRequestPrice(c *gin.Context, mc model.ModelConfig) (model.Price, error) {
 	request, err := getVideoGenerationJobRequest(c)
 	if err != nil {
 		return model.Price{}, err
 	}
 
-	if err := validateVideoGenerationSeconds(
-		request.NSeconds,
-		mc.MaxVideoGenerationSeconds,
-	); err != nil {
+	if err := validateVideoGenerationJobRequest(request, mc); err != nil {
 		return model.Price{}, err
 	}
 
-	if err := validateSupportedVideoSize(videoRequestPriceSize(request), mc); err != nil {
+	return getVideoRequestPrice(mc.Price), nil
+}
+
+func GetGeminiVideoRequestPrice(_ *gin.Context, mc model.ModelConfig) (model.Price, error) {
+	return getVideoRequestPrice(mc.Price), nil
+}
+
+func GetVideosRequestPrice(c *gin.Context, mc model.ModelConfig) (model.Price, error) {
+	params, err := getVideosRequestUsageParams(c)
+	if err != nil {
 		return model.Price{}, err
 	}
 
-	price := mc.Price
+	if err := validateVideosRequestUsageParams(params, mc); err != nil {
+		return model.Price{}, err
+	}
+
+	return getVideoRequestPrice(mc.Price), nil
+}
+
+func getVideoRequestPrice(price model.Price) model.Price {
 	setVideoOutputPriceUnit(&price, false)
-
-	return price, nil
+	return price
 }
 
 func validateVideoGenerationSeconds(seconds, maxSeconds int) error {
@@ -47,21 +102,34 @@ func validateVideoGenerationSeconds(seconds, maxSeconds int) error {
 	)
 }
 
-func validateSupportedVideoSize(size string, mc model.ModelConfig) error {
-	if size == "" {
+func validateVideoGenerationCount(count, maxCount int) error {
+	if maxCount <= 0 || count <= maxCount {
 		return nil
 	}
 
-	sizes, ok := model.GetModelConfigStringSlice(mc.Config, model.ModelConfigVideoSizes)
-	if !ok || len(sizes) == 0 {
+	return NewBadRequestParamError(
+		fmt.Sprintf("video count must be less than or equal to %d", maxCount),
+	)
+}
+
+func validateSupportedVideoResolution(resolution string, mc model.ModelConfig) error {
+	if resolution == "" {
 		return nil
 	}
 
-	if slices.Contains(normalizeSupportedSizeValues(sizes), normalizeSupportedSizeValue(size)) {
+	resolutions, ok := model.GetModelConfigStringSlice(mc.Config, model.ModelConfigVideoResolutions)
+	if !ok || len(resolutions) == 0 {
 		return nil
 	}
 
-	return NewBadRequestParamError(fmt.Sprintf("unsupported video size `%s`", size))
+	if slices.Contains(
+		normalizeSupportedResolutionValues(resolutions),
+		normalizeSupportedResolutionValue(resolution),
+	) {
+		return nil
+	}
+
+	return NewBadRequestParamError(fmt.Sprintf("unsupported video resolution `%s`", resolution))
 }
 
 func setVideoOutputPriceUnit(price *model.Price, force bool) {
@@ -84,15 +152,7 @@ func GetVideoGenerationJobRequestUsage(c *gin.Context, mc model.ModelConfig) (Re
 		return RequestUsage{}, err
 	}
 
-	priceSize := videoRequestPriceSize(request)
-	if err := validateSupportedVideoSize(priceSize, mc); err != nil {
-		return RequestUsage{}, err
-	}
-
-	if err := validateVideoGenerationSeconds(
-		request.NSeconds,
-		mc.MaxVideoGenerationSeconds,
-	); err != nil {
+	if err := validateVideoGenerationJobRequest(request, mc); err != nil {
 		return RequestUsage{}, err
 	}
 
@@ -107,9 +167,214 @@ func GetVideoGenerationJobRequestUsage(c *gin.Context, mc model.ModelConfig) (Re
 			TotalTokens:  model.ZeroNullInt64(seconds),
 		},
 		Context: model.UsageContext{
-			PriceCondition: model.UsagePriceCondition{Size: priceSize},
+			PriceCondition: model.UsagePriceCondition{
+				Resolution: videoRequestPriceResolution(request),
+			},
 		},
 	}, nil
+}
+
+func GetGeminiVideoRequestUsage(c *gin.Context, mc model.ModelConfig) (RequestUsage, error) {
+	params, err := getGeminiVideoRequestUsageParams(c)
+	if err != nil {
+		return RequestUsage{}, err
+	}
+
+	if err := validateGeminiVideoRequestUsageParams(params, mc); err != nil {
+		return RequestUsage{}, err
+	}
+
+	tokens := int64(params.seconds * params.variants)
+
+	return RequestUsage{
+		Usage: model.Usage{
+			OutputTokens: model.ZeroNullInt64(tokens),
+			TotalTokens:  model.ZeroNullInt64(tokens),
+		},
+		Context: model.UsageContext{
+			PriceCondition: model.UsagePriceCondition{Resolution: params.resolution},
+		},
+	}, nil
+}
+
+func GetVideosRequestUsage(c *gin.Context, mc model.ModelConfig) (RequestUsage, error) {
+	params, err := getVideosRequestUsageParams(c)
+	if err != nil {
+		return RequestUsage{}, err
+	}
+
+	if err := validateVideosRequestUsageParams(params, mc); err != nil {
+		return RequestUsage{}, err
+	}
+
+	if params.seconds <= 0 {
+		return RequestUsage{}, nil
+	}
+
+	return RequestUsage{
+		Usage: model.Usage{
+			OutputTokens: model.ZeroNullInt64(params.seconds),
+			TotalTokens:  model.ZeroNullInt64(params.seconds),
+		},
+		Context: model.UsageContext{
+			PriceCondition: model.UsagePriceCondition{Resolution: params.size},
+		},
+	}, nil
+}
+
+func validateVideoGenerationJobRequest(
+	request *relaymodel.VideoGenerationJobRequest,
+	mc model.ModelConfig,
+) error {
+	if err := validateVideoGenerationSeconds(
+		request.NSeconds,
+		mc.MaxVideoGenerationSeconds,
+	); err != nil {
+		return err
+	}
+
+	if err := validateVideoGenerationCount(
+		request.NVariants,
+		mc.MaxVideoGenerationCount,
+	); err != nil {
+		return err
+	}
+
+	return validateSupportedVideoResolution(videoRequestPriceResolution(request), mc)
+}
+
+func getVideosRequestUsageParams(c *gin.Context) (videosRequestUsageParams, error) {
+	if strings.HasPrefix(c.Request.Header.Get("Content-Type"), "multipart/form-data") {
+		if err := common.ParseMultipartFormWithLimit(c.Request); err != nil {
+			return videosRequestUsageParams{}, NewBadRequestParamError(err.Error())
+		}
+
+		seconds, err := parseOptionalPositiveInt(c.PostForm("seconds"), "seconds")
+		if err != nil {
+			return videosRequestUsageParams{}, err
+		}
+
+		return videosRequestUsageParams{
+			seconds: seconds,
+			size:    c.PostForm("size"),
+		}, nil
+	}
+
+	node, err := common.UnmarshalRequest2NodeReusable(c.Request)
+	if err != nil {
+		return videosRequestUsageParams{}, NewBadRequestParamError(err.Error())
+	}
+
+	seconds, _, err := intValueFromNode(&node, "seconds")
+	if err != nil {
+		return videosRequestUsageParams{}, err
+	}
+
+	return videosRequestUsageParams{
+		seconds: seconds,
+		size:    stringValueFromNode(&node, "size"),
+	}, nil
+}
+
+func validateVideosRequestUsageParams(params videosRequestUsageParams, mc model.ModelConfig) error {
+	if err := validateVideoGenerationSeconds(
+		params.seconds,
+		mc.MaxVideoGenerationSeconds,
+	); err != nil {
+		return err
+	}
+
+	return validateSupportedVideoResolution(params.size, mc)
+}
+
+func getGeminiVideoRequestUsageParams(c *gin.Context) (geminiVideoRequestUsageParams, error) {
+	node, err := common.UnmarshalRequest2NodeReusable(c.Request)
+	if err != nil {
+		return geminiVideoRequestUsageParams{}, NewBadRequestParamError(err.Error())
+	}
+
+	parameters := node.Get("parameters")
+	params := geminiVideoRequestUsageParams{
+		seconds:    defaultGeminiVideoDurationSeconds,
+		variants:   1,
+		resolution: defaultGeminiVideoResolution,
+	}
+
+	parsedResolution := geminiVideoStringValueFromNode(&node, parameters, "resolution")
+	if parsedResolution != "" {
+		params.resolution = parsedResolution
+	}
+
+	parsedSeconds, ok, err := geminiVideoIntValueFromNode(&node, parameters, "durationSeconds")
+	if err != nil {
+		return geminiVideoRequestUsageParams{}, err
+	}
+
+	if ok && parsedSeconds > 0 {
+		params.seconds = parsedSeconds
+	}
+
+	parsedVariants, ok, err := geminiVideoIntValueFromNode(&node, parameters, "numberOfVideos")
+	if err != nil {
+		return geminiVideoRequestUsageParams{}, err
+	}
+
+	if ok && parsedVariants > 0 {
+		params.variants = parsedVariants
+	}
+
+	return params, nil
+}
+
+func geminiVideoIntValueFromNode(
+	node *ast.Node,
+	parameters *ast.Node,
+	name string,
+) (int, bool, error) {
+	value, ok, err := intValueFromNode(node, name)
+	if err != nil || (ok && value != 0) {
+		return value, ok, err
+	}
+
+	parameterValue, parameterOK, err := intValueFromNode(parameters, name)
+	if err != nil || parameterOK {
+		return parameterValue, parameterOK, err
+	}
+
+	return value, ok, nil
+}
+
+func geminiVideoStringValueFromNode(
+	node *ast.Node,
+	parameters *ast.Node,
+	name string,
+) string {
+	if value := stringValueFromNode(node, name); value != "" {
+		return value
+	}
+
+	return stringValueFromNode(parameters, name)
+}
+
+func validateGeminiVideoRequestUsageParams(
+	params geminiVideoRequestUsageParams,
+	mc model.ModelConfig,
+) error {
+	if err := validateVideoGenerationSeconds(
+		params.seconds,
+		mc.MaxVideoGenerationSeconds,
+	); err != nil {
+		return err
+	}
+
+	if err := validateVideoGenerationCount(
+		params.variants,
+		mc.MaxVideoGenerationCount,
+	); err != nil {
+		return err
+	}
+
+	return validateSupportedVideoResolution(params.resolution, mc)
 }
 
 func getVideoGenerationJobRequest(c *gin.Context) (*relaymodel.VideoGenerationJobRequest, error) {
@@ -127,14 +392,6 @@ func getVideoGenerationJobRequest(c *gin.Context) (*relaymodel.VideoGenerationJo
 		return nil, err
 	}
 
-	if request.NSeconds == 0 {
-		if seconds, ok, err := intValueFromReusableRequest(c, "seconds"); err != nil {
-			return nil, err
-		} else if ok {
-			request.NSeconds = seconds
-		}
-	}
-
 	if err := validateParsedVideoGenerationJobRequest(request); err != nil {
 		return nil, err
 	}
@@ -142,22 +399,9 @@ func getVideoGenerationJobRequest(c *gin.Context) (*relaymodel.VideoGenerationJo
 	return request, nil
 }
 
-func validateParsedVideoGenerationJobRequest(request *relaymodel.VideoGenerationJobRequest) error {
-	if request.NSeconds < 0 {
-		return NewBadRequestParamError("invalid n_seconds: must be non-negative")
-	}
-
-	if request.NVariants < 0 {
-		return NewBadRequestParamError("invalid n_variants: must be non-negative")
-	}
-
-	return nil
-}
-
-func intValueFromReusableRequest(c *gin.Context, name string) (int, bool, error) {
-	node, err := common.UnmarshalRequest2NodeReusable(c.Request)
-	if err != nil {
-		return 0, false, NewBadRequestParamError(err.Error())
+func intValueFromNode(node *ast.Node, name string) (int, bool, error) {
+	if node == nil || !node.Exists() || node.TypeSafe() == ast.V_NULL {
+		return 0, false, nil
 	}
 
 	valueNode := node.Get(name)
@@ -197,6 +441,36 @@ func intValueFromReusableRequest(c *gin.Context, name string) (int, bool, error)
 	return int(value), true, nil
 }
 
+func stringValueFromNode(node *ast.Node, name string) string {
+	if node == nil || !node.Exists() || node.TypeSafe() == ast.V_NULL {
+		return ""
+	}
+
+	valueNode := node.Get(name)
+	if valueNode == nil || !valueNode.Exists() || valueNode.TypeSafe() == ast.V_NULL {
+		return ""
+	}
+
+	value, err := valueNode.String()
+	if err != nil {
+		return ""
+	}
+
+	return strings.TrimSpace(value)
+}
+
+func validateParsedVideoGenerationJobRequest(request *relaymodel.VideoGenerationJobRequest) error {
+	if request.NSeconds < 0 {
+		return NewBadRequestParamError("invalid n_seconds: must be non-negative")
+	}
+
+	if request.NVariants < 0 {
+		return NewBadRequestParamError("invalid n_variants: must be non-negative")
+	}
+
+	return nil
+}
+
 func getMultipartVideoGenerationJobRequest(
 	c *gin.Context,
 ) (*relaymodel.VideoGenerationJobRequest, error) {
@@ -223,12 +497,6 @@ func getMultipartVideoGenerationJobRequest(
 	request.NSeconds, err = parseOptionalPositiveInt(c.PostForm("n_seconds"), "n_seconds")
 	if err != nil {
 		return nil, err
-	}
-
-	if seconds, err := parseOptionalPositiveInt(c.PostForm("seconds"), "seconds"); err != nil {
-		return nil, err
-	} else if request.NSeconds == 0 {
-		request.NSeconds = seconds
 	}
 
 	return request, nil
@@ -272,7 +540,7 @@ func videoRequestSeconds(request *relaymodel.VideoGenerationJobRequest) int64 {
 	return int64(seconds * variants)
 }
 
-func videoRequestPriceSize(request *relaymodel.VideoGenerationJobRequest) string {
+func videoRequestPriceResolution(request *relaymodel.VideoGenerationJobRequest) string {
 	if request == nil {
 		return ""
 	}
@@ -282,7 +550,7 @@ func videoRequestPriceSize(request *relaymodel.VideoGenerationJobRequest) string
 	}
 
 	if request.Width > 0 && request.Height > 0 {
-		return relaymodel.VideoPriceSizeFromDimensions(request.Width, request.Height)
+		return relaymodel.VideoResolutionFromDimensions(request.Width, request.Height)
 	}
 
 	return ""

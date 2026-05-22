@@ -87,6 +87,28 @@ func TestParseFormWithLimitRejectsTooLargeContentLength(t *testing.T) {
 	}
 }
 
+func TestGetJSONNodeNoCopy(t *testing.T) {
+	node, err := common.GetJSONNodeNoCopy(
+		[]byte(`{"choices":[{"message":{"content":"hello"}}]}`),
+		"choices",
+		0,
+		"message",
+		"content",
+	)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	value, err := node.String()
+	if err != nil {
+		t.Fatalf("unexpected string error: %v", err)
+	}
+
+	if value != "hello" {
+		t.Fatalf("unexpected value: %q", value)
+	}
+}
+
 func TestGetResponseBodyLimitKnownLengthTooLargeHidesLimit(t *testing.T) {
 	resp := &http.Response{
 		Body:          io.NopCloser(strings.NewReader("abcd")),

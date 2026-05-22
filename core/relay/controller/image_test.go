@@ -95,7 +95,7 @@ func TestGetImagesRequestPriceUsesPerImageUnitForConditionalPrices(t *testing.T)
 		Price: model.Price{
 			ConditionalPrices: []model.ConditionalPrice{
 				{
-					Condition: model.PriceCondition{Size: []string{"1024x1024"}},
+					Condition: model.PriceCondition{Resolution: []string{"1024x1024"}},
 					Price:     model.Price{OutputPrice: 0.12},
 				},
 			},
@@ -126,7 +126,7 @@ func TestGetImagesRequestPriceAllowsUnmatchedConditionalPrice(t *testing.T) {
 		Price: model.Price{
 			ConditionalPrices: []model.ConditionalPrice{
 				{
-					Condition: model.PriceCondition{Size: []string{"1024x1024"}},
+					Condition: model.PriceCondition{Resolution: []string{"1024x1024"}},
 					Price:     model.Price{OutputPrice: 0.12},
 				},
 			},
@@ -137,7 +137,7 @@ func TestGetImagesRequestPriceAllowsUnmatchedConditionalPrice(t *testing.T) {
 	require.Equal(t, model.ZeroNullInt64(1), price.OutputPriceUnit)
 }
 
-func TestValidateImagesRequestRejectsUnsupportedSize(t *testing.T) {
+func TestValidateImagesRequestRejectsUnsupportedResolution(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	req := httptest.NewRequestWithContext(
@@ -152,10 +152,10 @@ func TestValidateImagesRequestRejectsUnsupportedSize(t *testing.T) {
 	c.Request = req
 
 	err := ValidateImagesRequest(c, model.ModelConfig{
-		Config: model.NewModelConfig(model.WithModelConfigImageSizes("1024x1024")),
+		Config: model.NewModelConfig(model.WithModelConfigImageResolutions("1024x1024")),
 	})
 	require.Error(t, err)
-	require.Equal(t, "unsupported image size `512x512`", err.Error())
+	require.Equal(t, "unsupported image resolution `512x512`", err.Error())
 
 	var requestParamErr *RequestParamError
 	require.ErrorAs(t, err, &requestParamErr)
@@ -180,6 +180,6 @@ func TestGetImagesRequestUsageSetsPriceCondition(t *testing.T) {
 
 	usage, err := GetImagesRequestUsage(c, model.ModelConfig{})
 	require.NoError(t, err)
-	require.Equal(t, "1024*1024", usage.Context.PriceCondition.Size)
+	require.Equal(t, "1024*1024", usage.Context.PriceCondition.Resolution)
 	require.Equal(t, "hd", usage.Context.PriceCondition.Quality)
 }

@@ -254,10 +254,11 @@ func ImagesStreamHandler(
 
 		data := render.ExtractSSEData(line)
 
-		node, err := sonic.GetWithOptions(data, ast.SearchOptions{})
+		node, err := common.GetJSONNodeNoCopy(data)
 		if err != nil {
 			log.Error("error unmarshalling image stream response: " + err.Error())
-			render.OpenaiBytesData(c, data)
+			render.ResponsesData(c, data)
+
 			continue
 		}
 
@@ -267,7 +268,7 @@ func ImagesStreamHandler(
 			usage = streamUsage.ToModelUsage()
 		}
 
-		render.OpenaiBytesData(c, data)
+		render.ResponsesData(c, data)
 	}
 
 	if err := scanner.Err(); err != nil {

@@ -76,7 +76,7 @@ func (p *StreamFake) ConvertRequest(
 		return adaptor.ConvertResult{}, fmt.Errorf("failed to read request body: %w", err)
 	}
 
-	node, err := sonic.Get(body)
+	node, err := common.GetJSONNodeNoCopy(body)
 	if err != nil {
 		return do.ConvertRequest(meta, store, req)
 	}
@@ -226,7 +226,7 @@ func (rw *fakeStreamResponseWriter) parseStreamingData(data []byte) error {
 		}
 	}
 
-	node, err := sonic.GetWithOptions(data, ast.SearchOptions{})
+	node, err := common.GetJSONNodeNoCopy(data)
 	if err != nil || !node.Valid() {
 		return nil
 	}
