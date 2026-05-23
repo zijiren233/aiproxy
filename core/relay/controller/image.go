@@ -11,7 +11,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/core/common"
 	"github.com/labring/aiproxy/core/model"
-	"github.com/labring/aiproxy/core/relay/adaptor/openai"
 	relaymodel "github.com/labring/aiproxy/core/relay/model"
 	"github.com/labring/aiproxy/core/relay/utils"
 )
@@ -167,10 +166,8 @@ func GetConditionalImagesOutputPrice(
 	}
 
 	selectedPrice := price.SelectConditionalPrice(model.Usage{}, model.UsageContext{
-		PriceCondition: model.UsagePriceCondition{
-			Resolution: resolution,
-			Quality:    quality,
-		},
+		Resolution: resolution,
+		Quality:    quality,
 	})
 	if len(selectedPrice.ConditionalPrices) != 0 {
 		return 0, false
@@ -186,6 +183,10 @@ func setImageOutputPriceUnit(price *model.Price, force bool) {
 
 	if (force || len(price.ConditionalPrices) != 0) && price.OutputPriceUnit == 0 {
 		price.OutputPriceUnit = 1
+	}
+
+	if (force || len(price.ConditionalPrices) != 0) && price.ImageOutputPriceUnit == 0 {
+		price.ImageOutputPriceUnit = 1
 	}
 
 	for i := range price.ConditionalPrices {
@@ -206,13 +207,15 @@ func GetImagesRequestPrice(c *gin.Context, mc model.ModelConfig) (model.Price, e
 	}
 
 	return model.Price{
-		PerRequestPrice:     mc.Price.PerRequestPrice,
-		InputPrice:          mc.Price.InputPrice,
-		InputPriceUnit:      mc.Price.InputPriceUnit,
-		ImageInputPrice:     mc.Price.ImageInputPrice,
-		ImageInputPriceUnit: mc.Price.ImageInputPriceUnit,
-		OutputPrice:         mc.Price.OutputPrice,
-		OutputPriceUnit:     mc.Price.OutputPriceUnit,
+		PerRequestPrice:      mc.Price.PerRequestPrice,
+		InputPrice:           mc.Price.InputPrice,
+		InputPriceUnit:       mc.Price.InputPriceUnit,
+		ImageInputPrice:      mc.Price.ImageInputPrice,
+		ImageInputPriceUnit:  mc.Price.ImageInputPriceUnit,
+		OutputPrice:          mc.Price.OutputPrice,
+		OutputPriceUnit:      mc.Price.OutputPriceUnit,
+		ImageOutputPrice:     mc.Price.ImageOutputPrice,
+		ImageOutputPriceUnit: mc.Price.ImageOutputPriceUnit,
 	}, nil
 }
 
@@ -223,16 +226,14 @@ func GetImagesRequestUsage(c *gin.Context, _ model.ModelConfig) (RequestUsage, e
 	}
 
 	return RequestUsage{
-		Usage: model.Usage{
-			InputTokens: model.ZeroNullInt64(openai.CountTokenInput(
-				imageRequest.Prompt,
-				imageRequest.Model,
-			)),
-			OutputTokens: model.ZeroNullInt64(imageRequest.N),
-		},
-		Context: model.UsageContext{PriceCondition: model.UsagePriceCondition{
+		// Image output usage depends on the upstream billing model. Some providers
+		// bill by returned image count, while GPT image models return image tokens.
+		// Keep preflight usage empty and let the response handler provide final
+		// usage from the upstream response or actual returned image count.
+		Usage: model.Usage{},
+		Context: model.UsageContext{
 			Resolution: imageRequest.Size,
 			Quality:    imageRequest.Quality,
-		}},
+		},
 	}, nil
 }

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -138,6 +139,84 @@ func normalizeConditionValue(value string) string {
 	value = strings.ReplaceAll(value, "*", "x")
 
 	return strings.ReplaceAll(value, " ", "")
+}
+
+func fuzzyResolutionValueMatches(conditionValues []string, value string) bool {
+	normalizedConditionValues := normalizeResolutionConditionValues(conditionValues)
+	if len(normalizedConditionValues) == 0 {
+		return true
+	}
+
+	for _, normalizedValue := range normalizeResolutionConditionValue(value) {
+		if slices.Contains(normalizedConditionValues, normalizedValue) {
+			return true
+		}
+	}
+
+	return false
+}
+
+func normalizeResolutionConditionValues(values []string) []string {
+	normalized := make([]string, 0, len(values))
+	for _, value := range values {
+		normalized = append(normalized, normalizeResolutionConditionValue(value)...)
+	}
+
+	return slices.Compact(normalized)
+}
+
+func normalizeResolutionConditionValue(value string) []string {
+	normalized := normalizeConditionValue(value)
+	if normalized == "" {
+		return nil
+	}
+
+	values := []string{normalized}
+	if resolution := videoResolutionTier(normalized); resolution != "" && resolution != normalized {
+		values = append(values, resolution)
+	}
+
+	return values
+}
+
+func videoResolutionTier(value string) string {
+	width, height, ok := parseResolutionDimensions(value)
+	if !ok {
+		return ""
+	}
+
+	shortSide := min(width, height)
+	switch {
+	case shortSide >= 2000:
+		return "4k"
+	case shortSide >= 1000:
+		return "1080p"
+	case shortSide >= 700:
+		return "720p"
+	case shortSide >= 400:
+		return "480p"
+	default:
+		return ""
+	}
+}
+
+func parseResolutionDimensions(value string) (int, int, bool) {
+	parts := strings.Split(value, "x")
+	if len(parts) != 2 {
+		return 0, 0, false
+	}
+
+	width, err := strconv.Atoi(parts[0])
+	if err != nil {
+		return 0, 0, false
+	}
+
+	height, err := strconv.Atoi(parts[1])
+	if err != nil {
+		return 0, 0, false
+	}
+
+	return width, height, width > 0 && height > 0
 }
 
 func (p *Price) ValidateConditionalPrices() error {
@@ -358,6 +437,27 @@ func (p *Price) SelectConditionalPrice(
 	usage Usage,
 	usageContext UsageContext,
 ) Price {
+	return p.SelectConditionalPriceWithOptions(usage, usageContext, PriceSelectionOptions{})
+}
+
+type PriceSelectionOptions struct {
+	DisableResolutionFuzzyMatch bool
+}
+
+func (p *Price) SelectConditionalPriceWithOptions(
+	usage Usage,
+	usageContext UsageContext,
+	options PriceSelectionOptions,
+) Price {
+	return p.selectConditionalPrice(usage, usageContext, false, options)
+}
+
+func (p *Price) selectConditionalPrice(
+	usage Usage,
+	usageContext UsageContext,
+	fuzzyResolution bool,
+	options PriceSelectionOptions,
+) Price {
 	if len(p.ConditionalPrices) == 0 {
 		return *p
 	}
@@ -376,7 +476,7 @@ func (p *Price) SelectConditionalPrice(
 			continue
 		}
 
-		if !usageContext.PriceConditionMatches(condition) {
+		if !usageContext.priceConditionMatches(condition, fuzzyResolution) {
 			continue
 		}
 
@@ -407,6 +507,10 @@ func (p *Price) SelectConditionalPrice(
 		}
 
 		return conditionalPrice.Price
+	}
+
+	if !fuzzyResolution && !options.DisableResolutionFuzzyMatch {
+		return p.selectConditionalPrice(usage, usageContext, true, options)
 	}
 
 	return *p
@@ -512,22 +616,33 @@ func (u *Usage) Add(other Usage) {
 	u.WebSearchCount += other.WebSearchCount
 }
 
-type UsagePriceCondition struct {
-	Resolution string `json:"resolution,omitempty"`
-	Quality    string `json:"quality,omitempty"`
-}
-
 type UsageContext struct {
-	PriceCondition UsagePriceCondition `json:"price_condition,omitempty"`
-	ServiceTier    string              `json:"service_tier,omitempty"`
+	Resolution  string `json:"resolution,omitempty"`
+	Quality     string `json:"quality,omitempty"`
+	ServiceTier string `json:"service_tier,omitempty"`
 }
 
 func (c UsageContext) PriceConditionMatches(condition PriceCondition) bool {
-	if !conditionValueMatches(condition.Resolution, c.PriceCondition.Resolution) {
+	return c.priceConditionMatches(condition, false)
+}
+
+func (c UsageContext) priceConditionMatches(
+	condition PriceCondition,
+	fuzzyResolution bool,
+) bool {
+	resolutionMatches := conditionValueMatches(condition.Resolution, c.Resolution)
+	if !resolutionMatches && fuzzyResolution {
+		resolutionMatches = fuzzyResolutionValueMatches(
+			condition.Resolution,
+			c.Resolution,
+		)
+	}
+
+	if !resolutionMatches {
 		return false
 	}
 
-	if !conditionValueMatches(condition.Quality, c.PriceCondition.Quality) {
+	if !conditionValueMatches(condition.Quality, c.Quality) {
 		return false
 	}
 
@@ -539,12 +654,12 @@ func (c UsageContext) WithFallback(fallback UsageContext) UsageContext {
 		c.ServiceTier = fallback.ServiceTier
 	}
 
-	if c.PriceCondition.Resolution == "" {
-		c.PriceCondition.Resolution = fallback.PriceCondition.Resolution
+	if c.Resolution == "" {
+		c.Resolution = fallback.Resolution
 	}
 
-	if c.PriceCondition.Quality == "" {
-		c.PriceCondition.Quality = fallback.PriceCondition.Quality
+	if c.Quality == "" {
+		c.Quality = fallback.Quality
 	}
 
 	return c

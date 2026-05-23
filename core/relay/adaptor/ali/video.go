@@ -862,8 +862,7 @@ func aliVideoJobDimensions(request *aliVideoOpenAIRequest) (int, int) {
 }
 
 func dimensionsFromAliVideoSize(size string) (int, int) {
-	size = strings.TrimSpace(strings.ToLower(size))
-	size = strings.ReplaceAll(size, "*", "x")
+	size = normalizeAliSizeToX(size)
 
 	if !strings.Contains(size, "x") {
 		return 0, 0
@@ -885,7 +884,7 @@ func dimensionsFromAliVideoSize(size string) (int, int) {
 }
 
 func setAliVideoSize(meta *meta.Meta, parameters map[string]any, size string) {
-	size = strings.ReplaceAll(size, "x", "*")
+	size = normalizeAliSizeToStar(size)
 	if videoModelUsesResolution(meta) && strings.HasSuffix(strings.ToUpper(size), "P") {
 		parameters["resolution"] = strings.ToUpper(size)
 		return

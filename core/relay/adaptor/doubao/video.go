@@ -875,6 +875,8 @@ func buildDoubaoVideo(
 }
 
 func doubaoVideoUsageToModelUsage(usage doubaoVideoUsage) coremodel.Usage {
+	// Seedance video usage is returned as completion/total tokens by Ark, and
+	// model pricing uses those tokens directly rather than generated seconds.
 	output := usage.CompletionTokens
 	if output == 0 {
 		output = usage.TotalTokens
@@ -898,9 +900,7 @@ func doubaoVideoUsageContext(response *doubaoVideoTaskResponse) coremodel.UsageC
 	}
 
 	return coremodel.UsageContext{
-		PriceCondition: coremodel.UsagePriceCondition{
-			Resolution: response.Resolution,
-		},
+		Resolution:  response.Resolution,
 		ServiceTier: response.ServiceTier,
 	}
 }

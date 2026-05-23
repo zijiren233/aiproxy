@@ -83,6 +83,96 @@ func TestHandler(t *testing.T) {
 				"signature_openai_123",
 			)
 		})
+
+		convey.Convey("should deduplicate streamed grounding search queries", func() {
+			meta := &meta.Meta{
+				OriginModel: "gemini-3-pro-preview",
+				ActualModel: "gemini-3-pro-preview",
+			}
+
+			first := &relaymodel.GeminiChatResponse{
+				ModelVersion: "gemini-3-pro-preview",
+				Candidates: []*relaymodel.GeminiChatCandidate{
+					{
+						GroundingMetadata: &relaymodel.GeminiGroundingMetadata{
+							WebSearchQueries: []string{"weather today"},
+						},
+					},
+				},
+			}
+			second := &relaymodel.GeminiChatResponse{
+				ModelVersion: "gemini-3-pro-preview",
+				Candidates: []*relaymodel.GeminiChatCandidate{
+					{
+						GroundingMetadata: &relaymodel.GeminiGroundingMetadata{
+							WebSearchQueries: []string{"weather today", "weather tomorrow"},
+						},
+					},
+				},
+			}
+
+			firstData, _ := json.Marshal(first)
+			secondData, _ := json.Marshal(second)
+			streamBody := "data: " + string(firstData) + "\n\n" +
+				"data: " + string(secondData) + "\n\n" +
+				"data: [DONE]\n\n"
+
+			httpResp := &http.Response{
+				StatusCode: http.StatusOK,
+				Body:       io.NopCloser(bytes.NewReader([]byte(streamBody))),
+			}
+
+			w := httptest.NewRecorder()
+			c, _ := gin.CreateTestContext(w)
+			c.Request, _ = http.NewRequestWithContext(
+				context.Background(),
+				http.MethodPost,
+				"/",
+				nil,
+			)
+
+			result, err := gemini.StreamHandler(meta, c, httpResp)
+			convey.So(err, convey.ShouldBeNil)
+			convey.So(int64(result.Usage.WebSearchCount), convey.ShouldEqual, 2)
+		})
+
+		convey.Convey("should charge older Gemini streams per grounded prompt", func() {
+			meta := &meta.Meta{
+				OriginModel: "gemini-2.5-flash",
+				ActualModel: "gemini-2.5-flash",
+			}
+
+			response := &relaymodel.GeminiChatResponse{
+				ModelVersion: "gemini-2.5-flash",
+				Candidates: []*relaymodel.GeminiChatCandidate{
+					{
+						GroundingMetadata: &relaymodel.GeminiGroundingMetadata{
+							WebSearchQueries: []string{"weather today", "weather tomorrow"},
+						},
+					},
+				},
+			}
+
+			data, _ := json.Marshal(response)
+			streamBody := "data: " + string(data) + "\n\n" + "data: [DONE]\n\n"
+			httpResp := &http.Response{
+				StatusCode: http.StatusOK,
+				Body:       io.NopCloser(bytes.NewReader([]byte(streamBody))),
+			}
+
+			w := httptest.NewRecorder()
+			c, _ := gin.CreateTestContext(w)
+			c.Request, _ = http.NewRequestWithContext(
+				context.Background(),
+				http.MethodPost,
+				"/",
+				nil,
+			)
+
+			result, err := gemini.StreamHandler(meta, c, httpResp)
+			convey.So(err, convey.ShouldBeNil)
+			convey.So(int64(result.Usage.WebSearchCount), convey.ShouldEqual, 1)
+		})
 	})
 }
 

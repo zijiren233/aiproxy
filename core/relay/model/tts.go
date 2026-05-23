@@ -30,8 +30,9 @@ type TextToSpeechUsage struct {
 
 func (u *TextToSpeechUsage) ToModelUsage() model.Usage {
 	return model.Usage{
-		InputTokens:  model.ZeroNullInt64(u.InputTokens),
-		OutputTokens: model.ZeroNullInt64(u.OutputTokens),
-		TotalTokens:  model.ZeroNullInt64(u.TotalTokens),
+		InputTokens:       model.ZeroNullInt64(u.InputTokens),
+		OutputTokens:      model.ZeroNullInt64(u.OutputTokens),
+		AudioOutputTokens: model.ZeroNullInt64(u.OutputTokens),
+		TotalTokens:       model.ZeroNullInt64(u.TotalTokens),
 	}
 }

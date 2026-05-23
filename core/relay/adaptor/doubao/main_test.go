@@ -538,14 +538,14 @@ func TestAdaptorDoResponseImageGenerationUsesDoubaoUsage(t *testing.T) {
 		t.Fatalf("DoResponse returned error: %v", err)
 	}
 
-	if result.Usage.OutputTokens != coremodel.ZeroNullInt64(1) ||
+	if result.Usage.OutputTokens != coremodel.ZeroNullInt64(16384) ||
 		result.Usage.ImageOutputTokens != coremodel.ZeroNullInt64(1) ||
-		result.Usage.TotalTokens != coremodel.ZeroNullInt64(1) ||
+		result.Usage.TotalTokens != coremodel.ZeroNullInt64(16384) ||
 		result.Usage.WebSearchCount != coremodel.ZeroNullInt64(2) {
 		t.Fatalf("unexpected usage: %#v", result.Usage)
 	}
 
-	if result.UsageContext.PriceCondition.Resolution != "2048x2048" {
+	if result.UsageContext.Resolution != "2048x2048" {
 		t.Fatalf("expected size context, got %#v", result.UsageContext)
 	}
 
@@ -597,14 +597,14 @@ func TestAdaptorDoResponseImageGenerationStreamConvertsDoubaoEvents(t *testing.T
 		t.Fatalf("DoResponse returned error: %v", err)
 	}
 
-	if result.Usage.OutputTokens != coremodel.ZeroNullInt64(2) ||
+	if result.Usage.OutputTokens != coremodel.ZeroNullInt64(32768) ||
 		result.Usage.ImageOutputTokens != coremodel.ZeroNullInt64(2) ||
-		result.Usage.TotalTokens != coremodel.ZeroNullInt64(2) ||
+		result.Usage.TotalTokens != coremodel.ZeroNullInt64(32768) ||
 		result.Usage.WebSearchCount != coremodel.ZeroNullInt64(1) {
 		t.Fatalf("unexpected usage: %#v", result.Usage)
 	}
 
-	if result.UsageContext.PriceCondition.Resolution != "2048x2048" {
+	if result.UsageContext.Resolution != "2048x2048" {
 		t.Fatalf("expected size context, got %#v", result.UsageContext)
 	}
 
@@ -619,7 +619,7 @@ func TestAdaptorDoResponseImageGenerationStreamConvertsDoubaoEvents(t *testing.T
 		!strings.Contains(body, "event: "+relaymodel.ImageStreamEventCompleted+"\n") ||
 		!strings.Contains(body, `"type":"`+relaymodel.ImageStreamEventCompleted+`"`) ||
 		!strings.Contains(body, `"url":"https://example.com/one.png"`) ||
-		!strings.Contains(body, `"output_tokens":2`) {
+		!strings.Contains(body, `"output_tokens":32768`) {
 		t.Fatalf("unexpected stream body: %s", body)
 	}
 
@@ -629,6 +629,65 @@ func TestAdaptorDoResponseImageGenerationStreamConvertsDoubaoEvents(t *testing.T
 
 	if recorder.Header().Get("Content-Type") != "text/event-stream" {
 		t.Fatalf("expected text/event-stream, got %s", recorder.Header().Get("Content-Type"))
+	}
+}
+
+func TestAdaptorDoResponseImageGenerationStreamFallsBackToCompletedImages(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	adaptor := &Adaptor{}
+	recorder := httptest.NewRecorder()
+	ctx, _ := gin.CreateTestContext(recorder)
+	ctx.Request = httptest.NewRequestWithContext(
+		context.Background(),
+		http.MethodPost,
+		"/v1/images/generations",
+		nil,
+	)
+
+	resp := &http.Response{
+		StatusCode: http.StatusOK,
+		Header: http.Header{
+			"Content-Type": {"text/event-stream"},
+		},
+		Body: io.NopCloser(strings.NewReader(strings.Join([]string{
+			"event: " + doubaoImageStreamEventPartialSucceeded,
+			`data: {"type":"` + doubaoImageStreamEventPartialSucceeded + `","image_index":0,"url":"https://example.com/one.png","size":"2048x2048"}`,
+			"",
+			"event: " + doubaoImageStreamEventPartialSucceeded,
+			`data: {"type":"` + doubaoImageStreamEventPartialSucceeded + `","image_index":1,"b64_json":"abc","size":"2048x2048"}`,
+			"",
+			"event: " + relaymodel.ImageStreamEventCompleted,
+			`data: {"type":"` + relaymodel.ImageStreamEventCompleted + `"}`,
+			"",
+		}, "\n"))),
+	}
+
+	result, err := adaptor.DoResponse(
+		&meta.Meta{
+			Mode: mode.ImagesGenerations,
+			RequestUsage: coremodel.Usage{
+				ImageOutputTokens: 99,
+			},
+		},
+		nil,
+		ctx,
+		resp,
+	)
+	if err != nil {
+		t.Fatalf("DoResponse returned error: %v", err)
+	}
+
+	if result.Usage.OutputTokens != coremodel.ZeroNullInt64(2) ||
+		result.Usage.ImageOutputTokens != coremodel.ZeroNullInt64(2) ||
+		result.Usage.TotalTokens != coremodel.ZeroNullInt64(2) {
+		t.Fatalf("unexpected usage: %#v", result.Usage)
+	}
+
+	body := recorder.Body.String()
+	if !strings.Contains(body, `"output_tokens":2`) ||
+		strings.Contains(body, `"output_tokens":99`) {
+		t.Fatalf("unexpected stream body: %s", body)
 	}
 }
 
@@ -715,7 +774,7 @@ func TestAdaptorConvertRequestVideoGenerationMapsPixelSize(t *testing.T) {
 		strings.NewReader(`{
 			"model": "alias-video",
 			"prompt": "Animate a calm ocean",
-			"size": "1280x720",
+			"size": "1280*720",
 			"seconds": 5
 		}`),
 	)
@@ -905,7 +964,7 @@ func TestAdaptorConvertRequestVideoGenerationMapsMultipartPixelSize(t *testing.T
 		t.Fatalf("failed to write prompt: %v", err)
 	}
 
-	if err := writer.WriteField("size", "1280x720"); err != nil {
+	if err := writer.WriteField("size", "1280×720"); err != nil {
 		t.Fatalf("failed to write size: %v", err)
 	}
 
@@ -1219,7 +1278,7 @@ func TestAdaptorFetchAsyncUsageUsesDoubaoCompletionTokens(t *testing.T) {
 		t.Fatalf("unexpected usage: %#v", usage)
 	}
 
-	if usageContext.PriceCondition.Resolution != "720p" || usageContext.ServiceTier != "default" {
+	if usageContext.Resolution != "720p" || usageContext.ServiceTier != "default" {
 		t.Fatalf("unexpected usage context: %#v", usageContext)
 	}
 }

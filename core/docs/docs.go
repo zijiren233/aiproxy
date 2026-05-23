@@ -13870,14 +13870,14 @@ const docTemplate = `{
                         "type": "string"
                     }
                 },
-                "service_tier": {
-                    "type": "string"
-                },
                 "resolution": {
                     "type": "array",
                     "items": {
                         "type": "string"
                     }
+                },
+                "service_tier": {
+                    "type": "string"
                 },
                 "start_time": {
                     "description": "Unix timestamp, 0 means no start limit",
@@ -15000,21 +15000,13 @@ const docTemplate = `{
         "model.UsageContext": {
             "type": "object",
             "properties": {
-                "price_condition": {
-                    "$ref": "#/definitions/model.UsagePriceCondition"
-                },
-                "service_tier": {
-                    "type": "string"
-                }
-            }
-        },
-        "model.UsagePriceCondition": {
-            "type": "object",
-            "properties": {
                 "quality": {
                     "type": "string"
                 },
                 "resolution": {
+                    "type": "string"
+                },
+                "service_tier": {
                     "type": "string"
                 }
             }

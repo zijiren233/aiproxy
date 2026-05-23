@@ -430,11 +430,29 @@ func buildMultimodalImageRequest(
 }
 
 func aliImageSize(size string) string {
-	if size == "" || size == "auto" {
+	size = strings.TrimSpace(size)
+	if size == "" || strings.EqualFold(size, "auto") {
 		return ""
 	}
 
-	return strings.ReplaceAll(size, "x", "*")
+	return normalizeAliSizeToStar(size)
+}
+
+func normalizeAliSizeToStar(size string) string {
+	size = strings.TrimSpace(size)
+	size = strings.ReplaceAll(size, "×", "*")
+	size = strings.ReplaceAll(size, "X", "*")
+	size = strings.ReplaceAll(size, "x", "*")
+
+	return size
+}
+
+func normalizeAliSizeToX(size string) string {
+	size = strings.TrimSpace(strings.ToLower(size))
+	size = strings.ReplaceAll(size, "×", "x")
+	size = strings.ReplaceAll(size, "*", "x")
+
+	return size
 }
 
 func unmarshalAliImageRequest(req *http.Request) (*qwenImageOpenAIRequest, error) {

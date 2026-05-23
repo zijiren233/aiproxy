@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/bytedance/sonic"
+	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/core/model"
 	"github.com/labring/aiproxy/core/relay/adaptor/gemini"
 	"github.com/labring/aiproxy/core/relay/meta"
@@ -180,6 +181,60 @@ func TestConvertTTSRequestMapsOpenAISpeechToGemini(t *testing.T) {
 		"Kore",
 		geminiReq.GenerationConfig.SpeechConfig.VoiceConfig.PrebuiltVoiceConfig.VoiceName,
 	)
+}
+
+func TestTTSHandlerReturnsAudioOutputTokensForPricing(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	adaptor := &gemini.Adaptor{}
+	recorder := httptest.NewRecorder()
+	ctx, _ := gin.CreateTestContext(recorder)
+	ctx.Request = httptest.NewRequestWithContext(
+		context.Background(),
+		http.MethodPost,
+		"/v1/audio/speech",
+		nil,
+	)
+
+	m := meta.NewMeta(
+		&model.Channel{Type: model.ChannelTypeGoogleGemini},
+		mode.AudioSpeech,
+		"gemini-2.5-flash-tts",
+		model.ModelConfig{},
+	)
+	m.RequestUsage.InputTokens = 10
+
+	audioData := base64.StdEncoding.EncodeToString([]byte("audio bytes"))
+	resp := &http.Response{
+		StatusCode: http.StatusOK,
+		Header:     make(http.Header),
+		Body: io.NopCloser(bytes.NewBufferString(`{
+			"candidates": [{
+				"content": {
+					"parts": [{
+						"inlineData": {
+							"mimeType": "audio/wav",
+							"data": "` + audioData + `"
+						}
+					}]
+				},
+				"finishReason": "STOP"
+			}],
+			"usageMetadata": {
+				"promptTokenCount": 10,
+				"candidatesTokenCount": 20,
+				"totalTokenCount": 30,
+				"promptTokensDetails": [{"modality": "TEXT", "tokenCount": 10}],
+				"candidatesTokensDetails": [{"modality": "AUDIO", "tokenCount": 20}]
+			}
+		}`)),
+	}
+
+	result, err := adaptor.DoResponse(m, nil, ctx, resp)
+	assert.Nil(t, err)
+	assert.Equal(t, model.ZeroNullInt64(20), result.Usage.OutputTokens)
+	assert.Equal(t, model.ZeroNullInt64(20), result.Usage.AudioOutputTokens)
+	assert.Equal(t, model.ZeroNullInt64(30), result.Usage.TotalTokens)
 }
 
 func TestConvertRequest_JsonSchema(t *testing.T) {

@@ -6,10 +6,14 @@ import (
 	"testing"
 	"time"
 
+	"github.com/glebarez/sqlite"
+	"github.com/labring/aiproxy/core/model"
 	relaycontroller "github.com/labring/aiproxy/core/relay/controller"
+	"github.com/labring/aiproxy/core/relay/meta"
 	"github.com/labring/aiproxy/core/relay/mode"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gorm.io/gorm"
 )
 
 func TestRetryStateRemainingRelayDelay(t *testing.T) {
@@ -151,4 +155,43 @@ func TestRelayControllerVideoModesValidateRequests(t *testing.T) {
 			)
 		})
 	}
+}
+
+func TestSaveAsyncUsageInfoDoesNotStoreInitialUsage(t *testing.T) {
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	require.NoError(t, err)
+	require.NoError(t, db.AutoMigrate(&model.AsyncUsageInfo{}))
+
+	oldLogDB := model.LogDB
+	model.LogDB = db
+	t.Cleanup(func() {
+		model.LogDB = oldLogDB
+	})
+
+	m := meta.NewMeta(
+		&model.Channel{ID: 11, BaseURL: "https://example.com"},
+		mode.Videos,
+		"test-video-model",
+		model.ModelConfig{},
+		meta.WithRequestID("request-async-1"),
+		meta.WithRequestUsage(model.Usage{
+			OutputTokens: 9,
+			TotalTokens:  9,
+		}),
+		meta.WithGroup(model.GroupCache{ID: "group-1"}),
+		meta.WithToken(model.TokenCache{ID: 22, Name: "token-1"}),
+	)
+
+	saveAsyncUsageInfo(m, model.Price{}, &relaycontroller.HandleResult{
+		UpstreamID: "video-123",
+		Usage: model.Usage{
+			OutputTokens: 99,
+			TotalTokens:  99,
+		},
+	})
+
+	var captured model.AsyncUsageInfo
+	require.NoError(t, db.Where("upstream_id = ?", "video-123").First(&captured).Error)
+	require.Zero(t, captured.Usage.OutputTokens)
+	require.Zero(t, captured.Usage.TotalTokens)
 }

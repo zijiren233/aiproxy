@@ -18,7 +18,7 @@ func TestCalculateVideoUsageNormalizesResolution(t *testing.T) {
 		Height:    720,
 	})
 
-	require.Equal(t, "720p", usageContext.PriceCondition.Resolution)
+	require.Equal(t, "720p", usageContext.Resolution)
 }
 
 func TestCalculateVideoUsageNormalizesPortraitResolution(t *testing.T) {
@@ -31,5 +31,5 @@ func TestCalculateVideoUsageNormalizesPortraitResolution(t *testing.T) {
 		Height:    1280,
 	})
 
-	require.Equal(t, "720p", usageContext.PriceCondition.Resolution)
+	require.Equal(t, "720p", usageContext.Resolution)
 }

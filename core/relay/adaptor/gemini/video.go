@@ -30,6 +30,13 @@ import (
 const (
 	geminiVideoTTL           = 7 * 24 * time.Hour
 	geminiVideoLocalIDPrefix = "gemini_op_"
+
+	defaultGeminiVideoDurationSeconds = 8
+	defaultGeminiVideoResolution      = "720p"
+
+	metaGeminiVideoSeconds    = "gemini_video_seconds"
+	metaGeminiVideoVariants   = "gemini_video_variants"
+	metaGeminiVideoResolution = "gemini_video_resolution"
 )
 
 type geminiVideoRequest struct {
@@ -54,10 +61,21 @@ type geminiVideoMedia struct {
 
 type geminiVideoParameters struct {
 	AspectRatio      string `json:"aspectRatio,omitempty"`
+	Resolution       string `json:"resolution,omitempty"`
 	DurationSeconds  int    `json:"durationSeconds,omitempty"`
 	NumberOfVideos   int    `json:"numberOfVideos,omitempty"`
 	NegativePrompt   string `json:"negativePrompt,omitempty"`
 	PersonGeneration string `json:"personGeneration,omitempty"`
+}
+
+type geminiVideoStoreMetadata struct {
+	OperationName string `json:"operation_name,omitempty"`
+	Prompt        string `json:"prompt,omitempty"`
+	Resolution    string `json:"resolution,omitempty"`
+	Seconds       int    `json:"seconds,omitempty"`
+	Variants      int    `json:"variants,omitempty"`
+	Width         int    `json:"width,omitempty"`
+	Height        int    `json:"height,omitempty"`
 }
 
 type geminiOperation = relaymodel.GeminiVideoOperation
@@ -85,15 +103,17 @@ func NativeVideoConvertRequest(
 
 	if meta != nil {
 		if node, err := common.GetJSONNodeNoCopy(body); err == nil {
-			seconds := intNode(&node, "durationSeconds")
-			if seconds == 0 {
-				parameters := node.Get("parameters")
-				seconds = intNode(parameters, "durationSeconds")
-			}
+			parameters := node.Get("parameters")
+
+			seconds := firstPositiveIntNode(
+				&node,
+				parameters,
+				defaultGeminiVideoDurationSeconds,
+				"durationSeconds",
+			)
 
 			variants := intNode(&node, "numberOfVideos")
 			if variants == 0 {
-				parameters := node.Get("parameters")
 				variants = intNode(parameters, "numberOfVideos")
 			}
 
@@ -101,14 +121,16 @@ func NativeVideoConvertRequest(
 				variants = 1
 			}
 
-			meta.Set("gemini_video_seconds", seconds)
-			meta.Set("gemini_video_variants", variants)
-
-			if seconds > 0 {
-				tokens := int64(seconds * variants)
-				meta.RequestUsage.OutputTokens = model.ZeroNullInt64(tokens)
-				meta.RequestUsage.TotalTokens = model.ZeroNullInt64(tokens)
+			resolution := firstStringNode(&node, parameters, "resolution")
+			if resolution == "" {
+				resolution = defaultGeminiVideoResolution
 			}
+
+			width, height := requestVideoDimensionsFromAspectRatio(
+				firstStringNode(&node, parameters, "aspectRatio"),
+				resolution,
+			)
+			setGeminiVideoRequestMetadata(meta, seconds, variants, resolution, width, height)
 		}
 	}
 
@@ -208,19 +230,18 @@ func convertGeminiVideoRequest(
 
 	if meta != nil {
 		meta.Set("gemini_video_prompt", request.Instances[0].Prompt)
-		meta.Set("gemini_video_seconds", request.Parameters.DurationSeconds)
-		meta.Set("gemini_video_variants", request.Parameters.NumberOfVideos)
-
-		if meta.RequestUsage.OutputTokens <= 0 && request.Parameters.DurationSeconds > 0 {
-			variants := request.Parameters.NumberOfVideos
-			if variants <= 0 {
-				variants = 1
-			}
-
-			tokens := int64(request.Parameters.DurationSeconds * variants)
-			meta.RequestUsage.OutputTokens = model.ZeroNullInt64(tokens)
-			meta.RequestUsage.TotalTokens = model.ZeroNullInt64(tokens)
-		}
+		width, height := requestVideoDimensionsFromAspectRatio(
+			request.Parameters.AspectRatio,
+			geminiVideoMetadataResolution(request.Parameters.Resolution),
+		)
+		setGeminiVideoRequestMetadata(
+			meta,
+			geminiVideoMetadataDurationSeconds(request.Parameters.DurationSeconds),
+			request.Parameters.NumberOfVideos,
+			geminiVideoMetadataResolution(request.Parameters.Resolution),
+			width,
+			height,
+		)
 	}
 
 	body, err := sonic.Marshal(request)
@@ -420,9 +441,11 @@ func parseJSONOpenAIVideosRequest(node *ast.Node) geminiVideoRequest {
 }
 
 func parseJSONOpenAIVideoCommonRequest(node *ast.Node) geminiVideoRequest {
+	size := stringNode(node, "size")
 	request := geminiVideoRequest{
 		Parameters: geminiVideoParameters{
-			AspectRatio:      geminiVideoAspectRatioFromSize(stringNode(node, "size")),
+			AspectRatio:      geminiVideoAspectRatioFromSize(size),
+			Resolution:       geminiVideoResolutionFromSize(size),
 			NegativePrompt:   stringNode(node, "negative_prompt"),
 			PersonGeneration: stringNode(node, "person_generation"),
 		},
@@ -484,9 +507,11 @@ func parseMultipartOpenAIVideoCommonRequest(req *http.Request) (geminiVideoReque
 		return geminiVideoRequest{}, fmt.Errorf("parse multipart form: %w", err)
 	}
 
+	size := req.PostFormValue("size")
 	request := geminiVideoRequest{
 		Parameters: geminiVideoParameters{
-			AspectRatio:      geminiVideoAspectRatioFromSize(req.PostFormValue("size")),
+			AspectRatio:      geminiVideoAspectRatioFromSize(size),
+			Resolution:       geminiVideoResolutionFromSize(size),
 			NegativePrompt:   strings.TrimSpace(req.PostFormValue("negative_prompt")),
 			PersonGeneration: strings.TrimSpace(req.PostFormValue("person_generation")),
 		},
@@ -567,6 +592,34 @@ func intNode(node *ast.Node, names ...string) int {
 	}
 
 	return 0
+}
+
+func firstPositiveIntNode(
+	node *ast.Node,
+	parameters *ast.Node,
+	defaultValue int,
+	name string,
+) int {
+	value := intNode(node, name)
+	if value > 0 {
+		return value
+	}
+
+	value = intNode(parameters, name)
+	if value > 0 {
+		return value
+	}
+
+	return defaultValue
+}
+
+func firstStringNode(node, parameters *ast.Node, name string) string {
+	value := stringNode(node, name)
+	if value != "" {
+		return value
+	}
+
+	return stringNode(parameters, name)
 }
 
 func intFromNode(node *ast.Node) (int, bool) {
@@ -700,6 +753,24 @@ func multipartGeminiVideoMedia(
 
 func geminiVideoAspectRatioFromSize(size string) string {
 	return relaymodel.VideoAspectRatioFromSize(size)
+}
+
+func geminiVideoResolutionFromSize(size string) string {
+	size = strings.TrimSpace(size)
+	if size == "" {
+		return ""
+	}
+
+	if width, height, ok := relaymodel.ParseVideoDimensions(size); ok {
+		return relaymodel.VideoResolutionFromDimensions(width, height)
+	}
+
+	switch strings.ToLower(size) {
+	case "480p", "720p", "1080p", "4k":
+		return strings.ToLower(size)
+	default:
+		return ""
+	}
 }
 
 func NativeVideoHandler(
@@ -930,6 +1001,8 @@ func VideoGenerationJobStatusHandler(
 		)
 	}
 
+	applyStoredGeminiVideoRequestMetadata(meta, store, model.VideoJobStoreID(meta.JobID))
+
 	if operation.Name == "" {
 		operationName, err := resolveVideoStatusOperationName(meta, store)
 		if err != nil {
@@ -986,6 +1059,8 @@ func VideosStatusHandler(
 			http.StatusInternalServerError,
 		)
 	}
+
+	applyStoredGeminiVideoRequestMetadata(meta, store, model.VideoGenerationStoreID(meta.VideoID))
 
 	if operation.Name == "" {
 		operationName, err := resolveVideosStatusOperationName(meta, store)
@@ -1126,6 +1201,8 @@ func buildGeminiVideoJob(
 			ID:        generationID,
 			JobID:     id,
 			CreatedAt: now,
+			Width:     requestVideoWidth(meta),
+			Height:    requestVideoHeight(meta),
 			Prompt:    metaPrompt(meta),
 			NSeconds:  requestVideoSeconds(meta),
 		})
@@ -1141,6 +1218,8 @@ func buildGeminiVideoJob(
 		Model:       meta.OriginModel,
 		NVariants:   maxInt(requestVideoVariants(meta), 1),
 		NSeconds:    requestVideoSeconds(meta),
+		Width:       requestVideoWidth(meta),
+		Height:      requestVideoHeight(meta),
 		Generations: generations,
 	}
 }
@@ -1159,6 +1238,7 @@ func buildGeminiVideo(
 		Model:     meta.OriginModel,
 		Prompt:    metaPrompt(meta),
 		Seconds:   requestVideoSeconds(meta),
+		Size:      requestVideoResolution(meta),
 		Progress:  geminiVideoProgress(status),
 	}
 
@@ -1491,16 +1571,12 @@ func geminiVideoStoredJobOperationName(
 	store adaptor.Store,
 	id string,
 ) (string, error) {
-	if store == nil || meta == nil || id == "" {
-		return "", nil
-	}
-
-	cache, err := store.GetStore(meta.Group.ID, meta.Token.ID, model.VideoJobStoreID(id))
+	metadata, err := geminiVideoStoredMetadata(meta, store, model.VideoJobStoreID(id))
 	if err != nil {
 		return "", err
 	}
 
-	return strings.TrimSpace(cache.Metadata), nil
+	return metadata.OperationName, nil
 }
 
 func geminiVideoStoredGenerationOperationName(
@@ -1508,16 +1584,73 @@ func geminiVideoStoredGenerationOperationName(
 	store adaptor.Store,
 	id string,
 ) (string, error) {
-	if store == nil || meta == nil || id == "" {
-		return "", nil
-	}
-
-	cache, err := store.GetStore(meta.Group.ID, meta.Token.ID, model.VideoGenerationStoreID(id))
+	metadata, err := geminiVideoStoredMetadata(meta, store, model.VideoGenerationStoreID(id))
 	if err != nil {
 		return "", err
 	}
 
-	return strings.TrimSpace(cache.Metadata), nil
+	return metadata.OperationName, nil
+}
+
+func geminiVideoStoredMetadata(
+	meta *meta.Meta,
+	store adaptor.Store,
+	storeID string,
+) (geminiVideoStoreMetadata, error) {
+	if store == nil || meta == nil || storeID == "" {
+		return geminiVideoStoreMetadata{}, nil
+	}
+
+	cache, err := store.GetStore(meta.Group.ID, meta.Token.ID, storeID)
+	if err != nil {
+		return geminiVideoStoreMetadata{}, err
+	}
+
+	return parseGeminiVideoStoreMetadata(cache.Metadata), nil
+}
+
+func applyStoredGeminiVideoRequestMetadata(
+	meta *meta.Meta,
+	store adaptor.Store,
+	storeID string,
+) {
+	metadata, err := geminiVideoStoredMetadata(meta, store, storeID)
+	if err != nil {
+		return
+	}
+
+	if metadata.Prompt != "" {
+		meta.Set("gemini_video_prompt", metadata.Prompt)
+	}
+
+	if metadata.Seconds > 0 ||
+		metadata.Variants > 0 ||
+		metadata.Resolution != "" ||
+		metadata.Width > 0 ||
+		metadata.Height > 0 {
+		setGeminiVideoRequestMetadata(
+			meta,
+			metadata.Seconds,
+			metadata.Variants,
+			metadata.Resolution,
+			metadata.Width,
+			metadata.Height,
+		)
+	}
+}
+
+func parseGeminiVideoStoreMetadata(value string) geminiVideoStoreMetadata {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return geminiVideoStoreMetadata{}
+	}
+
+	var metadata geminiVideoStoreMetadata
+	if err := sonic.UnmarshalString(value, &metadata); err == nil && metadata.OperationName != "" {
+		return metadata
+	}
+
+	return geminiVideoStoreMetadata{OperationName: value}
 }
 
 func requestVideoSeconds(meta *meta.Meta) int {
@@ -1534,6 +1667,30 @@ func requestVideoVariants(meta *meta.Meta) int {
 	}
 
 	return meta.GetInt("gemini_video_variants")
+}
+
+func requestVideoResolution(meta *meta.Meta) string {
+	if meta == nil {
+		return ""
+	}
+
+	return meta.GetString(metaGeminiVideoResolution)
+}
+
+func requestVideoWidth(meta *meta.Meta) int {
+	if meta == nil {
+		return 0
+	}
+
+	return meta.GetInt("gemini_video_width")
+}
+
+func requestVideoHeight(meta *meta.Meta) int {
+	if meta == nil {
+		return 0
+	}
+
+	return meta.GetInt("gemini_video_height")
 }
 
 func metaPrompt(meta *meta.Meta) string {
@@ -1561,7 +1718,7 @@ func saveGeminiVideoJobStore(
 		TokenID:   meta.Token.ID,
 		ChannelID: meta.Channel.ID,
 		Model:     meta.OriginModel,
-		Metadata:  operationName,
+		Metadata:  geminiVideoStoreMetadataString(meta, operationName),
 		ExpiresAt: expiresAt,
 	})
 }
@@ -1583,9 +1740,28 @@ func saveGeminiVideoStore(
 		TokenID:   meta.Token.ID,
 		ChannelID: meta.Channel.ID,
 		Model:     meta.OriginModel,
-		Metadata:  operationName,
+		Metadata:  geminiVideoStoreMetadataString(meta, operationName),
 		ExpiresAt: expiresAt,
 	})
+}
+
+func geminiVideoStoreMetadataString(meta *meta.Meta, operationName string) string {
+	metadata := geminiVideoStoreMetadata{
+		OperationName: operationName,
+		Prompt:        metaPrompt(meta),
+		Seconds:       requestVideoSeconds(meta),
+		Variants:      requestVideoVariants(meta),
+		Resolution:    requestVideoResolution(meta),
+		Width:         requestVideoWidth(meta),
+		Height:        requestVideoHeight(meta),
+	}
+
+	body, err := sonic.MarshalString(metadata)
+	if err != nil {
+		return operationName
+	}
+
+	return body
 }
 
 func writeGeminiVideoObject(
@@ -1643,6 +1819,9 @@ func geminiVideoUsageContext(meta *meta.Meta, operation *geminiOperation) model.
 	context := model.UsageContext{}
 	if meta != nil {
 		context = meta.RequestUsageContext
+		if resolution := meta.GetString(metaGeminiVideoResolution); resolution != "" {
+			context.Resolution = resolution
+		}
 	}
 
 	if operation == nil {
@@ -1650,6 +1829,128 @@ func geminiVideoUsageContext(meta *meta.Meta, operation *geminiOperation) model.
 	}
 
 	return context
+}
+
+func setGeminiVideoRequestMetadata(
+	meta *meta.Meta,
+	seconds int,
+	variants int,
+	resolution string,
+	width int,
+	height int,
+) {
+	if meta == nil {
+		return
+	}
+
+	if variants <= 0 {
+		variants = 1
+	}
+
+	meta.Set(metaGeminiVideoSeconds, seconds)
+	meta.Set(metaGeminiVideoVariants, variants)
+
+	if resolution != "" {
+		meta.Set(metaGeminiVideoResolution, resolution)
+	}
+
+	if width > 0 && height > 0 {
+		meta.Set("gemini_video_width", width)
+		meta.Set("gemini_video_height", height)
+	}
+}
+
+func requestVideoDimensionsFromAspectRatio(aspectRatio, resolution string) (int, int) {
+	shortSide := videoResolutionShortSide(resolution)
+	if shortSide <= 0 {
+		return 0, 0
+	}
+
+	widthRatio, heightRatio := parseVideoAspectRatio(aspectRatio)
+	if widthRatio <= 0 || heightRatio <= 0 {
+		widthRatio, heightRatio = 16, 9
+	}
+
+	if widthRatio >= heightRatio {
+		return shortSide * widthRatio / heightRatio, shortSide
+	}
+
+	return shortSide, shortSide * heightRatio / widthRatio
+}
+
+func videoResolutionShortSide(resolution string) int {
+	resolution = strings.ToLower(strings.TrimSpace(resolution))
+	switch resolution {
+	case "480p":
+		return 480
+	case "720p":
+		return 720
+	case "1080p":
+		return 1080
+	case "4k":
+		return 2160
+	default:
+		return 0
+	}
+}
+
+func parseVideoAspectRatio(aspectRatio string) (int, int) {
+	left, right, ok := strings.Cut(strings.TrimSpace(aspectRatio), ":")
+	if !ok {
+		return 0, 0
+	}
+
+	widthRatio, err := strconv.Atoi(left)
+	if err != nil {
+		return 0, 0
+	}
+
+	heightRatio, err := strconv.Atoi(right)
+	if err != nil {
+		return 0, 0
+	}
+
+	return widthRatio, heightRatio
+}
+
+func geminiVideoMetadataDurationSeconds(seconds int) int {
+	if seconds > 0 {
+		return seconds
+	}
+
+	return defaultGeminiVideoDurationSeconds
+}
+
+func geminiVideoMetadataResolution(resolution string) string {
+	resolution = strings.TrimSpace(resolution)
+	if resolution != "" {
+		return resolution
+	}
+
+	return defaultGeminiVideoResolution
+}
+
+func geminiVideoRequestUsage(meta *meta.Meta) model.Usage {
+	if meta == nil {
+		return model.Usage{}
+	}
+
+	seconds := meta.GetInt(metaGeminiVideoSeconds)
+	if seconds <= 0 {
+		return model.Usage{}
+	}
+
+	variants := meta.GetInt(metaGeminiVideoVariants)
+	if variants <= 0 {
+		variants = 1
+	}
+
+	tokens := model.ZeroNullInt64(int64(seconds * variants))
+
+	return model.Usage{
+		OutputTokens: tokens,
+		TotalTokens:  tokens,
+	}
 }
 
 func maxInt(values ...int) int {

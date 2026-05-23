@@ -37,7 +37,7 @@ func (a *Adaptor) SupportMode(mt *meta.Meta) bool {
 		return isGeminiTTSMeta(mt)
 	}
 
-	if m == mode.ImagesGenerations {
+	if m == mode.ImagesGenerations || m == mode.ImagesEdits {
 		return isGeminiImageMeta(mt)
 	}
 
@@ -202,6 +202,8 @@ func (a *Adaptor) ConvertRequest(
 		return ConvertTTSRequest(meta, req)
 	case mode.ImagesGenerations:
 		return ConvertImageRequest(meta, req)
+	case mode.ImagesEdits:
+		return ConvertImageEditRequest(meta, req)
 	case mode.GeminiVideo:
 		return NativeVideoConvertRequest(meta, req)
 	case mode.GeminiVideoOperations:
@@ -261,7 +263,7 @@ func (a *Adaptor) DoResponse(
 		return NativeHandler(meta, c, resp)
 	case mode.AudioSpeech:
 		return TTSHandler(meta, c, resp)
-	case mode.ImagesGenerations:
+	case mode.ImagesGenerations, mode.ImagesEdits:
 		return ImageHandler(meta, c, resp)
 	case mode.GeminiVideo:
 		return NativeVideoHandler(meta, store, c, resp)

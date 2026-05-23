@@ -1490,8 +1490,9 @@ func StreamHandler(
 	defer cleanup()
 
 	usage := model.Usage{}
-
-	var websearchCount int64
+	webSearchQueries := map[string]struct{}{}
+	webSearchGrounded := false
+	webSearchGemini3 := isGemini3Meta(meta)
 
 	for scanner.Scan() {
 		data := scanner.Bytes()
@@ -1516,10 +1517,13 @@ func StreamHandler(
 		if response.Usage != nil {
 			usage = geminiResponse.UsageMetadata.ToModelUsage()
 		}
-		// Track web search count from grounding metadata
-		if count := geminiResponse.GetWebSearchCount(); count > 0 {
-			websearchCount += count
-		}
+
+		trackGeminiWebSearch(
+			&geminiResponse,
+			webSearchQueries,
+			&webSearchGrounded,
+			&webSearchGemini3,
+		)
 
 		_ = render.OpenaiObjectData(c, response)
 	}
@@ -1530,7 +1534,9 @@ func StreamHandler(
 
 	render.OpenaiDone(c)
 
-	usage.WebSearchCount = model.ZeroNullInt64(websearchCount)
+	usage.WebSearchCount = model.ZeroNullInt64(
+		geminiWebSearchCount(webSearchQueries, webSearchGrounded, webSearchGemini3),
+	)
 
 	return adaptor.DoResponseResult{Usage: usage}, nil
 }

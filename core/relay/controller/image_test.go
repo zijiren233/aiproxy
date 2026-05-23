@@ -108,6 +108,41 @@ func TestGetImagesRequestPriceUsesPerImageUnitForConditionalPrices(t *testing.T)
 	require.Equal(t, model.ZeroNullInt64(1), price.ConditionalPrices[0].Price.OutputPriceUnit)
 }
 
+func TestGetImagesRequestPriceUsesPerImageOutputUnitForConditionalPrices(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	req := httptest.NewRequestWithContext(
+		context.Background(),
+		http.MethodPost,
+		"/v1/images/generations",
+		strings.NewReader(`{"model":"image-model","prompt":"A city street","size":"1024x1024"}`),
+	)
+	req.Header.Set("Content-Type", "application/json")
+
+	c, _ := gin.CreateTestContext(httptest.NewRecorder())
+	c.Request = req
+
+	price, err := GetImagesRequestPrice(c, model.ModelConfig{
+		Price: model.Price{
+			ConditionalPrices: []model.ConditionalPrice{
+				{
+					Condition: model.PriceCondition{Resolution: []string{"1024x1024"}},
+					Price:     model.Price{ImageOutputPrice: 0.12},
+				},
+			},
+		},
+	})
+	require.NoError(t, err)
+	require.Len(t, price.ConditionalPrices, 1)
+	require.Equal(t, model.ZeroNullInt64(1), price.ImageOutputPriceUnit)
+	require.Equal(
+		t,
+		model.ZeroNullFloat64(0.12),
+		price.ConditionalPrices[0].Price.ImageOutputPrice,
+	)
+	require.Equal(t, model.ZeroNullInt64(1), price.ConditionalPrices[0].Price.ImageOutputPriceUnit)
+}
+
 func TestGetImagesRequestPriceAllowsUnmatchedConditionalPrice(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
@@ -180,6 +215,11 @@ func TestGetImagesRequestUsageSetsPriceCondition(t *testing.T) {
 
 	usage, err := GetImagesRequestUsage(c, model.ModelConfig{})
 	require.NoError(t, err)
-	require.Equal(t, "1024*1024", usage.Context.PriceCondition.Resolution)
-	require.Equal(t, "hd", usage.Context.PriceCondition.Quality)
+	require.Equal(t, "1024*1024", usage.Context.Resolution)
+	require.Equal(t, "hd", usage.Context.Quality)
+	require.Zero(t, usage.Usage.InputTokens)
+	require.Zero(t, usage.Usage.ImageInputTokens)
+	require.Zero(t, usage.Usage.OutputTokens)
+	require.Zero(t, usage.Usage.ImageOutputTokens)
+	require.Zero(t, usage.Usage.TotalTokens)
 }

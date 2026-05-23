@@ -23,7 +23,13 @@ func (a *Adaptor) FetchAsyncUsage(
 	request adaptor.AsyncUsageRequest,
 ) (coremodel.Usage, coremodel.UsageContext, bool, error) {
 	channel := request.Channel
+
 	info := request.Info
+	if info == nil {
+		return coremodel.Usage{}, coremodel.UsageContext{}, false, errors.New(
+			"async usage info is nil",
+		)
+	}
 
 	switch mode.Mode(info.Mode) {
 	case mode.VideoGenerationsJobs, mode.Videos, mode.VideosRemix:
@@ -58,7 +64,7 @@ func (a *Adaptor) fetchAliVideoJobUsage(
 
 		usageContext := coremodel.UsageContext{}
 		if width, height := aliVideoDimensions(response.Usage); width > 0 && height > 0 {
-			usageContext.PriceCondition.Resolution = relaymodel.VideoResolutionFromDimensions(
+			usageContext.Resolution = relaymodel.VideoResolutionFromDimensions(
 				width,
 				height,
 			)

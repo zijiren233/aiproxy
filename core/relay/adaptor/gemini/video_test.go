@@ -6,10 +6,14 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/labring/aiproxy/core/common"
+	"github.com/labring/aiproxy/core/common/consume"
 	coremodel "github.com/labring/aiproxy/core/model"
 	adaptorapi "github.com/labring/aiproxy/core/relay/adaptor"
 	"github.com/labring/aiproxy/core/relay/adaptor/gemini"
@@ -21,6 +25,20 @@ import (
 
 type geminiVideoTestStore struct {
 	saved []adaptorapi.StoreCache
+}
+
+func geminiVideoModelPriceForTest(t *testing.T, modelName string) coremodel.Price {
+	t.Helper()
+
+	for _, mc := range gemini.ModelList {
+		if mc.Model == modelName {
+			return mc.Price
+		}
+	}
+
+	t.Fatalf("model %s not found", modelName)
+
+	return coremodel.Price{}
 }
 
 func (s *geminiVideoTestStore) GetStore(
@@ -238,11 +256,80 @@ func TestConvertVideoRequestMapsOpenAIFields(t *testing.T) {
 		t,
 		`{
 			"instances":[{"prompt":"make a video","image":{"fileData":{"fileUri":"gs://bucket/image.png"}}}],
-			"parameters":{"aspectRatio":"16:9","durationSeconds":8,"numberOfVideos":1}
+			"parameters":{"aspectRatio":"16:9","resolution":"720p","durationSeconds":8,"numberOfVideos":1}
 		}`,
 		string(body),
 	)
-	require.Equal(t, coremodel.ZeroNullInt64(8), m.RequestUsage.OutputTokens)
+	require.Zero(t, m.RequestUsage.OutputTokens)
+	require.Empty(t, m.RequestUsageContext.Resolution)
+	require.Equal(
+		t,
+		coremodel.ZeroNullInt64(8),
+		gemini.GeminiVideoRequestUsageForTest(m).OutputTokens,
+	)
+	require.Equal(t, "720p", gemini.GeminiVideoUsageContextForTest(m).Resolution)
+}
+
+func TestConvertVideoRequestPrefersNormalizedResolutionForPricing(t *testing.T) {
+	m := meta.NewMeta(
+		nil,
+		mode.Videos,
+		"veo-3.1-fast-generate-preview",
+		coremodel.ModelConfig{},
+		meta.WithRequestUsageContext(coremodel.UsageContext{
+			Resolution: "1280x720",
+		}),
+	)
+	req, err := http.NewRequestWithContext(
+		context.Background(),
+		http.MethodPost,
+		"/v1/videos",
+		strings.NewReader(
+			`{"model":"veo","prompt":"make a video","seconds":8,"size":"1280x720"}`,
+		),
+	)
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+
+	_, err = gemini.ConvertVideoRequestForTest(m, req)
+	require.NoError(t, err)
+
+	usageContext := gemini.GeminiVideoUsageContextForTest(m)
+	require.Equal(t, "720p", usageContext.Resolution)
+
+	amount := consume.CalculateAmountDetail(
+		200,
+		coremodel.Usage{
+			OutputTokens: 8,
+			TotalTokens:  8,
+		},
+		usageContext,
+		geminiVideoModelPriceForTest(t, "veo-3.1-fast-generate-preview"),
+	)
+	require.Equal(t, 0.8, amount.UsedAmount)
+}
+
+func TestNativeVideoConvertRequestStoresDefaultAsyncUsageMetadata(t *testing.T) {
+	m := meta.NewMeta(nil, mode.GeminiVideo, "veo-3.1-generate-preview", coremodel.ModelConfig{})
+	req, err := http.NewRequestWithContext(
+		context.Background(),
+		http.MethodPost,
+		"/v1beta/models/veo-3.1-generate-preview:predictLongRunning",
+		strings.NewReader(`{"instances":[{"prompt":"make a video"}]}`),
+	)
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+
+	_, err = gemini.NativeVideoConvertRequest(m, req)
+	require.NoError(t, err)
+
+	require.Zero(t, m.RequestUsage.OutputTokens)
+	require.Equal(
+		t,
+		coremodel.ZeroNullInt64(8),
+		gemini.GeminiVideoRequestUsageForTest(m).OutputTokens,
+	)
+	require.Equal(t, "720p", gemini.GeminiVideoUsageContextForTest(m).Resolution)
 }
 
 func TestConvertVideoGenerationJobRequestUsesJobOnlyFields(t *testing.T) {
@@ -272,11 +359,18 @@ func TestConvertVideoGenerationJobRequestUsesJobOnlyFields(t *testing.T) {
 		t,
 		`{
 			"instances":[{"prompt":"make a video"}],
-			"parameters":{"aspectRatio":"16:9","durationSeconds":8,"numberOfVideos":2}
+			"parameters":{"aspectRatio":"16:9","resolution":"720p","durationSeconds":8,"numberOfVideos":2}
 		}`,
 		string(body),
 	)
-	require.Equal(t, coremodel.ZeroNullInt64(16), m.RequestUsage.OutputTokens)
+	require.Zero(t, m.RequestUsage.OutputTokens)
+	require.Empty(t, m.RequestUsageContext.Resolution)
+	require.Equal(
+		t,
+		coremodel.ZeroNullInt64(16),
+		gemini.GeminiVideoRequestUsageForTest(m).OutputTokens,
+	)
+	require.Equal(t, "720p", gemini.GeminiVideoUsageContextForTest(m).Resolution)
 }
 
 func TestConvertVideoGenerationJobRequestIgnoresVideosSeconds(t *testing.T) {
@@ -306,10 +400,80 @@ func TestConvertVideoGenerationJobRequestIgnoresVideosSeconds(t *testing.T) {
 		t,
 		`{
 			"instances":[{"prompt":"make a video"}],
-			"parameters":{"aspectRatio":"16:9","numberOfVideos":2}
+			"parameters":{"aspectRatio":"16:9","resolution":"720p","numberOfVideos":2}
 		}`,
 		string(body),
 	)
+}
+
+func TestConvertVideoGenerationJobRequestStoresDefaultAsyncUsageMetadata(t *testing.T) {
+	m := meta.NewMeta(
+		nil,
+		mode.VideoGenerationsJobs,
+		"veo-3.1-generate-preview",
+		coremodel.ModelConfig{},
+	)
+	req, err := http.NewRequestWithContext(
+		context.Background(),
+		http.MethodPost,
+		"/v1/video/generations/jobs",
+		strings.NewReader(`{"model":"veo","prompt":"make a video"}`),
+	)
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+
+	result, err := gemini.ConvertVideoRequestForTest(m, req)
+	require.NoError(t, err)
+
+	body, err := io.ReadAll(result.Body)
+	require.NoError(t, err)
+	require.JSONEq(
+		t,
+		`{"instances":[{"prompt":"make a video"}],"parameters":{"numberOfVideos":1}}`,
+		string(body),
+	)
+	require.Zero(t, m.RequestUsage.OutputTokens)
+	require.Equal(
+		t,
+		coremodel.ZeroNullInt64(8),
+		gemini.GeminiVideoRequestUsageForTest(m).OutputTokens,
+	)
+	require.Equal(t, "720p", gemini.GeminiVideoUsageContextForTest(m).Resolution)
+}
+
+func TestConvertVideosRequestStoresDefaultAsyncUsageMetadata(t *testing.T) {
+	m := meta.NewMeta(
+		nil,
+		mode.Videos,
+		"veo-3.1-generate-preview",
+		coremodel.ModelConfig{},
+	)
+	req, err := http.NewRequestWithContext(
+		context.Background(),
+		http.MethodPost,
+		"/v1/videos",
+		strings.NewReader(`{"model":"veo","prompt":"make a video"}`),
+	)
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+
+	result, err := gemini.ConvertVideoRequestForTest(m, req)
+	require.NoError(t, err)
+
+	body, err := io.ReadAll(result.Body)
+	require.NoError(t, err)
+	require.JSONEq(
+		t,
+		`{"instances":[{"prompt":"make a video"}],"parameters":{"numberOfVideos":1}}`,
+		string(body),
+	)
+	require.Zero(t, m.RequestUsage.OutputTokens)
+	require.Equal(
+		t,
+		coremodel.ZeroNullInt64(8),
+		gemini.GeminiVideoRequestUsageForTest(m).OutputTokens,
+	)
+	require.Equal(t, "720p", gemini.GeminiVideoUsageContextForTest(m).Resolution)
 }
 
 func TestVideoSubmitHandlerReturnsURLSafeJobID(t *testing.T) {
@@ -354,8 +518,118 @@ func TestVideoSubmitHandlerReturnsURLSafeJobID(t *testing.T) {
 	require.NotEmpty(t, job.ID)
 	require.NotContains(t, job.ID, "/")
 	require.Equal(t, coremodel.VideoJobStoreID(job.ID), store.saved[0].ID)
-	require.Equal(t, result.UpstreamID, store.saved[0].Metadata)
+	require.Equal(
+		t,
+		result.UpstreamID,
+		gemini.GeminiVideoStoreMetadataForTest(store.saved[0].Metadata),
+	)
 	require.LessOrEqual(t, len(store.saved[0].ID), 128)
+}
+
+func TestVideoSubmitHandlerReturnsDefaultContextAndDuration(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	adaptor := &gemini.Adaptor{}
+	store := &geminiVideoTestStore{}
+	m := meta.NewMeta(
+		nil,
+		mode.VideoGenerationsJobs,
+		"veo-3.1-generate-preview",
+		coremodel.ModelConfig{},
+	)
+	m.OriginModel = "veo-3.1-generate-preview"
+	m.Group.ID = "group-1"
+	m.Token.ID = 7
+	m.Channel.ID = 11
+
+	req, err := http.NewRequestWithContext(
+		context.Background(),
+		http.MethodPost,
+		"/v1/video/generations/jobs",
+		strings.NewReader(`{"model":"veo","prompt":"make a video"}`),
+	)
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+
+	_, err = gemini.ConvertVideoRequestForTest(m, req)
+	require.NoError(t, err)
+
+	recorder := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(recorder)
+	c.Request = httptest.NewRequestWithContext(
+		t.Context(),
+		http.MethodPost,
+		"/v1/video/generations/jobs",
+		nil,
+	)
+
+	resp := &http.Response{
+		StatusCode: http.StatusOK,
+		Body: io.NopCloser(strings.NewReader(
+			`{"name":"models/veo-3.1-generate-preview/operations/video-123","done":false}`,
+		)),
+	}
+
+	result, relayErr := adaptor.DoResponse(m, store, c, resp)
+	require.Nil(t, relayErr)
+	require.True(t, result.AsyncUsage)
+	require.Zero(t, result.Usage.OutputTokens)
+	require.Zero(t, result.Usage.TotalTokens)
+	require.Equal(t, "720p", result.UsageContext.Resolution)
+
+	var job relaymodel.VideoGenerationJob
+	require.NoError(t, json.Unmarshal(recorder.Body.Bytes(), &job))
+	require.Equal(t, 8, job.NSeconds)
+	require.Equal(t, 1, job.NVariants)
+	require.Equal(t, 1280, job.Width)
+	require.Equal(t, 720, job.Height)
+}
+
+func TestVideosSubmitHandlerReturnsDefaultContextDurationAndSize(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	adaptor := &gemini.Adaptor{}
+	store := &geminiVideoTestStore{}
+	m := meta.NewMeta(nil, mode.Videos, "veo-3.1-generate-preview", coremodel.ModelConfig{})
+	m.OriginModel = "veo-3.1-generate-preview"
+	m.Group.ID = "group-1"
+	m.Token.ID = 7
+	m.Channel.ID = 11
+
+	req, err := http.NewRequestWithContext(
+		context.Background(),
+		http.MethodPost,
+		"/v1/videos",
+		strings.NewReader(`{"model":"veo","prompt":"make a video"}`),
+	)
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+
+	_, err = gemini.ConvertVideoRequestForTest(m, req)
+	require.NoError(t, err)
+
+	recorder := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(recorder)
+	c.Request = httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/v1/videos", nil)
+
+	resp := &http.Response{
+		StatusCode: http.StatusOK,
+		Body: io.NopCloser(strings.NewReader(
+			`{"name":"models/veo-3.1-generate-preview/operations/video-123","done":false}`,
+		)),
+	}
+
+	result, relayErr := adaptor.DoResponse(m, store, c, resp)
+	require.Nil(t, relayErr)
+	require.True(t, result.AsyncUsage)
+	require.Zero(t, result.Usage.OutputTokens)
+	require.Zero(t, result.Usage.TotalTokens)
+	require.Equal(t, "720p", result.UsageContext.Resolution)
+
+	var video relaymodel.Video
+	require.NoError(t, json.Unmarshal(recorder.Body.Bytes(), &video))
+	require.Equal(t, 8, video.Seconds)
+	require.Equal(t, "720p", video.Size)
 }
 
 func TestNativeVideoHandlerStoresShortOperationID(t *testing.T) {
@@ -396,7 +670,11 @@ func TestNativeVideoHandlerStoresShortOperationID(t *testing.T) {
 	require.True(t, result.AsyncUsage)
 	require.Equal(t, "models/veo-3.1-generate-preview/operations/video-123", result.UpstreamID)
 	require.Equal(t, coremodel.VideoJobStoreID("video-123"), store.saved[0].ID)
-	require.Equal(t, result.UpstreamID, store.saved[0].Metadata)
+	require.Equal(
+		t,
+		result.UpstreamID,
+		gemini.GeminiVideoStoreMetadataForTest(store.saved[0].Metadata),
+	)
 	require.JSONEq(
 		t,
 		`{"name":"models/public-veo/operations/video-123","done":false}`,
@@ -446,7 +724,7 @@ func TestVideoSubmitHandlerStoresBoundedIDForLongVertexOperation(t *testing.T) {
 	require.NoError(t, json.Unmarshal(recorder.Body.Bytes(), &job))
 	require.NotContains(t, job.ID, "/")
 	require.LessOrEqual(t, len(coremodel.VideoJobStoreID(job.ID)), 128)
-	require.Equal(t, operationName, store.saved[0].Metadata)
+	require.Equal(t, operationName, gemini.GeminiVideoStoreMetadataForTest(store.saved[0].Metadata))
 
 	followupMeta := meta.NewMeta(
 		nil,
@@ -517,7 +795,175 @@ func TestVideoStatusHandlerResolvesStoredOperationWhenResponseNameMissing(t *tes
 	require.Equal(t, localID, job.ID)
 	require.Len(t, job.Generations, 1)
 	require.Equal(t, localID, job.Generations[0].ID)
-	require.Equal(t, operationName, store.saved[1].Metadata)
+	require.Equal(t, operationName, gemini.GeminiVideoStoreMetadataForTest(store.saved[1].Metadata))
+}
+
+func TestVideoStatusHandlerReturnsStoredDefaultDuration(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	adaptor := &gemini.Adaptor{}
+	submitStore := &geminiVideoTestStore{}
+	submitMeta := meta.NewMeta(
+		nil,
+		mode.VideoGenerationsJobs,
+		"veo-3.1-generate-preview",
+		coremodel.ModelConfig{},
+	)
+	submitMeta.OriginModel = "veo-3.1-generate-preview"
+	submitMeta.Group.ID = "group-1"
+	submitMeta.Token.ID = 7
+	submitMeta.Channel.ID = 11
+
+	req, err := http.NewRequestWithContext(
+		context.Background(),
+		http.MethodPost,
+		"/v1/video/generations/jobs",
+		strings.NewReader(`{"model":"veo","prompt":"make a video"}`),
+	)
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+	_, err = gemini.ConvertVideoRequestForTest(submitMeta, req)
+	require.NoError(t, err)
+
+	submitRecorder := httptest.NewRecorder()
+	submitCtx, _ := gin.CreateTestContext(submitRecorder)
+	submitCtx.Request = httptest.NewRequestWithContext(
+		t.Context(),
+		http.MethodPost,
+		"/v1/video/generations/jobs",
+		nil,
+	)
+	submitResp := &http.Response{
+		StatusCode: http.StatusOK,
+		Body: io.NopCloser(strings.NewReader(
+			`{"name":"models/veo-3.1-generate-preview/operations/video-123","done":false}`,
+		)),
+	}
+	_, relayErr := adaptor.DoResponse(submitMeta, submitStore, submitCtx, submitResp)
+	require.Nil(t, relayErr)
+
+	var submittedJob relaymodel.VideoGenerationJob
+	require.NoError(t, json.Unmarshal(submitRecorder.Body.Bytes(), &submittedJob))
+
+	statusMeta := meta.NewMeta(
+		nil,
+		mode.VideoGenerationsGetJobs,
+		"veo-3.1-generate-preview",
+		coremodel.ModelConfig{},
+		meta.WithGroup(submitMeta.Group),
+		meta.WithToken(submitMeta.Token),
+		meta.WithJobID(submittedJob.ID),
+	)
+	statusMeta.OriginModel = "veo-3.1-generate-preview"
+
+	statusRecorder := httptest.NewRecorder()
+	statusCtx, _ := gin.CreateTestContext(statusRecorder)
+	statusCtx.Request = httptest.NewRequestWithContext(
+		t.Context(),
+		http.MethodGet,
+		"/v1/video/generations/jobs/"+submittedJob.ID,
+		nil,
+	)
+	statusResp := &http.Response{
+		StatusCode: http.StatusOK,
+		Body: io.NopCloser(strings.NewReader(
+			`{"done":false}`,
+		)),
+	}
+
+	_, relayErr = adaptor.DoResponse(statusMeta, submitStore, statusCtx, statusResp)
+	require.Nil(t, relayErr)
+
+	var job relaymodel.VideoGenerationJob
+	require.NoError(t, json.Unmarshal(statusRecorder.Body.Bytes(), &job))
+	require.Equal(t, 8, job.NSeconds)
+	require.Equal(t, 1, job.NVariants)
+	require.Equal(t, "make a video", job.Prompt)
+	require.Equal(t, 1280, job.Width)
+	require.Equal(t, 720, job.Height)
+}
+
+func TestVideosStatusHandlerReturnsStoredDefaultDurationAndSize(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	adaptor := &gemini.Adaptor{}
+	submitStore := &geminiVideoTestStore{}
+	submitMeta := meta.NewMeta(
+		nil,
+		mode.Videos,
+		"veo-3.1-generate-preview",
+		coremodel.ModelConfig{},
+	)
+	submitMeta.OriginModel = "veo-3.1-generate-preview"
+	submitMeta.Group.ID = "group-1"
+	submitMeta.Token.ID = 7
+	submitMeta.Channel.ID = 11
+
+	req, err := http.NewRequestWithContext(
+		context.Background(),
+		http.MethodPost,
+		"/v1/videos",
+		strings.NewReader(`{"model":"veo","prompt":"make a video"}`),
+	)
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+	_, err = gemini.ConvertVideoRequestForTest(submitMeta, req)
+	require.NoError(t, err)
+
+	submitRecorder := httptest.NewRecorder()
+	submitCtx, _ := gin.CreateTestContext(submitRecorder)
+	submitCtx.Request = httptest.NewRequestWithContext(
+		t.Context(),
+		http.MethodPost,
+		"/v1/videos",
+		nil,
+	)
+	submitResp := &http.Response{
+		StatusCode: http.StatusOK,
+		Body: io.NopCloser(strings.NewReader(
+			`{"name":"models/veo-3.1-generate-preview/operations/video-123","done":false}`,
+		)),
+	}
+	_, relayErr := adaptor.DoResponse(submitMeta, submitStore, submitCtx, submitResp)
+	require.Nil(t, relayErr)
+
+	var submittedVideo relaymodel.Video
+	require.NoError(t, json.Unmarshal(submitRecorder.Body.Bytes(), &submittedVideo))
+
+	statusMeta := meta.NewMeta(
+		nil,
+		mode.VideosGet,
+		"veo-3.1-generate-preview",
+		coremodel.ModelConfig{},
+		meta.WithGroup(submitMeta.Group),
+		meta.WithToken(submitMeta.Token),
+		meta.WithVideoID(submittedVideo.ID),
+	)
+	statusMeta.OriginModel = "veo-3.1-generate-preview"
+
+	statusRecorder := httptest.NewRecorder()
+	statusCtx, _ := gin.CreateTestContext(statusRecorder)
+	statusCtx.Request = httptest.NewRequestWithContext(
+		t.Context(),
+		http.MethodGet,
+		"/v1/videos/"+submittedVideo.ID,
+		nil,
+	)
+	statusResp := &http.Response{
+		StatusCode: http.StatusOK,
+		Body: io.NopCloser(strings.NewReader(
+			`{"done":false}`,
+		)),
+	}
+
+	_, relayErr = adaptor.DoResponse(statusMeta, submitStore, statusCtx, statusResp)
+	require.Nil(t, relayErr)
+
+	var video relaymodel.Video
+	require.NoError(t, json.Unmarshal(statusRecorder.Body.Bytes(), &video))
+	require.Equal(t, 8, video.Seconds)
+	require.Equal(t, "720p", video.Size)
+	require.Equal(t, "make a video", video.Prompt)
 }
 
 func TestConvertVideoRequestInjectsPersonGenerationWhenEnabled(t *testing.T) {
@@ -638,7 +1084,7 @@ func TestGeminiVideoOperationResponseExtractsGeneratedSampleURI(t *testing.T) {
 	)
 }
 
-func TestFetchAsyncUsageKeepsRequestUsageAndResolution(t *testing.T) {
+func TestFetchAsyncUsageBuildsFinalUsageFromStoredMetadata(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		require.Equal(
 			t,
@@ -667,6 +1113,120 @@ func TestFetchAsyncUsageKeepsRequestUsageAndResolution(t *testing.T) {
 	}))
 	defer ts.Close()
 
+	oldLogDB := coremodel.LogDB
+	oldDB := coremodel.DB
+	oldRedisEnabled := common.RedisEnabled
+
+	db, err := coremodel.OpenSQLite(filepath.Join(t.TempDir(), "gemini_async_usage.db"))
+	require.NoError(t, err)
+	require.NoError(t, db.AutoMigrate(&coremodel.StoreV2{}))
+
+	coremodel.LogDB = db
+	coremodel.DB = db
+	common.RedisEnabled = false
+
+	t.Cleanup(func() {
+		coremodel.LogDB = oldLogDB
+		coremodel.DB = oldDB
+		common.RedisEnabled = oldRedisEnabled
+	})
+
+	operationName := "models/veo-3.1-generate-preview/operations/video-123"
+	localID := gemini.GeminiVideoLocalIDForTest(operationName)
+	_, err = coremodel.SaveStore(&coremodel.StoreV2{
+		GroupID:   "group-1",
+		TokenID:   7,
+		ChannelID: 11,
+		Model:     "veo-3.1-generate-preview",
+		ID:        coremodel.VideoJobStoreID(localID),
+		Metadata:  `{"operation_name":"models/veo-3.1-generate-preview/operations/video-123","seconds":6,"variants":2,"resolution":"1080p"}`,
+		ExpiresAt: time.Now().Add(time.Hour),
+	})
+	require.NoError(t, err)
+
+	adaptor := &gemini.Adaptor{}
+	usage, usageContext, done, err := adaptor.FetchAsyncUsage(
+		t.Context(),
+		adaptorapi.AsyncUsageRequest{
+			Channel: &coremodel.Channel{Key: "apikey", BaseURL: ts.URL},
+			Info: &coremodel.AsyncUsageInfo{
+				Mode:       int(mode.VideoGenerationsJobs),
+				Model:      "veo-3.1-generate-preview",
+				BaseURL:    ts.URL,
+				GroupID:    "group-1",
+				TokenID:    7,
+				UpstreamID: operationName,
+				Usage: coremodel.Usage{
+					OutputTokens: 99,
+					TotalTokens:  99,
+				},
+				UsageContext: coremodel.UsageContext{
+					Resolution: "720p",
+				},
+			},
+		},
+	)
+	require.NoError(t, err)
+	require.True(t, done)
+	require.Equal(t, coremodel.ZeroNullInt64(12), usage.OutputTokens)
+	require.Equal(t, coremodel.ZeroNullInt64(12), usage.TotalTokens)
+	require.Equal(t, "1080p", usageContext.Resolution)
+}
+
+func TestFetchAsyncUsageNativeGeminiVideoUsesNativeStoreID(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		require.Equal(
+			t,
+			"/v1beta/models/veo-3.1-generate-preview/operations/video-123",
+			r.URL.Path,
+		)
+
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{
+			"name":"models/veo-3.1-generate-preview/operations/video-123",
+			"done":true,
+			"response":{
+				"generateVideoResponse":{
+					"generatedSamples":[
+						{"video":{"uri":"https://example.com/one.mp4"}},
+						{"video":{"uri":"https://example.com/two.mp4"}}
+					]
+				}
+			}
+		}`))
+	}))
+	defer ts.Close()
+
+	oldLogDB := coremodel.LogDB
+	oldDB := coremodel.DB
+	oldRedisEnabled := common.RedisEnabled
+
+	db, err := coremodel.OpenSQLite(filepath.Join(t.TempDir(), "gemini_native_async_usage.db"))
+	require.NoError(t, err)
+	require.NoError(t, db.AutoMigrate(&coremodel.StoreV2{}))
+
+	coremodel.LogDB = db
+	coremodel.DB = db
+	common.RedisEnabled = false
+
+	t.Cleanup(func() {
+		coremodel.LogDB = oldLogDB
+		coremodel.DB = oldDB
+		common.RedisEnabled = oldRedisEnabled
+	})
+
+	operationName := "models/veo-3.1-generate-preview/operations/video-123"
+	_, err = coremodel.SaveStore(&coremodel.StoreV2{
+		GroupID:   "group-1",
+		TokenID:   7,
+		ChannelID: 11,
+		Model:     "veo-3.1-generate-preview",
+		ID:        coremodel.VideoJobStoreID("video-123"),
+		Metadata:  `{"operation_name":"models/veo-3.1-generate-preview/operations/video-123","seconds":5,"variants":2,"resolution":"1080p"}`,
+		ExpiresAt: time.Now().Add(time.Hour),
+	})
+	require.NoError(t, err)
+
 	adaptor := &gemini.Adaptor{}
 	usage, usageContext, done, err := adaptor.FetchAsyncUsage(
 		t.Context(),
@@ -676,20 +1236,18 @@ func TestFetchAsyncUsageKeepsRequestUsageAndResolution(t *testing.T) {
 				Mode:       int(mode.GeminiVideo),
 				Model:      "veo-3.1-generate-preview",
 				BaseURL:    ts.URL,
-				UpstreamID: "models/veo-3.1-generate-preview/operations/video-123",
-				Usage: coremodel.Usage{
-					OutputTokens: 12,
-					TotalTokens:  12,
-				},
+				GroupID:    "group-1",
+				TokenID:    7,
+				UpstreamID: operationName,
 				UsageContext: coremodel.UsageContext{
-					PriceCondition: coremodel.UsagePriceCondition{Resolution: "1080p"},
+					Resolution: "720p",
 				},
 			},
 		},
 	)
 	require.NoError(t, err)
 	require.True(t, done)
-	require.Equal(t, coremodel.ZeroNullInt64(12), usage.OutputTokens)
-	require.Equal(t, coremodel.ZeroNullInt64(12), usage.TotalTokens)
-	require.Equal(t, "1080p", usageContext.PriceCondition.Resolution)
+	require.Equal(t, coremodel.ZeroNullInt64(10), usage.OutputTokens)
+	require.Equal(t, coremodel.ZeroNullInt64(10), usage.TotalTokens)
+	require.Equal(t, "1080p", usageContext.Resolution)
 }

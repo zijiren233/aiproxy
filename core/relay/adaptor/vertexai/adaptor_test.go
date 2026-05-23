@@ -2,11 +2,17 @@ package vertexai_test
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"io"
 	"net/http"
+	"net/http/httptest"
+	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/labring/aiproxy/core/common"
 	coremodel "github.com/labring/aiproxy/core/model"
 	adaptorapi "github.com/labring/aiproxy/core/relay/adaptor"
 	vertexai "github.com/labring/aiproxy/core/relay/adaptor/vertexai"
@@ -45,6 +51,11 @@ func (s *vertexVideoTestStore) SaveStoreWithOption(
 
 func (s *vertexVideoTestStore) SaveIfNotExistStore(adaptorapi.StoreCache) error {
 	return nil
+}
+
+func vertexGeminiVideoLocalIDForTest(operationName string) string {
+	sum := sha256.Sum256([]byte(operationName))
+	return "gemini_op_" + hex.EncodeToString(sum[:])
 }
 
 func TestGetRequestURL_UsesOriginModelNameForRouting(t *testing.T) {
@@ -328,12 +339,95 @@ func TestConvertRequestGeminiImageUsesGeminiInnerAdaptor(t *testing.T) {
 	require.JSONEq(
 		t,
 		`{
-			"contents":[{"role":"user","parts":[{"text":"draw a cat"}]}],
-			"generationConfig":{
-				"responseModalities":["TEXT","IMAGE"],
-				"imageConfig":{"aspectRatio":"1:1"}
-			}
-		}`,
+				"contents":[{"role":"user","parts":[{"text":"draw a cat"}]}],
+				"generationConfig":{
+					"responseModalities":["IMAGE"],
+					"imageConfig":{"aspectRatio":"1:1","imageSize":"1k"}
+				}
+			}`,
 		string(body),
 	)
+}
+
+func TestFetchAsyncUsageGeminiVideoBuildsUsageFromStoredMetadata(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		require.Equal(
+			t,
+			"/v1/projects/project-1/locations/us-central1/publishers/google/models/veo-3.1-generate-preview/operations/video-123",
+			r.URL.Path,
+		)
+
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{
+			"name":"projects/project-1/locations/us-central1/publishers/google/models/veo-3.1-generate-preview/operations/video-123",
+			"done":true,
+			"response":{
+				"generateVideoResponse":{
+					"generatedSamples":[
+						{"video":{"uri":"https://example.com/one.mp4"}},
+						{"video":{"uri":"https://example.com/two.mp4"}}
+					]
+				}
+			}
+		}`))
+	}))
+	defer ts.Close()
+
+	oldLogDB := coremodel.LogDB
+	oldDB := coremodel.DB
+	oldRedisEnabled := common.RedisEnabled
+
+	db, err := coremodel.OpenSQLite(filepath.Join(t.TempDir(), "vertex_async_usage.db"))
+	require.NoError(t, err)
+	require.NoError(t, db.AutoMigrate(&coremodel.StoreV2{}))
+
+	coremodel.LogDB = db
+	coremodel.DB = db
+	common.RedisEnabled = false
+
+	t.Cleanup(func() {
+		coremodel.LogDB = oldLogDB
+		coremodel.DB = oldDB
+		common.RedisEnabled = oldRedisEnabled
+	})
+
+	operationName := "projects/project-1/locations/us-central1/publishers/google/models/veo-3.1-generate-preview/operations/video-123"
+	localID := vertexGeminiVideoLocalIDForTest(operationName)
+	_, err = coremodel.SaveStore(&coremodel.StoreV2{
+		GroupID:   "group-1",
+		TokenID:   7,
+		ChannelID: 11,
+		Model:     "veo-3.1-generate-preview",
+		ID:        coremodel.VideoJobStoreID(localID),
+		Metadata:  `{"operation_name":"projects/project-1/locations/us-central1/publishers/google/models/veo-3.1-generate-preview/operations/video-123","seconds":5,"variants":2,"resolution":"1080p"}`,
+		ExpiresAt: time.Now().Add(time.Hour),
+	})
+	require.NoError(t, err)
+
+	adaptor := &vertexai.Adaptor{}
+	usage, usageContext, done, err := adaptor.FetchAsyncUsage(
+		t.Context(),
+		adaptorapi.AsyncUsageRequest{
+			Channel: &coremodel.Channel{
+				Key:     "us-central1|project-1|apikey",
+				BaseURL: ts.URL,
+			},
+			Info: &coremodel.AsyncUsageInfo{
+				Mode:       int(mode.VideoGenerationsJobs),
+				Model:      "veo-3.1-generate-preview",
+				BaseURL:    ts.URL,
+				GroupID:    "group-1",
+				TokenID:    7,
+				UpstreamID: operationName,
+				UsageContext: coremodel.UsageContext{
+					Resolution: "720p",
+				},
+			},
+		},
+	)
+	require.NoError(t, err)
+	require.True(t, done)
+	require.Equal(t, coremodel.ZeroNullInt64(10), usage.OutputTokens)
+	require.Equal(t, coremodel.ZeroNullInt64(10), usage.TotalTokens)
+	require.Equal(t, "1080p", usageContext.Resolution)
 }

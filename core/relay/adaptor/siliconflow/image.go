@@ -70,7 +70,7 @@ func ConvertImageRequest(meta *meta.Meta, request *http.Request) (adaptor.Conver
 		return adaptor.ConvertResult{}, err
 	}
 
-	if err := renameImageRequestField(&node, "size", "image_size"); err != nil {
+	if err := renameImageRequestSize(&node); err != nil {
 		return adaptor.ConvertResult{}, err
 	}
 
@@ -99,6 +99,26 @@ func renameImageRequestField(node *ast.Node, oldKey, newKey string) error {
 	}
 
 	_, err := node.Unset(oldKey)
+
+	return err
+}
+
+func renameImageRequestSize(node *ast.Node) error {
+	value := node.Get("size")
+	if !value.Exists() {
+		return nil
+	}
+
+	size, err := value.String()
+	if err != nil {
+		return renameImageRequestField(node, "size", "image_size")
+	}
+
+	if _, err := node.Set("image_size", ast.NewString(normalizeSiliconFlowSize(size))); err != nil {
+		return err
+	}
+
+	_, err = node.Unset("size")
 
 	return err
 }
@@ -175,10 +195,10 @@ func ImageHandler(
 	}
 
 	usage := model.Usage{
-		InputTokens:  meta.RequestUsage.InputTokens,
-		OutputTokens: meta.RequestUsage.OutputTokens,
-		TotalTokens:  meta.RequestUsage.InputTokens + meta.RequestUsage.OutputTokens,
+		ImageOutputTokens: model.ZeroNullInt64(len(openaiResponse.Data)),
 	}
+	usage.OutputTokens = usage.ImageOutputTokens
+	usage.TotalTokens = usage.OutputTokens
 
 	return adaptor.DoResponseResult{Usage: usage}, nil
 }

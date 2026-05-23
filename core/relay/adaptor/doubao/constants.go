@@ -10,6 +10,142 @@ import (
 
 var ModelList = []model.ModelConfig{
 	{
+		Model: "doubao-seedream-5-0-lite",
+		Type:  mode.ImagesGenerations,
+		Owner: model.ModelOwnerDoubao,
+		Price: model.Price{
+			// Seedream image generation bills by the number of successfully generated images.
+			ImageOutputPrice:     0.22,
+			ImageOutputPriceUnit: 1,
+		},
+	},
+	{
+		Model: "doubao-seedream-4-5",
+		Type:  mode.ImagesGenerations,
+		Owner: model.ModelOwnerDoubao,
+		Price: model.Price{
+			// Seedream image generation bills by the number of successfully generated images.
+			ImageOutputPrice:     0.25,
+			ImageOutputPriceUnit: 1,
+		},
+	},
+	{
+		Model: "doubao-seedream-4-0",
+		Type:  mode.ImagesGenerations,
+		Owner: model.ModelOwnerDoubao,
+		Price: model.Price{
+			// Seedream image generation bills by the number of successfully generated images.
+			ImageOutputPrice:     0.2,
+			ImageOutputPriceUnit: 1,
+		},
+	},
+	{
+		Model: "doubao-seedance-2-0",
+		Type:  mode.VideoGenerationsJobs,
+		Owner: model.ModelOwnerDoubao,
+		Price: model.Price{
+			// Seedance video billing uses the API response usage.completion_tokens.
+			// The token unit price depends on output resolution and whether the
+			// request used reference video input; current usage context only carries
+			// resolution, so this uses the no-reference-video official tier.
+			OutputPrice:     51,
+			OutputPriceUnit: model.PriceUnit,
+			ConditionalPrices: []model.ConditionalPrice{
+				{
+					Condition: model.PriceCondition{Resolution: []string{"480p", "720p"}},
+					Price: model.Price{
+						OutputPrice:     46,
+						OutputPriceUnit: model.PriceUnit,
+					},
+				},
+				{
+					Condition: model.PriceCondition{Resolution: []string{"1080p"}},
+					Price: model.Price{
+						OutputPrice:     51,
+						OutputPriceUnit: model.PriceUnit,
+					},
+				},
+			},
+		},
+	},
+	{
+		Model: "doubao-seedance-2-0-fast",
+		Type:  mode.VideoGenerationsJobs,
+		Owner: model.ModelOwnerDoubao,
+		Price: model.Price{
+			// Seedance video billing uses the API response usage.completion_tokens.
+			OutputPrice:     37,
+			OutputPriceUnit: model.PriceUnit,
+			ConditionalPrices: []model.ConditionalPrice{
+				{
+					Condition: model.PriceCondition{Resolution: []string{"480p", "720p"}},
+					Price: model.Price{
+						OutputPrice:     37,
+						OutputPriceUnit: model.PriceUnit,
+					},
+				},
+			},
+		},
+	},
+	{
+		Model: "doubao-seedance-1-5-pro",
+		Type:  mode.VideoGenerationsJobs,
+		Owner: model.ModelOwnerDoubao,
+		Price: model.Price{
+			// Seedance 1.5 pro token price is for the default generated-audio case.
+			// The silent-video price is lower, but generate_audio is not part of PriceCondition.
+			OutputPrice:     16,
+			OutputPriceUnit: model.PriceUnit,
+			ConditionalPrices: []model.ConditionalPrice{
+				{
+					Condition: model.PriceCondition{ServiceTier: "flex"},
+					Price: model.Price{
+						OutputPrice:     8,
+						OutputPriceUnit: model.PriceUnit,
+					},
+				},
+			},
+		},
+	},
+	{
+		Model: "doubao-seedance-1-0-pro",
+		Type:  mode.VideoGenerationsJobs,
+		Owner: model.ModelOwnerDoubao,
+		Price: model.Price{
+			// Seedance 1.0 pro bills by returned video completion tokens.
+			OutputPrice:     15,
+			OutputPriceUnit: model.PriceUnit,
+			ConditionalPrices: []model.ConditionalPrice{
+				{
+					Condition: model.PriceCondition{ServiceTier: "flex"},
+					Price: model.Price{
+						OutputPrice:     7.5,
+						OutputPriceUnit: model.PriceUnit,
+					},
+				},
+			},
+		},
+	},
+	{
+		Model: "doubao-seedance-1-0-pro-fast",
+		Type:  mode.VideoGenerationsJobs,
+		Owner: model.ModelOwnerDoubao,
+		Price: model.Price{
+			// Seedance 1.0 pro fast bills by returned video completion tokens.
+			OutputPrice:     4.2,
+			OutputPriceUnit: model.PriceUnit,
+			ConditionalPrices: []model.ConditionalPrice{
+				{
+					Condition: model.PriceCondition{ServiceTier: "flex"},
+					Price: model.Price{
+						OutputPrice:     2.1,
+						OutputPriceUnit: model.PriceUnit,
+					},
+				},
+			},
+		},
+	},
+	{
 		Model: "doubao-seed-1-6-250615",
 		Type:  mode.ChatCompletions,
 		Owner: model.ModelOwnerDoubao,

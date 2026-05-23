@@ -1,6 +1,8 @@
 package model
 
 import (
+	"strings"
+
 	"github.com/labring/aiproxy/core/model"
 	"github.com/labring/aiproxy/core/relay/adaptor"
 )
@@ -117,16 +119,54 @@ type GeminiChatResponse struct {
 	ModelVersion   string                    `json:"modelVersion,omitempty"`
 }
 
-// GetWebSearchCount returns the total number of web search queries from all candidates
+// GetWebSearchCount returns billable Google Search grounding usage.
 func (r *GeminiChatResponse) GetWebSearchCount() int64 {
-	var count int64
+	if r.IsGemini3Model() {
+		return int64(len(r.WebSearchQuerySet()))
+	}
+
 	for _, candidate := range r.Candidates {
-		if candidate.GroundingMetadata != nil {
-			count += int64(len(candidate.GroundingMetadata.WebSearchQueries))
+		if candidate.GroundingMetadata != nil &&
+			len(candidate.GroundingMetadata.WebSearchQueries) > 0 {
+			return 1
 		}
 	}
 
-	return count
+	return 0
+}
+
+func (r *GeminiChatResponse) IsGemini3Model() bool {
+	if r == nil {
+		return false
+	}
+
+	modelVersion := strings.ToLower(strings.TrimSpace(r.ModelVersion))
+
+	return strings.HasPrefix(modelVersion, "gemini-3")
+}
+
+func (r *GeminiChatResponse) WebSearchQuerySet() map[string]struct{} {
+	queries := map[string]struct{}{}
+	if r == nil {
+		return queries
+	}
+
+	for _, candidate := range r.Candidates {
+		if candidate == nil || candidate.GroundingMetadata == nil {
+			continue
+		}
+
+		for _, query := range candidate.GroundingMetadata.WebSearchQueries {
+			query = strings.TrimSpace(query)
+			if query == "" {
+				continue
+			}
+
+			queries[query] = struct{}{}
+		}
+	}
+
+	return queries
 }
 
 type GeminiUsageMetadata struct {

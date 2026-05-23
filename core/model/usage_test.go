@@ -841,27 +841,45 @@ func TestPrice_SelectConditionalPrice_WithMediaConditions(t *testing.T) {
 	}
 
 	imagePrice := price.SelectConditionalPrice(model.Usage{}, model.UsageContext{
-		PriceCondition: model.UsagePriceCondition{
-			Resolution: "1024*1024",
-			Quality:    "HD",
-		},
+		Resolution: "1024*1024",
+		Quality:    "HD",
 	})
 	if float64(imagePrice.OutputPrice) != 0.34 {
 		t.Fatalf("expected image conditional price 0.34, got %v", imagePrice.OutputPrice)
 	}
 
 	videoPrice := price.SelectConditionalPrice(model.Usage{}, model.UsageContext{
-		PriceCondition: model.UsagePriceCondition{Resolution: "720P"},
+		Resolution: "720P",
 	})
 	if float64(videoPrice.OutputPrice) != 0.40 {
 		t.Fatalf("expected video conditional price 0.40, got %v", videoPrice.OutputPrice)
 	}
 
+	videoDimensionPrice := price.SelectConditionalPrice(model.Usage{}, model.UsageContext{
+		Resolution: "1280x720",
+	})
+	if float64(videoDimensionPrice.OutputPrice) != 0.40 {
+		t.Fatalf(
+			"expected fuzzy video dimension conditional price 0.40, got %v",
+			videoDimensionPrice.OutputPrice,
+		)
+	}
+
+	disabledFuzzyPrice := price.SelectConditionalPriceWithOptions(
+		model.Usage{},
+		model.UsageContext{Resolution: "1280x720"},
+		model.PriceSelectionOptions{DisableResolutionFuzzyMatch: true},
+	)
+	if float64(disabledFuzzyPrice.OutputPrice) != 0.08 {
+		t.Fatalf(
+			"expected disabled fuzzy resolution fallback price 0.08, got %v",
+			disabledFuzzyPrice.OutputPrice,
+		)
+	}
+
 	fallbackPrice := price.SelectConditionalPrice(model.Usage{}, model.UsageContext{
-		PriceCondition: model.UsagePriceCondition{
-			Resolution: "1024x1024",
-			Quality:    "standard",
-		},
+		Resolution: "1024x1024",
+		Quality:    "standard",
 	})
 	if float64(fallbackPrice.OutputPrice) != 0.08 {
 		t.Fatalf("expected fallback price 0.08, got %v", fallbackPrice.OutputPrice)
@@ -885,20 +903,16 @@ func TestPrice_SelectConditionalPrice_AutoMediaConditionMatchesOnlyAuto(t *testi
 	}
 
 	selectedPrice := price.SelectConditionalPrice(model.Usage{}, model.UsageContext{
-		PriceCondition: model.UsagePriceCondition{
-			Resolution: "1024x1024",
-			Quality:    "standard",
-		},
+		Resolution: "1024x1024",
+		Quality:    "standard",
 	})
 	if float64(selectedPrice.OutputPrice) != 0.08 {
 		t.Fatalf("expected fallback price 0.08, got %v", selectedPrice.OutputPrice)
 	}
 
 	autoPrice := price.SelectConditionalPrice(model.Usage{}, model.UsageContext{
-		PriceCondition: model.UsagePriceCondition{
-			Resolution: "auto",
-			Quality:    "auto",
-		},
+		Resolution: "auto",
+		Quality:    "auto",
 	})
 	if float64(autoPrice.OutputPrice) != 0.12 {
 		t.Fatalf("expected auto condition price 0.12, got %v", autoPrice.OutputPrice)
@@ -922,10 +936,8 @@ func TestPrice_SelectConditionalPrice_WithMultipleMediaConditionValues(t *testin
 	}
 
 	selectedPrice := price.SelectConditionalPrice(model.Usage{}, model.UsageContext{
-		PriceCondition: model.UsagePriceCondition{
-			Resolution: "1024x1536",
-			Quality:    "medium",
-		},
+		Resolution: "1024x1536",
+		Quality:    "medium",
 	})
 	if float64(selectedPrice.OutputPrice) != 0.12 {
 		t.Fatalf("expected multi-value condition price 0.12, got %v", selectedPrice.OutputPrice)
@@ -1058,6 +1070,21 @@ func TestPrice_ValidateConditionalPrices_WithMediaConditions(t *testing.T) {
 					{
 						Condition: model.PriceCondition{Resolution: []string{"1080p"}},
 						Price:     model.Price{OutputPrice: 0.8},
+					},
+				},
+			},
+		},
+		{
+			name: "equivalent video dimension and tier do not overlap in validation",
+			price: model.Price{
+				ConditionalPrices: []model.ConditionalPrice{
+					{
+						Condition: model.PriceCondition{Resolution: []string{"720p"}},
+						Price:     model.Price{OutputPrice: 0.4},
+					},
+					{
+						Condition: model.PriceCondition{Resolution: []string{"1280x720"}},
+						Price:     model.Price{OutputPrice: 0.5},
 					},
 				},
 			},

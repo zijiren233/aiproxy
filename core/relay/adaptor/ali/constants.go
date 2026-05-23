@@ -6,6 +6,7 @@ import (
 )
 
 // https://help.aliyun.com/zh/model-studio/getting-started/models?spm=a2c4g.11186623.0.i12#ced16cb6cdfsy
+// https://help.aliyun.com/zh/model-studio/model-pricing
 
 var ModelList = []model.ModelConfig{
 	// 通义千问-Max
@@ -134,8 +135,8 @@ var ModelList = []model.ModelConfig{
 		Type:  mode.ChatCompletions,
 		Owner: model.ModelOwnerAlibaba,
 		Price: model.Price{
-			InputPrice:  0.02,
-			OutputPrice: 0.02,
+			InputPrice:  0.0016,
+			OutputPrice: 0.004,
 		},
 		RPM: 1200,
 		Config: model.NewModelConfig(
@@ -151,8 +152,8 @@ var ModelList = []model.ModelConfig{
 		Type:  mode.ChatCompletions,
 		Owner: model.ModelOwnerAlibaba,
 		Price: model.Price{
-			InputPrice:  0.02,
-			OutputPrice: 0.02,
+			InputPrice:  0.0016,
+			OutputPrice: 0.004,
 		},
 		RPM: 1200,
 		Config: model.NewModelConfig(
@@ -168,8 +169,8 @@ var ModelList = []model.ModelConfig{
 		Type:  mode.ChatCompletions,
 		Owner: model.ModelOwnerAlibaba,
 		Price: model.Price{
-			InputPrice:  0.008,
-			OutputPrice: 0.008,
+			InputPrice:  0.0008,
+			OutputPrice: 0.002,
 		},
 		RPM: 1200,
 		Config: model.NewModelConfig(
@@ -185,8 +186,8 @@ var ModelList = []model.ModelConfig{
 		Type:  mode.ChatCompletions,
 		Owner: model.ModelOwnerAlibaba,
 		Price: model.Price{
-			InputPrice:  0.008,
-			OutputPrice: 0.008,
+			InputPrice:  0.0008,
+			OutputPrice: 0.002,
 		},
 		RPM: 1200,
 		Config: model.NewModelConfig(
@@ -204,8 +205,8 @@ var ModelList = []model.ModelConfig{
 		Type:  mode.ChatCompletions,
 		Owner: model.ModelOwnerAlibaba,
 		Price: model.Price{
-			InputPrice:  0.005,
-			OutputPrice: 0.005,
+			InputPrice:  0.0003,
+			OutputPrice: 0.0005,
 		},
 		RPM:              600,
 		ExcludeFromTests: true,
@@ -221,8 +222,8 @@ var ModelList = []model.ModelConfig{
 		Type:  mode.ChatCompletions,
 		Owner: model.ModelOwnerAlibaba,
 		Price: model.Price{
-			InputPrice:  0.005,
-			OutputPrice: 0.005,
+			InputPrice:  0.0003,
+			OutputPrice: 0.0005,
 		},
 		RPM:              600,
 		ExcludeFromTests: true,
@@ -890,193 +891,403 @@ var ModelList = []model.ModelConfig{
 		Model: "qwen-image",
 		Type:  mode.ImagesGenerations,
 		Owner: model.ModelOwnerAlibaba,
-		RPM:   60,
+		// Ali image generation/edit APIs bill by successful output image count.
+		// aliImageUsageToOpenAI maps that count into ImageOutputTokens.
+		Price: model.Price{
+			ImageOutputPrice:     model.ZeroNullFloat64(0.25),
+			ImageOutputPriceUnit: 1,
+		},
+		RPM: 60,
 	},
 	{
 		Model: "qwen-image-plus",
 		Type:  mode.ImagesGenerations,
 		Owner: model.ModelOwnerAlibaba,
-		RPM:   60,
+		Price: model.Price{
+			ImageOutputPrice:     model.ZeroNullFloat64(0.2),
+			ImageOutputPriceUnit: 1,
+		},
+		RPM: 60,
 	},
 	{
 		Model: "qwen-image-plus-2026-01-09",
 		Type:  mode.ImagesGenerations,
 		Owner: model.ModelOwnerAlibaba,
-		RPM:   60,
+		Price: model.Price{
+			ImageOutputPrice:     model.ZeroNullFloat64(0.2),
+			ImageOutputPriceUnit: 1,
+		},
+		RPM: 60,
 	},
 	{
 		Model: "qwen-image-max",
 		Type:  mode.ImagesGenerations,
 		Owner: model.ModelOwnerAlibaba,
-		RPM:   60,
+		Price: model.Price{
+			ImageOutputPrice:     model.ZeroNullFloat64(0.5),
+			ImageOutputPriceUnit: 1,
+		},
+		RPM: 60,
 	},
 	{
 		Model: "qwen-image-max-2025-12-30",
 		Type:  mode.ImagesGenerations,
 		Owner: model.ModelOwnerAlibaba,
-		RPM:   60,
+		Price: model.Price{
+			ImageOutputPrice:     model.ZeroNullFloat64(0.5),
+			ImageOutputPriceUnit: 1,
+		},
+		RPM: 60,
 	},
 	{
 		Model: "qwen-image-2.0",
 		Type:  mode.ImagesGenerations,
 		Owner: model.ModelOwnerAlibaba,
-		RPM:   60,
+		Price: model.Price{
+			ImageOutputPrice:     model.ZeroNullFloat64(0.2),
+			ImageOutputPriceUnit: 1,
+		},
+		RPM: 60,
 	},
 	{
 		Model: "qwen-image-2.0-2026-03-03",
 		Type:  mode.ImagesGenerations,
 		Owner: model.ModelOwnerAlibaba,
-		RPM:   60,
+		Price: model.Price{
+			ImageOutputPrice:     model.ZeroNullFloat64(0.2),
+			ImageOutputPriceUnit: 1,
+		},
+		RPM: 60,
 	},
 	{
 		Model: "qwen-image-2.0-pro",
 		Type:  mode.ImagesGenerations,
 		Owner: model.ModelOwnerAlibaba,
-		RPM:   60,
+		Price: model.Price{
+			ImageOutputPrice:     model.ZeroNullFloat64(0.5),
+			ImageOutputPriceUnit: 1,
+		},
+		RPM: 60,
 	},
 	{
 		Model: "qwen-image-2.0-pro-2026-03-03",
 		Type:  mode.ImagesGenerations,
 		Owner: model.ModelOwnerAlibaba,
-		RPM:   60,
+		Price: model.Price{
+			ImageOutputPrice:     model.ZeroNullFloat64(0.5),
+			ImageOutputPriceUnit: 1,
+		},
+		RPM: 60,
 	},
 	{
 		Model: "qwen-image-2.0-pro-2026-04-22",
 		Type:  mode.ImagesGenerations,
 		Owner: model.ModelOwnerAlibaba,
-		RPM:   60,
+		Price: model.Price{
+			ImageOutputPrice:     model.ZeroNullFloat64(0.5),
+			ImageOutputPriceUnit: 1,
+		},
+		RPM: 60,
 	},
 	{
 		Model: "qwen-image-edit",
 		Type:  mode.ImagesEdits,
 		Owner: model.ModelOwnerAlibaba,
-		RPM:   60,
+		Price: model.Price{
+			ImageOutputPrice:     model.ZeroNullFloat64(0.3),
+			ImageOutputPriceUnit: 1,
+		},
+		RPM: 60,
 	},
 	{
 		Model: "qwen-image-edit-plus",
 		Type:  mode.ImagesEdits,
 		Owner: model.ModelOwnerAlibaba,
-		RPM:   60,
+		Price: model.Price{
+			ImageOutputPrice:     model.ZeroNullFloat64(0.2),
+			ImageOutputPriceUnit: 1,
+		},
+		RPM: 60,
 	},
 	{
 		Model: "qwen-image-edit-plus-2025-10-30",
 		Type:  mode.ImagesEdits,
 		Owner: model.ModelOwnerAlibaba,
-		RPM:   60,
+		Price: model.Price{
+			ImageOutputPrice:     model.ZeroNullFloat64(0.2),
+			ImageOutputPriceUnit: 1,
+		},
+		RPM: 60,
 	},
 	{
 		Model: "qwen-image-edit-plus-2025-12-15",
 		Type:  mode.ImagesEdits,
 		Owner: model.ModelOwnerAlibaba,
-		RPM:   60,
+		Price: model.Price{
+			ImageOutputPrice:     model.ZeroNullFloat64(0.2),
+			ImageOutputPriceUnit: 1,
+		},
+		RPM: 60,
 	},
 	{
 		Model: "qwen-image-edit-max",
 		Type:  mode.ImagesEdits,
 		Owner: model.ModelOwnerAlibaba,
-		RPM:   60,
+		Price: model.Price{
+			ImageOutputPrice:     model.ZeroNullFloat64(0.5),
+			ImageOutputPriceUnit: 1,
+		},
+		RPM: 60,
 	},
 	{
 		Model: "qwen-image-edit-max-2026-01-16",
 		Type:  mode.ImagesEdits,
 		Owner: model.ModelOwnerAlibaba,
-		RPM:   60,
+		Price: model.Price{
+			ImageOutputPrice:     model.ZeroNullFloat64(0.5),
+			ImageOutputPriceUnit: 1,
+		},
+		RPM: 60,
 	},
 	{
 		Model: "qwen-mt-image",
 		Type:  mode.ImagesEdits,
 		Owner: model.ModelOwnerAlibaba,
-		RPM:   60,
+		Price: model.Price{
+			ImageOutputPrice:     model.ZeroNullFloat64(0.003),
+			ImageOutputPriceUnit: 1,
+		},
+		RPM: 60,
 	},
 	{
 		Model: "z-image-turbo",
 		Type:  mode.ImagesGenerations,
 		Owner: model.ModelOwnerAlibaba,
-		RPM:   60,
+		Price: model.Price{
+			ImageOutputPrice:     model.ZeroNullFloat64(0.2),
+			ImageOutputPriceUnit: 1,
+		},
+		RPM: 60,
 	},
 	{
 		Model: "wan2.7-image",
 		Type:  mode.ImagesGenerations,
 		Owner: model.ModelOwnerAlibaba,
-		RPM:   60,
+		Price: model.Price{
+			ImageOutputPrice:     model.ZeroNullFloat64(0.2),
+			ImageOutputPriceUnit: 1,
+		},
+		RPM: 60,
 	},
 	{
 		Model: "wan2.7-image-pro",
 		Type:  mode.ImagesGenerations,
 		Owner: model.ModelOwnerAlibaba,
-		RPM:   60,
+		Price: model.Price{
+			ImageOutputPrice:     model.ZeroNullFloat64(0.5),
+			ImageOutputPriceUnit: 1,
+		},
+		RPM: 60,
 	},
 	{
 		Model: "wan2.6-t2i",
 		Type:  mode.ImagesGenerations,
 		Owner: model.ModelOwnerAlibaba,
-		RPM:   60,
+		Price: model.Price{
+			ImageOutputPrice:     model.ZeroNullFloat64(0.2),
+			ImageOutputPriceUnit: 1,
+		},
+		RPM: 60,
 	},
 	{
 		Model: "wan2.5-t2i-preview",
 		Type:  mode.ImagesGenerations,
 		Owner: model.ModelOwnerAlibaba,
-		RPM:   60,
+		Price: model.Price{
+			ImageOutputPrice:     model.ZeroNullFloat64(0.2),
+			ImageOutputPriceUnit: 1,
+		},
+		RPM: 60,
 	},
 	{
 		Model: "wan2.2-t2i-flash",
 		Type:  mode.ImagesGenerations,
 		Owner: model.ModelOwnerAlibaba,
-		RPM:   60,
+		Price: model.Price{
+			ImageOutputPrice:     model.ZeroNullFloat64(0.14),
+			ImageOutputPriceUnit: 1,
+		},
+		RPM: 60,
 	},
 	{
 		Model: "wan2.2-t2i-plus",
 		Type:  mode.ImagesGenerations,
 		Owner: model.ModelOwnerAlibaba,
-		RPM:   60,
+		Price: model.Price{
+			ImageOutputPrice:     model.ZeroNullFloat64(0.2),
+			ImageOutputPriceUnit: 1,
+		},
+		RPM: 60,
 	},
 	{
 		Model: "wanx2.1-t2i-turbo",
 		Type:  mode.ImagesGenerations,
 		Owner: model.ModelOwnerAlibaba,
-		RPM:   60,
+		Price: model.Price{
+			ImageOutputPrice:     model.ZeroNullFloat64(0.14),
+			ImageOutputPriceUnit: 1,
+		},
+		RPM: 60,
 	},
 	{
 		Model: "wanx2.1-t2i-plus",
 		Type:  mode.ImagesGenerations,
 		Owner: model.ModelOwnerAlibaba,
-		RPM:   60,
+		Price: model.Price{
+			ImageOutputPrice:     model.ZeroNullFloat64(0.2),
+			ImageOutputPriceUnit: 1,
+		},
+		RPM: 60,
 	},
 	{
 		Model: "wanx2.0-t2i-turbo",
 		Type:  mode.ImagesGenerations,
 		Owner: model.ModelOwnerAlibaba,
-		RPM:   60,
+		Price: model.Price{
+			ImageOutputPrice:     model.ZeroNullFloat64(0.04),
+			ImageOutputPriceUnit: 1,
+		},
+		RPM: 60,
 	},
 	{
 		Model: "wanx-v1",
 		Type:  mode.ImagesGenerations,
 		Owner: model.ModelOwnerAlibaba,
-		RPM:   60,
+		Price: model.Price{
+			ImageOutputPrice:     model.ZeroNullFloat64(0.16),
+			ImageOutputPriceUnit: 1,
+		},
+		RPM: 60,
 	},
 	{
 		Model: "wan2.5-t2v-preview",
 		Type:  mode.VideoGenerationsJobs,
 		Owner: model.ModelOwnerAlibaba,
-		RPM:   60,
+		// Ali video APIs bill by successful output video seconds. Async usage
+		// normalizes returned dimensions into a resolution condition.
+		Price: model.Price{
+			OutputPrice:     model.ZeroNullFloat64(1.0),
+			OutputPriceUnit: 1,
+			ConditionalPrices: []model.ConditionalPrice{
+				{
+					Condition: model.PriceCondition{Resolution: []string{"480p"}},
+					Price: model.Price{
+						OutputPrice:     model.ZeroNullFloat64(0.3),
+						OutputPriceUnit: 1,
+					},
+				},
+				{
+					Condition: model.PriceCondition{Resolution: []string{"720p"}},
+					Price: model.Price{
+						OutputPrice:     model.ZeroNullFloat64(0.6),
+						OutputPriceUnit: 1,
+					},
+				},
+				{
+					Condition: model.PriceCondition{Resolution: []string{"1080p"}},
+					Price: model.Price{
+						OutputPrice:     model.ZeroNullFloat64(1.0),
+						OutputPriceUnit: 1,
+					},
+				},
+			},
+		},
+		RPM: 60,
 	},
 	{
 		Model: "wan2.5-i2v-preview",
 		Type:  mode.VideoGenerationsJobs,
 		Owner: model.ModelOwnerAlibaba,
-		RPM:   60,
+		Price: model.Price{
+			OutputPrice:     model.ZeroNullFloat64(1.0),
+			OutputPriceUnit: 1,
+			ConditionalPrices: []model.ConditionalPrice{
+				{
+					Condition: model.PriceCondition{Resolution: []string{"480p"}},
+					Price: model.Price{
+						OutputPrice:     model.ZeroNullFloat64(0.3),
+						OutputPriceUnit: 1,
+					},
+				},
+				{
+					Condition: model.PriceCondition{Resolution: []string{"720p"}},
+					Price: model.Price{
+						OutputPrice:     model.ZeroNullFloat64(0.6),
+						OutputPriceUnit: 1,
+					},
+				},
+				{
+					Condition: model.PriceCondition{Resolution: []string{"1080p"}},
+					Price: model.Price{
+						OutputPrice:     model.ZeroNullFloat64(1.0),
+						OutputPriceUnit: 1,
+					},
+				},
+			},
+		},
+		RPM: 60,
 	},
 	{
 		Model: "wan2.2-t2v-plus",
 		Type:  mode.VideoGenerationsJobs,
 		Owner: model.ModelOwnerAlibaba,
-		RPM:   60,
+		Price: model.Price{
+			OutputPrice:     model.ZeroNullFloat64(0.70),
+			OutputPriceUnit: 1,
+			ConditionalPrices: []model.ConditionalPrice{
+				{
+					Condition: model.PriceCondition{Resolution: []string{"480p"}},
+					Price: model.Price{
+						OutputPrice:     model.ZeroNullFloat64(0.14),
+						OutputPriceUnit: 1,
+					},
+				},
+				{
+					Condition: model.PriceCondition{Resolution: []string{"1080p"}},
+					Price: model.Price{
+						OutputPrice:     model.ZeroNullFloat64(0.70),
+						OutputPriceUnit: 1,
+					},
+				},
+			},
+		},
+		RPM: 60,
 	},
 	{
 		Model: "wan2.2-i2v-plus",
 		Type:  mode.VideoGenerationsJobs,
 		Owner: model.ModelOwnerAlibaba,
-		RPM:   60,
+		Price: model.Price{
+			OutputPrice:     model.ZeroNullFloat64(0.70),
+			OutputPriceUnit: 1,
+			ConditionalPrices: []model.ConditionalPrice{
+				{
+					Condition: model.PriceCondition{Resolution: []string{"480p"}},
+					Price: model.Price{
+						OutputPrice:     model.ZeroNullFloat64(0.14),
+						OutputPriceUnit: 1,
+					},
+				},
+				{
+					Condition: model.PriceCondition{Resolution: []string{"1080p"}},
+					Price: model.Price{
+						OutputPrice:     model.ZeroNullFloat64(0.70),
+						OutputPriceUnit: 1,
+					},
+				},
+			},
+		},
+		RPM: 60,
 	},
 	{
 		Model: "wan2.2-videoedit",
@@ -1106,25 +1317,114 @@ var ModelList = []model.ModelConfig{
 		Model: "happyhorse-1.0-t2v",
 		Type:  mode.VideoGenerationsJobs,
 		Owner: model.ModelOwnerAlibaba,
-		RPM:   60,
+		Price: model.Price{
+			OutputPrice:     model.ZeroNullFloat64(1.6),
+			OutputPriceUnit: 1,
+			ConditionalPrices: []model.ConditionalPrice{
+				{
+					Condition: model.PriceCondition{Resolution: []string{"720p"}},
+					Price: model.Price{
+						OutputPrice:     model.ZeroNullFloat64(0.9),
+						OutputPriceUnit: 1,
+					},
+				},
+				{
+					Condition: model.PriceCondition{Resolution: []string{"1080p"}},
+					Price: model.Price{
+						OutputPrice:     model.ZeroNullFloat64(1.6),
+						OutputPriceUnit: 1,
+					},
+				},
+			},
+		},
+		RPM: 60,
 	},
 	{
 		Model: "happyhorse-1.0-i2v",
 		Type:  mode.VideoGenerationsJobs,
 		Owner: model.ModelOwnerAlibaba,
-		RPM:   60,
+		Price: model.Price{
+			OutputPrice:     model.ZeroNullFloat64(1.6),
+			OutputPriceUnit: 1,
+			ConditionalPrices: []model.ConditionalPrice{
+				{
+					Condition: model.PriceCondition{Resolution: []string{"720p"}},
+					Price: model.Price{
+						OutputPrice:     model.ZeroNullFloat64(0.9),
+						OutputPriceUnit: 1,
+					},
+				},
+				{
+					Condition: model.PriceCondition{Resolution: []string{"1080p"}},
+					Price: model.Price{
+						OutputPrice:     model.ZeroNullFloat64(1.6),
+						OutputPriceUnit: 1,
+					},
+				},
+			},
+		},
+		RPM: 60,
 	},
 	{
 		Model: "happyhorse-1.0-r2v",
 		Type:  mode.VideoGenerationsJobs,
 		Owner: model.ModelOwnerAlibaba,
-		RPM:   60,
+		Price: model.Price{
+			OutputPrice:     model.ZeroNullFloat64(1.6),
+			OutputPriceUnit: 1,
+			ConditionalPrices: []model.ConditionalPrice{
+				{
+					Condition: model.PriceCondition{Resolution: []string{"720p"}},
+					Price: model.Price{
+						OutputPrice:     model.ZeroNullFloat64(0.9),
+						OutputPriceUnit: 1,
+					},
+				},
+				{
+					Condition: model.PriceCondition{Resolution: []string{"1080p"}},
+					Price: model.Price{
+						OutputPrice:     model.ZeroNullFloat64(1.6),
+						OutputPriceUnit: 1,
+					},
+				},
+			},
+		},
+		RPM: 60,
 	},
 	{
 		Model: "happyhorse-1.0-video-edit",
 		Type:  mode.VideoGenerationsJobs,
 		Owner: model.ModelOwnerAlibaba,
-		RPM:   60,
+		// HappyHorse video edit bills both input video seconds and output video
+		// seconds. fetchAliVideoJobUsage maps those seconds into VideoInputTokens
+		// and OutputTokens.
+		Price: model.Price{
+			VideoInputPrice:     model.ZeroNullFloat64(1.6),
+			VideoInputPriceUnit: 1,
+			OutputPrice:         model.ZeroNullFloat64(1.6),
+			OutputPriceUnit:     1,
+			ConditionalPrices: []model.ConditionalPrice{
+				{
+					Condition: model.PriceCondition{Resolution: []string{"720p"}},
+					Price: model.Price{
+						VideoInputPrice:     model.ZeroNullFloat64(0.9),
+						VideoInputPriceUnit: 1,
+						OutputPrice:         model.ZeroNullFloat64(0.9),
+						OutputPriceUnit:     1,
+					},
+				},
+				{
+					Condition: model.PriceCondition{Resolution: []string{"1080p"}},
+					Price: model.Price{
+						VideoInputPrice:     model.ZeroNullFloat64(1.6),
+						VideoInputPriceUnit: 1,
+						OutputPrice:         model.ZeroNullFloat64(1.6),
+						OutputPriceUnit:     1,
+					},
+				},
+			},
+		},
+		RPM: 60,
 	},
 
 	{

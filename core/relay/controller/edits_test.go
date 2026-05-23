@@ -141,7 +141,7 @@ func TestValidateImagesEditsRequestRejectsUnsupportedResolution(t *testing.T) {
 	require.Equal(t, 400, requestParamErr.StatusCode)
 }
 
-func TestGetImagesEditsRequestUsageCountsImageArrayField(t *testing.T) {
+func TestGetImagesEditsRequestUsageReturnsNoPreflightUsage(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	body := &bytes.Buffer{}
@@ -170,5 +170,9 @@ func TestGetImagesEditsRequestUsageCountsImageArrayField(t *testing.T) {
 
 	usage, err := GetImagesEditsRequestUsage(c, model.ModelConfig{Model: "gpt-image-1"})
 	require.NoError(t, err)
-	require.Equal(t, model.ZeroNullInt64(2), usage.Usage.ImageInputTokens)
+	require.Zero(t, usage.Usage.InputTokens)
+	require.Zero(t, usage.Usage.ImageInputTokens)
+	require.Zero(t, usage.Usage.OutputTokens)
+	require.Zero(t, usage.Usage.ImageOutputTokens)
+	require.Zero(t, usage.Usage.TotalTokens)
 }

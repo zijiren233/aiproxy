@@ -172,7 +172,7 @@ func openAIAudioToDoubaoURL(value any) *doubaoVideoURLContent {
 }
 
 func doubaoVideoResolutionFromSize(size string) string {
-	size = strings.ToLower(strings.TrimSpace(size))
+	size = normalizeDoubaoSize(size)
 	switch size {
 	case "480p", "720p", "1080p":
 		return size
@@ -197,7 +197,7 @@ func doubaoVideoResolutionFromSize(size string) string {
 }
 
 func ratioFromSize(size string) string {
-	size = strings.ToLower(strings.TrimSpace(size))
+	size = normalizeDoubaoSize(size)
 	switch size {
 	case "720p", "1080p", "480p", "":
 		return ""
@@ -230,12 +230,20 @@ func ratioFromSize(size string) string {
 }
 
 func dimensionsFromSize(size string) (int, int, bool) {
-	width, height, ok := strings.Cut(strings.ToLower(strings.TrimSpace(size)), "x")
+	width, height, ok := strings.Cut(normalizeDoubaoSize(size), "x")
 	if !ok {
 		return 0, 0, false
 	}
 
 	return dimensionsFromParts(width, height)
+}
+
+func normalizeDoubaoSize(size string) string {
+	size = strings.ToLower(strings.TrimSpace(size))
+	size = strings.ReplaceAll(size, "×", "x")
+	size = strings.ReplaceAll(size, "*", "x")
+
+	return size
 }
 
 func dimensionsFromParts(width, height string) (int, int, bool) {

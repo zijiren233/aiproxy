@@ -101,11 +101,12 @@ func Consume(
 	if asyncUsageStatus == model.AsyncUsageStatusPending {
 		recordUsage = model.Usage{}
 	} else {
-		amountDetail = CalculateAmountDetail(
+		amountDetail = CalculateAmountDetailWithOptions(
 			code,
 			recordUsage,
 			usageContext,
 			modelPrice,
+			priceSelectionOptions(meta),
 		)
 	}
 
@@ -122,9 +123,10 @@ func Consume(
 
 	selectedModelPrice := model.Price{}
 	if asyncUsageStatus != model.AsyncUsageStatusPending {
-		selectedModelPrice = modelPrice.SelectConditionalPrice(
+		selectedModelPrice = modelPrice.SelectConditionalPriceWithOptions(
 			usage,
 			usageContext,
+			priceSelectionOptions(meta),
 		)
 		selectedModelPrice.ConditionalPrices = nil
 	}
@@ -162,11 +164,12 @@ func Summary(
 	modelPrice model.Price,
 	downstreamResult bool,
 ) {
-	amountDetail := CalculateAmountDetail(
+	amountDetail := CalculateAmountDetailWithOptions(
 		code,
 		usage,
 		usageContext,
 		modelPrice,
+		priceSelectionOptions(meta),
 	)
 
 	recordSummary(
@@ -225,6 +228,22 @@ func CalculateAmountDetail(
 	usageContext model.UsageContext,
 	modelPrice model.Price,
 ) model.Amount {
+	return CalculateAmountDetailWithOptions(
+		code,
+		usage,
+		usageContext,
+		modelPrice,
+		model.PriceSelectionOptions{},
+	)
+}
+
+func CalculateAmountDetailWithOptions(
+	code int,
+	usage model.Usage,
+	usageContext model.UsageContext,
+	modelPrice model.Price,
+	options model.PriceSelectionOptions,
+) model.Amount {
 	if modelPrice.PerRequestPrice != 0 {
 		if code != http.StatusOK {
 			return model.Amount{}
@@ -235,7 +254,7 @@ func CalculateAmountDetail(
 		}
 	}
 
-	modelPrice = modelPrice.SelectConditionalPrice(usage, usageContext)
+	modelPrice = modelPrice.SelectConditionalPriceWithOptions(usage, usageContext, options)
 
 	inputTokens := usage.InputTokens
 	if modelPrice.ImageInputPrice > 0 {
@@ -351,6 +370,37 @@ func CalculateAmount(
 	modelPrice model.Price,
 ) float64 {
 	return CalculateAmountDetail(code, usage, usageContext, modelPrice).UsedAmount
+}
+
+func CalculateAmountWithOptions(
+	code int,
+	usage model.Usage,
+	usageContext model.UsageContext,
+	modelPrice model.Price,
+	options model.PriceSelectionOptions,
+) float64 {
+	return CalculateAmountDetailWithOptions(
+		code,
+		usage,
+		usageContext,
+		modelPrice,
+		options,
+	).UsedAmount
+}
+
+func priceSelectionOptions(meta *meta.Meta) model.PriceSelectionOptions {
+	if meta == nil {
+		return model.PriceSelectionOptions{}
+	}
+
+	disableResolutionFuzzyMatch, _ := model.GetModelConfigBool(
+		meta.ModelConfig.Config,
+		model.ModelConfigDisableResolutionFuzzyMatch,
+	)
+
+	return model.PriceSelectionOptions{
+		DisableResolutionFuzzyMatch: disableResolutionFuzzyMatch,
+	}
 }
 
 func processGroupConsume(
