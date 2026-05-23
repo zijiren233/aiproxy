@@ -84,7 +84,16 @@ func ConvertImageEditRequest(meta *meta.Meta, req *http.Request) (adaptor.Conver
 		meta.Set("stream", strings.EqualFold(req.PostFormValue("stream"), "true"))
 	}
 
-	imageParts, err := geminiImageEditParts(req.Context(), req.MultipartForm)
+	cfg, err := loadConfig(meta)
+	if err != nil {
+		return adaptor.ConvertResult{}, err
+	}
+
+	imageParts, err := geminiImageEditParts(
+		req.Context(),
+		req.MultipartForm,
+		autoImageURLToBase64Disabled(meta, cfg),
+	)
 	if err != nil {
 		return adaptor.ConvertResult{}, err
 	}
@@ -145,6 +154,7 @@ func buildImageGenerationConfig(
 func geminiImageEditParts(
 	ctx context.Context,
 	form *multipart.Form,
+	disableAutoImageURLToBase64 bool,
 ) ([]*relaymodel.GeminiPart, error) {
 	if form == nil {
 		return nil, errors.New("image is required")
@@ -153,7 +163,7 @@ func geminiImageEditParts(
 	parts := []*relaymodel.GeminiPart{}
 
 	for _, value := range firstFormValues(form.Value, "image", "image_url") {
-		part, err := geminiImagePartFromString(ctx, value)
+		part, err := geminiImagePartFromString(ctx, value, disableAutoImageURLToBase64)
 		if err != nil {
 			return nil, err
 		}
@@ -201,6 +211,7 @@ func firstFormValues(values map[string][]string, names ...string) []string {
 func geminiImagePartFromString(
 	ctx context.Context,
 	value string,
+	disableAutoImageURLToBase64 bool,
 ) (*relaymodel.GeminiPart, error) {
 	value = strings.TrimSpace(value)
 	if value == "" {
@@ -217,6 +228,14 @@ func geminiImagePartFromString(
 	}
 
 	if strings.HasPrefix(value, "http://") || strings.HasPrefix(value, "https://") {
+		if disableAutoImageURLToBase64 {
+			return &relaymodel.GeminiPart{
+				FileData: &relaymodel.GeminiFileData{
+					FileURI: value,
+				},
+			}, nil
+		}
+
 		fetchCtx, cancel := context.WithTimeout(ctx, geminiImageEditFetchTimeout)
 		defer cancel()
 
@@ -297,7 +316,7 @@ func geminiImagePartFromFile(fileHeader *multipart.FileHeader) (*relaymodel.Gemi
 }
 
 func geminiImageAspectRatioFromSize(size string) string {
-	size = strings.ToLower(strings.TrimSpace(size))
+	size = normalizeGeminiImageSize(size)
 	switch size {
 	case "1:1", "3:4", "4:3", "9:16", "16:9":
 		return size
@@ -320,7 +339,7 @@ func absFloat64(value float64) float64 {
 }
 
 func geminiImageSizeFromSize(size string) string {
-	size = strings.ToLower(strings.TrimSpace(size))
+	size = normalizeGeminiImageSize(size)
 	switch size {
 	case "512", "1k", "2k", "4k":
 		return size
@@ -342,6 +361,14 @@ func geminiImageSizeFromSize(size string) string {
 	default:
 		return "512"
 	}
+}
+
+func normalizeGeminiImageSize(size string) string {
+	size = strings.ToLower(strings.TrimSpace(size))
+	size = strings.ReplaceAll(size, "×", "x")
+	size = strings.ReplaceAll(size, "*", "x")
+
+	return size
 }
 
 func closestGeminiImageAspectRatio(width, height int) string {

@@ -203,7 +203,7 @@ func jsonVideoGenerationJobSubmitRequest(reqMap map[string]any) videoSubmitReque
 
 func jsonVideosSubmitRequest(reqMap map[string]any) videoSubmitRequest {
 	request := jsonVideoCommonSubmitRequest(reqMap)
-	request.ImageSize = stringFromMap(reqMap, "size")
+	request.ImageSize = normalizeSiliconFlowSize(stringFromMap(reqMap, "size"))
 
 	return request
 }
@@ -246,7 +246,7 @@ func multipartVideoCommonSubmitRequest(req *http.Request) (videoSubmitRequest, e
 
 	request := videoSubmitRequest{
 		Prompt:         req.PostFormValue("prompt"),
-		ImageSize:      strings.TrimSpace(req.PostFormValue("size")),
+		ImageSize:      normalizeSiliconFlowSize(req.PostFormValue("size")),
 		NegativePrompt: req.PostFormValue("negative_prompt"),
 	}
 
@@ -276,7 +276,7 @@ func multipartVideoCommonSubmitRequest(req *http.Request) (videoSubmitRequest, e
 
 func videoGenerationJobImageSize(reqMap map[string]any) string {
 	if size := stringFromMap(reqMap, "size"); size != "" {
-		return size
+		return normalizeSiliconFlowSize(size)
 	}
 
 	width, widthOK := intFromAny(reqMap["width"])
@@ -287,7 +287,7 @@ func videoGenerationJobImageSize(reqMap map[string]any) string {
 	}
 
 	if imageSize := stringFromMap(reqMap, "image_size"); imageSize != "" {
-		return imageSize
+		return normalizeSiliconFlowSize(imageSize)
 	}
 
 	return ""
@@ -854,7 +854,7 @@ func siliconFlowVideoStatusToOpenAI(status string) relaymodel.VideoStatus {
 }
 
 func parseSize(size string) (int, int) {
-	width, height, ok := strings.Cut(size, "x")
+	width, height, ok := strings.Cut(normalizeSiliconFlowSize(size), "x")
 	if !ok {
 		return 0, 0
 	}
@@ -870,6 +870,14 @@ func parseSize(size string) (int, int) {
 	}
 
 	return parsedWidth, parsedHeight
+}
+
+func normalizeSiliconFlowSize(size string) string {
+	size = strings.TrimSpace(size)
+	size = strings.ReplaceAll(size, "×", "x")
+	size = strings.ReplaceAll(size, "*", "x")
+
+	return size
 }
 
 func saveVideoJobStore(

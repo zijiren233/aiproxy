@@ -95,6 +95,64 @@ func TestConvertImageRequestMapsSmallDimensionsToImageSize(t *testing.T) {
 	assert.Equal(t, "512", geminiReq.GenerationConfig.ImageConfig.ImageSize)
 }
 
+func TestConvertImageRequestNormalizesDimensionDelimiters(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name            string
+		size            string
+		wantAspectRatio string
+		wantImageSize   string
+	}{
+		{
+			name:            "asterisk",
+			size:            "1024*1024",
+			wantAspectRatio: "1:1",
+			wantImageSize:   "1k",
+		},
+		{
+			name:            "multiplication sign",
+			size:            "1536×1024",
+			wantAspectRatio: "3:2",
+			wantImageSize:   "2k",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			meta := meta.NewMeta(
+				&model.Channel{Type: model.ChannelTypeGoogleGemini},
+				mode.ImagesGenerations,
+				"gemini-3-pro-image-preview",
+				model.ModelConfig{Type: mode.GeminiImage},
+			)
+
+			req, err := http.NewRequestWithContext(
+				t.Context(),
+				http.MethodPost,
+				"http://localhost/v1/images/generations",
+				bytes.NewBufferString(
+					`{"model":"gemini-3-pro-image-preview","prompt":"Draw a cat.","size":"`+tt.size+`"}`,
+				),
+			)
+			assert.NoError(t, err)
+
+			result, err := gemini.ConvertImageRequest(meta, req)
+			assert.NoError(t, err)
+
+			bodyBytes, err := io.ReadAll(result.Body)
+			assert.NoError(t, err)
+
+			var geminiReq relaymodel.GeminiChatRequest
+			assert.NoError(t, json.Unmarshal(bodyBytes, &geminiReq))
+			assert.Equal(t, tt.wantAspectRatio, geminiReq.GenerationConfig.ImageConfig.AspectRatio)
+			assert.Equal(t, tt.wantImageSize, geminiReq.GenerationConfig.ImageConfig.ImageSize)
+		})
+	}
+}
+
 func TestConvertImageEditRequestMapsMultipartToGemini(t *testing.T) {
 	t.Parallel()
 
@@ -258,6 +316,57 @@ func TestConvertImageEditRequestUsesRequestContextForRemoteImages(t *testing.T) 
 
 	err = <-errCh
 	assert.ErrorIs(t, err, context.Canceled)
+}
+
+func TestConvertImageEditRequestKeepsRemoteImagesWhenAutoDownloadDisabled(t *testing.T) {
+	t.Parallel()
+
+	meta := meta.NewMeta(
+		&model.Channel{
+			Type: model.ChannelTypeGoogleGemini,
+			Configs: model.ChannelConfigs{
+				"disable_auto_image_url_to_base64": true,
+			},
+		},
+		mode.ImagesEdits,
+		"gemini-3-pro-image-preview",
+		model.ModelConfig{Type: mode.GeminiImage},
+	)
+
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+	assert.NoError(t, writer.WriteField("model", "gemini-3-pro-image-preview"))
+	assert.NoError(t, writer.WriteField("prompt", "Use the remote image."))
+	assert.NoError(t, writer.WriteField("image_url", "https://example.com/image.png"))
+	assert.NoError(t, writer.Close())
+
+	req, err := http.NewRequestWithContext(
+		t.Context(),
+		http.MethodPost,
+		"http://localhost/v1/images/edits",
+		body,
+	)
+	assert.NoError(t, err)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+
+	result, err := gemini.ConvertImageEditRequest(meta, req)
+	assert.NoError(t, err)
+
+	bodyBytes, err := io.ReadAll(result.Body)
+	assert.NoError(t, err)
+
+	var geminiReq relaymodel.GeminiChatRequest
+	assert.NoError(t, json.Unmarshal(bodyBytes, &geminiReq))
+	assert.Len(t, geminiReq.Contents, 1)
+	assert.Len(t, geminiReq.Contents[0].Parts, 2)
+	assert.Nil(t, geminiReq.Contents[0].Parts[0].InlineData)
+	assert.NotNil(t, geminiReq.Contents[0].Parts[0].FileData)
+	assert.Equal(
+		t,
+		"https://example.com/image.png",
+		geminiReq.Contents[0].Parts[0].FileData.FileURI,
+	)
+	assert.Equal(t, "Use the remote image.", geminiReq.Contents[0].Parts[1].Text)
 }
 
 func TestConvertImageRequestMapsImageSizePreset(t *testing.T) {

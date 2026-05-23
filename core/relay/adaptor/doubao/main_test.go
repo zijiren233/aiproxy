@@ -774,7 +774,7 @@ func TestAdaptorConvertRequestVideoGenerationMapsPixelSize(t *testing.T) {
 		strings.NewReader(`{
 			"model": "alias-video",
 			"prompt": "Animate a calm ocean",
-			"size": "1280x720",
+			"size": "1280*720",
 			"seconds": 5
 		}`),
 	)
@@ -964,7 +964,7 @@ func TestAdaptorConvertRequestVideoGenerationMapsMultipartPixelSize(t *testing.T
 		t.Fatalf("failed to write prompt: %v", err)
 	}
 
-	if err := writer.WriteField("size", "1280x720"); err != nil {
+	if err := writer.WriteField("size", "1280×720"); err != nil {
 		t.Fatalf("failed to write size: %v", err)
 	}
 

@@ -5,7 +5,6 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
-	"strings"
 
 	"github.com/bytedance/sonic"
 	"github.com/bytedance/sonic/ast"
@@ -415,5 +414,5 @@ func countSuccessfulDoubaoImages(data []*doubaoImageData) int64 {
 }
 
 func normalizeDoubaoImageSize(size string) string {
-	return strings.ToLower(strings.ReplaceAll(strings.TrimSpace(size), "×", "x"))
+	return normalizeDoubaoSize(size)
 }

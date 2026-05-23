@@ -449,8 +449,7 @@ func TestAdaptorConvertRequestAliTextToVideo(t *testing.T) {
 		"model":"wan2.5-t2v-preview",
 		"prompt":"A camera moves through a quiet city street",
 		"n_seconds":5,
-		"width":1280,
-		"height":720,
+		"size":"1280×720",
 		"metadata":{
 			"prompt_extend":true,
 			"seed":123,
@@ -743,7 +742,7 @@ func TestAdaptorConvertRequestQwenImageGeneration(t *testing.T) {
 		strings.NewReader(`{
 			"model": "qwen-image-plus",
 			"prompt": "draw a cat",
-			"size": "1024x1024",
+			"size": "1024×1024",
 			"negative_prompt": "low quality",
 			"prompt_extend": true,
 			"watermark": false,

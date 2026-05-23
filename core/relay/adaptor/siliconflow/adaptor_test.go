@@ -405,7 +405,7 @@ func TestConvertImageRequestMapsOpenAIFields(t *testing.T) {
 		"model":"alias-image",
 		"prompt":"A city at sunset",
 		"negative_prompt":"low quality",
-		"size":"1024x1024",
+		"size":"1024×1024",
 		"n":2,
 		"steps":24,
 		"scale":7,
@@ -505,7 +505,7 @@ func TestConvertVideoRequestMapsJSONFields(t *testing.T) {
 	req := newJSONRequest(t, "/v1/video/generations/jobs", `{
 		"model":"alias-video",
 		"prompt":"A calm ocean",
-		"size":"1280x720",
+		"size":"1280*720",
 		"negative_prompt":"rain",
 		"seed":123
 	}`)
