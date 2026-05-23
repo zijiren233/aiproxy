@@ -8,17 +8,16 @@ import (
 type ModelConfigKey string
 
 const (
-	ModelConfigMaxContextTokensKey         ModelConfigKey = "max_context_tokens"
-	ModelConfigMaxInputTokensKey           ModelConfigKey = "max_input_tokens"
-	ModelConfigMaxOutputTokensKey          ModelConfigKey = "max_output_tokens"
-	ModelConfigVisionKey                   ModelConfigKey = "vision"
-	ModelConfigToolChoiceKey               ModelConfigKey = "tool_choice"
-	ModelConfigSupportFormatsKey           ModelConfigKey = "support_formats"
-	ModelConfigSupportVoicesKey            ModelConfigKey = "support_voices"
-	ModelConfigImageResolutions            ModelConfigKey = "image_resolutions"
-	ModelConfigImageQualitys               ModelConfigKey = "image_qualitys"
-	ModelConfigVideoResolutions            ModelConfigKey = "video_resolutions"
-	ModelConfigDisableResolutionFuzzyMatch ModelConfigKey = "disable_resolution_fuzzy_match"
+	ModelConfigMaxContextTokensKey ModelConfigKey = "max_context_tokens"
+	ModelConfigMaxInputTokensKey   ModelConfigKey = "max_input_tokens"
+	ModelConfigMaxOutputTokensKey  ModelConfigKey = "max_output_tokens"
+	ModelConfigVisionKey           ModelConfigKey = "vision"
+	ModelConfigToolChoiceKey       ModelConfigKey = "tool_choice"
+	ModelConfigSupportFormatsKey   ModelConfigKey = "support_formats"
+	ModelConfigSupportVoicesKey    ModelConfigKey = "support_voices"
+	ModelConfigImageResolutions    ModelConfigKey = "image_resolutions"
+	ModelConfigImageQualitys       ModelConfigKey = "image_qualitys"
+	ModelConfigVideoResolutions    ModelConfigKey = "video_resolutions"
 )
 
 type ModelConfigOption func(config map[ModelConfigKey]any)
@@ -38,12 +37,6 @@ func WithModelConfigImageResolutions(resolutions ...string) ModelConfigOption {
 func WithModelConfigImageQualitys(qualitys ...string) ModelConfigOption {
 	return func(config map[ModelConfigKey]any) {
 		config[ModelConfigImageQualitys] = qualitys
-	}
-}
-
-func WithModelConfigDisableResolutionFuzzyMatch(disable bool) ModelConfigOption {
-	return func(config map[ModelConfigKey]any) {
-		config[ModelConfigDisableResolutionFuzzyMatch] = disable
 	}
 }
 

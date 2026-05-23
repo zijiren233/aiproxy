@@ -592,9 +592,6 @@ func completeAsyncUsage(
 	usageContext model.UsageContext,
 ) error {
 	usageContext = usageContext.WithFallback(info.UsageContext)
-	if usageContext.ServiceTier == "" {
-		usageContext.ServiceTier = info.ServiceTier
-	}
 
 	price := info.Price
 
@@ -617,21 +614,33 @@ func completeAsyncUsage(
 	selectedPrice.ConditionalPrices = nil
 
 	if amount.UsedAmount > 0 && !info.BalanceConsumed {
-		if err := consumeAsyncUsageGroupBalance(ctx, info, amount.UsedAmount); err != nil {
+		charged, err := consumeAsyncUsageGroupBalance(ctx, info, amount.UsedAmount)
+		if err != nil {
 			notify.ErrorThrottle(
 				"asyncUsageConsumeBalance",
 				time.Minute*5,
 				"consume async usage balance failed",
 				err.Error(),
 			)
+
+			if !charged {
+				return fmt.Errorf("consume async usage balance before charge: %w", err)
+			}
+
 			recordAsyncUsageConsumeError(info, amount.UsedAmount, err)
-
-			return fmt.Errorf("consume async usage balance: %w", err)
-		}
-
-		info.BalanceConsumed = true
-		if err := model.MarkAsyncUsageBalanceConsumed(info); err != nil {
-			return fmt.Errorf("update async usage balance consumed: %w", err)
+			log.Errorf(
+				"consume async usage balance failed, complete without retry to avoid duplicate charge: id=%d request_id=%s upstream_id=%s amount=%f err=%v",
+				info.ID,
+				info.RequestID,
+				info.UpstreamID,
+				amount.UsedAmount,
+				err,
+			)
+		} else if charged {
+			info.BalanceConsumed = true
+			if err := model.MarkAsyncUsageBalanceConsumed(info); err != nil {
+				return fmt.Errorf("update async usage balance consumed: %w", err)
+			}
 		}
 	}
 
@@ -664,7 +673,7 @@ func completeAsyncUsage(
 		info.TokenName,
 		usage,
 		amount,
-		info.ServiceTier,
+		usageContext.ServiceTier,
 		model.IsClaudeLongContextSummary(info.Model, usage),
 	)
 
@@ -744,28 +753,28 @@ func consumeAsyncUsageGroupBalance(
 	ctx context.Context,
 	info *model.AsyncUsageInfo,
 	amount float64,
-) error {
+) (bool, error) {
 	if balance.Default == nil || info.GroupID == "" {
-		return nil
+		return false, nil
 	}
 
 	group, err := model.CacheGetGroup(info.GroupID)
 	if err != nil {
-		return fmt.Errorf("get group: %w", err)
+		return false, fmt.Errorf("get group: %w", err)
 	}
 
 	_, consumer, err := balance.Default.GetGroupRemainBalance(ctx, *group)
 	if err != nil {
-		return fmt.Errorf("get group balance: %w", err)
+		return false, fmt.Errorf("get group balance: %w", err)
 	}
 
 	if consumer == nil {
-		return nil
+		return false, nil
 	}
 
 	_, err = consumer.PostGroupConsume(ctx, info.TokenName, amount)
 
-	return err
+	return true, err
 }
 
 func recordAsyncUsageConsumeError(

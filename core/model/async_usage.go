@@ -32,7 +32,6 @@ type AsyncUsageInfo struct {
 	TokenID                     int              `gorm:"index"                         json:"token_id"`
 	TokenName                   string           `gorm:"size:128"                      json:"token_name,omitempty"`
 	Price                       Price            `gorm:"serializer:fastjson;type:text" json:"price"`
-	ServiceTier                 string           `gorm:"size:16"                       json:"service_tier,omitempty"`
 	UpstreamID                  string           `gorm:"type:varchar(256);index"       json:"upstream_id"`
 	Status                      AsyncUsageStatus `gorm:"index;default:1"               json:"status"`
 	Usage                       Usage            `gorm:"serializer:fastjson;type:text" json:"usage"`
@@ -41,7 +40,6 @@ type AsyncUsageInfo struct {
 	Amount                      Amount           `gorm:"embedded"                      json:"amount,omitempty"`
 	Error                       string           `gorm:"type:text"                     json:"error,omitempty"`
 	RetryCount                  int              `                                     json:"retry_count"`
-	DownstreamDone              bool             `                                     json:"downstream_done"`
 	BalanceConsumed             bool             `                                     json:"balance_consumed"`
 	ProcessingToken             string           `gorm:"size:64;index"                 json:"-"`
 	NextPollAt                  time.Time        `gorm:"index"                         json:"next_poll_at"`
@@ -223,6 +221,7 @@ func CompleteClaimedAsyncUsageInfo(
 		UsageContext:    usageContext,
 		Amount:          amount,
 		Error:           "",
+		BalanceConsumed: info.BalanceConsumed,
 		ProcessingToken: "",
 		UpdatedAt:       time.Now(),
 	}
@@ -246,6 +245,7 @@ func CompleteClaimedAsyncUsageInfo(
 			"WebSearchAmount",
 			"UsedAmount",
 			"Error",
+			"BalanceConsumed",
 			"ProcessingToken",
 			"UpdatedAt",
 		).

@@ -41,6 +41,7 @@ import {
     IMAGE_GENERATION_COUNT_LIMIT_SUPPORTED_MODEL_TYPES,
     VIDEO_GENERATION_SECONDS_LIMIT_SUPPORTED_MODEL_TYPES,
     VIDEO_GENERATION_COUNT_LIMIT_SUPPORTED_MODEL_TYPES,
+    RESOLUTION_FUZZY_MATCH_SUPPORTED_MODEL_TYPES,
 } from '@/types/model'
 import { AdvancedErrorDisplay } from '@/components/common/error/errorDisplay'
 import { AnimatedButton } from '@/components/ui/animation/components/animated-button'
@@ -92,6 +93,7 @@ const MANAGED_MODEL_KEYS = new Set([
     'response_body_storage_max_size',
     'summary_service_tier',
     'summary_claude_long_context',
+    'disable_resolution_fuzzy_match',
     'price',
     'plugin',
 ])
@@ -147,6 +149,7 @@ const STREAM_TIMEOUT_SUPPORTED_TYPES = new Set<number>(STREAM_TIMEOUT_SUPPORTED_
 const IMAGE_GENERATION_COUNT_LIMIT_SUPPORTED_TYPES = new Set<number>(IMAGE_GENERATION_COUNT_LIMIT_SUPPORTED_MODEL_TYPES)
 const VIDEO_GENERATION_SECONDS_LIMIT_SUPPORTED_TYPES = new Set<number>(VIDEO_GENERATION_SECONDS_LIMIT_SUPPORTED_MODEL_TYPES)
 const VIDEO_GENERATION_COUNT_LIMIT_SUPPORTED_TYPES = new Set<number>(VIDEO_GENERATION_COUNT_LIMIT_SUPPORTED_MODEL_TYPES)
+const RESOLUTION_FUZZY_MATCH_SUPPORTED_TYPES = new Set<number>(RESOLUTION_FUZZY_MATCH_SUPPORTED_MODEL_TYPES)
 
 const omitKeys = (obj: object, keys: string[]) => {
     const omitted = new Set(keys)
@@ -177,6 +180,7 @@ interface ModelFormProps {
         response_body_storage_max_size?: number
         summary_service_tier?: boolean
         summary_claude_long_context?: boolean
+        disable_resolution_fuzzy_match?: boolean
         price?: ModelPrice
         plugin?: Plugin
     }
@@ -261,6 +265,7 @@ export function ModelForm({
             response_body_storage_max_size: defaultValues.response_body_storage_max_size,
             summary_service_tier: defaultValues.summary_service_tier ?? false,
             summary_claude_long_context: defaultValues.summary_claude_long_context ?? false,
+            disable_resolution_fuzzy_match: defaultValues.disable_resolution_fuzzy_match ?? false,
             price: defaultValues.price || {},
             plugin: {
                 cache: { enable: false, ...defaultValues.plugin?.cache },
@@ -287,6 +292,7 @@ export function ModelForm({
     const supportImageGenerationCountLimit = IMAGE_GENERATION_COUNT_LIMIT_SUPPORTED_TYPES.has(watchedType)
     const supportVideoGenerationSecondsLimit = VIDEO_GENERATION_SECONDS_LIMIT_SUPPORTED_TYPES.has(watchedType)
     const supportVideoGenerationCountLimit = VIDEO_GENERATION_COUNT_LIMIT_SUPPORTED_TYPES.has(watchedType)
+    const supportResolutionFuzzyMatchConfig = RESOLUTION_FUZZY_MATCH_SUPPORTED_TYPES.has(watchedType)
 
     const configFieldVisibility = (() => {
         switch (watchedType) {
@@ -800,6 +806,9 @@ export function ModelForm({
             }),
             ...(data.summary_service_tier !== undefined && { summary_service_tier: data.summary_service_tier }),
             ...(data.summary_claude_long_context !== undefined && { summary_claude_long_context: data.summary_claude_long_context }),
+            ...(supportResolutionFuzzyMatchConfig && data.disable_resolution_fuzzy_match !== undefined && {
+                disable_resolution_fuzzy_match: data.disable_resolution_fuzzy_match,
+            }),
             ...(mergedPrice && { price: mergedPrice }),
             ...(Object.keys(mergedPlugin).length > 0 && { plugin: mergedPlugin as Plugin })
         }
@@ -833,6 +842,9 @@ export function ModelForm({
                 }),
                 ...(data.summary_service_tier !== undefined && { summary_service_tier: data.summary_service_tier }),
                 ...(data.summary_claude_long_context !== undefined && { summary_claude_long_context: data.summary_claude_long_context }),
+                ...(supportResolutionFuzzyMatchConfig && data.disable_resolution_fuzzy_match !== undefined && {
+                    disable_resolution_fuzzy_match: data.disable_resolution_fuzzy_match,
+                }),
                 ...(priceData && { price: priceData }),
                 ...(Object.keys(pluginData).length > 0 && { plugin: pluginData as Plugin })
             }, {
@@ -1284,6 +1296,27 @@ export function ModelForm({
                             </FormItem>
                         )}
                     />
+
+                    {supportResolutionFuzzyMatchConfig && (
+                        <FormField
+                            control={form.control}
+                            name="disable_resolution_fuzzy_match"
+                            render={({ field }) => (
+                                <FormItem className="flex flex-row items-center justify-between py-2">
+                                    <div className="space-y-1">
+                                        <FormLabel>{t("model.dialog.disableResolutionFuzzyMatch")}</FormLabel>
+                                        <FormDescription>{t("model.dialog.disableResolutionFuzzyMatchDescription")}</FormDescription>
+                                    </div>
+                                    <FormControl>
+                                        <Switch
+                                            checked={field.value}
+                                            onCheckedChange={field.onChange}
+                                        />
+                                    </FormControl>
+                                </FormItem>
+                            )}
+                        />
+                    )}
 
                     <Collapsible open={configExpanded} onOpenChange={setConfigExpanded}>
                         <CollapsibleTrigger className="flex items-center justify-between w-full py-3 px-4 border rounded-lg hover:bg-muted/50 transition-colors">

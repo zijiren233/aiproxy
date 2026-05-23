@@ -85,6 +85,7 @@ export interface ModelConfig {
     response_body_storage_max_size?: number
     summary_service_tier?: boolean
     summary_claude_long_context?: boolean
+    disable_resolution_fuzzy_match?: boolean
     plugin?: Plugin
 }
 
@@ -96,6 +97,7 @@ export const STREAM_TIMEOUT_SUPPORTED_MODEL_TYPES = [1, 2, 12, 16, 21] as const
 export const IMAGE_GENERATION_COUNT_LIMIT_SUPPORTED_MODEL_TYPES = [5, 6] as const
 export const VIDEO_GENERATION_SECONDS_LIMIT_SUPPORTED_MODEL_TYPES = [13, 22, 26, 27] as const
 export const VIDEO_GENERATION_COUNT_LIMIT_SUPPORTED_MODEL_TYPES = [13, 27] as const
+export const RESOLUTION_FUZZY_MATCH_SUPPORTED_MODEL_TYPES = [5, 6, 13, 22, 26, 27, 28, 30] as const
 
 export type ModelTypeOption = (typeof MODEL_TYPE_OPTIONS)[number]
 
@@ -189,6 +191,7 @@ export interface ModelCreateRequest {
     response_body_storage_max_size?: number
     summary_service_tier?: boolean
     summary_claude_long_context?: boolean
+    disable_resolution_fuzzy_match?: boolean
     price?: ModelPrice | Record<string, unknown>
     plugin?: Plugin
 }
