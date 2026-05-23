@@ -178,6 +178,9 @@ func TestSaveAsyncUsageInfoDoesNotStoreInitialUsage(t *testing.T) {
 			OutputTokens: 9,
 			TotalTokens:  9,
 		}),
+		meta.WithRequestUsageContext(model.UsageContext{
+			ServiceTier: "priority",
+		}),
 		meta.WithGroup(model.GroupCache{ID: "group-1"}),
 		meta.WithToken(model.TokenCache{ID: 22, Name: "token-1"}),
 	)
@@ -194,4 +197,5 @@ func TestSaveAsyncUsageInfoDoesNotStoreInitialUsage(t *testing.T) {
 	require.NoError(t, db.Where("upstream_id = ?", "video-123").First(&captured).Error)
 	require.Zero(t, captured.Usage.OutputTokens)
 	require.Zero(t, captured.Usage.TotalTokens)
+	require.Equal(t, "priority", captured.UsageContext.ServiceTier)
 }

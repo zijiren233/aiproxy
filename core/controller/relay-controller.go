@@ -316,10 +316,7 @@ func relay(c *gin.Context, mode mode.Mode, relayController RelayController) {
 			meta.RequestUsageContext,
 			price,
 			model.PriceSelectionOptions{
-				DisableResolutionFuzzyMatch: modelConfigBool(
-					mc.Config,
-					model.ModelConfigDisableResolutionFuzzyMatch,
-				),
+				DisableResolutionFuzzyMatch: mc.DisableResolutionFuzzyMatch,
 			},
 		),
 		middleware.GroupMinimumBalance,
@@ -424,10 +421,7 @@ func recordResult(
 		usageContext,
 		price,
 		model.PriceSelectionOptions{
-			DisableResolutionFuzzyMatch: modelConfigBool(
-				meta.ModelConfig.Config,
-				model.ModelConfigDisableResolutionFuzzyMatch,
-			),
+			DisableResolutionFuzzyMatch: meta.ModelConfig.DisableResolutionFuzzyMatch,
 		},
 	)
 	if amount > 0 {
@@ -474,24 +468,19 @@ func saveAsyncUsageInfo(
 	}
 
 	if err := model.CreateAsyncUsageInfo(&model.AsyncUsageInfo{
-		RequestID:    meta.RequestID,
-		RequestAt:    meta.RequestAt,
-		Mode:         int(meta.Mode),
-		Model:        meta.OriginModel,
-		ChannelID:    meta.Channel.ID,
-		BaseURL:      meta.Channel.BaseURL,
-		GroupID:      meta.Group.ID,
-		TokenID:      meta.Token.ID,
-		TokenName:    meta.Token.Name,
-		Price:        price,
-		ServiceTier:  meta.RequestServiceTier,
-		UpstreamID:   result.UpstreamID,
-		UsageContext: result.UsageContext.WithFallback(meta.RequestUsageContext),
-		DisableResolutionFuzzyMatch: modelConfigBool(
-			meta.ModelConfig.Config,
-			model.ModelConfigDisableResolutionFuzzyMatch,
-		),
-		DownstreamDone: true,
+		RequestID:                   meta.RequestID,
+		RequestAt:                   meta.RequestAt,
+		Mode:                        int(meta.Mode),
+		Model:                       meta.OriginModel,
+		ChannelID:                   meta.Channel.ID,
+		BaseURL:                     meta.Channel.BaseURL,
+		GroupID:                     meta.Group.ID,
+		TokenID:                     meta.Token.ID,
+		TokenName:                   meta.Token.Name,
+		Price:                       price,
+		UpstreamID:                  result.UpstreamID,
+		UsageContext:                result.UsageContext.WithFallback(meta.RequestUsageContext),
+		DisableResolutionFuzzyMatch: meta.ModelConfig.DisableResolutionFuzzyMatch,
 	}); err != nil {
 		log.Errorf("failed to save async usage info: %v", err)
 	}
@@ -848,11 +837,6 @@ func handleRetryResult(
 func shouldBackoffStatus(statusCode int) bool {
 	return statusCode == http.StatusTooManyRequests ||
 		statusCode == http.StatusServiceUnavailable
-}
-
-func modelConfigBool(config map[model.ModelConfigKey]any, key model.ModelConfigKey) bool {
-	value, _ := model.GetModelConfigBool(config, key)
-	return value
 }
 
 func relayDelay(state *retryState, channelID int) {

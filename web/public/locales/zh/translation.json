@@ -400,6 +400,8 @@
       "recordServiceTierDescription": "为该模型在汇总数据中记录服务层级拆分，例如 flex 和 priority。",
       "recordClaudeLongContext": "记录 Claude 长上下文",
       "recordClaudeLongContextDescription": "仅当模型为 Claude 且输入 Token 大于 200,000 时，记录额外的长上下文汇总桶。",
+      "disableResolutionFuzzyMatch": "禁用分辨率模糊匹配",
+      "disableResolutionFuzzyMatchDescription": "要求条件价格中的分辨率完全匹配。关闭时，常见尺寸格式可回退匹配到归一化后的分辨率档位。",
       "create": "创建",
       "update": "更新",
       "submitting": "提交中...",

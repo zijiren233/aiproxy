@@ -393,13 +393,8 @@ func priceSelectionOptions(meta *meta.Meta) model.PriceSelectionOptions {
 		return model.PriceSelectionOptions{}
 	}
 
-	disableResolutionFuzzyMatch, _ := model.GetModelConfigBool(
-		meta.ModelConfig.Config,
-		model.ModelConfigDisableResolutionFuzzyMatch,
-	)
-
 	return model.PriceSelectionOptions{
-		DisableResolutionFuzzyMatch: disableResolutionFuzzyMatch,
+		DisableResolutionFuzzyMatch: meta.ModelConfig.DisableResolutionFuzzyMatch,
 	}
 }
 

@@ -277,12 +277,12 @@ func TestGetModelConfigLoadsFastJSONFields(t *testing.T) {
 	}
 
 	expected := model.ModelConfig{
-		Model: "provider:model:v1",
-		Owner: "owner",
-		Type:  mode.ChatCompletions,
+		Model:                       "provider:model:v1",
+		Owner:                       "owner",
+		Type:                        mode.ChatCompletions,
+		DisableResolutionFuzzyMatch: true,
 		Config: map[model.ModelConfigKey]any{
-			model.ModelConfigSupportFormatsKey:           []string{"json", "text"},
-			model.ModelConfigDisableResolutionFuzzyMatch: true,
+			model.ModelConfigSupportFormatsKey: []string{"json", "text"},
 		},
 		Plugin: map[string]map[string]any{
 			"cache": {
@@ -322,11 +322,8 @@ func TestGetModelConfigLoadsFastJSONFields(t *testing.T) {
 		t.Fatalf("expected plugin cache.enable to be true, got %#v", got.Plugin)
 	}
 
-	if disable, ok := model.GetModelConfigBool(
-		got.Config,
-		model.ModelConfigDisableResolutionFuzzyMatch,
-	); !ok || !disable {
-		t.Fatalf("expected disable resolution fuzzy match config, got %#v", got.Config)
+	if !got.DisableResolutionFuzzyMatch {
+		t.Fatal("expected disable resolution fuzzy match")
 	}
 
 	if got.Price.OutputPrice != 0.12 {

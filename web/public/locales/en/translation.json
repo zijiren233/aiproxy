@@ -411,6 +411,8 @@
       "recordServiceTierDescription": "Track service tier breakdown in summary data for this model, such as flex and priority.",
       "recordClaudeLongContext": "Record Claude Long Context",
       "recordClaudeLongContextDescription": "Track an extra summary bucket only when the model is Claude and input tokens are greater than 200,000.",
+      "disableResolutionFuzzyMatch": "Disable Resolution Fuzzy Match",
+      "disableResolutionFuzzyMatchDescription": "Require conditional prices to match resolution exactly. When disabled, common size formats can fall back to normalized resolution tiers.",
       "create": "Create",
       "update": "Update",
       "submitting": "Submitting...",

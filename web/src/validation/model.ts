@@ -179,6 +179,7 @@ export const modelCreateSchema = z.object({
     response_body_storage_max_size: z.number().optional(),
     summary_service_tier: z.boolean().optional(),
     summary_claude_long_context: z.boolean().optional(),
+    disable_resolution_fuzzy_match: z.boolean().optional(),
     price: priceSchema,
     plugin: pluginSchema,
 })
