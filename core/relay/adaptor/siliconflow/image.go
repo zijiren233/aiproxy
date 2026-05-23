@@ -175,10 +175,10 @@ func ImageHandler(
 	}
 
 	usage := model.Usage{
-		InputTokens:  meta.RequestUsage.InputTokens,
-		OutputTokens: meta.RequestUsage.OutputTokens,
-		TotalTokens:  meta.RequestUsage.InputTokens + meta.RequestUsage.OutputTokens,
+		ImageOutputTokens: model.ZeroNullInt64(len(openaiResponse.Data)),
 	}
+	usage.OutputTokens = usage.ImageOutputTokens
+	usage.TotalTokens = usage.OutputTokens
 
 	return adaptor.DoResponseResult{Usage: usage}, nil
 }

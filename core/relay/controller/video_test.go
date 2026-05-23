@@ -39,8 +39,8 @@ func TestGetVideoGenerationJobRequestUsageMultipart(t *testing.T) {
 
 	usage, err := GetVideoGenerationJobRequestUsage(ctx, model.ModelConfig{})
 	require.NoError(t, err)
-	require.Equal(t, model.ZeroNullInt64(5), usage.Usage.OutputTokens)
-	require.Equal(t, model.ZeroNullInt64(5), usage.Usage.TotalTokens)
+	require.Zero(t, usage.Usage.OutputTokens)
+	require.Zero(t, usage.Usage.TotalTokens)
 }
 
 func TestGetVideoGenerationJobRequestUsageJSON(t *testing.T) {
@@ -67,8 +67,8 @@ func TestGetVideoGenerationJobRequestUsageJSON(t *testing.T) {
 
 	usage, err := GetVideoGenerationJobRequestUsage(ctx, model.ModelConfig{})
 	require.NoError(t, err)
-	require.Equal(t, model.ZeroNullInt64(8), usage.Usage.OutputTokens)
-	require.Equal(t, model.ZeroNullInt64(8), usage.Usage.TotalTokens)
+	require.Zero(t, usage.Usage.OutputTokens)
+	require.Zero(t, usage.Usage.TotalTokens)
 }
 
 func TestGetGeminiVideoRequestUsageJSON(t *testing.T) {
@@ -93,9 +93,9 @@ func TestGetGeminiVideoRequestUsageJSON(t *testing.T) {
 
 	usage, err := GetGeminiVideoRequestUsage(ctx, model.ModelConfig{})
 	require.NoError(t, err)
-	require.Equal(t, model.ZeroNullInt64(12), usage.Usage.OutputTokens)
-	require.Equal(t, model.ZeroNullInt64(12), usage.Usage.TotalTokens)
-	require.Equal(t, "720p", usage.Context.PriceCondition.Resolution)
+	require.Zero(t, usage.Usage.OutputTokens)
+	require.Zero(t, usage.Usage.TotalTokens)
+	require.Equal(t, "720p", usage.Context.Resolution)
 }
 
 func TestGetGeminiVideoRequestUsageReadsTopLevelNativeParameters(t *testing.T) {
@@ -121,8 +121,8 @@ func TestGetGeminiVideoRequestUsageReadsTopLevelNativeParameters(t *testing.T) {
 
 	usage, err := GetGeminiVideoRequestUsage(ctx, model.ModelConfig{})
 	require.NoError(t, err)
-	require.Equal(t, model.ZeroNullInt64(21), usage.Usage.OutputTokens)
-	require.Equal(t, model.ZeroNullInt64(21), usage.Usage.TotalTokens)
+	require.Zero(t, usage.Usage.OutputTokens)
+	require.Zero(t, usage.Usage.TotalTokens)
 }
 
 func TestGetGeminiVideoRequestUsageTopLevelZeroFallsBackToParameters(t *testing.T) {
@@ -149,8 +149,8 @@ func TestGetGeminiVideoRequestUsageTopLevelZeroFallsBackToParameters(t *testing.
 
 	usage, err := GetGeminiVideoRequestUsage(ctx, model.ModelConfig{})
 	require.NoError(t, err)
-	require.Equal(t, model.ZeroNullInt64(12), usage.Usage.OutputTokens)
-	require.Equal(t, model.ZeroNullInt64(12), usage.Usage.TotalTokens)
+	require.Zero(t, usage.Usage.OutputTokens)
+	require.Zero(t, usage.Usage.TotalTokens)
 }
 
 func TestValidateGeminiVideoRequestRejectsTooLongDuration(t *testing.T) {
@@ -294,8 +294,8 @@ func TestGetGeminiVideoRequestUsageSetsResolutionCondition(t *testing.T) {
 		},
 	})
 	require.NoError(t, err)
-	require.Equal(t, model.ZeroNullInt64(12), usage.Usage.OutputTokens)
-	require.Equal(t, "1080p", usage.Context.PriceCondition.Resolution)
+	require.Zero(t, usage.Usage.OutputTokens)
+	require.Equal(t, "1080p", usage.Context.Resolution)
 }
 
 func TestGetGeminiVideoRequestUsageIgnoresAspectRatioForResolutionCondition(t *testing.T) {
@@ -324,8 +324,8 @@ func TestGetGeminiVideoRequestUsageIgnoresAspectRatioForResolutionCondition(t *t
 		},
 	})
 	require.NoError(t, err)
-	require.Equal(t, model.ZeroNullInt64(12), usage.Usage.OutputTokens)
-	require.Equal(t, "720p", usage.Context.PriceCondition.Resolution)
+	require.Zero(t, usage.Usage.OutputTokens)
+	require.Equal(t, "720p", usage.Context.Resolution)
 }
 
 func TestGetGeminiVideoRequestUsageRejectsWhenDefaultResolutionUnsupported(t *testing.T) {
@@ -383,7 +383,7 @@ func TestGetGeminiVideoRequestUsageResolutionOverridesAspectRatio(t *testing.T) 
 		},
 	})
 	require.NoError(t, err)
-	require.Equal(t, "1080p", usage.Context.PriceCondition.Resolution)
+	require.Equal(t, "1080p", usage.Context.Resolution)
 }
 
 func TestGetGeminiVideoRequestUsageDefaultsWhenParametersMissing(t *testing.T) {
@@ -405,9 +405,9 @@ func TestGetGeminiVideoRequestUsageDefaultsWhenParametersMissing(t *testing.T) {
 
 	usage, err := GetGeminiVideoRequestUsage(ctx, model.ModelConfig{})
 	require.NoError(t, err)
-	require.Equal(t, model.ZeroNullInt64(8), usage.Usage.OutputTokens)
-	require.Equal(t, model.ZeroNullInt64(8), usage.Usage.TotalTokens)
-	require.Equal(t, "720p", usage.Context.PriceCondition.Resolution)
+	require.Zero(t, usage.Usage.OutputTokens)
+	require.Zero(t, usage.Usage.TotalTokens)
+	require.Equal(t, "720p", usage.Context.Resolution)
 }
 
 func TestGetGeminiVideoRequestUsageIgnoresVertexSampleCount(t *testing.T) {
@@ -432,8 +432,8 @@ func TestGetGeminiVideoRequestUsageIgnoresVertexSampleCount(t *testing.T) {
 
 	usage, err := GetGeminiVideoRequestUsage(ctx, model.ModelConfig{})
 	require.NoError(t, err)
-	require.Equal(t, model.ZeroNullInt64(6), usage.Usage.OutputTokens)
-	require.Equal(t, model.ZeroNullInt64(6), usage.Usage.TotalTokens)
+	require.Zero(t, usage.Usage.OutputTokens)
+	require.Zero(t, usage.Usage.TotalTokens)
 }
 
 func TestGetGeminiVideoRequestUsageRejectsUnsupportedResolution(t *testing.T) {
@@ -616,8 +616,8 @@ func TestGetVideosRequestUsageMultipart(t *testing.T) {
 
 	usage, err := GetVideosRequestUsage(ctx, model.ModelConfig{})
 	require.NoError(t, err)
-	require.Equal(t, model.ZeroNullInt64(6), usage.Usage.OutputTokens)
-	require.Equal(t, model.ZeroNullInt64(6), usage.Usage.TotalTokens)
+	require.Zero(t, usage.Usage.OutputTokens)
+	require.Zero(t, usage.Usage.TotalTokens)
 }
 
 func TestValidateVideoGenerationJobRequestRejectsTooLongNSeconds(t *testing.T) {
@@ -778,9 +778,9 @@ func TestGetVideosRequestUsageUsesOfficialVideoFields(t *testing.T) {
 
 	usage, err := GetVideosRequestUsage(ctx, model.ModelConfig{})
 	require.NoError(t, err)
-	require.Equal(t, model.ZeroNullInt64(4), usage.Usage.OutputTokens)
-	require.Equal(t, model.ZeroNullInt64(4), usage.Usage.TotalTokens)
-	require.Equal(t, "720p", usage.Context.PriceCondition.Resolution)
+	require.Zero(t, usage.Usage.OutputTokens)
+	require.Zero(t, usage.Usage.TotalTokens)
+	require.Equal(t, "720p", usage.Context.Resolution)
 }
 
 func TestGetVideoGenerationJobRequestUsageSetsResolutionCondition(t *testing.T) {
@@ -808,8 +808,8 @@ func TestGetVideoGenerationJobRequestUsageSetsResolutionCondition(t *testing.T) 
 
 	usage, err := GetVideoGenerationJobRequestUsage(ctx, model.ModelConfig{})
 	require.NoError(t, err)
-	require.Equal(t, model.ZeroNullInt64(5), usage.Usage.OutputTokens)
-	require.Equal(t, "720p", usage.Context.PriceCondition.Resolution)
+	require.Zero(t, usage.Usage.OutputTokens)
+	require.Equal(t, "720p", usage.Context.Resolution)
 }
 
 func TestGetVideoGenerationJobRequestUsageRejectsUnsupportedResolution(t *testing.T) {

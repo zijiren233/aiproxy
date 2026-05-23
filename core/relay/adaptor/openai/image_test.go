@@ -219,6 +219,42 @@ func TestImagesStreamHandlerPassesEventsAndExtractsUsage(t *testing.T) {
 	assert.Equal(t, "text/event-stream", recorder.Header().Get("Content-Type"))
 }
 
+func TestImagesHandlerCountsReturnedImagesWhenUsageMissing(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	recorder := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(recorder)
+	c.Request = httptest.NewRequestWithContext(
+		context.Background(),
+		http.MethodPost,
+		"/v1/images/generations",
+		nil,
+	)
+
+	resp := &http.Response{
+		StatusCode: http.StatusOK,
+		Header:     make(http.Header),
+		Body: io.NopCloser(strings.NewReader(`{
+			"created": 1713833628,
+			"data": [
+				{"url":"https://example.com/one.png"},
+				{"b64_json":"two"}
+			]
+		}`)),
+	}
+
+	result, err := ImagesHandler(
+		meta.NewMeta(nil, mode.ImagesGenerations, "dall-e-3", model.ModelConfig{}),
+		c,
+		resp,
+	)
+
+	require.Nil(t, err)
+	assert.Equal(t, model.ZeroNullInt64(2), result.Usage.OutputTokens)
+	assert.Equal(t, model.ZeroNullInt64(2), result.Usage.ImageOutputTokens)
+	assert.Equal(t, model.ZeroNullInt64(2), result.Usage.TotalTokens)
+}
+
 func TestConvertVideosRequestMultipartRewritesModel(t *testing.T) {
 	meta := meta.NewMeta(nil, mode.Videos, "sora-2", model.ModelConfig{})
 

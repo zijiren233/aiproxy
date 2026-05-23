@@ -1,14 +1,12 @@
 package controller
 
 import (
-	"mime/multipart"
 	"strconv"
 	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/core/common"
 	"github.com/labring/aiproxy/core/model"
-	"github.com/labring/aiproxy/core/relay/adaptor/openai"
 )
 
 func getImagesEditsRequestN(c *gin.Context) (int, bool, error) {
@@ -72,13 +70,15 @@ func GetImagesEditsRequestPrice(c *gin.Context, mc model.ModelConfig) (model.Pri
 	}
 
 	return model.Price{
-		PerRequestPrice:     mc.Price.PerRequestPrice,
-		InputPrice:          mc.Price.InputPrice,
-		InputPriceUnit:      mc.Price.InputPriceUnit,
-		ImageInputPrice:     mc.Price.ImageInputPrice,
-		ImageInputPriceUnit: mc.Price.ImageInputPriceUnit,
-		OutputPrice:         mc.Price.OutputPrice,
-		OutputPriceUnit:     mc.Price.OutputPriceUnit,
+		PerRequestPrice:      mc.Price.PerRequestPrice,
+		InputPrice:           mc.Price.InputPrice,
+		InputPriceUnit:       mc.Price.InputPriceUnit,
+		ImageInputPrice:      mc.Price.ImageInputPrice,
+		ImageInputPriceUnit:  mc.Price.ImageInputPriceUnit,
+		OutputPrice:          mc.Price.OutputPrice,
+		OutputPriceUnit:      mc.Price.OutputPriceUnit,
+		ImageOutputPrice:     mc.Price.ImageOutputPrice,
+		ImageOutputPriceUnit: mc.Price.ImageOutputPriceUnit,
 	}, nil
 }
 
@@ -95,39 +95,22 @@ func parseImagesEditsForm(c *gin.Context) error {
 	return NewBadRequestParamError("images edits requests must use multipart/form-data")
 }
 
-func GetImagesEditsRequestUsage(c *gin.Context, mc model.ModelConfig) (RequestUsage, error) {
-	mutliForms, err := c.MultipartForm()
-	if err != nil {
+func GetImagesEditsRequestUsage(c *gin.Context, _ model.ModelConfig) (RequestUsage, error) {
+	if _, err := c.MultipartForm(); err != nil {
 		return RequestUsage{}, err
 	}
 
-	images := countImagesEditFiles(mutliForms.File)
-
-	prompt := c.PostForm("prompt")
-
-	n := 1
-	if parsedN, ok, err := getImagesEditsRequestN(c); err != nil {
+	if _, _, err := getImagesEditsRequestN(c); err != nil {
 		return RequestUsage{}, err
-	} else if ok {
-		n = parsedN
 	}
 
 	return RequestUsage{
-		Usage: model.Usage{
-			InputTokens: model.ZeroNullInt64(openai.CountTokenInput(
-				prompt,
-				mc.Model,
-			)),
-			ImageInputTokens: model.ZeroNullInt64(images),
-			OutputTokens:     model.ZeroNullInt64(n),
-		},
-		Context: model.UsageContext{PriceCondition: model.UsagePriceCondition{
+		// Image edit output usage depends on the upstream billing model. Keep
+		// preflight usage empty and bill from final response usage.
+		Usage: model.Usage{},
+		Context: model.UsageContext{
 			Resolution: c.PostForm("size"),
 			Quality:    c.PostForm("quality"),
-		}},
+		},
 	}, nil
-}
-
-func countImagesEditFiles(files map[string][]*multipart.FileHeader) int64 {
-	return int64(len(files["image"]) + len(files["image[]"]))
 }

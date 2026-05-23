@@ -79,9 +79,7 @@ func (a *Adaptor) fetchVideoJobUsage(
 				OutputTokens: model.ZeroNullInt64(totalSeconds),
 				TotalTokens:  model.ZeroNullInt64(totalSeconds),
 			}, model.UsageContext{
-				PriceCondition: model.UsagePriceCondition{
-					Resolution: videoGenerationJobPriceResolution(&job),
-				},
+				Resolution: videoGenerationJobPriceResolution(&job),
 			}, true, nil
 	case relaymodel.VideoGenerationJobStatusQueued,
 		relaymodel.VideoGenerationJobStatusProcessing,
@@ -123,7 +121,7 @@ func (a *Adaptor) fetchVideoUsage(
 		return model.Usage{
 			OutputTokens: model.ZeroNullInt64(video.Seconds),
 			TotalTokens:  model.ZeroNullInt64(video.Seconds),
-		}, model.UsageContext{PriceCondition: model.UsagePriceCondition{Resolution: video.Size}}, true, nil
+		}, model.UsageContext{Resolution: video.Size}, true, nil
 	case relaymodel.VideoStatusQueued, relaymodel.VideoStatusInProgress, "":
 		return model.Usage{}, model.UsageContext{}, false, nil
 	default:

@@ -555,5 +555,7 @@ func (a *Adaptor) FetchAsyncUsage(
 		)
 	}
 
-	return info.Usage, info.UsageContext, true, nil
+	usage, usageContext := gemini.VideoAsyncUsage(info, &operation)
+
+	return usage, usageContext, true, nil
 }

@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/bytedance/sonic"
+	"github.com/labring/aiproxy/core/model"
 	"github.com/labring/aiproxy/core/relay/adaptor"
 	"github.com/labring/aiproxy/core/relay/meta"
 	"github.com/labring/aiproxy/core/relay/mode"
@@ -109,4 +110,16 @@ func GeminiVideoURLByIDForTest(operation *relaymodel.GeminiVideoOperation, id st
 
 func GeminiVideoLocalIDForTest(operationName string) string {
 	return geminiVideoLocalID(operationName)
+}
+
+func GeminiVideoRequestUsageForTest(meta *meta.Meta) model.Usage {
+	return geminiVideoRequestUsage(meta)
+}
+
+func GeminiVideoUsageContextForTest(meta *meta.Meta) model.UsageContext {
+	return geminiVideoUsageContext(meta, nil)
+}
+
+func GeminiVideoStoreMetadataForTest(value string) string {
+	return parseGeminiVideoStoreMetadata(value).OperationName
 }

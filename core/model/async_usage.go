@@ -21,31 +21,32 @@ const (
 )
 
 type AsyncUsageInfo struct {
-	ID              int              `gorm:"primaryKey"                    json:"id"`
-	RequestID       string           `gorm:"type:char(16);index"           json:"request_id"`
-	RequestAt       time.Time        `                                     json:"request_at"`
-	Mode            int              `gorm:"index"                         json:"mode"`
-	Model           string           `gorm:"size:128"                      json:"model"`
-	ChannelID       int              `gorm:"index"                         json:"channel_id"`
-	BaseURL         string           `gorm:"type:text"                     json:"base_url,omitempty"`
-	GroupID         string           `gorm:"size:64;index"                 json:"group_id"`
-	TokenID         int              `gorm:"index"                         json:"token_id"`
-	TokenName       string           `gorm:"size:128"                      json:"token_name,omitempty"`
-	Price           Price            `gorm:"serializer:fastjson;type:text" json:"price"`
-	ServiceTier     string           `gorm:"size:16"                       json:"service_tier,omitempty"`
-	UpstreamID      string           `gorm:"type:varchar(256);index"       json:"upstream_id"`
-	Status          AsyncUsageStatus `gorm:"index;default:1"               json:"status"`
-	Usage           Usage            `gorm:"serializer:fastjson;type:text" json:"usage"`
-	UsageContext    UsageContext     `gorm:"serializer:fastjson;type:text" json:"usage_context,omitempty"`
-	Amount          Amount           `gorm:"embedded"                      json:"amount,omitempty"`
-	Error           string           `gorm:"type:text"                     json:"error,omitempty"`
-	RetryCount      int              `                                     json:"retry_count"`
-	DownstreamDone  bool             `                                     json:"downstream_done"`
-	BalanceConsumed bool             `                                     json:"balance_consumed"`
-	ProcessingToken string           `gorm:"size:64;index"                 json:"-"`
-	NextPollAt      time.Time        `gorm:"index"                         json:"next_poll_at"`
-	CreatedAt       time.Time        `                                     json:"created_at"`
-	UpdatedAt       time.Time        `                                     json:"updated_at"`
+	ID                          int              `gorm:"primaryKey"                    json:"id"`
+	RequestID                   string           `gorm:"type:char(16);index"           json:"request_id"`
+	RequestAt                   time.Time        `                                     json:"request_at"`
+	Mode                        int              `gorm:"index"                         json:"mode"`
+	Model                       string           `gorm:"size:128"                      json:"model"`
+	ChannelID                   int              `gorm:"index"                         json:"channel_id"`
+	BaseURL                     string           `gorm:"type:text"                     json:"base_url,omitempty"`
+	GroupID                     string           `gorm:"size:64;index"                 json:"group_id"`
+	TokenID                     int              `gorm:"index"                         json:"token_id"`
+	TokenName                   string           `gorm:"size:128"                      json:"token_name,omitempty"`
+	Price                       Price            `gorm:"serializer:fastjson;type:text" json:"price"`
+	ServiceTier                 string           `gorm:"size:16"                       json:"service_tier,omitempty"`
+	UpstreamID                  string           `gorm:"type:varchar(256);index"       json:"upstream_id"`
+	Status                      AsyncUsageStatus `gorm:"index;default:1"               json:"status"`
+	Usage                       Usage            `gorm:"serializer:fastjson;type:text" json:"usage"`
+	UsageContext                UsageContext     `gorm:"serializer:fastjson;type:text" json:"usage_context,omitempty"`
+	DisableResolutionFuzzyMatch bool             `                                     json:"disable_resolution_fuzzy_match,omitempty"`
+	Amount                      Amount           `gorm:"embedded"                      json:"amount,omitempty"`
+	Error                       string           `gorm:"type:text"                     json:"error,omitempty"`
+	RetryCount                  int              `                                     json:"retry_count"`
+	DownstreamDone              bool             `                                     json:"downstream_done"`
+	BalanceConsumed             bool             `                                     json:"balance_consumed"`
+	ProcessingToken             string           `gorm:"size:64;index"                 json:"-"`
+	NextPollAt                  time.Time        `gorm:"index"                         json:"next_poll_at"`
+	CreatedAt                   time.Time        `                                     json:"created_at"`
+	UpdatedAt                   time.Time        `                                     json:"updated_at"`
 }
 
 func CreateAsyncUsageInfo(info *AsyncUsageInfo) error {

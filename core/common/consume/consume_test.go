@@ -581,7 +581,7 @@ func TestConsumePendingAsyncUsageDoesNotRecordPriceUsageOrAmount(t *testing.T) {
 		TotalTokens:  5,
 	}
 	usageContext := model.UsageContext{
-		PriceCondition: model.UsagePriceCondition{Resolution: "720p"},
+		Resolution: "720p",
 	}
 
 	consume.Consume(

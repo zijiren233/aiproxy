@@ -156,20 +156,14 @@ func GetVideoGenerationJobRequestUsage(c *gin.Context, mc model.ModelConfig) (Re
 		return RequestUsage{}, err
 	}
 
-	seconds := videoRequestSeconds(request)
-	if seconds <= 0 {
-		return RequestUsage{}, nil
-	}
-
 	return RequestUsage{
-		Usage: model.Usage{
-			OutputTokens: model.ZeroNullInt64(seconds),
-			TotalTokens:  model.ZeroNullInt64(seconds),
-		},
+		// Video providers bill with incompatible units: returned videos, seconds,
+		// resolution tiers, or provider-specific async usage. Do not reserve
+		// balance from a preflight estimate; response/async handlers provide the
+		// final billable usage after the upstream result is known.
+		Usage: model.Usage{},
 		Context: model.UsageContext{
-			PriceCondition: model.UsagePriceCondition{
-				Resolution: videoRequestPriceResolution(request),
-			},
+			Resolution: videoRequestPriceResolution(request),
 		},
 	}, nil
 }
@@ -184,15 +178,14 @@ func GetGeminiVideoRequestUsage(c *gin.Context, mc model.ModelConfig) (RequestUs
 		return RequestUsage{}, err
 	}
 
-	tokens := int64(params.seconds * params.variants)
-
 	return RequestUsage{
-		Usage: model.Usage{
-			OutputTokens: model.ZeroNullInt64(tokens),
-			TotalTokens:  model.ZeroNullInt64(tokens),
-		},
+		// Native Gemini/Veo polling does not expose final duration or resolution
+		// metadata, and OpenAI-compatible video models use different units. Keep
+		// preflight usage empty; the Gemini adaptor stores request-side metadata
+		// for async completion billing without mutating RequestUsage.
+		Usage: model.Usage{},
 		Context: model.UsageContext{
-			PriceCondition: model.UsagePriceCondition{Resolution: params.resolution},
+			Resolution: params.resolution,
 		},
 	}, nil
 }
@@ -207,17 +200,13 @@ func GetVideosRequestUsage(c *gin.Context, mc model.ModelConfig) (RequestUsage, 
 		return RequestUsage{}, err
 	}
 
-	if params.seconds <= 0 {
-		return RequestUsage{}, nil
-	}
-
 	return RequestUsage{
-		Usage: model.Usage{
-			OutputTokens: model.ZeroNullInt64(params.seconds),
-			TotalTokens:  model.ZeroNullInt64(params.seconds),
-		},
+		// Video usage is provider-specific and often async. Do not use requested
+		// seconds as a preflight balance estimate; final usage is supplied by the
+		// response or async usage fetcher.
+		Usage: model.Usage{},
 		Context: model.UsageContext{
-			PriceCondition: model.UsagePriceCondition{Resolution: params.size},
+			Resolution: params.size,
 		},
 	}, nil
 }
@@ -520,24 +509,6 @@ func parseOptionalPositiveInt(value, name string) (int, error) {
 	}
 
 	return parsed, nil
-}
-
-func videoRequestSeconds(request *relaymodel.VideoGenerationJobRequest) int64 {
-	if request == nil {
-		return 0
-	}
-
-	seconds := request.NSeconds
-	if seconds <= 0 {
-		return 0
-	}
-
-	variants := request.NVariants
-	if variants == 0 {
-		variants = 1
-	}
-
-	return int64(seconds * variants)
 }
 
 func videoRequestPriceResolution(request *relaymodel.VideoGenerationJobRequest) string {

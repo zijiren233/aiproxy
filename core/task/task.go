@@ -598,13 +598,22 @@ func completeAsyncUsage(
 
 	price := info.Price
 
-	amount := consume.CalculateAmountDetail(
+	amount := consume.CalculateAmountDetailWithOptions(
 		http.StatusOK,
 		usage,
 		usageContext,
 		price,
+		model.PriceSelectionOptions{
+			DisableResolutionFuzzyMatch: info.DisableResolutionFuzzyMatch,
+		},
 	)
-	selectedPrice := price.SelectConditionalPrice(usage, usageContext)
+	selectedPrice := price.SelectConditionalPriceWithOptions(
+		usage,
+		usageContext,
+		model.PriceSelectionOptions{
+			DisableResolutionFuzzyMatch: info.DisableResolutionFuzzyMatch,
+		},
+	)
 	selectedPrice.ConditionalPrices = nil
 
 	if amount.UsedAmount > 0 && !info.BalanceConsumed {

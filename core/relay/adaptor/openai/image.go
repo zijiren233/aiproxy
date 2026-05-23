@@ -180,14 +180,13 @@ func ImagesHandler(
 		)
 	}
 
-	usage := model.Usage{
-		InputTokens:  meta.RequestUsage.InputTokens,
-		OutputTokens: meta.RequestUsage.OutputTokens,
-		TotalTokens:  meta.RequestUsage.InputTokens + meta.RequestUsage.OutputTokens,
-	}
-
+	usage := model.Usage{}
 	if imageResponse.Usage != nil {
 		usage = imageResponse.Usage.ToModelUsage()
+	} else if imageCount := successfulOpenAIImageCount(imageResponse.Data); imageCount > 0 {
+		usage.OutputTokens = model.ZeroNullInt64(imageCount)
+		usage.ImageOutputTokens = model.ZeroNullInt64(imageCount)
+		usage.TotalTokens = usage.OutputTokens
 	}
 
 	if meta.GetString(MetaResponseFormat) == "b64_json" {
@@ -224,6 +223,21 @@ func ImagesHandler(
 	return adaptor.DoResponseResult{Usage: usage}, nil
 }
 
+func successfulOpenAIImageCount(data []*relaymodel.ImageData) int64 {
+	var count int64
+	for _, item := range data {
+		if item == nil {
+			continue
+		}
+
+		if item.URL != "" || item.B64Json != "" {
+			count++
+		}
+	}
+
+	return count
+}
+
 func ImagesStreamHandler(
 	meta *meta.Meta,
 	c *gin.Context,
@@ -240,11 +254,7 @@ func ImagesStreamHandler(
 	scanner, cleanup := utils.NewStreamScanner(resp.Body, meta.ActualModel)
 	defer cleanup()
 
-	usage := model.Usage{
-		InputTokens:  meta.RequestUsage.InputTokens,
-		OutputTokens: meta.RequestUsage.OutputTokens,
-		TotalTokens:  meta.RequestUsage.InputTokens + meta.RequestUsage.OutputTokens,
-	}
+	usage := model.Usage{}
 
 	for scanner.Scan() {
 		line := scanner.Bytes()

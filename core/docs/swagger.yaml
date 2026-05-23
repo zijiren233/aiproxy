@@ -1700,6 +1700,8 @@ definitions:
         $ref: '#/definitions/model.SummaryDataSet'
       status_2xx_count:
         type: integer
+      status_400_count:
+        type: integer
       status_429_count:
         type: integer
       status_4xx_count:
@@ -1707,8 +1709,6 @@ definitions:
       status_500_count:
         type: integer
       status_5xx_count:
-        type: integer
-      status_400_count:
         type: integer
       status_other_count:
         type: integer
@@ -2059,13 +2059,13 @@ definitions:
         $ref: '#/definitions/model.SummaryDataSet'
       status_2xx_count:
         type: integer
-      status_5xx_count:
-        type: integer
       status_400_count:
         type: integer
-      status_429_count:
-        type: integer
       status_4xx_count:
+        type: integer
+      status_5xx_count:
+        type: integer
+      status_429_count:
         type: integer
       status_500_count:
         type: integer
@@ -2754,12 +2754,12 @@ definitions:
         items:
           type: string
         type: array
-      service_tier:
-        type: string
       resolution:
         items:
           type: string
         type: array
+      service_tier:
+        type: string
       start_time:
         description: Unix timestamp, 0 means no start limit
         type: integer
@@ -3218,15 +3218,15 @@ definitions:
         type: integer
       status_2xx_count:
         type: integer
+      status_400_count:
+        type: integer
+      status_429_count:
+        type: integer
       status_4xx_count:
         type: integer
       status_500_count:
         type: integer
       status_5xx_count:
-        type: integer
-      status_400_count:
-        type: integer
-      status_429_count:
         type: integer
       status_other_count:
         type: integer
@@ -3311,8 +3311,6 @@ definitions:
         $ref: '#/definitions/model.SummaryDataSet'
       status_2xx_count:
         type: integer
-      status_5xx_count:
-        type: integer
       status_400_count:
         type: integer
       status_429_count:
@@ -3320,6 +3318,8 @@ definitions:
       status_4xx_count:
         type: integer
       status_500_count:
+        type: integer
+      status_5xx_count:
         type: integer
       status_other_count:
         type: integer
@@ -3504,16 +3504,11 @@ definitions:
     type: object
   model.UsageContext:
     properties:
-      price_condition:
-        $ref: '#/definitions/model.UsagePriceCondition'
-      service_tier:
-        type: string
-    type: object
-  model.UsagePriceCondition:
-    properties:
       quality:
         type: string
       resolution:
+        type: string
+      service_tier:
         type: string
     type: object
   model.Video:

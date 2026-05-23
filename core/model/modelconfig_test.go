@@ -281,7 +281,8 @@ func TestGetModelConfigLoadsFastJSONFields(t *testing.T) {
 		Owner: "owner",
 		Type:  mode.ChatCompletions,
 		Config: map[model.ModelConfigKey]any{
-			model.ModelConfigSupportFormatsKey: []string{"json", "text"},
+			model.ModelConfigSupportFormatsKey:           []string{"json", "text"},
+			model.ModelConfigDisableResolutionFuzzyMatch: true,
 		},
 		Plugin: map[string]map[string]any{
 			"cache": {
@@ -319,6 +320,13 @@ func TestGetModelConfigLoadsFastJSONFields(t *testing.T) {
 
 	if got.Plugin["cache"]["enable"] != true {
 		t.Fatalf("expected plugin cache.enable to be true, got %#v", got.Plugin)
+	}
+
+	if disable, ok := model.GetModelConfigBool(
+		got.Config,
+		model.ModelConfigDisableResolutionFuzzyMatch,
+	); !ok || !disable {
+		t.Fatalf("expected disable resolution fuzzy match config, got %#v", got.Config)
 	}
 
 	if got.Price.OutputPrice != 0.12 {

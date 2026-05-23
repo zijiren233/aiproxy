@@ -2,8 +2,15 @@ package gemini
 
 import (
 	"bytes"
+	"context"
+	"encoding/base64"
 	"errors"
+	"fmt"
+	"io"
+	"mime"
+	"mime/multipart"
 	"net/http"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -11,6 +18,7 @@ import (
 	"github.com/bytedance/sonic"
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/core/common"
+	commonimage "github.com/labring/aiproxy/core/common/image"
 	"github.com/labring/aiproxy/core/model"
 	"github.com/labring/aiproxy/core/relay/adaptor"
 	"github.com/labring/aiproxy/core/relay/adaptor/openai"
@@ -19,6 +27,8 @@ import (
 	"github.com/labring/aiproxy/core/relay/render"
 	"github.com/labring/aiproxy/core/relay/utils"
 )
+
+const geminiImageEditFetchTimeout = 30 * time.Second
 
 func ConvertImageRequest(meta *meta.Meta, req *http.Request) (adaptor.ConvertResult, error) {
 	imageRequest, err := utils.UnmarshalImageRequest(req)
@@ -38,13 +48,59 @@ func ConvertImageRequest(meta *meta.Meta, req *http.Request) (adaptor.ConvertRes
 	geminiRequest := relaymodel.GeminiChatRequest{
 		Contents: []*relaymodel.GeminiChatContent{
 			{
-				Role: relaymodel.GeminiRoleUser,
-				Parts: []*relaymodel.GeminiPart{
-					{Text: imageRequest.Prompt},
-				},
+				Role:  relaymodel.GeminiRoleUser,
+				Parts: []*relaymodel.GeminiPart{{Text: imageRequest.Prompt}},
 			},
 		},
-		GenerationConfig: buildImageGenerationConfig(imageRequest),
+		GenerationConfig: buildImageGenerationConfig(imageRequest.Size),
+	}
+
+	data, err := sonic.Marshal(geminiRequest)
+	if err != nil {
+		return adaptor.ConvertResult{}, err
+	}
+
+	return adaptor.ConvertResult{
+		Header: http.Header{
+			"Content-Type":   {"application/json"},
+			"Content-Length": {strconv.Itoa(len(data))},
+		},
+		Body: bytes.NewReader(data),
+	}, nil
+}
+
+func ConvertImageEditRequest(meta *meta.Meta, req *http.Request) (adaptor.ConvertResult, error) {
+	if err := common.ParseMultipartFormWithLimit(req); err != nil {
+		return adaptor.ConvertResult{}, err
+	}
+
+	prompt := strings.TrimSpace(req.PostFormValue("prompt"))
+	if prompt == "" {
+		return adaptor.ConvertResult{}, errors.New("prompt is required")
+	}
+
+	if meta != nil {
+		meta.Set(openai.MetaResponseFormat, req.PostFormValue("response_format"))
+		meta.Set("stream", strings.EqualFold(req.PostFormValue("stream"), "true"))
+	}
+
+	imageParts, err := geminiImageEditParts(req.Context(), req.MultipartForm)
+	if err != nil {
+		return adaptor.ConvertResult{}, err
+	}
+
+	parts := make([]*relaymodel.GeminiPart, 0, len(imageParts)+1)
+	parts = append(parts, imageParts...)
+	parts = append(parts, &relaymodel.GeminiPart{Text: prompt})
+
+	geminiRequest := relaymodel.GeminiChatRequest{
+		Contents: []*relaymodel.GeminiChatContent{
+			{
+				Role:  relaymodel.GeminiRoleUser,
+				Parts: parts,
+			},
+		},
+		GenerationConfig: buildImageGenerationConfig(req.PostFormValue("size")),
 	}
 
 	data, err := sonic.Marshal(geminiRequest)
@@ -62,21 +118,20 @@ func ConvertImageRequest(meta *meta.Meta, req *http.Request) (adaptor.ConvertRes
 }
 
 func buildImageGenerationConfig(
-	imageRequest *relaymodel.ImageRequest,
+	size string,
 ) *relaymodel.GeminiChatGenerationConfig {
 	config := &relaymodel.GeminiChatGenerationConfig{
 		ResponseModalities: []string{
-			relaymodel.GeminiModalityText,
 			relaymodel.GeminiModalityImage,
 		},
 		ImageConfig: &relaymodel.GeminiImageConfig{},
 	}
 
-	if aspectRatio := geminiImageAspectRatioFromSize(imageRequest.Size); aspectRatio != "" {
+	if aspectRatio := geminiImageAspectRatioFromSize(size); aspectRatio != "" {
 		config.ImageConfig.AspectRatio = aspectRatio
 	}
 
-	if imageSize := geminiImageSizeFromSize(imageRequest.Size); imageSize != "" {
+	if imageSize := geminiImageSizeFromSize(size); imageSize != "" {
 		config.ImageConfig.ImageSize = imageSize
 	}
 
@@ -85,6 +140,160 @@ func buildImageGenerationConfig(
 	}
 
 	return config
+}
+
+func geminiImageEditParts(
+	ctx context.Context,
+	form *multipart.Form,
+) ([]*relaymodel.GeminiPart, error) {
+	if form == nil {
+		return nil, errors.New("image is required")
+	}
+
+	parts := []*relaymodel.GeminiPart{}
+
+	for _, value := range firstFormValues(form.Value, "image", "image_url") {
+		part, err := geminiImagePartFromString(ctx, value)
+		if err != nil {
+			return nil, err
+		}
+
+		if part != nil {
+			parts = append(parts, part)
+		}
+	}
+
+	fileParts, err := geminiImagePartsFromFiles(geminiImageEditFiles(form.File))
+	if err != nil {
+		return nil, err
+	}
+
+	parts = append(parts, fileParts...)
+
+	if len(parts) == 0 {
+		return nil, errors.New("image is required")
+	}
+
+	return parts, nil
+}
+
+func geminiImageEditFiles(files map[string][]*multipart.FileHeader) []*multipart.FileHeader {
+	imageFiles := files["image"]
+	imageArrayFiles := files["image[]"]
+
+	result := make([]*multipart.FileHeader, 0, len(imageFiles)+len(imageArrayFiles))
+	result = append(result, imageFiles...)
+	result = append(result, imageArrayFiles...)
+
+	return result
+}
+
+func firstFormValues(values map[string][]string, names ...string) []string {
+	for _, name := range names {
+		if len(values[name]) > 0 {
+			return values[name]
+		}
+	}
+
+	return nil
+}
+
+func geminiImagePartFromString(
+	ctx context.Context,
+	value string,
+) (*relaymodel.GeminiPart, error) {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return nil, nil
+	}
+
+	if mimeType, data, ok := parseMediaDataURL(value, "image"); ok {
+		return &relaymodel.GeminiPart{
+			InlineData: &relaymodel.GeminiInlineData{
+				MimeType: mimeType,
+				Data:     data,
+			},
+		}, nil
+	}
+
+	if strings.HasPrefix(value, "http://") || strings.HasPrefix(value, "https://") {
+		fetchCtx, cancel := context.WithTimeout(ctx, geminiImageEditFetchTimeout)
+		defer cancel()
+
+		mimeType, data, err := commonimage.GetImageFromURL(fetchCtx, value)
+		if err != nil {
+			return nil, err
+		}
+
+		return &relaymodel.GeminiPart{
+			InlineData: &relaymodel.GeminiInlineData{
+				MimeType: mimeType,
+				Data:     data,
+			},
+		}, nil
+	}
+
+	return nil, fmt.Errorf("unsupported image value: %s", value)
+}
+
+func geminiImagePartsFromFiles(files []*multipart.FileHeader) ([]*relaymodel.GeminiPart, error) {
+	parts := make([]*relaymodel.GeminiPart, 0, len(files))
+
+	for _, fileHeader := range files {
+		if fileHeader == nil {
+			continue
+		}
+
+		part, err := geminiImagePartFromFile(fileHeader)
+		if err != nil {
+			return nil, err
+		}
+
+		parts = append(parts, part)
+	}
+
+	return parts, nil
+}
+
+func geminiImagePartFromFile(fileHeader *multipart.FileHeader) (*relaymodel.GeminiPart, error) {
+	file, err := fileHeader.Open()
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	data, err := io.ReadAll(common.LimitReader(file, commonimage.MaxImageSize+1))
+	if err != nil {
+		return nil, err
+	}
+
+	if len(data) > commonimage.MaxImageSize {
+		return nil, fmt.Errorf("image too large: max: %d", commonimage.MaxImageSize)
+	}
+
+	mimeType := fileHeader.Header.Get("Content-Type")
+	if mimeType == "" {
+		mimeType = http.DetectContentType(data)
+	}
+
+	if !strings.HasPrefix(mimeType, "image/") {
+		if extensionMimeType := mime.TypeByExtension(
+			filepath.Ext(fileHeader.Filename),
+		); extensionMimeType != "" {
+			mimeType = extensionMimeType
+		}
+	}
+
+	if !strings.HasPrefix(mimeType, "image/") {
+		return nil, fmt.Errorf("unsupported image content type: %s", mimeType)
+	}
+
+	return &relaymodel.GeminiPart{
+		InlineData: &relaymodel.GeminiInlineData{
+			MimeType: commonimage.TrimImageContentType(mimeType),
+			Data:     base64.StdEncoding.EncodeToString(data),
+		},
+	}, nil
 }
 
 func geminiImageAspectRatioFromSize(size string) string {
@@ -115,8 +324,23 @@ func geminiImageSizeFromSize(size string) string {
 	switch size {
 	case "512", "1k", "2k", "4k":
 		return size
-	default:
+	}
+
+	width, height, ok := relaymodel.ParseVideoDimensions(size)
+	if !ok || width <= 0 || height <= 0 {
 		return ""
+	}
+
+	longSide := max(width, height)
+	switch {
+	case longSide >= 3500:
+		return "4k"
+	case longSide >= 1500:
+		return "2k"
+	case longSide >= 900:
+		return "1k"
+	default:
+		return "512"
 	}
 }
 
@@ -223,29 +447,39 @@ func geminiImageResponseToOpenAI(
 				continue
 			}
 
-			imageResponse.Data = append(imageResponse.Data, &relaymodel.ImageData{
-				B64Json: part.InlineData.Data,
-			})
+			imageResponse.Data = append(imageResponse.Data, geminiImageData(meta, part.InlineData))
 		}
 	}
 
-	usage := geminiImageUsageFromResponse(
-		meta,
-		response.UsageMetadata,
-		int64(len(imageResponse.Data)),
-	)
+	usage := geminiImageUsageFromResponse(response.UsageMetadata, int64(len(imageResponse.Data)))
 	imageResponse.Usage = usageToImageUsagePtr(usage)
 
 	return imageResponse, usage
 }
 
-func geminiImageUsageFromResponse(
+func geminiImageData(
 	meta *meta.Meta,
+	inlineData *relaymodel.GeminiInlineData,
+) *relaymodel.ImageData {
+	if inlineData == nil {
+		return &relaymodel.ImageData{}
+	}
+
+	if meta != nil && meta.GetString(openai.MetaResponseFormat) == "url" {
+		return &relaymodel.ImageData{
+			URL: "data:" + inlineData.MimeType + ";base64," + inlineData.Data,
+		}
+	}
+
+	return &relaymodel.ImageData{B64Json: inlineData.Data}
+}
+
+func geminiImageUsageFromResponse(
 	usage *relaymodel.GeminiUsageMetadata,
 	imageCount int64,
 ) model.Usage {
 	if usage == nil {
-		return geminiImageCountUsage(meta.RequestUsage, imageCount)
+		return geminiImageCountUsage(imageCount)
 	}
 
 	return usage.ToModelUsage()
@@ -263,7 +497,7 @@ func imageStreamHandler(
 	scanner, cleanup := utils.NewStreamScanner(resp.Body, meta.ActualModel)
 	defer cleanup()
 
-	usage := meta.RequestUsage
+	usage := model.Usage{}
 	imageIndex := 0
 
 	var completedB64JSON string
@@ -287,7 +521,6 @@ func imageStreamHandler(
 
 		if geminiResponse.UsageMetadata != nil {
 			usage = geminiImageUsageFromResponse(
-				meta,
 				geminiResponse.UsageMetadata,
 				int64(imageIndex),
 			)
@@ -321,7 +554,7 @@ func imageStreamHandler(
 	}
 
 	if usage.OutputTokens == 0 && imageIndex > 0 {
-		usage = geminiImageCountUsage(meta.RequestUsage, int64(imageIndex))
+		usage = geminiImageCountUsage(int64(imageIndex))
 	}
 
 	imageUsage := usageToImageUsage(usage)
@@ -366,17 +599,11 @@ func usageToImageUsagePtr(usage model.Usage) *relaymodel.ImageUsage {
 	return &imageUsage
 }
 
-func geminiImageCountUsage(requestUsage model.Usage, imageCount int64) model.Usage {
-	if imageCount == 0 {
-		imageCount = int64(requestUsage.OutputTokens)
-	}
-
+func geminiImageCountUsage(imageCount int64) model.Usage {
 	return model.Usage{
-		InputTokens:       requestUsage.InputTokens,
-		ImageInputTokens:  requestUsage.ImageInputTokens,
 		OutputTokens:      model.ZeroNullInt64(imageCount),
 		ImageOutputTokens: model.ZeroNullInt64(imageCount),
-		TotalTokens:       requestUsage.InputTokens + model.ZeroNullInt64(imageCount),
+		TotalTokens:       model.ZeroNullInt64(imageCount),
 	}
 }
 

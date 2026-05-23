@@ -11,10 +11,18 @@ import (
 	"github.com/labring/aiproxy/core/relay/adaptor"
 	"github.com/labring/aiproxy/core/relay/meta"
 	"github.com/labring/aiproxy/core/relay/mode"
+	relaymodel "github.com/labring/aiproxy/core/relay/model"
 	relayutils "github.com/labring/aiproxy/core/relay/utils"
 )
 
 var _ adaptor.AsyncUsageFetcher = (*Adaptor)(nil)
+
+func VideoAsyncUsage(
+	info *model.AsyncUsageInfo,
+	operation *relaymodel.GeminiVideoOperation,
+) (model.Usage, model.UsageContext) {
+	return geminiVideoAsyncUsage(info, operation)
+}
 
 func (a *Adaptor) FetchAsyncUsage(
 	ctx context.Context,
@@ -50,7 +58,9 @@ func (a *Adaptor) FetchAsyncUsage(
 		)
 	}
 
-	return info.Usage, info.UsageContext, true, nil
+	usage, usageContext := geminiVideoAsyncUsage(info, operation)
+
+	return usage, usageContext, true, nil
 }
 
 func (a *Adaptor) fetchVideoOperation(
@@ -116,4 +126,93 @@ func (a *Adaptor) fetchVideoOperation(
 	}
 
 	return &operation, nil
+}
+
+func geminiVideoAsyncUsage(
+	info *model.AsyncUsageInfo,
+	operation *geminiOperation,
+) (model.Usage, model.UsageContext) {
+	metadata := geminiVideoAsyncUsageMetadata(info, operation)
+
+	seconds := metadata.Seconds
+	if seconds <= 0 {
+		seconds = defaultGeminiVideoDurationSeconds
+	}
+
+	variants := metadata.Variants
+	if variants <= 0 {
+		variants = len(geminiVideoURLs(operation))
+	}
+
+	if variants <= 0 {
+		variants = 1
+	}
+
+	tokens := model.ZeroNullInt64(int64(seconds * variants))
+
+	usageContext := info.UsageContext
+	if metadata.Resolution != "" {
+		usageContext.Resolution = metadata.Resolution
+	}
+
+	if usageContext.Resolution == "" {
+		usageContext.Resolution = defaultGeminiVideoResolution
+	}
+
+	return model.Usage{
+		OutputTokens: tokens,
+		TotalTokens:  tokens,
+	}, usageContext
+}
+
+func geminiVideoAsyncUsageMetadata(
+	info *model.AsyncUsageInfo,
+	operation *geminiOperation,
+) geminiVideoStoreMetadata {
+	if info == nil {
+		return geminiVideoStoreMetadata{}
+	}
+
+	localID := geminiVideoLocalID(info.UpstreamID)
+
+	nativeOperationID := nativeGeminiVideoStoreID(info.UpstreamID)
+	if operation != nil && operation.Name != "" {
+		localID = geminiVideoLocalID(operation.Name)
+		nativeOperationID = nativeGeminiVideoStoreID(operation.Name)
+	}
+
+	var storeIDs []string
+	switch mode.Mode(info.Mode) {
+	case mode.GeminiVideo:
+		if nativeOperationID != "" {
+			storeIDs = append(storeIDs, model.VideoJobStoreID(nativeOperationID))
+		}
+
+		storeIDs = append(storeIDs, model.VideoJobStoreID(localID))
+	case mode.VideoGenerationsJobs:
+		storeIDs = append(storeIDs, model.VideoJobStoreID(localID))
+	case mode.Videos:
+		storeIDs = append(storeIDs, model.VideoGenerationStoreID(localID))
+	default:
+		storeIDs = append(storeIDs,
+			model.VideoJobStoreID(localID),
+			model.VideoGenerationStoreID(localID),
+		)
+	}
+
+	for _, storeID := range storeIDs {
+		cache, err := model.CacheGetStore(info.GroupID, info.TokenID, storeID)
+		if err != nil || cache == nil {
+			continue
+		}
+
+		metadata := parseGeminiVideoStoreMetadata(cache.Metadata)
+		if metadata.OperationName != "" {
+			return metadata
+		}
+	}
+
+	return geminiVideoStoreMetadata{
+		Resolution: info.UsageContext.Resolution,
+	}
 }

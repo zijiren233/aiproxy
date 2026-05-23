@@ -166,7 +166,7 @@ func ImageHandler(
 		)
 	}
 
-	usage := doubaoImageUsageToModelUsage(response.Usage, meta.RequestUsage, response.Data)
+	usage := doubaoImageUsageToModelUsage(response.Usage, response.Data, 0)
 	usageContext := doubaoImageUsageContext(response.Data).WithFallback(meta.RequestUsageContext)
 
 	if meta.GetString(metaDoubaoImageResponseFormat) == "b64_json" {
@@ -228,6 +228,8 @@ func ImageStreamHandler(
 
 	var completedData relaymodel.ImageStreamEvent
 
+	completedImageIndexes := map[int]struct{}{}
+
 	for scanner.Scan() {
 		line := scanner.Bytes()
 		if !render.IsValidSSEData(line) {
@@ -248,13 +250,18 @@ func ImageStreamHandler(
 
 		openAIEvent, eventUsage, eventContext := convertDoubaoImageStreamEvent(
 			event,
-			meta.RequestUsage,
+			int64(len(completedImageIndexes)),
 		)
 		if eventUsage != nil {
 			usage = *eventUsage
 		}
 
 		if openAIEvent.Type == relaymodel.ImageStreamEventPartialImage {
+			if openAIEvent.Error == nil && (openAIEvent.URL != "" || openAIEvent.B64Json != "") {
+				index := event.ImageIndex
+				completedImageIndexes[index] = struct{}{}
+			}
+
 			completedData.B64Json = openAIEvent.B64Json
 			completedData.URL = openAIEvent.URL
 			completedData.Size = openAIEvent.Size
@@ -282,7 +289,7 @@ func ImageStreamHandler(
 
 func convertDoubaoImageStreamEvent(
 	event doubaoImageStreamEvent,
-	requestUsage coremodel.Usage,
+	fallbackImageCount int64,
 ) (relaymodel.ImageStreamEvent, *coremodel.Usage, coremodel.UsageContext) {
 	openAIEvent := relaymodel.ImageStreamEvent{
 		Type:      event.Type,
@@ -295,7 +302,7 @@ func convertDoubaoImageStreamEvent(
 
 	usageContext := coremodel.UsageContext{}
 	if openAIEvent.Size != "" {
-		usageContext.PriceCondition.Resolution = openAIEvent.Size
+		usageContext.Resolution = openAIEvent.Size
 	}
 
 	switch event.Type {
@@ -305,8 +312,16 @@ func convertDoubaoImageStreamEvent(
 		openAIEvent.PartialImageIndex = &index
 	case relaymodel.ImageStreamEventCompleted:
 		openAIEvent.Type = relaymodel.ImageStreamEventCompleted
-		usage := doubaoImageUsageToModelUsage(event.Usage, requestUsage, nil)
+
+		if fallbackImageCount == 0 &&
+			event.Error == nil &&
+			(event.URL != "" || event.B64JSON != "") {
+			fallbackImageCount = 1
+		}
+
+		usage := doubaoImageUsageToModelUsage(event.Usage, nil, fallbackImageCount)
 		openAIEvent.Usage = doubaoImageUsageToOpenAIUsage(usage)
+
 		return openAIEvent, &usage, usageContext
 	}
 
@@ -329,42 +344,46 @@ func doubaoImageUsageToOpenAIUsage(usage coremodel.Usage) *relaymodel.ImageUsage
 
 func doubaoImageUsageToModelUsage(
 	usage *doubaoImageUsage,
-	requestUsage coremodel.Usage,
 	data []*doubaoImageData,
+	fallbackImageCount int64,
 ) coremodel.Usage {
 	if usage == nil {
-		output := int64(0)
-		for _, item := range data {
-			if item != nil && item.Error == nil && (item.URL != "" || item.B64JSON != "") {
-				output++
-			}
-		}
-
-		if output == 0 {
-			output = int64(requestUsage.OutputTokens)
+		imageCount := countSuccessfulDoubaoImages(data)
+		if imageCount == 0 {
+			imageCount = fallbackImageCount
 		}
 
 		return coremodel.Usage{
-			OutputTokens:      coremodel.ZeroNullInt64(output),
-			ImageOutputTokens: coremodel.ZeroNullInt64(output),
-			TotalTokens:       coremodel.ZeroNullInt64(output),
+			OutputTokens:      coremodel.ZeroNullInt64(imageCount),
+			ImageOutputTokens: coremodel.ZeroNullInt64(imageCount),
+			TotalTokens:       coremodel.ZeroNullInt64(imageCount),
 		}
 	}
 
-	outputTokens := usage.GeneratedImages
-	if outputTokens == 0 {
-		outputTokens = countSuccessfulDoubaoImages(data)
+	imageCount := usage.GeneratedImages
+	if imageCount == 0 {
+		imageCount = countSuccessfulDoubaoImages(data)
 	}
 
+	if imageCount == 0 {
+		imageCount = fallbackImageCount
+	}
+
+	// Seedream returns both the successful image count and token usage. Token-priced
+	// models should bill output_tokens; per-image fallbacks can use ImageOutputTokens.
+	outputTokens := usage.OutputTokens
 	if outputTokens == 0 {
-		outputTokens = int64(requestUsage.OutputTokens)
+		outputTokens = imageCount
 	}
 
 	totalTokens := outputTokens
+	if usage.TotalTokens != 0 {
+		totalTokens = usage.TotalTokens
+	}
 
 	return coremodel.Usage{
 		OutputTokens:      coremodel.ZeroNullInt64(outputTokens),
-		ImageOutputTokens: coremodel.ZeroNullInt64(outputTokens),
+		ImageOutputTokens: coremodel.ZeroNullInt64(imageCount),
 		TotalTokens:       coremodel.ZeroNullInt64(totalTokens),
 		WebSearchCount:    coremodel.ZeroNullInt64(usage.ToolUsage.WebSearch),
 	}
@@ -377,9 +396,7 @@ func doubaoImageUsageContext(data []*doubaoImageData) coremodel.UsageContext {
 		}
 
 		return coremodel.UsageContext{
-			PriceCondition: coremodel.UsagePriceCondition{
-				Resolution: normalizeDoubaoImageSize(item.Size),
-			},
+			Resolution: normalizeDoubaoImageSize(item.Size),
 		}
 	}
 

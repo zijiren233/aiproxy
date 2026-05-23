@@ -489,9 +489,10 @@ func TestImageHandlerMapsSiliconFlowResponse(t *testing.T) {
 		t.Fatalf("unexpected image response data: %#v", imageResponse.Data)
 	}
 
-	if int64(result.Usage.InputTokens) != 12 ||
+	if int64(result.Usage.InputTokens) != 0 ||
 		int64(result.Usage.OutputTokens) != 2 ||
-		int64(result.Usage.TotalTokens) != 14 {
+		int64(result.Usage.ImageOutputTokens) != 2 ||
+		int64(result.Usage.TotalTokens) != 2 {
 		t.Fatalf("unexpected usage: %#v", result.Usage)
 	}
 }

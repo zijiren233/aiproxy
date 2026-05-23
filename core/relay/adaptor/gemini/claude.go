@@ -163,7 +163,9 @@ func ClaudeStreamHandler(
 	var (
 		messageID           = "msg_" + common.ShortUUID()
 		usage               model.Usage
-		webSearchCount      int64
+		webSearchQueries    = map[string]struct{}{}
+		webSearchGrounded   bool
+		webSearchGemini3    = isGemini3Meta(meta)
 		stopReason          string
 		currentContentIndex = -1
 		currentContentType  = ""
@@ -231,10 +233,13 @@ func ClaudeStreamHandler(
 		if geminiResponse.UsageMetadata != nil {
 			usage = geminiResponse.UsageMetadata.ToModelUsage()
 		}
-		// Track web search count from grounding metadata
-		if count := geminiResponse.GetWebSearchCount(); count > 0 {
-			webSearchCount += count
-		}
+
+		trackGeminiWebSearch(
+			&geminiResponse,
+			webSearchQueries,
+			&webSearchGrounded,
+			&webSearchGemini3,
+		)
 
 		// Process each candidate
 		for _, candidate := range geminiResponse.Candidates {
@@ -354,7 +359,9 @@ func ClaudeStreamHandler(
 	// Close the last open content block
 	closeCurrentBlock()
 
-	usage.WebSearchCount = model.ZeroNullInt64(webSearchCount)
+	usage.WebSearchCount = model.ZeroNullInt64(
+		geminiWebSearchCount(webSearchQueries, webSearchGrounded, webSearchGemini3),
+	)
 
 	claudeUsage := relaymodel.ClaudeFromModelUsage(usage)
 

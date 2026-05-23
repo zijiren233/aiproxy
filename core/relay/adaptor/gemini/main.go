@@ -253,8 +253,9 @@ func NativeStreamHandler(
 	defer cleanup()
 
 	usage := model.Usage{}
-
-	var websearchCount int64
+	webSearchQueries := map[string]struct{}{}
+	webSearchGrounded := false
+	webSearchGemini3 := isGemini3Meta(meta)
 
 	for scanner.Scan() {
 		data := scanner.Bytes()
@@ -270,10 +271,13 @@ func NativeStreamHandler(
 			if geminiResp.UsageMetadata != nil {
 				usage = geminiResp.UsageMetadata.ToModelUsage()
 			}
-			// Get web search count from grounding metadata
-			if webSearchCount := geminiResp.GetWebSearchCount(); webSearchCount > 0 {
-				websearchCount += webSearchCount
-			}
+
+			trackGeminiWebSearch(
+				&geminiResp,
+				webSearchQueries,
+				&webSearchGrounded,
+				&webSearchGemini3,
+			)
 		}
 
 		// Pass through the data as-is
@@ -284,7 +288,9 @@ func NativeStreamHandler(
 		log.Error("error reading stream: " + err.Error())
 	}
 
-	usage.WebSearchCount = model.ZeroNullInt64(websearchCount)
+	usage.WebSearchCount = model.ZeroNullInt64(
+		geminiWebSearchCount(webSearchQueries, webSearchGrounded, webSearchGemini3),
+	)
 
 	return adaptor.DoResponseResult{Usage: usage}, nil
 }
