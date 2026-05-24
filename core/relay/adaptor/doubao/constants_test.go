@@ -78,7 +78,7 @@ func TestDoubaoSeedanceConditionalPriceKeepsTokenUnitAfterVideoController(t *tes
 			"model":"doubao-seedance-2-0",
 			"prompt":"A city street",
 			"n_seconds":5,
-			"size":"1080p"
+			"size":"1920x1080"
 		}`),
 	)
 	req.Header.Set("Content-Type", "application/json")

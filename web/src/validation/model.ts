@@ -157,8 +157,6 @@ const modelConfigSchema = z.object({
     limited_time_free: z.boolean().optional(),
     support_formats: z.array(z.string()).optional(),
     support_voices: z.array(z.string()).optional(),
-    image_resolutions: z.array(z.string()).optional(),
-    video_resolutions: z.array(z.string()).optional(),
 }).optional()
 
 export const modelCreateSchema = z.object({
@@ -175,6 +173,7 @@ export const modelCreateSchema = z.object({
     max_image_generation_count: z.number().nonnegative('Max image generation count must be a non-negative number').optional(),
     max_video_generation_seconds: z.number().nonnegative('Max video generation seconds must be a non-negative number').optional(),
     max_video_generation_count: z.number().nonnegative('Max video generation count must be a non-negative number').optional(),
+    allowed_resolutions: z.array(z.string()).optional(),
     request_body_storage_max_size: z.number().optional(),
     response_body_storage_max_size: z.number().optional(),
     summary_service_tier: z.boolean().optional(),

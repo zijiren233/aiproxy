@@ -384,6 +384,18 @@ func NewGeminiError(statusCode int, err GeminiError) adaptor.Error {
 	})
 }
 
+func WrapperGeminiError(err error, statusCode int) adaptor.Error {
+	return WrapperGeminiErrorWithMessage(err.Error(), statusCode)
+}
+
+func WrapperGeminiErrorWithMessage(message string, statusCode int) adaptor.Error {
+	return NewGeminiError(statusCode, GeminiError{
+		Message: message,
+		Status:  ErrorTypeAIPROXY,
+		Code:    statusCode,
+	})
+}
+
 // Gemini Role constants
 const (
 	GeminiRoleModel = "model"

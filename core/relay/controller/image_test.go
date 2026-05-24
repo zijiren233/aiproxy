@@ -187,7 +187,7 @@ func TestValidateImagesRequestRejectsUnsupportedResolution(t *testing.T) {
 	c.Request = req
 
 	err := ValidateImagesRequest(c, model.ModelConfig{
-		Config: model.NewModelConfig(model.WithModelConfigImageResolutions("1024x1024")),
+		AllowedResolutions: []string{"1024x1024"},
 	})
 	require.Error(t, err)
 	require.Equal(t, "unsupported image resolution `512x512`", err.Error())
@@ -195,6 +195,128 @@ func TestValidateImagesRequestRejectsUnsupportedResolution(t *testing.T) {
 	var requestParamErr *RequestParamError
 	require.ErrorAs(t, err, &requestParamErr)
 	require.Equal(t, 400, requestParamErr.StatusCode)
+}
+
+func TestValidateImagesRequestMatchesGeminiStyleImageResolution(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	req := httptest.NewRequestWithContext(
+		context.Background(),
+		http.MethodPost,
+		"/v1/images/generations",
+		strings.NewReader(`{"model":"image-model","prompt":"A city street","size":"1024x1024"}`),
+	)
+	req.Header.Set("Content-Type", "application/json")
+
+	c, _ := gin.CreateTestContext(httptest.NewRecorder())
+	c.Request = req
+
+	err := ValidateImagesRequest(c, model.ModelConfig{
+		AllowedResolutions: []string{"1k"},
+	})
+	require.NoError(t, err)
+}
+
+func TestValidateImagesRequestDisableFuzzyRejectsGeminiStyleImageResolution(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	req := httptest.NewRequestWithContext(
+		context.Background(),
+		http.MethodPost,
+		"/v1/images/generations",
+		strings.NewReader(`{"model":"image-model","prompt":"A city street","size":"1024x1024"}`),
+	)
+	req.Header.Set("Content-Type", "application/json")
+
+	c, _ := gin.CreateTestContext(httptest.NewRecorder())
+	c.Request = req
+
+	err := ValidateImagesRequest(c, model.ModelConfig{
+		AllowedResolutions:          []string{"1k"},
+		DisableResolutionFuzzyMatch: true,
+	})
+	require.Error(t, err)
+	require.Equal(t, "unsupported image resolution `1024x1024`", err.Error())
+}
+
+func TestValidateImagesRequestDoesNotMatchAspectRatioAsResolution(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	req := httptest.NewRequestWithContext(
+		context.Background(),
+		http.MethodPost,
+		"/v1/images/generations",
+		strings.NewReader(`{"model":"image-model","prompt":"A city street","size":"1024x1024"}`),
+	)
+	req.Header.Set("Content-Type", "application/json")
+
+	c, _ := gin.CreateTestContext(httptest.NewRecorder())
+	c.Request = req
+
+	err := ValidateImagesRequest(c, model.ModelConfig{
+		AllowedResolutions: []string{"1:1"},
+	})
+	require.Error(t, err)
+	require.Equal(t, "unsupported image resolution `1024x1024`", err.Error())
+}
+
+func TestValidateImagesRequestRejectsAspectRatioRequest(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	req := httptest.NewRequestWithContext(
+		context.Background(),
+		http.MethodPost,
+		"/v1/images/generations",
+		strings.NewReader(`{"model":"image-model","prompt":"A city street","size":"1:1"}`),
+	)
+	req.Header.Set("Content-Type", "application/json")
+
+	c, _ := gin.CreateTestContext(httptest.NewRecorder())
+	c.Request = req
+
+	err := ValidateImagesRequest(c, model.ModelConfig{
+		AllowedResolutions: []string{"1:1"},
+	})
+	require.Error(t, err)
+	require.Equal(t, "invalid image resolution `1:1`", err.Error())
+}
+
+func TestValidateImagesRequestRejectsInvalidResolutionFormat(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	req := httptest.NewRequestWithContext(
+		context.Background(),
+		http.MethodPost,
+		"/v1/images/generations",
+		strings.NewReader(`{"model":"image-model","prompt":"A city street","size":"1k"}`),
+	)
+	req.Header.Set("Content-Type", "application/json")
+
+	c, _ := gin.CreateTestContext(httptest.NewRecorder())
+	c.Request = req
+
+	err := ValidateImagesRequest(c, model.ModelConfig{})
+	require.Error(t, err)
+	require.Equal(t, "invalid image resolution `1k`", err.Error())
+}
+
+func TestValidateImagesRequestRejectsNonOpenAIDimensionDelimiter(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	req := httptest.NewRequestWithContext(
+		context.Background(),
+		http.MethodPost,
+		"/v1/images/generations",
+		strings.NewReader(`{"model":"image-model","prompt":"A city street","size":"1024*1024"}`),
+	)
+	req.Header.Set("Content-Type", "application/json")
+
+	c, _ := gin.CreateTestContext(httptest.NewRecorder())
+	c.Request = req
+
+	err := ValidateImagesRequest(c, model.ModelConfig{})
+	require.Error(t, err)
+	require.Equal(t, "invalid image resolution `1024*1024`", err.Error())
 }
 
 func TestGetImagesRequestUsageSetsPriceCondition(t *testing.T) {
@@ -205,7 +327,7 @@ func TestGetImagesRequestUsageSetsPriceCondition(t *testing.T) {
 		http.MethodPost,
 		"/v1/images/generations",
 		strings.NewReader(
-			`{"model":"image-model","prompt":"A city street","size":"1024*1024","quality":"hd"}`,
+			`{"model":"image-model","prompt":"A city street","size":"1024x1024","quality":"hd"}`,
 		),
 	)
 	req.Header.Set("Content-Type", "application/json")
@@ -215,7 +337,7 @@ func TestGetImagesRequestUsageSetsPriceCondition(t *testing.T) {
 
 	usage, err := GetImagesRequestUsage(c, model.ModelConfig{})
 	require.NoError(t, err)
-	require.Equal(t, "1024*1024", usage.Context.Resolution)
+	require.Equal(t, "1024x1024", usage.Context.Resolution)
 	require.Equal(t, "hd", usage.Context.Quality)
 	require.Zero(t, usage.Usage.InputTokens)
 	require.Zero(t, usage.Usage.ImageInputTokens)

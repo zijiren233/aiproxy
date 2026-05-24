@@ -43,6 +43,7 @@ type ModelConfig struct {
 	MaxImageGenerationCount     int                       `                                     json:"max_image_generation_count,omitempty"     yaml:"max_image_generation_count,omitempty"`
 	MaxVideoGenerationSeconds   int                       `                                     json:"max_video_generation_seconds,omitempty"   yaml:"max_video_generation_seconds,omitempty"`
 	MaxVideoGenerationCount     int                       `                                     json:"max_video_generation_count,omitempty"     yaml:"max_video_generation_count,omitempty"`
+	AllowedResolutions          []string                  `gorm:"serializer:fastjson;type:text" json:"allowed_resolutions,omitempty"            yaml:"allowed_resolutions,omitempty"`
 	RequestBodyStorageMaxSize   int64                     `                                     json:"request_body_storage_max_size,omitempty"  yaml:"request_body_storage_max_size,omitempty"`
 	ResponseBodyStorageMaxSize  int64                     `                                     json:"response_body_storage_max_size,omitempty" yaml:"response_body_storage_max_size,omitempty"`
 	SummaryServiceTier          bool                      `                                     json:"summary_service_tier,omitempty"           yaml:"summary_service_tier,omitempty"`

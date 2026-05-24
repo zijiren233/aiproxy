@@ -2,7 +2,6 @@ package controller
 
 import (
 	"fmt"
-	"slices"
 	"strconv"
 	"strings"
 
@@ -112,19 +111,50 @@ func validateVideoGenerationCount(count, maxCount int) error {
 	)
 }
 
+func validateOpenAIVideoSizeFormat(size string) error {
+	size = strings.ToLower(strings.TrimSpace(size))
+	if size == "" || dimensionResolutionValue(size) {
+		return nil
+	}
+
+	return NewBadRequestParamError(fmt.Sprintf("invalid video size `%s`", size))
+}
+
+func validateOpenAIVideoJobResolutionFormat(
+	request *relaymodel.VideoGenerationJobRequest,
+) error {
+	if request == nil {
+		return nil
+	}
+
+	if request.Size != "" {
+		return validateOpenAIVideoSizeFormat(request.Size)
+	}
+
+	if (request.Width == 0) != (request.Height == 0) {
+		return NewBadRequestParamError("width and height must be provided together")
+	}
+
+	return nil
+}
+
+func validateGeminiNativeVideoResolutionFormat(resolution string) error {
+	resolution = normalizeSupportedResolutionValue(resolution)
+	switch resolution {
+	case "", "720p", "1080p", "4k":
+		return nil
+	default:
+		return NewBadRequestParamError(fmt.Sprintf("invalid gemini video resolution `%s`", resolution))
+	}
+}
+
 func validateSupportedVideoResolution(resolution string, mc model.ModelConfig) error {
-	if resolution == "" {
-		return nil
-	}
-
-	resolutions, ok := model.GetModelConfigStringSlice(mc.Config, model.ModelConfigVideoResolutions)
-	if !ok || len(resolutions) == 0 {
-		return nil
-	}
-
-	if slices.Contains(
-		normalizeSupportedResolutionValues(resolutions),
-		normalizeSupportedResolutionValue(resolution),
+	if supportedResolutionMatches(
+		resolution,
+		mc.AllowedResolutions,
+		videoResolutionAliases,
+		videoResolutionAliases,
+		!mc.DisableResolutionFuzzyMatch,
 	) {
 		return nil
 	}
@@ -215,6 +245,10 @@ func validateVideoGenerationJobRequest(
 	request *relaymodel.VideoGenerationJobRequest,
 	mc model.ModelConfig,
 ) error {
+	if err := validateOpenAIVideoJobResolutionFormat(request); err != nil {
+		return err
+	}
+
 	if err := validateVideoGenerationSeconds(
 		request.NSeconds,
 		mc.MaxVideoGenerationSeconds,
@@ -266,6 +300,10 @@ func getVideosRequestUsageParams(c *gin.Context) (videosRequestUsageParams, erro
 }
 
 func validateVideosRequestUsageParams(params videosRequestUsageParams, mc model.ModelConfig) error {
+	if err := validateOpenAIVideoSizeFormat(params.size); err != nil {
+		return err
+	}
+
 	if err := validateVideoGenerationSeconds(
 		params.seconds,
 		mc.MaxVideoGenerationSeconds,
@@ -349,6 +387,10 @@ func validateGeminiVideoRequestUsageParams(
 	params geminiVideoRequestUsageParams,
 	mc model.ModelConfig,
 ) error {
+	if err := validateGeminiNativeVideoResolutionFormat(params.resolution); err != nil {
+		return err
+	}
+
 	if err := validateVideoGenerationSeconds(
 		params.seconds,
 		mc.MaxVideoGenerationSeconds,

@@ -131,7 +131,7 @@ func TestValidateImagesEditsRequestRejectsUnsupportedResolution(t *testing.T) {
 	c.Request = req
 
 	err := ValidateImagesEditsRequest(c, model.ModelConfig{
-		Config: model.NewModelConfig(model.WithModelConfigImageResolutions("1024x1024")),
+		AllowedResolutions: []string{"1024x1024"},
 	})
 	require.Error(t, err)
 	require.Equal(t, "unsupported image resolution `512x512`", err.Error())
@@ -139,6 +139,27 @@ func TestValidateImagesEditsRequestRejectsUnsupportedResolution(t *testing.T) {
 	var requestParamErr *RequestParamError
 	require.ErrorAs(t, err, &requestParamErr)
 	require.Equal(t, 400, requestParamErr.StatusCode)
+}
+
+func TestValidateImagesEditsRequestRejectsInvalidResolutionFormat(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+	require.NoError(t, writer.WriteField("model", "gpt-image-1"))
+	require.NoError(t, writer.WriteField("prompt", "test"))
+	require.NoError(t, writer.WriteField("size", "1:1"))
+	require.NoError(t, writer.Close())
+
+	req := httptest.NewRequestWithContext(context.Background(), "POST", "/v1/images/edits", body)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+
+	c, _ := gin.CreateTestContext(httptest.NewRecorder())
+	c.Request = req
+
+	err := ValidateImagesEditsRequest(c, model.ModelConfig{})
+	require.Error(t, err)
+	require.Equal(t, "invalid image resolution `1:1`", err.Error())
 }
 
 func TestGetImagesEditsRequestUsageReturnsNoPreflightUsage(t *testing.T) {

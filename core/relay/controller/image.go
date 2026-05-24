@@ -4,8 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"slices"
-	"strings"
 
 	"github.com/bytedance/sonic/ast"
 	"github.com/gin-gonic/gin"
@@ -121,39 +119,19 @@ func ValidateImagesRequest(c *gin.Context, mc model.ModelConfig) error {
 }
 
 func validateSupportedImageResolution(resolution string, mc model.ModelConfig) error {
-	if resolution == "" {
-		return nil
+	if err := validateOpenAIImageResolutionFormat(resolution); err != nil {
+		return err
 	}
 
-	resolutions, ok := model.GetModelConfigStringSlice(mc.Config, model.ModelConfigImageResolutions)
-	if !ok || len(resolutions) == 0 {
-		return nil
-	}
-
-	if slices.Contains(
-		normalizeSupportedResolutionValues(resolutions),
-		normalizeSupportedResolutionValue(resolution),
+	if supportedImageResolutionMatches(
+		resolution,
+		mc.AllowedResolutions,
+		!mc.DisableResolutionFuzzyMatch,
 	) {
 		return nil
 	}
 
 	return NewBadRequestParamError(fmt.Sprintf("unsupported image resolution `%s`", resolution))
-}
-
-func normalizeSupportedResolutionValues(resolutions []string) []string {
-	normalized := make([]string, 0, len(resolutions))
-	for _, resolution := range resolutions {
-		resolution = normalizeSupportedResolutionValue(resolution)
-		if resolution != "" {
-			normalized = append(normalized, resolution)
-		}
-	}
-
-	return normalized
-}
-
-func normalizeSupportedResolutionValue(resolution string) string {
-	return strings.ToLower(strings.ReplaceAll(strings.TrimSpace(resolution), " ", ""))
 }
 
 func GetConditionalImagesOutputPrice(
