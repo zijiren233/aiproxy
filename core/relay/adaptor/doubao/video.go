@@ -93,6 +93,13 @@ type doubaoVideoTaskResponse struct {
 	DraftTaskID           string                  `json:"draft_task_id,omitempty"`
 }
 
+type doubaoVideoStoreMetadata struct {
+	Prompt     string `json:"prompt,omitempty"`
+	Resolution string `json:"resolution,omitempty"`
+	Ratio      string `json:"ratio,omitempty"`
+	Duration   int    `json:"duration,omitempty"`
+}
+
 type doubaoVideoOutput struct {
 	VideoURL     string `json:"video_url,omitempty"`
 	LastFrameURL string `json:"last_frame_url,omitempty"`
@@ -586,6 +593,9 @@ func VideoGenerationJobSubmitHandler(
 	return writeDoubaoVideoObject(c, job, adaptor.DoResponseResult{
 		UpstreamID: response.ID,
 		AsyncUsage: true,
+		UsageContext: doubaoVideoUsageContext(
+			&response,
+		).WithFallback(doubaoVideoRequestUsageContext(meta)),
 	})
 }
 
@@ -610,6 +620,9 @@ func VideosSubmitHandler(
 	return writeDoubaoVideoObject(c, video, adaptor.DoResponseResult{
 		UpstreamID: response.ID,
 		AsyncUsage: true,
+		UsageContext: doubaoVideoUsageContext(
+			&response,
+		).WithFallback(doubaoVideoRequestUsageContext(meta)),
 	})
 }
 
@@ -666,6 +679,13 @@ func VideoGenerationJobStatusHandler(
 		response.ID = meta.JobID
 	}
 
+	applyStoredDoubaoVideoRequestMetadata(
+		meta,
+		store,
+		coremodel.VideoJobStoreID(response.ID),
+		&response,
+	)
+
 	expiresAt := doubaoVideoExpiresAt(response)
 	job := buildDoubaoVideoJob(meta, response.ID, &response)
 
@@ -677,7 +697,11 @@ func VideoGenerationJobStatusHandler(
 		}
 	}
 
-	return writeDoubaoVideoObject(c, job, adaptor.DoResponseResult{})
+	return writeDoubaoVideoObject(c, job, adaptor.DoResponseResult{
+		UsageContext: doubaoVideoUsageContext(
+			&response,
+		).WithFallback(doubaoVideoRequestUsageContext(meta)),
+	})
 }
 
 func VideosStatusHandler(
@@ -704,6 +728,13 @@ func VideosStatusHandler(
 		response.ID = meta.VideoID
 	}
 
+	applyStoredDoubaoVideoRequestMetadata(
+		meta,
+		store,
+		coremodel.VideoGenerationStoreID(response.ID),
+		&response,
+	)
+
 	expiresAt := doubaoVideoExpiresAt(response)
 	if response.Content.VideoURL != "" || response.Content.FileURL != "" {
 		if err := saveDoubaoVideoStore(meta, store, response.ID, expiresAt); err != nil {
@@ -714,7 +745,12 @@ func VideosStatusHandler(
 	return writeDoubaoVideoObject(
 		c,
 		buildDoubaoVideo(meta, response.ID, &response),
-		adaptor.DoResponseResult{UpstreamID: response.ID},
+		adaptor.DoResponseResult{
+			UpstreamID: response.ID,
+			UsageContext: doubaoVideoUsageContext(
+				&response,
+			).WithFallback(doubaoVideoRequestUsageContext(meta)),
+		},
 	)
 }
 
@@ -810,7 +846,8 @@ func buildDoubaoVideoJob(
 		NSeconds:    firstPositiveInt(response.Duration, intFromPtr(request.Duration)),
 	}
 
-	job.Width, job.Height = doubaoVideoDimensions(response.Resolution, response.Ratio)
+	resolution, ratio := doubaoVideoResolutionAndRatio(response, request)
+	job.Width, job.Height = doubaoVideoDimensions(resolution, ratio)
 
 	if status == relaymodel.VideoGenerationJobStatusSucceeded ||
 		status == relaymodel.VideoGenerationJobStatus("failed") {
@@ -847,6 +884,7 @@ func buildDoubaoVideo(
 ) relaymodel.Video {
 	now := time.Now().Unix()
 	request := doubaoVideoRequestFromMeta(meta)
+	resolution, ratio := doubaoVideoResolutionAndRatio(response, request)
 	video := relaymodel.Video{
 		ID:        id,
 		Object:    relaymodel.VideoObject,
@@ -855,7 +893,7 @@ func buildDoubaoVideo(
 		Model:     meta.OriginModel,
 		Prompt:    doubaoVideoPrompt(request),
 		Seconds:   firstPositiveInt(response.Duration, intFromPtr(request.Duration)),
-		Size:      response.Resolution,
+		Size:      doubaoVideoSize(resolution, ratio),
 	}
 
 	switch video.Status {
@@ -899,9 +937,23 @@ func doubaoVideoUsageContext(response *doubaoVideoTaskResponse) coremodel.UsageC
 		return coremodel.UsageContext{}
 	}
 
+	resolution := strings.TrimSpace(response.Resolution)
+	ratio := strings.TrimSpace(response.Ratio)
+
 	return coremodel.UsageContext{
-		Resolution:  response.Resolution,
-		ServiceTier: response.ServiceTier,
+		Resolution:       doubaoVideoSize(resolution, ratio),
+		NativeResolution: resolution,
+		ServiceTier:      response.ServiceTier,
+	}
+}
+
+func doubaoVideoRequestUsageContext(meta *meta.Meta) coremodel.UsageContext {
+	request := doubaoVideoRequestFromMeta(meta)
+
+	return coremodel.UsageContext{
+		Resolution:       doubaoVideoSize(request.Resolution, request.Ratio),
+		NativeResolution: request.Resolution,
+		ServiceTier:      request.ServiceTier,
 	}
 }
 
@@ -965,6 +1017,7 @@ func saveDoubaoVideoJobStore(
 		TokenID:   meta.Token.ID,
 		ChannelID: meta.Channel.ID,
 		Model:     meta.OriginModel,
+		Metadata:  doubaoVideoStoreMetadataString(meta),
 		ExpiresAt: expiresAt,
 	})
 }
@@ -985,8 +1038,91 @@ func saveDoubaoVideoStore(
 		TokenID:   meta.Token.ID,
 		ChannelID: meta.Channel.ID,
 		Model:     meta.OriginModel,
+		Metadata:  doubaoVideoStoreMetadataString(meta),
 		ExpiresAt: expiresAt,
 	})
+}
+
+func doubaoVideoStoreMetadataString(meta *meta.Meta) string {
+	request := doubaoVideoRequestFromMeta(meta)
+	metadata := doubaoVideoStoreMetadata{
+		Prompt:     doubaoVideoPrompt(request),
+		Resolution: request.Resolution,
+		Ratio:      request.Ratio,
+		Duration:   intFromPtr(request.Duration),
+	}
+
+	data, err := sonic.MarshalString(metadata)
+	if err != nil {
+		return ""
+	}
+
+	return data
+}
+
+func applyStoredDoubaoVideoRequestMetadata(
+	meta *meta.Meta,
+	store adaptor.Store,
+	storeID string,
+	response *doubaoVideoTaskResponse,
+) {
+	if meta == nil || store == nil || storeID == "" || response == nil {
+		return
+	}
+
+	cache, err := store.GetStore(meta.Group.ID, meta.Token.ID, storeID)
+	if err != nil || cache.Metadata == "" {
+		return
+	}
+
+	var metadata doubaoVideoStoreMetadata
+	if err := sonic.UnmarshalString(cache.Metadata, &metadata); err != nil {
+		return
+	}
+
+	var request doubaoVideoRequest
+	if value, ok := meta.Get(metaDoubaoVideoRequest); ok {
+		request, _ = value.(doubaoVideoRequest)
+	}
+
+	if doubaoVideoPrompt(request) == "" && metadata.Prompt != "" {
+		request.Content = append(
+			request.Content,
+			doubaoVideoContent{Type: "text", Text: metadata.Prompt},
+		)
+	}
+
+	if request.Resolution == "" {
+		request.Resolution = metadata.Resolution
+	}
+
+	if request.Ratio == "" {
+		request.Ratio = metadata.Ratio
+	}
+
+	if request.Duration == nil && metadata.Duration > 0 {
+		duration := metadata.Duration
+		request.Duration = &duration
+	}
+
+	if response.Resolution == "" {
+		response.Resolution = metadata.Resolution
+	}
+
+	if response.Ratio == "" {
+		response.Ratio = metadata.Ratio
+	}
+
+	if response.Duration == 0 {
+		response.Duration = metadata.Duration
+	}
+
+	if len(request.Content) > 0 ||
+		request.Resolution != "" ||
+		request.Ratio != "" ||
+		request.Duration != nil {
+		meta.Set(metaDoubaoVideoRequest, request)
+	}
 }
 
 func doubaoVideoRequestFromMeta(meta *meta.Meta) doubaoVideoRequest {
@@ -1035,18 +1171,39 @@ func doubaoVideoDimensions(resolution, ratio string) (int, int) {
 
 	switch strings.TrimSpace(ratio) {
 	case "9:16":
-		return height * 9 / 16, height
+		return height, height * 16 / 9
 	case "1:1":
 		return height, height
 	case "4:3":
 		return height * 4 / 3, height
 	case "3:4":
-		return height * 3 / 4, height
+		return height, height * 4 / 3
 	case "21:9":
 		return height * 21 / 9, height
 	default:
 		return height * 16 / 9, height
 	}
+}
+
+func doubaoVideoResolutionAndRatio(
+	response *doubaoVideoTaskResponse,
+	request doubaoVideoRequest,
+) (string, string) {
+	if response == nil {
+		return request.Resolution, request.Ratio
+	}
+
+	return firstNonEmptyString(response.Resolution, request.Resolution),
+		firstNonEmptyString(response.Ratio, request.Ratio)
+}
+
+func doubaoVideoSize(resolution, ratio string) string {
+	width, height := doubaoVideoDimensions(resolution, ratio)
+	if width <= 0 || height <= 0 {
+		return ""
+	}
+
+	return fmt.Sprintf("%dx%d", width, height)
 }
 
 func doubaoVideoJobStatus(status string) relaymodel.VideoGenerationJobStatus {

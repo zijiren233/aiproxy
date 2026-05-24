@@ -55,7 +55,7 @@ type RelayController struct {
 	Handler         RelayHandler
 }
 
-var adaptorStore adaptor.Store = &storeImpl{}
+var AdaptorStore adaptor.Store = &storeImpl{}
 
 type storeImpl struct{}
 
@@ -152,7 +152,7 @@ func relayHandler(c *gin.Context, meta *meta.Meta, mc *model.ModelCaches) *contr
 
 	adaptor = wrapPlugin(c.Request.Context(), mc, adaptor)
 
-	return controller.Handle(adaptor, c, meta, adaptorStore, buildBodyDetailOption(meta))
+	return controller.Handle(adaptor, c, meta, AdaptorStore, buildBodyDetailOption(meta))
 }
 
 func defaultPriceFunc(_ *gin.Context, mc model.ModelConfig) (model.Price, error) {

@@ -3,16 +3,15 @@ package gemini_test
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
-	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/labring/aiproxy/core/common"
 	"github.com/labring/aiproxy/core/common/consume"
 	coremodel "github.com/labring/aiproxy/core/model"
 	adaptorapi "github.com/labring/aiproxy/core/relay/adaptor"
@@ -71,6 +70,96 @@ func (s *geminiVideoTestStore) SaveStoreWithOption(
 func (s *geminiVideoTestStore) SaveIfNotExistStore(cache adaptorapi.StoreCache) error {
 	s.saved = append(s.saved, cache)
 	return nil
+}
+
+func TestVideoContentHandlersDownloadGeneratedVideo(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	videoServer := httptest.NewServer(
+		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			require.Equal(t, "/video.mp4", r.URL.Path)
+			require.Equal(t, "apikey", r.Header.Get("X-Goog-Api-Key"))
+
+			w.Header().Set("Content-Type", "video/mp4")
+			w.Header().Set("Content-Length", "10")
+			_, _ = w.Write([]byte("video-data"))
+		}),
+	)
+	defer videoServer.Close()
+
+	tests := []struct {
+		name string
+		mode mode.Mode
+		id   string
+		meta *meta.Meta
+	}{
+		{
+			name: "video generation content",
+			mode: mode.VideoGenerationsContent,
+			id:   "gemini_op_123-0",
+			meta: meta.NewMeta(
+				&coremodel.Channel{Key: "apikey"},
+				mode.VideoGenerationsContent,
+				"veo-3.1-generate-preview",
+				coremodel.ModelConfig{},
+				meta.WithGenerationID("gemini_op_123-0"),
+			),
+		},
+		{
+			name: "videos content",
+			mode: mode.VideosContent,
+			id:   "gemini_op_123",
+			meta: meta.NewMeta(
+				&coremodel.Channel{Key: "apikey"},
+				mode.VideosContent,
+				"veo-3.1-generate-preview",
+				coremodel.ModelConfig{},
+				meta.WithVideoID("gemini_op_123"),
+			),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			recorder := httptest.NewRecorder()
+			c, _ := gin.CreateTestContext(recorder)
+			c.Request = httptest.NewRequestWithContext(
+				t.Context(),
+				http.MethodGet,
+				"/content",
+				nil,
+			)
+
+			resp := &http.Response{
+				StatusCode: http.StatusOK,
+				Header:     make(http.Header),
+				Body: io.NopCloser(strings.NewReader(fmt.Sprintf(`{
+					"name":"models/veo-3.1-generate-preview/operations/123",
+					"done":true,
+					"response":{
+						"generateVideoResponse":{
+							"generatedSamples":[{"video":{"uri":"%s/video.mp4"}}]
+						}
+					}
+				}`, videoServer.URL))),
+			}
+
+			var (
+				result     adaptorapi.DoResponseResult
+				adaptorErr adaptorapi.Error
+			)
+			if tt.mode == mode.VideoGenerationsContent {
+				result, adaptorErr = gemini.VideoGenerationJobContentHandler(tt.meta, c, resp)
+			} else {
+				result, adaptorErr = gemini.VideosContentHandler(tt.meta, c, resp)
+			}
+
+			require.Nil(t, adaptorErr)
+			require.Equal(t, tt.id, result.UpstreamID)
+			require.Equal(t, "video/mp4", recorder.Header().Get("Content-Type"))
+			require.Equal(t, "video-data", recorder.Body.String())
+		})
+	}
 }
 
 func TestGetRequestURLGeminiVideoUsesPredictLongRunning(t *testing.T) {
@@ -1121,36 +1210,21 @@ func TestFetchAsyncUsageBuildsFinalUsageFromStoredMetadata(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	oldLogDB := coremodel.LogDB
-	oldDB := coremodel.DB
-	oldRedisEnabled := common.RedisEnabled
-
-	db, err := coremodel.OpenSQLite(filepath.Join(t.TempDir(), "gemini_async_usage.db"))
-	require.NoError(t, err)
-	require.NoError(t, db.AutoMigrate(&coremodel.StoreV2{}))
-
-	coremodel.LogDB = db
-	coremodel.DB = db
-	common.RedisEnabled = false
-
-	t.Cleanup(func() {
-		coremodel.LogDB = oldLogDB
-		coremodel.DB = oldDB
-		common.RedisEnabled = oldRedisEnabled
-	})
-
 	operationName := "models/veo-3.1-generate-preview/operations/video-123"
 	localID := gemini.GeminiVideoLocalIDForTest(operationName)
-	_, err = coremodel.SaveStore(&coremodel.StoreV2{
-		GroupID:   "group-1",
-		TokenID:   7,
-		ChannelID: 11,
-		Model:     "veo-3.1-generate-preview",
-		ID:        coremodel.VideoJobStoreID(localID),
-		Metadata:  `{"operation_name":"models/veo-3.1-generate-preview/operations/video-123","seconds":6,"variants":2,"resolution":"1080p"}`,
-		ExpiresAt: time.Now().Add(time.Hour),
-	})
-	require.NoError(t, err)
+	store := &geminiVideoTestStore{
+		saved: []adaptorapi.StoreCache{
+			{
+				GroupID:   "group-1",
+				TokenID:   7,
+				ChannelID: 11,
+				Model:     "veo-3.1-generate-preview",
+				ID:        coremodel.VideoJobStoreID(localID),
+				Metadata:  `{"operation_name":"models/veo-3.1-generate-preview/operations/video-123","seconds":6,"variants":2,"resolution":"1080p","width":1920,"height":1080}`,
+				ExpiresAt: time.Now().Add(time.Hour),
+			},
+		},
+	}
 
 	adaptor := &gemini.Adaptor{}
 	usage, usageContext, done, err := adaptor.FetchAsyncUsage(
@@ -1173,6 +1247,7 @@ func TestFetchAsyncUsageBuildsFinalUsageFromStoredMetadata(t *testing.T) {
 					NativeResolution: "720p",
 				},
 			},
+			Store: store,
 		},
 	)
 	require.NoError(t, err)
@@ -1207,35 +1282,20 @@ func TestFetchAsyncUsageNativeGeminiVideoUsesNativeStoreID(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	oldLogDB := coremodel.LogDB
-	oldDB := coremodel.DB
-	oldRedisEnabled := common.RedisEnabled
-
-	db, err := coremodel.OpenSQLite(filepath.Join(t.TempDir(), "gemini_native_async_usage.db"))
-	require.NoError(t, err)
-	require.NoError(t, db.AutoMigrate(&coremodel.StoreV2{}))
-
-	coremodel.LogDB = db
-	coremodel.DB = db
-	common.RedisEnabled = false
-
-	t.Cleanup(func() {
-		coremodel.LogDB = oldLogDB
-		coremodel.DB = oldDB
-		common.RedisEnabled = oldRedisEnabled
-	})
-
 	operationName := "models/veo-3.1-generate-preview/operations/video-123"
-	_, err = coremodel.SaveStore(&coremodel.StoreV2{
-		GroupID:   "group-1",
-		TokenID:   7,
-		ChannelID: 11,
-		Model:     "veo-3.1-generate-preview",
-		ID:        coremodel.VideoJobStoreID("video-123"),
-		Metadata:  `{"operation_name":"models/veo-3.1-generate-preview/operations/video-123","seconds":5,"variants":2,"resolution":"1080p"}`,
-		ExpiresAt: time.Now().Add(time.Hour),
-	})
-	require.NoError(t, err)
+	store := &geminiVideoTestStore{
+		saved: []adaptorapi.StoreCache{
+			{
+				GroupID:   "group-1",
+				TokenID:   7,
+				ChannelID: 11,
+				Model:     "veo-3.1-generate-preview",
+				ID:        coremodel.VideoJobStoreID("video-123"),
+				Metadata:  `{"operation_name":"models/veo-3.1-generate-preview/operations/video-123","seconds":5,"variants":2,"resolution":"1080p"}`,
+				ExpiresAt: time.Now().Add(time.Hour),
+			},
+		},
+	}
 
 	adaptor := &gemini.Adaptor{}
 	usage, usageContext, done, err := adaptor.FetchAsyncUsage(
@@ -1254,6 +1314,7 @@ func TestFetchAsyncUsageNativeGeminiVideoUsesNativeStoreID(t *testing.T) {
 					NativeResolution: "720p",
 				},
 			},
+			Store: store,
 		},
 	)
 	require.NoError(t, err)

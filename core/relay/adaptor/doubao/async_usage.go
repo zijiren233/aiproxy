@@ -45,7 +45,8 @@ func (a *Adaptor) FetchAsyncUsage(
 	switch strings.ToLower(response.Status) {
 	case "succeeded":
 		return doubaoVideoUsageToModelUsage(response.Usage),
-			doubaoVideoUsageContext(response),
+			doubaoVideoAsyncUsageContext(response, request.Store, info).
+				WithFallback(info.UsageContext),
 			true,
 			nil
 	case "queued", "running", "":
@@ -57,6 +58,81 @@ func (a *Adaptor) FetchAsyncUsage(
 			doubaoVideoErrorMessage(response),
 		)
 	}
+}
+
+func doubaoVideoAsyncUsageContext(
+	response *doubaoVideoTaskResponse,
+	store adaptor.Store,
+	info *coremodel.AsyncUsageInfo,
+) coremodel.UsageContext {
+	if response == nil {
+		return doubaoVideoAsyncUsageContextFromStore(store, info)
+	}
+
+	metadata := doubaoVideoAsyncMetadataFromStore(store, info)
+	if metadata == (doubaoVideoStoreMetadata{}) {
+		return doubaoVideoUsageContext(response)
+	}
+
+	merged := *response
+	merged.Resolution = firstNonEmptyString(response.Resolution, metadata.Resolution)
+	merged.Ratio = firstNonEmptyString(response.Ratio, metadata.Ratio)
+
+	return doubaoVideoUsageContext(&merged)
+}
+
+func doubaoVideoAsyncUsageContextFromStore(
+	store adaptor.Store,
+	info *coremodel.AsyncUsageInfo,
+) coremodel.UsageContext {
+	metadata := doubaoVideoAsyncMetadataFromStore(store, info)
+	if metadata == (doubaoVideoStoreMetadata{}) {
+		return coremodel.UsageContext{}
+	}
+
+	response := &doubaoVideoTaskResponse{
+		Resolution: metadata.Resolution,
+		Ratio:      metadata.Ratio,
+	}
+
+	return doubaoVideoUsageContext(response)
+}
+
+func doubaoVideoAsyncMetadataFromStore(
+	store adaptor.Store,
+	info *coremodel.AsyncUsageInfo,
+) doubaoVideoStoreMetadata {
+	if store == nil || info == nil || info.UpstreamID == "" {
+		return doubaoVideoStoreMetadata{}
+	}
+
+	storeIDs := []string{}
+	switch mode.Mode(info.Mode) {
+	case mode.VideoGenerationsJobs:
+		storeIDs = append(storeIDs, coremodel.VideoJobStoreID(info.UpstreamID))
+	case mode.Videos:
+		storeIDs = append(storeIDs, coremodel.VideoGenerationStoreID(info.UpstreamID))
+	default:
+		storeIDs = append(
+			storeIDs,
+			coremodel.VideoJobStoreID(info.UpstreamID),
+			coremodel.VideoGenerationStoreID(info.UpstreamID),
+		)
+	}
+
+	for _, storeID := range storeIDs {
+		cache, err := store.GetStore(info.GroupID, info.TokenID, storeID)
+		if err != nil || cache.Metadata == "" {
+			continue
+		}
+
+		var metadata doubaoVideoStoreMetadata
+		if err := sonic.UnmarshalString(cache.Metadata, &metadata); err == nil {
+			return metadata
+		}
+	}
+
+	return doubaoVideoStoreMetadata{}
 }
 
 func (a *Adaptor) fetchVideoTask(

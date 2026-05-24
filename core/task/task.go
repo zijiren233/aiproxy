@@ -472,6 +472,7 @@ func processOneAsyncUsage(ctx context.Context, info *model.AsyncUsageInfo) {
 	usage, usageContext, completed, err := fetcher.FetchAsyncUsage(ctx, adaptor.AsyncUsageRequest{
 		Channel: channel,
 		Info:    info,
+		Store:   controller.AdaptorStore,
 	})
 	if err != nil {
 		if completed {

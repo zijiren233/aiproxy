@@ -47,9 +47,10 @@ func (a *Adaptor) FetchAsyncUsage(
 		outputTokens := siliconFlowVideoOutputTokens(response)
 
 		return model.Usage{
-			OutputTokens: model.ZeroNullInt64(outputTokens),
-			TotalTokens:  model.ZeroNullInt64(outputTokens),
-		}, model.UsageContext{}, true, nil
+				OutputTokens: model.ZeroNullInt64(outputTokens),
+				TotalTokens:  model.ZeroNullInt64(outputTokens),
+			}, siliconFlowVideoAsyncUsageContextFromStore(request.Store, info).
+				WithFallback(info.UsageContext), true, nil
 	case relaymodel.VideoStatusQueued, relaymodel.VideoStatusInProgress:
 		return model.Usage{}, model.UsageContext{}, false, nil
 	default:
@@ -59,6 +60,55 @@ func (a *Adaptor) FetchAsyncUsage(
 			response.Reason,
 		)
 	}
+}
+
+func siliconFlowVideoAsyncUsageContextFromStore(
+	store adaptor.Store,
+	info *model.AsyncUsageInfo,
+) model.UsageContext {
+	metadata := siliconFlowVideoAsyncMetadataFromStore(store, info)
+	if metadata.ImageSize == "" {
+		return model.UsageContext{}
+	}
+
+	return model.UsageContext{Resolution: metadata.ImageSize}
+}
+
+func siliconFlowVideoAsyncMetadataFromStore(
+	store adaptor.Store,
+	info *model.AsyncUsageInfo,
+) videoStoreMetadata {
+	if store == nil || info == nil || info.UpstreamID == "" {
+		return videoStoreMetadata{}
+	}
+
+	storeIDs := []string{}
+	switch mode.Mode(info.Mode) {
+	case mode.VideoGenerationsJobs:
+		storeIDs = append(storeIDs, model.VideoJobStoreID(info.UpstreamID))
+	case mode.Videos:
+		storeIDs = append(storeIDs, model.VideoGenerationStoreID(info.UpstreamID))
+	default:
+		storeIDs = append(
+			storeIDs,
+			model.VideoJobStoreID(info.UpstreamID),
+			model.VideoGenerationStoreID(info.UpstreamID),
+		)
+	}
+
+	for _, storeID := range storeIDs {
+		cache, err := store.GetStore(info.GroupID, info.TokenID, storeID)
+		if err != nil || cache.Metadata == "" {
+			continue
+		}
+
+		var metadata videoStoreMetadata
+		if err := sonic.UnmarshalString(cache.Metadata, &metadata); err == nil {
+			return metadata
+		}
+	}
+
+	return videoStoreMetadata{}
 }
 
 func (a *Adaptor) fetchVideoStatus(

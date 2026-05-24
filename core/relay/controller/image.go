@@ -119,19 +119,30 @@ func ValidateImagesRequest(c *gin.Context, mc model.ModelConfig) error {
 }
 
 func validateSupportedImageResolution(resolution string, mc model.ModelConfig) error {
-	if err := validateOpenAIImageResolutionFormat(resolution); err != nil {
+	fuzzy := !mc.DisableResolutionFuzzyMatch
+	if err := validateOpenAIImageResolutionFormat(
+		resolution,
+		mc.AllowedResolutions,
+		fuzzy,
+	); err != nil {
 		return err
 	}
 
 	if supportedImageResolutionMatches(
 		resolution,
 		mc.AllowedResolutions,
-		!mc.DisableResolutionFuzzyMatch,
+		fuzzy,
 	) {
 		return nil
 	}
 
-	return NewBadRequestParamError(fmt.Sprintf("unsupported image resolution `%s`", resolution))
+	return NewBadRequestParamError(
+		fmt.Sprintf(
+			"unsupported image resolution `%s`, supported resolutions: %s",
+			resolution,
+			openAIImageSupportedResolutionOptions(mc.AllowedResolutions, fuzzy),
+		),
+	)
 }
 
 func GetConditionalImagesOutputPrice(

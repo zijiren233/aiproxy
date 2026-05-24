@@ -22,7 +22,17 @@ type siliconflowTestStore struct {
 	saved []adaptor.StoreCache
 }
 
-func (s *siliconflowTestStore) GetStore(string, int, string) (adaptor.StoreCache, error) {
+func (s *siliconflowTestStore) GetStore(
+	group string,
+	tokenID int,
+	id string,
+) (adaptor.StoreCache, error) {
+	for _, cache := range s.saved {
+		if cache.GroupID == group && cache.TokenID == tokenID && cache.ID == id {
+			return cache, nil
+		}
+	}
+
 	return adaptor.StoreCache{}, nil
 }
 
@@ -435,6 +445,62 @@ func TestConvertImageRequestMapsOpenAIFields(t *testing.T) {
 	}
 }
 
+func TestConvertImageRequestNormalizesSizeDelimiters(t *testing.T) {
+	tests := []struct {
+		name          string
+		size          string
+		wantImageSize string
+	}{
+		{
+			name:          "asterisk",
+			size:          "1024*1024",
+			wantImageSize: "1024x1024",
+		},
+		{
+			name:          "multiplication sign",
+			size:          "1024×1536",
+			wantImageSize: "1024x1536",
+		},
+		{
+			name:          "native x",
+			size:          "720x1280",
+			wantImageSize: "720x1280",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			sfAdaptor := &Adaptor{}
+			m := meta.NewMeta(nil, mode.ImagesGenerations, "alias-image", coremodel.ModelConfig{})
+			m.ActualModel = "stabilityai/stable-diffusion-3-5-large"
+
+			req := newJSONRequest(t, "/v1/images/generations", `{
+				"model":"alias-image",
+				"prompt":"A city at sunset",
+				"size":"`+tt.size+`",
+				"n":3
+			}`)
+
+			result, err := sfAdaptor.ConvertRequest(m, nil, req)
+			if err != nil {
+				t.Fatalf("ConvertRequest returned error: %v", err)
+			}
+
+			got := readJSONBody(t, result.Body)
+			assertMapValue(t, got, "image_size", tt.wantImageSize)
+			assertMapNumber(t, got, "batch_size", 3)
+
+			if _, ok := got["size"]; ok {
+				t.Fatal("expected size to be removed")
+			}
+
+			if _, ok := got["n"]; ok {
+				t.Fatal("expected n to be removed")
+			}
+		})
+	}
+}
+
 func TestImageHandlerMapsSiliconFlowResponse(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
@@ -487,6 +553,19 @@ func TestImageHandlerMapsSiliconFlowResponse(t *testing.T) {
 	if imageResponse.Data[0].URL != "https://example.com/one.png" ||
 		imageResponse.Data[1].URL != "https://example.com/two.png" {
 		t.Fatalf("unexpected image response data: %#v", imageResponse.Data)
+	}
+
+	var raw map[string]any
+	if err := json.Unmarshal(recorder.Body.Bytes(), &raw); err != nil {
+		t.Fatalf("failed to unmarshal raw image response: %v", err)
+	}
+
+	if _, ok := raw["images"]; ok {
+		t.Fatalf("expected provider images field to be omitted, got %#v", raw)
+	}
+
+	if _, ok := raw["seed"]; ok {
+		t.Fatalf("expected provider seed field to be omitted, got %#v", raw)
 	}
 
 	if int64(result.Usage.InputTokens) != 0 ||
@@ -565,6 +644,26 @@ func TestConvertVideosRequestIgnoresJobOnlyDimensions(t *testing.T) {
 	if _, ok := got["image_size"]; ok {
 		t.Fatalf("expected job-only dimensions to be ignored, got %#v", got["image_size"])
 	}
+}
+
+func TestConvertVideosRequestMapsOpenAISize(t *testing.T) {
+	sfAdaptor := &Adaptor{}
+	m := meta.NewMeta(nil, mode.Videos, "alias-video", coremodel.ModelConfig{})
+	m.ActualModel = "Wan-AI/Wan2.2-T2V-A14B"
+
+	req := newJSONRequest(t, "/v1/videos", `{
+		"model":"alias-video",
+		"prompt":"A calm ocean",
+		"size":"720×1280"
+	}`)
+
+	result, err := sfAdaptor.ConvertRequest(m, nil, req)
+	if err != nil {
+		t.Fatalf("ConvertRequest returned error: %v", err)
+	}
+
+	got := readJSONBody(t, result.Body)
+	assertMapValue(t, got, "image_size", "720x1280")
 }
 
 func TestConvertVideoStatusRequestUsesJobID(t *testing.T) {
@@ -651,12 +750,20 @@ func TestVideoSubmitHandlerMapsRequestIDToJob(t *testing.T) {
 		t.Fatalf("unexpected result: %#v", result)
 	}
 
+	if result.UsageContext.Resolution != "1280x720" {
+		t.Fatalf("expected usage context resolution, got %#v", result.UsageContext)
+	}
+
 	if m.RequestUsage.OutputTokens != 0 || m.RequestUsage.TotalTokens != 0 {
 		t.Fatalf("expected submit handler not to mutate request usage, got %#v", m.RequestUsage)
 	}
 
 	if len(store.saved) != 1 || store.saved[0].ID != coremodel.VideoJobStoreID("request-123") {
 		t.Fatalf("unexpected saved stores: %#v", store.saved)
+	}
+
+	if store.saved[0].Metadata != `{"prompt":"A calm ocean","image_size":"1280x720"}` {
+		t.Fatalf("unexpected saved metadata: %s", store.saved[0].Metadata)
 	}
 
 	var job relaymodel.VideoGenerationJob
@@ -670,6 +777,68 @@ func TestVideoSubmitHandlerMapsRequestIDToJob(t *testing.T) {
 		job.Width != 1280 ||
 		job.Height != 720 {
 		t.Fatalf("unexpected job: %#v", job)
+	}
+}
+
+func TestVideoStatusHandlerRestoresRequestMetadataFromStore(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	recorder := httptest.NewRecorder()
+	ctx, _ := gin.CreateTestContext(recorder)
+	ctx.Request = httptest.NewRequestWithContext(
+		context.Background(),
+		http.MethodPost,
+		"/v1/video/generations/jobs/request-123",
+		nil,
+	)
+
+	m := meta.NewMeta(
+		nil,
+		mode.VideoGenerationsGetJobs,
+		"Wan-AI/Wan2.2-T2V-A14B",
+		coremodel.ModelConfig{},
+		meta.WithJobID("request-123"),
+	)
+	m.Channel.ID = 9
+	m.Group = coremodel.GroupCache{ID: "group-1"}
+	m.Token = coremodel.TokenCache{ID: 7}
+
+	store := &siliconflowTestStore{
+		saved: []adaptor.StoreCache{
+			{
+				ID:        coremodel.VideoJobStoreID("request-123"),
+				GroupID:   "group-1",
+				TokenID:   7,
+				ChannelID: 9,
+				Model:     "Wan-AI/Wan2.2-T2V-A14B",
+				Metadata:  `{"prompt":"A calm ocean","image_size":"1280x720"}`,
+			},
+		},
+	}
+	resp := &http.Response{
+		StatusCode: http.StatusOK,
+		Header:     make(http.Header),
+		Body: io.NopCloser(bytes.NewReader([]byte(`{
+			"status":"Succeed",
+			"results":{"videos":[{"url":"https://example.com/video.mp4"}]}
+		}`))),
+	}
+
+	_, adaptorErr := VideoGenerationJobStatusHandler(m, store, ctx, resp)
+	if adaptorErr != nil {
+		t.Fatalf("VideoGenerationJobStatusHandler returned error: %v", adaptorErr)
+	}
+
+	var job relaymodel.VideoGenerationJob
+	if err := json.Unmarshal(recorder.Body.Bytes(), &job); err != nil {
+		t.Fatalf("failed to unmarshal job: %v", err)
+	}
+
+	if job.Prompt != "A calm ocean" || job.Width != 1280 || job.Height != 720 ||
+		len(job.Generations) != 1 ||
+		job.Generations[0].Width != 1280 ||
+		job.Generations[0].Height != 720 {
+		t.Fatalf("expected stored request metadata to be restored, got %#v", job)
 	}
 }
 
@@ -776,6 +945,10 @@ func TestVideosHandlerMapsSubmitResponse(t *testing.T) {
 	if len(store.saved) != 1 ||
 		store.saved[0].ID != coremodel.VideoGenerationStoreID("request-123") {
 		t.Fatalf("unexpected saved stores: %#v", store.saved)
+	}
+
+	if result.UsageContext.Resolution != "1280x720" {
+		t.Fatalf("expected usage context resolution, got %#v", result.UsageContext)
 	}
 
 	var video relaymodel.Video
@@ -975,8 +1148,18 @@ func TestFetchAsyncUsageUsesReturnedVideoCount(t *testing.T) {
 	defer statusServer.Close()
 
 	sfAdaptor := &Adaptor{}
+	store := &siliconflowTestStore{
+		saved: []adaptor.StoreCache{
+			{
+				ID:       coremodel.VideoGenerationStoreID("request-123"),
+				GroupID:  "group-1",
+				TokenID:  7,
+				Metadata: `{"prompt":"Stored prompt","image_size":"720x1280"}`,
+			},
+		},
+	}
 
-	usage, _, done, err := sfAdaptor.FetchAsyncUsage(
+	usage, usageContext, done, err := sfAdaptor.FetchAsyncUsage(
 		context.Background(),
 		adaptor.AsyncUsageRequest{
 			Channel: &coremodel.Channel{
@@ -986,11 +1169,17 @@ func TestFetchAsyncUsageUsesReturnedVideoCount(t *testing.T) {
 			Info: &coremodel.AsyncUsageInfo{
 				Mode:       int(mode.Videos),
 				UpstreamID: "request-123",
+				GroupID:    "group-1",
+				TokenID:    7,
 				Usage: coremodel.Usage{
 					OutputTokens: 8,
 					TotalTokens:  8,
 				},
+				UsageContext: coremodel.UsageContext{
+					Resolution: "640x480",
+				},
 			},
+			Store: store,
 		},
 	)
 	if err != nil {
@@ -1003,6 +1192,10 @@ func TestFetchAsyncUsageUsesReturnedVideoCount(t *testing.T) {
 
 	if usage.OutputTokens != 2 || usage.TotalTokens != 2 {
 		t.Fatalf("expected usage to count returned videos, got %#v", usage)
+	}
+
+	if usageContext.Resolution != "720x1280" {
+		t.Fatalf("expected async usage context resolution, got %#v", usageContext)
 	}
 }
 

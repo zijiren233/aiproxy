@@ -7,12 +7,10 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
-	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/labring/aiproxy/core/common"
 	coremodel "github.com/labring/aiproxy/core/model"
 	adaptorapi "github.com/labring/aiproxy/core/relay/adaptor"
 	vertexai "github.com/labring/aiproxy/core/relay/adaptor/vertexai"
@@ -373,36 +371,21 @@ func TestFetchAsyncUsageGeminiVideoBuildsUsageFromStoredMetadata(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	oldLogDB := coremodel.LogDB
-	oldDB := coremodel.DB
-	oldRedisEnabled := common.RedisEnabled
-
-	db, err := coremodel.OpenSQLite(filepath.Join(t.TempDir(), "vertex_async_usage.db"))
-	require.NoError(t, err)
-	require.NoError(t, db.AutoMigrate(&coremodel.StoreV2{}))
-
-	coremodel.LogDB = db
-	coremodel.DB = db
-	common.RedisEnabled = false
-
-	t.Cleanup(func() {
-		coremodel.LogDB = oldLogDB
-		coremodel.DB = oldDB
-		common.RedisEnabled = oldRedisEnabled
-	})
-
 	operationName := "projects/project-1/locations/us-central1/publishers/google/models/veo-3.1-generate-preview/operations/video-123"
 	localID := vertexGeminiVideoLocalIDForTest(operationName)
-	_, err = coremodel.SaveStore(&coremodel.StoreV2{
-		GroupID:   "group-1",
-		TokenID:   7,
-		ChannelID: 11,
-		Model:     "veo-3.1-generate-preview",
-		ID:        coremodel.VideoJobStoreID(localID),
-		Metadata:  `{"operation_name":"projects/project-1/locations/us-central1/publishers/google/models/veo-3.1-generate-preview/operations/video-123","seconds":5,"variants":2,"resolution":"1080p"}`,
-		ExpiresAt: time.Now().Add(time.Hour),
-	})
-	require.NoError(t, err)
+	store := &vertexVideoTestStore{
+		items: map[string]adaptorapi.StoreCache{
+			coremodel.VideoJobStoreID(localID): {
+				GroupID:   "group-1",
+				TokenID:   7,
+				ChannelID: 11,
+				Model:     "veo-3.1-generate-preview",
+				ID:        coremodel.VideoJobStoreID(localID),
+				Metadata:  `{"operation_name":"projects/project-1/locations/us-central1/publishers/google/models/veo-3.1-generate-preview/operations/video-123","seconds":5,"variants":2,"resolution":"1080p"}`,
+				ExpiresAt: time.Now().Add(time.Hour),
+			},
+		},
+	}
 
 	adaptor := &vertexai.Adaptor{}
 	usage, usageContext, done, err := adaptor.FetchAsyncUsage(
@@ -424,6 +407,7 @@ func TestFetchAsyncUsageGeminiVideoBuildsUsageFromStoredMetadata(t *testing.T) {
 					NativeResolution: "720p",
 				},
 			},
+			Store: store,
 		},
 	)
 	require.NoError(t, err)

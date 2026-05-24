@@ -1038,7 +1038,7 @@ func TestPrice_SelectConditionalPrice_WithMediaConditions(t *testing.T) {
 				Price:     model.Price{OutputPrice: 0.40},
 			},
 			{
-				Condition: model.PriceCondition{Resolution: []string{"1280x720"}},
+				Condition: model.PriceCondition{Resolution: []string{"1280*720"}},
 				Price:     model.Price{OutputPrice: 0.50},
 			},
 		},
@@ -1047,8 +1047,8 @@ func TestPrice_SelectConditionalPrice_WithMediaConditions(t *testing.T) {
 	selectedExactProtocolResolutionPrice := exactProtocolResolutionPrice.SelectConditionalPrice(
 		model.Usage{},
 		model.UsageContext{
-			Resolution:       "1280x720",
-			NativeResolution: "720p",
+			Resolution:       "1280 X 720",
+			NativeResolution: "720P",
 		},
 	)
 	if float64(selectedExactProtocolResolutionPrice.OutputPrice) != 0.50 {

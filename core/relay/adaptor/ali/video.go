@@ -123,6 +123,12 @@ type AliVideoUsage struct {
 	Audio               *bool  `json:"audio,omitempty"`
 }
 
+type aliVideoStoreMetadata struct {
+	Prompt  string `json:"prompt,omitempty"`
+	Seconds int    `json:"seconds,omitempty"`
+	Size    string `json:"size,omitempty"`
+}
+
 func getAliVideoRequestURL(baseURL string, meta *meta.Meta) (adaptor.RequestURL, error) {
 	path := "/api/v1/services/aigc/video-generation/video-synthesis"
 	method := http.MethodPost
@@ -1134,6 +1140,12 @@ func AliVideoGetJobsHandler(
 		)
 	}
 
+	applyStoredAliVideoRequestMetadata(
+		meta,
+		store,
+		coremodel.VideoJobStoreID(aliResponse.Output.TaskID),
+	)
+
 	job := aliVideoTaskToOpenAIJob(meta, &aliResponse)
 	if job.Status == relaymodel.VideoGenerationJobStatusSucceeded {
 		for _, generation := range job.Generations {
@@ -1296,6 +1308,10 @@ func aliVideoTaskToOpenAIJob(
 		height = meta.GetInt(metaAliVideoHeight)
 	}
 
+	if width == 0 || height == 0 {
+		width, height, _ = relaymodel.ParseVideoDimensions(meta.GetString(metaAliVideoSize))
+	}
+
 	job := &relaymodel.VideoGenerationJob{
 		Object:      relaymodel.VideoGenerationJobObject,
 		ID:          taskID,
@@ -1421,6 +1437,12 @@ func AliVideoGetHandler(
 			http.StatusInternalServerError,
 		)
 	}
+
+	applyStoredAliVideoRequestMetadata(
+		meta,
+		store,
+		coremodel.VideoGenerationStoreID(aliResponse.Output.TaskID),
+	)
 
 	video := aliVideoTaskToOpenAIVideo(meta, &aliResponse)
 	if video.Status == relaymodel.VideoStatusCompleted {
@@ -1582,13 +1604,13 @@ func aliVideoDimensions(usage AliVideoUsage) (int, int) {
 
 	switch usage.Ratio {
 	case "9:16":
-		return resolution * 9 / 16, resolution
+		return resolution, resolution * 16 / 9
 	case "1:1":
 		return resolution, resolution
 	case "4:3":
 		return resolution * 4 / 3, resolution
 	case "3:4":
-		return resolution * 3 / 4, resolution
+		return resolution, resolution * 4 / 3
 	default:
 		return resolution * 16 / 9, resolution
 	}
@@ -1651,6 +1673,7 @@ func saveAliVideoJobStore(meta *meta.Meta, store adaptor.Store, jobID string) er
 		TokenID:   meta.Token.ID,
 		ChannelID: meta.Channel.ID,
 		Model:     meta.OriginModel,
+		Metadata:  aliVideoStoreMetadataString(meta),
 		ExpiresAt: time.Now().Add(aliVideoTaskTTL),
 	})
 }
@@ -1676,6 +1699,71 @@ func saveAliVideoGenerationStore(
 		TokenID:   meta.Token.ID,
 		ChannelID: meta.Channel.ID,
 		Model:     meta.OriginModel,
+		Metadata:  aliVideoStoreMetadataString(meta),
 		ExpiresAt: expiresAtTime,
 	})
+}
+
+func aliVideoStoreMetadataString(meta *meta.Meta) string {
+	if meta == nil {
+		return ""
+	}
+
+	metadata := aliVideoStoreMetadata{
+		Prompt:  meta.GetString(metaAliVideoPrompt),
+		Seconds: meta.GetInt(metaAliVideoSeconds),
+		Size:    meta.GetString(metaAliVideoSize),
+	}
+
+	data, err := sonic.MarshalString(metadata)
+	if err != nil {
+		return ""
+	}
+
+	return data
+}
+
+func applyStoredAliVideoRequestMetadata(meta *meta.Meta, store adaptor.Store, storeID string) {
+	if meta == nil || store == nil || storeID == "" {
+		return
+	}
+
+	cache, err := store.GetStore(meta.Group.ID, meta.Token.ID, storeID)
+	if err != nil || cache.Metadata == "" {
+		return
+	}
+
+	var metadata aliVideoStoreMetadata
+	if err := sonic.UnmarshalString(cache.Metadata, &metadata); err != nil {
+		return
+	}
+
+	if meta.GetString(metaAliVideoPrompt) == "" && metadata.Prompt != "" {
+		meta.Set(metaAliVideoPrompt, metadata.Prompt)
+	}
+
+	if meta.GetInt(metaAliVideoSeconds) == 0 && metadata.Seconds > 0 {
+		meta.Set(metaAliVideoSeconds, metadata.Seconds)
+	}
+
+	if meta.GetString(metaAliVideoSize) == "" && metadata.Size != "" {
+		meta.Set(metaAliVideoSize, metadata.Size)
+	}
+
+	if metadata.Size == "" {
+		return
+	}
+
+	width, height, ok := relaymodel.ParseVideoDimensions(metadata.Size)
+	if !ok {
+		return
+	}
+
+	if meta.GetInt(metaAliVideoWidth) == 0 {
+		meta.Set(metaAliVideoWidth, width)
+	}
+
+	if meta.GetInt(metaAliVideoHeight) == 0 {
+		meta.Set(metaAliVideoHeight, height)
+	}
 }

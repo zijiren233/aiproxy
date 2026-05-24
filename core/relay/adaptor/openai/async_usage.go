@@ -255,5 +255,9 @@ func videoGenerationJobPriceResolution(job *relaymodel.VideoGenerationJob) strin
 		return ""
 	}
 
-	return relaymodel.VideoResolutionFromDimensions(job.Width, job.Height)
+	if job.Width <= 0 || job.Height <= 0 {
+		return ""
+	}
+
+	return fmt.Sprintf("%dx%d", job.Width, job.Height)
 }

@@ -134,7 +134,11 @@ func TestValidateImagesEditsRequestRejectsUnsupportedResolution(t *testing.T) {
 		AllowedResolutions: []string{"1024x1024"},
 	})
 	require.Error(t, err)
-	require.Equal(t, "unsupported image resolution `512x512`", err.Error())
+	require.Equal(
+		t,
+		"unsupported image resolution `512x512`, supported resolutions: 1024x1024",
+		err.Error(),
+	)
 
 	var requestParamErr *RequestParamError
 	require.ErrorAs(t, err, &requestParamErr)
@@ -159,7 +163,11 @@ func TestValidateImagesEditsRequestRejectsInvalidResolutionFormat(t *testing.T) 
 
 	err := ValidateImagesEditsRequest(c, model.ModelConfig{})
 	require.Error(t, err)
-	require.Equal(t, "invalid image resolution `1:1`", err.Error())
+	require.Equal(
+		t,
+		"invalid image resolution `1:1`, supported resolutions: auto, <width>x<height>",
+		err.Error(),
+	)
 }
 
 func TestGetImagesEditsRequestUsageReturnsNoPreflightUsage(t *testing.T) {
