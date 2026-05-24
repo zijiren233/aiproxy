@@ -260,12 +260,35 @@ func TestValidateGeminiVideoRequestRejectsUnsupportedResolution(t *testing.T) {
 	ctx.Request = req
 
 	err := ValidateGeminiVideoRequest(ctx, model.ModelConfig{
-		Config: map[model.ModelConfigKey]any{
-			model.ModelConfigVideoResolutions: []string{"720p"},
-		},
+		AllowedResolutions: []string{"720p"},
 	})
 	require.Error(t, err)
 	require.Equal(t, "unsupported video resolution `1080p`", err.Error())
+}
+
+func TestValidateGeminiVideoRequestRejectsInvalidResolutionFormat(t *testing.T) {
+	t.Parallel()
+
+	gin.SetMode(gin.TestMode)
+
+	body := `{
+		"instances":[{"prompt":"A city street"}],
+		"parameters":{"durationSeconds":6,"resolution":"1280x720"}
+	}`
+	req := httptest.NewRequestWithContext(
+		t.Context(),
+		http.MethodPost,
+		"/v1beta/models/veo-3.1-generate-preview:predictLongRunning",
+		bytes.NewBufferString(body),
+	)
+	req.Header.Set("Content-Type", "application/json")
+
+	ctx, _ := gin.CreateTestContext(httptest.NewRecorder())
+	ctx.Request = req
+
+	err := ValidateGeminiVideoRequest(ctx, model.ModelConfig{})
+	require.Error(t, err)
+	require.Equal(t, "invalid gemini video resolution `1280x720`", err.Error())
 }
 
 func TestGetGeminiVideoRequestUsageSetsResolutionCondition(t *testing.T) {
@@ -289,9 +312,7 @@ func TestGetGeminiVideoRequestUsageSetsResolutionCondition(t *testing.T) {
 	ctx.Request = req
 
 	usage, err := GetGeminiVideoRequestUsage(ctx, model.ModelConfig{
-		Config: map[model.ModelConfigKey]any{
-			model.ModelConfigVideoResolutions: []string{"1080p"},
-		},
+		AllowedResolutions: []string{"1080p"},
 	})
 	require.NoError(t, err)
 	require.Zero(t, usage.Usage.OutputTokens)
@@ -319,9 +340,7 @@ func TestGetGeminiVideoRequestUsageIgnoresAspectRatioForResolutionCondition(t *t
 	ctx.Request = req
 
 	usage, err := GetGeminiVideoRequestUsage(ctx, model.ModelConfig{
-		Config: map[model.ModelConfigKey]any{
-			model.ModelConfigVideoResolutions: []string{"720p"},
-		},
+		AllowedResolutions: []string{"720p"},
 	})
 	require.NoError(t, err)
 	require.Zero(t, usage.Usage.OutputTokens)
@@ -349,9 +368,7 @@ func TestGetGeminiVideoRequestUsageRejectsWhenDefaultResolutionUnsupported(t *te
 	ctx.Request = req
 
 	_, err := GetGeminiVideoRequestUsage(ctx, model.ModelConfig{
-		Config: map[model.ModelConfigKey]any{
-			model.ModelConfigVideoResolutions: []string{"1080p"},
-		},
+		AllowedResolutions: []string{"1080p"},
 	})
 	require.Error(t, err)
 	require.Equal(t, "unsupported video resolution `720p`", err.Error())
@@ -378,9 +395,7 @@ func TestGetGeminiVideoRequestUsageResolutionOverridesAspectRatio(t *testing.T) 
 	ctx.Request = req
 
 	usage, err := GetGeminiVideoRequestUsage(ctx, model.ModelConfig{
-		Config: map[model.ModelConfigKey]any{
-			model.ModelConfigVideoResolutions: []string{"1080p"},
-		},
+		AllowedResolutions: []string{"1080p"},
 	})
 	require.NoError(t, err)
 	require.Equal(t, "1080p", usage.Context.Resolution)
@@ -457,9 +472,7 @@ func TestGetGeminiVideoRequestUsageRejectsUnsupportedResolution(t *testing.T) {
 	ctx.Request = req
 
 	_, err := GetGeminiVideoRequestUsage(ctx, model.ModelConfig{
-		Config: map[model.ModelConfigKey]any{
-			model.ModelConfigVideoResolutions: []string{"720p"},
-		},
+		AllowedResolutions: []string{"720p"},
 	})
 	require.Error(t, err)
 	require.Equal(t, "unsupported video resolution `1080p`", err.Error())
@@ -571,9 +584,7 @@ func TestGetGeminiVideoRequestPriceDoesNotParseOpenAIVideoFields(t *testing.T) {
 	ctx.Request = req
 
 	price, err := GetGeminiVideoRequestPrice(ctx, model.ModelConfig{
-		Config: map[model.ModelConfigKey]any{
-			model.ModelConfigVideoResolutions: []string{"1080p"},
-		},
+		AllowedResolutions: []string{"1080p"},
 		Price: model.Price{
 			OutputPrice: 0.2,
 			ConditionalPrices: []model.ConditionalPrice{
@@ -694,7 +705,7 @@ func TestValidateVideosRequestRejectsUnsupportedMultipartSize(t *testing.T) {
 	writer := multipart.NewWriter(&body)
 	require.NoError(t, writer.WriteField("model", "video-model"))
 	require.NoError(t, writer.WriteField("prompt", "A city street"))
-	require.NoError(t, writer.WriteField("size", "1080p"))
+	require.NoError(t, writer.WriteField("size", "1920x1080"))
 	require.NoError(t, writer.WriteField("seconds", "5"))
 	require.NoError(t, writer.Close())
 
@@ -710,12 +721,10 @@ func TestValidateVideosRequestRejectsUnsupportedMultipartSize(t *testing.T) {
 	ctx.Request = req
 
 	err := ValidateVideosRequest(ctx, model.ModelConfig{
-		Config: map[model.ModelConfigKey]any{
-			model.ModelConfigVideoResolutions: []string{"720p"},
-		},
+		AllowedResolutions: []string{"720p"},
 	})
 	require.Error(t, err)
-	require.Equal(t, "unsupported video resolution `1080p`", err.Error())
+	require.Equal(t, "unsupported video resolution `1920x1080`", err.Error())
 }
 
 func TestValidateVideosRequestIgnoresJobOnlyFields(t *testing.T) {
@@ -744,9 +753,7 @@ func TestValidateVideosRequestIgnoresJobOnlyFields(t *testing.T) {
 	ctx.Request = req
 
 	err := ValidateVideosRequest(ctx, model.ModelConfig{
-		Config: map[model.ModelConfigKey]any{
-			model.ModelConfigVideoResolutions: []string{"720p"},
-		},
+		AllowedResolutions:        []string{"720p"},
 		MaxVideoGenerationSeconds: 5,
 	})
 	require.NoError(t, err)
@@ -761,7 +768,7 @@ func TestGetVideosRequestUsageUsesOfficialVideoFields(t *testing.T) {
 		"model":"video-model",
 		"prompt":"A city street",
 		"seconds":4,
-		"size":"720p",
+		"size":"1280x720",
 		"n_seconds":60,
 		"n_variants":10
 	}`
@@ -780,7 +787,7 @@ func TestGetVideosRequestUsageUsesOfficialVideoFields(t *testing.T) {
 	require.NoError(t, err)
 	require.Zero(t, usage.Usage.OutputTokens)
 	require.Zero(t, usage.Usage.TotalTokens)
-	require.Equal(t, "720p", usage.Context.Resolution)
+	require.Equal(t, "1280x720", usage.Context.Resolution)
 }
 
 func TestGetVideoGenerationJobRequestUsageSetsResolutionCondition(t *testing.T) {
@@ -820,7 +827,7 @@ func TestGetVideoGenerationJobRequestUsageRejectsUnsupportedResolution(t *testin
 	body := `{
 		"model":"video-model",
 		"prompt":"A city street",
-		"size":"720p",
+		"size":"1280x720",
 		"seconds":5
 	}`
 	req := httptest.NewRequestWithContext(
@@ -835,15 +842,13 @@ func TestGetVideoGenerationJobRequestUsageRejectsUnsupportedResolution(t *testin
 	ctx.Request = req
 
 	_, err := GetVideoGenerationJobRequestUsage(ctx, model.ModelConfig{
-		Config: map[model.ModelConfigKey]any{
-			model.ModelConfigVideoResolutions: []string{"1080p"},
-		},
+		AllowedResolutions: []string{"1080p"},
 	})
 	require.Error(t, err)
-	require.Equal(t, "unsupported video resolution `720p`", err.Error())
+	require.Equal(t, "unsupported video resolution `1280x720`", err.Error())
 }
 
-func TestGetVideoGenerationJobRequestUsageNormalizesSupportedResolutionCase(t *testing.T) {
+func TestGetVideoGenerationJobRequestUsageRejectsInvalidSizeFormat(t *testing.T) {
 	t.Parallel()
 
 	gin.SetMode(gin.TestMode)
@@ -866,11 +871,152 @@ func TestGetVideoGenerationJobRequestUsageNormalizesSupportedResolutionCase(t *t
 	ctx.Request = req
 
 	_, err := GetVideoGenerationJobRequestUsage(ctx, model.ModelConfig{
-		Config: map[model.ModelConfigKey]any{
-			model.ModelConfigVideoResolutions: []string{"720p"},
-		},
+		AllowedResolutions: []string{"720p"},
+	})
+	require.Error(t, err)
+	require.Equal(t, "invalid video size `720p`", err.Error())
+}
+
+func TestGetVideoGenerationJobRequestUsageRejectsNonOpenAIDimensionDelimiter(t *testing.T) {
+	t.Parallel()
+
+	gin.SetMode(gin.TestMode)
+
+	body := `{
+		"model":"video-model",
+		"prompt":"A city street",
+		"size":"1280*720",
+		"seconds":5
+	}`
+	req := httptest.NewRequestWithContext(
+		t.Context(),
+		http.MethodPost,
+		"/v1/videos",
+		bytes.NewBufferString(body),
+	)
+	req.Header.Set("Content-Type", "application/json")
+
+	ctx, _ := gin.CreateTestContext(httptest.NewRecorder())
+	ctx.Request = req
+
+	_, err := GetVideoGenerationJobRequestUsage(ctx, model.ModelConfig{})
+	require.Error(t, err)
+	require.Equal(t, "invalid video size `1280*720`", err.Error())
+}
+
+func TestGetVideoGenerationJobRequestUsageMatchesDimensionToTier(t *testing.T) {
+	t.Parallel()
+
+	gin.SetMode(gin.TestMode)
+
+	body := `{
+		"model":"video-model",
+		"prompt":"A city street",
+		"size":"1280x720",
+		"seconds":5
+	}`
+	req := httptest.NewRequestWithContext(
+		t.Context(),
+		http.MethodPost,
+		"/v1/videos",
+		bytes.NewBufferString(body),
+	)
+	req.Header.Set("Content-Type", "application/json")
+
+	ctx, _ := gin.CreateTestContext(httptest.NewRecorder())
+	ctx.Request = req
+
+	_, err := GetVideoGenerationJobRequestUsage(ctx, model.ModelConfig{
+		AllowedResolutions: []string{"720p"},
 	})
 	require.NoError(t, err)
+}
+
+func TestGetVideoGenerationJobRequestUsageRejectsAllBlankAllowedResolutions(t *testing.T) {
+	t.Parallel()
+
+	gin.SetMode(gin.TestMode)
+
+	body := `{
+		"model":"video-model",
+		"prompt":"A city street",
+		"size":"1280x720",
+		"seconds":5
+	}`
+	req := httptest.NewRequestWithContext(
+		t.Context(),
+		http.MethodPost,
+		"/v1/videos",
+		bytes.NewBufferString(body),
+	)
+	req.Header.Set("Content-Type", "application/json")
+
+	ctx, _ := gin.CreateTestContext(httptest.NewRecorder())
+	ctx.Request = req
+
+	_, err := GetVideoGenerationJobRequestUsage(ctx, model.ModelConfig{
+		AllowedResolutions: []string{" ", "\t"},
+	})
+	require.Error(t, err)
+	require.Equal(t, "unsupported video resolution `1280x720`", err.Error())
+}
+
+func TestGetVideoGenerationJobRequestUsageMatchesPortraitDimensionToTier(t *testing.T) {
+	t.Parallel()
+
+	gin.SetMode(gin.TestMode)
+
+	body := `{
+		"model":"video-model",
+		"prompt":"A city street",
+		"size":"720x1280",
+		"seconds":5
+	}`
+	req := httptest.NewRequestWithContext(
+		t.Context(),
+		http.MethodPost,
+		"/v1/videos",
+		bytes.NewBufferString(body),
+	)
+	req.Header.Set("Content-Type", "application/json")
+
+	ctx, _ := gin.CreateTestContext(httptest.NewRecorder())
+	ctx.Request = req
+
+	_, err := GetVideoGenerationJobRequestUsage(ctx, model.ModelConfig{
+		AllowedResolutions: []string{"720p"},
+	})
+	require.NoError(t, err)
+}
+
+func TestGetVideoGenerationJobRequestUsageDisableFuzzyRejectsDimensionToTier(t *testing.T) {
+	t.Parallel()
+
+	gin.SetMode(gin.TestMode)
+
+	body := `{
+		"model":"video-model",
+		"prompt":"A city street",
+		"size":"1280x720",
+		"seconds":5
+	}`
+	req := httptest.NewRequestWithContext(
+		t.Context(),
+		http.MethodPost,
+		"/v1/videos",
+		bytes.NewBufferString(body),
+	)
+	req.Header.Set("Content-Type", "application/json")
+
+	ctx, _ := gin.CreateTestContext(httptest.NewRecorder())
+	ctx.Request = req
+
+	_, err := GetVideoGenerationJobRequestUsage(ctx, model.ModelConfig{
+		AllowedResolutions:          []string{"720p"},
+		DisableResolutionFuzzyMatch: true,
+	})
+	require.Error(t, err)
+	require.Equal(t, "unsupported video resolution `1280x720`", err.Error())
 }
 
 func TestGetVideoGenerationJobRequestUsageRejectsTooLongSeconds(t *testing.T) {
@@ -973,7 +1119,7 @@ func TestGetVideoGenerationJobRequestPriceSetsPerSecondUnitForConditionalPrices(
 	writer := multipart.NewWriter(&body)
 	require.NoError(t, writer.WriteField("model", "video-model"))
 	require.NoError(t, writer.WriteField("prompt", "A city street"))
-	require.NoError(t, writer.WriteField("size", "1280*720"))
+	require.NoError(t, writer.WriteField("size", "1280x720"))
 	require.NoError(t, writer.Close())
 
 	req := httptest.NewRequestWithContext(

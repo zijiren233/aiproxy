@@ -58,6 +58,13 @@ export interface LogAmount {
   used_amount?: number
 }
 
+// 计费条件上下文
+export interface LogUsageContext {
+  resolution?: string
+  quality?: string
+  service_tier?: string
+}
+
 // 请求详情
 export interface LogRequestDetail {
   id: number
@@ -94,6 +101,7 @@ export interface LogRecord {
   token_name: string
   ttfb_milliseconds: number
   usage: LogUsage
+  usage_context?: LogUsageContext
   // 兼容旧接口字段
   used_amount?: number
   // 新接口金额明细字段

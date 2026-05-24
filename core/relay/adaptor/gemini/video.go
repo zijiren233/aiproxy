@@ -787,18 +787,16 @@ func NativeVideoHandler(
 
 	body, err := common.GetResponseBody(resp)
 	if err != nil {
-		return adaptor.DoResponseResult{}, relaymodel.WrapperOpenAIError(
+		return adaptor.DoResponseResult{}, relaymodel.WrapperGeminiError(
 			err,
-			"read_response_body_failed",
 			http.StatusInternalServerError,
 		)
 	}
 
 	var operation geminiOperation
 	if err := sonic.Unmarshal(body, &operation); err != nil {
-		return adaptor.DoResponseResult{}, relaymodel.WrapperOpenAIError(
+		return adaptor.DoResponseResult{}, relaymodel.WrapperGeminiError(
 			err,
-			"unmarshal_response_body_failed",
 			http.StatusInternalServerError,
 		)
 	}
@@ -850,9 +848,8 @@ func NativeVideoOperationHandler(
 
 	body, err := common.GetResponseBody(resp)
 	if err != nil {
-		return adaptor.DoResponseResult{}, relaymodel.WrapperOpenAIError(
+		return adaptor.DoResponseResult{}, relaymodel.WrapperGeminiError(
 			err,
-			"read_response_body_failed",
 			http.StatusInternalServerError,
 		)
 	}

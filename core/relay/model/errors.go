@@ -73,13 +73,13 @@ func WrapperErrorWithMessage(
 		mode.VideosGet,
 		mode.VideosContent,
 		mode.VideosDelete,
-		mode.VideosRemix,
-		mode.GeminiVideo,
-		mode.GeminiVideoOperations:
+		mode.VideosRemix:
 		return NewOpenAIVideoError(statusCode, OpenAIVideoError{
 			Detail: message,
 		})
-	case mode.Gemini:
+	case mode.Gemini,
+		mode.GeminiVideo,
+		mode.GeminiVideoOperations:
 		return NewGeminiError(statusCode, GeminiError{
 			Message: message,
 			Status:  opt.Type,
