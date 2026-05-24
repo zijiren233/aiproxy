@@ -12,7 +12,6 @@ import (
 	coremodel "github.com/labring/aiproxy/core/model"
 	"github.com/labring/aiproxy/core/relay/adaptor"
 	"github.com/labring/aiproxy/core/relay/mode"
-	relaymodel "github.com/labring/aiproxy/core/relay/model"
 	relayutils "github.com/labring/aiproxy/core/relay/utils"
 )
 
@@ -33,7 +32,7 @@ func (a *Adaptor) FetchAsyncUsage(
 
 	switch mode.Mode(info.Mode) {
 	case mode.VideoGenerationsJobs, mode.Videos, mode.VideosRemix:
-		return a.fetchAliVideoJobUsage(ctx, channel, info)
+		return a.fetchAliVideoJobUsage(ctx, channel, request.Store, info)
 	default:
 		return coremodel.Usage{}, coremodel.UsageContext{}, false, fmt.Errorf(
 			"unsupported async usage mode: %d",
@@ -45,6 +44,7 @@ func (a *Adaptor) FetchAsyncUsage(
 func (a *Adaptor) fetchAliVideoJobUsage(
 	ctx context.Context,
 	channel *coremodel.Channel,
+	store adaptor.Store,
 	info *coremodel.AsyncUsageInfo,
 ) (coremodel.Usage, coremodel.UsageContext, bool, error) {
 	if info.UpstreamID == "" {
@@ -62,13 +62,8 @@ func (a *Adaptor) fetchAliVideoJobUsage(
 	case "SUCCEEDED":
 		usage := aliVideoUsageToModelUsage(response.Usage)
 
-		usageContext := coremodel.UsageContext{}
-		if width, height := aliVideoDimensions(response.Usage); width > 0 && height > 0 {
-			usageContext.Resolution = relaymodel.VideoResolutionFromDimensions(
-				width,
-				height,
-			)
-		}
+		usageContext := aliVideoAsyncUsageContext(response.Usage, store, info).
+			WithFallback(info.UsageContext)
 
 		return usage, usageContext, true, nil
 	case "PENDING", "RUNNING", "":
@@ -82,6 +77,65 @@ func (a *Adaptor) fetchAliVideoJobUsage(
 	default:
 		return coremodel.Usage{}, coremodel.UsageContext{}, false, nil
 	}
+}
+
+func aliVideoAsyncUsageContext(
+	usage AliVideoUsage,
+	store adaptor.Store,
+	info *coremodel.AsyncUsageInfo,
+) coremodel.UsageContext {
+	storedContext := aliVideoAsyncUsageContextFromStore(store, info)
+	if strings.TrimSpace(usage.Ratio) == "" && storedContext.Resolution != "" {
+		return storedContext
+	}
+
+	usageContext := coremodel.UsageContext{}
+	if width, height := aliVideoDimensions(usage); width > 0 && height > 0 {
+		usageContext.Resolution = aliVideoSize(width, height)
+	}
+
+	return usageContext.WithFallback(storedContext)
+}
+
+func aliVideoAsyncUsageContextFromStore(
+	store adaptor.Store,
+	info *coremodel.AsyncUsageInfo,
+) coremodel.UsageContext {
+	if store == nil || info == nil || info.UpstreamID == "" {
+		return coremodel.UsageContext{}
+	}
+
+	storeIDs := []string{}
+	switch mode.Mode(info.Mode) {
+	case mode.VideoGenerationsJobs:
+		storeIDs = append(storeIDs, coremodel.VideoJobStoreID(info.UpstreamID))
+	case mode.Videos, mode.VideosRemix:
+		storeIDs = append(storeIDs, coremodel.VideoGenerationStoreID(info.UpstreamID))
+	default:
+		storeIDs = append(
+			storeIDs,
+			coremodel.VideoJobStoreID(info.UpstreamID),
+			coremodel.VideoGenerationStoreID(info.UpstreamID),
+		)
+	}
+
+	for _, storeID := range storeIDs {
+		cache, err := store.GetStore(info.GroupID, info.TokenID, storeID)
+		if err != nil || cache.Metadata == "" {
+			continue
+		}
+
+		var metadata aliVideoStoreMetadata
+		if err := sonic.UnmarshalString(cache.Metadata, &metadata); err != nil {
+			continue
+		}
+
+		if metadata.Size != "" {
+			return coremodel.UsageContext{Resolution: metadata.Size}
+		}
+	}
+
+	return coremodel.UsageContext{}
 }
 
 func fetchAliVideoTask(

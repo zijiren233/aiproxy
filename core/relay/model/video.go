@@ -140,6 +140,8 @@ func VideoAspectRatioFromSize(size string) string {
 
 func VideoResolutionFromHeight(height int) string {
 	switch {
+	case height >= 2000:
+		return "4k"
 	case height >= 1000:
 		return "1080p"
 	case height >= 700:

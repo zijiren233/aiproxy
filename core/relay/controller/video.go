@@ -111,24 +111,32 @@ func validateVideoGenerationCount(count, maxCount int) error {
 	)
 }
 
-func validateOpenAIVideoSizeFormat(size string) error {
+func validateOpenAIVideoSizeFormat(size string, supported []string, fuzzy bool) error {
 	size = strings.ToLower(strings.TrimSpace(size))
 	if size == "" || dimensionResolutionValue(size) {
 		return nil
 	}
 
-	return NewBadRequestParamError(fmt.Sprintf("invalid video size `%s`", size))
+	return NewBadRequestParamError(
+		fmt.Sprintf(
+			"invalid video size `%s`, supported resolutions: %s",
+			size,
+			openAIVideoSupportedResolutionOptions(supported, fuzzy),
+		),
+	)
 }
 
 func validateOpenAIVideoJobResolutionFormat(
 	request *relaymodel.VideoGenerationJobRequest,
+	supported []string,
+	fuzzy bool,
 ) error {
 	if request == nil {
 		return nil
 	}
 
 	if request.Size != "" {
-		return validateOpenAIVideoSizeFormat(request.Size)
+		return validateOpenAIVideoSizeFormat(request.Size, supported, fuzzy)
 	}
 
 	if (request.Width == 0) != (request.Height == 0) {
@@ -138,19 +146,31 @@ func validateOpenAIVideoJobResolutionFormat(
 	return nil
 }
 
-func validateGeminiNativeVideoResolutionFormat(resolution string) error {
+func validateGeminiNativeVideoResolutionFormat(
+	resolution string,
+	supported []string,
+	fuzzy bool,
+) error {
 	resolution = normalizeSupportedResolutionValue(resolution)
 	switch resolution {
 	case "", "720p", "1080p", "4k":
 		return nil
 	default:
 		return NewBadRequestParamError(
-			fmt.Sprintf("invalid gemini video resolution `%s`", resolution),
+			fmt.Sprintf(
+				"invalid gemini video resolution `%s`, supported resolutions: %s",
+				resolution,
+				geminiVideoSupportedResolutionOptions(supported, fuzzy),
+			),
 		)
 	}
 }
 
-func validateSupportedVideoResolution(resolution string, mc model.ModelConfig) error {
+func validateSupportedVideoResolution(
+	resolution string,
+	mc model.ModelConfig,
+	supportedOptions string,
+) error {
 	if supportedResolutionMatches(
 		resolution,
 		mc.AllowedResolutions,
@@ -161,7 +181,13 @@ func validateSupportedVideoResolution(resolution string, mc model.ModelConfig) e
 		return nil
 	}
 
-	return NewBadRequestParamError(fmt.Sprintf("unsupported video resolution `%s`", resolution))
+	return NewBadRequestParamError(
+		fmt.Sprintf(
+			"unsupported video resolution `%s`, supported resolutions: %s",
+			resolution,
+			supportedOptions,
+		),
+	)
 }
 
 func setVideoOutputPriceUnit(price *model.Price, force bool) {
@@ -247,7 +273,12 @@ func validateVideoGenerationJobRequest(
 	request *relaymodel.VideoGenerationJobRequest,
 	mc model.ModelConfig,
 ) error {
-	if err := validateOpenAIVideoJobResolutionFormat(request); err != nil {
+	fuzzy := !mc.DisableResolutionFuzzyMatch
+	if err := validateOpenAIVideoJobResolutionFormat(
+		request,
+		mc.AllowedResolutions,
+		fuzzy,
+	); err != nil {
 		return err
 	}
 
@@ -265,7 +296,11 @@ func validateVideoGenerationJobRequest(
 		return err
 	}
 
-	return validateSupportedVideoResolution(videoRequestPriceResolution(request), mc)
+	return validateSupportedVideoResolution(
+		videoRequestPriceResolution(request),
+		mc,
+		openAIVideoSupportedResolutionOptions(mc.AllowedResolutions, fuzzy),
+	)
 }
 
 func getVideosRequestUsageParams(c *gin.Context) (videosRequestUsageParams, error) {
@@ -302,7 +337,8 @@ func getVideosRequestUsageParams(c *gin.Context) (videosRequestUsageParams, erro
 }
 
 func validateVideosRequestUsageParams(params videosRequestUsageParams, mc model.ModelConfig) error {
-	if err := validateOpenAIVideoSizeFormat(params.size); err != nil {
+	fuzzy := !mc.DisableResolutionFuzzyMatch
+	if err := validateOpenAIVideoSizeFormat(params.size, mc.AllowedResolutions, fuzzy); err != nil {
 		return err
 	}
 
@@ -313,7 +349,11 @@ func validateVideosRequestUsageParams(params videosRequestUsageParams, mc model.
 		return err
 	}
 
-	return validateSupportedVideoResolution(params.size, mc)
+	return validateSupportedVideoResolution(
+		params.size,
+		mc,
+		openAIVideoSupportedResolutionOptions(mc.AllowedResolutions, fuzzy),
+	)
 }
 
 func getGeminiVideoRequestUsageParams(c *gin.Context) (geminiVideoRequestUsageParams, error) {
@@ -389,7 +429,12 @@ func validateGeminiVideoRequestUsageParams(
 	params geminiVideoRequestUsageParams,
 	mc model.ModelConfig,
 ) error {
-	if err := validateGeminiNativeVideoResolutionFormat(params.resolution); err != nil {
+	fuzzy := !mc.DisableResolutionFuzzyMatch
+	if err := validateGeminiNativeVideoResolutionFormat(
+		params.resolution,
+		mc.AllowedResolutions,
+		fuzzy,
+	); err != nil {
 		return err
 	}
 
@@ -407,7 +452,11 @@ func validateGeminiVideoRequestUsageParams(
 		return err
 	}
 
-	return validateSupportedVideoResolution(params.resolution, mc)
+	return validateSupportedVideoResolution(
+		params.resolution,
+		mc,
+		geminiVideoSupportedResolutionOptions(mc.AllowedResolutions, fuzzy),
+	)
 }
 
 func getVideoGenerationJobRequest(c *gin.Context) (*relaymodel.VideoGenerationJobRequest, error) {

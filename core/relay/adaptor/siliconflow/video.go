@@ -64,6 +64,11 @@ type videoStatusVideo struct {
 	URL string `json:"url"`
 }
 
+type videoStoreMetadata struct {
+	Prompt    string `json:"prompt,omitempty"`
+	ImageSize string `json:"image_size,omitempty"`
+}
+
 func ConvertVideoGenerationJobRequest(
 	meta *meta.Meta,
 	req *http.Request,
@@ -432,8 +437,9 @@ func VideoGenerationJobSubmitHandler(
 	_, _ = c.Writer.Write(data)
 
 	return adaptor.DoResponseResult{
-		UpstreamID: response.RequestID,
-		AsyncUsage: true,
+		UpstreamID:   response.RequestID,
+		AsyncUsage:   true,
+		UsageContext: siliconFlowVideoUsageContext(meta),
 	}, nil
 }
 
@@ -471,8 +477,9 @@ func VideosSubmitHandler(
 	_, _ = c.Writer.Write(data)
 
 	return adaptor.DoResponseResult{
-		UpstreamID: response.RequestID,
-		AsyncUsage: true,
+		UpstreamID:   response.RequestID,
+		AsyncUsage:   true,
+		UsageContext: siliconFlowVideoUsageContext(meta),
 	}, nil
 }
 
@@ -521,6 +528,8 @@ func VideoGenerationJobStatusHandler(
 		)
 	}
 
+	applyStoredVideoRequestMetadata(meta, store, model.VideoJobStoreID(meta.JobID))
+
 	job := buildVideoJob(meta, meta.JobID, siliconFlowVideoStatus(response.Status), &response)
 
 	if response.Status == "Succeed" {
@@ -567,6 +576,8 @@ func VideosStatusHandler(
 			http.StatusInternalServerError,
 		)
 	}
+
+	applyStoredVideoRequestMetadata(meta, store, model.VideoGenerationStoreID(meta.VideoID))
 
 	video := buildVideo(
 		meta,
@@ -759,6 +770,19 @@ func buildVideo(
 	return video
 }
 
+func siliconFlowVideoUsageContext(meta *meta.Meta) model.UsageContext {
+	if meta == nil {
+		return model.UsageContext{}
+	}
+
+	var request videoSubmitRequest
+	if value, ok := meta.Get(metaVideoRequest); ok {
+		request, _ = value.(videoSubmitRequest)
+	}
+
+	return model.UsageContext{Resolution: request.ImageSize}
+}
+
 func buildVideoJob(
 	meta *meta.Meta,
 	id string,
@@ -880,6 +904,56 @@ func normalizeSiliconFlowSize(size string) string {
 	return size
 }
 
+func videoStoreMetadataString(meta *meta.Meta) string {
+	metadata := videoStoreMetadata{}
+	if value, ok := meta.Get(metaVideoRequest); ok {
+		if request, ok := value.(videoSubmitRequest); ok {
+			metadata.Prompt = request.Prompt
+			metadata.ImageSize = request.ImageSize
+		}
+	}
+
+	data, err := sonic.MarshalString(metadata)
+	if err != nil {
+		return ""
+	}
+
+	return data
+}
+
+func applyStoredVideoRequestMetadata(meta *meta.Meta, store adaptor.Store, storeID string) {
+	if meta == nil || store == nil || storeID == "" {
+		return
+	}
+
+	cache, err := store.GetStore(meta.Group.ID, meta.Token.ID, storeID)
+	if err != nil || cache.Metadata == "" {
+		return
+	}
+
+	var metadata videoStoreMetadata
+	if err := sonic.UnmarshalString(cache.Metadata, &metadata); err != nil {
+		return
+	}
+
+	var request videoSubmitRequest
+	if value, ok := meta.Get(metaVideoRequest); ok {
+		request, _ = value.(videoSubmitRequest)
+	}
+
+	if request.Prompt == "" {
+		request.Prompt = metadata.Prompt
+	}
+
+	if request.ImageSize == "" {
+		request.ImageSize = metadata.ImageSize
+	}
+
+	if request.Prompt != "" || request.ImageSize != "" {
+		meta.Set(metaVideoRequest, request)
+	}
+}
+
 func saveVideoJobStore(
 	meta *meta.Meta,
 	store adaptor.Store,
@@ -896,6 +970,7 @@ func saveVideoJobStore(
 		TokenID:   meta.Token.ID,
 		ChannelID: meta.Channel.ID,
 		Model:     meta.OriginModel,
+		Metadata:  videoStoreMetadataString(meta),
 		ExpiresAt: expiresAt,
 	})
 }
@@ -916,6 +991,7 @@ func saveVideoGenerationStore(
 		TokenID:   meta.Token.ID,
 		ChannelID: meta.Channel.ID,
 		Model:     meta.OriginModel,
+		Metadata:  videoStoreMetadataString(meta),
 		ExpiresAt: expiresAt,
 	})
 }

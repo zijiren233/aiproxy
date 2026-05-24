@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestCalculateVideoUsageNormalizesResolution(t *testing.T) {
+func TestCalculateVideoUsageKeepsLandscapeDimensions(t *testing.T) {
 	t.Parallel()
 
 	_, usageContext := calculateVideoUsage(&model.VideoGenerationJob{
@@ -18,10 +18,10 @@ func TestCalculateVideoUsageNormalizesResolution(t *testing.T) {
 		Height:    720,
 	})
 
-	require.Equal(t, "720p", usageContext.Resolution)
+	require.Equal(t, "1280x720", usageContext.Resolution)
 }
 
-func TestCalculateVideoUsageNormalizesPortraitResolution(t *testing.T) {
+func TestCalculateVideoUsageKeepsPortraitDimensions(t *testing.T) {
 	t.Parallel()
 
 	_, usageContext := calculateVideoUsage(&model.VideoGenerationJob{
@@ -31,5 +31,16 @@ func TestCalculateVideoUsageNormalizesPortraitResolution(t *testing.T) {
 		Height:    1280,
 	})
 
-	require.Equal(t, "720p", usageContext.Resolution)
+	require.Equal(t, "720x1280", usageContext.Resolution)
+}
+
+func TestCalculateVideoUsageKeepsEmptyResolutionWithoutDimensions(t *testing.T) {
+	t.Parallel()
+
+	_, usageContext := calculateVideoUsage(&model.VideoGenerationJob{
+		NVariants: 1,
+		NSeconds:  5,
+	})
+
+	require.Empty(t, usageContext.Resolution)
 }

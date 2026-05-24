@@ -18,10 +18,11 @@ import (
 var _ adaptor.AsyncUsageFetcher = (*Adaptor)(nil)
 
 func VideoAsyncUsage(
+	store adaptor.Store,
 	info *model.AsyncUsageInfo,
 	operation *relaymodel.GeminiVideoOperation,
 ) (model.Usage, model.UsageContext) {
-	return geminiVideoAsyncUsage(info, operation)
+	return geminiVideoAsyncUsage(store, info, operation)
 }
 
 func (a *Adaptor) FetchAsyncUsage(
@@ -58,7 +59,7 @@ func (a *Adaptor) FetchAsyncUsage(
 		)
 	}
 
-	usage, usageContext := geminiVideoAsyncUsage(info, operation)
+	usage, usageContext := geminiVideoAsyncUsage(request.Store, info, operation)
 
 	return usage, usageContext, true, nil
 }
@@ -129,10 +130,11 @@ func (a *Adaptor) fetchVideoOperation(
 }
 
 func geminiVideoAsyncUsage(
+	store adaptor.Store,
 	info *model.AsyncUsageInfo,
 	operation *geminiOperation,
 ) (model.Usage, model.UsageContext) {
-	metadata := geminiVideoAsyncUsageMetadata(info, operation)
+	metadata := geminiVideoAsyncUsageMetadata(store, info, operation)
 
 	seconds := metadata.Seconds
 	if seconds <= 0 {
@@ -177,10 +179,14 @@ func geminiVideoAsyncUsageResolution(
 		return firstNonEmpty(metadata.Resolution, info.UsageContext.NativeResolution)
 	}
 
-	return videoDimensionsResolution(metadata.Width, metadata.Height)
+	return firstNonEmpty(
+		videoDimensionsResolution(metadata.Width, metadata.Height),
+		info.UsageContext.Resolution,
+	)
 }
 
 func geminiVideoAsyncUsageMetadata(
+	store adaptor.Store,
 	info *model.AsyncUsageInfo,
 	operation *geminiOperation,
 ) geminiVideoStoreMetadata {
@@ -216,8 +222,12 @@ func geminiVideoAsyncUsageMetadata(
 	}
 
 	for _, storeID := range storeIDs {
-		cache, err := model.CacheGetStore(info.GroupID, info.TokenID, storeID)
-		if err != nil || cache == nil {
+		if store == nil {
+			continue
+		}
+
+		cache, err := store.GetStore(info.GroupID, info.TokenID, storeID)
+		if err != nil {
 			continue
 		}
 

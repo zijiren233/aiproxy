@@ -191,7 +191,11 @@ func TestValidateImagesRequestRejectsUnsupportedResolution(t *testing.T) {
 		AllowedResolutions: []string{"1024x1024"},
 	})
 	require.Error(t, err)
-	require.Equal(t, "unsupported image resolution `512x512`", err.Error())
+	require.Equal(
+		t,
+		"unsupported image resolution `512x512`, supported resolutions: 1024x1024",
+		err.Error(),
+	)
 
 	var requestParamErr *RequestParamError
 	require.ErrorAs(t, err, &requestParamErr)
@@ -260,21 +264,21 @@ func TestValidateImagesRequestResolutionMatrix(t *testing.T) {
 			allowed:    []string{"1k"},
 			disable:    true,
 			wantErr:    true,
-			wantErrMsg: "unsupported image resolution `1024x1024`",
+			wantErrMsg: "unsupported image resolution `1024x1024`, supported resolutions: none",
 		},
 		{
 			name:       "aspect ratio allowed is not a resolution alias",
 			size:       "1024x1024",
 			allowed:    []string{"1:1"},
 			wantErr:    true,
-			wantErrMsg: "unsupported image resolution `1024x1024`",
+			wantErrMsg: "unsupported image resolution `1024x1024`, supported resolutions: none",
 		},
 		{
 			name:       "invalid openai size format",
 			size:       "1k",
 			allowed:    []string{"1k"},
 			wantErr:    true,
-			wantErrMsg: "invalid image resolution `1k`",
+			wantErrMsg: "invalid image resolution `1k`, supported resolutions: 1024x1024, 1536x1024, 1024x1536",
 		},
 		{
 			name:    "empty allowed means unrestricted",
@@ -286,7 +290,7 @@ func TestValidateImagesRequestResolutionMatrix(t *testing.T) {
 			size:       "512x512",
 			allowed:    []string{" ", "\t"},
 			wantErr:    true,
-			wantErrMsg: "unsupported image resolution `512x512`",
+			wantErrMsg: "unsupported image resolution `512x512`, supported resolutions: none",
 		},
 	}
 
@@ -340,7 +344,11 @@ func TestValidateImagesRequestDisableFuzzyRejectsGeminiStyleImageResolution(t *t
 		DisableResolutionFuzzyMatch: true,
 	})
 	require.Error(t, err)
-	require.Equal(t, "unsupported image resolution `1024x1024`", err.Error())
+	require.Equal(
+		t,
+		"unsupported image resolution `1024x1024`, supported resolutions: none",
+		err.Error(),
+	)
 }
 
 func TestValidateImagesRequestDoesNotMatchAspectRatioAsResolution(t *testing.T) {
@@ -361,7 +369,11 @@ func TestValidateImagesRequestDoesNotMatchAspectRatioAsResolution(t *testing.T) 
 		AllowedResolutions: []string{"1:1"},
 	})
 	require.Error(t, err)
-	require.Equal(t, "unsupported image resolution `1024x1024`", err.Error())
+	require.Equal(
+		t,
+		"unsupported image resolution `1024x1024`, supported resolutions: none",
+		err.Error(),
+	)
 }
 
 func TestValidateImagesRequestRejectsAspectRatioRequest(t *testing.T) {
@@ -382,7 +394,7 @@ func TestValidateImagesRequestRejectsAspectRatioRequest(t *testing.T) {
 		AllowedResolutions: []string{"1:1"},
 	})
 	require.Error(t, err)
-	require.Equal(t, "invalid image resolution `1:1`", err.Error())
+	require.Equal(t, "invalid image resolution `1:1`, supported resolutions: none", err.Error())
 }
 
 func TestValidateImagesRequestRejectsInvalidResolutionFormat(t *testing.T) {
@@ -401,7 +413,11 @@ func TestValidateImagesRequestRejectsInvalidResolutionFormat(t *testing.T) {
 
 	err := ValidateImagesRequest(c, model.ModelConfig{})
 	require.Error(t, err)
-	require.Equal(t, "invalid image resolution `1k`", err.Error())
+	require.Equal(
+		t,
+		"invalid image resolution `1k`, supported resolutions: auto, <width>x<height>",
+		err.Error(),
+	)
 }
 
 func TestValidateImagesRequestRejectsNonOpenAIDimensionDelimiter(t *testing.T) {
@@ -420,7 +436,11 @@ func TestValidateImagesRequestRejectsNonOpenAIDimensionDelimiter(t *testing.T) {
 
 	err := ValidateImagesRequest(c, model.ModelConfig{})
 	require.Error(t, err)
-	require.Equal(t, "invalid image resolution `1024*1024`", err.Error())
+	require.Equal(
+		t,
+		"invalid image resolution `1024*1024`, supported resolutions: auto, <width>x<height>",
+		err.Error(),
+	)
 }
 
 func TestGetImagesRequestUsageSetsPriceCondition(t *testing.T) {

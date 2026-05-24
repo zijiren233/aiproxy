@@ -25,7 +25,13 @@ type aliTestStore struct {
 	saved []adaptor.StoreCache
 }
 
-func (s *aliTestStore) GetStore(string, int, string) (adaptor.StoreCache, error) {
+func (s *aliTestStore) GetStore(_ string, _ int, id string) (adaptor.StoreCache, error) {
+	for _, cache := range s.saved {
+		if cache.ID == id {
+			return cache, nil
+		}
+	}
+
 	return adaptor.StoreCache{}, nil
 }
 
@@ -47,7 +53,7 @@ func (s *aliTestStore) SaveIfNotExistStore(cache adaptor.StoreCache) error {
 	return nil
 }
 
-func TestFetchAliVideoJobUsageNormalizesSize(t *testing.T) {
+func TestFetchAliVideoJobUsageKeepsResponseSize(t *testing.T) {
 	t.Parallel()
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -66,6 +72,7 @@ func TestFetchAliVideoJobUsageNormalizesSize(t *testing.T) {
 	usage, usageContext, completed, err := (&Adaptor{}).fetchAliVideoJobUsage(
 		t.Context(),
 		&coremodel.Channel{BaseURL: server.URL},
+		nil,
 		&coremodel.AsyncUsageInfo{UpstreamID: "task-123"},
 	)
 	if err != nil {
@@ -80,9 +87,9 @@ func TestFetchAliVideoJobUsageNormalizesSize(t *testing.T) {
 		t.Fatalf("expected output tokens 5, got %#v", usage.OutputTokens)
 	}
 
-	if usageContext.Resolution != "720p" {
+	if usageContext.Resolution != "1280x720" {
 		t.Fatalf(
-			"expected normalized video resolution 720p, got %q",
+			"expected video resolution 1280x720, got %q",
 			usageContext.Resolution,
 		)
 	}
@@ -2019,6 +2026,10 @@ func TestAliVideoHandlersConvertTaskToOpenAIJob(t *testing.T) {
 		t.Fatalf("unexpected generation store id: %#v", store.saved[0].ID)
 	}
 
+	if store.saved[0].Metadata == "" {
+		t.Fatal("expected generation store metadata to be saved")
+	}
+
 	var job relaymodel.VideoGenerationJob
 	if err := json.Unmarshal(recorder.Body.Bytes(), &job); err != nil {
 		t.Fatalf("failed to unmarshal job: %v", err)
@@ -2095,9 +2106,16 @@ func TestAliVideoCreateJobUsesRequestMetadataFallback(t *testing.T) {
 		}`)),
 	}
 
-	_, adaptorErr := adaptor.DoResponse(m, &aliTestStore{}, ctx, resp)
+	store := &aliTestStore{}
+
+	_, adaptorErr := adaptor.DoResponse(m, store, ctx, resp)
 	if adaptorErr != nil {
 		t.Fatalf("DoResponse returned error: %v", adaptorErr)
+	}
+
+	if len(store.saved) != 1 ||
+		store.saved[0].Metadata != `{"prompt":"Animate the horse","seconds":5,"size":"1280x720"}` {
+		t.Fatalf("expected request metadata to be stored, got %#v", store.saved)
 	}
 
 	var job relaymodel.VideoGenerationJob
@@ -2110,6 +2128,68 @@ func TestAliVideoCreateJobUsesRequestMetadataFallback(t *testing.T) {
 		job.Width != 1280 ||
 		job.Height != 720 {
 		t.Fatalf("expected request metadata fallback, got %#v", job)
+	}
+}
+
+func TestAliVideoGetUsesStoredRequestMetadataFallback(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	aliAdaptor := &Adaptor{}
+	recorder := httptest.NewRecorder()
+	ctx, _ := gin.CreateTestContext(recorder)
+	ctx.Request = httptest.NewRequestWithContext(
+		context.Background(),
+		http.MethodGet,
+		"/v1/video/generations/jobs/task-123",
+		nil,
+	)
+
+	m := meta.NewMeta(
+		nil,
+		mode.VideoGenerationsGetJobs,
+		"happyhorse-1.0-i2v",
+		coremodel.ModelConfig{},
+		meta.WithJobID("task-123"),
+	)
+	m.Channel.ID = 9
+	m.Group = coremodel.GroupCache{ID: "group-1"}
+	m.Token = coremodel.TokenCache{ID: 7}
+
+	store := &aliTestStore{
+		saved: []adaptor.StoreCache{
+			{
+				ID:       coremodel.VideoJobStoreID("task-123"),
+				Metadata: `{"prompt":"Stored horse","seconds":5,"size":"1280x720"}`,
+			},
+		},
+	}
+	resp := &http.Response{
+		StatusCode: http.StatusOK,
+		Header:     make(http.Header),
+		Body: io.NopCloser(strings.NewReader(`{
+			"request_id":"req-1",
+			"output":{
+				"task_id":"task-123",
+				"task_status":"PENDING"
+			}
+		}`)),
+	}
+
+	_, adaptorErr := aliAdaptor.DoResponse(m, store, ctx, resp)
+	if adaptorErr != nil {
+		t.Fatalf("DoResponse returned error: %v", adaptorErr)
+	}
+
+	var job relaymodel.VideoGenerationJob
+	if err := json.Unmarshal(recorder.Body.Bytes(), &job); err != nil {
+		t.Fatalf("failed to unmarshal job: %v", err)
+	}
+
+	if job.Prompt != "Stored horse" ||
+		job.NSeconds != 5 ||
+		job.Width != 1280 ||
+		job.Height != 720 {
+		t.Fatalf("expected stored metadata fallback, got %#v", job)
 	}
 }
 
@@ -2298,13 +2378,23 @@ func TestAliVideoAsyncUsageUsesBaseURL(t *testing.T) {
 			"usage": {
 				"duration": 8,
 				"input_video_duration": 3,
-				"output_video_duration": 5
+				"output_video_duration": 5,
+				"SR": 720,
+				"ratio": "9:16"
 			}
 		}`))
 	}))
 	defer server.Close()
 
 	aliAdaptor := &Adaptor{}
+	store := &aliTestStore{
+		saved: []adaptor.StoreCache{
+			{
+				ID:       coremodel.VideoJobStoreID("task-123"),
+				Metadata: `{"prompt":"Stored prompt","seconds":5,"size":"1280x720"}`,
+			},
+		},
+	}
 
 	usage, usageContext, completed, err := aliAdaptor.FetchAsyncUsage(
 		context.Background(),
@@ -2317,7 +2407,13 @@ func TestAliVideoAsyncUsageUsesBaseURL(t *testing.T) {
 				Mode:       int(mode.VideoGenerationsJobs),
 				BaseURL:    server.URL + "/custom",
 				UpstreamID: "task-123",
+				GroupID:    "group-1",
+				TokenID:    7,
+				UsageContext: coremodel.UsageContext{
+					Resolution: "640x480",
+				},
 			},
+			Store: store,
 		},
 	)
 	if err != nil {
@@ -2328,7 +2424,7 @@ func TestAliVideoAsyncUsageUsesBaseURL(t *testing.T) {
 		t.Fatal("expected async usage to be completed")
 	}
 
-	if usageContext != (coremodel.UsageContext{}) {
+	if usageContext.Resolution != "720x1280" {
 		t.Fatalf("unexpected usage context: %#v", usageContext)
 	}
 
@@ -2336,6 +2432,68 @@ func TestAliVideoAsyncUsageUsesBaseURL(t *testing.T) {
 		usage.OutputTokens != coremodel.ZeroNullInt64(5) ||
 		usage.TotalTokens != coremodel.ZeroNullInt64(8) {
 		t.Fatalf("unexpected usage: %#v", usage)
+	}
+}
+
+func TestAliVideoAsyncUsageUsesStoredSizeWhenUpstreamRatioMissing(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/custom/api/v1/tasks/task-123" {
+			t.Fatalf("expected task path, got %s", r.URL.Path)
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{
+			"output": {
+				"task_id": "task-123",
+				"task_status": "SUCCEEDED"
+			},
+			"usage": {
+				"duration": 8,
+				"input_video_duration": 3,
+				"output_video_duration": 5,
+				"SR": 720
+			}
+		}`))
+	}))
+	defer server.Close()
+
+	aliAdaptor := &Adaptor{}
+	store := &aliTestStore{
+		saved: []adaptor.StoreCache{
+			{
+				ID:       coremodel.VideoJobStoreID("task-123"),
+				Metadata: `{"prompt":"Stored prompt","seconds":5,"size":"720x1280"}`,
+			},
+		},
+	}
+
+	_, usageContext, completed, err := aliAdaptor.FetchAsyncUsage(
+		context.Background(),
+		adaptor.AsyncUsageRequest{
+			Channel: &coremodel.Channel{
+				BaseURL: server.URL + "/fallback",
+				Key:     "test-key",
+			},
+			Info: &coremodel.AsyncUsageInfo{
+				Mode:       int(mode.VideoGenerationsJobs),
+				BaseURL:    server.URL + "/custom",
+				UpstreamID: "task-123",
+				GroupID:    "group-1",
+				TokenID:    7,
+			},
+			Store: store,
+		},
+	)
+	if err != nil {
+		t.Fatalf("FetchAsyncUsage returned error: %v", err)
+	}
+
+	if !completed {
+		t.Fatal("expected async usage to be completed")
+	}
+
+	if usageContext.Resolution != "720x1280" {
+		t.Fatalf("unexpected usage context: %#v", usageContext)
 	}
 }
 

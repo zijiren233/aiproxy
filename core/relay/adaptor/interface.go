@@ -89,6 +89,7 @@ type DoResponse interface {
 type AsyncUsageRequest struct {
 	Channel *model.Channel
 	Info    *model.AsyncUsageInfo
+	Store   Store
 }
 
 type AsyncUsageFetcher interface {

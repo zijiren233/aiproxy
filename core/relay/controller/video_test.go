@@ -264,7 +264,11 @@ func TestValidateGeminiVideoRequestRejectsUnsupportedResolution(t *testing.T) {
 		AllowedResolutions: []string{"720p"},
 	})
 	require.Error(t, err)
-	require.Equal(t, "unsupported video resolution `1080p`", err.Error())
+	require.Equal(
+		t,
+		"unsupported video resolution `1080p`, supported resolutions: 720p",
+		err.Error(),
+	)
 }
 
 func TestValidateGeminiVideoRequestRejectsInvalidResolutionFormat(t *testing.T) {
@@ -289,7 +293,11 @@ func TestValidateGeminiVideoRequestRejectsInvalidResolutionFormat(t *testing.T) 
 
 	err := ValidateGeminiVideoRequest(ctx, model.ModelConfig{})
 	require.Error(t, err)
-	require.Equal(t, "invalid gemini video resolution `1280x720`", err.Error())
+	require.Equal(
+		t,
+		"invalid gemini video resolution `1280x720`, supported resolutions: 720p, 1080p, 4k",
+		err.Error(),
+	)
 }
 
 func TestValidateGeminiVideoRequestResolutionMatrix(t *testing.T) {
@@ -326,21 +334,21 @@ func TestValidateGeminiVideoRequestResolutionMatrix(t *testing.T) {
 			allowed:    []string{"1280x720"},
 			disable:    true,
 			wantErr:    true,
-			wantErrMsg: "unsupported video resolution `720p`",
+			wantErrMsg: "unsupported video resolution `720p`, supported resolutions: none",
 		},
 		{
 			name:       "invalid native dimension request",
 			resolution: "1280x720",
 			allowed:    []string{"720p"},
 			wantErr:    true,
-			wantErrMsg: "invalid gemini video resolution `1280x720`",
+			wantErrMsg: "invalid gemini video resolution `1280x720`, supported resolutions: 720p",
 		},
 		{
 			name:       "blank allowed means unsupported",
 			resolution: "720p",
 			allowed:    []string{" ", "\t"},
 			wantErr:    true,
-			wantErrMsg: "unsupported video resolution `720p`",
+			wantErrMsg: "unsupported video resolution `720p`, supported resolutions: none",
 		},
 	}
 
@@ -458,7 +466,11 @@ func TestGetGeminiVideoRequestUsageRejectsWhenDefaultResolutionUnsupported(t *te
 		AllowedResolutions: []string{"1080p"},
 	})
 	require.Error(t, err)
-	require.Equal(t, "unsupported video resolution `720p`", err.Error())
+	require.Equal(
+		t,
+		"unsupported video resolution `720p`, supported resolutions: 1080p",
+		err.Error(),
+	)
 }
 
 func TestGetGeminiVideoRequestUsageResolutionOverridesAspectRatio(t *testing.T) {
@@ -562,7 +574,11 @@ func TestGetGeminiVideoRequestUsageRejectsUnsupportedResolution(t *testing.T) {
 		AllowedResolutions: []string{"720p"},
 	})
 	require.Error(t, err)
-	require.Equal(t, "unsupported video resolution `1080p`", err.Error())
+	require.Equal(
+		t,
+		"unsupported video resolution `1080p`, supported resolutions: 720p",
+		err.Error(),
+	)
 }
 
 func TestValidateVideoGenerationJobRequestRejectsTooManyVariants(t *testing.T) {
@@ -811,7 +827,39 @@ func TestValidateVideosRequestRejectsUnsupportedMultipartSize(t *testing.T) {
 		AllowedResolutions: []string{"720p"},
 	})
 	require.Error(t, err)
-	require.Equal(t, "unsupported video resolution `1920x1080`", err.Error())
+	require.Equal(
+		t,
+		"unsupported video resolution `1920x1080`, supported resolutions: 1280x720",
+		err.Error(),
+	)
+}
+
+func TestValidateVideosRequestAllowsAdvertised4KSize(t *testing.T) {
+	t.Parallel()
+
+	gin.SetMode(gin.TestMode)
+
+	body := `{
+		"model":"video-model",
+		"prompt":"A city street",
+		"size":"3840x2160",
+		"seconds":5
+	}`
+	req := httptest.NewRequestWithContext(
+		t.Context(),
+		http.MethodPost,
+		"/v1/videos",
+		bytes.NewBufferString(body),
+	)
+	req.Header.Set("Content-Type", "application/json")
+
+	ctx, _ := gin.CreateTestContext(httptest.NewRecorder())
+	ctx.Request = req
+
+	err := ValidateVideosRequest(ctx, model.ModelConfig{
+		AllowedResolutions: []string{"4k"},
+	})
+	require.NoError(t, err)
 }
 
 func TestValidateVideosRequestIgnoresJobOnlyFields(t *testing.T) {
@@ -932,7 +980,11 @@ func TestGetVideoGenerationJobRequestUsageRejectsUnsupportedResolution(t *testin
 		AllowedResolutions: []string{"1080p"},
 	})
 	require.Error(t, err)
-	require.Equal(t, "unsupported video resolution `1280x720`", err.Error())
+	require.Equal(
+		t,
+		"unsupported video resolution `1280x720`, supported resolutions: 1920x1080",
+		err.Error(),
+	)
 }
 
 func TestGetVideoGenerationJobRequestUsageRejectsInvalidSizeFormat(t *testing.T) {
@@ -961,7 +1013,7 @@ func TestGetVideoGenerationJobRequestUsageRejectsInvalidSizeFormat(t *testing.T)
 		AllowedResolutions: []string{"720p"},
 	})
 	require.Error(t, err)
-	require.Equal(t, "invalid video size `720p`", err.Error())
+	require.Equal(t, "invalid video size `720p`, supported resolutions: 1280x720", err.Error())
 }
 
 func TestGetVideoGenerationJobRequestUsageRejectsNonOpenAIDimensionDelimiter(t *testing.T) {
@@ -988,7 +1040,11 @@ func TestGetVideoGenerationJobRequestUsageRejectsNonOpenAIDimensionDelimiter(t *
 
 	_, err := GetVideoGenerationJobRequestUsage(ctx, model.ModelConfig{})
 	require.Error(t, err)
-	require.Equal(t, "invalid video size `1280*720`", err.Error())
+	require.Equal(
+		t,
+		"invalid video size `1280*720`, supported resolutions: <width>x<height>",
+		err.Error(),
+	)
 }
 
 func TestGetVideoGenerationJobRequestUsageMatchesDimensionToTier(t *testing.T) {
@@ -1045,7 +1101,11 @@ func TestGetVideoGenerationJobRequestUsageRejectsAllBlankAllowedResolutions(t *t
 		AllowedResolutions: []string{" ", "\t"},
 	})
 	require.Error(t, err)
-	require.Equal(t, "unsupported video resolution `1280x720`", err.Error())
+	require.Equal(
+		t,
+		"unsupported video resolution `1280x720`, supported resolutions: none",
+		err.Error(),
+	)
 }
 
 func TestGetVideoGenerationJobRequestUsageMatchesPortraitDimensionToTier(t *testing.T) {
@@ -1114,14 +1174,14 @@ func TestGetVideoGenerationJobRequestUsageResolutionMatrix(t *testing.T) {
 			allowed:    []string{"720p"},
 			disable:    true,
 			wantErr:    true,
-			wantErrMsg: "unsupported video resolution `1280x720`",
+			wantErrMsg: "unsupported video resolution `1280x720`, supported resolutions: none",
 		},
 		{
 			name:       "non-openai delimiter is invalid",
 			size:       "1280*720",
 			allowed:    []string{"720p"},
 			wantErr:    true,
-			wantErrMsg: "invalid video size `1280*720`",
+			wantErrMsg: "invalid video size `1280*720`, supported resolutions: 1280x720",
 		},
 	}
 
@@ -1190,7 +1250,11 @@ func TestGetVideoGenerationJobRequestUsageDisableFuzzyRejectsDimensionToTier(t *
 		DisableResolutionFuzzyMatch: true,
 	})
 	require.Error(t, err)
-	require.Equal(t, "unsupported video resolution `1280x720`", err.Error())
+	require.Equal(
+		t,
+		"unsupported video resolution `1280x720`, supported resolutions: none",
+		err.Error(),
+	)
 }
 
 func TestGetVideoGenerationJobRequestUsageRejectsTooLongSeconds(t *testing.T) {

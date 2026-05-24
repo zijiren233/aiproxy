@@ -25,7 +25,13 @@ type doubaoTestStore struct {
 	saved []adaptor.StoreCache
 }
 
-func (s *doubaoTestStore) GetStore(string, int, string) (adaptor.StoreCache, error) {
+func (s *doubaoTestStore) GetStore(_ string, _ int, id string) (adaptor.StoreCache, error) {
+	for _, cache := range s.saved {
+		if cache.ID == id {
+			return cache, nil
+		}
+	}
+
 	return adaptor.StoreCache{}, nil
 }
 
@@ -449,7 +455,7 @@ func TestAdaptorConvertRequestImageGenerationMapsSequentialCount(t *testing.T) {
 			"model": "alias-image",
 			"prompt": "Draw a quiet library",
 			"n": 3,
-			"size": "2K",
+			"size": "1024×1536",
 			"response_format": "url"
 		}`),
 	)
@@ -474,6 +480,10 @@ func TestAdaptorConvertRequestImageGenerationMapsSequentialCount(t *testing.T) {
 
 	if payload["model"] != "doubao-seedream-5-0-lite" {
 		t.Fatalf("expected actual model, got %#v", payload["model"])
+	}
+
+	if payload["size"] != "1024x1536" {
+		t.Fatalf("expected normalized size 1024x1536, got %#v", payload["size"])
 	}
 
 	if _, ok := payload["n"]; ok {
@@ -518,7 +528,7 @@ func TestAdaptorDoResponseImageGenerationUsesDoubaoUsage(t *testing.T) {
 		Header:     make(http.Header),
 		Body: io.NopCloser(strings.NewReader(`{
 			"created": 1770000000,
-			"data": [{"url": "https://example.com/image.png", "size": "2048x2048"}],
+			"data": [{"url": "https://example.com/image.png", "size": "2048×2048"}],
 			"usage": {
 				"generated_images": 1,
 				"output_tokens": 16384,
@@ -554,8 +564,36 @@ func TestAdaptorDoResponseImageGenerationUsesDoubaoUsage(t *testing.T) {
 		t.Fatalf("failed to unmarshal response body %s: %v", recorder.Body.String(), err)
 	}
 
-	if _, ok := payload["data"].([]any); !ok {
+	data, ok := payload["data"].([]any)
+	if !ok {
 		t.Fatalf("expected response data array, got %#v", payload["data"])
+	}
+
+	first, ok := data[0].(map[string]any)
+	if !ok || first["url"] != "https://example.com/image.png" {
+		t.Fatalf("expected OpenAI image data, got %#v", payload["data"])
+	}
+
+	if _, ok := first["size"]; ok {
+		t.Fatalf("expected provider size field to be omitted, got %#v", first)
+	}
+
+	usagePayload, ok := payload["usage"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected OpenAI usage object, got %#v", payload["usage"])
+	}
+
+	if _, ok := usagePayload["generated_images"]; ok {
+		t.Fatalf("expected provider generated_images to be omitted, got %#v", usagePayload)
+	}
+
+	if _, ok := usagePayload["tool_usage"]; ok {
+		t.Fatalf("expected provider tool_usage to be omitted, got %#v", usagePayload)
+	}
+
+	outputDetails, ok := usagePayload["output_tokens_details"].(map[string]any)
+	if !ok || outputDetails["image_tokens"] != float64(1) {
+		t.Fatalf("expected OpenAI output token details, got %#v", usagePayload)
 	}
 }
 
@@ -1131,6 +1169,12 @@ func TestAdaptorDoResponseVideoSubmitStoresJob(t *testing.T) {
 	)
 	m.Group.ID = "group-1"
 	m.Token.ID = 7
+	m.Set(metaDoubaoVideoRequest, doubaoVideoRequest{
+		Content:    []doubaoVideoContent{{Type: "text", Text: "Animate a calm ocean"}},
+		Resolution: "720p",
+		Ratio:      "16:9",
+		Duration:   intPtrFromAny(5),
+	})
 
 	resp := &http.Response{
 		StatusCode: http.StatusOK,
@@ -1157,6 +1201,10 @@ func TestAdaptorDoResponseVideoSubmitStoresJob(t *testing.T) {
 		t.Fatalf("expected video job store, got %#v", store.saved)
 	}
 
+	if store.saved[0].Metadata != `{"prompt":"Animate a calm ocean","resolution":"720p","ratio":"16:9","duration":5}` {
+		t.Fatalf("unexpected saved metadata: %s", store.saved[0].Metadata)
+	}
+
 	var job relaymodel.VideoGenerationJob
 	if err := json.Unmarshal(recorder.Body.Bytes(), &job); err != nil {
 		t.Fatalf("failed to unmarshal job response %s: %v", recorder.Body.String(), err)
@@ -1164,6 +1212,19 @@ func TestAdaptorDoResponseVideoSubmitStoresJob(t *testing.T) {
 
 	if job.ID != "task-123" || job.Status != relaymodel.VideoGenerationJobStatusQueued {
 		t.Fatalf("unexpected job: %#v", job)
+	}
+
+	if job.Model != "doubao-seedance-2-0" ||
+		job.Prompt != "Animate a calm ocean" ||
+		job.NSeconds != 5 ||
+		job.Width != 1280 ||
+		job.Height != 720 {
+		t.Fatalf("expected OpenAI job fields from request metadata, got %#v", job)
+	}
+
+	if result.UsageContext.Resolution != "1280x720" ||
+		result.UsageContext.NativeResolution != "720p" {
+		t.Fatalf("unexpected submit usage context: %#v", result.UsageContext)
 	}
 }
 
@@ -1183,6 +1244,12 @@ func TestAdaptorDoResponseVideoSubmitStoresCompletedGeneration(t *testing.T) {
 	)
 	m.Group.ID = "group-1"
 	m.Token.ID = 7
+	m.Set(metaDoubaoVideoRequest, doubaoVideoRequest{
+		Content:    []doubaoVideoContent{{Type: "text", Text: "Animate a calm ocean"}},
+		Resolution: "720p",
+		Ratio:      "9:16",
+		Duration:   intPtrFromAny(5),
+	})
 
 	resp := &http.Response{
 		StatusCode: http.StatusOK,
@@ -1194,6 +1261,8 @@ func TestAdaptorDoResponseVideoSubmitStoresCompletedGeneration(t *testing.T) {
 			"created_at": 1770000000,
 			"updated_at": 1770000100,
 			"execution_expires_after": 172800,
+			"resolution": "720p",
+			"ratio": "9:16",
 			"content": {
 				"video_url": "https://example.com/video.mp4"
 			}
@@ -1231,6 +1300,171 @@ func TestAdaptorDoResponseVideoSubmitStoresCompletedGeneration(t *testing.T) {
 		job.Generations[0].ID != "task-123" {
 		t.Fatalf("unexpected completed job: %#v", job)
 	}
+
+	if job.Width != 720 ||
+		job.Height != 1280 ||
+		job.Generations[0].Width != 720 ||
+		job.Generations[0].Height != 1280 {
+		t.Fatalf("expected portrait OpenAI dimensions, got %#v", job)
+	}
+}
+
+func TestAdaptorDoResponseVideoStatusRestoresOpenAIFieldsFromStore(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	doubaoAdaptor := &Adaptor{}
+	store := &doubaoTestStore{
+		saved: []adaptor.StoreCache{
+			{
+				ID:       coremodel.VideoGenerationStoreID("video-123"),
+				Metadata: `{"prompt":"A stored prompt","resolution":"720p","ratio":"9:16","duration":6}`,
+			},
+		},
+	}
+	recorder := httptest.NewRecorder()
+	ctx, _ := gin.CreateTestContext(recorder)
+
+	m := meta.NewMeta(
+		&coremodel.Channel{ID: 9},
+		mode.VideosGet,
+		"doubao-seedance-2-0",
+		coremodel.ModelConfig{},
+		meta.WithVideoID("video-123"),
+	)
+	m.Group.ID = "group-1"
+	m.Token.ID = 7
+
+	resp := &http.Response{
+		StatusCode: http.StatusOK,
+		Header:     make(http.Header),
+		Body: io.NopCloser(strings.NewReader(`{
+			"id": "video-123",
+			"status": "succeeded",
+			"created_at": 1770000000,
+			"content": {
+				"video_url": "https://example.com/video.mp4"
+			}
+		}`)),
+	}
+
+	result, err := doubaoAdaptor.DoResponse(m, store, ctx, resp)
+	if err != nil {
+		t.Fatalf("DoResponse returned error: %v", err)
+	}
+
+	var video relaymodel.Video
+	if err := json.Unmarshal(recorder.Body.Bytes(), &video); err != nil {
+		t.Fatalf("failed to unmarshal video response %s: %v", recorder.Body.String(), err)
+	}
+
+	if video.ID != "video-123" ||
+		video.Object != relaymodel.VideoObject ||
+		video.Status != relaymodel.VideoStatusCompleted ||
+		video.Model != "doubao-seedance-2-0" ||
+		video.Prompt != "A stored prompt" ||
+		video.Seconds != 6 ||
+		video.Size != "720x1280" ||
+		video.Progress != 100 {
+		t.Fatalf("expected OpenAI video response with stored metadata, got %#v", video)
+	}
+
+	if result.UpstreamID != "video-123" ||
+		result.UsageContext.Resolution != "720x1280" ||
+		result.UsageContext.NativeResolution != "720p" {
+		t.Fatalf("unexpected status result: %#v", result)
+	}
+}
+
+func TestAdaptorDoResponseVideoContentDownloadsGeneratedVideo(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	videoServer := httptest.NewServer(
+		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.URL.Path != "/video.mp4" {
+				t.Fatalf("expected video path, got %s", r.URL.Path)
+			}
+
+			w.Header().Set("Content-Type", "video/mp4")
+			w.Header().Set("Content-Length", "11")
+			_, _ = w.Write([]byte("video-bytes"))
+		}),
+	)
+	defer videoServer.Close()
+
+	tests := []struct {
+		name string
+		mode mode.Mode
+		id   string
+		meta *meta.Meta
+	}{
+		{
+			name: "video generation content",
+			mode: mode.VideoGenerationsContent,
+			id:   "generation-123",
+			meta: meta.NewMeta(
+				&coremodel.Channel{ID: 9},
+				mode.VideoGenerationsContent,
+				"doubao-seedance-2-0",
+				coremodel.ModelConfig{},
+				meta.WithGenerationID("generation-123"),
+			),
+		},
+		{
+			name: "videos content",
+			mode: mode.VideosContent,
+			id:   "video-123",
+			meta: meta.NewMeta(
+				&coremodel.Channel{ID: 9},
+				mode.VideosContent,
+				"doubao-seedance-2-0",
+				coremodel.ModelConfig{},
+				meta.WithVideoID("video-123"),
+			),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			doubaoAdaptor := &Adaptor{}
+			recorder := httptest.NewRecorder()
+			ctx, _ := gin.CreateTestContext(recorder)
+			ctx.Request = httptest.NewRequestWithContext(
+				context.Background(),
+				http.MethodGet,
+				"/v1/videos/"+tt.id+"/content",
+				nil,
+			)
+
+			resp := &http.Response{
+				StatusCode: http.StatusOK,
+				Header:     make(http.Header),
+				Body: io.NopCloser(strings.NewReader(`{
+					"id": "` + tt.id + `",
+					"status": "succeeded",
+					"content": {
+						"video_url": "` + videoServer.URL + `/video.mp4"
+					}
+				}`)),
+			}
+
+			result, err := doubaoAdaptor.DoResponse(tt.meta, nil, ctx, resp)
+			if err != nil {
+				t.Fatalf("DoResponse returned error: %v", err)
+			}
+
+			if result.UpstreamID != tt.id {
+				t.Fatalf("expected upstream id %s, got %#v", tt.id, result)
+			}
+
+			if recorder.Header().Get("Content-Type") != "video/mp4" {
+				t.Fatalf("expected video/mp4, got %s", recorder.Header().Get("Content-Type"))
+			}
+
+			if recorder.Body.String() != "video-bytes" {
+				t.Fatalf("expected video bytes, got %q", recorder.Body.String())
+			}
+		})
+	}
 }
 
 func TestAdaptorFetchAsyncUsageUsesDoubaoCompletionTokens(t *testing.T) {
@@ -1248,6 +1482,7 @@ func TestAdaptorFetchAsyncUsageUsesDoubaoCompletionTokens(t *testing.T) {
 			"id": "task-123",
 			"status": "succeeded",
 			"resolution": "720p",
+			"ratio": "16:9",
 			"service_tier": "default",
 			"usage": {
 				"completion_tokens": 411300,
@@ -1258,11 +1493,19 @@ func TestAdaptorFetchAsyncUsageUsesDoubaoCompletionTokens(t *testing.T) {
 	}))
 	defer server.Close()
 
-	adaptor := &Adaptor{}
+	doubaoAdaptor := &Adaptor{}
+	store := &doubaoTestStore{
+		saved: []adaptor.StoreCache{
+			{
+				ID:       coremodel.VideoJobStoreID("task-123"),
+				Metadata: `{"prompt":"Stored prompt","resolution":"720p","ratio":"9:16","duration":6}`,
+			},
+		},
+	}
 
-	usage, usageContext, completed, err := adaptor.FetchAsyncUsage(
+	usage, usageContext, completed, err := doubaoAdaptor.FetchAsyncUsage(
 		context.Background(),
-		doubaoAsyncUsageRequest(server.URL+"/custom", "task-123"),
+		doubaoAsyncUsageRequest(server.URL+"/custom", "task-123", store),
 	)
 	if err != nil {
 		t.Fatalf("FetchAsyncUsage returned error: %v", err)
@@ -1278,12 +1521,65 @@ func TestAdaptorFetchAsyncUsageUsesDoubaoCompletionTokens(t *testing.T) {
 		t.Fatalf("unexpected usage: %#v", usage)
 	}
 
-	if usageContext.Resolution != "720p" || usageContext.ServiceTier != "default" {
+	if usageContext.Resolution != "1280x720" ||
+		usageContext.NativeResolution != "720p" ||
+		usageContext.ServiceTier != "default" {
 		t.Fatalf("unexpected usage context: %#v", usageContext)
 	}
 }
 
-func doubaoAsyncUsageRequest(baseURL, upstreamID string) adaptor.AsyncUsageRequest {
+func TestAdaptorFetchAsyncUsageCombinesStoredRatioBeforeDerivingSize(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/custom/api/v3/contents/generations/tasks/task-123" {
+			t.Fatalf("expected task path, got %s", r.URL.Path)
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{
+			"id": "task-123",
+			"status": "succeeded",
+			"resolution": "720p",
+			"usage": {
+				"completion_tokens": 411300,
+				"total_tokens": 411300
+			}
+		}`))
+	}))
+	defer server.Close()
+
+	doubaoAdaptor := &Adaptor{}
+	store := &doubaoTestStore{
+		saved: []adaptor.StoreCache{
+			{
+				ID:       coremodel.VideoJobStoreID("task-123"),
+				Metadata: `{"prompt":"Stored prompt","resolution":"720p","ratio":"9:16","duration":6}`,
+			},
+		},
+	}
+
+	_, usageContext, completed, err := doubaoAdaptor.FetchAsyncUsage(
+		context.Background(),
+		doubaoAsyncUsageRequest(server.URL+"/custom", "task-123", store),
+	)
+	if err != nil {
+		t.Fatalf("FetchAsyncUsage returned error: %v", err)
+	}
+
+	if !completed {
+		t.Fatal("expected async usage to be completed")
+	}
+
+	if usageContext.Resolution != "720x1280" ||
+		usageContext.NativeResolution != "720p" {
+		t.Fatalf("unexpected usage context: %#v", usageContext)
+	}
+}
+
+func doubaoAsyncUsageRequest(
+	baseURL string,
+	upstreamID string,
+	store adaptor.Store,
+) adaptor.AsyncUsageRequest {
 	return adaptor.AsyncUsageRequest{
 		Channel: &coremodel.Channel{
 			BaseURL: baseURL + "/fallback",
@@ -1293,7 +1589,10 @@ func doubaoAsyncUsageRequest(baseURL, upstreamID string) adaptor.AsyncUsageReque
 			Mode:       int(mode.VideoGenerationsJobs),
 			BaseURL:    baseURL,
 			UpstreamID: upstreamID,
+			GroupID:    "group-1",
+			TokenID:    7,
 		},
+		Store: store,
 	}
 }
 

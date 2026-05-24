@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/bytedance/sonic"
 	"github.com/bytedance/sonic/ast"
@@ -98,6 +99,17 @@ func normalizeDoubaoImageRequest(node *ast.Node, actualModel string) error {
 		return err
 	}
 
+	if size, err := node.Get("size").String(); err == nil {
+		if _, err := node.Set(
+			"size",
+			ast.NewString(normalizeDoubaoImageRequestSize(size)),
+		); err != nil {
+			return err
+		}
+	} else if !errors.Is(err, ast.ErrNotExist) {
+		return err
+	}
+
 	if n, err := node.Get("n").Int64(); err == nil && n > 1 {
 		if err := setDoubaoSequentialImages(node, n); err != nil {
 			return err
@@ -183,10 +195,13 @@ func ImageHandler(
 			}
 
 			data.B64JSON = b64JSON
+			data.URL = ""
 		}
 	}
 
-	data, err := sonic.Marshal(&response)
+	openAIResponse := doubaoImageResponseToOpenAI(response, usage)
+
+	data, err := sonic.Marshal(&openAIResponse)
 	if err != nil {
 		return adaptor.DoResponseResult{Usage: usage, UsageContext: usageContext},
 			relaymodel.WrapperOpenAIError(
@@ -204,6 +219,30 @@ func ImageHandler(
 	}
 
 	return adaptor.DoResponseResult{Usage: usage, UsageContext: usageContext}, nil
+}
+
+func doubaoImageResponseToOpenAI(
+	response doubaoImageResponse,
+	usage coremodel.Usage,
+) relaymodel.ImageResponse {
+	data := make([]*relaymodel.ImageData, 0, len(response.Data))
+	for _, item := range response.Data {
+		if item == nil || item.Error != nil {
+			continue
+		}
+
+		data = append(data, &relaymodel.ImageData{
+			URL:           item.URL,
+			B64Json:       item.B64JSON,
+			RevisedPrompt: item.RevisedPrompt,
+		})
+	}
+
+	return relaymodel.ImageResponse{
+		Created: response.Created,
+		Data:    data,
+		Usage:   doubaoImageUsageToOpenAIUsage(usage),
+	}
 }
 
 func ImageStreamHandler(
@@ -415,4 +454,12 @@ func countSuccessfulDoubaoImages(data []*doubaoImageData) int64 {
 
 func normalizeDoubaoImageSize(size string) string {
 	return normalizeDoubaoSize(size)
+}
+
+func normalizeDoubaoImageRequestSize(size string) string {
+	size = strings.TrimSpace(size)
+	size = strings.ReplaceAll(size, "×", "x")
+	size = strings.ReplaceAll(size, "*", "x")
+
+	return size
 }

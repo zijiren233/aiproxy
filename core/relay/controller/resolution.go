@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"fmt"
 	"slices"
 	"strconv"
 	"strings"
@@ -9,6 +10,13 @@ import (
 )
 
 type resolutionAliasFunc func(string) []string
+
+const (
+	openAIImageResolutionOptions = "auto, <width>x<height>"
+	openAIVideoResolutionOptions = "<width>x<height>"
+	geminiVideoResolutionOptions = "720p, 1080p, 4k"
+	noResolutionOptions          = "none"
+)
 
 func supportedImageResolutionMatches(
 	resolution string,
@@ -119,13 +127,23 @@ func normalizeSupportedResolutionValue(resolution string) string {
 	return resolution
 }
 
-func validateOpenAIImageResolutionFormat(resolution string) error {
+func validateOpenAIImageResolutionFormat(
+	resolution string,
+	supported []string,
+	fuzzy bool,
+) error {
 	resolution = strings.ToLower(strings.TrimSpace(resolution))
 	if resolution == "" || resolution == "auto" || dimensionResolutionValue(resolution) {
 		return nil
 	}
 
-	return NewBadRequestParamError("invalid image resolution `" + resolution + "`")
+	return NewBadRequestParamError(
+		fmt.Sprintf(
+			"invalid image resolution `%s`, supported resolutions: %s",
+			resolution,
+			openAIImageSupportedResolutionOptions(supported, fuzzy),
+		),
+	)
 }
 
 func dimensionResolutionValue(resolution string) bool {
@@ -230,6 +248,180 @@ func imageResolutionSizeAlias(resolution string) string {
 		return "1k"
 	default:
 		return "512"
+	}
+}
+
+func openAIImageSupportedResolutionOptions(supported []string, fuzzy bool) string {
+	if len(supported) == 0 {
+		return openAIImageResolutionOptions
+	}
+
+	options := make([]string, 0, len(supported)+1)
+	for _, resolution := range normalizeSupportedImageResolutionValues(supported) {
+		switch resolution {
+		case "512":
+			if fuzzy {
+				options = append(options, openAIImagePresetResolutionOptions("512")...)
+			}
+		case "1k":
+			if fuzzy {
+				options = append(options, openAIImagePresetResolutionOptions("1k")...)
+			}
+		case "2k":
+			if fuzzy {
+				options = append(options, openAIImagePresetResolutionOptions("2k")...)
+			}
+		case "4k":
+			if fuzzy {
+				options = append(options, openAIImagePresetResolutionOptions("4k")...)
+			}
+		default:
+			if dimensionResolutionValue(resolution) {
+				options = append(options, resolution)
+			}
+		}
+	}
+
+	if len(options) == 0 {
+		return noResolutionOptions
+	}
+
+	sortResolutionOptions(options)
+
+	return strings.Join(slices.Compact(options), ", ")
+}
+
+func openAIImagePresetResolutionOptions(size string) []string {
+	switch size {
+	case "512":
+		return []string{"512x512", "768x512", "512x768"}
+	case "1k":
+		return []string{"1024x1024", "1536x1024", "1024x1536"}
+	case "2k":
+		return []string{"2048x2048", "3072x2048", "2048x3072"}
+	case "4k":
+		return []string{"4096x4096", "6144x4096", "4096x6144"}
+	default:
+		return nil
+	}
+}
+
+func openAIVideoSupportedResolutionOptions(supported []string, fuzzy bool) string {
+	if len(supported) == 0 {
+		return openAIVideoResolutionOptions
+	}
+
+	options := make([]string, 0, len(supported))
+	for _, resolution := range normalizeSupportedResolutionValues(supported) {
+		if dimensionResolutionValue(resolution) {
+			options = append(options, resolution)
+			continue
+		}
+
+		if width, height, ok := canonicalOpenAIVideoDimensionsForTier(resolution); fuzzy && ok {
+			options = append(options, fmt.Sprintf("%dx%d", width, height))
+		}
+	}
+
+	if len(options) == 0 {
+		return noResolutionOptions
+	}
+
+	slices.Sort(options)
+
+	return strings.Join(slices.Compact(options), ", ")
+}
+
+func sortResolutionOptions(options []string) {
+	slices.SortFunc(options, func(a, b string) int {
+		aWidth, aHeight, aOK := relaymodel.ParseVideoDimensions(a)
+
+		bWidth, bHeight, bOK := relaymodel.ParseVideoDimensions(b)
+		if aOK && bOK {
+			aShort, aLong := min(aWidth, aHeight), max(aWidth, aHeight)
+
+			bShort, bLong := min(bWidth, bHeight), max(bWidth, bHeight)
+			if aShort != bShort {
+				return aShort - bShort
+			}
+
+			if aLong != bLong {
+				return aLong - bLong
+			}
+
+			if orientationRank(aWidth, aHeight) != orientationRank(bWidth, bHeight) {
+				return orientationRank(aWidth, aHeight) - orientationRank(bWidth, bHeight)
+			}
+
+			return strings.Compare(a, b)
+		}
+
+		if aOK {
+			return -1
+		}
+
+		if bOK {
+			return 1
+		}
+
+		return strings.Compare(a, b)
+	})
+}
+
+func orientationRank(width, height int) int {
+	switch {
+	case width == height:
+		return 0
+	case width > height:
+		return 1
+	default:
+		return 2
+	}
+}
+
+func geminiVideoSupportedResolutionOptions(supported []string, fuzzy bool) string {
+	if len(supported) == 0 {
+		return geminiVideoResolutionOptions
+	}
+
+	options := make([]string, 0, len(supported))
+	for _, resolution := range normalizeSupportedResolutionValues(supported) {
+		switch resolution {
+		case "720p", "1080p", "4k":
+			options = append(options, resolution)
+		case "480p":
+			continue
+		default:
+			if width, height, ok := relaymodel.ParseVideoDimensions(resolution); fuzzy && ok {
+				if tier := relaymodel.VideoResolutionFromDimensions(width, height); tier != "" &&
+					tier != "480p" {
+					options = append(options, tier)
+				}
+			}
+		}
+	}
+
+	if len(options) == 0 {
+		return noResolutionOptions
+	}
+
+	slices.Sort(options)
+
+	return strings.Join(slices.Compact(options), ", ")
+}
+
+func canonicalOpenAIVideoDimensionsForTier(resolution string) (int, int, bool) {
+	switch resolution {
+	case "480p":
+		return 854, 480, true
+	case "720p":
+		return 1280, 720, true
+	case "1080p":
+		return 1920, 1080, true
+	case "4k":
+		return 3840, 2160, true
+	default:
+		return 0, 0, false
 	}
 }
 

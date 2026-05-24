@@ -153,6 +153,62 @@ func TestConvertImageRequestNormalizesDimensionDelimiters(t *testing.T) {
 	}
 }
 
+func TestConvertImageRequestMapsSquareDimensionsToGeminiImageSize(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		size          string
+		wantImageSize string
+	}{
+		{
+			size:          "1024x1024",
+			wantImageSize: "1k",
+		},
+		{
+			size:          "2048x2048",
+			wantImageSize: "2k",
+		},
+		{
+			size:          "4096x4096",
+			wantImageSize: "4k",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.size, func(t *testing.T) {
+			t.Parallel()
+
+			meta := meta.NewMeta(
+				&model.Channel{Type: model.ChannelTypeGoogleGemini},
+				mode.ImagesGenerations,
+				"gemini-3-pro-image-preview",
+				model.ModelConfig{Type: mode.GeminiImage},
+			)
+
+			req, err := http.NewRequestWithContext(
+				t.Context(),
+				http.MethodPost,
+				"http://localhost/v1/images/generations",
+				bytes.NewBufferString(
+					`{"model":"gemini-3-pro-image-preview","prompt":"Draw a cat.","size":"`+tt.size+`"}`,
+				),
+			)
+			assert.NoError(t, err)
+
+			result, err := gemini.ConvertImageRequest(meta, req)
+			assert.NoError(t, err)
+
+			bodyBytes, err := io.ReadAll(result.Body)
+			assert.NoError(t, err)
+
+			var geminiReq relaymodel.GeminiChatRequest
+			assert.NoError(t, json.Unmarshal(bodyBytes, &geminiReq))
+			assert.Equal(t, "1:1", geminiReq.GenerationConfig.ImageConfig.AspectRatio)
+			assert.Equal(t, tt.wantImageSize, geminiReq.GenerationConfig.ImageConfig.ImageSize)
+		})
+	}
+}
+
 func TestConvertImageEditRequestMapsMultipartToGemini(t *testing.T) {
 	t.Parallel()
 
@@ -533,6 +589,11 @@ func TestImageHandlerConvertsGeminiImageResponseToOpenAI(t *testing.T) {
 	assert.NotNil(t, imageResp.Usage)
 	assert.Equal(t, int64(20), imageResp.Usage.OutputTokens)
 	assert.Equal(t, int64(20), imageResp.Usage.OutputTokensDetails.ImageTokens)
+
+	var raw map[string]any
+	assert.NoError(t, json.Unmarshal(recorder.Body.Bytes(), &raw))
+	assert.NotContains(t, raw, "candidates")
+	assert.NotContains(t, raw, "usageMetadata")
 }
 
 func TestImageHandlerHonorsURLResponseFormat(t *testing.T) {
