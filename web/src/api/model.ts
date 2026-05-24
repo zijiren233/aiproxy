@@ -25,6 +25,10 @@ export interface AllDefaultModelsResponse {
   mapping: Record<string, Record<string, string>>;
 }
 
+export interface ChannelBuiltinModelsResponse {
+  [channelType: string]: ModelConfig[];
+}
+
 export const modelApi = {
   getModels: async (): Promise<ModelConfig[]> => {
     const response = await get<ModelConfig[]>("model_configs/all");
@@ -38,6 +42,11 @@ export const modelApi = {
 
   getModelSets: async () => {
     const response = await get<ModelSetsResponse>("models/sets");
+    return response;
+  },
+
+  getChannelBuiltinModels: async (): Promise<ChannelBuiltinModelsResponse> => {
+    const response = await get<ChannelBuiltinModelsResponse>("models/builtin/channel");
     return response;
   },
 

@@ -25,6 +25,7 @@ import {
   Download,
   Upload,
   Copy,
+  Sparkles,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -34,6 +35,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Card } from "@/components/ui/card";
 import { ModelDialog } from "./ModelDialog";
+import { BuiltinModelsDialog } from "./BuiltinModelsDialog";
 import { DeleteModelDialog } from "./DeleteModelDialog";
 import { useTranslation } from "react-i18next";
 import { DataTable } from "@/components/table/motion-data-table";
@@ -69,10 +71,12 @@ export function ModelTable() {
 
   // State management
   const [modelDialogOpen, setModelDialogOpen] = useState(false);
+  const [builtinModelsDialogOpen, setBuiltinModelsDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedModelId, setSelectedModelId] = useState<string | null>(null);
   const [dialogMode, setDialogMode] = useState<"create" | "update">("create");
   const [selectedModel, setSelectedModel] = useState<ModelConfig | null>(null);
+  const [preserveModelNameOnCreate, setPreserveModelNameOnCreate] = useState(false);
   const [isRefreshAnimating, setIsRefreshAnimating] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [searchKeyword, setSearchKeyword] = useState('');
@@ -550,6 +554,7 @@ export function ModelTable() {
   const openCreateDialog = () => {
     setDialogMode("create");
     setSelectedModel(null);
+    setPreserveModelNameOnCreate(false);
     setModelDialogOpen(true);
   };
 
@@ -557,6 +562,7 @@ export function ModelTable() {
   const openUpdateDialog = (model: ModelConfig) => {
     setDialogMode("update");
     setSelectedModel(model);
+    setPreserveModelNameOnCreate(false);
     setModelDialogOpen(true);
   };
 
@@ -564,6 +570,14 @@ export function ModelTable() {
   const openCopyDialog = (model: ModelConfig) => {
     setDialogMode("create");
     setSelectedModel(model);
+    setPreserveModelNameOnCreate(false);
+    setModelDialogOpen(true);
+  };
+
+  const openCreateFromBuiltinDialog = (model: ModelConfig) => {
+    setDialogMode("create");
+    setSelectedModel(model);
+    setPreserveModelNameOnCreate(true);
     setModelDialogOpen(true);
   };
 
@@ -751,6 +765,17 @@ export function ModelTable() {
             />
             <AnimatedButton>
               <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setBuiltinModelsDialogOpen(true)}
+                className="flex items-center gap-1"
+              >
+                <Sparkles className="h-4 w-4" />
+                {t("model.builtin.trigger")}
+              </Button>
+            </AnimatedButton>
+            <AnimatedButton>
+              <Button
                 size="sm"
                 onClick={openCreateDialog}
                 className="flex items-center gap-1"
@@ -788,6 +813,14 @@ export function ModelTable() {
         onOpenChange={setModelDialogOpen}
         mode={dialogMode}
         model={selectedModel}
+        preserveModelNameOnCreate={preserveModelNameOnCreate}
+      />
+
+      <BuiltinModelsDialog
+        open={builtinModelsDialogOpen}
+        onOpenChange={setBuiltinModelsDialogOpen}
+        existingModels={models || []}
+        onCreateFromBuiltin={openCreateFromBuiltinDialog}
       />
 
       {/* Delete Model Dialog */}

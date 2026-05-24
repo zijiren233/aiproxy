@@ -420,7 +420,8 @@ func TestFetchAsyncUsageGeminiVideoBuildsUsageFromStoredMetadata(t *testing.T) {
 				TokenID:    7,
 				UpstreamID: operationName,
 				UsageContext: coremodel.UsageContext{
-					Resolution: "720p",
+					Resolution:       "1280x720",
+					NativeResolution: "720p",
 				},
 			},
 		},
@@ -429,5 +430,6 @@ func TestFetchAsyncUsageGeminiVideoBuildsUsageFromStoredMetadata(t *testing.T) {
 	require.True(t, done)
 	require.Equal(t, coremodel.ZeroNullInt64(10), usage.OutputTokens)
 	require.Equal(t, coremodel.ZeroNullInt64(10), usage.TotalTokens)
-	require.Equal(t, "1080p", usageContext.Resolution)
+	require.Equal(t, "1280x720", usageContext.Resolution)
+	require.Equal(t, "1080p", usageContext.NativeResolution)
 }

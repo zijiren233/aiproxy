@@ -23,6 +23,7 @@ import (
 	"github.com/labring/aiproxy/core/relay/adaptor"
 	"github.com/labring/aiproxy/core/relay/adaptor/openai"
 	"github.com/labring/aiproxy/core/relay/meta"
+	"github.com/labring/aiproxy/core/relay/mode"
 	relaymodel "github.com/labring/aiproxy/core/relay/model"
 	relayutils "github.com/labring/aiproxy/core/relay/utils"
 )
@@ -34,9 +35,9 @@ const (
 	defaultGeminiVideoDurationSeconds = 8
 	defaultGeminiVideoResolution      = "720p"
 
-	metaGeminiVideoSeconds    = "gemini_video_seconds"
-	metaGeminiVideoVariants   = "gemini_video_variants"
-	metaGeminiVideoResolution = "gemini_video_resolution"
+	metaGeminiVideoSeconds          = "gemini_video_seconds"
+	metaGeminiVideoVariants         = "gemini_video_variants"
+	metaGeminiVideoNativeResolution = "gemini_video_native_resolution"
 )
 
 type geminiVideoRequest struct {
@@ -130,7 +131,14 @@ func NativeVideoConvertRequest(
 				firstStringNode(&node, parameters, "aspectRatio"),
 				resolution,
 			)
-			setGeminiVideoRequestMetadata(meta, seconds, variants, resolution, width, height)
+			setGeminiVideoRequestMetadata(
+				meta,
+				seconds,
+				variants,
+				resolution,
+				width,
+				height,
+			)
 		}
 	}
 
@@ -230,15 +238,16 @@ func convertGeminiVideoRequest(
 
 	if meta != nil {
 		meta.Set("gemini_video_prompt", request.Instances[0].Prompt)
+		nativeResolution := geminiVideoMetadataResolution(request.Parameters.Resolution)
 		width, height := requestVideoDimensionsFromAspectRatio(
 			request.Parameters.AspectRatio,
-			geminiVideoMetadataResolution(request.Parameters.Resolution),
+			nativeResolution,
 		)
 		setGeminiVideoRequestMetadata(
 			meta,
 			geminiVideoMetadataDurationSeconds(request.Parameters.DurationSeconds),
 			request.Parameters.NumberOfVideos,
-			geminiVideoMetadataResolution(request.Parameters.Resolution),
+			nativeResolution,
 			width,
 			height,
 		)
@@ -1671,7 +1680,20 @@ func requestVideoResolution(meta *meta.Meta) string {
 		return ""
 	}
 
-	return meta.GetString(metaGeminiVideoResolution)
+	nativeResolution := requestVideoNativeResolution(meta)
+	if meta.Mode == mode.GeminiVideo {
+		return nativeResolution
+	}
+
+	return videoDimensionsResolution(requestVideoWidth(meta), requestVideoHeight(meta))
+}
+
+func requestVideoNativeResolution(meta *meta.Meta) string {
+	if meta == nil {
+		return ""
+	}
+
+	return meta.GetString(metaGeminiVideoNativeResolution)
 }
 
 func requestVideoWidth(meta *meta.Meta) int {
@@ -1748,7 +1770,7 @@ func geminiVideoStoreMetadataString(meta *meta.Meta, operationName string) strin
 		Prompt:        metaPrompt(meta),
 		Seconds:       requestVideoSeconds(meta),
 		Variants:      requestVideoVariants(meta),
-		Resolution:    requestVideoResolution(meta),
+		Resolution:    requestVideoNativeResolution(meta),
 		Width:         requestVideoWidth(meta),
 		Height:        requestVideoHeight(meta),
 	}
@@ -1816,8 +1838,12 @@ func geminiVideoUsageContext(meta *meta.Meta, operation *geminiOperation) model.
 	context := model.UsageContext{}
 	if meta != nil {
 		context = meta.RequestUsageContext
-		if resolution := meta.GetString(metaGeminiVideoResolution); resolution != "" {
-			context.Resolution = resolution
+		if requestResolution := requestVideoResolution(meta); requestResolution != "" {
+			context.Resolution = requestResolution
+		}
+
+		if nativeResolution := requestVideoNativeResolution(meta); nativeResolution != "" {
+			context.NativeResolution = nativeResolution
 		}
 	}
 
@@ -1832,7 +1858,7 @@ func setGeminiVideoRequestMetadata(
 	meta *meta.Meta,
 	seconds int,
 	variants int,
-	resolution string,
+	nativeResolution string,
 	width int,
 	height int,
 ) {
@@ -1847,8 +1873,8 @@ func setGeminiVideoRequestMetadata(
 	meta.Set(metaGeminiVideoSeconds, seconds)
 	meta.Set(metaGeminiVideoVariants, variants)
 
-	if resolution != "" {
-		meta.Set(metaGeminiVideoResolution, resolution)
+	if nativeResolution != "" {
+		meta.Set(metaGeminiVideoNativeResolution, nativeResolution)
 	}
 
 	if width > 0 && height > 0 {
@@ -1925,6 +1951,14 @@ func geminiVideoMetadataResolution(resolution string) string {
 	}
 
 	return defaultGeminiVideoResolution
+}
+
+func videoDimensionsResolution(width, height int) string {
+	if width > 0 && height > 0 {
+		return fmt.Sprintf("%dx%d", width, height)
+	}
+
+	return ""
 }
 
 func geminiVideoRequestUsage(meta *meta.Meta) model.Usage {

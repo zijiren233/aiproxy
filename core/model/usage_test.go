@@ -138,14 +138,14 @@ func TestPrice_ValidateConditionalPrices(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "Overlapping input ranges with overlapping output ranges",
+			name: "Same-specificity overlapping input and output ranges",
 			price: model.Price{
 				ConditionalPrices: []model.ConditionalPrice{
 					{
 						Condition: model.PriceCondition{
-							InputTokenMin:  0,
+							InputTokenMin:  1,
 							InputTokenMax:  32000,
-							OutputTokenMin: 0,
+							OutputTokenMin: 1,
 							OutputTokenMax: 500,
 						},
 						Price: model.Price{
@@ -202,7 +202,7 @@ func TestPrice_ValidateConditionalPrices(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "Improperly ordered conditions",
+			name: "Unordered non-overlapping conditions are allowed",
 			price: model.Price{
 				ConditionalPrices: []model.ConditionalPrice{
 					{
@@ -217,8 +217,8 @@ func TestPrice_ValidateConditionalPrices(t *testing.T) {
 					},
 					{
 						Condition: model.PriceCondition{
-							InputTokenMin: 0,
-							InputTokenMax: 32000, // should come before the previous one
+							InputTokenMin: 1,
+							InputTokenMax: 32000,
 						},
 						Price: model.Price{
 							InputPrice:  0.0008,
@@ -227,7 +227,7 @@ func TestPrice_ValidateConditionalPrices(t *testing.T) {
 					},
 				},
 			},
-			wantErr: true,
+			wantErr: false,
 		},
 		{
 			name: "Valid consecutive ranges",
@@ -806,6 +806,157 @@ func TestPrice_SelectConditionalPrice_WithServiceTier(t *testing.T) {
 	}
 }
 
+func TestPrice_SelectConditionalPrice_UsesMostSpecificMatchingCondition(t *testing.T) {
+	price := model.Price{
+		InputPrice: 0.001,
+		ConditionalPrices: []model.ConditionalPrice{
+			{
+				Condition: model.PriceCondition{
+					InputTokenMax: 32000,
+				},
+				Price: model.Price{
+					InputPrice: 0.002,
+				},
+			},
+			{
+				Condition: model.PriceCondition{
+					InputTokenMax: 32000,
+					ServiceTier:   "priority",
+				},
+				Price: model.Price{
+					InputPrice: 0.004,
+				},
+			},
+		},
+	}
+
+	selectedPrice := price.SelectConditionalPrice(
+		model.Usage{InputTokens: 1000},
+		model.UsageContext{ServiceTier: "priority"},
+	)
+	if float64(selectedPrice.InputPrice) != 0.004 {
+		t.Fatalf("expected more specific price 0.004, got %v", selectedPrice.InputPrice)
+	}
+}
+
+func TestPrice_SelectConditionalPrice_MostSpecificConditionIsOrderIndependent(t *testing.T) {
+	price := model.Price{
+		InputPrice: 0.001,
+		ConditionalPrices: []model.ConditionalPrice{
+			{
+				Condition: model.PriceCondition{
+					InputTokenMax: 32000,
+				},
+				Price: model.Price{
+					InputPrice: 0.002,
+				},
+			},
+			{
+				Condition: model.PriceCondition{
+					InputTokenMax: 32000,
+					ServiceTier:   "priority",
+				},
+				Price: model.Price{
+					InputPrice: 0.004,
+				},
+			},
+		},
+	}
+
+	priorityPrice := price.SelectConditionalPrice(
+		model.Usage{InputTokens: 1000},
+		model.UsageContext{ServiceTier: "priority"},
+	)
+	if float64(priorityPrice.InputPrice) != 0.004 {
+		t.Fatalf("expected priority price 0.004, got %v", priorityPrice.InputPrice)
+	}
+
+	defaultPrice := price.SelectConditionalPrice(
+		model.Usage{InputTokens: 1000},
+		model.UsageContext{ServiceTier: "default"},
+	)
+	if float64(defaultPrice.InputPrice) != 0.002 {
+		t.Fatalf("expected default price 0.002, got %v", defaultPrice.InputPrice)
+	}
+}
+
+func TestPrice_SelectConditionalPrice_TokenAndTimeBoundsIncreaseSpecificity(t *testing.T) {
+	now := time.Now().Unix()
+	price := model.Price{
+		InputPrice: 0.001,
+		ConditionalPrices: []model.ConditionalPrice{
+			{
+				Condition: model.PriceCondition{
+					InputTokenMax: 32000,
+				},
+				Price: model.Price{
+					InputPrice: 0.002,
+				},
+			},
+			{
+				Condition: model.PriceCondition{
+					InputTokenMin: 100,
+					InputTokenMax: 2000,
+				},
+				Price: model.Price{
+					InputPrice: 0.003,
+				},
+			},
+			{
+				Condition: model.PriceCondition{
+					InputTokenMin: 100,
+					InputTokenMax: 2000,
+					StartTime:     now - 60,
+					EndTime:       now + 60,
+				},
+				Price: model.Price{
+					InputPrice: 0.004,
+				},
+			},
+		},
+	}
+
+	selectedPrice := price.SelectConditionalPrice(
+		model.Usage{InputTokens: 1000},
+		model.UsageContext{},
+	)
+	if float64(selectedPrice.InputPrice) != 0.004 {
+		t.Fatalf("expected token+time bounded price 0.004, got %v", selectedPrice.InputPrice)
+	}
+}
+
+func TestPrice_SelectConditionalPrice_SameSpecificityKeepsFirstMatch(t *testing.T) {
+	price := model.Price{
+		InputPrice: 0.001,
+		ConditionalPrices: []model.ConditionalPrice{
+			{
+				Condition: model.PriceCondition{
+					InputTokenMax: 32000,
+				},
+				Price: model.Price{
+					InputPrice: 0.002,
+				},
+			},
+			{
+				Condition: model.PriceCondition{
+					OutputTokenMax: 32000,
+				},
+				Price: model.Price{
+					InputPrice: 0.003,
+				},
+			},
+		},
+	}
+
+	selectedPrice := price.SelectConditionalPrice(
+		model.Usage{InputTokens: 1000, OutputTokens: 1000},
+		model.UsageContext{},
+	)
+	if float64(selectedPrice.InputPrice) != 0.002 {
+		t.Fatalf("expected first same-specificity price 0.002, got %v", selectedPrice.InputPrice)
+	}
+}
+
 func TestUsageContextWithFallbackPreservesRequestServiceTier(t *testing.T) {
 	resultContext := model.UsageContext{}
 	requestContext := model.UsageContext{ServiceTier: "priority"}
@@ -813,6 +964,20 @@ func TestUsageContextWithFallbackPreservesRequestServiceTier(t *testing.T) {
 	got := resultContext.WithFallback(requestContext)
 	if got.ServiceTier != "priority" {
 		t.Fatalf("expected fallback service tier priority, got %q", got.ServiceTier)
+	}
+}
+
+func TestUsageContextWithFallbackPreservesNativeResolution(t *testing.T) {
+	resultContext := model.UsageContext{Resolution: "1920x1080"}
+	requestContext := model.UsageContext{NativeResolution: "1080p"}
+
+	got := resultContext.WithFallback(requestContext)
+	if got.Resolution != "1920x1080" {
+		t.Fatalf("expected protocol resolution 1920x1080, got %q", got.Resolution)
+	}
+
+	if got.NativeResolution != "1080p" {
+		t.Fatalf("expected native resolution 1080p, got %q", got.NativeResolution)
 	}
 }
 
@@ -865,6 +1030,34 @@ func TestPrice_SelectConditionalPrice_WithMediaConditions(t *testing.T) {
 		)
 	}
 
+	exactProtocolResolutionPrice := model.Price{
+		OutputPrice: 0.08,
+		ConditionalPrices: []model.ConditionalPrice{
+			{
+				Condition: model.PriceCondition{Resolution: []string{"720p"}},
+				Price:     model.Price{OutputPrice: 0.40},
+			},
+			{
+				Condition: model.PriceCondition{Resolution: []string{"1280x720"}},
+				Price:     model.Price{OutputPrice: 0.50},
+			},
+		},
+	}
+
+	selectedExactProtocolResolutionPrice := exactProtocolResolutionPrice.SelectConditionalPrice(
+		model.Usage{},
+		model.UsageContext{
+			Resolution:       "1280x720",
+			NativeResolution: "720p",
+		},
+	)
+	if float64(selectedExactProtocolResolutionPrice.OutputPrice) != 0.50 {
+		t.Fatalf(
+			"expected exact protocol resolution conditional price 0.50, got %v",
+			selectedExactProtocolResolutionPrice.OutputPrice,
+		)
+	}
+
 	disabledFuzzyPrice := price.SelectConditionalPriceWithOptions(
 		model.Usage{},
 		model.UsageContext{Resolution: "1280x720"},
@@ -877,12 +1070,127 @@ func TestPrice_SelectConditionalPrice_WithMediaConditions(t *testing.T) {
 		)
 	}
 
+	nativeResolutionPrice := price.SelectConditionalPriceWithOptions(
+		model.Usage{},
+		model.UsageContext{
+			Resolution:       "1280x720",
+			NativeResolution: "720p",
+		},
+		model.PriceSelectionOptions{DisableResolutionFuzzyMatch: true},
+	)
+	if float64(nativeResolutionPrice.OutputPrice) != 0.40 {
+		t.Fatalf(
+			"expected native resolution conditional price 0.40, got %v",
+			nativeResolutionPrice.OutputPrice,
+		)
+	}
+
+	protocolFallbackPrice := model.Price{
+		OutputPrice: 0.08,
+		ConditionalPrices: []model.ConditionalPrice{
+			{
+				Condition: model.PriceCondition{
+					Resolution: []string{"1024x1024"},
+					Quality:    []string{"hd"},
+				},
+				Price: model.Price{
+					OutputPrice: 0.34,
+				},
+			},
+		},
+	}
+
+	protocolResolutionFallbackPrice := protocolFallbackPrice.SelectConditionalPriceWithOptions(
+		model.Usage{},
+		model.UsageContext{
+			Resolution:       "1024x1024",
+			NativeResolution: "720p",
+			Quality:          "hd",
+		},
+		model.PriceSelectionOptions{DisableResolutionFuzzyMatch: true},
+	)
+	if float64(protocolResolutionFallbackPrice.OutputPrice) != 0.34 {
+		t.Fatalf(
+			"expected protocol resolution fallback conditional price 0.34, got %v",
+			protocolResolutionFallbackPrice.OutputPrice,
+		)
+	}
+
 	fallbackPrice := price.SelectConditionalPrice(model.Usage{}, model.UsageContext{
 		Resolution: "1024x1024",
 		Quality:    "standard",
 	})
 	if float64(fallbackPrice.OutputPrice) != 0.08 {
 		t.Fatalf("expected fallback price 0.08, got %v", fallbackPrice.OutputPrice)
+	}
+}
+
+func TestPrice_SelectConditionalPrice_ResolutionAndQualityNormalizationAreIndependent(
+	t *testing.T,
+) {
+	price := model.Price{
+		OutputPrice: 0.08,
+		ConditionalPrices: []model.ConditionalPrice{
+			{
+				Condition: model.PriceCondition{
+					Resolution: []string{"1024*1024"},
+					Quality:    []string{"h*d"},
+				},
+				Price: model.Price{
+					OutputPrice: 0.12,
+				},
+			},
+			{
+				Condition: model.PriceCondition{
+					Resolution: []string{"1024*1024"},
+					Quality:    []string{"hxd"},
+				},
+				Price: model.Price{
+					OutputPrice: 0.34,
+				},
+			},
+		},
+	}
+
+	selectedPrice := price.SelectConditionalPrice(model.Usage{}, model.UsageContext{
+		Resolution: "1024x1024",
+		Quality:    "H*D",
+	})
+	if float64(selectedPrice.OutputPrice) != 0.12 {
+		t.Fatalf(
+			"expected quality '*' to stay distinct from 'x', got %v",
+			selectedPrice.OutputPrice,
+		)
+	}
+}
+
+func TestPrice_SelectConditionalPrice_ResolutionMultiplicationSignsMatchOnlyResolution(
+	t *testing.T,
+) {
+	price := model.Price{
+		OutputPrice: 0.08,
+		ConditionalPrices: []model.ConditionalPrice{
+			{
+				Condition: model.PriceCondition{
+					Resolution: []string{"1024*1024"},
+					Quality:    []string{"hd"},
+				},
+				Price: model.Price{
+					OutputPrice: 0.34,
+				},
+			},
+		},
+	}
+
+	selectedPrice := price.SelectConditionalPrice(model.Usage{}, model.UsageContext{
+		Resolution: "1024×1024",
+		Quality:    "HD",
+	})
+	if float64(selectedPrice.OutputPrice) != 0.34 {
+		t.Fatalf(
+			"expected resolution multiplication signs to match, got %v",
+			selectedPrice.OutputPrice,
+		)
 	}
 }
 
@@ -1011,7 +1319,7 @@ func TestPrice_ValidateConditionalPrices_WithServiceTier(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "same token range with wildcard and specific tier should fail overlap",
+			name: "same token range with wildcard and specific tier is allowed",
 			price: model.Price{
 				ConditionalPrices: []model.ConditionalPrice{
 					{
@@ -1035,7 +1343,33 @@ func TestPrice_ValidateConditionalPrices_WithServiceTier(t *testing.T) {
 					},
 				},
 			},
-			wantErr: true,
+			wantErr: false,
+		},
+		{
+			name: "specific tier before broad tier with same token range is allowed",
+			price: model.Price{
+				ConditionalPrices: []model.ConditionalPrice{
+					{
+						Condition: model.PriceCondition{
+							InputTokenMin: 0,
+							InputTokenMax: 32000,
+							ServiceTier:   "priority",
+						},
+						Price: model.Price{
+							InputPrice: 0.003,
+						},
+					},
+					{
+						Condition: model.PriceCondition{
+							ServiceTier: "priority",
+						},
+						Price: model.Price{
+							InputPrice: 0.002,
+						},
+					},
+				},
+			},
+			wantErr: false,
 		},
 	}
 
@@ -1166,7 +1500,7 @@ func TestPrice_ValidateConditionalPrices_WithMediaConditions(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "wildcard size overlaps with specific size",
+			name: "wildcard fallback with specific size is allowed",
 			price: model.Price{
 				ConditionalPrices: []model.ConditionalPrice{
 					{
@@ -1179,7 +1513,7 @@ func TestPrice_ValidateConditionalPrices_WithMediaConditions(t *testing.T) {
 					},
 				},
 			},
-			wantErr: true,
+			wantErr: false,
 		},
 	}
 

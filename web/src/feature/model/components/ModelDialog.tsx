@@ -23,13 +23,15 @@ interface ModelDialogProps {
     onOpenChange: (open: boolean) => void
     mode: 'create' | 'update'
     model?: ModelConfig | null
+    preserveModelNameOnCreate?: boolean
 }
 
 export function ModelDialog({
     open,
     onOpenChange,
     mode = 'create',
-    model = null
+    model = null,
+    preserveModelNameOnCreate = false
 }: ModelDialogProps) {
     const { t } = useTranslation()
 
@@ -43,7 +45,7 @@ export function ModelDialog({
     const defaultValues = useMemo(() => model
         ? {
             ...model,
-            model: mode === 'create' ? '' : model.model,
+            model: mode === 'create' && !preserveModelNameOnCreate ? '' : model.model,
             owner: model.owner ?? '',
             type: model.type,
             timeout: model.timeout_config?.request_timeout,
@@ -55,7 +57,7 @@ export function ModelDialog({
             model: '',
             owner: '',
             type: 1
-        }, [mode, model])
+        }, [mode, model, preserveModelNameOnCreate])
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
@@ -78,7 +80,7 @@ export function ModelDialog({
                                     <ModelForm
                                         mode={mode}
                                         defaultValues={defaultValues}
-                                        baseModelConfig={mode === 'update' ? model : null}
+                                        baseModelConfig={model}
                                         onSuccess={() => onOpenChange(false)}
                                     />
                                 </motion.div>

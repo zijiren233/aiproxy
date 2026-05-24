@@ -152,17 +152,32 @@ func geminiVideoAsyncUsage(
 
 	usageContext := info.UsageContext
 	if metadata.Resolution != "" {
-		usageContext.Resolution = metadata.Resolution
+		usageContext.NativeResolution = metadata.Resolution
 	}
 
-	if usageContext.Resolution == "" {
-		usageContext.Resolution = defaultGeminiVideoResolution
+	if usageContext.NativeResolution == "" {
+		usageContext.NativeResolution = defaultGeminiVideoResolution
+	}
+
+	if resolution := geminiVideoAsyncUsageResolution(info, metadata); resolution != "" {
+		usageContext.Resolution = resolution
 	}
 
 	return model.Usage{
 		OutputTokens: tokens,
 		TotalTokens:  tokens,
 	}, usageContext
+}
+
+func geminiVideoAsyncUsageResolution(
+	info *model.AsyncUsageInfo,
+	metadata geminiVideoStoreMetadata,
+) string {
+	if mode.Mode(info.Mode) == mode.GeminiVideo {
+		return firstNonEmpty(metadata.Resolution, info.UsageContext.NativeResolution)
+	}
+
+	return videoDimensionsResolution(metadata.Width, metadata.Height)
 }
 
 func geminiVideoAsyncUsageMetadata(
@@ -213,6 +228,6 @@ func geminiVideoAsyncUsageMetadata(
 	}
 
 	return geminiVideoStoreMetadata{
-		Resolution: info.UsageContext.Resolution,
+		Resolution: info.UsageContext.NativeResolution,
 	}
 }

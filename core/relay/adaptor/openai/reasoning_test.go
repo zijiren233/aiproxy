@@ -221,6 +221,14 @@ func TestConvertRequest_OpenAIReasoningEffortCompatibility(t *testing.T) {
 			var payload map[string]any
 			require.NoError(t, json.Unmarshal(bodyBytes, &payload))
 
+			if tt.mode == mode.ChatCompletions &&
+				IsResponsesOnlyModelAny(&m.ModelConfig, m.OriginModel, m.ActualModel) {
+				reasoning, ok := payload["reasoning"].(map[string]any)
+				require.True(t, ok)
+				assert.Equal(t, tt.wantEffort, reasoning["effort"])
+				return
+			}
+
 			if tt.mode == mode.Responses {
 				reasoning, ok := payload["reasoning"].(map[string]any)
 				require.True(t, ok)

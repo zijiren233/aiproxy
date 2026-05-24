@@ -61,6 +61,7 @@ export interface LogAmount {
 // 计费条件上下文
 export interface LogUsageContext {
   resolution?: string
+  native_resolution?: string
   quality?: string
   service_tier?: string
 }

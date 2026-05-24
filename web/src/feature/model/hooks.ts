@@ -24,6 +24,15 @@ export const useModelSets = () => {
   });
 };
 
+// Get builtin model configs grouped by channel type
+export const useChannelBuiltinModels = () => {
+  return useQuery({
+    queryKey: ["channelBuiltinModels"],
+    queryFn: () => modelApi.getChannelBuiltinModels(),
+    staleTime: 1000 * 60 * 30,
+  });
+};
+
 // Get a specific model
 export const useModel = (model: string) => {
   return useQuery({
