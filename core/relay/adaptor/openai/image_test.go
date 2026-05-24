@@ -76,6 +76,48 @@ func TestConvertImagesRequest_CanRemoveModelDynamically(t *testing.T) {
 	assert.Equal(t, "b64_json", meta.GetString(MetaResponseFormat))
 }
 
+func TestImagesHandlerClearsURLWhenB64JSONRequested(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	imageServer := httptest.NewServer(
+		http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			w.Header().Set("Content-Type", "image/png")
+			_, _ = w.Write([]byte("png-bytes"))
+		}),
+	)
+	defer imageServer.Close()
+
+	recorder := httptest.NewRecorder()
+	ctx, _ := gin.CreateTestContext(recorder)
+	ctx.Request = httptest.NewRequestWithContext(
+		context.Background(),
+		http.MethodPost,
+		"/v1/images/generations",
+		nil,
+	)
+
+	m := meta.NewMeta(nil, mode.ImagesGenerations, "gpt-image-1", model.ModelConfig{})
+	m.Set(MetaResponseFormat, "b64_json")
+
+	resp := &http.Response{
+		StatusCode: http.StatusOK,
+		Header:     make(http.Header),
+		Body: io.NopCloser(strings.NewReader(`{
+			"created": 1710000000,
+			"data": [{"url": "` + imageServer.URL + `/one.png"}]
+		}`)),
+	}
+
+	_, adaptorErr := ImagesHandler(m, ctx, resp)
+	require.Nil(t, adaptorErr)
+
+	var imageResponse relaymodel.ImageResponse
+	require.NoError(t, json.Unmarshal(recorder.Body.Bytes(), &imageResponse))
+	require.Len(t, imageResponse.Data, 1)
+	assert.Empty(t, imageResponse.Data[0].URL)
+	assert.NotEmpty(t, imageResponse.Data[0].B64Json)
+}
+
 func TestConvertImagesEditsRequest_DefaultIncludesModel(t *testing.T) {
 	meta := meta.NewMeta(nil, mode.ImagesEdits, "gpt-image-1", model.ModelConfig{})
 

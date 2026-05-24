@@ -576,6 +576,68 @@ func TestImageHandlerMapsSiliconFlowResponse(t *testing.T) {
 	}
 }
 
+func TestImageHandlerClearsURLWhenB64JSONRequested(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	imageServer := httptest.NewServer(
+		http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			w.Header().Set("Content-Type", "image/png")
+			_, _ = w.Write([]byte("png-bytes"))
+		}),
+	)
+	defer imageServer.Close()
+
+	recorder := httptest.NewRecorder()
+	ctx, _ := gin.CreateTestContext(recorder)
+	ctx.Request = httptest.NewRequestWithContext(
+		context.Background(),
+		http.MethodPost,
+		"/v1/images/generations",
+		nil,
+	)
+
+	m := meta.NewMeta(
+		nil,
+		mode.ImagesGenerations,
+		"stabilityai/stable-diffusion-3-5-large",
+		coremodel.ModelConfig{},
+	)
+	m.Set("response_format", "b64_json")
+
+	resp := &http.Response{
+		StatusCode: http.StatusOK,
+		Header:     make(http.Header),
+		Body: io.NopCloser(bytes.NewReader([]byte(`{
+			"images":[{"url":"` + imageServer.URL + `/one.png"}]
+		}`))),
+	}
+
+	_, adaptorErr := ImageHandler(m, ctx, resp)
+	if adaptorErr != nil {
+		t.Fatalf("ImageHandler returned error: %v", adaptorErr)
+	}
+
+	var imageResponse relaymodel.ImageResponse
+	if err := json.Unmarshal(recorder.Body.Bytes(), &imageResponse); err != nil {
+		t.Fatalf("failed to unmarshal image response: %v", err)
+	}
+
+	if len(imageResponse.Data) != 1 {
+		t.Fatalf("expected 1 image, got %d", len(imageResponse.Data))
+	}
+
+	if imageResponse.Data[0].URL != "" {
+		t.Fatalf(
+			"expected url to be omitted for b64_json response, got %#v",
+			imageResponse.Data[0].URL,
+		)
+	}
+
+	if imageResponse.Data[0].B64Json == "" {
+		t.Fatal("expected b64_json to be set")
+	}
+}
+
 func TestConvertVideoRequestMapsJSONFields(t *testing.T) {
 	sfAdaptor := &Adaptor{}
 	m := meta.NewMeta(nil, mode.VideoGenerationsJobs, "alias-video", coremodel.ModelConfig{})
@@ -1009,6 +1071,10 @@ func TestVideosGetHandlerMapsStatusResponse(t *testing.T) {
 
 	if result.UpstreamID != "request-123" {
 		t.Fatalf("expected upstream id, got %q", result.UpstreamID)
+	}
+
+	if result.UsageContext.Resolution != "1280x720" {
+		t.Fatalf("expected usage context resolution, got %#v", result.UsageContext)
 	}
 
 	var video relaymodel.Video

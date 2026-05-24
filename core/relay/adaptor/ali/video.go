@@ -1115,8 +1115,9 @@ func AliVideoHandler(
 	_, _ = c.Writer.Write(jsonResponse)
 
 	return adaptor.DoResponseResult{
-		UpstreamID: job.ID,
-		AsyncUsage: true,
+		UpstreamID:   job.ID,
+		AsyncUsage:   true,
+		UsageContext: aliVideoUsageContext(meta, aliResponse.Usage),
 	}, nil
 }
 
@@ -1172,7 +1173,10 @@ func AliVideoGetJobsHandler(
 	c.Writer.Header().Set("Content-Length", strconv.Itoa(len(jsonResponse)))
 	_, _ = c.Writer.Write(jsonResponse)
 
-	return adaptor.DoResponseResult{UpstreamID: job.ID}, nil
+	return adaptor.DoResponseResult{
+		UpstreamID:   job.ID,
+		UsageContext: aliVideoUsageContext(meta, aliResponse.Usage),
+	}, nil
 }
 
 func AliVideoContentHandler(
@@ -1296,20 +1300,11 @@ func aliVideoTaskToOpenAIJob(
 		nVariants = 1
 	}
 
-	width, height := aliVideoDimensions(response.Usage)
+	width, height := aliVideoDimensionsWithStoredRequestSize(meta, response.Usage)
 
 	prompt := firstNonEmpty(response.Output.OrigPrompt, meta.GetString(metaAliVideoPrompt))
 	if nSeconds == 0 {
 		nSeconds = meta.GetInt(metaAliVideoSeconds)
-	}
-
-	if width == 0 || height == 0 {
-		width = meta.GetInt(metaAliVideoWidth)
-		height = meta.GetInt(metaAliVideoHeight)
-	}
-
-	if width == 0 || height == 0 {
-		width, height, _ = relaymodel.ParseVideoDimensions(meta.GetString(metaAliVideoSize))
 	}
 
 	job := &relaymodel.VideoGenerationJob{
@@ -1413,8 +1408,9 @@ func aliVideosHandler(
 	_, _ = c.Writer.Write(jsonResponse)
 
 	return adaptor.DoResponseResult{
-		UpstreamID: video.ID,
-		AsyncUsage: true,
+		UpstreamID:   video.ID,
+		AsyncUsage:   true,
+		UsageContext: aliVideoUsageContext(meta, aliResponse.Usage),
 	}, nil
 }
 
@@ -1463,7 +1459,10 @@ func AliVideoGetHandler(
 	c.Writer.Header().Set("Content-Length", strconv.Itoa(len(jsonResponse)))
 	_, _ = c.Writer.Write(jsonResponse)
 
-	return adaptor.DoResponseResult{UpstreamID: video.ID}, nil
+	return adaptor.DoResponseResult{
+		UpstreamID:   video.ID,
+		UsageContext: aliVideoUsageContext(meta, aliResponse.Usage),
+	}, nil
 }
 
 func aliVideoStatusToOpenAI(status string) relaymodel.VideoGenerationJobStatus {
@@ -1516,7 +1515,7 @@ func aliVideoTaskToOpenAIVideo(
 ) *relaymodel.Video {
 	now := time.Now()
 	createdAt := parseAliVideoTime(response.Output.SubmitTime, now).Unix()
-	width, height := aliVideoDimensions(response.Usage)
+	width, height := aliVideoDimensionsWithStoredRequestSize(meta, response.Usage)
 
 	seconds := int(aliVideoOutputSeconds(response.Usage))
 	if seconds == 0 {
@@ -1562,6 +1561,19 @@ func aliVideoSize(width, height int) string {
 	}
 
 	return fmt.Sprintf("%dx%d", width, height)
+}
+
+func aliVideoUsageContext(meta *meta.Meta, usage AliVideoUsage) coremodel.UsageContext {
+	usageContext := coremodel.UsageContext{}
+	if width, height := aliVideoDimensionsWithStoredRequestSize(
+		meta,
+		usage,
+	); width > 0 &&
+		height > 0 {
+		usageContext.Resolution = aliVideoSize(width, height)
+	}
+
+	return usageContext
 }
 
 func aliVideoOutputSeconds(usage AliVideoUsage) int64 {
@@ -1614,6 +1626,37 @@ func aliVideoDimensions(usage AliVideoUsage) (int, int) {
 	default:
 		return resolution * 16 / 9, resolution
 	}
+}
+
+func aliVideoDimensionsWithStoredRequestSize(meta *meta.Meta, usage AliVideoUsage) (int, int) {
+	storedWidth, storedHeight := storedAliVideoRequestDimensions(meta)
+	if strings.TrimSpace(usage.Ratio) == "" && storedWidth > 0 && storedHeight > 0 {
+		return storedWidth, storedHeight
+	}
+
+	width, height := aliVideoDimensions(usage)
+	if width > 0 && height > 0 {
+		return width, height
+	}
+
+	return storedWidth, storedHeight
+}
+
+func storedAliVideoRequestDimensions(meta *meta.Meta) (int, int) {
+	if meta == nil {
+		return 0, 0
+	}
+
+	width := meta.GetInt(metaAliVideoWidth)
+
+	height := meta.GetInt(metaAliVideoHeight)
+	if width > 0 && height > 0 {
+		return width, height
+	}
+
+	width, height, _ = relaymodel.ParseVideoDimensions(meta.GetString(metaAliVideoSize))
+
+	return width, height
 }
 
 func intFromAny(value any) int {

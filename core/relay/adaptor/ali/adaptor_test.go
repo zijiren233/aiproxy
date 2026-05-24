@@ -1843,6 +1843,78 @@ func TestAdaptorDoResponseQwenImageB64DownloadFailureFallsBackToURL(t *testing.T
 	}
 }
 
+func TestAdaptorDoResponseQwenImageClearsURLWhenB64JSONRequested(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	imageServer := httptest.NewServer(
+		http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			w.Header().Set("Content-Type", "image/png")
+			_, _ = w.Write([]byte("png-bytes"))
+		}),
+	)
+	defer imageServer.Close()
+
+	adaptor := &Adaptor{}
+	recorder := httptest.NewRecorder()
+	ctx, _ := gin.CreateTestContext(recorder)
+	ctx.Request = httptest.NewRequestWithContext(
+		context.Background(),
+		http.MethodPost,
+		"/v1/images/generations",
+		nil,
+	)
+
+	m := meta.NewMeta(nil, mode.ImagesGenerations, "qwen-image-2.0-pro", coremodel.ModelConfig{})
+	m.Set(MetaResponseFormat, "b64_json")
+
+	resp := &http.Response{
+		StatusCode: http.StatusOK,
+		Header:     make(http.Header),
+		Body: io.NopCloser(strings.NewReader(`{
+			"request_id": "req-1",
+			"output": {
+				"choices": [
+					{
+						"message": {
+							"content": [
+								{"image": "` + imageServer.URL + `/out.png"}
+							]
+						}
+					}
+				]
+			},
+			"usage": {
+				"image_count": 1
+			}
+		}`)),
+	}
+
+	_, adaptorErr := adaptor.DoResponse(m, nil, ctx, resp)
+	if adaptorErr != nil {
+		t.Fatalf("DoResponse returned error: %v", adaptorErr)
+	}
+
+	var imageResponse relaymodel.ImageResponse
+	if err := json.Unmarshal(recorder.Body.Bytes(), &imageResponse); err != nil {
+		t.Fatalf("failed to unmarshal response: %v", err)
+	}
+
+	if len(imageResponse.Data) != 1 {
+		t.Fatalf("expected 1 image, got %d", len(imageResponse.Data))
+	}
+
+	if imageResponse.Data[0].URL != "" {
+		t.Fatalf(
+			"expected url to be omitted for b64_json response, got %#v",
+			imageResponse.Data[0].URL,
+		)
+	}
+
+	if imageResponse.Data[0].B64Json == "" {
+		t.Fatal("expected b64_json to be set")
+	}
+}
+
 func TestAdaptorDoResponseWanImageUsesImageCountForUsage(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
@@ -2193,6 +2265,81 @@ func TestAliVideoGetUsesStoredRequestMetadataFallback(t *testing.T) {
 	}
 }
 
+func TestAliVideoGetUsesStoredRequestSizeWhenUpstreamRatioMissing(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	aliAdaptor := &Adaptor{}
+	recorder := httptest.NewRecorder()
+	ctx, _ := gin.CreateTestContext(recorder)
+	ctx.Request = httptest.NewRequestWithContext(
+		context.Background(),
+		http.MethodGet,
+		"/v1/video/generations/jobs/task-123",
+		nil,
+	)
+
+	m := meta.NewMeta(
+		nil,
+		mode.VideoGenerationsGetJobs,
+		"happyhorse-1.0-i2v",
+		coremodel.ModelConfig{},
+		meta.WithJobID("task-123"),
+	)
+	m.Channel.ID = 9
+	m.Group = coremodel.GroupCache{ID: "group-1"}
+	m.Token = coremodel.TokenCache{ID: 7}
+
+	store := &aliTestStore{
+		saved: []adaptor.StoreCache{
+			{
+				ID:       coremodel.VideoJobStoreID("task-123"),
+				Metadata: `{"prompt":"Stored horse","seconds":5,"size":"720x1280"}`,
+			},
+		},
+	}
+	resp := &http.Response{
+		StatusCode: http.StatusOK,
+		Header:     make(http.Header),
+		Body: io.NopCloser(strings.NewReader(`{
+			"request_id":"req-1",
+			"output":{
+				"task_id":"task-123",
+				"task_status":"SUCCEEDED",
+				"video_url":"https://example.com/video.mp4"
+			},
+			"usage":{
+				"duration":5,
+				"video_count":1,
+				"SR":720
+			}
+		}`)),
+	}
+
+	result, adaptorErr := aliAdaptor.DoResponse(m, store, ctx, resp)
+	if adaptorErr != nil {
+		t.Fatalf("DoResponse returned error: %v", adaptorErr)
+	}
+
+	if result.UsageContext.Resolution != "720x1280" {
+		t.Fatalf("expected stored usage context resolution, got %#v", result.UsageContext)
+	}
+
+	var job relaymodel.VideoGenerationJob
+	if err := json.Unmarshal(recorder.Body.Bytes(), &job); err != nil {
+		t.Fatalf("failed to unmarshal job: %v", err)
+	}
+
+	if job.Width != 720 || job.Height != 1280 {
+		t.Fatalf("expected stored metadata dimensions, got %#v", job)
+	}
+
+	if len(job.Generations) != 1 ||
+		job.Generations[0].Width != 720 ||
+		job.Generations[0].Height != 1280 {
+		t.Fatalf("expected stored generation dimensions, got %#v", job.Generations)
+	}
+}
+
 func TestAliVideosHandlerConvertsTaskToOpenAIVideo(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
@@ -2244,6 +2391,10 @@ func TestAliVideosHandlerConvertsTaskToOpenAIVideo(t *testing.T) {
 
 	if result.UpstreamID != "task-123" || !result.AsyncUsage {
 		t.Fatalf("unexpected result: %#v", result)
+	}
+
+	if result.UsageContext.Resolution != "1280x720" {
+		t.Fatalf("expected usage context resolution, got %#v", result.UsageContext)
 	}
 
 	if len(store.saved) != 1 {

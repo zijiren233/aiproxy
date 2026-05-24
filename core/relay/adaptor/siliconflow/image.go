@@ -174,6 +174,8 @@ func ImageHandler(
 
 				continue
 			}
+
+			data.URL = ""
 		}
 	}
 
