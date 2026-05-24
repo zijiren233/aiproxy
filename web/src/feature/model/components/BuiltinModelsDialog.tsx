@@ -387,7 +387,7 @@ export function BuiltinModelsDialog({
                   <button
                     type="button"
                     className="flex h-5 w-5 items-center justify-center rounded border border-input bg-background disabled:cursor-not-allowed disabled:opacity-50"
-                    disabled={filteredRows.length === 0}
+                    disabled={selectableVisibleRows.length === 0}
                     onClick={toggleVisibleModels}
                     aria-label={t("model.builtin.selectVisible")}
                   >
