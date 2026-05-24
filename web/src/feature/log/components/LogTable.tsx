@@ -186,33 +186,6 @@ export function LogTable({
                 ),
                 size: 100,
             }),
-            columnHelper.display({
-                id: 'billing_context',
-                header: t('log.billingContext'),
-                cell: ({ row }) => {
-                    const context = row.original.usage_context
-                    const items = [
-                        context?.resolution && `${t('log.resolution')}: ${context.resolution}`,
-                        context?.quality && `${t('log.quality')}: ${context.quality}`,
-                        context?.service_tier && `${t('log.serviceTier')}: ${context.service_tier}`,
-                    ].filter((item): item is string => Boolean(item))
-
-                    if (items.length === 0) {
-                        return <div className="text-sm text-muted-foreground">-</div>
-                    }
-
-                    return (
-                        <div className="flex flex-wrap gap-1">
-                            {items.map((item) => (
-                                <Badge key={item} variant="outline" className="text-xs font-normal">
-                                    {item}
-                                </Badge>
-                            ))}
-                        </div>
-                    )
-                },
-                size: 160,
-            }),
             columnHelper.accessor('code', {
                 header: t('log.state'),
                 cell: (info) => {

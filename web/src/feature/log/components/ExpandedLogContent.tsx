@@ -84,6 +84,7 @@ export const ExpandedLogContent = ({ log }: { log: LogRecord }) => {
 
     const amount = log.amount
     const totalUsedAmount = Number(amount?.used_amount ?? log.used_amount ?? 0)
+    const usageContext = log.usage_context
 
     const formatAmount = (value?: number) => {
         if (value === undefined || value === null) return '-'
@@ -107,7 +108,7 @@ export const ExpandedLogContent = ({ log }: { log: LogRecord }) => {
 
     return (
         <div className="p-4 space-y-4 bg-muted/50 border-t">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6 gap-4">
                 {/* Basic info */}
                 <div className="space-y-2">
                     <h4 className="font-semibold text-sm">{t('log.basicInfo')}</h4>
@@ -182,7 +183,6 @@ export const ExpandedLogContent = ({ log }: { log: LogRecord }) => {
                         </div>
                         <div><span className="font-medium">{t('log.mode')}:</span> {t(`modeType.${log.mode}`, { defaultValue: log.mode?.toString() || '-' })}</div>
                         <div><span className="font-medium">{t('log.statusCode')}:</span> {log.code || '-'}</div>
-                        <div><span className="font-medium">{t('log.serviceTier')}:</span> {log.service_tier || '-'}</div>
                         <div><span className="font-medium">{t('log.user')}:</span> {log.user || '-'}</div>
                         <div><span className="font-medium">{t('log.ip')}:</span> {log.ip || '-'}</div>
                         <div><span className="font-medium">{t('log.endpoint')}:</span> {log.endpoint || '-'}</div>
@@ -219,6 +219,16 @@ export const ExpandedLogContent = ({ log }: { log: LogRecord }) => {
                         <div><span className="font-medium">{t('log.audioOutput')}:</span> {log.usage?.audio_output_tokens?.toLocaleString() || 0}</div>
                         <div><span className="font-medium">{t('log.reasoning')}:</span> {log.usage?.reasoning_tokens?.toLocaleString() || 0}</div>
                         <div><span className="font-medium">{t('log.webSearchCount')}:</span> {log.usage?.web_search_count || 0}</div>
+                    </div>
+                </div>
+
+                {/* Billing context */}
+                <div className="space-y-2">
+                    <h4 className="font-semibold text-sm">{t('log.billingContext')}</h4>
+                    <div className="space-y-1 text-sm">
+                        <div><span className="font-medium">{t('log.resolution')}:</span> {usageContext?.resolution || '-'}</div>
+                        <div><span className="font-medium">{t('log.quality')}:</span> {usageContext?.quality || '-'}</div>
+                        <div><span className="font-medium">{t('log.serviceTier')}:</span> {usageContext?.service_tier || '-'}</div>
                     </div>
                 </div>
 
