@@ -1565,7 +1565,11 @@ func aliVideoSize(width, height int) string {
 
 func aliVideoUsageContext(meta *meta.Meta, usage AliVideoUsage) coremodel.UsageContext {
 	usageContext := coremodel.UsageContext{}
-	if width, height := aliVideoDimensionsWithStoredRequestSize(meta, usage); width > 0 && height > 0 {
+	if width, height := aliVideoDimensionsWithStoredRequestSize(
+		meta,
+		usage,
+	); width > 0 &&
+		height > 0 {
 		usageContext.Resolution = aliVideoSize(width, height)
 	}
 
@@ -1644,6 +1648,7 @@ func storedAliVideoRequestDimensions(meta *meta.Meta) (int, int) {
 	}
 
 	width := meta.GetInt(metaAliVideoWidth)
+
 	height := meta.GetInt(metaAliVideoHeight)
 	if width > 0 && height > 0 {
 		return width, height
