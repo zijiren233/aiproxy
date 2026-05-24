@@ -144,7 +144,9 @@ func validateGeminiNativeVideoResolutionFormat(resolution string) error {
 	case "", "720p", "1080p", "4k":
 		return nil
 	default:
-		return NewBadRequestParamError(fmt.Sprintf("invalid gemini video resolution `%s`", resolution))
+		return NewBadRequestParamError(
+			fmt.Sprintf("invalid gemini video resolution `%s`", resolution),
+		)
 	}
 }
 

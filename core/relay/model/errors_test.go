@@ -1,3 +1,4 @@
+//nolint:testpackage
 package model
 
 import (
@@ -33,7 +34,8 @@ func TestWrapperErrorWithMessageKeepsOpenAIVideoError(t *testing.T) {
 
 func mustMarshalError(t *testing.T, err interface {
 	MarshalJSON() ([]byte, error)
-}) []byte {
+},
+) []byte {
 	t.Helper()
 
 	data, marshalErr := err.MarshalJSON()
