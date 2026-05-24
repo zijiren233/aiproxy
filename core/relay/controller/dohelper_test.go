@@ -159,6 +159,25 @@ func TestUpdateUsageMetricsIncludesAsyncUsage(t *testing.T) {
 	require.NotContains(t, entry.Data, "async_usage_status")
 }
 
+func TestUpdateUsageMetricsIncludesUsageContext(t *testing.T) {
+	entry := logrus.NewEntry(logrus.New())
+	entry.Data = logrus.Fields{}
+
+	updateUsageMetrics(adaptor.DoResponseResult{
+		UsageContext: model.UsageContext{
+			Resolution:       "1280x720",
+			NativeResolution: "720p",
+			Quality:          "hd",
+			ServiceTier:      "priority",
+		},
+	}, entry)
+
+	require.Equal(t, "1280x720", entry.Data["resolution"])
+	require.Equal(t, "720p", entry.Data["native_resolution"])
+	require.Equal(t, "hd", entry.Data["quality"])
+	require.Equal(t, "priority", entry.Data["service_tier"])
+}
+
 func TestPrepareAndDoRequestConvertRequestReturnsAdaptorError(t *testing.T) {
 	c, relayMeta := newTestRelayContext()
 	expectedErr := relaymodel.WrapperErrorWithMessage(

@@ -449,6 +449,23 @@ func updateUsageMetrics(result adaptor.DoResponseResult, log *log.Entry) {
 		usage.TotalTokens = usage.InputTokens + usage.OutputTokens
 	}
 
+	usageContext := result.UsageContext
+	if usageContext.Resolution != "" {
+		log.Data["resolution"] = usageContext.Resolution
+	}
+
+	if usageContext.NativeResolution != "" {
+		log.Data["native_resolution"] = usageContext.NativeResolution
+	}
+
+	if usageContext.Quality != "" {
+		log.Data["quality"] = usageContext.Quality
+	}
+
+	if usageContext.ServiceTier != "" {
+		log.Data["service_tier"] = usageContext.ServiceTier
+	}
+
 	if usage.InputTokens > 0 {
 		log.Data["t_input"] = usage.InputTokens
 	}

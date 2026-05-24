@@ -554,7 +554,10 @@ func VideoGenerationJobStatusHandler(
 	c.Writer.Header().Set("Content-Length", strconv.Itoa(len(data)))
 	_, _ = c.Writer.Write(data)
 
-	return adaptor.DoResponseResult{}, nil
+	return adaptor.DoResponseResult{
+		UpstreamID:   job.ID,
+		UsageContext: siliconFlowVideoUsageContext(meta),
+	}, nil
 }
 
 func VideosStatusHandler(
@@ -608,7 +611,10 @@ func VideosStatusHandler(
 	c.Writer.Header().Set("Content-Length", strconv.Itoa(len(data)))
 	_, _ = c.Writer.Write(data)
 
-	return adaptor.DoResponseResult{UpstreamID: video.ID}, nil
+	return adaptor.DoResponseResult{
+		UpstreamID:   video.ID,
+		UsageContext: siliconFlowVideoUsageContext(meta),
+	}, nil
 }
 
 func VideoGenerationJobContentHandler(

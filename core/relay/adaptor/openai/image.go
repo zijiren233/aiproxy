@@ -200,6 +200,8 @@ func ImagesHandler(
 				log.Warnf("convert image url to b64_json failed, keep original url: %v", err)
 				continue
 			}
+
+			data.URL = ""
 		}
 	}
 

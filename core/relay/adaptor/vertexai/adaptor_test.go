@@ -340,7 +340,7 @@ func TestConvertRequestGeminiImageUsesGeminiInnerAdaptor(t *testing.T) {
 				"contents":[{"role":"user","parts":[{"text":"draw a cat"}]}],
 				"generationConfig":{
 					"responseModalities":["IMAGE"],
-					"imageConfig":{"aspectRatio":"1:1","imageSize":"1k"}
+					"imageConfig":{"aspectRatio":"1:1","imageSize":"1K"}
 				}
 			}`,
 		string(body),

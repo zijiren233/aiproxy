@@ -60,7 +60,7 @@ func TestConvertImageRequestMapsOpenAIImageToGemini(t *testing.T) {
 		geminiReq.GenerationConfig.ResponseModalities,
 	)
 	assert.Equal(t, "3:2", geminiReq.GenerationConfig.ImageConfig.AspectRatio)
-	assert.Equal(t, "2k", geminiReq.GenerationConfig.ImageConfig.ImageSize)
+	assert.Equal(t, "2K", geminiReq.GenerationConfig.ImageConfig.ImageSize)
 }
 
 func TestConvertImageRequestMapsSmallDimensionsToImageSize(t *testing.T) {
@@ -108,13 +108,13 @@ func TestConvertImageRequestNormalizesDimensionDelimiters(t *testing.T) {
 			name:            "asterisk",
 			size:            "1024*1024",
 			wantAspectRatio: "1:1",
-			wantImageSize:   "1k",
+			wantImageSize:   "1K",
 		},
 		{
 			name:            "multiplication sign",
 			size:            "1536×1024",
 			wantAspectRatio: "3:2",
-			wantImageSize:   "2k",
+			wantImageSize:   "2K",
 		},
 	}
 
@@ -162,15 +162,15 @@ func TestConvertImageRequestMapsSquareDimensionsToGeminiImageSize(t *testing.T) 
 	}{
 		{
 			size:          "1024x1024",
-			wantImageSize: "1k",
+			wantImageSize: "1K",
 		},
 		{
 			size:          "2048x2048",
-			wantImageSize: "2k",
+			wantImageSize: "2K",
 		},
 		{
 			size:          "4096x4096",
-			wantImageSize: "4k",
+			wantImageSize: "4K",
 		},
 	}
 
@@ -266,7 +266,7 @@ func TestConvertImageEditRequestMapsMultipartToGemini(t *testing.T) {
 	assert.Equal(t, "image/png", geminiReq.Contents[0].Parts[0].InlineData.MimeType)
 	assert.Equal(t, "Add a hat.", geminiReq.Contents[0].Parts[1].Text)
 	assert.Equal(t, "2:3", geminiReq.GenerationConfig.ImageConfig.AspectRatio)
-	assert.Equal(t, "2k", geminiReq.GenerationConfig.ImageConfig.ImageSize)
+	assert.Equal(t, "2K", geminiReq.GenerationConfig.ImageConfig.ImageSize)
 }
 
 func TestConvertImageEditRequestAcceptsImageArrayFiles(t *testing.T) {
@@ -455,7 +455,7 @@ func TestConvertImageRequestMapsImageSizePreset(t *testing.T) {
 
 	err = json.Unmarshal(bodyBytes, &geminiReq)
 	assert.NoError(t, err)
-	assert.Equal(t, "2k", geminiReq.GenerationConfig.ImageConfig.ImageSize)
+	assert.Equal(t, "2K", geminiReq.GenerationConfig.ImageConfig.ImageSize)
 	assert.Empty(t, geminiReq.GenerationConfig.ImageConfig.AspectRatio)
 }
 

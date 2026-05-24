@@ -347,8 +347,14 @@ func absFloat64(value float64) float64 {
 func geminiImageSizeFromSize(size string) string {
 	size = normalizeGeminiImageSize(size)
 	switch size {
-	case "512", "1k", "2k", "4k":
-		return size
+	case "512":
+		return "512"
+	case "1k":
+		return "1K"
+	case "2k":
+		return "2K"
+	case "4k":
+		return "4K"
 	}
 
 	width, height, ok := relaymodel.ParseVideoDimensions(size)
@@ -359,11 +365,11 @@ func geminiImageSizeFromSize(size string) string {
 	longSide := max(width, height)
 	switch {
 	case longSide >= 3500:
-		return "4k"
+		return "4K"
 	case longSide >= 1500:
-		return "2k"
+		return "2K"
 	case longSide >= 900:
-		return "1k"
+		return "1K"
 	default:
 		return "512"
 	}
@@ -659,7 +665,7 @@ func geminiImageOutputTokensFromContext(meta *meta.Meta) int64 {
 		return gemini25FlashImageDefaultOutputTokens
 	}
 
-	if geminiImageSizeFromSize(meta.RequestUsageContext.Resolution) == "4k" {
+	if geminiImageSizeFromSize(meta.RequestUsageContext.Resolution) == "4K" {
 		return gemini3Image4KOutputTokens
 	}
 

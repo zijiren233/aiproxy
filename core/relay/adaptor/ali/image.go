@@ -996,9 +996,17 @@ func appendAliImageData(
 	}
 
 	imageResponse.Data = append(imageResponse.Data, &relaymodel.ImageData{
-		URL:     url,
+		URL:     imageDataURLForResponseFormat(url, b64Json, responseFormat),
 		B64Json: b64Json,
 	})
+}
+
+func imageDataURLForResponseFormat(url, b64JSON, responseFormat string) string {
+	if responseFormat == "b64_json" && b64JSON != "" {
+		return ""
+	}
+
+	return url
 }
 
 func responseQwenImage2OpenAI(
@@ -1026,7 +1034,7 @@ func responseQwenImage2OpenAI(
 		}
 
 		imageResponse.Data = append(imageResponse.Data, &relaymodel.ImageData{
-			URL:           url,
+			URL:           imageDataURLForResponseFormat(url, b64Json, responseFormat),
 			B64Json:       b64Json,
 			RevisedPrompt: revisedPrompt,
 		})
