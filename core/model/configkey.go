@@ -1,9 +1,6 @@
 package model
 
-import (
-	"reflect"
-	"strings"
-)
+import "reflect"
 
 type ModelConfigKey string
 
@@ -15,30 +12,9 @@ const (
 	ModelConfigToolChoiceKey       ModelConfigKey = "tool_choice"
 	ModelConfigSupportFormatsKey   ModelConfigKey = "support_formats"
 	ModelConfigSupportVoicesKey    ModelConfigKey = "support_voices"
-	ModelConfigImageResolutions    ModelConfigKey = "image_resolutions"
-	ModelConfigImageQualitys       ModelConfigKey = "image_qualitys"
-	ModelConfigVideoResolutions    ModelConfigKey = "video_resolutions"
 )
 
 type ModelConfigOption func(config map[ModelConfigKey]any)
-
-func WithModelConfigImageResolutions(resolutions ...string) ModelConfigOption {
-	for _, resolution := range resolutions {
-		if !strings.Contains(resolution, "x") {
-			panic("image resolution format error")
-		}
-	}
-
-	return func(config map[ModelConfigKey]any) {
-		config[ModelConfigImageResolutions] = resolutions
-	}
-}
-
-func WithModelConfigImageQualitys(qualitys ...string) ModelConfigOption {
-	return func(config map[ModelConfigKey]any) {
-		config[ModelConfigImageQualitys] = qualitys
-	}
-}
 
 func WithModelConfigMaxContextTokens(maxContextTokens int) ModelConfigOption {
 	return func(config map[ModelConfigKey]any) {

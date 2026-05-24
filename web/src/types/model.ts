@@ -9,8 +9,6 @@ export interface ModelConfigDetail {
     limited_time_free?: boolean
     support_formats?: string[]
     support_voices?: string[]
-    image_resolutions?: string[]
-    video_resolutions?: string[]
     [key: string]: unknown
 }
 
@@ -81,6 +79,7 @@ export interface ModelConfig {
     max_image_generation_count?: number
     max_video_generation_seconds?: number
     max_video_generation_count?: number
+    allowed_resolutions?: string[]
     request_body_storage_max_size?: number
     response_body_storage_max_size?: number
     summary_service_tier?: boolean
@@ -187,6 +186,7 @@ export interface ModelCreateRequest {
     max_image_generation_count?: number
     max_video_generation_seconds?: number
     max_video_generation_count?: number
+    allowed_resolutions?: string[]
     request_body_storage_max_size?: number
     response_body_storage_max_size?: number
     summary_service_tier?: boolean
