@@ -60,7 +60,11 @@ func supportedResolutionMatches(
 	}
 
 	supportedExact := normalizeSupportedResolutionValues(supported)
-	if len(supportedExact) == 0 || slices.Contains(supportedExact, resolution) {
+	if len(supportedExact) == 0 {
+		return false
+	}
+
+	if slices.Contains(supportedExact, resolution) {
 		return true
 	}
 

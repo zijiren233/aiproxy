@@ -932,6 +932,35 @@ func TestGetVideoGenerationJobRequestUsageMatchesDimensionToTier(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestGetVideoGenerationJobRequestUsageRejectsAllBlankAllowedResolutions(t *testing.T) {
+	t.Parallel()
+
+	gin.SetMode(gin.TestMode)
+
+	body := `{
+		"model":"video-model",
+		"prompt":"A city street",
+		"size":"1280x720",
+		"seconds":5
+	}`
+	req := httptest.NewRequestWithContext(
+		t.Context(),
+		http.MethodPost,
+		"/v1/videos",
+		bytes.NewBufferString(body),
+	)
+	req.Header.Set("Content-Type", "application/json")
+
+	ctx, _ := gin.CreateTestContext(httptest.NewRecorder())
+	ctx.Request = req
+
+	_, err := GetVideoGenerationJobRequestUsage(ctx, model.ModelConfig{
+		AllowedResolutions: []string{" ", "\t"},
+	})
+	require.Error(t, err)
+	require.Equal(t, "unsupported video resolution `1280x720`", err.Error())
+}
+
 func TestGetVideoGenerationJobRequestUsageMatchesPortraitDimensionToTier(t *testing.T) {
 	t.Parallel()
 
