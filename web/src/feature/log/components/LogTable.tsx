@@ -195,7 +195,7 @@ export function LogTable({
                         context?.resolution && `${t('log.resolution')}: ${context.resolution}`,
                         context?.quality && `${t('log.quality')}: ${context.quality}`,
                         context?.service_tier && `${t('log.serviceTier')}: ${context.service_tier}`,
-                    ].filter(Boolean)
+                    ].filter((item): item is string => Boolean(item))
 
                     if (items.length === 0) {
                         return <div className="text-sm text-muted-foreground">-</div>
