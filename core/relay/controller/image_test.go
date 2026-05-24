@@ -5,6 +5,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -215,6 +216,109 @@ func TestValidateImagesRequestMatchesGeminiStyleImageResolution(t *testing.T) {
 		AllowedResolutions: []string{"1k"},
 	})
 	require.NoError(t, err)
+}
+
+func TestValidateImagesRequestResolutionMatrix(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	tests := []struct {
+		name       string
+		size       string
+		allowed    []string
+		disable    bool
+		wantErr    bool
+		wantErrMsg string
+	}{
+		{
+			name:    "exact square",
+			size:    "1024x1024",
+			allowed: []string{"1024x1024"},
+		},
+		{
+			name:    "asterisk allowed matches x request",
+			size:    "1024x1024",
+			allowed: []string{"1024*1024"},
+		},
+		{
+			name:    "gemini 1k allowed fuzzy matches openai dimensions",
+			size:    "1024x1024",
+			allowed: []string{"1k"},
+		},
+		{
+			name:    "gemini 2k allowed fuzzy matches openai landscape dimensions",
+			size:    "1536x1024",
+			allowed: []string{"2k"},
+		},
+		{
+			name:    "gemini 2k allowed fuzzy matches openai portrait dimensions",
+			size:    "1024x1536",
+			allowed: []string{"2k"},
+		},
+		{
+			name:       "disabled fuzzy rejects gemini size alias",
+			size:       "1024x1024",
+			allowed:    []string{"1k"},
+			disable:    true,
+			wantErr:    true,
+			wantErrMsg: "unsupported image resolution `1024x1024`",
+		},
+		{
+			name:       "aspect ratio allowed is not a resolution alias",
+			size:       "1024x1024",
+			allowed:    []string{"1:1"},
+			wantErr:    true,
+			wantErrMsg: "unsupported image resolution `1024x1024`",
+		},
+		{
+			name:       "invalid openai size format",
+			size:       "1k",
+			allowed:    []string{"1k"},
+			wantErr:    true,
+			wantErrMsg: "invalid image resolution `1k`",
+		},
+		{
+			name:    "empty allowed means unrestricted",
+			size:    "512x512",
+			allowed: nil,
+		},
+		{
+			name:       "blank allowed means unsupported",
+			size:       "512x512",
+			allowed:    []string{" ", "\t"},
+			wantErr:    true,
+			wantErrMsg: "unsupported image resolution `512x512`",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequestWithContext(
+				context.Background(),
+				http.MethodPost,
+				"/v1/images/generations",
+				strings.NewReader(
+					`{"model":"image-model","prompt":"A city street","size":`+
+						strconv.Quote(tt.size)+`}`,
+				),
+			)
+			req.Header.Set("Content-Type", "application/json")
+
+			c, _ := gin.CreateTestContext(httptest.NewRecorder())
+			c.Request = req
+
+			err := ValidateImagesRequest(c, model.ModelConfig{
+				AllowedResolutions:          tt.allowed,
+				DisableResolutionFuzzyMatch: tt.disable,
+			})
+			if tt.wantErr {
+				require.Error(t, err)
+				require.Equal(t, tt.wantErrMsg, err.Error())
+				return
+			}
+
+			require.NoError(t, err)
+		})
+	}
 }
 
 func TestValidateImagesRequestDisableFuzzyRejectsGeminiStyleImageResolution(t *testing.T) {

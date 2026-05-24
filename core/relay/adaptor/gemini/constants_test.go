@@ -97,9 +97,9 @@ func TestGeminiImagePriceUsesSeparateImageInputTokens(t *testing.T) {
 		model.Usage{
 			InputTokens:       1000,
 			ImageInputTokens:  400,
-			OutputTokens:      1290,
-			ImageOutputTokens: 1290,
-			TotalTokens:       2290,
+			OutputTokens:      1120,
+			ImageOutputTokens: 1120,
+			TotalTokens:       2120,
 		},
 		model.UsageContext{},
 		geminiModelPriceForTest(t, "gemini-3-pro-image-preview"),
@@ -113,8 +113,8 @@ func TestGeminiImagePriceUsesSeparateImageInputTokens(t *testing.T) {
 		t.Fatalf("expected image input amount 0.0008, got %#v", amount)
 	}
 
-	if amount.UsedAmount != 0.136 {
-		t.Fatalf("expected 0.136 amount, got %#v", amount)
+	if amount.UsedAmount != 0.1364 {
+		t.Fatalf("expected 0.1364 amount, got %#v", amount)
 	}
 }
 

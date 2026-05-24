@@ -81,6 +81,7 @@ const MANAGED_MODEL_KEYS = new Set([
     'config',
     'owner',
     'type',
+    'exclude_from_tests',
     'rpm',
     'tpm',
     'retry_times',
@@ -250,6 +251,7 @@ export function ModelForm({
             },
             owner: defaultValues.owner ?? '',
             type: defaultValues.type || 1,
+            exclude_from_tests: defaultValues.exclude_from_tests ?? false,
             rpm: defaultValues.rpm,
             tpm: defaultValues.tpm,
             retry_times: defaultValues.retry_times,
@@ -514,81 +516,6 @@ export function ModelForm({
             }
         }
 
-        // Prepare plugin data - only include enabled plugins with their configured values
-        const pluginData = {}
-
-        // Cache plugin - 如果开启，必须有 enable 字段，其他字段可选
-        if (data.plugin?.cache?.enable) {
-            Object.assign(pluginData, {
-                cache: {
-                    enable: true,
-                    ...(data.plugin.cache.ttl && { ttl: data.plugin.cache.ttl }),
-                    ...(data.plugin.cache.item_max_size && { item_max_size: data.plugin.cache.item_max_size }),
-                    ...(data.plugin.cache.add_cache_hit_header !== undefined && { add_cache_hit_header: data.plugin.cache.add_cache_hit_header }),
-                    ...(data.plugin.cache.cache_hit_header && { cache_hit_header: data.plugin.cache.cache_hit_header }),
-                }
-            })
-        }
-
-        if (data.plugin?.cachefollow?.enable) {
-            Object.assign(pluginData, {
-                cachefollow: {
-                    enable: true,
-                    ...(data.plugin.cachefollow.enable_generic_follow !== undefined && {
-                        enable_generic_follow: data.plugin.cachefollow.enable_generic_follow,
-                    }),
-                    ...(data.plugin.cachefollow.followed_channel_ttl_seconds !== undefined && {
-                        followed_channel_ttl_seconds: data.plugin.cachefollow.followed_channel_ttl_seconds,
-                    }),
-                    ...(data.plugin.cachefollow.recent_channel_update_debounce_seconds !== undefined && {
-                        recent_channel_update_debounce_seconds: data.plugin.cachefollow.recent_channel_update_debounce_seconds,
-                    }),
-                }
-            })
-        }
-
-        // Web search plugin - 如果开启，必须有 enable 和 search_from，其他字段可选
-        if (data.plugin?.["web-search"]?.enable && data.plugin["web-search"].search_from && data.plugin["web-search"].search_from.length > 0) {
-            // Clean up search engines - remove empty spec objects
-            const cleanedSearchFrom = data.plugin["web-search"].search_from.map(engine => ({
-                type: engine.type,
-                ...(engine.max_results && { max_results: engine.max_results }),
-                ...(engine.spec && Object.keys(engine.spec).some(key => (engine.spec as Record<string, unknown>)[key]) && { spec: engine.spec })
-            }))
-
-            Object.assign(pluginData, {
-                "web-search": {
-                    enable: true,
-                    search_from: cleanedSearchFrom,
-                    ...(data.plugin["web-search"].force_search !== undefined && { force_search: data.plugin["web-search"].force_search }),
-                    ...(data.plugin["web-search"].max_results && { max_results: data.plugin["web-search"].max_results }),
-                    ...(data.plugin["web-search"].need_reference !== undefined && { need_reference: data.plugin["web-search"].need_reference }),
-                    ...(data.plugin["web-search"].reference_location && { reference_location: data.plugin["web-search"].reference_location }),
-                    ...(data.plugin["web-search"].reference_format && { reference_format: data.plugin["web-search"].reference_format }),
-                    ...(data.plugin["web-search"].default_language && { default_language: data.plugin["web-search"].default_language }),
-                    ...(data.plugin["web-search"].prompt_template && { prompt_template: data.plugin["web-search"].prompt_template }),
-                }
-            })
-        }
-
-        // Think split plugin - 如果开启，必须有 enable 字段
-        if (data.plugin?.["think-split"]?.enable) {
-            Object.assign(pluginData, {
-                "think-split": {
-                    enable: true
-                }
-            })
-        }
-
-        // Stream fake plugin - 如果开启，必须有 enable 字段
-        if (data.plugin?.["stream-fake"]?.enable) {
-            Object.assign(pluginData, {
-                "stream-fake": {
-                    enable: true
-                }
-            })
-        }
-
         // Clean price data - remove zero/undefined values
         const cleanPrice = (p: ModelPrice | undefined) => {
             if (!p) return undefined
@@ -776,6 +703,7 @@ export function ModelForm({
             ...(cleanedConfig && { config: cleanedConfig }),
             owner: data.owner ?? '',
             type: Number(data.type),
+            ...(data.exclude_from_tests !== undefined && { exclude_from_tests: data.exclude_from_tests }),
             ...(data.rpm !== undefined && { rpm: Number(data.rpm) }),
             ...(data.tpm !== undefined && { tpm: Number(data.tpm) }),
             ...(data.retry_times !== undefined && { retry_times: Number(data.retry_times) }),
@@ -812,39 +740,7 @@ export function ModelForm({
             // For create mode, include the model name
             createModel({
                 model: data.model,
-                ...(cleanedConfig && { config: cleanedConfig }),
-                owner: data.owner ?? '',
-                type: Number(data.type),
-                ...(data.rpm !== undefined && { rpm: Number(data.rpm) }),
-                ...(data.tpm !== undefined && { tpm: Number(data.tpm) }),
-                ...(data.retry_times !== undefined && { retry_times: Number(data.retry_times) }),
-                ...(mergedTimeoutConfig && { timeout_config: mergedTimeoutConfig }),
-                ...(data.force_save_detail !== undefined && { force_save_detail: data.force_save_detail }),
-                ...(supportImageGenerationCountLimit && data.max_image_generation_count !== undefined && {
-                    max_image_generation_count: Number(data.max_image_generation_count),
-                }),
-                ...(configFieldVisibility.showResolutions && data.allowed_resolutions !== undefined && {
-                    allowed_resolutions: data.allowed_resolutions,
-                }),
-                ...(supportVideoGenerationSecondsLimit && data.max_video_generation_seconds !== undefined && {
-                    max_video_generation_seconds: Number(data.max_video_generation_seconds),
-                }),
-                ...(supportVideoGenerationCountLimit && data.max_video_generation_count !== undefined && {
-                    max_video_generation_count: Number(data.max_video_generation_count),
-                }),
-                ...(data.request_body_storage_max_size !== undefined && {
-                    request_body_storage_max_size: Number(data.request_body_storage_max_size),
-                }),
-                ...(data.response_body_storage_max_size !== undefined && {
-                    response_body_storage_max_size: Number(data.response_body_storage_max_size),
-                }),
-                ...(data.summary_service_tier !== undefined && { summary_service_tier: data.summary_service_tier }),
-                ...(data.summary_claude_long_context !== undefined && { summary_claude_long_context: data.summary_claude_long_context }),
-                ...(supportResolutionFuzzyMatchConfig && data.disable_resolution_fuzzy_match !== undefined && {
-                    disable_resolution_fuzzy_match: data.disable_resolution_fuzzy_match,
-                }),
-                ...(priceData && { price: priceData }),
-                ...(Object.keys(pluginData).length > 0 && { plugin: pluginData as Plugin })
+                ...formData,
             }, {
                 onSuccess: () => {
                     // Reset form
@@ -1175,6 +1071,25 @@ export function ModelForm({
                                 <div className="space-y-1">
                                     <FormLabel>{t("model.dialog.forceSaveDetail")}</FormLabel>
                                     <FormDescription>{t("model.dialog.forceSaveDetailDescription")}</FormDescription>
+                                </div>
+                                <FormControl>
+                                    <Switch
+                                        checked={field.value}
+                                        onCheckedChange={field.onChange}
+                                    />
+                                </FormControl>
+                            </FormItem>
+                        )}
+                    />
+
+                    <FormField
+                        control={form.control}
+                        name="exclude_from_tests"
+                        render={({ field }) => (
+                            <FormItem className="flex flex-row items-center justify-between py-2">
+                                <div className="space-y-1">
+                                    <FormLabel>{t("model.dialog.excludeFromTests")}</FormLabel>
+                                    <FormDescription>{t("model.dialog.excludeFromTestsDescription")}</FormDescription>
                                 </div>
                                 <FormControl>
                                     <Switch

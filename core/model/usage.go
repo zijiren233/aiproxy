@@ -94,9 +94,9 @@ func serviceTierOverlap(serviceTier1, serviceTier2 string) bool {
 	return normalized1 == normalized2
 }
 
-func conditionValueOverlap(values1, values2 []string) bool {
-	normalized1 := normalizeConditionValues(values1)
-	normalized2 := normalizeConditionValues(values2)
+func resolutionConditionValuesOverlap(values1, values2 []string) bool {
+	normalized1 := normalizeResolutionConditionValues(values1)
+	normalized2 := normalizeResolutionConditionValues(values2)
 
 	if len(normalized1) == 0 || len(normalized2) == 0 {
 		return true
@@ -111,21 +111,95 @@ func conditionValueOverlap(values1, values2 []string) bool {
 	return false
 }
 
-func conditionValueMatches(conditionValues []string, value string) bool {
-	normalizedConditionValues := normalizeConditionValues(conditionValues)
+func qualityConditionValuesOverlap(values1, values2 []string) bool {
+	normalized1 := normalizeQualityConditionValues(values1)
+	normalized2 := normalizeQualityConditionValues(values2)
+
+	if len(normalized1) == 0 || len(normalized2) == 0 {
+		return true
+	}
+
+	for _, value1 := range normalized1 {
+		if slices.Contains(normalized2, value1) {
+			return true
+		}
+	}
+
+	return false
+}
+
+func priceConditionSpecificity(condition PriceCondition) int {
+	specificity := 0
+
+	if normalizeServiceTier(condition.ServiceTier) != "" {
+		specificity++
+	}
+
+	if len(normalizeResolutionConditionValues(condition.Resolution)) > 0 {
+		specificity++
+	}
+
+	if len(normalizeQualityConditionValues(condition.Quality)) > 0 {
+		specificity++
+	}
+
+	if condition.InputTokenMin > 0 {
+		specificity++
+	}
+
+	if condition.InputTokenMax > 0 {
+		specificity++
+	}
+
+	if condition.OutputTokenMin > 0 {
+		specificity++
+	}
+
+	if condition.OutputTokenMax > 0 {
+		specificity++
+	}
+
+	if condition.StartTime > 0 {
+		specificity++
+	}
+
+	if condition.EndTime > 0 {
+		specificity++
+	}
+
+	return specificity
+}
+
+func priceConditionsHaveDifferentSpecificity(condition1, condition2 PriceCondition) bool {
+	return priceConditionSpecificity(condition1) != priceConditionSpecificity(condition2)
+}
+
+func resolutionConditionValueMatches(conditionValues []string, value string) bool {
+	normalizedConditionValues := normalizeResolutionConditionValues(conditionValues)
 	if len(normalizedConditionValues) == 0 {
 		return true
 	}
 
-	normalizedValue := normalizeConditionValue(value)
+	normalizedValue := normalizeResolutionConditionValue(value)
 
 	return slices.Contains(normalizedConditionValues, normalizedValue)
 }
 
-func normalizeConditionValues(values []string) []string {
+func qualityConditionValueMatches(conditionValues []string, value string) bool {
+	normalizedConditionValues := normalizeQualityConditionValues(conditionValues)
+	if len(normalizedConditionValues) == 0 {
+		return true
+	}
+
+	normalizedValue := normalizeQualityConditionValue(value)
+
+	return slices.Contains(normalizedConditionValues, normalizedValue)
+}
+
+func normalizeResolutionConditionValues(values []string) []string {
 	normalized := make([]string, 0, len(values))
 	for _, value := range values {
-		value = normalizeConditionValue(value)
+		value = normalizeResolutionConditionValue(value)
 		if value != "" {
 			normalized = append(normalized, value)
 		}
@@ -134,20 +208,39 @@ func normalizeConditionValues(values []string) []string {
 	return normalized
 }
 
-func normalizeConditionValue(value string) string {
+func normalizeResolutionConditionValue(value string) string {
 	value = strings.TrimSpace(strings.ToLower(value))
+	value = strings.ReplaceAll(value, "×", "x")
 	value = strings.ReplaceAll(value, "*", "x")
 
 	return strings.ReplaceAll(value, " ", "")
 }
 
+func normalizeQualityConditionValues(values []string) []string {
+	normalized := make([]string, 0, len(values))
+	for _, value := range values {
+		value = normalizeQualityConditionValue(value)
+		if value != "" {
+			normalized = append(normalized, value)
+		}
+	}
+
+	return normalized
+}
+
+func normalizeQualityConditionValue(value string) string {
+	value = strings.TrimSpace(strings.ToLower(value))
+
+	return strings.ReplaceAll(value, " ", "")
+}
+
 func fuzzyResolutionValueMatches(conditionValues []string, value string) bool {
-	normalizedConditionValues := normalizeResolutionConditionValues(conditionValues)
+	normalizedConditionValues := normalizeFuzzyResolutionConditionValues(conditionValues)
 	if len(normalizedConditionValues) == 0 {
 		return true
 	}
 
-	for _, normalizedValue := range normalizeResolutionConditionValue(value) {
+	for _, normalizedValue := range normalizeFuzzyResolutionConditionValue(value) {
 		if slices.Contains(normalizedConditionValues, normalizedValue) {
 			return true
 		}
@@ -156,17 +249,17 @@ func fuzzyResolutionValueMatches(conditionValues []string, value string) bool {
 	return false
 }
 
-func normalizeResolutionConditionValues(values []string) []string {
+func normalizeFuzzyResolutionConditionValues(values []string) []string {
 	normalized := make([]string, 0, len(values))
 	for _, value := range values {
-		normalized = append(normalized, normalizeResolutionConditionValue(value)...)
+		normalized = append(normalized, normalizeFuzzyResolutionConditionValue(value)...)
 	}
 
 	return slices.Compact(normalized)
 }
 
-func normalizeResolutionConditionValue(value string) []string {
-	normalized := normalizeConditionValue(value)
+func normalizeFuzzyResolutionConditionValue(value string) []string {
+	normalized := normalizeResolutionConditionValue(value)
 	if normalized == "" {
 		return nil
 	}
@@ -270,15 +363,20 @@ func (p *Price) ValidateConditionalPrices() error {
 			}
 		}
 
-		// Check for overlaps with other conditions
+		// Same-specificity overlapping conditions are ambiguous because runtime
+		// selection keeps the first match when specificity ties.
 		for j := i + 1; j < len(p.ConditionalPrices); j++ {
 			otherCondition := p.ConditionalPrices[j].Condition
+			if priceConditionsHaveDifferentSpecificity(condition, otherCondition) {
+				continue
+			}
+
 			if !serviceTierOverlap(condition.ServiceTier, otherCondition.ServiceTier) {
 				continue
 			}
 
-			if !conditionValueOverlap(condition.Resolution, otherCondition.Resolution) ||
-				!conditionValueOverlap(condition.Quality, otherCondition.Quality) {
+			if !resolutionConditionValuesOverlap(condition.Resolution, otherCondition.Resolution) ||
+				!qualityConditionValuesOverlap(condition.Quality, otherCondition.Quality) {
 				continue
 			}
 
@@ -307,11 +405,6 @@ func (p *Price) ValidateConditionalPrices() error {
 				}
 			}
 		}
-	}
-
-	// Check if conditions are sorted by input token ranges (optional ordering check)
-	if err := p.validateConditionalPriceOrdering(); err != nil {
-		return err
 	}
 
 	return nil
@@ -377,62 +470,6 @@ func hasTimeRangeOverlap(start1, end1, start2, end2 int64) bool {
 	return actualEnd1 > actualStart2 && actualStart1 < actualEnd2
 }
 
-// validateConditionalPriceOrdering checks if conditional prices are properly ordered
-func (p *Price) validateConditionalPriceOrdering() error {
-	if len(p.ConditionalPrices) <= 1 {
-		return nil
-	}
-
-	for i := range len(p.ConditionalPrices) - 1 {
-		current := p.ConditionalPrices[i].Condition
-
-		next := p.ConditionalPrices[i+1].Condition
-		if !serviceTierOverlap(current.ServiceTier, next.ServiceTier) {
-			continue
-		}
-
-		if !conditionValueOverlap(current.Resolution, next.Resolution) ||
-			!conditionValueOverlap(current.Quality, next.Quality) {
-			continue
-		}
-
-		// Check if input token ranges are in ascending order
-		// Compare the starting points of ranges
-		currentInputMin := current.InputTokenMin
-		nextInputMin := next.InputTokenMin
-
-		// If current range starts after next range, it's improperly ordered
-		if currentInputMin > nextInputMin {
-			return fmt.Errorf("conditional prices %d and %d are not properly ordered: "+
-				"current min (%d) should not be greater than next min (%d)",
-				i, i+1, currentInputMin, nextInputMin)
-		}
-
-		// If they have the same starting point, check the ending points
-		if currentInputMin == nextInputMin {
-			currentInputMax := current.InputTokenMax
-			nextInputMax := next.InputTokenMax
-
-			// Handle unbounded ranges (0 means unbounded)
-			if currentInputMax == 0 {
-				currentInputMax = math.MaxInt64
-			}
-
-			if nextInputMax == 0 {
-				nextInputMax = math.MaxInt64
-			}
-
-			if currentInputMax > nextInputMax {
-				return fmt.Errorf("conditional prices %d and %d are not properly ordered: "+
-					"ranges with same min should be ordered by max",
-					i, i+1)
-			}
-		}
-	}
-
-	return nil
-}
-
 func (p *Price) SelectConditionalPrice(
 	usage Usage,
 	usageContext UsageContext,
@@ -466,6 +503,9 @@ func (p *Price) selectConditionalPrice(
 	outputTokens := int64(usage.OutputTokens)
 	usageServiceTier := normalizeServiceTier(usageContext.ServiceTier)
 	currentTime := time.Now().Unix()
+	bestSpecificity := -1
+	bestProtocolResolutionExact := false
+	selectedPrice := Price{}
 
 	for _, conditionalPrice := range p.ConditionalPrices {
 		condition := conditionalPrice.Condition
@@ -506,7 +546,19 @@ func (p *Price) selectConditionalPrice(
 			continue
 		}
 
-		return conditionalPrice.Price
+		specificity := priceConditionSpecificity(condition)
+
+		protocolResolutionExact := usageContext.protocolResolutionExactlyMatches(condition)
+		if specificity > bestSpecificity ||
+			(specificity == bestSpecificity && protocolResolutionExact && !bestProtocolResolutionExact) {
+			bestSpecificity = specificity
+			bestProtocolResolutionExact = protocolResolutionExact
+			selectedPrice = conditionalPrice.Price
+		}
+	}
+
+	if bestSpecificity >= 0 {
+		return selectedPrice
 	}
 
 	if !fuzzyResolution && !options.DisableResolutionFuzzyMatch {
@@ -617,9 +669,10 @@ func (u *Usage) Add(other Usage) {
 }
 
 type UsageContext struct {
-	Resolution  string `json:"resolution,omitempty"`
-	Quality     string `json:"quality,omitempty"`
-	ServiceTier string `json:"service_tier,omitempty"`
+	Resolution       string `json:"resolution,omitempty"`
+	NativeResolution string `json:"native_resolution,omitempty"`
+	Quality          string `json:"quality,omitempty"`
+	ServiceTier      string `json:"service_tier,omitempty"`
 }
 
 func (c UsageContext) PriceConditionMatches(condition PriceCondition) bool {
@@ -630,19 +683,28 @@ func (c UsageContext) priceConditionMatches(
 	condition PriceCondition,
 	fuzzyResolution bool,
 ) bool {
-	resolutionMatches := conditionValueMatches(condition.Resolution, c.Resolution)
+	resolutionMatches := false
+	for _, resolution := range c.priceResolutionCandidates() {
+		if resolutionConditionValueMatches(condition.Resolution, resolution) {
+			resolutionMatches = true
+			break
+		}
+	}
+
 	if !resolutionMatches && fuzzyResolution {
-		resolutionMatches = fuzzyResolutionValueMatches(
-			condition.Resolution,
-			c.Resolution,
-		)
+		for _, resolution := range c.priceResolutionCandidates() {
+			if fuzzyResolutionValueMatches(condition.Resolution, resolution) {
+				resolutionMatches = true
+				break
+			}
+		}
 	}
 
 	if !resolutionMatches {
 		return false
 	}
 
-	if !conditionValueMatches(condition.Quality, c.Quality) {
+	if !qualityConditionValueMatches(condition.Quality, c.Quality) {
 		return false
 	}
 
@@ -658,11 +720,39 @@ func (c UsageContext) WithFallback(fallback UsageContext) UsageContext {
 		c.Resolution = fallback.Resolution
 	}
 
+	if c.NativeResolution == "" {
+		c.NativeResolution = fallback.NativeResolution
+	}
+
 	if c.Quality == "" {
 		c.Quality = fallback.Quality
 	}
 
 	return c
+}
+
+func (c UsageContext) priceResolutionCandidates() []string {
+	if c.NativeResolution == "" {
+		return []string{c.Resolution}
+	}
+
+	if c.Resolution == "" || c.Resolution == c.NativeResolution {
+		return []string{c.NativeResolution}
+	}
+
+	return []string{c.NativeResolution, c.Resolution}
+}
+
+func (c UsageContext) protocolResolutionExactlyMatches(condition PriceCondition) bool {
+	if c.Resolution == "" {
+		return false
+	}
+
+	if len(normalizeResolutionConditionValues(condition.Resolution)) == 0 {
+		return false
+	}
+
+	return resolutionConditionValueMatches(condition.Resolution, c.Resolution)
 }
 
 type Amount struct {

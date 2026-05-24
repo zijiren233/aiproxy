@@ -267,10 +267,11 @@ func TestConvertVideoRequestMapsOpenAIFields(t *testing.T) {
 		coremodel.ZeroNullInt64(8),
 		gemini.GeminiVideoRequestUsageForTest(m).OutputTokens,
 	)
-	require.Equal(t, "720p", gemini.GeminiVideoUsageContextForTest(m).Resolution)
+	require.Equal(t, "1280x720", gemini.GeminiVideoUsageContextForTest(m).Resolution)
+	require.Equal(t, "720p", gemini.GeminiVideoUsageContextForTest(m).NativeResolution)
 }
 
-func TestConvertVideoRequestPrefersNormalizedResolutionForPricing(t *testing.T) {
+func TestConvertVideoRequestKeepsProtocolAndNativeResolutionForPricing(t *testing.T) {
 	m := meta.NewMeta(
 		nil,
 		mode.Videos,
@@ -295,7 +296,8 @@ func TestConvertVideoRequestPrefersNormalizedResolutionForPricing(t *testing.T) 
 	require.NoError(t, err)
 
 	usageContext := gemini.GeminiVideoUsageContextForTest(m)
-	require.Equal(t, "720p", usageContext.Resolution)
+	require.Equal(t, "1280x720", usageContext.Resolution)
+	require.Equal(t, "720p", usageContext.NativeResolution)
 
 	amount := consume.CalculateAmountDetail(
 		200,
@@ -330,6 +332,7 @@ func TestNativeVideoConvertRequestStoresDefaultAsyncUsageMetadata(t *testing.T) 
 		gemini.GeminiVideoRequestUsageForTest(m).OutputTokens,
 	)
 	require.Equal(t, "720p", gemini.GeminiVideoUsageContextForTest(m).Resolution)
+	require.Equal(t, "720p", gemini.GeminiVideoUsageContextForTest(m).NativeResolution)
 }
 
 func TestConvertVideoGenerationJobRequestUsesJobOnlyFields(t *testing.T) {
@@ -370,7 +373,8 @@ func TestConvertVideoGenerationJobRequestUsesJobOnlyFields(t *testing.T) {
 		coremodel.ZeroNullInt64(16),
 		gemini.GeminiVideoRequestUsageForTest(m).OutputTokens,
 	)
-	require.Equal(t, "720p", gemini.GeminiVideoUsageContextForTest(m).Resolution)
+	require.Equal(t, "1280x720", gemini.GeminiVideoUsageContextForTest(m).Resolution)
+	require.Equal(t, "720p", gemini.GeminiVideoUsageContextForTest(m).NativeResolution)
 }
 
 func TestConvertVideoGenerationJobRequestIgnoresVideosSeconds(t *testing.T) {
@@ -438,7 +442,8 @@ func TestConvertVideoGenerationJobRequestStoresDefaultAsyncUsageMetadata(t *test
 		coremodel.ZeroNullInt64(8),
 		gemini.GeminiVideoRequestUsageForTest(m).OutputTokens,
 	)
-	require.Equal(t, "720p", gemini.GeminiVideoUsageContextForTest(m).Resolution)
+	require.Equal(t, "1280x720", gemini.GeminiVideoUsageContextForTest(m).Resolution)
+	require.Equal(t, "720p", gemini.GeminiVideoUsageContextForTest(m).NativeResolution)
 }
 
 func TestConvertVideosRequestStoresDefaultAsyncUsageMetadata(t *testing.T) {
@@ -473,7 +478,8 @@ func TestConvertVideosRequestStoresDefaultAsyncUsageMetadata(t *testing.T) {
 		coremodel.ZeroNullInt64(8),
 		gemini.GeminiVideoRequestUsageForTest(m).OutputTokens,
 	)
-	require.Equal(t, "720p", gemini.GeminiVideoUsageContextForTest(m).Resolution)
+	require.Equal(t, "1280x720", gemini.GeminiVideoUsageContextForTest(m).Resolution)
+	require.Equal(t, "720p", gemini.GeminiVideoUsageContextForTest(m).NativeResolution)
 }
 
 func TestVideoSubmitHandlerReturnsURLSafeJobID(t *testing.T) {
@@ -575,7 +581,8 @@ func TestVideoSubmitHandlerReturnsDefaultContextAndDuration(t *testing.T) {
 	require.True(t, result.AsyncUsage)
 	require.Zero(t, result.Usage.OutputTokens)
 	require.Zero(t, result.Usage.TotalTokens)
-	require.Equal(t, "720p", result.UsageContext.Resolution)
+	require.Equal(t, "1280x720", result.UsageContext.Resolution)
+	require.Equal(t, "720p", result.UsageContext.NativeResolution)
 
 	var job relaymodel.VideoGenerationJob
 	require.NoError(t, json.Unmarshal(recorder.Body.Bytes(), &job))
@@ -624,12 +631,13 @@ func TestVideosSubmitHandlerReturnsDefaultContextDurationAndSize(t *testing.T) {
 	require.True(t, result.AsyncUsage)
 	require.Zero(t, result.Usage.OutputTokens)
 	require.Zero(t, result.Usage.TotalTokens)
-	require.Equal(t, "720p", result.UsageContext.Resolution)
+	require.Equal(t, "1280x720", result.UsageContext.Resolution)
+	require.Equal(t, "720p", result.UsageContext.NativeResolution)
 
 	var video relaymodel.Video
 	require.NoError(t, json.Unmarshal(recorder.Body.Bytes(), &video))
 	require.Equal(t, 8, video.Seconds)
-	require.Equal(t, "720p", video.Size)
+	require.Equal(t, "1280x720", video.Size)
 }
 
 func TestNativeVideoHandlerStoresShortOperationID(t *testing.T) {
@@ -962,7 +970,7 @@ func TestVideosStatusHandlerReturnsStoredDefaultDurationAndSize(t *testing.T) {
 	var video relaymodel.Video
 	require.NoError(t, json.Unmarshal(statusRecorder.Body.Bytes(), &video))
 	require.Equal(t, 8, video.Seconds)
-	require.Equal(t, "720p", video.Size)
+	require.Equal(t, "1280x720", video.Size)
 	require.Equal(t, "make a video", video.Prompt)
 }
 
@@ -1161,7 +1169,8 @@ func TestFetchAsyncUsageBuildsFinalUsageFromStoredMetadata(t *testing.T) {
 					TotalTokens:  99,
 				},
 				UsageContext: coremodel.UsageContext{
-					Resolution: "720p",
+					Resolution:       "1920x1080",
+					NativeResolution: "720p",
 				},
 			},
 		},
@@ -1170,7 +1179,8 @@ func TestFetchAsyncUsageBuildsFinalUsageFromStoredMetadata(t *testing.T) {
 	require.True(t, done)
 	require.Equal(t, coremodel.ZeroNullInt64(12), usage.OutputTokens)
 	require.Equal(t, coremodel.ZeroNullInt64(12), usage.TotalTokens)
-	require.Equal(t, "1080p", usageContext.Resolution)
+	require.Equal(t, "1920x1080", usageContext.Resolution)
+	require.Equal(t, "1080p", usageContext.NativeResolution)
 }
 
 func TestFetchAsyncUsageNativeGeminiVideoUsesNativeStoreID(t *testing.T) {
@@ -1240,7 +1250,8 @@ func TestFetchAsyncUsageNativeGeminiVideoUsesNativeStoreID(t *testing.T) {
 				TokenID:    7,
 				UpstreamID: operationName,
 				UsageContext: coremodel.UsageContext{
-					Resolution: "720p",
+					Resolution:       "720p",
+					NativeResolution: "720p",
 				},
 			},
 		},
@@ -1250,4 +1261,5 @@ func TestFetchAsyncUsageNativeGeminiVideoUsesNativeStoreID(t *testing.T) {
 	require.Equal(t, coremodel.ZeroNullInt64(10), usage.OutputTokens)
 	require.Equal(t, coremodel.ZeroNullInt64(10), usage.TotalTokens)
 	require.Equal(t, "1080p", usageContext.Resolution)
+	require.Equal(t, "1080p", usageContext.NativeResolution)
 }

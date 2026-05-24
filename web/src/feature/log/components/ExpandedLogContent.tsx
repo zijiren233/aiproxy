@@ -227,6 +227,7 @@ export const ExpandedLogContent = ({ log }: { log: LogRecord }) => {
                     <h4 className="font-semibold text-sm">{t('log.billingContext')}</h4>
                     <div className="space-y-1 text-sm">
                         <div><span className="font-medium">{t('log.resolution')}:</span> {usageContext?.resolution || '-'}</div>
+                        <div><span className="font-medium">{t('log.nativeResolution')}:</span> {usageContext?.native_resolution || '-'}</div>
                         <div><span className="font-medium">{t('log.quality')}:</span> {usageContext?.quality || '-'}</div>
                         <div><span className="font-medium">{t('log.serviceTier')}:</span> {usageContext?.service_tier || '-'}</div>
                     </div>

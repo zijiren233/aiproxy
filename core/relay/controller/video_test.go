@@ -6,6 +6,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"testing"
 
 	"github.com/gin-gonic/gin"
@@ -289,6 +290,92 @@ func TestValidateGeminiVideoRequestRejectsInvalidResolutionFormat(t *testing.T) 
 	err := ValidateGeminiVideoRequest(ctx, model.ModelConfig{})
 	require.Error(t, err)
 	require.Equal(t, "invalid gemini video resolution `1280x720`", err.Error())
+}
+
+func TestValidateGeminiVideoRequestResolutionMatrix(t *testing.T) {
+	t.Parallel()
+
+	gin.SetMode(gin.TestMode)
+
+	tests := []struct {
+		name       string
+		resolution string
+		allowed    []string
+		disable    bool
+		wantErr    bool
+		wantErrMsg string
+	}{
+		{
+			name:       "exact native tier",
+			resolution: "720p",
+			allowed:    []string{"720p"},
+		},
+		{
+			name:       "case-insensitive native tier",
+			resolution: "720P",
+			allowed:    []string{"720p"},
+		},
+		{
+			name:       "allowed dimensions fuzzy match native tier",
+			resolution: "720p",
+			allowed:    []string{"1280x720"},
+		},
+		{
+			name:       "disabled fuzzy rejects allowed dimensions",
+			resolution: "720p",
+			allowed:    []string{"1280x720"},
+			disable:    true,
+			wantErr:    true,
+			wantErrMsg: "unsupported video resolution `720p`",
+		},
+		{
+			name:       "invalid native dimension request",
+			resolution: "1280x720",
+			allowed:    []string{"720p"},
+			wantErr:    true,
+			wantErrMsg: "invalid gemini video resolution `1280x720`",
+		},
+		{
+			name:       "blank allowed means unsupported",
+			resolution: "720p",
+			allowed:    []string{" ", "\t"},
+			wantErr:    true,
+			wantErrMsg: "unsupported video resolution `720p`",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			body := `{
+				"instances":[{"prompt":"A city street"}],
+				"parameters":{"durationSeconds":6,"resolution":` + strconv.Quote(tt.resolution) + `}
+			}`
+			req := httptest.NewRequestWithContext(
+				t.Context(),
+				http.MethodPost,
+				"/v1beta/models/veo-3.1-generate-preview:predictLongRunning",
+				bytes.NewBufferString(body),
+			)
+			req.Header.Set("Content-Type", "application/json")
+
+			ctx, _ := gin.CreateTestContext(httptest.NewRecorder())
+			ctx.Request = req
+
+			err := ValidateGeminiVideoRequest(ctx, model.ModelConfig{
+				AllowedResolutions:          tt.allowed,
+				DisableResolutionFuzzyMatch: tt.disable,
+			})
+			if tt.wantErr {
+				require.Error(t, err)
+				require.Equal(t, tt.wantErrMsg, err.Error())
+				return
+			}
+
+			require.NoError(t, err)
+		})
+	}
 }
 
 func TestGetGeminiVideoRequestUsageSetsResolutionCondition(t *testing.T) {
@@ -987,6 +1074,93 @@ func TestGetVideoGenerationJobRequestUsageMatchesPortraitDimensionToTier(t *test
 		AllowedResolutions: []string{"720p"},
 	})
 	require.NoError(t, err)
+}
+
+func TestGetVideoGenerationJobRequestUsageResolutionMatrix(t *testing.T) {
+	t.Parallel()
+
+	gin.SetMode(gin.TestMode)
+
+	tests := []struct {
+		name       string
+		size       string
+		allowed    []string
+		disable    bool
+		wantCtx    string
+		wantErr    bool
+		wantErrMsg string
+	}{
+		{
+			name:    "landscape dimensions match 720p tier",
+			size:    "1280x720",
+			allowed: []string{"720p"},
+			wantCtx: "1280x720",
+		},
+		{
+			name:    "portrait dimensions match 720p tier",
+			size:    "720x1280",
+			allowed: []string{"720p"},
+			wantCtx: "720x1280",
+		},
+		{
+			name:    "dimensions match exact allowed dimension",
+			size:    "1280x720",
+			allowed: []string{"1280x720"},
+			wantCtx: "1280x720",
+		},
+		{
+			name:       "disabled fuzzy rejects tier-only allowed",
+			size:       "1280x720",
+			allowed:    []string{"720p"},
+			disable:    true,
+			wantErr:    true,
+			wantErrMsg: "unsupported video resolution `1280x720`",
+		},
+		{
+			name:       "non-openai delimiter is invalid",
+			size:       "1280*720",
+			allowed:    []string{"720p"},
+			wantErr:    true,
+			wantErrMsg: "invalid video size `1280*720`",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			body := `{
+				"model":"video-model",
+				"prompt":"A city street",
+				"size":` + strconv.Quote(tt.size) + `,
+				"seconds":5
+			}`
+			req := httptest.NewRequestWithContext(
+				t.Context(),
+				http.MethodPost,
+				"/v1/videos",
+				bytes.NewBufferString(body),
+			)
+			req.Header.Set("Content-Type", "application/json")
+
+			ctx, _ := gin.CreateTestContext(httptest.NewRecorder())
+			ctx.Request = req
+
+			usage, err := GetVideoGenerationJobRequestUsage(ctx, model.ModelConfig{
+				AllowedResolutions:          tt.allowed,
+				DisableResolutionFuzzyMatch: tt.disable,
+			})
+			if tt.wantErr {
+				require.Error(t, err)
+				require.Equal(t, tt.wantErrMsg, err.Error())
+				return
+			}
+
+			require.NoError(t, err)
+			require.Zero(t, usage.Usage.OutputTokens)
+			require.Equal(t, tt.wantCtx, usage.Context.Resolution)
+		})
+	}
 }
 
 func TestGetVideoGenerationJobRequestUsageDisableFuzzyRejectsDimensionToTier(t *testing.T) {

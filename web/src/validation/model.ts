@@ -164,6 +164,7 @@ export const modelCreateSchema = z.object({
     config: modelConfigSchema,
     owner: z.string().optional(),
     type: z.number().min(0, 'Type is required'),
+    exclude_from_tests: z.boolean().optional(),
     rpm: z.number().nonnegative('RPM must be a non-negative number').optional(),
     tpm: z.number().nonnegative('TPM must be a non-negative number').optional(),
     retry_times: z.number().nonnegative('Retry times must be a non-negative number').optional(),

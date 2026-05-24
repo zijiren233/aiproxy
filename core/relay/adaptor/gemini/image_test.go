@@ -585,6 +585,9 @@ func TestImageHandlerChargesActualGeminiImageCount(t *testing.T) {
 		mode.ImagesGenerations,
 		"gemini-3-pro-image-preview",
 		model.ModelConfig{Type: mode.GeminiImage},
+		meta.WithRequestUsageContext(model.UsageContext{
+			Resolution: "1024x1024",
+		}),
 		meta.WithRequestUsage(model.Usage{
 			InputTokens:  model.ZeroNullInt64(5),
 			OutputTokens: model.ZeroNullInt64(2),
@@ -615,16 +618,16 @@ func TestImageHandlerChargesActualGeminiImageCount(t *testing.T) {
 
 	result, err := gemini.ImageHandler(meta, c, resp)
 	assert.Nil(t, err)
-	assert.Equal(t, int64(1), int64(result.Usage.OutputTokens))
-	assert.Equal(t, int64(1), int64(result.Usage.ImageOutputTokens))
-	assert.Equal(t, int64(1), int64(result.Usage.TotalTokens))
+	assert.Equal(t, int64(1120), int64(result.Usage.OutputTokens))
+	assert.Equal(t, int64(1120), int64(result.Usage.ImageOutputTokens))
+	assert.Equal(t, int64(1120), int64(result.Usage.TotalTokens))
 
 	var imageResp relaymodel.ImageResponse
 
 	assert.NoError(t, json.Unmarshal(recorder.Body.Bytes(), &imageResp))
 	assert.NotNil(t, imageResp.Usage)
-	assert.Equal(t, int64(1), imageResp.Usage.OutputTokens)
-	assert.Equal(t, int64(1), imageResp.Usage.OutputTokensDetails.ImageTokens)
+	assert.Equal(t, int64(1120), imageResp.Usage.OutputTokens)
+	assert.Equal(t, int64(1120), imageResp.Usage.OutputTokensDetails.ImageTokens)
 }
 
 func TestImageStreamHandlerConvertsGeminiStreamToOpenAIImageEvents(t *testing.T) {

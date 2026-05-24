@@ -30,6 +30,12 @@ import (
 
 const geminiImageEditFetchTimeout = 30 * time.Second
 
+const (
+	gemini25FlashImageDefaultOutputTokens = int64(1290)
+	gemini3ImageDefaultOutputTokens       = int64(1120)
+	gemini3Image4KOutputTokens            = int64(2000)
+)
+
 func ConvertImageRequest(meta *meta.Meta, req *http.Request) (adaptor.ConvertResult, error) {
 	imageRequest, err := utils.UnmarshalImageRequest(req)
 	if err != nil {
@@ -478,7 +484,11 @@ func geminiImageResponseToOpenAI(
 		}
 	}
 
-	usage := geminiImageUsageFromResponse(response.UsageMetadata, int64(len(imageResponse.Data)))
+	usage := geminiImageUsageFromResponse(
+		meta,
+		response.UsageMetadata,
+		int64(len(imageResponse.Data)),
+	)
 	imageResponse.Usage = usageToImageUsagePtr(usage)
 
 	return imageResponse, usage
@@ -502,11 +512,12 @@ func geminiImageData(
 }
 
 func geminiImageUsageFromResponse(
+	meta *meta.Meta,
 	usage *relaymodel.GeminiUsageMetadata,
 	imageCount int64,
 ) model.Usage {
 	if usage == nil {
-		return geminiImageCountUsage(imageCount)
+		return geminiImageCountUsage(meta, imageCount)
 	}
 
 	return usage.ToModelUsage()
@@ -548,6 +559,7 @@ func imageStreamHandler(
 
 		if geminiResponse.UsageMetadata != nil {
 			usage = geminiImageUsageFromResponse(
+				meta,
 				geminiResponse.UsageMetadata,
 				int64(imageIndex),
 			)
@@ -581,7 +593,7 @@ func imageStreamHandler(
 	}
 
 	if usage.OutputTokens == 0 && imageIndex > 0 {
-		usage = geminiImageCountUsage(int64(imageIndex))
+		usage = geminiImageCountUsage(meta, int64(imageIndex))
 	}
 
 	imageUsage := usageToImageUsage(usage)
@@ -626,12 +638,32 @@ func usageToImageUsagePtr(usage model.Usage) *relaymodel.ImageUsage {
 	return &imageUsage
 }
 
-func geminiImageCountUsage(imageCount int64) model.Usage {
+func geminiImageCountUsage(meta *meta.Meta, imageCount int64) model.Usage {
+	outputTokens := geminiImageOutputTokensFromContext(meta) * imageCount
+
 	return model.Usage{
-		OutputTokens:      model.ZeroNullInt64(imageCount),
-		ImageOutputTokens: model.ZeroNullInt64(imageCount),
-		TotalTokens:       model.ZeroNullInt64(imageCount),
+		OutputTokens:      model.ZeroNullInt64(outputTokens),
+		ImageOutputTokens: model.ZeroNullInt64(outputTokens),
+		TotalTokens:       model.ZeroNullInt64(outputTokens),
 	}
+}
+
+func geminiImageOutputTokensFromContext(meta *meta.Meta) int64 {
+	if meta == nil {
+		return gemini3ImageDefaultOutputTokens
+	}
+
+	if strings.Contains(meta.ActualModel, "2.5-flash-image") ||
+		strings.Contains(meta.OriginModel, "2.5-flash-image") ||
+		strings.Contains(meta.ModelConfig.Model, "2.5-flash-image") {
+		return gemini25FlashImageDefaultOutputTokens
+	}
+
+	if geminiImageSizeFromSize(meta.RequestUsageContext.Resolution) == "4k" {
+		return gemini3Image4KOutputTokens
+	}
+
+	return gemini3ImageDefaultOutputTokens
 }
 
 func maxInt64(values ...int64) int64 {
