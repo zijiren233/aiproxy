@@ -195,6 +195,7 @@ func checkNeedRecordConsume(code int, meta *meta.Meta) bool {
 		mode.VideosGet,
 		mode.VideosContent,
 		mode.VideosDelete,
+		mode.GeminiFiles,
 		mode.GeminiVideoOperations,
 		mode.ResponsesGet,
 		mode.ResponsesDelete,

@@ -52,6 +52,7 @@ type Meta struct {
 	OperationID  string
 	ResponseID   string
 	VideoID      string
+	FileID       string
 }
 
 type Option func(meta *Meta)
@@ -137,6 +138,12 @@ func WithResponseID(responseID string) Option {
 func WithVideoID(videoID string) Option {
 	return func(meta *Meta) {
 		meta.VideoID = videoID
+	}
+}
+
+func WithFileID(fileID string) Option {
+	return func(meta *Meta) {
+		meta.FileID = fileID
 	}
 }
 

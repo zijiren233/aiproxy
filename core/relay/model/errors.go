@@ -78,6 +78,7 @@ func WrapperErrorWithMessage(
 			Detail: message,
 		})
 	case mode.Gemini,
+		mode.GeminiFiles,
 		mode.GeminiVideo,
 		mode.GeminiVideoOperations:
 		return NewGeminiError(statusCode, GeminiError{

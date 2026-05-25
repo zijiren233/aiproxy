@@ -59,6 +59,13 @@ func (a *Adaptor) FetchAsyncUsage(
 		)
 	}
 
+	if reason := geminiOperationRAIFilteredReason(operation); reason != "" {
+		return model.Usage{}, model.UsageContext{}, true, fmt.Errorf(
+			"gemini video operation failed: %s",
+			reason,
+		)
+	}
+
 	usage, usageContext := geminiVideoAsyncUsage(request.Store, info, operation)
 
 	return usage, usageContext, true, nil

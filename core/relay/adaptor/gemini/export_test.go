@@ -1,11 +1,9 @@
 package gemini
 
 import (
-	"bytes"
 	"context"
 	"net/http"
 
-	"github.com/bytedance/sonic"
 	"github.com/labring/aiproxy/core/model"
 	"github.com/labring/aiproxy/core/relay/adaptor"
 	"github.com/labring/aiproxy/core/relay/meta"
@@ -72,32 +70,7 @@ func ConvertVideoRequestWithConfigForTest(
 	req *http.Request,
 	cfg Config,
 ) (adaptor.ConvertResult, error) {
-	var request geminiVideoRequest
-
-	var err error
-	if meta != nil && meta.Mode == mode.Videos {
-		request, err = parseOpenAIVideosRequest(req)
-	} else {
-		request, err = parseOpenAIVideoGenerationJobRequest(req)
-	}
-
-	if err != nil {
-		return adaptor.ConvertResult{}, err
-	}
-
-	applyVideoPersonGenerationConfig(&request, cfg)
-
-	data, err := sonic.Marshal(request)
-	if err != nil {
-		return adaptor.ConvertResult{}, err
-	}
-
-	return adaptor.ConvertResult{
-		Header: http.Header{
-			"Content-Type": {"application/json"},
-		},
-		Body: bytes.NewReader(data),
-	}, nil
+	return convertOpenAIVideoRequestWithConfig(meta, req, cfg)
 }
 
 func GeminiImageAspectRatioFromSizeForTest(size string) string {

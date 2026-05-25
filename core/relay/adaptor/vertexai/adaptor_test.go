@@ -229,6 +229,7 @@ func TestConvertRequestVeoVideoUsesGeminiInnerAdaptor(t *testing.T) {
 		"veo-3.1-generate-preview",
 		coremodel.ModelConfig{},
 	)
+	m.Channel.Type = coremodel.ChannelTypeVertexAI
 	req, err := http.NewRequestWithContext(
 		context.Background(),
 		http.MethodPost,
@@ -261,6 +262,7 @@ func TestConvertRequestNativeGeminiVideoMapsNumberOfVideosToVertexSampleCount(t 
 		"veo-3.1-generate-preview",
 		coremodel.ModelConfig{},
 	)
+	m.Channel.Type = coremodel.ChannelTypeVertexAI
 	req, err := http.NewRequestWithContext(
 		context.Background(),
 		http.MethodPost,

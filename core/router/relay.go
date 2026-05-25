@@ -46,6 +46,10 @@ func SetRelayRouter(router *gin.Engine) {
 			"/models/:model/operations/*operation_id",
 			controller.GeminiOperation()...,
 		)
+		v1betaRouter.GET(
+			"/files/*model",
+			controller.GeminiByPath()...,
+		)
 	}
 
 	dashboardRouter := v1Router.Group("/dashboard")

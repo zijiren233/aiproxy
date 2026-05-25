@@ -38,6 +38,7 @@ var modeNames = map[Mode]string{
 	GeminiVideoOperations:   "GeminiVideoOperations",
 	GeminiTTS:               "GeminiTTS",
 	GeminiImage:             "GeminiImage",
+	GeminiFiles:             "GeminiFiles",
 	Responses:               "Responses",
 	ResponsesGet:            "ResponsesGet",
 	ResponsesDelete:         "ResponsesDelete",
@@ -78,4 +79,5 @@ const (
 	GeminiVideoOperations
 	GeminiTTS
 	GeminiImage
+	GeminiFiles
 )

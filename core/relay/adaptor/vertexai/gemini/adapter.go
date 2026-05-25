@@ -142,7 +142,7 @@ func (a *Adaptor) DoResponse(
 	case mode.GeminiVideo:
 		return gemini.NativeVideoHandler(meta, store, c, resp)
 	case mode.GeminiVideoOperations:
-		return gemini.NativeVideoOperationHandler(meta, c, resp)
+		return gemini.NativeVideoOperationHandler(meta, store, c, resp)
 	case mode.VideoGenerationsJobs:
 		return gemini.VideoGenerationJobSubmitHandler(meta, store, c, resp)
 	case mode.Videos:

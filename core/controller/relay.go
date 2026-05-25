@@ -574,9 +574,13 @@ func GeminiByPath() []gin.HandlerFunc {
 	return []gin.HandlerFunc{
 		func(c *gin.Context) {
 			relayMode := mode.Gemini
-			action := geminiPathAction(c.Param("model"))
+			modelPath := c.Param("model")
+			action := geminiPathAction(modelPath)
 
-			if action == "predictLongRunning" {
+			switch {
+			case geminiPathIsFile(modelPath):
+				relayMode = mode.GeminiFiles
+			case action == "predictLongRunning":
 				relayMode = mode.GeminiVideo
 			}
 
@@ -625,4 +629,11 @@ func geminiPathAction(modelPath string) string {
 	}
 
 	return action
+}
+
+func geminiPathIsFile(modelPath string) bool {
+	modelPath = strings.TrimPrefix(modelPath, "/")
+	fileID, ok := strings.CutSuffix(modelPath, ":download")
+
+	return ok && fileID != "" && !strings.Contains(fileID, "/")
 }

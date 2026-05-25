@@ -43,6 +43,10 @@ func NewGroupMCPResponse(host string, mcp model.GroupMCP) GroupMCPResponse {
 		groupMCPHost := config.GetGroupMCPHost()
 		if groupMCPHost == "" {
 			ep.Host = host
+			if defaultHost := config.GetDefaultMCPHost(); defaultHost != "" {
+				ep.Host = defaultHost
+			}
+
 			ep.SSE = fmt.Sprintf("/mcp/group/%s/sse", mcp.ID)
 			ep.StreamableHTTP = "/mcp/group/" + mcp.ID
 		} else {
