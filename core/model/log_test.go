@@ -100,14 +100,13 @@ func TestRecordConsumeLogPersistsWebSearchCount(t *testing.T) {
 			TotalTokens:    15,
 			WebSearchCount: 1,
 		},
-		model.UsageContext{},
+		model.UsageContext{ServiceTier: "default"},
 		model.Price{},
 		model.Amount{},
 		"",
 		nil,
 		"",
 		"resp_test_websearch",
-		"default",
 		model.AsyncUsageStatusNone,
 	)
 	if err != nil {
