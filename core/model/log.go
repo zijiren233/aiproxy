@@ -68,9 +68,8 @@ type Log struct {
 	RetryTimes       ZeroNullInt64    `                                                                      json:"retry_times,omitempty"`
 	Price            Price            `gorm:"embedded"                                                       json:"price,omitempty"`
 	Usage            Usage            `gorm:"embedded"                                                       json:"usage,omitempty"`
-	UsageContext     UsageContext     `gorm:"serializer:fastjson;type:text"                                  json:"usage_context,omitempty"`
+	UsageContext     UsageContext     `gorm:"embedded"                                                       json:"usage_context,omitempty"`
 	Amount           Amount           `gorm:"embedded"                                                       json:"amount,omitempty"`
-	ServiceTier      string           `gorm:"size:16"                                                        json:"service_tier,omitempty"`
 	PromptCacheKey   EmptyNullString  `gorm:"type:text"                                                      json:"prompt_cache_key,omitempty"`
 	// https://platform.openai.com/docs/guides/safety-best-practices#end-user-ids
 	User     EmptyNullString   `gorm:"type:text"                     json:"user,omitempty"`
@@ -362,7 +361,6 @@ func RecordConsumeLog(
 	metadata map[string]string,
 	promptCacheKey string,
 	upstreamID string,
-	serviceTier string,
 	asyncUsageStatus AsyncUsageStatus,
 ) error {
 	if createAt.IsZero() {
@@ -409,7 +407,6 @@ func RecordConsumeLog(
 		Metadata:         metadata,
 		PromptCacheKey:   EmptyNullString(promptCacheKey),
 		UpstreamID:       EmptyNullString(upstreamID),
-		ServiceTier:      serviceTier,
 		AsyncUsageStatus: asyncUsageStatus,
 	}
 

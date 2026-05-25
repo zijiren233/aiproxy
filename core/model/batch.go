@@ -365,7 +365,6 @@ func BatchRecordLogs(
 	metadata map[string]string,
 	promptCacheKey string,
 	upstreamID string,
-	serviceTier string,
 	asyncUsageStatus AsyncUsageStatus,
 	summaryServiceTier string,
 	summaryClaudeLongContext bool,
@@ -408,7 +407,6 @@ func BatchRecordLogs(
 				metadata,
 				promptCacheKey,
 				upstreamID,
-				serviceTier,
 				asyncUsageStatus,
 			)
 		}

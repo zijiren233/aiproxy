@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"encoding/csv"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -12,6 +13,38 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/core/model"
 )
+
+func parseLogExportCSV(t *testing.T, content []byte) [][]string {
+	t.Helper()
+
+	text := strings.TrimPrefix(string(content), "\xEF\xBB\xBF")
+
+	records, err := csv.NewReader(strings.NewReader(text)).ReadAll()
+	if err != nil {
+		t.Fatalf("parse csv: %v", err)
+	}
+
+	return records
+}
+
+func csvRecordMap(t *testing.T, records [][]string) map[string]string {
+	t.Helper()
+
+	if len(records) < 2 {
+		t.Fatalf("expected header and row, got %d records", len(records))
+	}
+
+	if len(records[0]) != len(records[1]) {
+		t.Fatalf("header has %d columns, row has %d", len(records[0]), len(records[1]))
+	}
+
+	values := make(map[string]string, len(records[0]))
+	for i, header := range records[0] {
+		values[header] = records[1][i]
+	}
+
+	return values
+}
 
 func TestBuildLogExportCSVFormatsTimezoneAndSanitizesCells(t *testing.T) {
 	location, err := time.LoadLocation("Asia/Shanghai")
@@ -137,6 +170,44 @@ func TestBuildLogExportCSVExcludesTimezoneModeAndRetryAtByDefault(t *testing.T) 
 			"expected timezone, mode and retry_at headers to be excluded, got header %q",
 			headerLine,
 		)
+	}
+}
+
+func TestBuildLogExportCSVIncludesFullUsageContext(t *testing.T) {
+	content, err := buildLogExportCSV([]*model.Log{
+		{
+			ID:        1,
+			CreatedAt: time.Date(2026, time.April, 14, 12, 0, 0, 0, time.UTC),
+			RequestAt: time.Date(2026, time.April, 14, 12, 0, 1, 0, time.UTC),
+			Model:     "gpt-test",
+			UsageContext: model.UsageContext{
+				Resolution:       "1920x1080",
+				NativeResolution: "1080p",
+				Quality:          "high",
+				ServiceTier:      "priority",
+			},
+		},
+	}, time.UTC, false, false)
+	if err != nil {
+		t.Fatalf("build csv: %v", err)
+	}
+
+	values := csvRecordMap(t, parseLogExportCSV(t, content))
+
+	if values["resolution"] != "1920x1080" {
+		t.Fatalf("expected resolution to be exported, got %q", values["resolution"])
+	}
+
+	if values["native_resolution"] != "1080p" {
+		t.Fatalf("expected native_resolution to be exported, got %q", values["native_resolution"])
+	}
+
+	if values["quality"] != "high" {
+		t.Fatalf("expected quality to be exported, got %q", values["quality"])
+	}
+
+	if values["service_tier"] != "priority" {
+		t.Fatalf("expected service_tier to be exported, got %q", values["service_tier"])
 	}
 }
 

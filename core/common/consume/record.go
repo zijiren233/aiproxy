@@ -60,7 +60,6 @@ func recordConsume(
 		metadata,
 		meta.PromptCacheKey,
 		upstreamID,
-		usageContext.ServiceTier,
 		asyncUsageStatus,
 		summaryServiceTier,
 		summaryClaudeLongContext,
