@@ -4,7 +4,7 @@ type GeminiVideoOperation struct {
 	Name     string                       `json:"name,omitempty"`
 	Done     bool                         `json:"done,omitempty"`
 	Metadata map[string]any               `json:"metadata,omitempty"`
-	Error    *OpenAIError                 `json:"error,omitempty"`
+	Error    *GeminiError                 `json:"error,omitempty"`
 	Response GeminiVideoOperationResponse `json:"response,omitempty"`
 }
 
@@ -14,7 +14,9 @@ type GeminiVideoOperationResponse struct {
 }
 
 type GeminiGenerateVideoResponse struct {
-	GeneratedSamples []GeminiGeneratedSample `json:"generatedSamples,omitempty"`
+	GeneratedSamples        []GeminiGeneratedSample `json:"generatedSamples,omitempty"`
+	RAIMediaFilteredCount   int                     `json:"raiMediaFilteredCount,omitempty"`
+	RAIMediaFilteredReasons []string                `json:"raiMediaFilteredReasons,omitempty"`
 }
 
 type GeminiGeneratedSample struct {

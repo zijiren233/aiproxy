@@ -158,7 +158,7 @@ func BuildModerationsRequest(model string) (io.Reader, error) {
 func BuildImagesGenerationsRequest(modelConfig model.ModelConfig) (io.Reader, error) {
 	imagesGenerationsRequest := &relaymodel.GeneralOpenAIRequest{
 		Model:  modelConfig.Model,
-		Prompt: "hi",
+		Prompt: "A simple red square icon on a white background.",
 		Size:   "1024x1024",
 	}
 
@@ -205,11 +205,6 @@ func BuildGeminiVideoRequest(_ string) (io.Reader, error) {
 			{
 				"prompt": "A calm cinematic shot of clouds moving over a mountain.",
 			},
-		},
-		"parameters": map[string]any{
-			"durationSeconds": 5,
-			"numberOfVideos":  1,
-			"aspectRatio":     "16:9",
 		},
 	}
 

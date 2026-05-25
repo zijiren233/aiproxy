@@ -15,6 +15,7 @@ func TestCheckRelayModeGeminiVideo(t *testing.T) {
 	require.True(t, middleware.CheckRelayMode(mode.VideoGenerationsContent, mode.GeminiVideo))
 	require.True(t, middleware.CheckRelayMode(mode.VideosContent, mode.GeminiVideo))
 	require.True(t, middleware.CheckRelayMode(mode.GeminiVideoOperations, mode.GeminiVideo))
+	require.True(t, middleware.CheckRelayMode(mode.GeminiFiles, mode.GeminiVideo))
 
 	require.False(t, middleware.CheckRelayMode(mode.VideosDelete, mode.GeminiVideo))
 	require.False(t, middleware.CheckRelayMode(mode.ChatCompletions, mode.GeminiVideo))

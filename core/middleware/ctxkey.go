@@ -20,6 +20,7 @@ const (
 	OperationID        = "operation_id"
 	ResponseID         = "response_id"
 	VideoID            = "video_id"
+	FileID             = "file_id"
 
 	requestBodyNode = "request_body_node"
 )

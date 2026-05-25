@@ -34,6 +34,8 @@ func (a *Adaptor) ConvertRequest(
 		return convertNativeVideoRequest(meta, request)
 	case mode.GeminiVideoOperations:
 		return gemini.ConvertVideoNoBodyRequest(meta, request)
+	case mode.GeminiFiles:
+		return gemini.ConvertVideoNoBodyRequest(meta, request)
 	case mode.VideoGenerationsJobs:
 		return convertOpenAIVideoRequest(meta, request, gemini.ConvertVideoGenerationJobRequest)
 	case mode.Videos:
@@ -142,7 +144,9 @@ func (a *Adaptor) DoResponse(
 	case mode.GeminiVideo:
 		return gemini.NativeVideoHandler(meta, store, c, resp)
 	case mode.GeminiVideoOperations:
-		return gemini.NativeVideoOperationHandler(meta, c, resp)
+		return gemini.NativeVideoOperationHandler(meta, store, c, resp)
+	case mode.GeminiFiles:
+		return gemini.GeminiFileHandler(meta, c, resp)
 	case mode.VideoGenerationsJobs:
 		return gemini.VideoGenerationJobSubmitHandler(meta, store, c, resp)
 	case mode.Videos:

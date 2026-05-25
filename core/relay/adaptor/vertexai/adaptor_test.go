@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gin-gonic/gin"
 	coremodel "github.com/labring/aiproxy/core/model"
 	adaptorapi "github.com/labring/aiproxy/core/relay/adaptor"
 	vertexai "github.com/labring/aiproxy/core/relay/adaptor/vertexai"
@@ -229,6 +230,7 @@ func TestConvertRequestVeoVideoUsesGeminiInnerAdaptor(t *testing.T) {
 		"veo-3.1-generate-preview",
 		coremodel.ModelConfig{},
 	)
+	m.Channel.Type = coremodel.ChannelTypeVertexAI
 	req, err := http.NewRequestWithContext(
 		context.Background(),
 		http.MethodPost,
@@ -261,6 +263,7 @@ func TestConvertRequestNativeGeminiVideoMapsNumberOfVideosToVertexSampleCount(t 
 		"veo-3.1-generate-preview",
 		coremodel.ModelConfig{},
 	)
+	m.Channel.Type = coremodel.ChannelTypeVertexAI
 	req, err := http.NewRequestWithContext(
 		context.Background(),
 		http.MethodPost,
@@ -308,6 +311,77 @@ func TestSetupRequestHeaderVeoVideoUsesGeminiInnerAdaptor(t *testing.T) {
 	err = adaptor.SetupRequestHeader(m, nil, nil, req)
 	require.NoError(t, err)
 	assert.Equal(t, "apikey", req.Header.Get("X-Goog-Api-Key"))
+}
+
+func TestGeminiFileModeUsesGeminiInnerAdaptor(t *testing.T) {
+	adaptor := &vertexai.Adaptor{}
+
+	fileServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		require.Equal(t, "/v1beta/files/ef8j32lly0bs:download", r.URL.Path)
+		require.Equal(t, "media", r.URL.Query().Get("alt"))
+
+		w.Header().Set("Content-Type", "video/mp4")
+		_, _ = w.Write([]byte("video-data"))
+	}))
+	defer fileServer.Close()
+
+	store := &vertexVideoTestStore{
+		items: map[string]adaptorapi.StoreCache{
+			coremodel.GeminiFileStoreID("ef8j32lly0bs"): {
+				GroupID:   "group-1",
+				TokenID:   7,
+				ChannelID: 11,
+				Model:     "veo-3.1-generate-preview",
+				ID:        coremodel.GeminiFileStoreID("ef8j32lly0bs"),
+				Metadata:  `{"uri":"` + fileServer.URL + `/v1beta/files/ef8j32lly0bs:download?alt=media"}`,
+				ExpiresAt: time.Now().Add(time.Hour),
+			},
+		},
+	}
+	m := meta.NewMeta(
+		&coremodel.Channel{Key: "us-central1|project-1|apikey"},
+		mode.GeminiFiles,
+		"veo-3.1-generate-preview",
+		coremodel.ModelConfig{Type: mode.GeminiVideo},
+		meta.WithFileID("ef8j32lly0bs"),
+		meta.WithGroup(coremodel.GroupCache{ID: "group-1"}),
+		meta.WithToken(coremodel.TokenCache{ID: 7}),
+	)
+
+	require.True(t, adaptor.SupportMode(m))
+
+	reqURL, err := adaptor.GetRequestURL(m, store, nil)
+	require.NoError(t, err)
+	require.Equal(t, http.MethodGet, reqURL.Method)
+	require.Equal(t, fileServer.URL+"/v1beta/files/ef8j32lly0bs:download?alt=media", reqURL.URL)
+
+	result, err := adaptor.ConvertRequest(
+		m,
+		store,
+		httptest.NewRequestWithContext(t.Context(), http.MethodGet, reqURL.URL, nil),
+	)
+	require.NoError(t, err)
+	require.Nil(t, result.Body)
+
+	resp := &http.Response{
+		StatusCode: http.StatusOK,
+		Header:     http.Header{"Content-Type": {"video/mp4"}},
+		Body:       io.NopCloser(strings.NewReader("video-data")),
+	}
+	recorder := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(recorder)
+	c.Request = httptest.NewRequestWithContext(
+		t.Context(),
+		http.MethodGet,
+		"/v1beta/files/ef8j32lly0bs:download?alt=media",
+		nil,
+	)
+
+	responseResult, relayErr := adaptor.DoResponse(m, store, c, resp)
+	require.Nil(t, relayErr)
+	require.Equal(t, "ef8j32lly0bs", responseResult.UpstreamID)
+	require.Equal(t, "video/mp4", recorder.Header().Get("Content-Type"))
+	require.Equal(t, "video-data", recorder.Body.String())
 }
 
 func TestConvertRequestGeminiImageUsesGeminiInnerAdaptor(t *testing.T) {

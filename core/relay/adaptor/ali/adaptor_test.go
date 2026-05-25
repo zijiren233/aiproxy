@@ -25,6 +25,35 @@ type aliTestStore struct {
 	saved []adaptor.StoreCache
 }
 
+func TestErrorHandlerParsesAliTopLevelError(t *testing.T) {
+	t.Parallel()
+
+	resp := &http.Response{
+		StatusCode: http.StatusBadRequest,
+		Body: io.NopCloser(strings.NewReader(
+			`{"code":"InvalidParameter","message":"duration is invalid","request_id":"req-1"}`,
+		)),
+	}
+
+	err := ErrorHanlder(resp)
+	if err.StatusCode() != http.StatusBadRequest {
+		t.Fatalf("expected status %d, got %d", http.StatusBadRequest, err.StatusCode())
+	}
+
+	body, marshalErr := err.MarshalJSON()
+	if marshalErr != nil {
+		t.Fatalf("marshal error: %v", marshalErr)
+	}
+
+	if !strings.Contains(string(body), `"message":"duration is invalid"`) {
+		t.Fatalf("expected ali message, got %s", body)
+	}
+
+	if !strings.Contains(string(body), `"code":"InvalidParameter"`) {
+		t.Fatalf("expected ali code, got %s", body)
+	}
+}
+
 func (s *aliTestStore) GetStore(_ string, _ int, id string) (adaptor.StoreCache, error) {
 	for _, cache := range s.saved {
 		if cache.ID == id {

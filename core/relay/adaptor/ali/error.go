@@ -2,17 +2,31 @@ package ali
 
 import (
 	"net/http"
+	"strconv"
 	"strings"
 
+	"github.com/bytedance/sonic"
+	"github.com/labring/aiproxy/core/common"
 	"github.com/labring/aiproxy/core/relay/adaptor"
-	"github.com/labring/aiproxy/core/relay/adaptor/openai"
 	relaymodel "github.com/labring/aiproxy/core/relay/model"
 )
 
 // https://help.aliyun.com/zh/model-studio/error-code?userCode=okjhlpr5
 
 func ErrorHanlder(resp *http.Response) adaptor.Error {
-	statusCode, openAIError := openai.GetError(resp)
+	defer resp.Body.Close()
+
+	respBody, err := common.GetResponseBody(resp)
+	if err != nil {
+		return relaymodel.WrapperOpenAIErrorWithMessage(
+			err.Error(),
+			relaymodel.ErrorCodeBadResponse,
+			resp.StatusCode,
+			relaymodel.ErrorTypeUpstream,
+		)
+	}
+
+	statusCode, openAIError := getAliErrorWithBody(resp.StatusCode, respBody)
 
 	// {"error":{"code":"ServiceUnavailable","message":"<503> InternalError.Algo: An error occurred in model serving, error message is: [Too many requests. Your requests are being throttled due to system capacity limits. Please try again later.]","type":"ServiceUnavailable"}}
 	switch openAIError.Type {
@@ -29,4 +43,37 @@ func ErrorHanlder(resp *http.Response) adaptor.Error {
 	}
 
 	return relaymodel.NewOpenAIError(statusCode, openAIError)
+}
+
+func getAliErrorWithBody(statusCode int, respBody []byte) (int, relaymodel.OpenAIError) {
+	openAIError := relaymodel.OpenAIError{
+		Type:  relaymodel.ErrorTypeUpstream,
+		Code:  relaymodel.ErrorCodeBadResponse,
+		Param: strconv.Itoa(statusCode),
+	}
+
+	var errResponse struct {
+		Error     relaymodel.OpenAIError `json:"error"`
+		Code      string                 `json:"code"`
+		Message   string                 `json:"message"`
+		RequestID string                 `json:"request_id"`
+	}
+
+	if err := sonic.Unmarshal(respBody, &errResponse); err != nil {
+		openAIError.Message = string(respBody)
+		return statusCode, openAIError
+	}
+
+	if errResponse.Error.Message != "" {
+		openAIError = errResponse.Error
+	} else if errResponse.Message != "" || errResponse.Code != "" {
+		openAIError.Message = firstNonEmpty(errResponse.Message, errResponse.Code)
+		openAIError.Code = firstNonEmpty(errResponse.Code, relaymodel.ErrorCodeBadResponse)
+	}
+
+	if openAIError.Message == "" {
+		openAIError.Message = string(respBody)
+	}
+
+	return statusCode, openAIError
 }

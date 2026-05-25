@@ -638,6 +638,46 @@ func TestImageHandlerHonorsURLResponseFormat(t *testing.T) {
 	assert.Equal(t, "data:image/png;base64,aW1hZ2U=", imageResp.Data[0].URL)
 }
 
+func TestImageHandlerEmptyImageErrorIncludesGeminiText(t *testing.T) {
+	t.Parallel()
+
+	meta := meta.NewMeta(
+		&model.Channel{Type: model.ChannelTypeGoogleGemini},
+		mode.ImagesGenerations,
+		"gemini-3.1-flash-image-preview",
+		model.ModelConfig{Type: mode.GeminiImage},
+	)
+
+	resp := &http.Response{
+		StatusCode: http.StatusOK,
+		Header:     http.Header{"Content-Type": {"application/json"}},
+		Body: io.NopCloser(bytes.NewBufferString(`{
+			"candidates":[{
+				"finishReason":"STOP",
+				"content":{"parts":[{"text":"I need a more specific image prompt."}]}
+			}]
+		}`)),
+	}
+
+	recorder := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(recorder)
+	c.Request = httptest.NewRequestWithContext(
+		t.Context(),
+		http.MethodPost,
+		"/v1/images/generations",
+		nil,
+	)
+
+	_, err := gemini.ImageHandler(meta, c, resp)
+	assert.NotNil(t, err)
+
+	body, marshalErr := err.MarshalJSON()
+	assert.NoError(t, marshalErr)
+	assert.Contains(t, string(body), "gemini image response image is empty")
+	assert.Contains(t, string(body), "I need a more specific image prompt.")
+	assert.Contains(t, string(body), "finish_reason=STOP")
+}
+
 func TestImageHandlerChargesActualGeminiImageCount(t *testing.T) {
 	t.Parallel()
 

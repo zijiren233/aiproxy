@@ -447,8 +447,10 @@ func ImageHandler(
 
 	imageResponse, usage := geminiImageResponseToOpenAI(meta, &geminiResponse)
 	if len(imageResponse.Data) == 0 {
+		message := geminiImageEmptyResponseMessage(&geminiResponse)
+
 		return adaptor.DoResponseResult{Usage: usage}, relaymodel.WrapperOpenAIErrorWithMessage(
-			"gemini image response image is empty",
+			message,
 			"empty_image",
 			http.StatusInternalServerError,
 		)
@@ -468,6 +470,38 @@ func ImageHandler(
 	_, _ = c.Writer.Write(data)
 
 	return adaptor.DoResponseResult{Usage: usage}, nil
+}
+
+func geminiImageEmptyResponseMessage(response *relaymodel.GeminiChatResponse) string {
+	const baseMessage = "gemini image response image is empty"
+
+	if response == nil {
+		return baseMessage
+	}
+
+	details := make([]string, 0, len(response.Candidates))
+
+	for _, candidate := range response.Candidates {
+		if candidate == nil {
+			continue
+		}
+
+		if candidate.FinishReason != "" {
+			details = append(details, "finish_reason="+candidate.FinishReason)
+		}
+
+		for _, part := range candidate.Content.Parts {
+			if text := strings.TrimSpace(part.Text); text != "" {
+				details = append(details, text)
+			}
+		}
+	}
+
+	if len(details) == 0 {
+		return baseMessage
+	}
+
+	return baseMessage + ": " + strings.Join(details, "; ")
 }
 
 func geminiImageResponseToOpenAI(

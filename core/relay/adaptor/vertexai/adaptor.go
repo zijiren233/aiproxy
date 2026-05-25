@@ -44,6 +44,7 @@ func (a *Adaptor) SupportMode(mt *meta.Meta) bool {
 	return m == mode.ChatCompletions ||
 		m == mode.Anthropic ||
 		m == mode.Gemini ||
+		m == mode.GeminiFiles ||
 		m == mode.GeminiVideo ||
 		m == mode.GeminiVideoOperations ||
 		m == mode.GeminiTTS ||
@@ -89,6 +90,7 @@ func innerAdaptor(meta *meta.Meta) innerAIAdapter {
 
 	switch meta.Mode {
 	case mode.GeminiVideo,
+		mode.GeminiFiles,
 		mode.GeminiVideoOperations,
 		mode.GeminiTTS,
 		mode.GeminiImage,
@@ -153,6 +155,10 @@ func (a *Adaptor) GetRequestURL(
 	config, err := getConfigFromKey(meta.Channel.Key)
 	if err != nil {
 		return adaptor.RequestURL{}, err
+	}
+
+	if meta.Mode == mode.GeminiFiles {
+		return (&gemini.Adaptor{}).GetRequestURL(meta, store, c)
 	}
 
 	featureModel := resolveFeatureModel(meta)

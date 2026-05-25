@@ -21,6 +21,7 @@ const (
 	StorePrefixResponse        = "response"
 	StorePrefixVideoJob        = "video_job"
 	StorePrefixVideoGeneration = "video_generation"
+	StorePrefixGeminiFile      = "gemini_file"
 	StorePrefixPromptCacheKey  = "prompt_cache_key"
 	StorePrefixCacheFollow     = "cachefollow"
 	StorePrefixCacheFollowUser = "cachefollow_user"
@@ -334,6 +335,10 @@ func VideoJobStoreID(jobID string) string {
 
 func VideoGenerationStoreID(generationID string) string {
 	return StoreID(StorePrefixVideoGeneration, generationID)
+}
+
+func GeminiFileStoreID(fileID string) string {
+	return StoreID(StorePrefixGeminiFile, fileID)
 }
 
 func PromptCacheStoreID(modelName, promptCacheKey string, keyType CacheKeyType) string {

@@ -330,6 +330,8 @@ func CheckRelayMode(requestMode, modelMode mode.Mode) bool {
 	switch requestMode {
 	case mode.GeminiVideo:
 		return modelMode == mode.GeminiVideo
+	case mode.GeminiFiles:
+		return containsMode(mode.Gemini, mode.GeminiFiles, mode.GeminiVideo)
 	case mode.GeminiVideoOperations:
 		return containsMode(mode.GeminiVideo, mode.GeminiVideoOperations)
 	case mode.AudioSpeech:
@@ -608,6 +610,10 @@ func GetVideoID(c *gin.Context) string {
 	return c.GetString(VideoID)
 }
 
+func GetFileID(c *gin.Context) string {
+	return c.GetString(FileID)
+}
+
 func GetRequestMetadata(c *gin.Context) map[string]string {
 	return c.GetStringMapString(RequestMetadata)
 }
@@ -637,6 +643,7 @@ func NewMetaByContext(c *gin.Context,
 	operationID := GetOperationID(c)
 	responseID := GetResponseID(c)
 	videoID := GetVideoID(c)
+	fileID := GetFileID(c)
 	promptCacheKey := GetPromptCacheKey(c)
 	user := GetRequestUser(c)
 	requestServiceTier := GetRequestServiceTier(c)
@@ -653,6 +660,7 @@ func NewMetaByContext(c *gin.Context,
 		meta.WithOperationID(operationID),
 		meta.WithResponseID(responseID),
 		meta.WithVideoID(videoID),
+		meta.WithFileID(fileID),
 		meta.WithPromptCacheKey(promptCacheKey),
 		meta.WithUser(user),
 		meta.WithRequestServiceTier(requestServiceTier),
@@ -835,6 +843,8 @@ func getRequestModel(c *gin.Context, m mode.Mode, group string, tokenID int) (st
 		return modelName, nil
 	case m == mode.Gemini || m == mode.GeminiVideo || m == mode.GeminiVideoOperations:
 		return getGeminiRequestModel(c, group, tokenID)
+	case m == mode.GeminiFiles:
+		return getGeminiFileRequestModel(c, group, tokenID)
 	default:
 		node, err := getRequestBodyNode(c)
 		if err != nil {
@@ -867,6 +877,29 @@ func getGeminiRequestModel(c *gin.Context, group string, tokenID int) (string, e
 	modelName, _, _ = strings.Cut(modelName, ":")
 
 	return modelName, nil
+}
+
+func getGeminiFileRequestModel(c *gin.Context, group string, tokenID int) (string, error) {
+	fileID := strings.TrimPrefix(c.Param("model"), "/")
+
+	fileID = strings.TrimSuffix(fileID, ":download")
+	if fileID == "" {
+		return "", errors.New("get request model failed: file id is empty")
+	}
+
+	store, err := model.CacheGetStore(
+		group,
+		tokenID,
+		model.GeminiFileStoreID(fileID),
+	)
+	if err != nil {
+		return "", fmt.Errorf("get request model failed: %w", err)
+	}
+
+	c.Set(FileID, fileID)
+	c.Set(ChannelID, store.ChannelID)
+
+	return store.Model, nil
 }
 
 func getGeminiPathModel(c *gin.Context) string {

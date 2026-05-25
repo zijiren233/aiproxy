@@ -32,6 +32,7 @@ var (
 
 	defaultWarnNotifyErrorRate uint64 = math.Float64bits(0.5)
 
+	defaultHost    atomic.Value
 	defaultMCPHost atomic.Value
 	publicMCPHost  atomic.Value
 	groupMCPHost   atomic.Value
@@ -49,6 +50,7 @@ func init() {
 	groupConsumeLevelRatio.Store(make(map[float64]float64))
 	usageAlertWhitelist.Store(make([]string, 0))
 	notifyNote.Store("")
+	defaultHost.Store("")
 	defaultMCPHost.Store("")
 	publicMCPHost.Store("")
 	groupMCPHost.Store("")
@@ -219,7 +221,26 @@ func SetNotifyNote(note string) {
 	notifyNote.Store(note)
 }
 
+func GetDefaultHost() string {
+	h, _ := defaultHost.Load().(string)
+	return h
+}
+
+func SetDefaultHost(host string) {
+	host = env.String("DEFAULT_HOST", host)
+	defaultHost.Store(host)
+}
+
 func GetDefaultMCPHost() string {
+	h := GetConfiguredDefaultMCPHost()
+	if h == "" {
+		return GetDefaultHost()
+	}
+
+	return h
+}
+
+func GetConfiguredDefaultMCPHost() string {
 	h, _ := defaultMCPHost.Load().(string)
 	return h
 }

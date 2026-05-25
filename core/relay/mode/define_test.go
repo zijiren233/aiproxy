@@ -39,6 +39,7 @@ func TestPersistedModeIDsStayStable(t *testing.T) {
 		mode.GeminiVideoOperations:   28,
 		mode.GeminiTTS:               29,
 		mode.GeminiImage:             30,
+		mode.GeminiFiles:             31,
 	}
 
 	for relayMode, want := range tests {

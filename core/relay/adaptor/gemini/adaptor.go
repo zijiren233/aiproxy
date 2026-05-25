@@ -45,6 +45,7 @@ func (a *Adaptor) SupportMode(mt *meta.Meta) bool {
 		m == mode.Anthropic ||
 		m == mode.Embeddings ||
 		m == mode.Gemini ||
+		m == mode.GeminiFiles ||
 		m == mode.GeminiVideo ||
 		m == mode.GeminiVideoOperations ||
 		m == mode.GeminiTTS ||
@@ -134,6 +135,8 @@ func (a *Adaptor) GetRequestURL(
 		action = "predictLongRunning"
 	case mode.GeminiVideoOperations:
 		return getNativeVideoOperationRequestURL(meta, store)
+	case mode.GeminiFiles:
+		return getGeminiFileRequestURL(meta, store)
 	case mode.VideoGenerationsGetJobs:
 		operationID, err := ResolveVideoJobOperationID(meta, store, meta.JobID)
 		if err != nil {
@@ -208,6 +211,8 @@ func (a *Adaptor) ConvertRequest(
 		return NativeVideoConvertRequest(meta, req)
 	case mode.GeminiVideoOperations:
 		return ConvertVideoNoBodyRequest(meta, req)
+	case mode.GeminiFiles:
+		return ConvertVideoNoBodyRequest(meta, req)
 	case mode.VideoGenerationsJobs:
 		return ConvertVideoGenerationJobRequest(meta, req)
 	case mode.Videos:
@@ -268,7 +273,9 @@ func (a *Adaptor) DoResponse(
 	case mode.GeminiVideo:
 		return NativeVideoHandler(meta, store, c, resp)
 	case mode.GeminiVideoOperations:
-		return NativeVideoOperationHandler(meta, c, resp)
+		return NativeVideoOperationHandler(meta, store, c, resp)
+	case mode.GeminiFiles:
+		return GeminiFileHandler(meta, c, resp)
 	case mode.VideoGenerationsJobs:
 		return VideoGenerationJobSubmitHandler(meta, store, c, resp)
 	case mode.Videos:

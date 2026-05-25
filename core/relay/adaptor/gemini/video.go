@@ -11,6 +11,7 @@ import (
 	"io"
 	"mime/multipart"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -19,9 +20,9 @@ import (
 	"github.com/bytedance/sonic/ast"
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/core/common"
+	"github.com/labring/aiproxy/core/common/config"
 	"github.com/labring/aiproxy/core/model"
 	"github.com/labring/aiproxy/core/relay/adaptor"
-	"github.com/labring/aiproxy/core/relay/adaptor/openai"
 	"github.com/labring/aiproxy/core/relay/meta"
 	"github.com/labring/aiproxy/core/relay/mode"
 	relaymodel "github.com/labring/aiproxy/core/relay/model"
@@ -34,6 +35,7 @@ const (
 
 	defaultGeminiVideoDurationSeconds = 8
 	defaultGeminiVideoResolution      = "720p"
+	defaultGeminiVideoRAIFilterReason = "Gemini filtered the generated media."
 
 	metaGeminiVideoSeconds          = "gemini_video_seconds"
 	metaGeminiVideoVariants         = "gemini_video_variants"
@@ -77,6 +79,10 @@ type geminiVideoStoreMetadata struct {
 	Variants      int    `json:"variants,omitempty"`
 	Width         int    `json:"width,omitempty"`
 	Height        int    `json:"height,omitempty"`
+}
+
+type geminiFileStoreMetadata struct {
+	URI string `json:"uri,omitempty"`
 }
 
 type geminiOperation = relaymodel.GeminiVideoOperation
@@ -142,6 +148,13 @@ func NativeVideoConvertRequest(
 		}
 	}
 
+	if meta == nil || meta.Channel.Type != model.ChannelTypeVertexAI {
+		body, err = removeGeminiVideoNumberOfVideos(body)
+		if err != nil {
+			return adaptor.ConvertResult{}, err
+		}
+	}
+
 	return adaptor.ConvertResult{
 		Header: http.Header{
 			"Content-Type":   {"application/json"},
@@ -149,6 +162,26 @@ func NativeVideoConvertRequest(
 		},
 		Body: bytes.NewReader(body),
 	}, nil
+}
+
+func removeGeminiVideoNumberOfVideos(body []byte) ([]byte, error) {
+	node, err := common.GetJSONNodeNoCopy(body)
+	if err != nil {
+		return nil, err
+	}
+
+	removeGeminiVideoNumberOfVideosFromObject(&node)
+	removeGeminiVideoNumberOfVideosFromObject(node.Get("parameters"))
+
+	return node.MarshalJSON()
+}
+
+func removeGeminiVideoNumberOfVideosFromObject(node *ast.Node) {
+	if node == nil || !node.Exists() || node.TypeSafe() != ast.V_OBJECT {
+		return
+	}
+
+	_, _ = node.Unset("numberOfVideos")
 }
 
 func ConvertVideoNoBodyRequest(
@@ -221,6 +254,27 @@ func convertOpenAIVideosRequest(
 	return convertGeminiVideoRequest(meta, request)
 }
 
+func convertOpenAIVideoRequestWithConfig(
+	meta *meta.Meta,
+	req *http.Request,
+	cfg Config,
+) (adaptor.ConvertResult, error) {
+	var request geminiVideoRequest
+
+	var err error
+	if meta != nil && meta.Mode == mode.Videos {
+		request, err = parseOpenAIVideosRequest(req)
+	} else {
+		request, err = parseOpenAIVideoGenerationJobRequest(req)
+	}
+
+	if err != nil {
+		return adaptor.ConvertResult{}, err
+	}
+
+	return convertGeminiVideoRequestWithConfig(meta, request, cfg)
+}
+
 func convertGeminiVideoRequest(
 	meta *meta.Meta,
 	request geminiVideoRequest,
@@ -230,6 +284,14 @@ func convertGeminiVideoRequest(
 		return adaptor.ConvertResult{}, err
 	}
 
+	return convertGeminiVideoRequestWithConfig(meta, request, cfg)
+}
+
+func convertGeminiVideoRequestWithConfig(
+	meta *meta.Meta,
+	request geminiVideoRequest,
+	cfg Config,
+) (adaptor.ConvertResult, error) {
 	if len(request.Instances) == 0 {
 		return adaptor.ConvertResult{}, errors.New("prompt or input_reference is required")
 	}
@@ -251,6 +313,10 @@ func convertGeminiVideoRequest(
 			width,
 			height,
 		)
+	}
+
+	if meta == nil || meta.Channel.Type != model.ChannelTypeVertexAI {
+		request.Parameters.NumberOfVideos = 0
 	}
 
 	body, err := sonic.Marshal(request)
@@ -846,6 +912,7 @@ func NativeVideoHandler(
 
 func NativeVideoOperationHandler(
 	meta *meta.Meta,
+	store adaptor.Store,
 	c *gin.Context,
 	resp *http.Response,
 ) (adaptor.DoResponseResult, adaptor.Error) {
@@ -865,12 +932,19 @@ func NativeVideoOperationHandler(
 
 	var operation geminiOperation
 	if err := sonic.Unmarshal(body, &operation); err == nil {
+		if err := saveGeminiFileStores(meta, store, &operation); err != nil {
+			common.GetLogger(c).Errorf("save gemini file store failed: %v", err)
+		}
+
 		publicName := publicNativeGeminiVideoOperationName(meta, operation.Name)
-		if publicName != "" {
-			patchedBody, marshalErr := rewriteGeminiOperationName(body, publicName)
-			if marshalErr == nil {
-				body = patchedBody
-			}
+
+		patchedBody, marshalErr := rewriteGeminiOperationResponse(
+			c,
+			body,
+			publicName,
+		)
+		if marshalErr == nil {
+			body = patchedBody
 		}
 	}
 
@@ -879,6 +953,25 @@ func NativeVideoOperationHandler(
 	_, _ = c.Writer.Write(body)
 
 	return adaptor.DoResponseResult{}, nil
+}
+
+func GeminiFileHandler(
+	meta *meta.Meta,
+	c *gin.Context,
+	resp *http.Response,
+) (adaptor.DoResponseResult, adaptor.Error) {
+	if resp.StatusCode != http.StatusOK {
+		return adaptor.DoResponseResult{}, ErrorHandler(resp)
+	}
+
+	defer resp.Body.Close()
+
+	c.Writer.Header().
+		Set("Content-Type", firstNonEmpty(resp.Header.Get("Content-Type"), "application/octet-stream"))
+	c.Writer.Header().Set("Content-Length", resp.Header.Get("Content-Length"))
+	_, _ = io.Copy(c.Writer, resp.Body)
+
+	return adaptor.DoResponseResult{UpstreamID: meta.FileID}, nil
 }
 
 func VideoGenerationJobSubmitHandler(
@@ -964,7 +1057,7 @@ func VideosSubmitHandler(
 
 func readGeminiVideoOperation(resp *http.Response) (geminiOperation, adaptor.Error) {
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
-		return geminiOperation{}, openai.VideoErrorHanlder(resp)
+		return geminiOperation{}, OpenAIVideoErrorHandler(resp)
 	}
 
 	defer resp.Body.Close()
@@ -994,7 +1087,7 @@ func VideoGenerationJobStatusHandler(
 	resp *http.Response,
 ) (adaptor.DoResponseResult, adaptor.Error) {
 	if resp.StatusCode != http.StatusOK {
-		return adaptor.DoResponseResult{}, openai.VideoErrorHanlder(resp)
+		return adaptor.DoResponseResult{}, OpenAIVideoErrorHandler(resp)
 	}
 
 	defer resp.Body.Close()
@@ -1053,7 +1146,7 @@ func VideosStatusHandler(
 	resp *http.Response,
 ) (adaptor.DoResponseResult, adaptor.Error) {
 	if resp.StatusCode != http.StatusOK {
-		return adaptor.DoResponseResult{}, openai.VideoErrorHanlder(resp)
+		return adaptor.DoResponseResult{}, OpenAIVideoErrorHandler(resp)
 	}
 
 	defer resp.Body.Close()
@@ -1123,7 +1216,7 @@ func fetchGeminiVideoContentHandler(
 	id string,
 ) (adaptor.DoResponseResult, adaptor.Error) {
 	if resp.StatusCode != http.StatusOK {
-		return adaptor.DoResponseResult{}, openai.VideoErrorHanlder(resp)
+		return adaptor.DoResponseResult{}, OpenAIVideoErrorHandler(resp)
 	}
 
 	defer resp.Body.Close()
@@ -1197,6 +1290,11 @@ func buildGeminiVideoJob(
 		finishedAt = &now
 	}
 
+	var finishReason *string
+	if reason := geminiOperationFailureMessage(operation); reason != "" {
+		finishReason = &reason
+	}
+
 	urls := geminiVideoURLs(operation)
 	generations := make([]relaymodel.VideoGenerations, 0, len(urls))
 
@@ -1215,18 +1313,19 @@ func buildGeminiVideoJob(
 	}
 
 	return relaymodel.VideoGenerationJob{
-		Object:      "video.generation.job",
-		ID:          id,
-		Status:      status,
-		CreatedAt:   now,
-		FinishedAt:  finishedAt,
-		Prompt:      metaPrompt(meta),
-		Model:       meta.OriginModel,
-		NVariants:   maxInt(requestVideoVariants(meta), 1),
-		NSeconds:    requestVideoSeconds(meta),
-		Width:       requestVideoWidth(meta),
-		Height:      requestVideoHeight(meta),
-		Generations: generations,
+		Object:       "video.generation.job",
+		ID:           id,
+		Status:       status,
+		CreatedAt:    now,
+		FinishedAt:   finishedAt,
+		Prompt:       metaPrompt(meta),
+		Model:        meta.OriginModel,
+		NVariants:    maxInt(requestVideoVariants(meta), 1),
+		NSeconds:     requestVideoSeconds(meta),
+		Width:        requestVideoWidth(meta),
+		Height:       requestVideoHeight(meta),
+		Generations:  generations,
+		FinishReason: finishReason,
 	}
 }
 
@@ -1255,6 +1354,12 @@ func buildGeminiVideo(
 		}
 	}
 
+	if reason := geminiOperationRAIFilteredReason(operation); reason != "" {
+		video.Error = map[string]any{
+			"message": reason,
+		}
+	}
+
 	return video
 }
 
@@ -1265,6 +1370,10 @@ func geminiOperationVideoJobStatus(operation *geminiOperation) relaymodel.VideoG
 
 	if geminiOperationFailed(operation) {
 		return "failed"
+	}
+
+	if operation != nil && operation.Name != "" {
+		return relaymodel.VideoGenerationJobStatusRunning
 	}
 
 	return relaymodel.VideoGenerationJobStatusQueued
@@ -1279,6 +1388,10 @@ func geminiOperationVideoStatus(operation *geminiOperation) relaymodel.VideoStat
 		return relaymodel.VideoStatusFailed
 	}
 
+	if operation != nil && operation.Name != "" {
+		return relaymodel.VideoStatusInProgress
+	}
+
 	return relaymodel.VideoStatusQueued
 }
 
@@ -1290,12 +1403,18 @@ func geminiOperationSucceeded(operation *geminiOperation) bool {
 }
 
 func geminiOperationFailed(operation *geminiOperation) bool {
-	return operation != nil && operation.Done && operation.Error != nil
+	return operation != nil &&
+		operation.Done &&
+		(operation.Error != nil || geminiOperationRAIFilteredReason(operation) != "")
 }
 
 func geminiVideoProgress(status relaymodel.VideoStatus) int {
 	if status == relaymodel.VideoStatusCompleted {
 		return 100
+	}
+
+	if status == relaymodel.VideoStatusInProgress {
+		return 50
 	}
 
 	return 0
@@ -1316,6 +1435,35 @@ func geminiVideoURLs(operation *geminiOperation) []string {
 	}
 
 	return urls
+}
+
+func geminiOperationFailureMessage(operation *geminiOperation) string {
+	if operation == nil {
+		return ""
+	}
+
+	if operation.Error != nil && operation.Error.Message != "" {
+		return operation.Error.Message
+	}
+
+	return geminiOperationRAIFilteredReason(operation)
+}
+
+func geminiOperationRAIFilteredReason(operation *geminiOperation) string {
+	if operation == nil || !operation.Done {
+		return ""
+	}
+
+	response := operation.Response.GenerateVideoResponse
+	if response.RAIMediaFilteredCount <= 0 && len(response.RAIMediaFilteredReasons) == 0 {
+		return ""
+	}
+
+	if reason := firstNonEmpty(response.RAIMediaFilteredReasons...); reason != "" {
+		return reason
+	}
+
+	return defaultGeminiVideoRAIFilterReason
 }
 
 func geminiVideoGenerationID(operationName string, index int) string {
@@ -1456,6 +1604,26 @@ func getNativeVideoOperationRequestURL(
 	return getOperationRequestURL(meta, operationName)
 }
 
+func getGeminiFileRequestURL(meta *meta.Meta, store adaptor.Store) (adaptor.RequestURL, error) {
+	if meta == nil || meta.FileID == "" {
+		return adaptor.RequestURL{}, errors.New("file id is empty")
+	}
+
+	fileURL := storedGeminiFileURL(meta, store)
+	if fileURL == "" {
+		fileURL = geminiFileDownloadURL(meta.Channel.BaseURL, meta.FileID)
+	}
+
+	if fileURL == "" {
+		return adaptor.RequestURL{}, errors.New("file url is empty")
+	}
+
+	return adaptor.RequestURL{
+		Method: http.MethodGet,
+		URL:    fileURL,
+	}, nil
+}
+
 func NativeGeminiVideoUpstreamOperationName(meta *meta.Meta, store adaptor.Store) string {
 	return nativeGeminiVideoUpstreamOperationName(meta, store)
 }
@@ -1544,6 +1712,159 @@ func rewriteGeminiOperationName(body []byte, name string) ([]byte, error) {
 	}
 
 	return node.MarshalJSON()
+}
+
+func rewriteGeminiOperationResponse(
+	c *gin.Context,
+	body []byte,
+	name string,
+) ([]byte, error) {
+	node, err := sonic.GetCopyFromString(string(body))
+	if err != nil {
+		return nil, err
+	}
+
+	if name != "" {
+		if _, err := node.Set("name", ast.NewString(name)); err != nil {
+			return nil, err
+		}
+	}
+
+	rewriteGeminiFileURIs(c, &node)
+
+	return node.MarshalJSON()
+}
+
+func rewriteGeminiFileURIs(c *gin.Context, node *ast.Node) {
+	samples := node.GetByPath("response", "generateVideoResponse", "generatedSamples")
+	if samples == nil || !samples.Exists() || samples.TypeSafe() != ast.V_ARRAY {
+		return
+	}
+
+	length, err := samples.Cap()
+	if err != nil {
+		return
+	}
+
+	for i := range length {
+		sampleNode := samples.Index(i)
+		if sampleNode == nil || !sampleNode.Exists() || sampleNode.TypeSafe() != ast.V_OBJECT {
+			continue
+		}
+
+		videoNode := sampleNode.Get("video")
+		if videoNode == nil || !videoNode.Exists() || videoNode.TypeSafe() != ast.V_OBJECT {
+			continue
+		}
+
+		uriNode := videoNode.Get("uri")
+		if uriNode == nil || !uriNode.Exists() || uriNode.TypeSafe() != ast.V_STRING {
+			continue
+		}
+
+		uri, err := uriNode.String()
+		if err != nil {
+			continue
+		}
+
+		fileID := geminiFileIDFromURI(uri)
+		if fileID == "" {
+			continue
+		}
+
+		proxyURL := geminiFileProxyURL(c, fileID)
+		if proxyURL == "" {
+			continue
+		}
+
+		if _, err := videoNode.Set("uri", ast.NewString(proxyURL)); err != nil {
+			continue
+		}
+
+		if _, err := sampleNode.Set("video", *videoNode); err != nil {
+			continue
+		}
+
+		if _, err := samples.SetByIndex(i, *sampleNode); err != nil {
+			continue
+		}
+	}
+
+	_, _ = node.GetByPath("response", "generateVideoResponse").
+		Set("generatedSamples", *samples)
+}
+
+func geminiFileIDFromURI(uri string) string {
+	parsed, err := url.Parse(uri)
+	if err != nil {
+		return ""
+	}
+
+	parts := strings.Split(strings.Trim(parsed.Path, "/"), "/")
+	if len(parts) < 2 || parts[len(parts)-2] != "files" {
+		return ""
+	}
+
+	fileID, ok := strings.CutSuffix(parts[len(parts)-1], ":download")
+	if !ok || fileID == "" {
+		return ""
+	}
+
+	return fileID
+}
+
+func geminiFileProxyURL(c *gin.Context, fileID string) string {
+	if fileID == "" || c == nil || c.Request == nil {
+		return ""
+	}
+
+	scheme := c.Request.URL.Scheme
+	if scheme == "" {
+		if c.Request.TLS != nil {
+			scheme = "https"
+		} else {
+			scheme = "http"
+		}
+	}
+
+	host := c.Request.Host
+	if defaultHost := config.GetDefaultHost(); defaultHost != "" {
+		host = defaultHost
+	}
+
+	if host == "" {
+		return ""
+	}
+
+	values := url.Values{"alt": {"media"}}
+
+	return fmt.Sprintf(
+		"%s://%s/%s/files/%s:download?%s",
+		scheme,
+		host,
+		"v1beta",
+		url.PathEscape(fileID),
+		values.Encode(),
+	)
+}
+
+func geminiFileDownloadURL(baseURL, fileID string) string {
+	if fileID == "" {
+		return ""
+	}
+
+	if baseURL == "" {
+		baseURL = (&Adaptor{}).DefaultBaseURL()
+	}
+
+	versionedURL, err := url.JoinPath(baseURL, "v1beta", "files", fileID+":download")
+	if err != nil {
+		return ""
+	}
+
+	values := url.Values{"alt": {"media"}}
+
+	return versionedURL + "?" + values.Encode()
 }
 
 func nativeGeminiVideoStoreID(operationName string) string {
@@ -1762,6 +2083,95 @@ func saveGeminiVideoStore(
 		Metadata:  geminiVideoStoreMetadataString(meta, operationName),
 		ExpiresAt: expiresAt,
 	})
+}
+
+func saveGeminiFileStores(
+	meta *meta.Meta,
+	store adaptor.Store,
+	operation *geminiOperation,
+) error {
+	if meta == nil || store == nil {
+		return nil
+	}
+
+	for _, uri := range geminiVideoURLs(operation) {
+		fileID := geminiFileIDFromURI(uri)
+		if fileID == "" {
+			continue
+		}
+
+		if err := store.SaveStore(adaptor.StoreCache{
+			ID:        model.GeminiFileStoreID(fileID),
+			GroupID:   meta.Group.ID,
+			TokenID:   meta.Token.ID,
+			ChannelID: meta.Channel.ID,
+			Model:     meta.OriginModel,
+			Metadata:  geminiFileStoreMetadataString(uri),
+			ExpiresAt: time.Now().Add(geminiVideoTTL),
+		}); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func geminiFileStoreMetadataString(uri string) string {
+	body, err := sonic.MarshalString(geminiFileStoreMetadata{URI: uri})
+	if err != nil {
+		return uri
+	}
+
+	return body
+}
+
+func storedGeminiFileURL(meta *meta.Meta, store adaptor.Store) string {
+	if meta == nil || meta.FileID == "" || meta.Token.ID == 0 {
+		return ""
+	}
+
+	var (
+		cache adaptor.StoreCache
+		err   error
+	)
+
+	if store != nil {
+		cache, err = store.GetStore(
+			meta.Group.ID,
+			meta.Token.ID,
+			model.GeminiFileStoreID(meta.FileID),
+		)
+	} else {
+		storeCache, getErr := model.CacheGetStore(
+			meta.Group.ID,
+			meta.Token.ID,
+			model.GeminiFileStoreID(meta.FileID),
+		)
+		if getErr == nil && storeCache != nil {
+			cache = adaptor.StoreCache(*storeCache)
+		}
+
+		err = getErr
+	}
+
+	if err != nil {
+		return ""
+	}
+
+	if uri := parseGeminiFileStoreMetadata(cache.Metadata).URI; uri != "" {
+		return uri
+	}
+
+	return geminiFileDownloadURL(meta.Channel.BaseURL, meta.FileID)
+}
+
+func parseGeminiFileStoreMetadata(value string) geminiFileStoreMetadata {
+	var metadata geminiFileStoreMetadata
+	if err := sonic.UnmarshalString(value, &metadata); err == nil && metadata.URI != "" {
+		return metadata
+	}
+
+	return geminiFileStoreMetadata{URI: strings.TrimSpace(value)}
 }
 
 func geminiVideoStoreMetadataString(meta *meta.Meta, operationName string) string {
