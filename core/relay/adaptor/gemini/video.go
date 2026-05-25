@@ -1818,7 +1818,7 @@ func geminiFileProxyURL(c *gin.Context, fileID string) string {
 		return ""
 	}
 
-	scheme := firstNonEmpty(c.Request.Header.Get("X-Forwarded-Proto"), c.Request.URL.Scheme)
+	scheme := c.Request.URL.Scheme
 	if scheme == "" {
 		if c.Request.TLS != nil {
 			scheme = "https"
@@ -1827,7 +1827,7 @@ func geminiFileProxyURL(c *gin.Context, fileID string) string {
 		}
 	}
 
-	host := firstNonEmpty(c.Request.Header.Get("X-Forwarded-Host"), c.Request.Host)
+	host := c.Request.Host
 	if defaultHost := config.GetDefaultHost(); defaultHost != "" {
 		host = defaultHost
 	}

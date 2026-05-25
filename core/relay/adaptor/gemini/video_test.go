@@ -2,6 +2,7 @@ package gemini_test
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -1502,7 +1503,7 @@ func TestNativeVideoOperationHandlerRewritesGeneratedFileURI(t *testing.T) {
 		nil,
 	)
 	c.Request.Host = "proxy.example.com"
-	c.Request.Header.Set("X-Forwarded-Proto", "https")
+	c.Request.TLS = &tls.ConnectionState{}
 
 	resp := &http.Response{
 		StatusCode: http.StatusOK,
@@ -1581,6 +1582,7 @@ func TestNativeVideoOperationHandlerUsesDefaultHostForGeneratedFileURI(t *testin
 		nil,
 	)
 	c.Request.Host = "internal.example.local"
+	c.Request.TLS = &tls.ConnectionState{}
 	c.Request.Header.Set("X-Forwarded-Host", "forwarded.example.com")
 	c.Request.Header.Set("X-Forwarded-Proto", "https")
 
@@ -1608,6 +1610,69 @@ func TestNativeVideoOperationHandlerUsesDefaultHostForGeneratedFileURI(t *testin
 		recorder.Body.String(),
 		`https://public.example.com/v1beta/files/ef8j32lly0bs:download?alt=media`,
 	)
+}
+
+func TestNativeVideoOperationHandlerIgnoresForwardedHostWithoutDefaultHost(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	t.Setenv("DEFAULT_HOST", "")
+
+	oldDefaultHost := config.GetDefaultHost()
+
+	config.SetDefaultHost("")
+	defer config.SetDefaultHost(oldDefaultHost)
+
+	adaptor := &gemini.Adaptor{}
+	store := &geminiVideoTestStore{}
+	m := meta.NewMeta(
+		nil,
+		mode.GeminiVideoOperations,
+		"veo-3.1-generate-preview",
+		coremodel.ModelConfig{},
+		meta.WithOperationID("3b12t6snoaee"),
+		meta.WithGroup(coremodel.GroupCache{ID: "group-1"}),
+		meta.WithToken(coremodel.TokenCache{ID: 7}),
+	)
+	m.OriginModel = "veo-3.1-generate-preview"
+	m.Channel.ID = 11
+
+	recorder := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(recorder)
+	c.Request = httptest.NewRequestWithContext(
+		t.Context(),
+		http.MethodGet,
+		"/v1beta/models/veo-3.1-generate-preview/operations/3b12t6snoaee",
+		nil,
+	)
+	c.Request.Host = "proxy.example.com"
+	c.Request.Header.Set("X-Forwarded-Host", "attacker.example.com")
+	c.Request.Header.Set("X-Forwarded-Proto", "https")
+
+	resp := &http.Response{
+		StatusCode: http.StatusOK,
+		Header:     make(http.Header),
+		Body: io.NopCloser(strings.NewReader(`{
+			"name":"models/veo-3.1-generate-preview/operations/3b12t6snoaee",
+			"done":true,
+			"response":{
+				"generateVideoResponse":{
+					"generatedSamples":[
+						{"video":{"uri":"https://generativelanguage.googleapis.com/v1beta/files/ef8j32lly0bs:download?alt=media"}}
+					]
+				}
+			}
+		}`)),
+	}
+
+	_, relayErr := adaptor.DoResponse(m, store, c, resp)
+	require.Nil(t, relayErr)
+
+	require.Contains(
+		t,
+		recorder.Body.String(),
+		`http://proxy.example.com/v1beta/files/ef8j32lly0bs:download?alt=media`,
+	)
+	require.NotContains(t, recorder.Body.String(), "attacker.example.com")
 }
 
 func TestGeminiFileModeDownloadsStoredFileWithAPIKey(t *testing.T) {
