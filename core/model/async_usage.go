@@ -26,6 +26,8 @@ const (
 	AsyncUsageMaxPollDelay     = 3 * time.Minute
 )
 
+var asyncUsageSchemaCache sync.Map
+
 type AsyncUsageInfo struct {
 	ID                          int              `gorm:"primaryKey"              json:"id"`
 	RequestID                   string           `gorm:"type:char(16);index"     json:"request_id"`
@@ -272,9 +274,7 @@ func asyncUsageUpdateValues(
 		namer = LogDB.NamingStrategy
 	}
 
-	var schemaCache sync.Map
-
-	s, err := schema.Parse(&AsyncUsageInfo{}, &schemaCache, namer)
+	s, err := schema.Parse(&AsyncUsageInfo{}, &asyncUsageSchemaCache, namer)
 	if err != nil {
 		return nil, fmt.Errorf("parse async usage schema: %w", err)
 	}
