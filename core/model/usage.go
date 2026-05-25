@@ -669,10 +669,10 @@ func (u *Usage) Add(other Usage) {
 }
 
 type UsageContext struct {
-	Resolution       string `json:"resolution,omitempty"`
-	NativeResolution string `json:"native_resolution,omitempty"`
-	Quality          string `json:"quality,omitempty"`
-	ServiceTier      string `json:"service_tier,omitempty"`
+	Resolution       string `gorm:"size:32" json:"resolution,omitempty"`
+	NativeResolution string `gorm:"size:32" json:"native_resolution,omitempty"`
+	Quality          string `gorm:"size:32" json:"quality,omitempty"`
+	ServiceTier      string `gorm:"size:32" json:"service_tier,omitempty"`
 }
 
 func (c UsageContext) PriceConditionMatches(condition PriceCondition) bool {

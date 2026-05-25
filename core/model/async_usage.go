@@ -1,9 +1,15 @@
 package model
 
 import (
+	"context"
+	"errors"
+	"fmt"
+	"reflect"
+	"sync"
 	"time"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/schema"
 )
 
 type AsyncUsageStatus int
@@ -21,30 +27,30 @@ const (
 )
 
 type AsyncUsageInfo struct {
-	ID                          int              `gorm:"primaryKey"                    json:"id"`
-	RequestID                   string           `gorm:"type:char(16);index"           json:"request_id"`
-	RequestAt                   time.Time        `                                     json:"request_at"`
-	Mode                        int              `gorm:"index"                         json:"mode"`
-	Model                       string           `gorm:"size:128"                      json:"model"`
-	ChannelID                   int              `gorm:"index"                         json:"channel_id"`
-	BaseURL                     string           `gorm:"type:text"                     json:"base_url,omitempty"`
-	GroupID                     string           `gorm:"size:64;index"                 json:"group_id"`
-	TokenID                     int              `gorm:"index"                         json:"token_id"`
-	TokenName                   string           `gorm:"size:128"                      json:"token_name,omitempty"`
-	Price                       Price            `gorm:"serializer:fastjson;type:text" json:"price"`
-	UpstreamID                  string           `gorm:"type:varchar(256);index"       json:"upstream_id"`
-	Status                      AsyncUsageStatus `gorm:"index;default:1"               json:"status"`
-	Usage                       Usage            `gorm:"serializer:fastjson;type:text" json:"usage"`
-	UsageContext                UsageContext     `gorm:"serializer:fastjson;type:text" json:"usage_context,omitempty"`
-	DisableResolutionFuzzyMatch bool             `                                     json:"disable_resolution_fuzzy_match,omitempty"`
-	Amount                      Amount           `gorm:"embedded"                      json:"amount,omitempty"`
-	Error                       string           `gorm:"type:text"                     json:"error,omitempty"`
-	RetryCount                  int              `                                     json:"retry_count"`
-	BalanceConsumed             bool             `                                     json:"balance_consumed"`
-	ProcessingToken             string           `gorm:"size:64;index"                 json:"-"`
-	NextPollAt                  time.Time        `gorm:"index"                         json:"next_poll_at"`
-	CreatedAt                   time.Time        `                                     json:"created_at"`
-	UpdatedAt                   time.Time        `                                     json:"updated_at"`
+	ID                          int              `gorm:"primaryKey"              json:"id"`
+	RequestID                   string           `gorm:"type:char(16);index"     json:"request_id"`
+	RequestAt                   time.Time        `                               json:"request_at"`
+	Mode                        int              `gorm:"index"                   json:"mode"`
+	Model                       string           `gorm:"size:128"                json:"model"`
+	ChannelID                   int              `gorm:"index"                   json:"channel_id"`
+	BaseURL                     string           `gorm:"type:text"               json:"base_url,omitempty"`
+	GroupID                     string           `gorm:"size:64;index"           json:"group_id"`
+	TokenID                     int              `gorm:"index"                   json:"token_id"`
+	TokenName                   string           `gorm:"size:128"                json:"token_name,omitempty"`
+	Price                       Price            `gorm:"embedded"                json:"price"`
+	UpstreamID                  string           `gorm:"type:varchar(256);index" json:"upstream_id"`
+	Status                      AsyncUsageStatus `gorm:"index;default:1"         json:"status"`
+	Usage                       Usage            `gorm:"embedded"                json:"usage"`
+	UsageContext                UsageContext     `gorm:"embedded"                json:"usage_context,omitempty"`
+	DisableResolutionFuzzyMatch bool             `                               json:"disable_resolution_fuzzy_match,omitempty"`
+	Amount                      Amount           `gorm:"embedded"                json:"amount,omitempty"`
+	Error                       string           `gorm:"type:text"               json:"error,omitempty"`
+	RetryCount                  int              `                               json:"retry_count"`
+	BalanceConsumed             bool             `                               json:"balance_consumed"`
+	ProcessingToken             string           `gorm:"size:64;index"           json:"-"`
+	NextPollAt                  time.Time        `gorm:"index"                   json:"next_poll_at"`
+	CreatedAt                   time.Time        `                               json:"created_at"`
+	UpdatedAt                   time.Time        `                               json:"updated_at"`
 }
 
 func CreateAsyncUsageInfo(info *AsyncUsageInfo) error {
@@ -215,7 +221,8 @@ func CompleteClaimedAsyncUsageInfo(
 	usageContext UsageContext,
 	amount Amount,
 ) (bool, error) {
-	updates := &AsyncUsageInfo{
+	now := time.Now()
+	updatesModel := &AsyncUsageInfo{
 		Status:          AsyncUsageStatusCompleted,
 		Usage:           usage,
 		UsageContext:    usageContext,
@@ -223,38 +230,87 @@ func CompleteClaimedAsyncUsageInfo(
 		Error:           "",
 		BalanceConsumed: info.BalanceConsumed,
 		ProcessingToken: "",
-		UpdatedAt:       time.Now(),
+		UpdatedAt:       now,
+	}
+
+	updates, err := asyncUsageUpdateValues(
+		updatesModel,
+		"Status",
+		"Usage",
+		"UsageContext",
+		"Amount",
+		"Error",
+		"BalanceConsumed",
+		"ProcessingToken",
+		"UpdatedAt",
+	)
+	if err != nil {
+		return false, err
 	}
 
 	tx := LogDB.
 		Model(&AsyncUsageInfo{}).
 		Where("id = ? AND processing_token = ?", info.ID, info.ProcessingToken).
-		Select(
-			"Status",
-			"Usage",
-			"UsageContext",
-			"InputAmount",
-			"ImageInputAmount",
-			"AudioInputAmount",
-			"VideoInputAmount",
-			"OutputAmount",
-			"ImageOutputAmount",
-			"AudioOutputAmount",
-			"CachedAmount",
-			"CacheCreationAmount",
-			"WebSearchAmount",
-			"UsedAmount",
-			"Error",
-			"BalanceConsumed",
-			"ProcessingToken",
-			"UpdatedAt",
-		).
 		Updates(updates)
 	if tx.Error != nil {
 		return false, tx.Error
 	}
 
 	return tx.RowsAffected > 0, nil
+}
+
+func asyncUsageUpdateValues(
+	info *AsyncUsageInfo,
+	names ...string,
+) (map[string]any, error) {
+	if info == nil {
+		return nil, errors.New("async usage info is nil")
+	}
+
+	var namer schema.Namer = schema.NamingStrategy{IdentifierMaxLength: 64}
+	if LogDB != nil && LogDB.NamingStrategy != nil {
+		namer = LogDB.NamingStrategy
+	}
+
+	var schemaCache sync.Map
+
+	s, err := schema.Parse(&AsyncUsageInfo{}, &schemaCache, namer)
+	if err != nil {
+		return nil, fmt.Errorf("parse async usage schema: %w", err)
+	}
+
+	values := make(map[string]any)
+	reflectValue := reflect.ValueOf(info)
+	ctx := context.Background()
+	selected := make(map[string]struct{}, len(names))
+	seen := make(map[string]struct{}, len(names))
+
+	for _, name := range names {
+		selected[name] = struct{}{}
+	}
+
+	for _, field := range s.Fields {
+		if !field.Updatable || field.DBName == "" || len(field.BindNames) == 0 {
+			continue
+		}
+
+		topName := field.BindNames[0]
+		if _, ok := selected[topName]; !ok {
+			continue
+		}
+
+		value, _ := field.ValueOf(ctx, reflectValue)
+		values[field.DBName] = value
+		seen[topName] = struct{}{}
+	}
+
+	for _, name := range names {
+		if _, ok := seen[name]; !ok {
+			return nil, fmt.Errorf("async usage field %q not found", name)
+		}
+	}
+
+	return values, nil
 }
 
 func updateClaimedAsyncUsageInfo(
