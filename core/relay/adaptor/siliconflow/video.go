@@ -228,13 +228,13 @@ func multipartVideoGenerationJobSubmitRequest(req *http.Request) (videoSubmitReq
 		return videoSubmitRequest{}, err
 	}
 
-	if request.ImageSize == "" {
-		width := req.PostFormValue("width")
+	request.ImageSize = ""
 
-		height := req.PostFormValue("height")
-		if width != "" && height != "" {
-			request.ImageSize = width + "x" + height
-		}
+	width := req.PostFormValue("width")
+
+	height := req.PostFormValue("height")
+	if width != "" && height != "" {
+		request.ImageSize = normalizeSiliconFlowSize(width + "x" + height)
 	}
 
 	return request, nil
@@ -280,19 +280,11 @@ func multipartVideoCommonSubmitRequest(req *http.Request) (videoSubmitRequest, e
 }
 
 func videoGenerationJobImageSize(reqMap map[string]any) string {
-	if size := stringFromMap(reqMap, "size"); size != "" {
-		return normalizeSiliconFlowSize(size)
-	}
-
 	width, widthOK := intFromAny(reqMap["width"])
 
 	height, heightOK := intFromAny(reqMap["height"])
 	if widthOK && heightOK && width > 0 && height > 0 {
 		return fmt.Sprintf("%dx%d", width, height)
-	}
-
-	if imageSize := stringFromMap(reqMap, "image_size"); imageSize != "" {
-		return normalizeSiliconFlowSize(imageSize)
 	}
 
 	return ""
@@ -485,7 +477,7 @@ func VideosSubmitHandler(
 
 func readSiliconFlowVideoSubmitResponse(resp *http.Response) (videoSubmitResponse, adaptor.Error) {
 	if resp.StatusCode != http.StatusOK {
-		return videoSubmitResponse{}, ErrorHandler(resp)
+		return videoSubmitResponse{}, OpenAIVideoErrorHandler(resp)
 	}
 
 	defer resp.Body.Close()
@@ -515,7 +507,7 @@ func VideoGenerationJobStatusHandler(
 	resp *http.Response,
 ) (adaptor.DoResponseResult, adaptor.Error) {
 	if resp.StatusCode != http.StatusOK {
-		return adaptor.DoResponseResult{}, ErrorHandler(resp)
+		return adaptor.DoResponseResult{}, OpenAIVideoErrorHandler(resp)
 	}
 
 	defer resp.Body.Close()
@@ -567,7 +559,7 @@ func VideosStatusHandler(
 	resp *http.Response,
 ) (adaptor.DoResponseResult, adaptor.Error) {
 	if resp.StatusCode != http.StatusOK {
-		return adaptor.DoResponseResult{}, ErrorHandler(resp)
+		return adaptor.DoResponseResult{}, OpenAIVideoErrorHandler(resp)
 	}
 
 	defer resp.Body.Close()
@@ -640,7 +632,7 @@ func fetchSiliconFlowVideoContentHandler(
 	id string,
 ) (adaptor.DoResponseResult, adaptor.Error) {
 	if resp.StatusCode != http.StatusOK {
-		return adaptor.DoResponseResult{}, ErrorHandler(resp)
+		return adaptor.DoResponseResult{}, OpenAIVideoErrorHandler(resp)
 	}
 
 	defer resp.Body.Close()

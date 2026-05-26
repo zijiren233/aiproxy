@@ -51,7 +51,9 @@ func (t *Timeout) ConvertRequest(
 		mode.VideosGet,
 		mode.VideosContent,
 		mode.VideosDelete,
-		mode.VideosRemix:
+		mode.VideosRemix,
+		mode.VideosEdits,
+		mode.VideosExtensions:
 		meta.RequestTimeout = time.Second * 30
 	case mode.ResponsesGet,
 		mode.ResponsesDelete,

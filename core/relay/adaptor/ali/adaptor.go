@@ -45,6 +45,8 @@ func (a *Adaptor) SupportMode(mt *meta.Meta) bool {
 		m == mode.AudioTranslation ||
 		m == mode.Anthropic ||
 		m == mode.Gemini ||
+		m == mode.AliVideo ||
+		m == mode.AliVideoTasks ||
 		m == mode.VideoGenerationsJobs ||
 		m == mode.VideoGenerationsGetJobs ||
 		m == mode.VideoGenerationsContent ||
@@ -52,6 +54,8 @@ func (a *Adaptor) SupportMode(mt *meta.Meta) bool {
 		m == mode.VideosGet ||
 		m == mode.VideosContent ||
 		m == mode.VideosRemix ||
+		m == mode.VideosEdits ||
+		m == mode.VideosExtensions ||
 		m == mode.Responses ||
 		m == mode.ResponsesGet ||
 		m == mode.ResponsesDelete ||
@@ -61,23 +65,27 @@ func (a *Adaptor) SupportMode(mt *meta.Meta) bool {
 
 func isAliVideoMode(m mode.Mode) bool {
 	return m == mode.VideoGenerationsJobs ||
+		m == mode.AliVideo ||
+		m == mode.AliVideoTasks ||
 		m == mode.VideoGenerationsGetJobs ||
 		m == mode.VideoGenerationsContent ||
 		m == mode.Videos ||
 		m == mode.VideosGet ||
 		m == mode.VideosContent ||
-		m == mode.VideosRemix
+		m == mode.VideosRemix ||
+		m == mode.VideosEdits ||
+		m == mode.VideosExtensions
 }
 
 func (a *Adaptor) GetRequestURL(
 	meta *meta.Meta,
-	_ adaptor.Store,
+	store adaptor.Store,
 	_ *gin.Context,
 ) (adaptor.RequestURL, error) {
 	u := meta.Channel.BaseURL
 
 	if isAliVideoMode(meta.Mode) {
-		return getAliVideoRequestURL(u, meta)
+		return getAliVideoRequestURL(u, meta, store)
 	}
 
 	switch meta.Mode {
@@ -242,6 +250,10 @@ func (a *Adaptor) SetupRequestHeader(
 ) error {
 	req.Header.Set("Authorization", "Bearer "+meta.Channel.Key)
 
+	if meta.Mode == mode.AliVideo {
+		req.Header.Set("X-Dashscope-Async", "enable")
+	}
+
 	// req.Header.Set("X-Dashscope-Plugin", meta.Channel.Config.Plugin)
 	return nil
 }
@@ -272,12 +284,20 @@ func (a *Adaptor) ConvertRequest(
 		return ConvertTTSRequest(meta, req)
 	case mode.AudioTranscription:
 		return ConvertSTTRequest(meta, req)
+	case mode.AliVideo:
+		return ConvertAliNativeVideoRequest(meta, req)
+	case mode.AliVideoTasks:
+		return adaptor.ConvertResult{}, nil
 	case mode.VideoGenerationsJobs:
 		return ConvertAliVideoGenerationJobRequest(meta, req)
 	case mode.Videos:
 		return ConvertAliVideosRequest(meta, req)
 	case mode.VideosRemix:
 		return ConvertAliVideosRemixRequest(meta, req)
+	case mode.VideosEdits:
+		return ConvertAliVideosEditRequest(meta, req)
+	case mode.VideosExtensions:
+		return ConvertAliVideosExtensionRequest(meta, req)
 	case mode.VideoGenerationsGetJobs:
 		return ConvertAliVideoGenerationGetJobsRequest(meta, req)
 	case mode.VideoGenerationsContent:
@@ -326,6 +346,10 @@ func (a *Adaptor) DoResponse(
 	resp *http.Response,
 ) (adaptor.DoResponseResult, adaptor.Error) {
 	switch meta.Mode {
+	case mode.AliVideo:
+		return AliNativeVideoHandler(meta, store, c, resp)
+	case mode.AliVideoTasks:
+		return AliNativeVideoTaskHandler(meta, store, c, resp)
 	case mode.VideoGenerationsJobs:
 		return AliVideoHandler(meta, store, c, resp)
 	case mode.VideoGenerationsGetJobs:
@@ -336,6 +360,10 @@ func (a *Adaptor) DoResponse(
 		return AliVideosHandler(meta, store, c, resp)
 	case mode.VideosRemix:
 		return AliVideosRemixHandler(meta, store, c, resp)
+	case mode.VideosEdits:
+		return AliVideosEditHandler(meta, store, c, resp)
+	case mode.VideosExtensions:
+		return AliVideosExtensionHandler(meta, store, c, resp)
 	case mode.VideosGet:
 		return AliVideoGetHandler(meta, store, c, resp)
 	case mode.VideosContent:

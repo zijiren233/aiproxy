@@ -362,6 +362,136 @@ func TestConvertVideoRequestMapsOpenAIFields(t *testing.T) {
 	require.Equal(t, "720p", gemini.GeminiVideoUsageContextForTest(m).NativeResolution)
 }
 
+func TestConvertVideosEditRequestMapsVideoField(t *testing.T) {
+	t.Parallel()
+
+	m := meta.NewMeta(nil, mode.VideosEdits, "veo-3.1-generate-preview", coremodel.ModelConfig{})
+	req, err := http.NewRequestWithContext(
+		context.Background(),
+		http.MethodPost,
+		"/v1/videos/edits",
+		strings.NewReader(
+			`{"model":"veo","prompt":"edit the video","seconds":4,"size":"1280x720","video":"gs://bucket/source.mp4"}`,
+		),
+	)
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+
+	result, err := gemini.ConvertVideoRequestForTest(m, req)
+	require.NoError(t, err)
+
+	body, err := io.ReadAll(result.Body)
+	require.NoError(t, err)
+	require.JSONEq(
+		t,
+		`{
+			"instances":[{"prompt":"edit the video","video":{"fileData":{"fileUri":"gs://bucket/source.mp4"}}}],
+			"parameters":{"aspectRatio":"16:9","resolution":"720p","durationSeconds":4}
+		}`,
+		string(body),
+	)
+}
+
+func TestConvertVideosExtensionRequestMapsVideoField(t *testing.T) {
+	t.Parallel()
+
+	m := meta.NewMeta(
+		nil,
+		mode.VideosExtensions,
+		"veo-3.1-generate-preview",
+		coremodel.ModelConfig{},
+	)
+	req, err := http.NewRequestWithContext(
+		context.Background(),
+		http.MethodPost,
+		"/v1/videos/extensions",
+		strings.NewReader(
+			`{"model":"veo","prompt":"extend the video","seconds":4,"size":"1280x720","video":"gs://bucket/source.mp4"}`,
+		),
+	)
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+
+	result, err := gemini.ConvertVideoRequestForTest(m, req)
+	require.NoError(t, err)
+
+	body, err := io.ReadAll(result.Body)
+	require.NoError(t, err)
+	require.JSONEq(
+		t,
+		`{
+			"instances":[{"prompt":"extend the video","video":{"fileData":{"fileUri":"gs://bucket/source.mp4"}}}],
+			"parameters":{"aspectRatio":"16:9","resolution":"720p","durationSeconds":4}
+		}`,
+		string(body),
+	)
+}
+
+func TestConvertVideosEditRequestHydratesStoredVideoID(t *testing.T) {
+	operationName := "models/veo-3.1-generate-preview/operations/video-123"
+	localID := gemini.GeminiVideoLocalIDForTest(operationName)
+
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		require.Equal(t, "/v1beta/"+operationName, r.URL.Path)
+		require.Equal(t, "apikey", r.Header.Get("X-Goog-Api-Key"))
+
+		_, _ = w.Write([]byte(`{
+			"name":"` + operationName + `",
+			"done":true,
+			"response":{
+				"generateVideoResponse":{
+					"generatedSamples":[
+						{"video":{"uri":"https://example.com/generated.mp4"}}
+					]
+				}
+			}
+		}`))
+	}))
+	defer upstream.Close()
+
+	store := &geminiVideoTestStore{
+		saved: []adaptorapi.StoreCache{
+			{
+				ID:       coremodel.VideoGenerationStoreID(localID),
+				Metadata: operationName,
+			},
+		},
+	}
+	m := meta.NewMeta(
+		&coremodel.Channel{BaseURL: upstream.URL, Key: "apikey"},
+		mode.VideosEdits,
+		"veo-3.1-generate-preview",
+		coremodel.ModelConfig{},
+		meta.WithGroup(coremodel.GroupCache{ID: "group-1"}),
+		meta.WithToken(coremodel.TokenCache{ID: 7}),
+		meta.WithVideoID(localID),
+	)
+	req, err := http.NewRequestWithContext(
+		context.Background(),
+		http.MethodPost,
+		"/v1/videos/edits",
+		strings.NewReader(
+			`{"prompt":"edit stored video","video":"`+localID+`","seconds":4,"size":"1280x720"}`,
+		),
+	)
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+
+	result, err := (&gemini.Adaptor{}).ConvertRequest(m, store, req)
+	require.NoError(t, err)
+
+	body, err := io.ReadAll(result.Body)
+	require.NoError(t, err)
+	require.JSONEq(
+		t,
+		`{
+			"instances":[{"prompt":"edit stored video","video":{"fileData":{"fileUri":"https://example.com/generated.mp4"}}}],
+			"parameters":{"aspectRatio":"16:9","resolution":"720p","durationSeconds":4}
+		}`,
+		string(body),
+	)
+}
+
 func TestConvertVideosRequestIgnoresNSeconds(t *testing.T) {
 	m := meta.NewMeta(nil, mode.Videos, "veo-3.1-generate-preview", coremodel.ModelConfig{})
 	req, err := http.NewRequestWithContext(
@@ -529,7 +659,7 @@ func TestConvertVideoGenerationJobRequestUsesJobOnlyFields(t *testing.T) {
 		http.MethodPost,
 		"/v1/video/generations/jobs",
 		strings.NewReader(
-			`{"model":"veo","prompt":"make a video","n_seconds":8,"n_variants":2,"size":"1280x720"}`,
+			`{"model":"veo","prompt":"make a video","n_seconds":8,"n_variants":2,"width":1280,"height":720}`,
 		),
 	)
 	require.NoError(t, err)
@@ -571,7 +701,7 @@ func TestConvertVideoGenerationJobRequestIgnoresVideosSeconds(t *testing.T) {
 		http.MethodPost,
 		"/v1/video/generations/jobs",
 		strings.NewReader(
-			`{"model":"veo","prompt":"make a video","seconds":8,"n_variants":2,"size":"1280x720"}`,
+			`{"model":"veo","prompt":"make a video","seconds":8,"n_variants":2,"width":1280,"height":720}`,
 		),
 	)
 	require.NoError(t, err)
@@ -1857,6 +1987,88 @@ func TestFetchAsyncUsageTreatsRAIFilteredResponseAsCompletedFailure(t *testing.T
 		},
 	)
 	require.ErrorContains(t, err, reason)
+	require.True(t, done)
+	require.Zero(t, usage)
+	require.Zero(t, usageContext)
+}
+
+func TestFetchAsyncUsageTreatsPartialRAIFilteredResponseAsSuccess(t *testing.T) {
+	reason := "One requested video was filtered by responsible AI policy."
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		require.Equal(
+			t,
+			"/v1beta/models/veo-3.1-generate-preview/operations/video-123",
+			r.URL.Path,
+		)
+
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{
+			"name":"models/veo-3.1-generate-preview/operations/video-123",
+			"done":true,
+			"response":{
+				"generateVideoResponse":{
+					"generatedSamples":[{"video":{"uri":"https://example.com/video.mp4"}}],
+					"raiMediaFilteredCount":1,
+					"raiMediaFilteredReasons":["` + reason + `"]
+				}
+			}
+		}`))
+	}))
+	defer ts.Close()
+
+	adaptor := &gemini.Adaptor{}
+	usage, _, done, err := adaptor.FetchAsyncUsage(
+		t.Context(),
+		adaptorapi.AsyncUsageRequest{
+			Channel: &coremodel.Channel{Key: "apikey", BaseURL: ts.URL},
+			Info: &coremodel.AsyncUsageInfo{
+				Mode:       int(mode.VideoGenerationsJobs),
+				Model:      "veo-3.1-generate-preview",
+				BaseURL:    ts.URL,
+				UpstreamID: "models/veo-3.1-generate-preview/operations/video-123",
+			},
+		},
+	)
+	require.NoError(t, err)
+	require.True(t, done)
+	require.Equal(t, coremodel.ZeroNullInt64(8), usage.OutputTokens)
+	require.Equal(t, coremodel.ZeroNullInt64(8), usage.TotalTokens)
+}
+
+func TestFetchAsyncUsageTreatsHTTP200GeminiErrorAsCompletedFailure(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		require.Equal(
+			t,
+			"/v1beta/models/veo-3.1-generate-preview/operations/video-123",
+			r.URL.Path,
+		)
+
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{
+			"error":{
+				"code":400,
+				"message":"Requested duration is not supported for this model.",
+				"status":"INVALID_ARGUMENT"
+			}
+		}`))
+	}))
+	defer ts.Close()
+
+	adaptor := &gemini.Adaptor{}
+	usage, usageContext, done, err := adaptor.FetchAsyncUsage(
+		t.Context(),
+		adaptorapi.AsyncUsageRequest{
+			Channel: &coremodel.Channel{Key: "apikey", BaseURL: ts.URL},
+			Info: &coremodel.AsyncUsageInfo{
+				Mode:       int(mode.VideoGenerationsJobs),
+				Model:      "veo-3.1-generate-preview",
+				BaseURL:    ts.URL,
+				UpstreamID: "models/veo-3.1-generate-preview/operations/video-123",
+			},
+		},
+	)
+	require.ErrorContains(t, err, "Requested duration is not supported for this model.")
 	require.True(t, done)
 	require.Zero(t, usage)
 	require.Zero(t, usageContext)

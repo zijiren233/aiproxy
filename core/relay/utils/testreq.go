@@ -80,6 +80,20 @@ func BuildRequest(modelConfig model.ModelConfig) (io.Reader, mode.Mode, error) {
 		}
 
 		return body, mode.Rerank, nil
+	case mode.VideoGenerationsJobs:
+		body, err := BuildVideoGenerationJobRequest(modelConfig.Model)
+		if err != nil {
+			return nil, mode.Unknown, err
+		}
+
+		return body, mode.VideoGenerationsJobs, nil
+	case mode.Videos:
+		body, err := BuildVideosRequest(modelConfig.Model)
+		if err != nil {
+			return nil, mode.Unknown, err
+		}
+
+		return body, mode.Videos, nil
 	case mode.ParsePdf:
 		return nil, mode.Unknown, NewErrUnsupportedModelType("parse pdf")
 	case mode.GeminiVideo:
@@ -192,6 +206,34 @@ func BuildRerankRequest(model string) (io.Reader, error) {
 	}
 
 	jsonBytes, err := sonic.Marshal(rerankRequest)
+	if err != nil {
+		return nil, err
+	}
+
+	return bytes.NewReader(jsonBytes), nil
+}
+
+func BuildVideoGenerationJobRequest(model string) (io.Reader, error) {
+	testRequest := map[string]any{
+		"model":  model,
+		"prompt": "A calm cinematic shot of clouds moving over a mountain.",
+	}
+
+	jsonBytes, err := sonic.Marshal(testRequest)
+	if err != nil {
+		return nil, err
+	}
+
+	return bytes.NewReader(jsonBytes), nil
+}
+
+func BuildVideosRequest(model string) (io.Reader, error) {
+	testRequest := &relaymodel.VideosRequest{
+		Model:  model,
+		Prompt: "A calm cinematic shot of clouds moving over a mountain.",
+	}
+
+	jsonBytes, err := sonic.Marshal(testRequest)
 	if err != nil {
 		return nil, err
 	}

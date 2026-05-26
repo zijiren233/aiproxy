@@ -54,6 +54,8 @@ func (a *Adaptor) SupportMode(mt *meta.Meta) bool {
 		m == mode.VideosContent ||
 		m == mode.VideosDelete ||
 		m == mode.VideosRemix ||
+		m == mode.VideosEdits ||
+		m == mode.VideosExtensions ||
 		m == mode.Anthropic ||
 		m == mode.Gemini ||
 		m == mode.Responses ||
@@ -315,6 +317,26 @@ func (a *Adaptor) GetRequestURL(
 			Method: http.MethodPost,
 			URL:    url,
 		}, nil
+	case mode.VideosEdits:
+		url, err := url.JoinPath(u, "/videos/edits")
+		if err != nil {
+			return adaptor.RequestURL{}, err
+		}
+
+		return adaptor.RequestURL{
+			Method: http.MethodPost,
+			URL:    url,
+		}, nil
+	case mode.VideosExtensions:
+		url, err := url.JoinPath(u, "/videos/extensions")
+		if err != nil {
+			return adaptor.RequestURL{}, err
+		}
+
+		return adaptor.RequestURL{
+			Method: http.MethodPost,
+			URL:    url,
+		}, nil
 	default:
 		return adaptor.RequestURL{}, fmt.Errorf("unsupported mode: %s", meta.Mode)
 	}
@@ -391,6 +413,10 @@ func ConvertRequest(
 		return ConvertVideosRequest(meta, req)
 	case mode.VideosRemix:
 		return ConvertVideosRemixRequest(meta, req)
+	case mode.VideosEdits:
+		return ConvertVideosEditRequest(meta, req)
+	case mode.VideosExtensions:
+		return ConvertVideosExtensionRequest(meta, req)
 	case mode.VideosGet:
 		return ConvertVideosGetRequest(meta, req)
 	case mode.VideosContent:
@@ -508,6 +534,10 @@ func DoResponse(
 		result, err = VideosHandler(meta, store, c, resp)
 	case mode.VideosRemix:
 		result, err = VideosRemixHandler(meta, store, c, resp)
+	case mode.VideosEdits:
+		result, err = VideosEditHandler(meta, store, c, resp)
+	case mode.VideosExtensions:
+		result, err = VideosExtensionHandler(meta, store, c, resp)
 	case mode.VideosGet:
 		result, err = VideosGetHandler(meta, c, resp)
 	case mode.VideosContent:

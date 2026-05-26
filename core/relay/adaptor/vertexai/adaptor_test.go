@@ -491,3 +491,89 @@ func TestFetchAsyncUsageGeminiVideoBuildsUsageFromStoredMetadata(t *testing.T) {
 	require.Equal(t, "1280x720", usageContext.Resolution)
 	require.Equal(t, "1080p", usageContext.NativeResolution)
 }
+
+func TestFetchAsyncUsageGeminiVideoTreatsHTTP200ErrorAsCompletedFailure(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		require.Equal(
+			t,
+			"/v1/projects/project-1/locations/us-central1/publishers/google/models/veo-3.1-generate-preview/operations/video-123",
+			r.URL.Path,
+		)
+
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{
+			"error":{
+				"code":400,
+				"message":"Requested duration is not supported for this model.",
+				"status":"INVALID_ARGUMENT"
+			}
+		}`))
+	}))
+	defer ts.Close()
+
+	adaptor := &vertexai.Adaptor{}
+	usage, usageContext, done, err := adaptor.FetchAsyncUsage(
+		t.Context(),
+		adaptorapi.AsyncUsageRequest{
+			Channel: &coremodel.Channel{
+				Key:     "us-central1|project-1|apikey",
+				BaseURL: ts.URL,
+			},
+			Info: &coremodel.AsyncUsageInfo{
+				Mode:       int(mode.VideoGenerationsJobs),
+				Model:      "veo-3.1-generate-preview",
+				BaseURL:    ts.URL,
+				UpstreamID: "projects/project-1/locations/us-central1/publishers/google/models/veo-3.1-generate-preview/operations/video-123",
+			},
+		},
+	)
+	require.ErrorContains(t, err, "Requested duration is not supported for this model.")
+	require.True(t, done)
+	require.Zero(t, usage)
+	require.Zero(t, usageContext)
+}
+
+func TestFetchAsyncUsageGeminiVideoTreatsPartialRAIFilterAsSuccess(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		require.Equal(
+			t,
+			"/v1/projects/project-1/locations/us-central1/publishers/google/models/veo-3.1-generate-preview/operations/video-123",
+			r.URL.Path,
+		)
+
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{
+			"name":"projects/project-1/locations/us-central1/publishers/google/models/veo-3.1-generate-preview/operations/video-123",
+			"done":true,
+			"response":{
+				"generateVideoResponse":{
+					"generatedSamples":[{"video":{"uri":"https://example.com/video.mp4"}}],
+					"raiMediaFilteredCount":1,
+					"raiMediaFilteredReasons":["one requested video was filtered"]
+				}
+			}
+		}`))
+	}))
+	defer ts.Close()
+
+	adaptor := &vertexai.Adaptor{}
+	usage, _, done, err := adaptor.FetchAsyncUsage(
+		t.Context(),
+		adaptorapi.AsyncUsageRequest{
+			Channel: &coremodel.Channel{
+				Key:     "us-central1|project-1|apikey",
+				BaseURL: ts.URL,
+			},
+			Info: &coremodel.AsyncUsageInfo{
+				Mode:       int(mode.VideoGenerationsJobs),
+				Model:      "veo-3.1-generate-preview",
+				BaseURL:    ts.URL,
+				UpstreamID: "projects/project-1/locations/us-central1/publishers/google/models/veo-3.1-generate-preview/operations/video-123",
+			},
+		},
+	)
+	require.NoError(t, err)
+	require.True(t, done)
+	require.Equal(t, coremodel.ZeroNullInt64(8), usage.OutputTokens)
+	require.Equal(t, coremodel.ZeroNullInt64(8), usage.TotalTokens)
+}

@@ -41,6 +41,20 @@ func ConvertVideosRemixRequest(
 	return convertOpenAIVideoRequest(meta, req)
 }
 
+func ConvertVideosEditRequest(
+	meta *meta.Meta,
+	req *http.Request,
+) (adaptor.ConvertResult, error) {
+	return convertOpenAIVideoRequest(meta, req)
+}
+
+func ConvertVideosExtensionRequest(
+	meta *meta.Meta,
+	req *http.Request,
+) (adaptor.ConvertResult, error) {
+	return convertOpenAIVideoRequest(meta, req)
+}
+
 func convertOpenAIVideoRequest(
 	meta *meta.Meta,
 	req *http.Request,
@@ -206,6 +220,24 @@ func VideosHandler(
 }
 
 func VideosRemixHandler(
+	meta *meta.Meta,
+	store adaptor.Store,
+	c *gin.Context,
+	resp *http.Response,
+) (adaptor.DoResponseResult, adaptor.Error) {
+	return videosHandler(meta, store, c, resp)
+}
+
+func VideosEditHandler(
+	meta *meta.Meta,
+	store adaptor.Store,
+	c *gin.Context,
+	resp *http.Response,
+) (adaptor.DoResponseResult, adaptor.Error) {
+	return videosHandler(meta, store, c, resp)
+}
+
+func VideosExtensionHandler(
 	meta *meta.Meta,
 	store adaptor.Store,
 	c *gin.Context,

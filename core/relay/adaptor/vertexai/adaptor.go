@@ -18,6 +18,7 @@ import (
 	"github.com/labring/aiproxy/core/relay/mode"
 	relaymodel "github.com/labring/aiproxy/core/relay/model"
 	"github.com/labring/aiproxy/core/relay/utils"
+	log "github.com/sirupsen/logrus"
 )
 
 type Adaptor struct{}
@@ -550,16 +551,25 @@ func (a *Adaptor) FetchAsyncUsage(
 		)
 	}
 
-	if !operation.Done {
-		return model.Usage{}, model.UsageContext{}, false, nil
-	}
-
 	if operation.Error != nil {
 		return model.Usage{}, model.UsageContext{}, true, fmt.Errorf(
 			"vertexai gemini video operation failed: %s",
 			operation.Error.Message,
 		)
 	}
+
+	if !operation.Done {
+		return model.Usage{}, model.UsageContext{}, false, nil
+	}
+
+	if reason := gemini.GeminiOperationFinalFailureMessage(&operation); reason != "" {
+		return model.Usage{}, model.UsageContext{}, true, fmt.Errorf(
+			"vertexai gemini video operation failed: %s",
+			reason,
+		)
+	}
+
+	gemini.LogGeminiOperationPartialRAIFilter(log.Warnf, &operation)
 
 	usage, usageContext := gemini.VideoAsyncUsage(request.Store, info, &operation)
 

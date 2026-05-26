@@ -230,6 +230,33 @@ func ConvertVideosRequest(meta *meta.Meta, req *http.Request) (adaptor.ConvertRe
 	return convertOpenAIVideosRequest(meta, req)
 }
 
+func ConvertVideosEditRequest(meta *meta.Meta, req *http.Request) (adaptor.ConvertResult, error) {
+	return convertOpenAIVideosEditRequest(meta, req)
+}
+
+func ConvertVideosExtensionRequest(
+	meta *meta.Meta,
+	req *http.Request,
+) (adaptor.ConvertResult, error) {
+	return convertOpenAIVideosExtensionRequest(meta, req)
+}
+
+func ConvertVideosEditRequestWithStore(
+	meta *meta.Meta,
+	store adaptor.Store,
+	req *http.Request,
+) (adaptor.ConvertResult, error) {
+	return convertOpenAIVideosEditRequestWithStore(meta, store, req)
+}
+
+func ConvertVideosExtensionRequestWithStore(
+	meta *meta.Meta,
+	store adaptor.Store,
+	req *http.Request,
+) (adaptor.ConvertResult, error) {
+	return convertOpenAIVideosExtensionRequestWithStore(meta, store, req)
+}
+
 func convertOpenAIVideoGenerationJobRequest(
 	meta *meta.Meta,
 	req *http.Request,
@@ -254,6 +281,54 @@ func convertOpenAIVideosRequest(
 	return convertGeminiVideoRequest(meta, request)
 }
 
+func convertOpenAIVideosEditRequest(
+	meta *meta.Meta,
+	req *http.Request,
+) (adaptor.ConvertResult, error) {
+	return convertOpenAIVideosEditRequestWithStore(meta, nil, req)
+}
+
+func convertOpenAIVideosEditRequestWithStore(
+	meta *meta.Meta,
+	store adaptor.Store,
+	req *http.Request,
+) (adaptor.ConvertResult, error) {
+	request, err := parseOpenAIVideosEditRequest(req)
+	if err != nil {
+		return adaptor.ConvertResult{}, err
+	}
+
+	if err := hydrateGeminiOpenAIVideoReference(req.Context(), meta, store, &request); err != nil {
+		return adaptor.ConvertResult{}, err
+	}
+
+	return convertGeminiVideoRequest(meta, request)
+}
+
+func convertOpenAIVideosExtensionRequest(
+	meta *meta.Meta,
+	req *http.Request,
+) (adaptor.ConvertResult, error) {
+	return convertOpenAIVideosExtensionRequestWithStore(meta, nil, req)
+}
+
+func convertOpenAIVideosExtensionRequestWithStore(
+	meta *meta.Meta,
+	store adaptor.Store,
+	req *http.Request,
+) (adaptor.ConvertResult, error) {
+	request, err := parseOpenAIVideosExtensionRequest(req)
+	if err != nil {
+		return adaptor.ConvertResult{}, err
+	}
+
+	if err := hydrateGeminiOpenAIVideoReference(req.Context(), meta, store, &request); err != nil {
+		return adaptor.ConvertResult{}, err
+	}
+
+	return convertGeminiVideoRequest(meta, request)
+}
+
 func convertOpenAIVideoRequestWithConfig(
 	meta *meta.Meta,
 	req *http.Request,
@@ -262,7 +337,9 @@ func convertOpenAIVideoRequestWithConfig(
 	var request geminiVideoRequest
 
 	var err error
-	if meta != nil && meta.Mode == mode.Videos {
+	if meta != nil && (meta.Mode == mode.Videos ||
+		meta.Mode == mode.VideosEdits ||
+		meta.Mode == mode.VideosExtensions) {
 		request, err = parseOpenAIVideosRequest(req)
 	} else {
 		request, err = parseOpenAIVideoGenerationJobRequest(req)
@@ -495,8 +572,115 @@ func parseOpenAIVideosRequest(req *http.Request) (geminiVideoRequest, error) {
 	return parseJSONOpenAIVideosRequest(&node), nil
 }
 
+func parseOpenAIVideosEditRequest(req *http.Request) (geminiVideoRequest, error) {
+	return parseOpenAIVideosRequestWithVideoField(req)
+}
+
+func parseOpenAIVideosExtensionRequest(req *http.Request) (geminiVideoRequest, error) {
+	return parseOpenAIVideosRequestWithVideoField(req)
+}
+
+func parseOpenAIVideosRequestWithVideoField(req *http.Request) (geminiVideoRequest, error) {
+	if strings.HasPrefix(req.Header.Get("Content-Type"), "multipart/form-data") {
+		request, err := parseMultipartOpenAIVideosRequest(req)
+		if err != nil {
+			return geminiVideoRequest{}, err
+		}
+
+		if len(request.Instances) > 0 && request.Instances[0].Video == nil {
+			if media := mediaFromString(
+				firstFormValue(req.MultipartForm.Value, "video"),
+			); media != nil {
+				request.Instances[0].Video = media
+			}
+		}
+
+		return request, nil
+	}
+
+	node, err := common.UnmarshalRequest2NodeReusable(req)
+	if err != nil {
+		return geminiVideoRequest{}, err
+	}
+
+	request := parseJSONOpenAIVideosRequest(&node)
+	if len(request.Instances) > 0 && request.Instances[0].Video == nil {
+		if media := mediaFromString(stringNode(&node, "video")); media != nil {
+			request.Instances[0].Video = media
+		}
+	}
+
+	return request, nil
+}
+
+func hydrateGeminiOpenAIVideoReference(
+	ctx context.Context,
+	meta *meta.Meta,
+	store adaptor.Store,
+	request *geminiVideoRequest,
+) error {
+	if meta == nil || store == nil || meta.VideoID == "" || request == nil ||
+		len(request.Instances) == 0 {
+		return nil
+	}
+
+	if request.Instances[0].Video == nil {
+		return nil
+	}
+
+	operationID, err := ResolveVideoGenerationOperationID(meta, store, meta.VideoID)
+	if err != nil || operationID == "" || operationID == meta.VideoID {
+		return err
+	}
+
+	requestURL, err := getOperationRequestURL(meta, operationID)
+	if err != nil {
+		return err
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, requestURL.URL, nil)
+	if err != nil {
+		return err
+	}
+
+	req.Header.Set("X-Goog-Api-Key", meta.Channel.Key)
+
+	client, err := relayutils.LoadHTTPClientWithTLSConfigE(
+		0,
+		meta.Channel.ProxyURL,
+		meta.Channel.SkipTLSVerify,
+	)
+	if err != nil {
+		return err
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("fetch source video operation status code: %d", resp.StatusCode)
+	}
+
+	var operation geminiOperation
+	if err := sonic.ConfigDefault.NewDecoder(resp.Body).Decode(&operation); err != nil {
+		return fmt.Errorf("decode source video operation: %w", err)
+	}
+
+	videoURL := geminiVideoURLByID(&operation, meta.VideoID)
+	if videoURL == "" {
+		return errors.New("source video url is empty")
+	}
+
+	request.Instances[0].Video = mediaFromString(videoURL)
+
+	return nil
+}
+
 func parseJSONOpenAIVideoGenerationJobRequest(node *ast.Node) geminiVideoRequest {
-	request := parseJSONOpenAIVideoCommonRequest(node)
+	request := parseJSONOpenAIVideoCommonRequest(node, geminiVideoJobSizeFromJSON(node))
 	request.Parameters.DurationSeconds = intNode(node, "n_seconds")
 	request.Parameters.NumberOfVideos = intNode(node, "n_variants")
 
@@ -508,15 +692,14 @@ func parseJSONOpenAIVideoGenerationJobRequest(node *ast.Node) geminiVideoRequest
 }
 
 func parseJSONOpenAIVideosRequest(node *ast.Node) geminiVideoRequest {
-	request := parseJSONOpenAIVideoCommonRequest(node)
+	request := parseJSONOpenAIVideoCommonRequest(node, stringNode(node, "size"))
 	request.Parameters.DurationSeconds = intNode(node, "seconds")
 	request.Parameters.NumberOfVideos = 1
 
 	return request
 }
 
-func parseJSONOpenAIVideoCommonRequest(node *ast.Node) geminiVideoRequest {
-	size := stringNode(node, "size")
+func parseJSONOpenAIVideoCommonRequest(node *ast.Node, size string) geminiVideoRequest {
 	request := geminiVideoRequest{
 		Parameters: geminiVideoParameters{
 			AspectRatio:      geminiVideoAspectRatioFromSize(size),
@@ -550,7 +733,7 @@ func parseJSONOpenAIVideoCommonRequest(node *ast.Node) geminiVideoRequest {
 }
 
 func parseMultipartOpenAIVideoGenerationJobRequest(req *http.Request) (geminiVideoRequest, error) {
-	request, err := parseMultipartOpenAIVideoCommonRequest(req)
+	request, err := parseMultipartOpenAIVideoCommonRequest(req, geminiVideoJobSizeFromForm)
 	if err != nil {
 		return geminiVideoRequest{}, err
 	}
@@ -566,7 +749,7 @@ func parseMultipartOpenAIVideoGenerationJobRequest(req *http.Request) (geminiVid
 }
 
 func parseMultipartOpenAIVideosRequest(req *http.Request) (geminiVideoRequest, error) {
-	request, err := parseMultipartOpenAIVideoCommonRequest(req)
+	request, err := parseMultipartOpenAIVideoCommonRequest(req, geminiVideoSizeFromForm)
 	if err != nil {
 		return geminiVideoRequest{}, err
 	}
@@ -577,12 +760,19 @@ func parseMultipartOpenAIVideosRequest(req *http.Request) (geminiVideoRequest, e
 	return request, nil
 }
 
-func parseMultipartOpenAIVideoCommonRequest(req *http.Request) (geminiVideoRequest, error) {
+func parseMultipartOpenAIVideoCommonRequest(
+	req *http.Request,
+	sizeFromForm func(*http.Request) string,
+) (geminiVideoRequest, error) {
 	if err := common.ParseMultipartFormWithLimit(req); err != nil {
 		return geminiVideoRequest{}, fmt.Errorf("parse multipart form: %w", err)
 	}
 
-	size := req.PostFormValue("size")
+	size := ""
+	if sizeFromForm != nil {
+		size = sizeFromForm(req)
+	}
+
 	request := geminiVideoRequest{
 		Parameters: geminiVideoParameters{
 			AspectRatio:      geminiVideoAspectRatioFromSize(size),
@@ -605,6 +795,7 @@ func parseMultipartOpenAIVideoCommonRequest(req *http.Request) (geminiVideoReque
 	if media := mediaFromString(firstFormValue(
 		req.MultipartForm.Value,
 		"video_url",
+		"video",
 	)); media != nil {
 		instance.Video = media
 	}
@@ -630,6 +821,32 @@ func parseMultipartOpenAIVideoCommonRequest(req *http.Request) (geminiVideoReque
 	}
 
 	return request, nil
+}
+
+func geminiVideoSizeFromForm(req *http.Request) string {
+	return req.PostFormValue("size")
+}
+
+func geminiVideoJobSizeFromJSON(node *ast.Node) string {
+	width := intNode(node, "width")
+
+	height := intNode(node, "height")
+	if width <= 0 || height <= 0 {
+		return ""
+	}
+
+	return fmt.Sprintf("%dx%d", width, height)
+}
+
+func geminiVideoJobSizeFromForm(req *http.Request) string {
+	width, widthErr := strconv.Atoi(strings.TrimSpace(req.PostFormValue("width")))
+
+	height, heightErr := strconv.Atoi(strings.TrimSpace(req.PostFormValue("height")))
+	if widthErr != nil || heightErr != nil || width <= 0 || height <= 0 {
+		return ""
+	}
+
+	return fmt.Sprintf("%dx%d", width, height)
 }
 
 func stringNode(node *ast.Node, names ...string) string {
@@ -1119,6 +1336,8 @@ func VideoGenerationJobStatusHandler(
 	job := buildGeminiVideoJob(meta, localID, &operation)
 
 	if job.Status == relaymodel.VideoGenerationJobStatusSucceeded {
+		logGeminiOperationPartialRAIFilter(common.GetLogger(c).Warnf, &operation)
+
 		for _, generation := range job.Generations {
 			if err := saveGeminiVideoStore(
 				meta,
@@ -1175,6 +1394,8 @@ func VideosStatusHandler(
 
 	localID := geminiVideoLocalID(operation.Name)
 	if len(geminiVideoURLs(&operation)) > 0 {
+		logGeminiOperationPartialRAIFilter(common.GetLogger(c).Warnf, &operation)
+
 		if err := saveGeminiVideoStore(
 			meta,
 			store,
@@ -1291,7 +1512,7 @@ func buildGeminiVideoJob(
 	}
 
 	var finishReason *string
-	if reason := geminiOperationFailureMessage(operation); reason != "" {
+	if reason := geminiOperationFinalFailureMessage(operation); reason != "" {
 		finishReason = &reason
 	}
 
@@ -1354,7 +1575,7 @@ func buildGeminiVideo(
 		}
 	}
 
-	if reason := geminiOperationRAIFilteredReason(operation); reason != "" {
+	if reason := geminiOperationFinalFailureMessage(operation); reason != "" {
 		video.Error = map[string]any{
 			"message": reason,
 		}
@@ -1398,14 +1619,14 @@ func geminiOperationVideoStatus(operation *geminiOperation) relaymodel.VideoStat
 func geminiOperationSucceeded(operation *geminiOperation) bool {
 	return operation != nil &&
 		operation.Done &&
-		len(geminiVideoURLs(operation)) > 0 &&
-		operation.Error == nil
+		len(geminiVideoURLs(operation)) > 0
 }
 
 func geminiOperationFailed(operation *geminiOperation) bool {
 	return operation != nil &&
 		operation.Done &&
-		(operation.Error != nil || geminiOperationRAIFilteredReason(operation) != "")
+		len(geminiVideoURLs(operation)) == 0 &&
+		geminiOperationFailureMessage(operation) != ""
 }
 
 func geminiVideoProgress(status relaymodel.VideoStatus) int {
@@ -1449,6 +1670,22 @@ func geminiOperationFailureMessage(operation *geminiOperation) string {
 	return geminiOperationRAIFilteredReason(operation)
 }
 
+func logGeminiOperationPartialRAIFilter(logf func(string, ...any), operation *geminiOperation) {
+	if logf == nil || operation == nil || len(geminiVideoURLs(operation)) == 0 {
+		return
+	}
+
+	if reason := geminiOperationRAIFilteredReason(operation); reason != "" {
+		logf(
+			"gemini video operation partially filtered by RAI: operation=%s generated=%d filtered=%d reason=%s",
+			operation.Name,
+			len(geminiVideoURLs(operation)),
+			operation.Response.GenerateVideoResponse.RAIMediaFilteredCount,
+			reason,
+		)
+	}
+}
+
 func geminiOperationRAIFilteredReason(operation *geminiOperation) string {
 	if operation == nil || !operation.Done {
 		return ""
@@ -1464,6 +1701,29 @@ func geminiOperationRAIFilteredReason(operation *geminiOperation) string {
 	}
 
 	return defaultGeminiVideoRAIFilterReason
+}
+
+func GeminiOperationFinalFailureMessage(operation *relaymodel.GeminiVideoOperation) string {
+	return geminiOperationFinalFailureMessage(operation)
+}
+
+func LogGeminiOperationPartialRAIFilter(
+	logf func(string, ...any),
+	operation *relaymodel.GeminiVideoOperation,
+) {
+	logGeminiOperationPartialRAIFilter(logf, operation)
+}
+
+func geminiOperationFinalFailureMessage(operation *geminiOperation) string {
+	if operation == nil || !operation.Done {
+		return ""
+	}
+
+	if len(geminiVideoURLs(operation)) > 0 {
+		return ""
+	}
+
+	return geminiOperationFailureMessage(operation)
 }
 
 func geminiVideoGenerationID(operationName string, index int) string {

@@ -1171,7 +1171,7 @@ var ModelList = []model.ModelConfig{
 	},
 	{
 		Model: "wan2.5-t2v-preview",
-		Type:  mode.VideoGenerationsJobs,
+		Type:  mode.AliVideo,
 		Owner: model.ModelOwnerAlibaba,
 		// Ali video APIs bill by successful output video seconds. Async usage
 		// normalizes returned dimensions into a resolution condition.
@@ -1206,7 +1206,7 @@ var ModelList = []model.ModelConfig{
 	},
 	{
 		Model: "wan2.5-i2v-preview",
-		Type:  mode.VideoGenerationsJobs,
+		Type:  mode.AliVideo,
 		Owner: model.ModelOwnerAlibaba,
 		Price: model.Price{
 			OutputPrice:     model.ZeroNullFloat64(1.0),
@@ -1239,7 +1239,7 @@ var ModelList = []model.ModelConfig{
 	},
 	{
 		Model: "wan2.2-t2v-plus",
-		Type:  mode.VideoGenerationsJobs,
+		Type:  mode.AliVideo,
 		Owner: model.ModelOwnerAlibaba,
 		Price: model.Price{
 			OutputPrice:     model.ZeroNullFloat64(0.70),
@@ -1265,7 +1265,7 @@ var ModelList = []model.ModelConfig{
 	},
 	{
 		Model: "wan2.2-i2v-plus",
-		Type:  mode.VideoGenerationsJobs,
+		Type:  mode.AliVideo,
 		Owner: model.ModelOwnerAlibaba,
 		Price: model.Price{
 			OutputPrice:     model.ZeroNullFloat64(0.70),
@@ -1291,31 +1291,31 @@ var ModelList = []model.ModelConfig{
 	},
 	{
 		Model: "wan2.2-videoedit",
-		Type:  mode.VideoGenerationsJobs,
+		Type:  mode.AliVideo,
 		Owner: model.ModelOwnerAlibaba,
 		RPM:   60,
 	},
 	{
 		Model: "kling-v1",
-		Type:  mode.VideoGenerationsJobs,
+		Type:  mode.AliVideo,
 		Owner: model.ModelOwnerAlibaba,
 		RPM:   60,
 	},
 	{
 		Model: "vidu2.0",
-		Type:  mode.VideoGenerationsJobs,
+		Type:  mode.AliVideo,
 		Owner: model.ModelOwnerAlibaba,
 		RPM:   60,
 	},
 	{
 		Model: "pixverse-v4.5",
-		Type:  mode.VideoGenerationsJobs,
+		Type:  mode.AliVideo,
 		Owner: model.ModelOwnerAlibaba,
 		RPM:   60,
 	},
 	{
 		Model: "happyhorse-1.0-t2v",
-		Type:  mode.VideoGenerationsJobs,
+		Type:  mode.AliVideo,
 		Owner: model.ModelOwnerAlibaba,
 		Price: model.Price{
 			OutputPrice:     model.ZeroNullFloat64(1.6),
@@ -1341,7 +1341,7 @@ var ModelList = []model.ModelConfig{
 	},
 	{
 		Model: "happyhorse-1.0-i2v",
-		Type:  mode.VideoGenerationsJobs,
+		Type:  mode.AliVideo,
 		Owner: model.ModelOwnerAlibaba,
 		Price: model.Price{
 			OutputPrice:     model.ZeroNullFloat64(1.6),
@@ -1367,7 +1367,7 @@ var ModelList = []model.ModelConfig{
 	},
 	{
 		Model: "happyhorse-1.0-r2v",
-		Type:  mode.VideoGenerationsJobs,
+		Type:  mode.AliVideo,
 		Owner: model.ModelOwnerAlibaba,
 		Price: model.Price{
 			OutputPrice:     model.ZeroNullFloat64(1.6),
@@ -1393,7 +1393,7 @@ var ModelList = []model.ModelConfig{
 	},
 	{
 		Model: "happyhorse-1.0-video-edit",
-		Type:  mode.VideoGenerationsJobs,
+		Type:  mode.AliVideo,
 		Owner: model.ModelOwnerAlibaba,
 		// HappyHorse video edit bills both input video seconds and output video
 		// seconds. fetchAliVideoJobUsage maps those seconds into VideoInputTokens

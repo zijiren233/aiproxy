@@ -53,6 +53,78 @@ func (s *doubaoTestStore) SaveIfNotExistStore(cache adaptor.StoreCache) error {
 	return nil
 }
 
+func TestErrorHandlerParsesDoubaoOpenAIError(t *testing.T) {
+	t.Parallel()
+
+	resp := &http.Response{
+		StatusCode: http.StatusBadRequest,
+		Body: io.NopCloser(strings.NewReader(
+			`{"error":{"code":"InvalidParameter","message":"duration is invalid","type":"invalid_request_error","param":"duration"}}`,
+		)),
+	}
+
+	err := ErrorHandler(resp)
+	if err.StatusCode() != http.StatusBadRequest {
+		t.Fatalf("expected status %d, got %d", http.StatusBadRequest, err.StatusCode())
+	}
+
+	body, marshalErr := err.MarshalJSON()
+	if marshalErr != nil {
+		t.Fatalf("marshal error: %v", marshalErr)
+	}
+
+	if !strings.Contains(string(body), `"message":"duration is invalid"`) {
+		t.Fatalf("expected doubao message, got %s", body)
+	}
+}
+
+func TestOpenAIVideoErrorHandlerParsesDoubaoOpenAIError(t *testing.T) {
+	t.Parallel()
+
+	resp := &http.Response{
+		StatusCode: http.StatusBadRequest,
+		Body: io.NopCloser(strings.NewReader(
+			`{"error":{"code":"InvalidParameter","message":"duration is invalid","type":"invalid_request_error"}}`,
+		)),
+	}
+
+	err := OpenAIVideoErrorHandler(resp)
+	if err.StatusCode() != http.StatusBadRequest {
+		t.Fatalf("expected status %d, got %d", http.StatusBadRequest, err.StatusCode())
+	}
+
+	body, marshalErr := err.MarshalJSON()
+	if marshalErr != nil {
+		t.Fatalf("marshal error: %v", marshalErr)
+	}
+
+	if string(body) != `{"detail":"duration is invalid"}` {
+		t.Fatalf("expected OpenAI video error detail, got %s", body)
+	}
+}
+
+func TestErrorHandlerParsesDoubaoResponseMetadataError(t *testing.T) {
+	t.Parallel()
+
+	resp := &http.Response{
+		StatusCode: http.StatusBadRequest,
+		Body: io.NopCloser(strings.NewReader(
+			`{"ResponseMetadata":{"Error":{"Code":"InvalidParameter","Message":"duration is invalid"}}}`,
+		)),
+	}
+
+	err := ErrorHandler(resp)
+
+	body, marshalErr := err.MarshalJSON()
+	if marshalErr != nil {
+		t.Fatalf("marshal error: %v", marshalErr)
+	}
+
+	if !strings.Contains(string(body), `"message":"duration is invalid"`) {
+		t.Fatalf("expected doubao response metadata message, got %s", body)
+	}
+}
+
 func TestAdaptorSupportMode(t *testing.T) {
 	adaptor := &Adaptor{}
 
@@ -745,7 +817,8 @@ func TestAdaptorConvertRequestVideoGenerationMapsOpenAIFields(t *testing.T) {
 		strings.NewReader(`{
 			"model": "alias-video",
 			"prompt": "Animate a calm ocean",
-			"size": "720p",
+			"width": 1280,
+			"height": 720,
 			"n_seconds": 5,
 			"input_reference": "https://example.com/reference.png",
 			"video_url": "https://example.com/reference.mp4",
@@ -796,6 +869,151 @@ func TestAdaptorConvertRequestVideoGenerationMapsOpenAIFields(t *testing.T) {
 	assertDoubaoVideoContent(t, content[3], "audio_url", "data:audio/wav;base64,AAAA", "")
 }
 
+func TestAdaptorConvertVideosEditMapsVideoFieldToReferenceVideo(t *testing.T) {
+	adaptor := &Adaptor{}
+	m := meta.NewMeta(nil, mode.VideosEdits, "doubao-seedance-2-0", coremodel.ModelConfig{})
+
+	req, err := http.NewRequestWithContext(
+		context.Background(),
+		http.MethodPost,
+		"/v1/videos/edits",
+		strings.NewReader(`{
+			"model": "alias-video",
+			"prompt": "Change the color",
+			"video": "https://example.com/source.mp4",
+			"seconds": 4,
+			"size": "1280x720"
+		}`),
+	)
+	if err != nil {
+		t.Fatalf("failed to create request: %v", err)
+	}
+
+	result, err := adaptor.ConvertRequest(m, nil, req)
+	if err != nil {
+		t.Fatalf("ConvertRequest returned error: %v", err)
+	}
+
+	body, err := io.ReadAll(result.Body)
+	if err != nil {
+		t.Fatalf("failed to read converted body: %v", err)
+	}
+
+	var payload map[string]any
+	if err := json.Unmarshal(body, &payload); err != nil {
+		t.Fatalf("failed to unmarshal converted body %s: %v", string(body), err)
+	}
+
+	content, ok := payload["content"].([]any)
+	if !ok || len(content) != 2 {
+		t.Fatalf("expected 2 content items, got %#v", payload["content"])
+	}
+
+	assertDoubaoVideoContent(t, content[1], "video_url", "https://example.com/source.mp4", "")
+
+	item, ok := content[1].(map[string]any)
+	if !ok || item["role"] != "reference_video" {
+		t.Fatalf("expected reference_video role, got %#v", content[1])
+	}
+}
+
+func TestAdaptorConvertVideosEditMapsStoredVideoIDToDraftTask(t *testing.T) {
+	adaptor := &Adaptor{}
+	m := meta.NewMeta(nil, mode.VideosEdits, "doubao-seedance-2-0", coremodel.ModelConfig{})
+
+	req, err := http.NewRequestWithContext(
+		context.Background(),
+		http.MethodPost,
+		"/v1/videos/edits",
+		strings.NewReader(`{
+			"prompt": "Change the color",
+			"video": "video_123",
+			"seconds": 4
+		}`),
+	)
+	if err != nil {
+		t.Fatalf("failed to create request: %v", err)
+	}
+
+	result, err := adaptor.ConvertRequest(m, nil, req)
+	if err != nil {
+		t.Fatalf("ConvertRequest returned error: %v", err)
+	}
+
+	body, err := io.ReadAll(result.Body)
+	if err != nil {
+		t.Fatalf("failed to read converted body: %v", err)
+	}
+
+	var payload map[string]any
+	if err := json.Unmarshal(body, &payload); err != nil {
+		t.Fatalf("failed to unmarshal converted body %s: %v", string(body), err)
+	}
+
+	content, ok := payload["content"].([]any)
+	if !ok || len(content) != 2 {
+		t.Fatalf("expected 2 content items, got %#v", payload["content"])
+	}
+
+	item, ok := content[1].(map[string]any)
+	if !ok || item["type"] != "draft_task" {
+		t.Fatalf("expected draft_task content, got %#v", content[1])
+	}
+
+	draftTask, ok := item["draft_task"].(map[string]any)
+	if !ok || draftTask["id"] != "video_123" {
+		t.Fatalf("expected draft task video_123, got %#v", item["draft_task"])
+	}
+}
+
+func TestAdaptorConvertVideosExtensionMapsVideoFieldToFirstVideo(t *testing.T) {
+	adaptor := &Adaptor{}
+	m := meta.NewMeta(nil, mode.VideosExtensions, "doubao-seedance-2-0", coremodel.ModelConfig{})
+
+	req, err := http.NewRequestWithContext(
+		context.Background(),
+		http.MethodPost,
+		"/v1/videos/extensions",
+		strings.NewReader(`{
+			"model": "alias-video",
+			"prompt": "Continue the shot",
+			"video": "https://example.com/source.mp4",
+			"seconds": 4,
+			"size": "1280x720"
+		}`),
+	)
+	if err != nil {
+		t.Fatalf("failed to create request: %v", err)
+	}
+
+	result, err := adaptor.ConvertRequest(m, nil, req)
+	if err != nil {
+		t.Fatalf("ConvertRequest returned error: %v", err)
+	}
+
+	body, err := io.ReadAll(result.Body)
+	if err != nil {
+		t.Fatalf("failed to read converted body: %v", err)
+	}
+
+	var payload map[string]any
+	if err := json.Unmarshal(body, &payload); err != nil {
+		t.Fatalf("failed to unmarshal converted body %s: %v", string(body), err)
+	}
+
+	content, ok := payload["content"].([]any)
+	if !ok || len(content) != 2 {
+		t.Fatalf("expected 2 content items, got %#v", payload["content"])
+	}
+
+	assertDoubaoVideoContent(t, content[1], "video_url", "https://example.com/source.mp4", "")
+
+	item, ok := content[1].(map[string]any)
+	if !ok || item["role"] != "first_video" {
+		t.Fatalf("expected first_video role, got %#v", content[1])
+	}
+}
+
 func TestAdaptorConvertRequestVideoGenerationMapsPixelSize(t *testing.T) {
 	adaptor := &Adaptor{}
 	m := meta.NewMeta(
@@ -812,8 +1030,9 @@ func TestAdaptorConvertRequestVideoGenerationMapsPixelSize(t *testing.T) {
 		strings.NewReader(`{
 			"model": "alias-video",
 			"prompt": "Animate a calm ocean",
-			"size": "1280*720",
-			"seconds": 5
+			"width": 1280,
+			"height": 720,
+			"n_seconds": 5
 		}`),
 	)
 	if err != nil {
@@ -860,8 +1079,9 @@ func TestAdaptorConvertRequestVideoGenerationMapsPortraitPixelSize(t *testing.T)
 		strings.NewReader(`{
 			"model": "alias-video",
 			"prompt": "Animate a calm ocean",
-			"size": "720x1280",
-			"seconds": 5
+			"width": 720,
+			"height": 1280,
+			"n_seconds": 5
 		}`),
 	)
 	if err != nil {
@@ -1002,12 +1222,16 @@ func TestAdaptorConvertRequestVideoGenerationMapsMultipartPixelSize(t *testing.T
 		t.Fatalf("failed to write prompt: %v", err)
 	}
 
-	if err := writer.WriteField("size", "1280×720"); err != nil {
-		t.Fatalf("failed to write size: %v", err)
+	if err := writer.WriteField("width", "1280"); err != nil {
+		t.Fatalf("failed to write width: %v", err)
 	}
 
-	if err := writer.WriteField("seconds", "5"); err != nil {
-		t.Fatalf("failed to write seconds: %v", err)
+	if err := writer.WriteField("height", "720"); err != nil {
+		t.Fatalf("failed to write height: %v", err)
+	}
+
+	if err := writer.WriteField("n_seconds", "5"); err != nil {
+		t.Fatalf("failed to write n_seconds: %v", err)
 	}
 
 	if err := writer.Close(); err != nil {

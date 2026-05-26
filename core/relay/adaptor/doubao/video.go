@@ -20,7 +20,6 @@ import (
 	"github.com/labring/aiproxy/core/common"
 	coremodel "github.com/labring/aiproxy/core/model"
 	"github.com/labring/aiproxy/core/relay/adaptor"
-	"github.com/labring/aiproxy/core/relay/adaptor/openai"
 	"github.com/labring/aiproxy/core/relay/meta"
 	relaymodel "github.com/labring/aiproxy/core/relay/model"
 	relayutils "github.com/labring/aiproxy/core/relay/utils"
@@ -53,6 +52,14 @@ type doubaoVideoRequest struct {
 	Watermark             *bool                `json:"watermark,omitempty"`
 }
 
+type doubaoOpenAIVideoMode string
+
+const (
+	doubaoOpenAIVideoModeCreate doubaoOpenAIVideoMode = "create"
+	doubaoOpenAIVideoModeEdit   doubaoOpenAIVideoMode = "edit"
+	doubaoOpenAIVideoModeExtend doubaoOpenAIVideoMode = "extend"
+)
+
 type doubaoVideoContent struct {
 	Type      string                 `json:"type,omitempty"`
 	Text      string                 `json:"text,omitempty"`
@@ -71,49 +78,11 @@ type doubaoDraftTask struct {
 	ID string `json:"id,omitempty"`
 }
 
-type doubaoVideoTaskResponse struct {
-	ID                    string                  `json:"id,omitempty"`
-	Model                 string                  `json:"model,omitempty"`
-	Status                string                  `json:"status,omitempty"`
-	Error                 *relaymodel.OpenAIError `json:"error,omitempty"`
-	Content               doubaoVideoOutput       `json:"content,omitempty"`
-	Usage                 doubaoVideoUsage        `json:"usage,omitempty"`
-	Seed                  int64                   `json:"seed,omitempty"`
-	Resolution            string                  `json:"resolution,omitempty"`
-	Ratio                 string                  `json:"ratio,omitempty"`
-	Duration              int                     `json:"duration,omitempty"`
-	Frames                int                     `json:"frames,omitempty"`
-	FramesPerSecond       int                     `json:"framespersecond,omitempty"`
-	CreatedAt             int64                   `json:"created_at,omitempty"`
-	UpdatedAt             int64                   `json:"updated_at,omitempty"`
-	ServiceTier           string                  `json:"service_tier,omitempty"`
-	ExecutionExpiresAfter int64                   `json:"execution_expires_after,omitempty"`
-	GenerateAudio         *bool                   `json:"generate_audio,omitempty"`
-	Draft                 *bool                   `json:"draft,omitempty"`
-	DraftTaskID           string                  `json:"draft_task_id,omitempty"`
-}
-
 type doubaoVideoStoreMetadata struct {
 	Prompt     string `json:"prompt,omitempty"`
 	Resolution string `json:"resolution,omitempty"`
 	Ratio      string `json:"ratio,omitempty"`
 	Duration   int    `json:"duration,omitempty"`
-}
-
-type doubaoVideoOutput struct {
-	VideoURL     string `json:"video_url,omitempty"`
-	LastFrameURL string `json:"last_frame_url,omitempty"`
-	FileURL      string `json:"file_url,omitempty"`
-}
-
-type doubaoVideoUsage struct {
-	CompletionTokens int64                `json:"completion_tokens,omitempty"`
-	TotalTokens      int64                `json:"total_tokens,omitempty"`
-	ToolUsage        doubaoVideoToolUsage `json:"tool_usage,omitempty"`
-}
-
-type doubaoVideoToolUsage struct {
-	WebSearch int64 `json:"web_search,omitempty"`
 }
 
 func ConvertVideoGenerationJobRequest(
@@ -125,6 +94,17 @@ func ConvertVideoGenerationJobRequest(
 
 func ConvertVideosRequest(meta *meta.Meta, req *http.Request) (adaptor.ConvertResult, error) {
 	return convertDoubaoVideosRequest(meta, req)
+}
+
+func ConvertVideosEditRequest(meta *meta.Meta, req *http.Request) (adaptor.ConvertResult, error) {
+	return convertDoubaoVideosEditRequest(meta, req)
+}
+
+func ConvertVideosExtensionRequest(
+	meta *meta.Meta,
+	req *http.Request,
+) (adaptor.ConvertResult, error) {
+	return convertDoubaoVideosExtensionRequest(meta, req)
 }
 
 func ConvertVideoGenerationsGetJobsRequest(
@@ -163,6 +143,30 @@ func convertDoubaoVideoGenerationJobRequest(
 
 func convertDoubaoVideosRequest(meta *meta.Meta, req *http.Request) (adaptor.ConvertResult, error) {
 	request, err := parseDoubaoVideosRequest(req)
+	if err != nil {
+		return adaptor.ConvertResult{}, err
+	}
+
+	return convertDoubaoVideoRequest(meta, request)
+}
+
+func convertDoubaoVideosEditRequest(
+	meta *meta.Meta,
+	req *http.Request,
+) (adaptor.ConvertResult, error) {
+	request, err := parseDoubaoVideosEditRequest(req)
+	if err != nil {
+		return adaptor.ConvertResult{}, err
+	}
+
+	return convertDoubaoVideoRequest(meta, request)
+}
+
+func convertDoubaoVideosExtensionRequest(
+	meta *meta.Meta,
+	req *http.Request,
+) (adaptor.ConvertResult, error) {
+	request, err := parseDoubaoVideosExtensionRequest(req)
 	if err != nil {
 		return adaptor.ConvertResult{}, err
 	}
@@ -210,7 +214,7 @@ func parseDoubaoVideoGenerationJobRequest(req *http.Request) (doubaoVideoRequest
 
 func parseDoubaoVideosRequest(req *http.Request) (doubaoVideoRequest, error) {
 	if strings.HasPrefix(req.Header.Get("Content-Type"), "multipart/form-data") {
-		return parseDoubaoMultipartVideosRequest(req)
+		return parseDoubaoMultipartVideosRequest(req, doubaoOpenAIVideoModeCreate)
 	}
 
 	var raw map[string]any
@@ -221,21 +225,48 @@ func parseDoubaoVideosRequest(req *http.Request) (doubaoVideoRequest, error) {
 	return parseDoubaoJSONVideosRequest(raw), nil
 }
 
+func parseDoubaoVideosEditRequest(req *http.Request) (doubaoVideoRequest, error) {
+	return parseDoubaoVideosModeRequest(req, doubaoOpenAIVideoModeEdit)
+}
+
+func parseDoubaoVideosExtensionRequest(req *http.Request) (doubaoVideoRequest, error) {
+	return parseDoubaoVideosModeRequest(req, doubaoOpenAIVideoModeExtend)
+}
+
+func parseDoubaoVideosModeRequest(
+	req *http.Request,
+	openAIMode doubaoOpenAIVideoMode,
+) (doubaoVideoRequest, error) {
+	if strings.HasPrefix(req.Header.Get("Content-Type"), "multipart/form-data") {
+		return parseDoubaoMultipartVideosRequest(req, openAIMode)
+	}
+
+	var raw map[string]any
+	if err := common.UnmarshalRequestReusable(req, &raw); err != nil {
+		return doubaoVideoRequest{}, err
+	}
+
+	request := parseDoubaoJSONVideosRequest(raw)
+	addDoubaoOpenAIVideoField(&request.Content, raw["video"], openAIMode)
+
+	return request, nil
+}
+
 func parseDoubaoJSONVideoGenerationJobRequest(raw map[string]any) doubaoVideoRequest {
-	request := parseDoubaoJSONOpenAIVideoCommonRequest(raw)
+	request := parseDoubaoJSONOpenAIVideoCommonRequest(raw, doubaoVideoJobSizeFromJSON(raw))
 	request.Duration = intPtrFromAny(raw["n_seconds"])
 
 	return request
 }
 
 func parseDoubaoJSONVideosRequest(raw map[string]any) doubaoVideoRequest {
-	request := parseDoubaoJSONOpenAIVideoCommonRequest(raw)
+	request := parseDoubaoJSONOpenAIVideoCommonRequest(raw, stringFromAny(raw["size"]))
 	request.Duration = intPtrFromAny(raw["seconds"])
 
 	return request
 }
 
-func parseDoubaoJSONOpenAIVideoCommonRequest(raw map[string]any) doubaoVideoRequest {
+func parseDoubaoJSONOpenAIVideoCommonRequest(raw map[string]any, size string) doubaoVideoRequest {
 	request := doubaoVideoRequest{
 		Content:          doubaoVideoContentFromAny(raw["content"]),
 		CallbackURL:      stringFromAny(raw["callback_url"]),
@@ -243,11 +274,11 @@ func parseDoubaoJSONOpenAIVideoCommonRequest(raw map[string]any) doubaoVideoRequ
 		SafetyIdentifier: stringFromAny(raw["safety_identifier"]),
 		Resolution: firstNonEmptyString(
 			stringFromAny(raw["resolution"]),
-			doubaoVideoResolutionFromSize(stringFromAny(raw["size"])),
+			doubaoVideoResolutionFromSize(size),
 		),
 		Ratio: firstNonEmptyString(
 			stringFromAny(raw["ratio"]),
-			ratioFromSize(stringFromAny(raw["size"])),
+			ratioFromSize(size),
 		),
 		Seed:                  raw["seed"],
 		ExecutionExpiresAfter: intPtrFromAny(raw["execution_expires_after"]),
@@ -277,7 +308,10 @@ func parseDoubaoJSONOpenAIVideoCommonRequest(raw map[string]any) doubaoVideoRequ
 }
 
 func parseDoubaoMultipartVideoGenerationJobRequest(req *http.Request) (doubaoVideoRequest, error) {
-	request, err := parseDoubaoMultipartOpenAIVideoCommonRequest(req)
+	request, err := parseDoubaoMultipartOpenAIVideoCommonRequest(
+		req,
+		doubaoVideoJobSizeFromForm,
+	)
 	if err != nil {
 		return doubaoVideoRequest{}, err
 	}
@@ -287,20 +321,37 @@ func parseDoubaoMultipartVideoGenerationJobRequest(req *http.Request) (doubaoVid
 	return request, nil
 }
 
-func parseDoubaoMultipartVideosRequest(req *http.Request) (doubaoVideoRequest, error) {
-	request, err := parseDoubaoMultipartOpenAIVideoCommonRequest(req)
+func parseDoubaoMultipartVideosRequest(
+	req *http.Request,
+	openAIMode doubaoOpenAIVideoMode,
+) (doubaoVideoRequest, error) {
+	request, err := parseDoubaoMultipartOpenAIVideoCommonRequest(req, doubaoVideoSizeFromForm)
 	if err != nil {
 		return doubaoVideoRequest{}, err
 	}
 
 	setOptionalInt(&request.Duration, req.PostFormValue("seconds"))
 
+	addDoubaoOpenAIVideoField(
+		&request.Content,
+		req.PostFormValue("video"),
+		openAIMode,
+	)
+
 	return request, nil
 }
 
-func parseDoubaoMultipartOpenAIVideoCommonRequest(req *http.Request) (doubaoVideoRequest, error) {
+func parseDoubaoMultipartOpenAIVideoCommonRequest(
+	req *http.Request,
+	sizeFromForm func(*http.Request) string,
+) (doubaoVideoRequest, error) {
 	if err := common.ParseMultipartFormWithLimit(req); err != nil {
 		return doubaoVideoRequest{}, fmt.Errorf("parse multipart form: %w", err)
+	}
+
+	size := ""
+	if sizeFromForm != nil {
+		size = sizeFromForm(req)
 	}
 
 	request := doubaoVideoRequest{
@@ -309,11 +360,11 @@ func parseDoubaoMultipartOpenAIVideoCommonRequest(req *http.Request) (doubaoVide
 		SafetyIdentifier: req.PostFormValue("safety_identifier"),
 		Resolution: firstNonEmptyString(
 			req.PostFormValue("resolution"),
-			doubaoVideoResolutionFromSize(req.PostFormValue("size")),
+			doubaoVideoResolutionFromSize(size),
 		),
 		Ratio: firstNonEmptyString(
 			req.PostFormValue("ratio"),
-			ratioFromSize(req.PostFormValue("size")),
+			ratioFromSize(size),
 		),
 		Content: []doubaoVideoContent{},
 	}
@@ -347,6 +398,32 @@ func parseDoubaoMultipartOpenAIVideoCommonRequest(req *http.Request) (doubaoVide
 	}
 
 	return request, nil
+}
+
+func doubaoVideoSizeFromForm(req *http.Request) string {
+	return req.PostFormValue("size")
+}
+
+func doubaoVideoJobSizeFromJSON(raw map[string]any) string {
+	width := intFromPtr(intPtrFromAny(raw["width"]))
+
+	height := intFromPtr(intPtrFromAny(raw["height"]))
+	if width <= 0 || height <= 0 {
+		return ""
+	}
+
+	return fmt.Sprintf("%dx%d", width, height)
+}
+
+func doubaoVideoJobSizeFromForm(req *http.Request) string {
+	width := intFromPtr(intPtrFromAny(req.PostFormValue("width")))
+
+	height := intFromPtr(intPtrFromAny(req.PostFormValue("height")))
+	if width <= 0 || height <= 0 {
+		return ""
+	}
+
+	return fmt.Sprintf("%dx%d", width, height)
 }
 
 func doubaoVideoContentFromAny(value any) []doubaoVideoContent {
@@ -440,16 +517,84 @@ func doubaoVideoContentFromOpenAI(raw map[string]any) []doubaoVideoContent {
 		})
 	}
 
-	if draftTaskID := stringFromAny(
-		firstPresent(raw, "draft_task_id", "video_id"),
-	); draftTaskID != "" {
-		content = append(content, doubaoVideoContent{
-			Type:      "draft_task",
-			DraftTask: &doubaoDraftTask{ID: draftTaskID},
-		})
+	if draftTaskID := doubaoVideoDraftTaskIDFromRaw(raw); draftTaskID != "" {
+		addDoubaoDraftTaskContent(&content, draftTaskID)
 	}
 
 	return content
+}
+
+func addDoubaoOpenAIVideoField(
+	content *[]doubaoVideoContent,
+	value any,
+	openAIMode doubaoOpenAIVideoMode,
+) {
+	if openAIMode == doubaoOpenAIVideoModeCreate {
+		return
+	}
+
+	videoURL := strings.TrimSpace(stringFromAny(value))
+	if videoURL == "" {
+		return
+	}
+
+	if strings.HasPrefix(videoURL, "video_") || strings.HasPrefix(videoURL, "doubao_") {
+		addDoubaoDraftTaskContent(content, videoURL)
+		return
+	}
+
+	roleForMode := func() string {
+		if openAIMode == doubaoOpenAIVideoModeExtend {
+			return "first_video"
+		}
+
+		return "reference_video"
+	}
+
+	for i := range *content {
+		item := &(*content)[i]
+		if item.Type != "video_url" || item.Role != "reference_video" {
+			continue
+		}
+
+		urlValue := ""
+		if item.VideoURL != nil {
+			urlValue = item.VideoURL.URL
+		}
+
+		if urlValue == videoURL {
+			item.Role = roleForMode()
+			return
+		}
+	}
+
+	*content = append(*content, doubaoVideoContent{
+		Type:     "video_url",
+		VideoURL: &doubaoVideoURLContent{URL: videoURL},
+		Role:     roleForMode(),
+	})
+}
+
+func doubaoVideoDraftTaskIDFromRaw(raw map[string]any) string {
+	return stringFromAny(firstPresent(raw, "draft_task_id", "video_id"))
+}
+
+func addDoubaoDraftTaskContent(content *[]doubaoVideoContent, draftTaskID string) {
+	draftTaskID = strings.TrimSpace(draftTaskID)
+	if draftTaskID == "" {
+		return
+	}
+
+	for _, item := range *content {
+		if item.Type == "draft_task" && item.DraftTask != nil && item.DraftTask.ID == draftTaskID {
+			return
+		}
+	}
+
+	*content = append(*content, doubaoVideoContent{
+		Type:      "draft_task",
+		DraftTask: &doubaoDraftTask{ID: draftTaskID},
+	})
 }
 
 func addFormURLContents(content *[]doubaoVideoContent, values map[string][]string) {
@@ -479,6 +624,7 @@ func addFormURLContents(content *[]doubaoVideoContent, values map[string][]strin
 	add("image_url", "first_frame_url", "first_frame")
 	add("image_url", "last_frame_url", "last_frame")
 	add("video_url", "video_url", "reference_video")
+	add("video_url", "video", "reference_video")
 	add("audio_url", "audio_url", "reference_audio")
 }
 
@@ -626,23 +772,25 @@ func VideosSubmitHandler(
 	})
 }
 
-func readDoubaoVideoTaskResponse(resp *http.Response) (doubaoVideoTaskResponse, adaptor.Error) {
+func readDoubaoVideoTaskResponse(
+	resp *http.Response,
+) (relaymodel.DoubaoVideoTaskResponse, adaptor.Error) {
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
-		return doubaoVideoTaskResponse{}, openai.VideoErrorHanlder(resp)
+		return relaymodel.DoubaoVideoTaskResponse{}, OpenAIVideoErrorHandler(resp)
 	}
 
 	defer resp.Body.Close()
 
-	var response doubaoVideoTaskResponse
+	var response relaymodel.DoubaoVideoTaskResponse
 	if err := common.UnmarshalResponse(resp, &response); err != nil {
-		return doubaoVideoTaskResponse{}, relaymodel.WrapperOpenAIVideoError(
+		return relaymodel.DoubaoVideoTaskResponse{}, relaymodel.WrapperOpenAIVideoError(
 			err,
 			http.StatusInternalServerError,
 		)
 	}
 
 	if response.ID == "" {
-		return doubaoVideoTaskResponse{}, relaymodel.WrapperOpenAIVideoErrorWithMessage(
+		return relaymodel.DoubaoVideoTaskResponse{}, relaymodel.WrapperOpenAIVideoErrorWithMessage(
 			"missing id in doubao video response",
 			http.StatusInternalServerError,
 		)
@@ -662,12 +810,12 @@ func VideoGenerationJobStatusHandler(
 	resp *http.Response,
 ) (adaptor.DoResponseResult, adaptor.Error) {
 	if resp.StatusCode != http.StatusOK {
-		return adaptor.DoResponseResult{}, openai.VideoErrorHanlder(resp)
+		return adaptor.DoResponseResult{}, OpenAIVideoErrorHandler(resp)
 	}
 
 	defer resp.Body.Close()
 
-	var response doubaoVideoTaskResponse
+	var response relaymodel.DoubaoVideoTaskResponse
 	if err := common.UnmarshalResponse(resp, &response); err != nil {
 		return adaptor.DoResponseResult{}, relaymodel.WrapperOpenAIVideoError(
 			err,
@@ -711,12 +859,12 @@ func VideosStatusHandler(
 	resp *http.Response,
 ) (adaptor.DoResponseResult, adaptor.Error) {
 	if resp.StatusCode != http.StatusOK {
-		return adaptor.DoResponseResult{}, openai.VideoErrorHanlder(resp)
+		return adaptor.DoResponseResult{}, OpenAIVideoErrorHandler(resp)
 	}
 
 	defer resp.Body.Close()
 
-	var response doubaoVideoTaskResponse
+	var response relaymodel.DoubaoVideoTaskResponse
 	if err := common.UnmarshalResponse(resp, &response); err != nil {
 		return adaptor.DoResponseResult{}, relaymodel.WrapperOpenAIVideoError(
 			err,
@@ -777,12 +925,12 @@ func fetchDoubaoVideoContentHandler(
 	id string,
 ) (adaptor.DoResponseResult, adaptor.Error) {
 	if resp.StatusCode != http.StatusOK {
-		return adaptor.DoResponseResult{}, openai.VideoErrorHanlder(resp)
+		return adaptor.DoResponseResult{}, OpenAIVideoErrorHandler(resp)
 	}
 
 	defer resp.Body.Close()
 
-	var response doubaoVideoTaskResponse
+	var response relaymodel.DoubaoVideoTaskResponse
 	if err := common.UnmarshalResponse(resp, &response); err != nil {
 		return adaptor.DoResponseResult{}, relaymodel.WrapperOpenAIVideoError(
 			err,
@@ -825,7 +973,7 @@ func fetchDoubaoVideoContentHandler(
 func buildDoubaoVideoJob(
 	meta *meta.Meta,
 	id string,
-	response *doubaoVideoTaskResponse,
+	response *relaymodel.DoubaoVideoTaskResponse,
 ) relaymodel.VideoGenerationJob {
 	now := time.Now().Unix()
 	createdAt := firstPositiveInt64(response.CreatedAt, now)
@@ -880,7 +1028,7 @@ func buildDoubaoVideoJob(
 func buildDoubaoVideo(
 	meta *meta.Meta,
 	id string,
-	response *doubaoVideoTaskResponse,
+	response *relaymodel.DoubaoVideoTaskResponse,
 ) relaymodel.Video {
 	now := time.Now().Unix()
 	request := doubaoVideoRequestFromMeta(meta)
@@ -912,7 +1060,7 @@ func buildDoubaoVideo(
 	return video
 }
 
-func doubaoVideoUsageToModelUsage(usage doubaoVideoUsage) coremodel.Usage {
+func doubaoVideoUsageToModelUsage(usage relaymodel.DoubaoVideoUsage) coremodel.Usage {
 	// Seedance video usage is returned as completion/total tokens by Ark, and
 	// model pricing uses those tokens directly rather than generated seconds.
 	output := usage.CompletionTokens
@@ -932,7 +1080,7 @@ func doubaoVideoUsageToModelUsage(usage doubaoVideoUsage) coremodel.Usage {
 	}
 }
 
-func doubaoVideoUsageContext(response *doubaoVideoTaskResponse) coremodel.UsageContext {
+func doubaoVideoUsageContext(response *relaymodel.DoubaoVideoTaskResponse) coremodel.UsageContext {
 	if response == nil {
 		return coremodel.UsageContext{}
 	}
@@ -1064,7 +1212,7 @@ func applyStoredDoubaoVideoRequestMetadata(
 	meta *meta.Meta,
 	store adaptor.Store,
 	storeID string,
-	response *doubaoVideoTaskResponse,
+	response *relaymodel.DoubaoVideoTaskResponse,
 ) {
 	if meta == nil || store == nil || storeID == "" || response == nil {
 		return
@@ -1148,7 +1296,7 @@ func doubaoVideoPrompt(request doubaoVideoRequest) string {
 	return ""
 }
 
-func doubaoVideoExpiresAt(response doubaoVideoTaskResponse) time.Time {
+func doubaoVideoExpiresAt(response relaymodel.DoubaoVideoTaskResponse) time.Time {
 	if response.CreatedAt > 0 && response.ExecutionExpiresAfter > 0 {
 		return time.Unix(response.CreatedAt+response.ExecutionExpiresAfter, 0)
 	}
@@ -1186,7 +1334,7 @@ func doubaoVideoDimensions(resolution, ratio string) (int, int) {
 }
 
 func doubaoVideoResolutionAndRatio(
-	response *doubaoVideoTaskResponse,
+	response *relaymodel.DoubaoVideoTaskResponse,
 	request doubaoVideoRequest,
 ) (string, string) {
 	if response == nil {

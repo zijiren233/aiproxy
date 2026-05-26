@@ -54,6 +54,8 @@ func (a *Adaptor) SupportMode(mt *meta.Meta) bool {
 		m == mode.VideoGenerationsGetJobs ||
 		m == mode.VideoGenerationsContent ||
 		m == mode.Videos ||
+		m == mode.VideosEdits ||
+		m == mode.VideosExtensions ||
 		m == mode.VideosGet ||
 		m == mode.VideosContent
 }
@@ -131,7 +133,11 @@ func (a *Adaptor) GetRequestURL(
 	switch meta.Mode {
 	case mode.Embeddings:
 		action = "batchEmbedContents"
-	case mode.GeminiVideo, mode.VideoGenerationsJobs, mode.Videos:
+	case mode.GeminiVideo,
+		mode.VideoGenerationsJobs,
+		mode.Videos,
+		mode.VideosEdits,
+		mode.VideosExtensions:
 		action = "predictLongRunning"
 	case mode.GeminiVideoOperations:
 		return getNativeVideoOperationRequestURL(meta, store)
@@ -189,7 +195,7 @@ func (a *Adaptor) SetupRequestHeader(
 
 func (a *Adaptor) ConvertRequest(
 	meta *meta.Meta,
-	_ adaptor.Store,
+	store adaptor.Store,
 	req *http.Request,
 ) (adaptor.ConvertResult, error) {
 	switch meta.Mode {
@@ -217,6 +223,10 @@ func (a *Adaptor) ConvertRequest(
 		return ConvertVideoGenerationJobRequest(meta, req)
 	case mode.Videos:
 		return ConvertVideosRequest(meta, req)
+	case mode.VideosEdits:
+		return ConvertVideosEditRequestWithStore(meta, store, req)
+	case mode.VideosExtensions:
+		return ConvertVideosExtensionRequestWithStore(meta, store, req)
 	case mode.VideoGenerationsGetJobs:
 		return ConvertVideoGenerationsGetJobsRequest(meta, req)
 	case mode.VideoGenerationsContent:
@@ -278,7 +288,7 @@ func (a *Adaptor) DoResponse(
 		return GeminiFileHandler(meta, c, resp)
 	case mode.VideoGenerationsJobs:
 		return VideoGenerationJobSubmitHandler(meta, store, c, resp)
-	case mode.Videos:
+	case mode.Videos, mode.VideosEdits, mode.VideosExtensions:
 		return VideosSubmitHandler(meta, store, c, resp)
 	case mode.VideoGenerationsGetJobs:
 		return VideoGenerationJobStatusHandler(meta, store, c, resp)

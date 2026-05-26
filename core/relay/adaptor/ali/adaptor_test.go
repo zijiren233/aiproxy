@@ -54,6 +54,73 @@ func TestErrorHandlerParsesAliTopLevelError(t *testing.T) {
 	}
 }
 
+func TestOpenAIVideoErrorHandlerParsesAliTopLevelError(t *testing.T) {
+	t.Parallel()
+
+	resp := &http.Response{
+		StatusCode: http.StatusBadRequest,
+		Body: io.NopCloser(strings.NewReader(
+			`{"code":"InvalidParameter","message":"duration is invalid","request_id":"req-1"}`,
+		)),
+	}
+
+	err := OpenAIVideoErrorHandler(resp)
+	if err.StatusCode() != http.StatusBadRequest {
+		t.Fatalf("expected status %d, got %d", http.StatusBadRequest, err.StatusCode())
+	}
+
+	body, marshalErr := err.MarshalJSON()
+	if marshalErr != nil {
+		t.Fatalf("marshal error: %v", marshalErr)
+	}
+
+	if string(body) != `{"detail":"duration is invalid"}` {
+		t.Fatalf("expected OpenAI video error detail, got %s", body)
+	}
+}
+
+func TestOpenAIVideoErrorHandlerKeepsAliStatusNormalization(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name       string
+		body       string
+		wantStatus int
+	}{
+		{
+			name:       "service unavailable type",
+			body:       `{"error":{"code":"ServiceUnavailable","message":"upstream overloaded","type":"ServiceUnavailable"}}`,
+			wantStatus: http.StatusServiceUnavailable,
+		},
+		{
+			name:       "request timeout type",
+			body:       `{"error":{"code":"RequestTimeOut","message":"upstream timeout","type":"RequestTimeOut"}}`,
+			wantStatus: http.StatusRequestTimeout,
+		},
+		{
+			name:       "object is not iterable message",
+			body:       `{"code":"InvalidParameter","message":"object is not iterable"}`,
+			wantStatus: http.StatusBadRequest,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			resp := &http.Response{
+				StatusCode: http.StatusInternalServerError,
+				Body:       io.NopCloser(strings.NewReader(tt.body)),
+			}
+
+			err := OpenAIVideoErrorHandler(resp)
+			if err.StatusCode() != tt.wantStatus {
+				t.Fatalf("expected status %d, got %d", tt.wantStatus, err.StatusCode())
+			}
+		})
+	}
+}
+
 func (s *aliTestStore) GetStore(_ string, _ int, id string) (adaptor.StoreCache, error) {
 	for _, cache := range s.saved {
 		if cache.ID == id {
@@ -120,6 +187,13 @@ func TestFetchAliVideoJobUsageKeepsResponseSize(t *testing.T) {
 		t.Fatalf(
 			"expected video resolution 1280x720, got %q",
 			usageContext.Resolution,
+		)
+	}
+
+	if usageContext.NativeResolution != "720P" {
+		t.Fatalf(
+			"expected native resolution 720P, got %q",
+			usageContext.NativeResolution,
 		)
 	}
 }
@@ -485,7 +559,8 @@ func TestAdaptorConvertRequestAliTextToVideo(t *testing.T) {
 		"model":"wan2.5-t2v-preview",
 		"prompt":"A camera moves through a quiet city street",
 		"n_seconds":5,
-		"size":"1280×720",
+		"width":1280,
+		"height":720,
 		"metadata":{
 			"prompt_extend":true,
 			"seed":123,
@@ -544,6 +619,53 @@ func TestAdaptorConvertRequestAliTextToVideo(t *testing.T) {
 	}
 }
 
+func TestAdaptorConvertRequestHappyHorseDimensionsUseNearestResolution(t *testing.T) {
+	adaptor := &Adaptor{}
+	m := meta.NewMeta(nil, mode.VideoGenerationsJobs, "happyhorse-1.0-t2v", coremodel.ModelConfig{})
+	m.ActualModel = "happyhorse-1.0-t2v"
+
+	body := `{
+		"model":"happyhorse-1.0-t2v",
+		"prompt":"公鸡打篮球",
+		"n_seconds":4,
+		"width":480,
+		"height":480
+	}`
+
+	req, err := http.NewRequestWithContext(
+		context.Background(),
+		http.MethodPost,
+		"/v1/video/generations/jobs",
+		strings.NewReader(body),
+	)
+	if err != nil {
+		t.Fatalf("NewRequest returned error: %v", err)
+	}
+
+	result, err := adaptor.ConvertRequest(m, nil, req)
+	if err != nil {
+		t.Fatalf("ConvertRequest returned error: %v", err)
+	}
+
+	payload := readJSONMap(t, result.Body)
+	parameters := mustMap(t, payload["parameters"])
+
+	if parameters["resolution"] != "720P" {
+		t.Fatalf(
+			"expected dimensions to map to nearest resolution 720P, got %#v",
+			parameters["resolution"],
+		)
+	}
+
+	if parameters["ratio"] != "1:1" {
+		t.Fatalf("expected square dimensions to map to ratio 1:1, got %#v", parameters["ratio"])
+	}
+
+	if _, ok := parameters["size"]; ok {
+		t.Fatalf("expected size not to be sent for happyhorse, got %#v", parameters["size"])
+	}
+}
+
 func TestAdaptorConvertRequestAliWan27ImageToVideoUsesMedia(t *testing.T) {
 	adaptor := &Adaptor{}
 	m := meta.NewMeta(nil, mode.VideoGenerationsJobs, "wan2.7-i2v", coremodel.ModelConfig{})
@@ -555,7 +677,8 @@ func TestAdaptorConvertRequestAliWan27ImageToVideoUsesMedia(t *testing.T) {
 		"image_url":"https://example.com/start.png",
 		"last_frame_url":"https://example.com/end.png",
 		"n_seconds":10,
-		"size":"1080p",
+		"width":1920,
+		"height":1080,
 		"audio_url":"https://example.com/music.wav"
 	}`
 
@@ -604,8 +727,15 @@ func TestAdaptorConvertRequestAliWan27ImageToVideoUsesMedia(t *testing.T) {
 
 	if parameters["resolution"] != "1080P" {
 		t.Fatalf(
-			"expected OpenAI size to map to resolution 1080P, got %#v",
+			"expected dimensions to map to nearest resolution 1080P, got %#v",
 			parameters["resolution"],
+		)
+	}
+
+	if _, ok := parameters["ratio"]; ok {
+		t.Fatalf(
+			"expected ratio not to be auto-generated when media has first_frame, got %#v",
+			parameters["ratio"],
 		)
 	}
 }
@@ -655,12 +785,498 @@ func TestAdaptorConvertRequestAliVideoPrefersOpenAIFields(t *testing.T) {
 		t.Fatalf("expected n_seconds to win, got %#v", parameters["duration"])
 	}
 
-	if parameters["resolution"] != "1080P" {
-		t.Fatalf("expected OpenAI size to map to resolution, got %#v", parameters["resolution"])
+	if parameters["resolution"] != "720P" {
+		t.Fatalf(
+			"expected dimensions to map to nearest resolution, got %#v",
+			parameters["resolution"],
+		)
+	}
+
+	if _, ok := parameters["ratio"]; ok {
+		t.Fatalf(
+			"expected ratio not to be auto-generated when media has first_frame, got %#v",
+			parameters["ratio"],
+		)
 	}
 
 	if _, ok := parameters["size"]; ok {
 		t.Fatalf("expected size not to be set for 1080p, got %#v", parameters["size"])
+	}
+}
+
+func TestAdaptorConvertRequestAliVideoDimensionsSkipAutoRatioForVideoMedia(t *testing.T) {
+	adaptor := &Adaptor{}
+	m := meta.NewMeta(
+		nil,
+		mode.VideoGenerationsJobs,
+		"happyhorse-1.0-video-edit",
+		coremodel.ModelConfig{},
+	)
+	m.ActualModel = "happyhorse-1.0-video-edit"
+
+	body := `{
+		"model":"happyhorse-1.0-video-edit",
+		"prompt":"Make the video cinematic",
+		"video_url":"https://example.com/input.mp4",
+		"n_seconds":4,
+		"width":720,
+		"height":1280
+	}`
+
+	req, err := http.NewRequestWithContext(
+		context.Background(),
+		http.MethodPost,
+		"/v1/video/generations/jobs",
+		strings.NewReader(body),
+	)
+	if err != nil {
+		t.Fatalf("NewRequest returned error: %v", err)
+	}
+
+	result, err := adaptor.ConvertRequest(m, nil, req)
+	if err != nil {
+		t.Fatalf("ConvertRequest returned error: %v", err)
+	}
+
+	payload := readJSONMap(t, result.Body)
+	input := mustMap(t, payload["input"])
+	media := mustSlice(t, input["media"])
+
+	video := mustMap(t, media[0])
+	if video["type"] != "video" || video["url"] != "https://example.com/input.mp4" {
+		t.Fatalf("unexpected video media: %#v", video)
+	}
+
+	parameters := mustMap(t, payload["parameters"])
+	if parameters["resolution"] != "720P" {
+		t.Fatalf(
+			"expected dimensions to map to nearest resolution 720P, got %#v",
+			parameters["resolution"],
+		)
+	}
+
+	if _, ok := parameters["ratio"]; ok {
+		t.Fatalf(
+			"expected ratio not to be auto-generated when media has video, got %#v",
+			parameters["ratio"],
+		)
+	}
+}
+
+func TestAdaptorConvertRequestAliHappyHorseVideoEditMapsImageAndVideoMedia(t *testing.T) {
+	adaptor := &Adaptor{}
+	m := meta.NewMeta(
+		nil,
+		mode.VideoGenerationsJobs,
+		"happyhorse-1.0-video-edit",
+		coremodel.ModelConfig{},
+	)
+	m.ActualModel = "happyhorse-1.0-video-edit"
+
+	req, err := http.NewRequestWithContext(
+		context.Background(),
+		http.MethodPost,
+		"/v1/video/generations/jobs",
+		strings.NewReader(`{
+			"model":"happyhorse-1.0-video-edit",
+			"prompt":"Change clothes",
+			"video_url":"https://example.com/input.mp4",
+			"image_url":"https://example.com/reference.png",
+			"n_seconds":4,
+			"width":1280,
+			"height":720
+		}`),
+	)
+	if err != nil {
+		t.Fatalf("NewRequest returned error: %v", err)
+	}
+
+	result, err := adaptor.ConvertRequest(m, nil, req)
+	if err != nil {
+		t.Fatalf("ConvertRequest returned error: %v", err)
+	}
+
+	payload := readJSONMap(t, result.Body)
+	input := mustMap(t, payload["input"])
+
+	media := mustSlice(t, input["media"])
+	if len(media) != 2 {
+		t.Fatalf("expected 2 media items, got %#v", media)
+	}
+
+	referenceImage := mustMap(t, media[0])
+	if referenceImage["type"] != "reference_image" ||
+		referenceImage["url"] != "https://example.com/reference.png" {
+		t.Fatalf("unexpected reference image media: %#v", referenceImage)
+	}
+
+	video := mustMap(t, media[1])
+	if video["type"] != "video" || video["url"] != "https://example.com/input.mp4" {
+		t.Fatalf("unexpected video media: %#v", video)
+	}
+}
+
+func TestAdaptorConvertRequestAliVideoEditMapsFirstClipAliasToVideoMedia(t *testing.T) {
+	adaptor := &Adaptor{}
+	m := meta.NewMeta(
+		nil,
+		mode.VideoGenerationsJobs,
+		"happyhorse-1.0-video-edit",
+		coremodel.ModelConfig{},
+	)
+	m.ActualModel = "happyhorse-1.0-video-edit"
+
+	req, err := http.NewRequestWithContext(
+		context.Background(),
+		http.MethodPost,
+		"/v1/video/generations/jobs",
+		strings.NewReader(`{
+			"model":"happyhorse-1.0-video-edit",
+			"prompt":"Change clothes",
+			"first_clip_url":"https://example.com/input.mp4",
+			"reference_urls":["https://example.com/reference.png"],
+			"n_seconds":4,
+			"width":1280,
+			"height":720
+		}`),
+	)
+	if err != nil {
+		t.Fatalf("NewRequest returned error: %v", err)
+	}
+
+	result, err := adaptor.ConvertRequest(m, nil, req)
+	if err != nil {
+		t.Fatalf("ConvertRequest returned error: %v", err)
+	}
+
+	payload := readJSONMap(t, result.Body)
+	input := mustMap(t, payload["input"])
+
+	media := mustSlice(t, input["media"])
+	if len(media) != 2 {
+		t.Fatalf("expected 2 media items, got %#v", media)
+	}
+
+	video := mustMap(t, media[0])
+	if video["type"] != "video" || video["url"] != "https://example.com/input.mp4" {
+		t.Fatalf("unexpected video media: %#v", video)
+	}
+
+	referenceImage := mustMap(t, media[1])
+	if referenceImage["type"] != "reference_image" ||
+		referenceImage["url"] != "https://example.com/reference.png" {
+		t.Fatalf("unexpected reference image media: %#v", referenceImage)
+	}
+}
+
+func TestAdaptorConvertRequestAliWanVideoEditMapsImageAndVideoMedia(t *testing.T) {
+	adaptor := &Adaptor{}
+	m := meta.NewMeta(nil, mode.VideoGenerationsJobs, "wan2.7-videoedit", coremodel.ModelConfig{})
+	m.ActualModel = "wan2.7-videoedit"
+
+	req, err := http.NewRequestWithContext(
+		context.Background(),
+		http.MethodPost,
+		"/v1/video/generations/jobs",
+		strings.NewReader(`{
+			"model":"wan2.7-videoedit",
+			"prompt":"Change clothes",
+			"video_url":"https://example.com/input.mp4",
+			"input_reference":"https://example.com/reference.png",
+			"n_seconds":4,
+			"width":1280,
+			"height":720
+		}`),
+	)
+	if err != nil {
+		t.Fatalf("NewRequest returned error: %v", err)
+	}
+
+	result, err := adaptor.ConvertRequest(m, nil, req)
+	if err != nil {
+		t.Fatalf("ConvertRequest returned error: %v", err)
+	}
+
+	payload := readJSONMap(t, result.Body)
+	input := mustMap(t, payload["input"])
+
+	media := mustSlice(t, input["media"])
+	if len(media) != 2 {
+		t.Fatalf("expected 2 media items, got %#v", media)
+	}
+
+	referenceImage := mustMap(t, media[0])
+	if referenceImage["type"] != "reference_image" ||
+		referenceImage["url"] != "https://example.com/reference.png" {
+		t.Fatalf("unexpected reference image media: %#v", referenceImage)
+	}
+
+	video := mustMap(t, media[1])
+	if video["type"] != "video" || video["url"] != "https://example.com/input.mp4" {
+		t.Fatalf("unexpected video media: %#v", video)
+	}
+}
+
+func TestAdaptorConvertVideosEditMapsVideoFieldToVideoMedia(t *testing.T) {
+	adaptor := &Adaptor{}
+	m := meta.NewMeta(nil, mode.VideosEdits, "wan2.7-i2v", coremodel.ModelConfig{})
+	m.ActualModel = "wan2.7-i2v"
+
+	req, err := http.NewRequestWithContext(
+		context.Background(),
+		http.MethodPost,
+		"/v1/videos/edits",
+		strings.NewReader(`{
+			"model":"wan2.7-i2v",
+			"prompt":"change the color",
+			"video":"https://example.com/source.mp4",
+			"seconds":4,
+			"size":"1280x720"
+		}`),
+	)
+	if err != nil {
+		t.Fatalf("NewRequest returned error: %v", err)
+	}
+
+	result, err := adaptor.ConvertRequest(m, nil, req)
+	if err != nil {
+		t.Fatalf("ConvertRequest returned error: %v", err)
+	}
+
+	payload := readJSONMap(t, result.Body)
+	input := mustMap(t, payload["input"])
+	media := mustSlice(t, input["media"])
+
+	video := mustMap(t, media[0])
+	if video["type"] != "video" || video["url"] != "https://example.com/source.mp4" {
+		t.Fatalf("unexpected edit media: %#v", video)
+	}
+}
+
+func TestAdaptorConvertVideosExtensionMapsVideoFieldToFirstClip(t *testing.T) {
+	adaptor := &Adaptor{}
+	m := meta.NewMeta(nil, mode.VideosExtensions, "wan2.7-i2v", coremodel.ModelConfig{})
+	m.ActualModel = "wan2.7-i2v"
+
+	req, err := http.NewRequestWithContext(
+		context.Background(),
+		http.MethodPost,
+		"/v1/videos/extensions",
+		strings.NewReader(`{
+			"model":"wan2.7-i2v",
+			"prompt":"continue the shot",
+			"video":"https://example.com/source.mp4",
+			"seconds":4,
+			"size":"1280x720"
+		}`),
+	)
+	if err != nil {
+		t.Fatalf("NewRequest returned error: %v", err)
+	}
+
+	result, err := adaptor.ConvertRequest(m, nil, req)
+	if err != nil {
+		t.Fatalf("ConvertRequest returned error: %v", err)
+	}
+
+	payload := readJSONMap(t, result.Body)
+	input := mustMap(t, payload["input"])
+	media := mustSlice(t, input["media"])
+
+	video := mustMap(t, media[0])
+	if video["type"] != "first_clip" || video["url"] != "https://example.com/source.mp4" {
+		t.Fatalf("unexpected extension media: %#v", video)
+	}
+}
+
+func TestAdaptorConvertVideosEditHydratesStoredVideoID(t *testing.T) {
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/v1/tasks/task-123" {
+			t.Fatalf("unexpected path %s", r.URL.Path)
+		}
+
+		_, _ = w.Write([]byte(`{
+			"output":{
+				"task_id":"task-123",
+				"task_status":"SUCCEEDED",
+				"video_url":"https://example.com/source.mp4"
+			}
+		}`))
+	}))
+	defer upstream.Close()
+
+	adaptor := &Adaptor{}
+	m := meta.NewMeta(
+		&coremodel.Channel{BaseURL: upstream.URL},
+		mode.VideosEdits,
+		"wan2.7-i2v",
+		coremodel.ModelConfig{},
+		meta.WithVideoID("task-123"),
+	)
+	m.ActualModel = "wan2.7-i2v"
+
+	req, err := http.NewRequestWithContext(
+		context.Background(),
+		http.MethodPost,
+		"/v1/videos/edits",
+		strings.NewReader(`{
+			"prompt":"change the color",
+			"video":"task-123",
+			"seconds":4,
+			"size":"1280x720"
+		}`),
+	)
+	if err != nil {
+		t.Fatalf("NewRequest returned error: %v", err)
+	}
+
+	result, err := adaptor.ConvertRequest(m, nil, req)
+	if err != nil {
+		t.Fatalf("ConvertRequest returned error: %v", err)
+	}
+
+	payload := readJSONMap(t, result.Body)
+	input := mustMap(t, payload["input"])
+	media := mustSlice(t, input["media"])
+
+	video := mustMap(t, media[0])
+	if video["type"] != "video" || video["url"] != "https://example.com/source.mp4" {
+		t.Fatalf("unexpected hydrated edit media: %#v", video)
+	}
+}
+
+func TestAdaptorConvertRequestAliReferenceImageKeepsAutoRatio(t *testing.T) {
+	adaptor := &Adaptor{}
+	m := meta.NewMeta(nil, mode.VideoGenerationsJobs, "happyhorse-1.0-r2v", coremodel.ModelConfig{})
+	m.ActualModel = "happyhorse-1.0-r2v"
+
+	body := `{
+		"model":"happyhorse-1.0-r2v",
+		"prompt":"Animate these references",
+		"reference_urls":["https://example.com/ref.png"],
+		"n_seconds":4,
+		"width":720,
+		"height":1280
+	}`
+
+	req, err := http.NewRequestWithContext(
+		context.Background(),
+		http.MethodPost,
+		"/v1/video/generations/jobs",
+		strings.NewReader(body),
+	)
+	if err != nil {
+		t.Fatalf("NewRequest returned error: %v", err)
+	}
+
+	result, err := adaptor.ConvertRequest(m, nil, req)
+	if err != nil {
+		t.Fatalf("ConvertRequest returned error: %v", err)
+	}
+
+	payload := readJSONMap(t, result.Body)
+	input := mustMap(t, payload["input"])
+	media := mustSlice(t, input["media"])
+
+	reference := mustMap(t, media[0])
+	if reference["type"] != "reference_image" || reference["url"] != "https://example.com/ref.png" {
+		t.Fatalf("unexpected reference image media: %#v", reference)
+	}
+
+	parameters := mustMap(t, payload["parameters"])
+	if parameters["resolution"] != "720P" {
+		t.Fatalf(
+			"expected dimensions to map to nearest resolution 720P, got %#v",
+			parameters["resolution"],
+		)
+	}
+
+	if parameters["ratio"] != "9:16" {
+		t.Fatalf("expected reference_image to keep auto ratio 9:16, got %#v", parameters["ratio"])
+	}
+}
+
+func TestAdaptorConvertRequestAliReferenceVideoModelMapsVideoToReferenceVideo(t *testing.T) {
+	adaptor := &Adaptor{}
+	m := meta.NewMeta(nil, mode.VideoGenerationsJobs, "wan2.7-r2v", coremodel.ModelConfig{})
+	m.ActualModel = "wan2.7-r2v"
+
+	req, err := http.NewRequestWithContext(
+		context.Background(),
+		http.MethodPost,
+		"/v1/video/generations/jobs",
+		strings.NewReader(`{
+			"model":"wan2.7-r2v",
+			"prompt":"Animate these references",
+			"image_url":"https://example.com/ref.png",
+			"video_url":"https://example.com/ref.mp4",
+			"n_seconds":4,
+			"width":1280,
+			"height":720
+		}`),
+	)
+	if err != nil {
+		t.Fatalf("NewRequest returned error: %v", err)
+	}
+
+	result, err := adaptor.ConvertRequest(m, nil, req)
+	if err != nil {
+		t.Fatalf("ConvertRequest returned error: %v", err)
+	}
+
+	payload := readJSONMap(t, result.Body)
+	input := mustMap(t, payload["input"])
+
+	media := mustSlice(t, input["media"])
+	if len(media) != 2 {
+		t.Fatalf("expected 2 media items, got %#v", media)
+	}
+
+	image := mustMap(t, media[0])
+	if image["type"] != "reference_image" || image["url"] != "https://example.com/ref.png" {
+		t.Fatalf("unexpected reference image media: %#v", image)
+	}
+
+	video := mustMap(t, media[1])
+	if video["type"] != "reference_video" || video["url"] != "https://example.com/ref.mp4" {
+		t.Fatalf("unexpected reference video media: %#v", video)
+	}
+}
+
+func TestAdaptorConvertRequestAliI2VModelMapsImageToFirstFrame(t *testing.T) {
+	adaptor := &Adaptor{}
+	m := meta.NewMeta(nil, mode.VideoGenerationsJobs, "happyhorse-1.0-i2v", coremodel.ModelConfig{})
+	m.ActualModel = "happyhorse-1.0-i2v"
+
+	req, err := http.NewRequestWithContext(
+		context.Background(),
+		http.MethodPost,
+		"/v1/video/generations/jobs",
+		strings.NewReader(`{
+			"model":"happyhorse-1.0-i2v",
+			"prompt":"Animate the image",
+			"image_url":"https://example.com/start.png",
+			"n_seconds":4,
+			"width":1280,
+			"height":720
+		}`),
+	)
+	if err != nil {
+		t.Fatalf("NewRequest returned error: %v", err)
+	}
+
+	result, err := adaptor.ConvertRequest(m, nil, req)
+	if err != nil {
+		t.Fatalf("ConvertRequest returned error: %v", err)
+	}
+
+	payload := readJSONMap(t, result.Body)
+	input := mustMap(t, payload["input"])
+	media := mustSlice(t, input["media"])
+
+	firstFrame := mustMap(t, media[0])
+	if firstFrame["type"] != "first_frame" || firstFrame["url"] != "https://example.com/start.png" {
+		t.Fatalf("unexpected first frame media: %#v", firstFrame)
 	}
 }
 
@@ -2086,6 +2702,9 @@ func TestAliVideoHandlersConvertTaskToOpenAIJob(t *testing.T) {
 	m.Channel.ID = 9
 	m.Group = coremodel.GroupCache{ID: "group-1"}
 	m.Token = coremodel.TokenCache{ID: 7}
+	m.Set(metaAliVideoWidth, 480)
+	m.Set(metaAliVideoHeight, 480)
+	m.Set(metaAliVideoSize, "480x480")
 
 	store := &aliTestStore{}
 	resp := &http.Response{
@@ -2149,6 +2768,15 @@ func TestAliVideoHandlersConvertTaskToOpenAIJob(t *testing.T) {
 	if job.Width != 1280 || job.Height != 720 || job.NSeconds != 5 {
 		t.Fatalf("unexpected dimensions or duration: %#v", job)
 	}
+
+	if job.Generations[0].Width != 1280 || job.Generations[0].Height != 720 {
+		t.Fatalf("unexpected generation dimensions: %#v", job.Generations[0])
+	}
+
+	if result.UsageContext.Resolution != "1280x720" ||
+		result.UsageContext.NativeResolution != "720P" {
+		t.Fatalf("unexpected usage context: %#v", result.UsageContext)
+	}
 }
 
 func TestAliVideoCreateJobUsesRequestMetadataFallback(t *testing.T) {
@@ -2175,7 +2803,8 @@ func TestAliVideoCreateJobUsesRequestMetadataFallback(t *testing.T) {
 			"prompt":"Animate the horse",
 			"input_reference":"https://example.com/reference.png",
 			"n_seconds":5,
-			"size":"1280x720"
+			"width":1280,
+			"height":720
 		}`),
 	)
 	if err != nil {
@@ -2674,6 +3303,10 @@ func TestAliVideoAsyncUsageUsesStoredSizeWhenUpstreamRatioMissing(t *testing.T) 
 
 	if usageContext.Resolution != "720x1280" {
 		t.Fatalf("unexpected usage context: %#v", usageContext)
+	}
+
+	if usageContext.NativeResolution != "720P" {
+		t.Fatalf("expected native resolution 720P, got %#v", usageContext)
 	}
 }
 

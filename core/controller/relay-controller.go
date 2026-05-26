@@ -198,7 +198,7 @@ func relayController(m mode.Mode) RelayController {
 		c.ValidateRequest = controller.ValidateVideoGenerationJobRequest
 		c.GetRequestPrice = controller.GetVideoGenerationJobRequestPrice
 		c.GetRequestUsage = controller.GetVideoGenerationJobRequestUsage
-	case mode.Videos, mode.VideosRemix:
+	case mode.Videos, mode.VideosRemix, mode.VideosEdits, mode.VideosExtensions:
 		c.ValidateRequest = controller.ValidateVideosRequest
 		c.GetRequestPrice = controller.GetVideosRequestPrice
 		c.GetRequestUsage = controller.GetVideosRequestUsage

@@ -13,6 +13,7 @@ import (
 	"github.com/labring/aiproxy/core/relay/mode"
 	relaymodel "github.com/labring/aiproxy/core/relay/model"
 	relayutils "github.com/labring/aiproxy/core/relay/utils"
+	log "github.com/sirupsen/logrus"
 )
 
 var _ adaptor.AsyncUsageFetcher = (*Adaptor)(nil)
@@ -35,7 +36,11 @@ func (a *Adaptor) FetchAsyncUsage(
 	}
 
 	switch mode.Mode(info.Mode) {
-	case mode.GeminiVideo, mode.VideoGenerationsJobs, mode.Videos:
+	case mode.GeminiVideo,
+		mode.VideoGenerationsJobs,
+		mode.Videos,
+		mode.VideosEdits,
+		mode.VideosExtensions:
 	default:
 		return model.Usage{}, model.UsageContext{}, false, fmt.Errorf(
 			"unsupported async usage mode: %d",
@@ -48,10 +53,6 @@ func (a *Adaptor) FetchAsyncUsage(
 		return model.Usage{}, model.UsageContext{}, false, err
 	}
 
-	if !operation.Done {
-		return model.Usage{}, model.UsageContext{}, false, nil
-	}
-
 	if operation.Error != nil {
 		return model.Usage{}, model.UsageContext{}, true, fmt.Errorf(
 			"gemini video operation failed: %s",
@@ -59,12 +60,18 @@ func (a *Adaptor) FetchAsyncUsage(
 		)
 	}
 
-	if reason := geminiOperationRAIFilteredReason(operation); reason != "" {
+	if !operation.Done {
+		return model.Usage{}, model.UsageContext{}, false, nil
+	}
+
+	if reason := geminiOperationFinalFailureMessage(operation); reason != "" {
 		return model.Usage{}, model.UsageContext{}, true, fmt.Errorf(
 			"gemini video operation failed: %s",
 			reason,
 		)
 	}
+
+	logGeminiOperationPartialRAIFilter(log.Warnf, operation)
 
 	usage, usageContext := geminiVideoAsyncUsage(request.Store, info, operation)
 
@@ -219,7 +226,7 @@ func geminiVideoAsyncUsageMetadata(
 		storeIDs = append(storeIDs, model.VideoJobStoreID(localID))
 	case mode.VideoGenerationsJobs:
 		storeIDs = append(storeIDs, model.VideoJobStoreID(localID))
-	case mode.Videos:
+	case mode.Videos, mode.VideosEdits, mode.VideosExtensions:
 		storeIDs = append(storeIDs, model.VideoGenerationStoreID(localID))
 	default:
 		storeIDs = append(storeIDs,

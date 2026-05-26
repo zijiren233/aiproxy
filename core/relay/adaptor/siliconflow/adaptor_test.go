@@ -646,7 +646,8 @@ func TestConvertVideoRequestMapsJSONFields(t *testing.T) {
 	req := newJSONRequest(t, "/v1/video/generations/jobs", `{
 		"model":"alias-video",
 		"prompt":"A calm ocean",
-		"size":"1280*720",
+		"width":1280,
+		"height":720,
 		"negative_prompt":"rain",
 		"seed":123
 	}`)
@@ -672,7 +673,8 @@ func TestConvertVideoRequestMapsImageReference(t *testing.T) {
 	req := newJSONRequest(t, "/v1/video/generations/jobs", `{
 		"model":"alias-video",
 		"prompt":"Animate this scene",
-		"size":"960x960",
+		"width":960,
+		"height":960,
 		"input_reference":"https://example.com/input.png"
 	}`)
 

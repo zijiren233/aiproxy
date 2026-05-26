@@ -213,36 +213,49 @@ func TestGetRequestURL_OtherModes(t *testing.T) {
 	tests := []struct {
 		name            string
 		mode            mode.Mode
+		expectedMethod  string
 		expectedContain string
 	}{
 		{
 			name:            "Completions mode",
 			mode:            mode.Completions,
+			expectedMethod:  http.MethodPost,
 			expectedContain: "/completions",
 		},
 		{
 			name:            "Embeddings mode",
 			mode:            mode.Embeddings,
+			expectedMethod:  http.MethodPost,
 			expectedContain: "/embeddings",
 		},
 		{
 			name:            "ImagesGenerations mode",
 			mode:            mode.ImagesGenerations,
+			expectedMethod:  http.MethodPost,
 			expectedContain: "/images/generations",
+		},
+		{
+			name:            "ImagesEdits mode",
+			mode:            mode.ImagesEdits,
+			expectedMethod:  http.MethodPost,
+			expectedContain: "/images/edits",
 		},
 		{
 			name:            "AudioTranscription mode",
 			mode:            mode.AudioTranscription,
+			expectedMethod:  http.MethodPost,
 			expectedContain: "/audio/transcriptions",
 		},
 		{
 			name:            "AudioSpeech mode",
 			mode:            mode.AudioSpeech,
+			expectedMethod:  http.MethodPost,
 			expectedContain: "/audio/speech",
 		},
 		{
 			name:            "Videos mode",
 			mode:            mode.Videos,
+			expectedMethod:  http.MethodPost,
 			expectedContain: "/openai/v1/videos",
 		},
 	}
@@ -259,6 +272,7 @@ func TestGetRequestURL_OtherModes(t *testing.T) {
 			result, err := adaptor.GetRequestURL(meta, nil, nil)
 			require.NoError(t, err)
 
+			assert.Equal(t, tt.expectedMethod, result.Method)
 			assert.Contains(t, result.URL, tt.expectedContain)
 		})
 	}
@@ -316,6 +330,58 @@ func TestGetRequestURL_Videos(t *testing.T) {
 				ActualModel: "sora",
 				Mode:        tt.mode,
 				VideoID:     tt.videoID,
+			}
+			meta.Channel.BaseURL = "https://test.openai.azure.com"
+			meta.Channel.Key = "test-key|2024-02-01"
+
+			result, err := adaptor.GetRequestURL(meta, nil, nil)
+			require.NoError(t, err)
+			assert.Equal(t, tt.expectedMethod, result.Method)
+			assert.Contains(t, result.URL, tt.expectedContain)
+		})
+	}
+}
+
+func TestGetRequestURL_VideoGenerationsJobs(t *testing.T) {
+	adaptor := &azure.Adaptor{}
+
+	tests := []struct {
+		name            string
+		mode            mode.Mode
+		jobID           string
+		generationID    string
+		expectedMethod  string
+		expectedContain string
+	}{
+		{
+			name:            "create video generation job",
+			mode:            mode.VideoGenerationsJobs,
+			expectedMethod:  http.MethodPost,
+			expectedContain: "/openai/v1/video/generations/jobs?api-version=2024-02-01",
+		},
+		{
+			name:            "get video generation job",
+			mode:            mode.VideoGenerationsGetJobs,
+			jobID:           "job_123",
+			expectedMethod:  http.MethodGet,
+			expectedContain: "/openai/v1/video/generations/jobs/job_123?api-version=2024-02-01",
+		},
+		{
+			name:            "get video generation content",
+			mode:            mode.VideoGenerationsContent,
+			generationID:    "gen_123",
+			expectedMethod:  http.MethodGet,
+			expectedContain: "/openai/v1/video/generations/gen_123/content/video?api-version=2024-02-01",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			meta := &meta.Meta{
+				ActualModel:  "sora",
+				Mode:         tt.mode,
+				JobID:        tt.jobID,
+				GenerationID: tt.generationID,
 			}
 			meta.Channel.BaseURL = "https://test.openai.azure.com"
 			meta.Channel.Key = "test-key|2024-02-01"
