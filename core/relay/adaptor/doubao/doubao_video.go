@@ -44,7 +44,7 @@ func DoubaoNativeVideoSubmitHandler(
 	c *gin.Context,
 	resp *http.Response,
 ) (adaptor.DoResponseResult, adaptor.Error) {
-	body, response, relayErr := readDoubaoNativeVideoTaskResponse(resp)
+	body, response, relayErr := readDoubaoNativeVideoTaskResponse(resp, true)
 	if relayErr != nil {
 		return adaptor.DoResponseResult{}, relayErr
 	}
@@ -71,7 +71,7 @@ func DoubaoNativeVideoTaskHandler(
 	c *gin.Context,
 	resp *http.Response,
 ) (adaptor.DoResponseResult, adaptor.Error) {
-	body, response, relayErr := readDoubaoNativeVideoTaskResponse(resp)
+	body, response, relayErr := readDoubaoNativeVideoTaskResponse(resp, false)
 	if relayErr != nil {
 		return adaptor.DoResponseResult{}, relayErr
 	}
@@ -130,6 +130,7 @@ func DoubaoNativeVideoTaskDeleteHandler(
 
 func readDoubaoNativeVideoTaskResponse(
 	resp *http.Response,
+	requireID bool,
 ) ([]byte, relaymodel.DoubaoVideoTaskResponse, adaptor.Error) {
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
 		return nil, relaymodel.DoubaoVideoTaskResponse{}, ErrorHandler(resp)
@@ -157,7 +158,7 @@ func readDoubaoNativeVideoTaskResponse(
 		)
 	}
 
-	if response.ID == "" {
+	if requireID && response.ID == "" {
 		return nil, relaymodel.DoubaoVideoTaskResponse{}, relaymodel.WrapperOpenAIErrorWithMessage(
 			"missing id in doubao video response",
 			relaymodel.ErrorCodeBadResponse,

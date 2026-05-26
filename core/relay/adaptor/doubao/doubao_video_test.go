@@ -101,3 +101,73 @@ func TestDoubaoNativeVideoSubmitHandlerPassesThroughAndStoresTask(t *testing.T) 
 		t.Fatalf("unexpected saved store: %#v", store.saved[0])
 	}
 }
+
+func TestDoubaoNativeVideoSubmitHandlerRequiresID(t *testing.T) {
+	t.Parallel()
+
+	gin.SetMode(gin.TestMode)
+
+	recorder := httptest.NewRecorder()
+	ctx, _ := gin.CreateTestContext(recorder)
+	ctx.Request = httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/", nil)
+
+	resp := &http.Response{
+		StatusCode: http.StatusOK,
+		Header:     http.Header{"Content-Type": {"application/json"}},
+		Body:       io.NopCloser(bytes.NewBufferString(`{"status":"queued"}`)),
+	}
+
+	_, relayErr := DoubaoNativeVideoSubmitHandler(&meta.Meta{}, nil, ctx, resp)
+	if relayErr == nil {
+		t.Fatal("expected missing id error")
+	}
+}
+
+func TestDoubaoNativeVideoTaskHandlerBackfillsMissingIDFromMeta(t *testing.T) {
+	t.Parallel()
+
+	gin.SetMode(gin.TestMode)
+
+	recorder := httptest.NewRecorder()
+	ctx, _ := gin.CreateTestContext(recorder)
+	ctx.Request = httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", nil)
+
+	store := &doubaoTestStore{}
+	m := &meta.Meta{
+		Mode:        mode.DoubaoVideoTasks,
+		VideoID:     "task-123",
+		OriginModel: "doubao-seedance-2-0",
+		Group:       coremodel.GroupCache{ID: "group-1"},
+		Token:       coremodel.TokenCache{ID: 7},
+		Channel:     meta.ChannelMeta{ID: 42},
+	}
+	respBody := `{"model":"doubao-seedance-2-0","status":"succeeded","content":{"video_url":"https://example.com/out.mp4"}}`
+	resp := &http.Response{
+		StatusCode: http.StatusOK,
+		Header:     http.Header{"Content-Type": {"application/json"}},
+		Body:       io.NopCloser(bytes.NewBufferString(respBody)),
+	}
+
+	result, relayErr := DoubaoNativeVideoTaskHandler(m, store, ctx, resp)
+	if relayErr != nil {
+		t.Fatalf("DoubaoNativeVideoTaskHandler returned error: %v", relayErr)
+	}
+
+	if recorder.Body.String() != respBody {
+		t.Fatalf("unexpected passthrough body: %s", recorder.Body.String())
+	}
+
+	if result.UpstreamID != "task-123" {
+		t.Fatalf("expected upstream id from meta, got %#v", result.UpstreamID)
+	}
+
+	if len(store.saved) != 1 {
+		t.Fatalf("expected one store save, got %d", len(store.saved))
+	}
+
+	if store.saved[0].ID != coremodel.VideoGenerationStoreID("task-123") ||
+		store.saved[0].ChannelID != 42 ||
+		store.saved[0].Model != "doubao-seedance-2-0" {
+		t.Fatalf("unexpected saved store: %#v", store.saved[0])
+	}
+}
