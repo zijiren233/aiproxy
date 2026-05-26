@@ -52,6 +52,10 @@ func ConvertVideoRequestForTest(
 		return ConvertVideoGenerationJobRequest(meta, req)
 	case mode.Videos:
 		return ConvertVideosRequest(meta, req)
+	case mode.VideosEdits:
+		return ConvertVideosEditRequest(meta, req)
+	case mode.VideosExtensions:
+		return ConvertVideosExtensionRequest(meta, req)
 	default:
 		return ConvertVideoGenerationJobRequest(meta, req)
 	}

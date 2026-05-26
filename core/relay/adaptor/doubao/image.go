@@ -14,7 +14,6 @@ import (
 	"github.com/labring/aiproxy/core/common/image"
 	coremodel "github.com/labring/aiproxy/core/model"
 	"github.com/labring/aiproxy/core/relay/adaptor"
-	"github.com/labring/aiproxy/core/relay/adaptor/openai"
 	"github.com/labring/aiproxy/core/relay/meta"
 	relaymodel "github.com/labring/aiproxy/core/relay/model"
 	"github.com/labring/aiproxy/core/relay/render"
@@ -154,7 +153,7 @@ func ImageHandler(
 	resp *http.Response,
 ) (adaptor.DoResponseResult, adaptor.Error) {
 	if resp.StatusCode != http.StatusOK {
-		return adaptor.DoResponseResult{}, openai.ErrorHanlder(resp)
+		return adaptor.DoResponseResult{}, ErrorHandler(resp)
 	}
 
 	defer resp.Body.Close()
@@ -251,7 +250,7 @@ func ImageStreamHandler(
 	resp *http.Response,
 ) (adaptor.DoResponseResult, adaptor.Error) {
 	if resp.StatusCode != http.StatusOK {
-		return adaptor.DoResponseResult{}, openai.ErrorHanlder(resp)
+		return adaptor.DoResponseResult{}, ErrorHandler(resp)
 	}
 
 	defer resp.Body.Close()

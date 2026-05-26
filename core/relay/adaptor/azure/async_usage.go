@@ -26,7 +26,11 @@ func (a *Adaptor) FetchAsyncUsage(
 	info := request.Info
 
 	switch mode.Mode(info.Mode) {
-	case mode.VideoGenerationsJobs, mode.Videos, mode.VideosRemix:
+	case mode.VideoGenerationsJobs,
+		mode.Videos,
+		mode.VideosRemix,
+		mode.VideosEdits,
+		mode.VideosExtensions:
 		return a.fetchVideoJobUsage(ctx, channel, info)
 	case mode.Responses, mode.ChatCompletions, mode.Anthropic, mode.Gemini:
 		return a.fetchResponseUsage(ctx, channel, info)
@@ -43,7 +47,7 @@ func (a *Adaptor) fetchVideoJobUsage(
 	channel *model.Channel,
 	info *model.AsyncUsageInfo,
 ) (model.Usage, model.UsageContext, bool, error) {
-	if mode.Mode(info.Mode) == mode.Videos || mode.Mode(info.Mode) == mode.VideosRemix {
+	if isAzureVideosMode(mode.Mode(info.Mode)) {
 		return a.fetchVideoUsage(ctx, channel, info)
 	}
 
@@ -91,6 +95,13 @@ func (a *Adaptor) fetchVideoJobUsage(
 			job.Status,
 		)
 	}
+}
+
+func isAzureVideosMode(m mode.Mode) bool {
+	return m == mode.Videos ||
+		m == mode.VideosRemix ||
+		m == mode.VideosEdits ||
+		m == mode.VideosExtensions
 }
 
 func (a *Adaptor) fetchVideoUsage(

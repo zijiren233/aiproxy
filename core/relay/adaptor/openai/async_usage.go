@@ -26,7 +26,11 @@ func (a *Adaptor) FetchAsyncUsage(
 	info := request.Info
 
 	switch mode.Mode(info.Mode) {
-	case mode.VideoGenerationsJobs, mode.Videos, mode.VideosRemix:
+	case mode.VideoGenerationsJobs,
+		mode.Videos,
+		mode.VideosRemix,
+		mode.VideosEdits,
+		mode.VideosExtensions:
 		return a.fetchVideoUsage(ctx, channel, info)
 	case mode.Responses, mode.ChatCompletions, mode.Anthropic, mode.Gemini:
 		return a.fetchResponseUsage(ctx, channel, info)
@@ -47,7 +51,7 @@ func (a *Adaptor) fetchVideoUsage(
 		return model.Usage{}, model.UsageContext{}, false, errors.New("upstream id is empty")
 	}
 
-	if mode.Mode(info.Mode) == mode.Videos || mode.Mode(info.Mode) == mode.VideosRemix {
+	if isOpenAIVideosMode(mode.Mode(info.Mode)) {
 		return a.fetchVideoObjectUsage(ctx, channel, info)
 	}
 
@@ -83,6 +87,13 @@ func (a *Adaptor) fetchVideoUsage(
 			job.Status,
 		)
 	}
+}
+
+func isOpenAIVideosMode(m mode.Mode) bool {
+	return m == mode.Videos ||
+		m == mode.VideosRemix ||
+		m == mode.VideosEdits ||
+		m == mode.VideosExtensions
 }
 
 func (a *Adaptor) fetchVideoObjectUsage(

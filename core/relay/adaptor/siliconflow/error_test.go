@@ -39,6 +39,26 @@ func TestErrorHandlerParsesObjectError(t *testing.T) {
 	require.Equal(t, "upstream_error", body.Error.Type)
 }
 
+func TestOpenAIVideoErrorHandlerParsesObjectError(t *testing.T) {
+	resp := &http.Response{
+		StatusCode: http.StatusTooManyRequests,
+		Body: io.NopCloser(strings.NewReader(
+			`{"message":"System is really busy, please try again later","code":20015}`,
+		)),
+	}
+
+	err := OpenAIVideoErrorHandler(resp)
+	require.Equal(t, http.StatusTooManyRequests, err.StatusCode())
+
+	data, marshalErr := err.MarshalJSON()
+	require.NoError(t, marshalErr)
+	require.JSONEq(
+		t,
+		`{"detail":"System is really busy, please try again later"}`,
+		string(data),
+	)
+}
+
 func TestErrorHandlerParsesJSONStringError(t *testing.T) {
 	resp := &http.Response{
 		StatusCode: http.StatusBadRequest,

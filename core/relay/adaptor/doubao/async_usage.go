@@ -12,6 +12,7 @@ import (
 	coremodel "github.com/labring/aiproxy/core/model"
 	"github.com/labring/aiproxy/core/relay/adaptor"
 	"github.com/labring/aiproxy/core/relay/mode"
+	relaymodel "github.com/labring/aiproxy/core/relay/model"
 	relayutils "github.com/labring/aiproxy/core/relay/utils"
 )
 
@@ -29,7 +30,11 @@ func (a *Adaptor) FetchAsyncUsage(
 	}
 
 	switch mode.Mode(info.Mode) {
-	case mode.VideoGenerationsJobs, mode.Videos:
+	case mode.DoubaoVideo,
+		mode.VideoGenerationsJobs,
+		mode.Videos,
+		mode.VideosEdits,
+		mode.VideosExtensions:
 	default:
 		return coremodel.Usage{}, coremodel.UsageContext{}, false, fmt.Errorf(
 			"unsupported async usage mode: %d",
@@ -61,7 +66,7 @@ func (a *Adaptor) FetchAsyncUsage(
 }
 
 func doubaoVideoAsyncUsageContext(
-	response *doubaoVideoTaskResponse,
+	response *relaymodel.DoubaoVideoTaskResponse,
 	store adaptor.Store,
 	info *coremodel.AsyncUsageInfo,
 ) coremodel.UsageContext {
@@ -90,7 +95,7 @@ func doubaoVideoAsyncUsageContextFromStore(
 		return coremodel.UsageContext{}
 	}
 
-	response := &doubaoVideoTaskResponse{
+	response := &relaymodel.DoubaoVideoTaskResponse{
 		Resolution: metadata.Resolution,
 		Ratio:      metadata.Ratio,
 	}
@@ -108,9 +113,11 @@ func doubaoVideoAsyncMetadataFromStore(
 
 	storeIDs := []string{}
 	switch mode.Mode(info.Mode) {
+	case mode.DoubaoVideo:
+		storeIDs = append(storeIDs, coremodel.VideoGenerationStoreID(info.UpstreamID))
 	case mode.VideoGenerationsJobs:
 		storeIDs = append(storeIDs, coremodel.VideoJobStoreID(info.UpstreamID))
-	case mode.Videos:
+	case mode.Videos, mode.VideosEdits, mode.VideosExtensions:
 		storeIDs = append(storeIDs, coremodel.VideoGenerationStoreID(info.UpstreamID))
 	default:
 		storeIDs = append(
@@ -139,7 +146,7 @@ func (a *Adaptor) fetchVideoTask(
 	ctx context.Context,
 	channel *coremodel.Channel,
 	info *coremodel.AsyncUsageInfo,
-) (*doubaoVideoTaskResponse, error) {
+) (*relaymodel.DoubaoVideoTaskResponse, error) {
 	if info.UpstreamID == "" {
 		return nil, errors.New("upstream id is empty")
 	}
@@ -189,7 +196,7 @@ func (a *Adaptor) fetchVideoTask(
 		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
 	}
 
-	var response doubaoVideoTaskResponse
+	var response relaymodel.DoubaoVideoTaskResponse
 	if err := sonic.ConfigDefault.NewDecoder(resp.Body).Decode(&response); err != nil {
 		return nil, fmt.Errorf("decode doubao video task: %w", err)
 	}
@@ -197,7 +204,7 @@ func (a *Adaptor) fetchVideoTask(
 	return &response, nil
 }
 
-func doubaoVideoErrorMessage(response *doubaoVideoTaskResponse) string {
+func doubaoVideoErrorMessage(response *relaymodel.DoubaoVideoTaskResponse) string {
 	if response == nil || response.Error == nil {
 		return ""
 	}

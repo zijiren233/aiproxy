@@ -241,7 +241,7 @@ func GetRequestURL(meta *meta.Meta, replaceDot bool) (adaptor.RequestURL, error)
 		}
 
 		return adaptor.RequestURL{
-			Method: http.MethodPost,
+			Method: http.MethodGet,
 			URL:    fmt.Sprintf("%s?api-version=%s", url, apiVersion),
 		}, nil
 	case mode.VideoGenerationsContent:
@@ -256,7 +256,7 @@ func GetRequestURL(meta *meta.Meta, replaceDot bool) (adaptor.RequestURL, error)
 		}
 
 		return adaptor.RequestURL{
-			Method: http.MethodPost,
+			Method: http.MethodGet,
 			URL:    fmt.Sprintf("%s?api-version=%s", url, apiVersion),
 		}, nil
 	case mode.Videos:
@@ -301,6 +301,26 @@ func GetRequestURL(meta *meta.Meta, replaceDot bool) (adaptor.RequestURL, error)
 		}, nil
 	case mode.VideosRemix:
 		url, err := url.JoinPath(meta.Channel.BaseURL, "/openai/v1/videos", meta.VideoID, "remix")
+		if err != nil {
+			return adaptor.RequestURL{}, err
+		}
+
+		return adaptor.RequestURL{
+			Method: http.MethodPost,
+			URL:    fmt.Sprintf("%s?api-version=%s", url, "preview"),
+		}, nil
+	case mode.VideosEdits:
+		url, err := url.JoinPath(meta.Channel.BaseURL, "/openai/v1/videos/edits")
+		if err != nil {
+			return adaptor.RequestURL{}, err
+		}
+
+		return adaptor.RequestURL{
+			Method: http.MethodPost,
+			URL:    fmt.Sprintf("%s?api-version=%s", url, "preview"),
+		}, nil
+	case mode.VideosExtensions:
+		url, err := url.JoinPath(meta.Channel.BaseURL, "/openai/v1/videos/extensions")
 		if err != nil {
 			return adaptor.RequestURL{}, err
 		}

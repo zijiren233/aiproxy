@@ -34,8 +34,15 @@ var modeNames = map[Mode]string{
 	VideosContent:           "VideosContent",
 	VideosDelete:            "VideosDelete",
 	VideosRemix:             "VideosRemix",
+	VideosEdits:             "VideosEdits",
+	VideosExtensions:        "VideosExtensions",
 	GeminiVideo:             "GeminiVideo",
 	GeminiVideoOperations:   "GeminiVideoOperations",
+	AliVideo:                "AliVideo",
+	AliVideoTasks:           "AliVideoTasks",
+	DoubaoVideo:             "DoubaoVideo",
+	DoubaoVideoTasks:        "DoubaoVideoTasks",
+	DoubaoVideoTasksDelete:  "DoubaoVideoTasksDelete",
 	GeminiTTS:               "GeminiTTS",
 	GeminiImage:             "GeminiImage",
 	GeminiFiles:             "GeminiFiles",
@@ -80,4 +87,11 @@ const (
 	GeminiTTS
 	GeminiImage
 	GeminiFiles
+	VideosEdits
+	VideosExtensions
+	AliVideo
+	AliVideoTasks
+	DoubaoVideo
+	DoubaoVideoTasks
+	DoubaoVideoTasksDelete
 )

@@ -31,6 +31,49 @@ func TestBuildRequestGeminiVideo(t *testing.T) {
 	)
 }
 
+func TestBuildRequestVideoGenerationJob(t *testing.T) {
+	body, relayMode, err := utils.BuildRequest(model.ModelConfig{
+		Model: "happyhorse-1.0-t2v",
+		Type:  mode.VideoGenerationsJobs,
+	})
+	require.NoError(t, err)
+	require.Equal(t, mode.VideoGenerationsJobs, relayMode)
+
+	data, err := io.ReadAll(body)
+	require.NoError(t, err)
+
+	var request relaymodel.VideoGenerationJobRequest
+	require.NoError(t, sonic.Unmarshal(data, &request))
+	require.Equal(t, "happyhorse-1.0-t2v", request.Model)
+	require.Contains(t, request.Prompt, "clouds")
+	require.Zero(t, request.NVariants)
+	require.Zero(t, request.NSeconds)
+	require.NotContains(t, string(data), "size")
+	require.NotContains(t, string(data), "n_variants")
+	require.NotContains(t, string(data), "n_seconds")
+}
+
+func TestBuildRequestVideos(t *testing.T) {
+	body, relayMode, err := utils.BuildRequest(model.ModelConfig{
+		Model: "sora-2",
+		Type:  mode.Videos,
+	})
+	require.NoError(t, err)
+	require.Equal(t, mode.Videos, relayMode)
+
+	data, err := io.ReadAll(body)
+	require.NoError(t, err)
+
+	var request relaymodel.VideosRequest
+	require.NoError(t, sonic.Unmarshal(data, &request))
+	require.Equal(t, "sora-2", request.Model)
+	require.Contains(t, request.Prompt, "clouds")
+	require.Empty(t, request.Size)
+	require.Empty(t, request.Seconds)
+	require.NotContains(t, string(data), "size")
+	require.NotContains(t, string(data), "seconds")
+}
+
 func TestBuildImagesGenerationsRequestUsesImagePrompt(t *testing.T) {
 	body, relayMode, err := utils.BuildRequest(model.ModelConfig{
 		Model: "gemini-3.1-flash-image-preview",

@@ -12,6 +12,7 @@ import (
 	coremodel "github.com/labring/aiproxy/core/model"
 	"github.com/labring/aiproxy/core/relay/adaptor"
 	"github.com/labring/aiproxy/core/relay/mode"
+	relaymodel "github.com/labring/aiproxy/core/relay/model"
 	relayutils "github.com/labring/aiproxy/core/relay/utils"
 )
 
@@ -31,7 +32,13 @@ func (a *Adaptor) FetchAsyncUsage(
 	}
 
 	switch mode.Mode(info.Mode) {
-	case mode.VideoGenerationsJobs, mode.Videos, mode.VideosRemix:
+	case mode.AliVideo:
+		return a.fetchAliVideoJobUsage(ctx, channel, request.Store, info)
+	case mode.VideoGenerationsJobs,
+		mode.Videos,
+		mode.VideosRemix,
+		mode.VideosEdits,
+		mode.VideosExtensions:
 		return a.fetchAliVideoJobUsage(ctx, channel, request.Store, info)
 	default:
 		return coremodel.Usage{}, coremodel.UsageContext{}, false, fmt.Errorf(
@@ -80,19 +87,24 @@ func (a *Adaptor) fetchAliVideoJobUsage(
 }
 
 func aliVideoAsyncUsageContext(
-	usage AliVideoUsage,
+	usage relaymodel.AliVideoUsage,
 	store adaptor.Store,
 	info *coremodel.AsyncUsageInfo,
 ) coremodel.UsageContext {
 	storedContext := aliVideoAsyncUsageContextFromStore(store, info)
 	if strings.TrimSpace(usage.Ratio) == "" && storedContext.Resolution != "" {
-		return storedContext
+		return coremodel.UsageContext{
+			Resolution:       storedContext.Resolution,
+			NativeResolution: aliVideoNativeResolution(usage),
+		}.WithFallback(storedContext)
 	}
 
 	usageContext := coremodel.UsageContext{}
 	if width, height := aliVideoDimensions(usage); width > 0 && height > 0 {
 		usageContext.Resolution = aliVideoSize(width, height)
 	}
+
+	usageContext.NativeResolution = aliVideoNativeResolution(usage)
 
 	return usageContext.WithFallback(storedContext)
 }
@@ -107,9 +119,11 @@ func aliVideoAsyncUsageContextFromStore(
 
 	storeIDs := []string{}
 	switch mode.Mode(info.Mode) {
+	case mode.AliVideo:
+		storeIDs = append(storeIDs, coremodel.VideoGenerationStoreID(info.UpstreamID))
 	case mode.VideoGenerationsJobs:
 		storeIDs = append(storeIDs, coremodel.VideoJobStoreID(info.UpstreamID))
-	case mode.Videos, mode.VideosRemix:
+	case mode.Videos, mode.VideosRemix, mode.VideosEdits, mode.VideosExtensions:
 		storeIDs = append(storeIDs, coremodel.VideoGenerationStoreID(info.UpstreamID))
 	default:
 		storeIDs = append(
@@ -143,7 +157,7 @@ func fetchAliVideoTask(
 	channel *coremodel.Channel,
 	baseURL string,
 	taskID string,
-) (*AliVideoTaskResponse, error) {
+) (*relaymodel.AliVideoTaskResponse, error) {
 	if baseURL == "" && channel != nil {
 		baseURL = channel.BaseURL
 	}
@@ -194,7 +208,7 @@ func fetchAliVideoTask(
 		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
 	}
 
-	var response AliVideoTaskResponse
+	var response relaymodel.AliVideoTaskResponse
 	if err := sonic.ConfigDefault.NewDecoder(resp.Body).Decode(&response); err != nil {
 		return nil, fmt.Errorf("decode ali video task: %w", err)
 	}

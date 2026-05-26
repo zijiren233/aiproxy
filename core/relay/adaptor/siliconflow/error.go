@@ -51,6 +51,37 @@ func ErrorHandler(resp *http.Response) adaptor.Error {
 	)
 }
 
+func OpenAIVideoErrorHandler(resp *http.Response) adaptor.Error {
+	defer resp.Body.Close()
+
+	responseBody, err := common.GetResponseBody(resp)
+	if err != nil {
+		return relaymodel.NewOpenAIVideoError(resp.StatusCode, relaymodel.OpenAIVideoError{
+			Detail: err.Error(),
+		})
+	}
+
+	return OpenAIVideoErrorHandlerWithBody(resp.StatusCode, responseBody)
+}
+
+func OpenAIVideoErrorHandlerWithBody(statusCode int, responseBody []byte) adaptor.Error {
+	message, code, parseErr := parseErrorResponse(responseBody)
+	if parseErr != nil {
+		return relaymodel.NewOpenAIVideoError(
+			http.StatusInternalServerError,
+			relaymodel.OpenAIVideoError{
+				Detail: parseErr.Error(),
+			},
+		)
+	}
+
+	statusCode, _ = normalizeError(statusCode, message, code)
+
+	return relaymodel.NewOpenAIVideoError(statusCode, relaymodel.OpenAIVideoError{
+		Detail: message,
+	})
+}
+
 func normalizeError(statusCode int, message string, code any) (int, any) {
 	if strings.Contains(message, "System is really busy") {
 		statusCode = http.StatusTooManyRequests

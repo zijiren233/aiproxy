@@ -73,7 +73,9 @@ func WrapperErrorWithMessage(
 		mode.VideosGet,
 		mode.VideosContent,
 		mode.VideosDelete,
-		mode.VideosRemix:
+		mode.VideosRemix,
+		mode.VideosEdits,
+		mode.VideosExtensions:
 		return NewOpenAIVideoError(statusCode, OpenAIVideoError{
 			Detail: message,
 		})

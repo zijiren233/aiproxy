@@ -13,7 +13,6 @@ type VideoGenerationJobRequest struct {
 	Model     string `json:"model"`
 	Width     int    `json:"width"`
 	Height    int    `json:"height"`
-	Size      string `json:"size,omitempty"`
 	NVariants int    `json:"n_variants"`
 	NSeconds  int    `json:"n_seconds"`
 	Seconds   int    `json:"seconds,omitempty"`
@@ -29,6 +28,16 @@ type VideosRequest struct {
 
 type VideosRemixRequest struct {
 	VideosRequest
+}
+
+type VideosEditRequest struct {
+	VideosRequest
+	Video any `json:"video,omitempty"`
+}
+
+type VideosExtensionRequest struct {
+	VideosRequest
+	Video any `json:"video,omitempty"`
 }
 
 type VideoGenerationJobStatus = string

@@ -23,6 +23,7 @@ import (
 	"github.com/labring/aiproxy/core/relay/mode"
 	relaymodel "github.com/labring/aiproxy/core/relay/model"
 	monitorplugin "github.com/labring/aiproxy/core/relay/plugin/monitor"
+	"gorm.io/gorm"
 )
 
 func calculateGroupConsumeLevelRatio(usedAmount float64) float64 {
@@ -334,6 +335,14 @@ func CheckRelayMode(requestMode, modelMode mode.Mode) bool {
 		return containsMode(mode.Gemini, mode.GeminiFiles, mode.GeminiVideo)
 	case mode.GeminiVideoOperations:
 		return containsMode(mode.GeminiVideo, mode.GeminiVideoOperations)
+	case mode.AliVideo:
+		return modelMode == mode.AliVideo
+	case mode.AliVideoTasks:
+		return containsMode(mode.AliVideo, mode.AliVideoTasks)
+	case mode.DoubaoVideo:
+		return modelMode == mode.DoubaoVideo
+	case mode.DoubaoVideoTasks, mode.DoubaoVideoTasksDelete:
+		return containsMode(mode.DoubaoVideo, mode.DoubaoVideoTasks, mode.DoubaoVideoTasksDelete)
 	case mode.AudioSpeech:
 		return containsMode(mode.AudioSpeech, mode.GeminiTTS)
 	case mode.ChatCompletions, mode.Anthropic, mode.Gemini:
@@ -387,8 +396,15 @@ func CheckRelayMode(requestMode, modelMode mode.Mode) bool {
 			mode.VideoGenerationsGetJobs,
 			mode.VideoGenerationsContent,
 			mode.GeminiVideo,
+			mode.AliVideo,
+			mode.DoubaoVideo,
 		)
-	case mode.Videos, mode.VideosGet, mode.VideosContent, mode.VideosRemix:
+	case mode.Videos,
+		mode.VideosGet,
+		mode.VideosContent,
+		mode.VideosRemix,
+		mode.VideosEdits,
+		mode.VideosExtensions:
 		return containsMode(
 			mode.VideoGenerationsJobs,
 			mode.VideoGenerationsGetJobs,
@@ -398,7 +414,11 @@ func CheckRelayMode(requestMode, modelMode mode.Mode) bool {
 			mode.VideosContent,
 			mode.VideosDelete,
 			mode.VideosRemix,
+			mode.VideosEdits,
+			mode.VideosExtensions,
 			mode.GeminiVideo,
+			mode.AliVideo,
+			mode.DoubaoVideo,
 		)
 	case mode.VideosDelete:
 		return containsMode(
@@ -410,6 +430,8 @@ func CheckRelayMode(requestMode, modelMode mode.Mode) bool {
 			mode.VideosContent,
 			mode.VideosDelete,
 			mode.VideosRemix,
+			mode.VideosEdits,
+			mode.VideosExtensions,
 		)
 	default:
 		return requestMode == modelMode
@@ -793,19 +815,8 @@ func getRequestModel(c *gin.Context, m mode.Mode, group string, tokenID int) (st
 		return store.Model, nil
 	case isVideosStoredMode(m):
 		return getStoredVideoRequestModel(c, group, tokenID)
-	case m == mode.ResponsesGet || m == mode.ResponsesDelete ||
-		m == mode.ResponsesCancel || m == mode.ResponsesInputItems:
-		responseID := c.Param("response_id")
-
-		store, err := model.CacheGetStore(group, tokenID, model.ResponseStoreID(responseID))
-		if err != nil {
-			return "", fmt.Errorf("get request model failed: %w", err)
-		}
-
-		c.Set(ResponseID, responseID)
-		c.Set(ChannelID, store.ChannelID)
-
-		return store.Model, nil
+	case isStoredResponseMode(m):
+		return getStoredResponseRequestModel(c, group, tokenID)
 	case m == mode.Responses:
 		node, err := getRequestBodyNode(c)
 		if err != nil {
@@ -845,6 +856,8 @@ func getRequestModel(c *gin.Context, m mode.Mode, group string, tokenID int) (st
 		return getGeminiRequestModel(c, group, tokenID)
 	case m == mode.GeminiFiles:
 		return getGeminiFileRequestModel(c, group, tokenID)
+	case isProviderVideoMode(m):
+		return getProviderVideoRequestModel(c, m, group, tokenID)
 	default:
 		node, err := getRequestBodyNode(c)
 		if err != nil {
@@ -877,6 +890,53 @@ func getGeminiRequestModel(c *gin.Context, group string, tokenID int) (string, e
 	modelName, _, _ = strings.Cut(modelName, ":")
 
 	return modelName, nil
+}
+
+func isStoredResponseMode(m mode.Mode) bool {
+	return m == mode.ResponsesGet ||
+		m == mode.ResponsesDelete ||
+		m == mode.ResponsesCancel ||
+		m == mode.ResponsesInputItems
+}
+
+func getStoredResponseRequestModel(c *gin.Context, group string, tokenID int) (string, error) {
+	responseID := c.Param("response_id")
+
+	store, err := model.CacheGetStore(group, tokenID, model.ResponseStoreID(responseID))
+	if err != nil {
+		return "", fmt.Errorf("get request model failed: %w", err)
+	}
+
+	c.Set(ResponseID, responseID)
+	c.Set(ChannelID, store.ChannelID)
+
+	return store.Model, nil
+}
+
+func isProviderVideoMode(m mode.Mode) bool {
+	return m == mode.AliVideo ||
+		m == mode.AliVideoTasks ||
+		m == mode.DoubaoVideo ||
+		m == mode.DoubaoVideoTasks ||
+		m == mode.DoubaoVideoTasksDelete
+}
+
+func getProviderVideoRequestModel(
+	c *gin.Context,
+	m mode.Mode,
+	group string,
+	tokenID int,
+) (string, error) {
+	if m == mode.AliVideoTasks || m == mode.DoubaoVideoTasks || m == mode.DoubaoVideoTasksDelete {
+		return getNativeVideoTaskRequestModel(c, group, tokenID)
+	}
+
+	node, err := getRequestBodyNode(c)
+	if err != nil {
+		return "", fmt.Errorf("get request model failed: %w", err)
+	}
+
+	return getStringFieldFromNode(node, "model", "get request model failed")
 }
 
 func getGeminiFileRequestModel(c *gin.Context, group string, tokenID int) (string, error) {
@@ -933,7 +993,10 @@ func getGeminiPathModelAndOperationID(c *gin.Context) (string, string) {
 }
 
 func isVideosCreateMode(m mode.Mode) bool {
-	return m == mode.Videos || m == mode.VideosRemix
+	return m == mode.Videos ||
+		m == mode.VideosRemix ||
+		m == mode.VideosEdits ||
+		m == mode.VideosExtensions
 }
 
 func isVideosStoredMode(m mode.Mode) bool {
@@ -957,7 +1020,24 @@ func getVideosCreateRequestModel(c *gin.Context, group string, tokenID int) (str
 	}
 
 	if strings.HasPrefix(c.Request.Header.Get("Content-Type"), "multipart/form-data") {
-		return getLimitedMultipartFormValue(c.Request, "model")
+		requestModel, err := getLimitedMultipartFormValue(c.Request, "model")
+		if err != nil {
+			return requestModel, err
+		}
+
+		referenceModel, err := getVideoCreateRequestModelFromReference(
+			c,
+			group,
+			tokenID,
+			func() (string, error) {
+				return getLimitedMultipartFormValue(c.Request, "video")
+			},
+		)
+		if err != nil || requestModel != "" {
+			return requestModel, err
+		}
+
+		return referenceModel, nil
 	}
 
 	node, err := getRequestBodyNode(c)
@@ -965,7 +1045,64 @@ func getVideosCreateRequestModel(c *gin.Context, group string, tokenID int) (str
 		return "", fmt.Errorf("get request model failed: %w", err)
 	}
 
-	return getStringFieldFromNode(node, "model", "get request model failed")
+	requestModel, err := getStringFieldFromNode(node, "model", "get request model failed")
+	if err != nil {
+		return requestModel, err
+	}
+
+	referenceModel, err := getVideoCreateRequestModelFromReference(
+		c,
+		group,
+		tokenID,
+		func() (string, error) {
+			return getStringFieldFromNode(node, "video", "get request video failed")
+		},
+	)
+	if err != nil || requestModel != "" {
+		return requestModel, err
+	}
+
+	return referenceModel, nil
+}
+
+func getVideoCreateRequestModelFromReference(
+	c *gin.Context,
+	group string,
+	tokenID int,
+	videoIDFromRequest func() (string, error),
+) (string, error) {
+	m := GetMode(c)
+	if m != mode.VideosEdits && m != mode.VideosExtensions {
+		return "", nil
+	}
+
+	videoID, err := videoIDFromRequest()
+	if err != nil {
+		return "", err
+	}
+
+	videoID = strings.TrimSpace(videoID)
+	if videoID == "" {
+		return "", nil
+	}
+
+	store, err := model.CacheGetStore(
+		group,
+		tokenID,
+		model.VideoGenerationStoreID(videoID),
+	)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return "", nil
+		}
+
+		return "", fmt.Errorf("get request model failed: %w", err)
+	}
+
+	c.Set(VideoID, videoID)
+	c.Set(ChannelID, store.ChannelID)
+
+	return store.Model, nil
 }
 
 func getLimitedMultipartFormValue(req *http.Request, key string) (string, error) {
@@ -999,6 +1136,32 @@ func getStoredVideoRequestModel(c *gin.Context, group string, tokenID int) (stri
 
 	c.Set(VideoID, videoID)
 	c.Set(GenerationID, videoID)
+	c.Set(ChannelID, store.ChannelID)
+
+	return store.Model, nil
+}
+
+func getNativeVideoTaskRequestModel(c *gin.Context, group string, tokenID int) (string, error) {
+	taskID := strings.TrimSpace(c.Param("task_id"))
+	if taskID == "" {
+		taskID = strings.TrimSpace(c.Param("id"))
+	}
+
+	if taskID == "" {
+		return "", errors.New("get request model failed: task id is empty")
+	}
+
+	store, err := model.CacheGetStore(
+		group,
+		tokenID,
+		model.VideoGenerationStoreID(taskID),
+	)
+	if err != nil {
+		return "", fmt.Errorf("get request model failed: %w", err)
+	}
+
+	c.Set(VideoID, taskID)
+	c.Set(GenerationID, taskID)
 	c.Set(ChannelID, store.ChannelID)
 
 	return store.Model, nil

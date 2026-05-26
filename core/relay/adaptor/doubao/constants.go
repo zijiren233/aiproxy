@@ -41,7 +41,7 @@ var ModelList = []model.ModelConfig{
 	},
 	{
 		Model: "doubao-seedance-2-0",
-		Type:  mode.VideoGenerationsJobs,
+		Type:  mode.DoubaoVideo,
 		Owner: model.ModelOwnerDoubao,
 		Price: model.Price{
 			// Seedance video billing uses the API response usage.completion_tokens.
@@ -70,7 +70,7 @@ var ModelList = []model.ModelConfig{
 	},
 	{
 		Model: "doubao-seedance-2-0-fast",
-		Type:  mode.VideoGenerationsJobs,
+		Type:  mode.DoubaoVideo,
 		Owner: model.ModelOwnerDoubao,
 		Price: model.Price{
 			// Seedance video billing uses the API response usage.completion_tokens.
@@ -89,7 +89,7 @@ var ModelList = []model.ModelConfig{
 	},
 	{
 		Model: "doubao-seedance-1-5-pro",
-		Type:  mode.VideoGenerationsJobs,
+		Type:  mode.DoubaoVideo,
 		Owner: model.ModelOwnerDoubao,
 		Price: model.Price{
 			// Seedance 1.5 pro token price is for the default generated-audio case.
@@ -109,7 +109,7 @@ var ModelList = []model.ModelConfig{
 	},
 	{
 		Model: "doubao-seedance-1-0-pro",
-		Type:  mode.VideoGenerationsJobs,
+		Type:  mode.DoubaoVideo,
 		Owner: model.ModelOwnerDoubao,
 		Price: model.Price{
 			// Seedance 1.0 pro bills by returned video completion tokens.
@@ -128,7 +128,7 @@ var ModelList = []model.ModelConfig{
 	},
 	{
 		Model: "doubao-seedance-1-0-pro-fast",
-		Type:  mode.VideoGenerationsJobs,
+		Type:  mode.DoubaoVideo,
 		Owner: model.ModelOwnerDoubao,
 		Price: model.Price{
 			// Seedance 1.0 pro fast bills by returned video completion tokens.

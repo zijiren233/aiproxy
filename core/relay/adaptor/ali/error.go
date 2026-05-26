@@ -27,7 +27,37 @@ func ErrorHanlder(resp *http.Response) adaptor.Error {
 	}
 
 	statusCode, openAIError := getAliErrorWithBody(resp.StatusCode, respBody)
+	statusCode, openAIError = normalizeAliError(statusCode, openAIError)
 
+	return relaymodel.NewOpenAIError(statusCode, openAIError)
+}
+
+func OpenAIVideoErrorHandler(resp *http.Response) adaptor.Error {
+	defer resp.Body.Close()
+
+	respBody, err := common.GetResponseBody(resp)
+	if err != nil {
+		return relaymodel.NewOpenAIVideoError(resp.StatusCode, relaymodel.OpenAIVideoError{
+			Detail: err.Error(),
+		})
+	}
+
+	return OpenAIVideoErrorHandlerWithBody(resp.StatusCode, respBody)
+}
+
+func OpenAIVideoErrorHandlerWithBody(statusCode int, respBody []byte) adaptor.Error {
+	statusCode, openAIError := getAliErrorWithBody(statusCode, respBody)
+	statusCode, openAIError = normalizeAliError(statusCode, openAIError)
+
+	return relaymodel.NewOpenAIVideoError(statusCode, relaymodel.OpenAIVideoError{
+		Detail: openAIError.Message,
+	})
+}
+
+func normalizeAliError(
+	statusCode int,
+	openAIError relaymodel.OpenAIError,
+) (int, relaymodel.OpenAIError) {
 	// {"error":{"code":"ServiceUnavailable","message":"<503> InternalError.Algo: An error occurred in model serving, error message is: [Too many requests. Your requests are being throttled due to system capacity limits. Please try again later.]","type":"ServiceUnavailable"}}
 	switch openAIError.Type {
 	case "ServiceUnavailable":
@@ -42,7 +72,7 @@ func ErrorHanlder(resp *http.Response) adaptor.Error {
 		statusCode = http.StatusBadRequest
 	}
 
-	return relaymodel.NewOpenAIError(statusCode, openAIError)
+	return statusCode, openAIError
 }
 
 func getAliErrorWithBody(statusCode int, respBody []byte) (int, relaymodel.OpenAIError) {
