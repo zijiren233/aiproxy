@@ -76,6 +76,7 @@ export function ModelTable() {
   const [selectedModelId, setSelectedModelId] = useState<string | null>(null);
   const [dialogMode, setDialogMode] = useState<"create" | "update">("create");
   const [selectedModel, setSelectedModel] = useState<ModelConfig | null>(null);
+  const [baseModelConfig, setBaseModelConfig] = useState<ModelConfig | null>(null);
   const [preserveModelNameOnCreate, setPreserveModelNameOnCreate] = useState(false);
   const [isRefreshAnimating, setIsRefreshAnimating] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
@@ -554,6 +555,7 @@ export function ModelTable() {
   const openCreateDialog = () => {
     setDialogMode("create");
     setSelectedModel(null);
+    setBaseModelConfig(null);
     setPreserveModelNameOnCreate(false);
     setModelDialogOpen(true);
   };
@@ -562,6 +564,7 @@ export function ModelTable() {
   const openUpdateDialog = (model: ModelConfig) => {
     setDialogMode("update");
     setSelectedModel(model);
+    setBaseModelConfig(model);
     setPreserveModelNameOnCreate(false);
     setModelDialogOpen(true);
   };
@@ -570,6 +573,7 @@ export function ModelTable() {
   const openCopyDialog = (model: ModelConfig) => {
     setDialogMode("create");
     setSelectedModel(model);
+    setBaseModelConfig(model);
     setPreserveModelNameOnCreate(false);
     setModelDialogOpen(true);
   };
@@ -577,13 +581,15 @@ export function ModelTable() {
   const openCreateFromBuiltinDialog = (model: ModelConfig) => {
     setDialogMode("create");
     setSelectedModel(model);
+    setBaseModelConfig(model);
     setPreserveModelNameOnCreate(true);
     setModelDialogOpen(true);
   };
 
-  const openEditFromBuiltinDialog = (model: ModelConfig) => {
+  const openEditFromBuiltinDialog = (builtinModel: ModelConfig, existingModel: ModelConfig) => {
     setDialogMode("update");
-    setSelectedModel(model);
+    setSelectedModel(builtinModel);
+    setBaseModelConfig(existingModel);
     setPreserveModelNameOnCreate(false);
     setModelDialogOpen(true);
   };
@@ -828,6 +834,7 @@ export function ModelTable() {
         onOpenChange={setModelDialogOpen}
         mode={dialogMode}
         model={selectedModel}
+        baseModelConfig={baseModelConfig}
         preserveModelNameOnCreate={preserveModelNameOnCreate}
       />
 

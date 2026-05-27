@@ -17,6 +17,16 @@ import {
     FormMessage,
 } from '@/components/ui/form'
 import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import {
     Select,
     SelectContent,
     SelectItem,
@@ -49,6 +59,18 @@ import { useState } from 'react'
 import { ENV } from '@/utils/env'
 import { PriceFormFields } from '@/components/price/PriceFormFields'
 import { ValidationErrorDisplay } from '@/components/common/error/validationErrorDisplay'
+
+type PendingUpdate = {
+    model: string
+    data: Omit<ModelCreateRequest, 'model'>
+    changes: ChangeSummary[]
+}
+
+type ChangeSummary = {
+    field: string
+    before: string
+    after: string
+}
 
 const KNOWN_PRICE_KEYS = new Set([
     'input_price',
@@ -156,6 +178,143 @@ const omitKeys = (obj: object, keys: string[]) => {
     return Object.fromEntries(Object.entries(obj).filter(([key]) => !omitted.has(key)))
 }
 
+const normalizeForCompare = (value: unknown): unknown => {
+    if (value === undefined || value === null || value === '' || value === false) return null
+    if (Array.isArray(value)) {
+        const normalizedItems: unknown[] = value.map(normalizeForCompare).filter((item) => item !== null)
+        return normalizedItems.length > 0 ? normalizedItems : null
+    }
+    if (typeof value === 'object') {
+        const normalizedEntries: Array<readonly [string, unknown]> = Object.entries(value as Record<string, unknown>)
+            .map(([key, item]) => [key, normalizeForCompare(item)] as const)
+            .filter(([, item]) => item !== null)
+            .sort(([left], [right]) => left.localeCompare(right))
+
+        return normalizedEntries.length > 0 ? Object.fromEntries(normalizedEntries) : null
+    }
+    return value
+}
+
+const isSameValue = (before: unknown, after: unknown) =>
+    JSON.stringify(normalizeForCompare(before)) === JSON.stringify(normalizeForCompare(after))
+
+const formatScalar = (value: unknown, labels: Record<string, string>) => {
+    if (value === undefined || value === null || value === '') return labels.unset
+    if (typeof value === 'boolean') return value ? labels.yes : labels.no
+    if (Array.isArray(value)) return value.length > 0 ? value.join(', ') : labels.none
+    return String(value)
+}
+
+const summarizeStructuredChange = (
+    before: unknown,
+    after: unknown,
+    labels: Record<string, string>
+) => {
+    if (isSameValue(before, after)) return null
+    const normalizedBefore = normalizeForCompare(before)
+    const normalizedAfter = normalizeForCompare(after)
+    return {
+        before: normalizedBefore == null ? labels.unset : labels.configured,
+        after: normalizedAfter == null ? labels.unset : labels.changed,
+    }
+}
+
+const pickManagedFields = (
+    source: Record<string, unknown> | undefined,
+    keys: Set<string>
+) => {
+    if (!source) return undefined
+
+    const picked = Object.fromEntries(
+        Object.entries(source).filter(([key]) => keys.has(key))
+    )
+
+    return Object.keys(picked).length > 0 ? picked : undefined
+}
+
+const normalizePluginForCompare = (plugin: unknown) => {
+    const source = plugin as Partial<Record<keyof typeof MANAGED_PLUGIN_KEYS, Record<string, unknown>>> | undefined
+    if (!source) return undefined
+
+    return {
+        cache: pickManagedFields(source.cache, MANAGED_PLUGIN_KEYS.cache),
+        cachefollow: pickManagedFields(source.cachefollow, MANAGED_PLUGIN_KEYS.cachefollow),
+        'web-search': pickManagedFields(source['web-search'], MANAGED_PLUGIN_KEYS['web-search']),
+        'think-split': pickManagedFields(source['think-split'], MANAGED_PLUGIN_KEYS['think-split']),
+        'stream-fake': pickManagedFields(source['stream-fake'], MANAGED_PLUGIN_KEYS['stream-fake']),
+    }
+}
+
+const buildChangeSummaries = (
+    original: ModelConfig | null | undefined,
+    next: Omit<ModelCreateRequest, 'model'>,
+    labels: Record<string, string>,
+    options: { includePlugin?: boolean } = {}
+): ChangeSummary[] => {
+    if (!original) return []
+
+    const changes: ChangeSummary[] = []
+    const addScalar = (key: keyof ModelConfig, label: string, afterValue: unknown) => {
+        const beforeValue = original[key]
+        if (!isSameValue(beforeValue, afterValue)) {
+            changes.push({
+                field: label,
+                before: formatScalar(beforeValue, labels),
+                after: formatScalar(afterValue, labels),
+            })
+        }
+    }
+
+    addScalar('owner', labels.owner, next.owner)
+    addScalar('type', labels.type, next.type)
+    addScalar('exclude_from_tests', labels.excludeFromTests, next.exclude_from_tests)
+    addScalar('rpm', labels.rpm, next.rpm)
+    addScalar('tpm', labels.tpm, next.tpm)
+    addScalar('retry_times', labels.retryTimes, next.retry_times)
+    addScalar('force_save_detail', labels.forceSaveDetail, next.force_save_detail)
+    addScalar('summary_service_tier', labels.summaryServiceTier, next.summary_service_tier)
+    addScalar('summary_claude_long_context', labels.summaryClaudeLongContext, next.summary_claude_long_context)
+    addScalar('disable_resolution_fuzzy_match', labels.disableResolutionFuzzyMatch, next.disable_resolution_fuzzy_match)
+    addScalar('allowed_resolutions', labels.allowedResolutions, next.allowed_resolutions)
+    addScalar('request_body_storage_max_size', labels.requestBodyStorageMaxSize, next.request_body_storage_max_size)
+    addScalar('response_body_storage_max_size', labels.responseBodyStorageMaxSize, next.response_body_storage_max_size)
+    addScalar('max_image_generation_count', labels.maxImageGenerationCount, next.max_image_generation_count)
+    addScalar('max_video_generation_seconds', labels.maxVideoGenerationSeconds, next.max_video_generation_seconds)
+    addScalar('max_video_generation_count', labels.maxVideoGenerationCount, next.max_video_generation_count)
+
+    const timeoutChange = summarizeStructuredChange(
+        original.timeout_config,
+        next.timeout_config,
+        labels
+    )
+    if (timeoutChange) {
+        changes.push({ field: labels.timeoutConfig, ...timeoutChange })
+    }
+
+    const configChange = summarizeStructuredChange(original.config, next.config, labels)
+    if (configChange) {
+        changes.push({ field: labels.displayConfig, ...configChange })
+    }
+
+    const priceChange = summarizeStructuredChange(original.price, next.price, labels)
+    if (priceChange) {
+        changes.push({ field: labels.priceConfig, ...priceChange })
+    }
+
+    if (options.includePlugin) {
+        const pluginChange = summarizeStructuredChange(
+            normalizePluginForCompare(original.plugin),
+            normalizePluginForCompare(next.plugin),
+            labels
+        )
+        if (pluginChange) {
+            changes.push({ field: labels.pluginConfig, ...pluginChange })
+        }
+    }
+
+    return changes
+}
+
 interface ModelFormProps {
     mode?: 'create' | 'update'
     onSuccess?: () => void
@@ -204,6 +363,7 @@ export function ModelForm({
     const [priceExpanded, setPriceExpanded] = useState(false)
     const [cachePluginExpanded, setCachePluginExpanded] = useState(false)
     const [webSearchPluginExpanded, setWebSearchPluginExpanded] = useState(false)
+    const [pendingUpdate, setPendingUpdate] = useState<PendingUpdate | null>(null)
     const [configExtrasText, setConfigExtrasText] = useState(() => {
         const extras = Object.fromEntries(
             Object.entries(defaultValues.config || {}).filter(([key]) => !KNOWN_CONFIG_KEYS.has(key))
@@ -293,6 +453,34 @@ export function ModelForm({
     const supportVideoGenerationSecondsLimit = VIDEO_GENERATION_SECONDS_LIMIT_SUPPORTED_TYPES.has(watchedType)
     const supportVideoGenerationCountLimit = VIDEO_GENERATION_COUNT_LIMIT_SUPPORTED_TYPES.has(watchedType)
     const supportResolutionFuzzyMatchConfig = RESOLUTION_FUZZY_MATCH_SUPPORTED_TYPES.has(watchedType)
+    const changeSummaryLabels = {
+        owner: t("model.owner"),
+        type: t("model.dialog.modelType"),
+        excludeFromTests: t("model.dialog.excludeFromTests"),
+        rpm: t("model.dialog.rpm"),
+        tpm: t("model.dialog.tpm"),
+        retryTimes: t("model.dialog.retryTimes"),
+        forceSaveDetail: t("model.dialog.forceSaveDetail"),
+        summaryServiceTier: t("model.dialog.recordServiceTier"),
+        summaryClaudeLongContext: t("model.dialog.recordClaudeLongContext"),
+        disableResolutionFuzzyMatch: t("model.dialog.disableResolutionFuzzyMatch"),
+        allowedResolutions: t("model.dialog.config.allowedResolutions"),
+        requestBodyStorageMaxSize: t("model.dialog.requestBodyStorageMaxSize"),
+        responseBodyStorageMaxSize: t("model.dialog.responseBodyStorageMaxSize"),
+        maxImageGenerationCount: t("model.dialog.maxImageGenerationCount"),
+        maxVideoGenerationSeconds: t("model.dialog.maxVideoGenerationSeconds"),
+        maxVideoGenerationCount: t("model.dialog.maxVideoGenerationCount"),
+        timeoutConfig: t("model.dialog.timeoutConfig"),
+        displayConfig: t("model.dialog.config.title"),
+        priceConfig: t("group.price.title"),
+        pluginConfig: t("model.dialog.pluginConfiguration"),
+        unset: t("model.dialog.changeSummary.unset"),
+        none: t("model.dialog.changeSummary.none"),
+        yes: t("common.yes"),
+        no: t("common.no"),
+        configured: t("model.dialog.changeSummary.configured"),
+        changed: t("model.dialog.changeSummary.changed"),
+    }
 
     const configFieldVisibility = (() => {
         switch (watchedType) {
@@ -406,6 +594,23 @@ export function ModelForm({
             spec: undefined
         }
         form.setValue('plugin.web-search.search_from', [...currentEngines, newEngine])
+    }
+
+    const submitUpdate = (model: string, data: Omit<ModelCreateRequest, 'model'>) => {
+        updateModel({
+            model,
+            data,
+        }, {
+            onSuccess: () => {
+                if (onSuccess) onSuccess()
+            }
+        })
+    }
+
+    const confirmPendingUpdate = () => {
+        if (!pendingUpdate) return
+        submitUpdate(pendingUpdate.model, pendingUpdate.data)
+        setPendingUpdate(null)
     }
 
     // Remove search engine
@@ -754,21 +959,73 @@ export function ModelForm({
                 }
             })
         } else {
-            // For update mode, use the model name as the identifier
-            updateModel({
-                model: data.model,
-                data: formData
-            }, {
-                onSuccess: () => {
-                    // Notify parent component
-                    if (onSuccess) onSuccess()
-                }
+            const includePluginChange = !isSameValue(
+                normalizePluginForCompare(baseModelConfig?.plugin),
+                normalizePluginForCompare(defaultValues.plugin)
+            ) || form.formState.dirtyFields.plugin !== undefined
+            const changes = buildChangeSummaries(baseModelConfig, formData, changeSummaryLabels, {
+                includePlugin: includePluginChange,
             })
+            if (changes.length > 0) {
+                setPendingUpdate({
+                    model: data.model,
+                    data: formData,
+                    changes,
+                })
+                return
+            }
+
+            submitUpdate(data.model, formData)
         }
     }
 
     return (
         <div>
+            <AlertDialog
+                open={pendingUpdate !== null}
+                onOpenChange={(open) => {
+                    if (!open) {
+                        setPendingUpdate(null)
+                    }
+                }}
+            >
+                <AlertDialogContent className="sm:max-w-2xl">
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>{t("model.dialog.confirmUpdateTitle")}</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            {t("model.dialog.confirmUpdateDescription")}
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <div className="max-h-[50vh] overflow-auto rounded-md border">
+                        <div className="grid grid-cols-[9rem_1fr_1fr] border-b bg-muted/40 px-3 py-2 text-xs font-medium text-muted-foreground">
+                            <span>{t("model.dialog.changeSummary.field")}</span>
+                            <span>{t("model.dialog.changeSummary.before")}</span>
+                            <span>{t("model.dialog.changeSummary.after")}</span>
+                        </div>
+                        <div className="divide-y">
+                            {pendingUpdate?.changes.map((change) => (
+                                <div
+                                    key={change.field}
+                                    className="grid grid-cols-[9rem_1fr_1fr] gap-2 px-3 py-2 text-sm"
+                                >
+                                    <span className="font-medium">{change.field}</span>
+                                    <span className="text-muted-foreground">{change.before}</span>
+                                    <span>{change.after}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel disabled={isLoading}>
+                            {t("common.cancel")}
+                        </AlertDialogCancel>
+                        <AlertDialogAction disabled={isLoading} onClick={confirmPendingUpdate}>
+                            {isLoading ? t("model.dialog.submitting") : t("model.dialog.confirmUpdate")}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
             {/* 使用简化的验证错误显示组件 */}
             <ValidationErrorDisplay
                 errors={formErrors as FieldErrors<Record<string, unknown>>}

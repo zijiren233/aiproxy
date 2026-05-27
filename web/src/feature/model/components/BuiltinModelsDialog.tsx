@@ -40,7 +40,7 @@ interface BuiltinModelsDialogProps {
   onOpenChange: (open: boolean) => void;
   existingModels: ModelConfig[];
   onCreateFromBuiltin: (model: ModelConfig) => void;
-  onEditFromBuiltin: (model: ModelConfig) => void;
+  onEditFromBuiltin: (builtinModel: ModelConfig, existingModel: ModelConfig) => void;
 }
 
 interface BuiltinModelRow {
@@ -102,10 +102,15 @@ export function BuiltinModelsDialog({
   const [selectedModels, setSelectedModels] = useState<Set<string>>(new Set());
   const [showExistingModels, setShowExistingModels] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [savingRowKey, setSavingRowKey] = useState<string | null>(null);
+  const [savingRowKeys, setSavingRowKeys] = useState<Set<string>>(new Set());
 
   const existingModelSet = useMemo(
     () => new Set(existingModels.map((model) => model.model)),
+    [existingModels]
+  );
+
+  const existingModelMap = useMemo(
+    () => new Map(existingModels.map((model) => [model.model, model])),
     [existingModels]
   );
 
@@ -292,7 +297,7 @@ export function BuiltinModelsDialog({
 
   const handleAddBuiltin = async (row: BuiltinModelRow) => {
     const rowKey = getBuiltinModelRowKey(row);
-    setSavingRowKey(rowKey);
+    setSavingRowKeys((prev) => new Set(prev).add(rowKey));
 
     try {
       await modelApi.saveModels([toModelSaveRequest(row.model)]);
@@ -306,7 +311,11 @@ export function BuiltinModelsDialog({
     } catch (error) {
       toast.error(error instanceof Error ? error.message : t("model.builtin.importFailed"));
     } finally {
-      setSavingRowKey(null);
+      setSavingRowKeys((prev) => {
+        const next = new Set(prev);
+        next.delete(rowKey);
+        return next;
+      });
     }
   };
 
@@ -444,8 +453,10 @@ export function BuiltinModelsDialog({
                   const model = row.model;
                   const rowKey = getBuiltinModelRowKey(row);
                   const exists = existingModelSet.has(model.model);
+                  const existingModel = existingModelMap.get(model.model);
                   const selected = selectedModels.has(rowKey);
                   const disabled = !isRowSelectable(row);
+                  const rowSaving = savingRowKeys.has(rowKey);
                   const configBadges = [
                     model.config?.vision && "vision",
                     model.config?.tool_choice && "tool",
@@ -499,7 +510,9 @@ export function BuiltinModelsDialog({
                               className="h-7 px-2 text-xs"
                               onClick={(event) => {
                                 event.stopPropagation();
-                                onEditFromBuiltin(model);
+                                if (existingModel) {
+                                  onEditFromBuiltin(model, existingModel);
+                                }
                               }}
                             >
                               {t("model.builtin.editFromThis")}
@@ -522,15 +535,13 @@ export function BuiltinModelsDialog({
                                 type="button"
                                 size="sm"
                                 className="h-7 px-2 text-xs"
-                                disabled={savingRowKey === rowKey}
+                                disabled={rowSaving}
                                 onClick={(event) => {
                                   event.stopPropagation();
                                   void handleAddBuiltin(row);
                                 }}
                               >
-                                {savingRowKey === rowKey
-                                  ? t("model.builtin.importing")
-                                  : t("model.builtin.add")}
+                                {rowSaving ? t("model.builtin.importing") : t("model.builtin.add")}
                               </Button>
                             </>
                           )}
