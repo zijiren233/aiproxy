@@ -1148,6 +1148,12 @@ func TestPrice_SelectConditionalPrice_WithMediaFlags(t *testing.T) {
 		ConditionalPrices: []model.ConditionalPrice{
 			{
 				Condition: model.PriceCondition{
+					InputMedia: new(false),
+				},
+				Price: model.Price{OutputPrice: 0.012},
+			},
+			{
+				Condition: model.PriceCondition{
 					Resolution: []string{"720p"},
 					InputVideo: new(false),
 				},
@@ -1188,6 +1194,13 @@ func TestPrice_SelectConditionalPrice_WithMediaFlags(t *testing.T) {
 	})
 	if float64(textOnlyPrice.OutputPrice) != 0.046 {
 		t.Fatalf("expected text-only price 0.046, got %v", textOnlyPrice.OutputPrice)
+	}
+
+	pureTextPrice := price.SelectConditionalPrice(model.Usage{}, model.UsageContext{
+		InputMedia: new(false),
+	})
+	if float64(pureTextPrice.OutputPrice) != 0.012 {
+		t.Fatalf("expected pure text price 0.012, got %v", pureTextPrice.OutputPrice)
 	}
 
 	unknownInputVideoPrice := price.SelectConditionalPrice(model.Usage{}, model.UsageContext{
@@ -1609,6 +1622,22 @@ func TestPrice_ValidateConditionalPrices_WithMediaConditions(t *testing.T) {
 					},
 					{
 						Condition: model.PriceCondition{InputVideo: new(true)},
+						Price:     model.Price{OutputPrice: 0.04},
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "same ranges with different input media flags are allowed",
+			price: model.Price{
+				ConditionalPrices: []model.ConditionalPrice{
+					{
+						Condition: model.PriceCondition{InputMedia: new(false)},
+						Price:     model.Price{OutputPrice: 0.08},
+					},
+					{
+						Condition: model.PriceCondition{InputMedia: new(true)},
 						Price:     model.Price{OutputPrice: 0.04},
 					},
 				},

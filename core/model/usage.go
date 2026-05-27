@@ -21,6 +21,7 @@ type PriceCondition struct {
 	Resolution     []string `json:"resolution,omitempty"`
 	Quality        []string `json:"quality,omitempty"`
 	ServiceTier    string   `json:"service_tier,omitempty"`
+	InputMedia     *bool    `json:"input_media,omitempty"`
 	InputVideo     *bool    `json:"input_video,omitempty"`
 	OutputAudio    *bool    `json:"output_audio,omitempty"`
 }
@@ -154,6 +155,10 @@ func priceConditionSpecificity(condition PriceCondition) int {
 	}
 
 	if condition.InputVideo != nil {
+		specificity++
+	}
+
+	if condition.InputMedia != nil {
 		specificity++
 	}
 
@@ -398,7 +403,8 @@ func (p *Price) ValidateConditionalPrices() error {
 				continue
 			}
 
-			if !boolConditionOverlap(condition.InputVideo, otherCondition.InputVideo) ||
+			if !boolConditionOverlap(condition.InputMedia, otherCondition.InputMedia) ||
+				!boolConditionOverlap(condition.InputVideo, otherCondition.InputVideo) ||
 				!boolConditionOverlap(condition.OutputAudio, otherCondition.OutputAudio) {
 				continue
 			}
@@ -696,6 +702,7 @@ type UsageContext struct {
 	NativeResolution string `gorm:"size:32" json:"native_resolution,omitempty"`
 	Quality          string `gorm:"size:32" json:"quality,omitempty"`
 	ServiceTier      string `gorm:"size:32" json:"service_tier,omitempty"`
+	InputMedia       *bool  `               json:"input_media,omitempty"`
 	InputVideo       *bool  `               json:"input_video,omitempty"`
 	OutputAudio      *bool  `               json:"output_audio,omitempty"`
 }
@@ -733,6 +740,12 @@ func (c UsageContext) priceConditionMatches(
 		return false
 	}
 
+	if condition.InputMedia != nil {
+		if c.InputMedia == nil || *c.InputMedia != *condition.InputMedia {
+			return false
+		}
+	}
+
 	if condition.InputVideo != nil {
 		if c.InputVideo == nil || *c.InputVideo != *condition.InputVideo {
 			return false
@@ -763,6 +776,10 @@ func (c UsageContext) WithFallback(fallback UsageContext) UsageContext {
 
 	if c.Quality == "" {
 		c.Quality = fallback.Quality
+	}
+
+	if c.InputMedia == nil {
+		c.InputMedia = fallback.InputMedia
 	}
 
 	if c.InputVideo == nil {

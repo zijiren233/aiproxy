@@ -40,6 +40,7 @@ interface BuiltinModelsDialogProps {
   onOpenChange: (open: boolean) => void;
   existingModels: ModelConfig[];
   onCreateFromBuiltin: (model: ModelConfig) => void;
+  onEditFromBuiltin: (model: ModelConfig) => void;
 }
 
 interface BuiltinModelRow {
@@ -89,6 +90,7 @@ export function BuiltinModelsDialog({
   onOpenChange,
   existingModels,
   onCreateFromBuiltin,
+  onEditFromBuiltin,
 }: BuiltinModelsDialogProps) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
@@ -100,6 +102,7 @@ export function BuiltinModelsDialog({
   const [selectedModels, setSelectedModels] = useState<Set<string>>(new Set());
   const [showExistingModels, setShowExistingModels] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [savingRowKey, setSavingRowKey] = useState<string | null>(null);
 
   const existingModelSet = useMemo(
     () => new Set(existingModels.map((model) => model.model)),
@@ -287,6 +290,26 @@ export function BuiltinModelsDialog({
     }
   };
 
+  const handleAddBuiltin = async (row: BuiltinModelRow) => {
+    const rowKey = getBuiltinModelRowKey(row);
+    setSavingRowKey(rowKey);
+
+    try {
+      await modelApi.saveModels([toModelSaveRequest(row.model)]);
+      toast.success(t("model.builtin.importSuccess", { count: 1 }));
+      await queryClient.invalidateQueries({ queryKey: ["models"] });
+      setSelectedModels((prev) => {
+        const next = new Set(prev);
+        next.delete(rowKey);
+        return next;
+      });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : t("model.builtin.importFailed"));
+    } finally {
+      setSavingRowKey(null);
+    }
+  };
+
   const getModelTypeLabel = (type: number) => {
     return t(`modeType.${type}`, { defaultValue: String(type) });
   };
@@ -398,6 +421,7 @@ export function BuiltinModelsDialog({
                 <TableHead>{t("model.builtin.channelType")}</TableHead>
                 <TableHead>{t("model.modelType")}</TableHead>
                 <TableHead>{t("model.builtin.status")}</TableHead>
+                <TableHead className="w-40" />
                 <TableHead>{t("group.price.title")}</TableHead>
                 <TableHead>{t("model.configInfo")}</TableHead>
               </TableRow>
@@ -405,13 +429,13 @@ export function BuiltinModelsDialog({
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="h-32 text-center text-muted-foreground">
+                  <TableCell colSpan={8} className="h-32 text-center text-muted-foreground">
                     {t("model.loading")}
                   </TableCell>
                 </TableRow>
               ) : filteredRows.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="h-32 text-center text-muted-foreground">
+                  <TableCell colSpan={8} className="h-32 text-center text-muted-foreground">
                     {t("model.builtin.noAvailableModels")}
                   </TableCell>
                 </TableRow>
@@ -464,6 +488,53 @@ export function BuiltinModelsDialog({
                         <Badge variant={exists ? "secondary" : "outline"} className="text-xs">
                           {exists ? t("model.builtin.added") : t("model.builtin.notAdded")}
                         </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center justify-end gap-1.5 whitespace-nowrap">
+                          {exists ? (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="h-7 px-2 text-xs"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                onEditFromBuiltin(model);
+                              }}
+                            >
+                              {t("model.builtin.editFromThis")}
+                            </Button>
+                          ) : (
+                            <>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="h-7 px-2 text-xs"
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  onCreateFromBuiltin(model);
+                                }}
+                              >
+                                {t("model.builtin.createFromThis")}
+                              </Button>
+                              <Button
+                                type="button"
+                                size="sm"
+                                className="h-7 px-2 text-xs"
+                                disabled={savingRowKey === rowKey}
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  void handleAddBuiltin(row);
+                                }}
+                              >
+                                {savingRowKey === rowKey
+                                  ? t("model.builtin.importing")
+                                  : t("model.builtin.add")}
+                              </Button>
+                            </>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell>
                         <PriceDisplay price={model.price} />
