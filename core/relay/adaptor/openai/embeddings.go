@@ -23,7 +23,7 @@ func ConvertEmbeddingsRequest(
 ) (adaptor.ConvertResult, error) {
 	node, err := common.UnmarshalRequest2NodeReusable(req)
 	if err != nil {
-		return adaptor.ConvertResult{}, err
+		return adaptor.ConvertResult{}, convertRequestError(meta, err.Error())
 	}
 
 	for _, callback := range callback {

@@ -1510,6 +1510,26 @@ var ModelList = []model.ModelConfig{
 			model.WithModelConfigMaxInputTokens(4000),
 		),
 	},
+	{
+		Model: "gte-rerank-v2",
+		Type:  mode.Rerank,
+		Owner: model.ModelOwnerAlibaba,
+		RPM:   300,
+		Config: model.NewModelConfig(
+			model.WithModelConfigMaxContextTokens(8000),
+			model.WithModelConfigMaxInputTokens(8000),
+		),
+	},
+	{
+		Model: "qwen3-vl-rerank",
+		Type:  mode.Rerank,
+		Owner: model.ModelOwnerAlibaba,
+		RPM:   300,
+		Config: model.NewModelConfig(
+			model.WithModelConfigMaxContextTokens(32000),
+			model.WithModelConfigMaxInputTokens(32000),
+		),
+	},
 
 	{
 		Model: "text-embedding-v1",

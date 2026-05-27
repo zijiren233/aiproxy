@@ -28,12 +28,12 @@ func ConvertImagesRequest(
 ) (adaptor.ConvertResult, error) {
 	node, err := common.UnmarshalRequest2NodeReusable(req)
 	if err != nil {
-		return adaptor.ConvertResult{}, err
+		return adaptor.ConvertResult{}, convertRequestError(meta, err.Error())
 	}
 
 	responseFormat, err := node.Get("response_format").String()
 	if err != nil && !errors.Is(err, ast.ErrNotExist) {
-		return adaptor.ConvertResult{}, err
+		return adaptor.ConvertResult{}, convertRequestError(meta, err.Error())
 	}
 
 	meta.Set(MetaResponseFormat, responseFormat)
@@ -75,7 +75,7 @@ func ConvertImagesEditsRequest(
 ) (adaptor.ConvertResult, error) {
 	err := common.ParseMultipartFormWithLimit(request)
 	if err != nil {
-		return adaptor.ConvertResult{}, err
+		return adaptor.ConvertResult{}, convertRequestError(meta, err.Error())
 	}
 
 	multipartBody := &bytes.Buffer{}

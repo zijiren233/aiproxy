@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/base64"
-	"errors"
 	"fmt"
 	"io"
 	"mime"
@@ -87,7 +86,7 @@ func convertSiliconFlowVideoGenerationJobRequest(
 	var request videoSubmitRequest
 
 	if strings.HasPrefix(req.Header.Get("Content-Type"), "multipart/form-data") {
-		parsed, err := multipartVideoGenerationJobSubmitRequest(req)
+		parsed, err := multipartVideoGenerationJobSubmitRequest(meta, req)
 		if err != nil {
 			return adaptor.ConvertResult{}, err
 		}
@@ -112,7 +111,7 @@ func convertSiliconFlowVideosRequest(
 	var request videoSubmitRequest
 
 	if strings.HasPrefix(req.Header.Get("Content-Type"), "multipart/form-data") {
-		parsed, err := multipartVideosSubmitRequest(req)
+		parsed, err := multipartVideosSubmitRequest(meta, req)
 		if err != nil {
 			return adaptor.ConvertResult{}, err
 		}
@@ -222,8 +221,11 @@ func jsonVideoCommonSubmitRequest(reqMap map[string]any) videoSubmitRequest {
 	}
 }
 
-func multipartVideoGenerationJobSubmitRequest(req *http.Request) (videoSubmitRequest, error) {
-	request, err := multipartVideoCommonSubmitRequest(req)
+func multipartVideoGenerationJobSubmitRequest(
+	meta *meta.Meta,
+	req *http.Request,
+) (videoSubmitRequest, error) {
+	request, err := multipartVideoCommonSubmitRequest(meta, req)
 	if err != nil {
 		return videoSubmitRequest{}, err
 	}
@@ -240,11 +242,14 @@ func multipartVideoGenerationJobSubmitRequest(req *http.Request) (videoSubmitReq
 	return request, nil
 }
 
-func multipartVideosSubmitRequest(req *http.Request) (videoSubmitRequest, error) {
-	return multipartVideoCommonSubmitRequest(req)
+func multipartVideosSubmitRequest(meta *meta.Meta, req *http.Request) (videoSubmitRequest, error) {
+	return multipartVideoCommonSubmitRequest(meta, req)
 }
 
-func multipartVideoCommonSubmitRequest(req *http.Request) (videoSubmitRequest, error) {
+func multipartVideoCommonSubmitRequest(
+	meta *meta.Meta,
+	req *http.Request,
+) (videoSubmitRequest, error) {
 	if err := common.ParseMultipartFormWithLimit(req); err != nil {
 		return videoSubmitRequest{}, fmt.Errorf("parse multipart form: %w", err)
 	}
@@ -269,7 +274,7 @@ func multipartVideoCommonSubmitRequest(req *http.Request) (videoSubmitRequest, e
 		return request, nil
 	}
 
-	imageData, err := multipartVideoImageDataURL(req.MultipartForm.File)
+	imageData, err := multipartVideoImageDataURL(meta, req.MultipartForm.File)
 	if err != nil {
 		return videoSubmitRequest{}, err
 	}
@@ -336,7 +341,10 @@ func intFromAny(value any) (int, bool) {
 	}
 }
 
-func multipartVideoImageDataURL(files map[string][]*multipart.FileHeader) (string, error) {
+func multipartVideoImageDataURL(
+	meta *meta.Meta,
+	files map[string][]*multipart.FileHeader,
+) (string, error) {
 	fileHeaders := make(
 		[]*multipart.FileHeader,
 		0,
@@ -350,13 +358,13 @@ func multipartVideoImageDataURL(files map[string][]*multipart.FileHeader) (strin
 	}
 
 	if len(fileHeaders) > 1 {
-		return "", errors.New("video image supports at most 1 file")
+		return "", convertRequestError(meta, "video image supports at most 1 file")
 	}
 
-	return multipartImageDataURL(fileHeaders[0])
+	return multipartImageDataURL(meta, fileHeaders[0])
 }
 
-func multipartImageDataURL(fileHeader *multipart.FileHeader) (string, error) {
+func multipartImageDataURL(meta *meta.Meta, fileHeader *multipart.FileHeader) (string, error) {
 	file, err := fileHeader.Open()
 	if err != nil {
 		return "", err
@@ -369,7 +377,10 @@ func multipartImageDataURL(fileHeader *multipart.FileHeader) (string, error) {
 	}
 
 	if len(data) > image.MaxImageSize {
-		return "", fmt.Errorf("image too large: max: %d", image.MaxImageSize)
+		return "", convertRequestError(
+			meta,
+			fmt.Sprintf("image too large: max: %d", image.MaxImageSize),
+		)
 	}
 
 	contentType := fileHeader.Header.Get("Content-Type")
@@ -386,7 +397,7 @@ func multipartImageDataURL(fileHeader *multipart.FileHeader) (string, error) {
 	}
 
 	if !image.IsImageURL(contentType) {
-		return "", errors.New("image file is not an image")
+		return "", convertRequestError(meta, "image file is not an image")
 	}
 
 	contentType = image.TrimImageContentType(contentType)

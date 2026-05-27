@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/base64"
-	"errors"
 	"fmt"
 	"io"
 	"mime"
@@ -48,7 +47,7 @@ func ConvertImageRequest(meta *meta.Meta, req *http.Request) (adaptor.ConvertRes
 	}
 
 	if imageRequest.Prompt == "" {
-		return adaptor.ConvertResult{}, errors.New("prompt is required")
+		return adaptor.ConvertResult{}, convertRequestError(meta, "prompt is required")
 	}
 
 	geminiRequest := relaymodel.GeminiChatRequest{
@@ -82,7 +81,7 @@ func ConvertImageEditRequest(meta *meta.Meta, req *http.Request) (adaptor.Conver
 
 	prompt := strings.TrimSpace(req.PostFormValue("prompt"))
 	if prompt == "" {
-		return adaptor.ConvertResult{}, errors.New("prompt is required")
+		return adaptor.ConvertResult{}, convertRequestError(meta, "prompt is required")
 	}
 
 	if meta != nil {
@@ -96,6 +95,7 @@ func ConvertImageEditRequest(meta *meta.Meta, req *http.Request) (adaptor.Conver
 	}
 
 	imageParts, err := geminiImageEditParts(
+		meta,
 		req.Context(),
 		req.MultipartForm,
 		autoImageURLToBase64Disabled(meta, cfg),
@@ -158,18 +158,19 @@ func buildImageGenerationConfig(
 }
 
 func geminiImageEditParts(
+	meta *meta.Meta,
 	ctx context.Context,
 	form *multipart.Form,
 	disableAutoImageURLToBase64 bool,
 ) ([]*relaymodel.GeminiPart, error) {
 	if form == nil {
-		return nil, errors.New("image is required")
+		return nil, convertRequestError(meta, "image is required")
 	}
 
 	parts := []*relaymodel.GeminiPart{}
 
 	for _, value := range firstFormValues(form.Value, "image", "image_url") {
-		part, err := geminiImagePartFromString(ctx, value, disableAutoImageURLToBase64)
+		part, err := geminiImagePartFromString(meta, ctx, value, disableAutoImageURLToBase64)
 		if err != nil {
 			return nil, err
 		}
@@ -179,7 +180,7 @@ func geminiImageEditParts(
 		}
 	}
 
-	fileParts, err := geminiImagePartsFromFiles(geminiImageEditFiles(form.File))
+	fileParts, err := geminiImagePartsFromFiles(meta, geminiImageEditFiles(form.File))
 	if err != nil {
 		return nil, err
 	}
@@ -187,7 +188,7 @@ func geminiImageEditParts(
 	parts = append(parts, fileParts...)
 
 	if len(parts) == 0 {
-		return nil, errors.New("image is required")
+		return nil, convertRequestError(meta, "image is required")
 	}
 
 	return parts, nil
@@ -215,6 +216,7 @@ func firstFormValues(values map[string][]string, names ...string) []string {
 }
 
 func geminiImagePartFromString(
+	meta *meta.Meta,
 	ctx context.Context,
 	value string,
 	disableAutoImageURLToBase64 bool,
@@ -258,10 +260,13 @@ func geminiImagePartFromString(
 		}, nil
 	}
 
-	return nil, fmt.Errorf("unsupported image value: %s", value)
+	return nil, convertRequestError(meta, "unsupported image value: "+value)
 }
 
-func geminiImagePartsFromFiles(files []*multipart.FileHeader) ([]*relaymodel.GeminiPart, error) {
+func geminiImagePartsFromFiles(
+	meta *meta.Meta,
+	files []*multipart.FileHeader,
+) ([]*relaymodel.GeminiPart, error) {
 	parts := make([]*relaymodel.GeminiPart, 0, len(files))
 
 	for _, fileHeader := range files {
@@ -269,7 +274,7 @@ func geminiImagePartsFromFiles(files []*multipart.FileHeader) ([]*relaymodel.Gem
 			continue
 		}
 
-		part, err := geminiImagePartFromFile(fileHeader)
+		part, err := geminiImagePartFromFile(meta, fileHeader)
 		if err != nil {
 			return nil, err
 		}
@@ -280,7 +285,10 @@ func geminiImagePartsFromFiles(files []*multipart.FileHeader) ([]*relaymodel.Gem
 	return parts, nil
 }
 
-func geminiImagePartFromFile(fileHeader *multipart.FileHeader) (*relaymodel.GeminiPart, error) {
+func geminiImagePartFromFile(
+	meta *meta.Meta,
+	fileHeader *multipart.FileHeader,
+) (*relaymodel.GeminiPart, error) {
 	file, err := fileHeader.Open()
 	if err != nil {
 		return nil, err
@@ -293,7 +301,10 @@ func geminiImagePartFromFile(fileHeader *multipart.FileHeader) (*relaymodel.Gemi
 	}
 
 	if len(data) > commonimage.MaxImageSize {
-		return nil, fmt.Errorf("image too large: max: %d", commonimage.MaxImageSize)
+		return nil, convertRequestError(
+			meta,
+			fmt.Sprintf("image too large: max: %d", commonimage.MaxImageSize),
+		)
 	}
 
 	mimeType := fileHeader.Header.Get("Content-Type")
@@ -310,7 +321,10 @@ func geminiImagePartFromFile(fileHeader *multipart.FileHeader) (*relaymodel.Gemi
 	}
 
 	if !strings.HasPrefix(mimeType, "image/") {
-		return nil, fmt.Errorf("unsupported image content type: %s", mimeType)
+		return nil, convertRequestError(
+			meta,
+			"unsupported image content type: "+mimeType,
+		)
 	}
 
 	return &relaymodel.GeminiPart{

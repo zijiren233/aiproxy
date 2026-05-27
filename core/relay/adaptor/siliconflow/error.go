@@ -11,6 +11,7 @@ import (
 	"github.com/bytedance/sonic"
 	"github.com/labring/aiproxy/core/common"
 	"github.com/labring/aiproxy/core/relay/adaptor"
+	"github.com/labring/aiproxy/core/relay/meta"
 	relaymodel "github.com/labring/aiproxy/core/relay/model"
 )
 
@@ -80,6 +81,23 @@ func OpenAIVideoErrorHandlerWithBody(statusCode int, responseBody []byte) adapto
 	return relaymodel.NewOpenAIVideoError(statusCode, relaymodel.OpenAIVideoError{
 		Detail: message,
 	})
+}
+
+func convertRequestError(meta *meta.Meta, message string) adaptor.Error {
+	if meta == nil {
+		return relaymodel.WrapperOpenAIErrorWithMessage(
+			message,
+			"invalid_request_error",
+			http.StatusBadRequest,
+		)
+	}
+
+	return relaymodel.WrapperErrorWithMessage(
+		meta.Mode,
+		http.StatusBadRequest,
+		message,
+		relaymodel.WithCode("invalid_request_error"),
+	)
 }
 
 func normalizeError(statusCode int, message string, code any) (int, any) {

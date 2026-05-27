@@ -12,6 +12,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/core/model"
+	adaptorapi "github.com/labring/aiproxy/core/relay/adaptor"
 	"github.com/labring/aiproxy/core/relay/adaptor/gemini"
 	"github.com/labring/aiproxy/core/relay/adaptor/openai"
 	"github.com/labring/aiproxy/core/relay/meta"
@@ -487,6 +488,31 @@ func TestConvertImageRequestPreservesStream(t *testing.T) {
 	requestURL, err := adaptor.GetRequestURL(meta, nil, nil)
 	assert.NoError(t, err)
 	assert.Contains(t, requestURL.URL, ":streamGenerateContent?alt=sse")
+}
+
+func TestConvertImageRequestMissingPromptReturnsRelayError(t *testing.T) {
+	t.Parallel()
+
+	meta := meta.NewMeta(
+		&model.Channel{Type: model.ChannelTypeGoogleGemini},
+		mode.ImagesGenerations,
+		"gemini-3-pro-image-preview",
+		model.ModelConfig{Type: mode.GeminiImage},
+	)
+
+	req := httptest.NewRequestWithContext(
+		t.Context(),
+		http.MethodPost,
+		"/v1/images/generations",
+		bytes.NewBufferString(`{"model":"gemini-3-pro-image-preview"}`),
+	)
+
+	_, err := gemini.ConvertImageRequest(meta, req)
+	assert.Error(t, err)
+
+	var relayErr adaptorapi.Error
+	assert.ErrorAs(t, err, &relayErr)
+	assert.Equal(t, http.StatusBadRequest, relayErr.StatusCode())
 }
 
 func TestConvertImageRequestAllowsMultipleRequestedImages(t *testing.T) {

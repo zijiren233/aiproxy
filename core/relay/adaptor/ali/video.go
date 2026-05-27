@@ -205,11 +205,14 @@ func ConvertAliVideoGenerationJobRequest(
 ) (adaptor.ConvertResult, error) {
 	parsed, err := parseAliVideoGenerationJobRequest(req)
 	if err != nil {
-		return adaptor.ConvertResult{}, err
+		return adaptor.ConvertResult{}, convertRequestError(meta, err.Error())
 	}
 
 	if parsed.request.NVariants > 1 {
-		return adaptor.ConvertResult{}, errors.New("n_variants must be 1 for Ali video models")
+		return adaptor.ConvertResult{}, convertRequestError(
+			meta,
+			"n_variants must be 1 for Ali video models",
+		)
 	}
 
 	return convertAliVideoRequest(meta, req, parsed)
@@ -218,7 +221,7 @@ func ConvertAliVideoGenerationJobRequest(
 func ConvertAliVideosRequest(meta *meta.Meta, req *http.Request) (adaptor.ConvertResult, error) {
 	parsed, err := parseAliVideosRequest(req)
 	if err != nil {
-		return adaptor.ConvertResult{}, err
+		return adaptor.ConvertResult{}, convertRequestError(meta, err.Error())
 	}
 
 	return convertAliVideoRequest(meta, req, parsed)
@@ -230,7 +233,7 @@ func ConvertAliVideosRemixRequest(
 ) (adaptor.ConvertResult, error) {
 	parsed, err := parseAliVideosRemixRequest(req)
 	if err != nil {
-		return adaptor.ConvertResult{}, err
+		return adaptor.ConvertResult{}, convertRequestError(meta, err.Error())
 	}
 
 	return convertAliVideoRequest(meta, req, parsed)
@@ -242,7 +245,7 @@ func ConvertAliVideosEditRequest(
 ) (adaptor.ConvertResult, error) {
 	parsed, err := parseAliVideosEditRequest(req)
 	if err != nil {
-		return adaptor.ConvertResult{}, err
+		return adaptor.ConvertResult{}, convertRequestError(meta, err.Error())
 	}
 
 	return convertAliVideoRequest(meta, req, parsed)
@@ -254,7 +257,7 @@ func ConvertAliVideosExtensionRequest(
 ) (adaptor.ConvertResult, error) {
 	parsed, err := parseAliVideosExtensionRequest(req)
 	if err != nil {
-		return adaptor.ConvertResult{}, err
+		return adaptor.ConvertResult{}, convertRequestError(meta, err.Error())
 	}
 
 	return convertAliVideoRequest(meta, req, parsed)
@@ -433,7 +436,7 @@ func hydrateAliVideoRemixReference(
 	}
 
 	if meta.VideoID == "" {
-		return errors.New("video_id is required")
+		return convertRequestError(meta, "video_id is required")
 	}
 
 	channel := &coremodel.Channel{

@@ -15,4 +15,17 @@ var ModelList = []model.ModelConfig{
 		},
 		RPM: 120,
 	},
+	{
+		Model: "jina-reranker-m0",
+		Type:  mode.Rerank,
+		Owner: model.ModelOwnerJina,
+		Price: model.Price{
+			InputPrice: 0.06,
+		},
+		RPM: 120,
+		Config: model.NewModelConfig(
+			model.WithModelConfigMaxContextTokens(10240),
+			model.WithModelConfigMaxInputTokens(10240),
+		),
+	},
 }

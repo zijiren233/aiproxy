@@ -10,6 +10,7 @@ import (
 	"github.com/labring/aiproxy/core/common"
 	"github.com/labring/aiproxy/core/common/conv"
 	"github.com/labring/aiproxy/core/relay/adaptor"
+	"github.com/labring/aiproxy/core/relay/meta"
 	relaymodel "github.com/labring/aiproxy/core/relay/model"
 )
 
@@ -89,6 +90,23 @@ func VideoErrorHanlder(resp *http.Response) adaptor.Error {
 func VideoErrorHanlderWithBody(statusCode int, respBody []byte) adaptor.Error {
 	statusCode, openAIError := GetVideoErrorWithBody(statusCode, respBody)
 	return relaymodel.NewOpenAIVideoError(statusCode, openAIError)
+}
+
+func convertRequestError(meta *meta.Meta, message string) adaptor.Error {
+	if meta == nil {
+		return relaymodel.WrapperOpenAIErrorWithMessage(
+			message,
+			"invalid_request_error",
+			http.StatusBadRequest,
+		)
+	}
+
+	return relaymodel.WrapperErrorWithMessage(
+		meta.Mode,
+		http.StatusBadRequest,
+		message,
+		relaymodel.WithCode("invalid_request_error"),
+	)
 }
 
 func GetVideoErrorWithBody(statusCode int, respBody []byte) (int, relaymodel.OpenAIVideoError) {
