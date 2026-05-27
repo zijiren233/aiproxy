@@ -23,6 +23,7 @@ interface ModelDialogProps {
     onOpenChange: (open: boolean) => void
     mode: 'create' | 'update'
     model?: ModelConfig | null
+    baseModelConfig?: ModelConfig | null
     preserveModelNameOnCreate?: boolean
 }
 
@@ -31,6 +32,7 @@ export function ModelDialog({
     onOpenChange,
     mode = 'create',
     model = null,
+    baseModelConfig = model,
     preserveModelNameOnCreate = false
 }: ModelDialogProps) {
     const { t } = useTranslation()
@@ -80,7 +82,7 @@ export function ModelDialog({
                                     <ModelForm
                                         mode={mode}
                                         defaultValues={defaultValues}
-                                        baseModelConfig={model}
+                                        baseModelConfig={baseModelConfig}
                                         onSuccess={() => onOpenChange(false)}
                                     />
                                 </motion.div>
