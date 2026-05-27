@@ -557,13 +557,13 @@ export function MonitorCharts({ chartData, modelRanking, detailRanking = [], has
                             const tokenSeries: { key: keyof ChartDataPoint; name: string; color: string }[] = [
                                 { key: 'inputTokens', name: t('monitor.charts.tokensBreakdown.totalInput'), color: '#1d4ed8' },
                                 { key: 'outputTokens', name: t('monitor.charts.tokensBreakdown.totalOutput'), color: '#059669' },
-                                { key: 'textInputTokens', name: t('monitor.charts.tokensBreakdown.textInput'), color: '#3b82f6' },
+                                { key: 'generalInputTokens', name: t('monitor.charts.tokensBreakdown.textInput'), color: '#3b82f6' },
                                 { key: 'cachedTokens', name: t('monitor.charts.tokensBreakdown.cached'), color: '#6366f1' },
                                 { key: 'cacheCreationTokens', name: t('monitor.charts.tokensBreakdown.cacheCreation'), color: '#a78bfa' },
                                 { key: 'imageInputTokens', name: t('monitor.charts.tokensBreakdown.imageInput'), color: '#06b6d4' },
                                 { key: 'audioInputTokens', name: t('monitor.charts.tokensBreakdown.audioInput'), color: '#8b5cf6' },
                                 { key: 'videoInputTokens', name: t('monitor.charts.tokensBreakdown.videoInput'), color: '#ec4899' },
-                                { key: 'textOutputTokens', name: t('monitor.charts.tokensBreakdown.textOutput'), color: '#10b981' },
+                                { key: 'generalOutputTokens', name: t('monitor.charts.tokensBreakdown.textOutput'), color: '#10b981' },
                                 { key: 'imageOutputTokens', name: t('monitor.charts.tokensBreakdown.imageOutput'), color: '#14b8a6' },
                                 { key: 'audioOutputTokens', name: t('monitor.charts.tokensBreakdown.audioOutput'), color: '#f97316' },
                             ]

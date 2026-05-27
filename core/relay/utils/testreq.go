@@ -103,6 +103,20 @@ func BuildRequest(modelConfig model.ModelConfig) (io.Reader, mode.Mode, error) {
 		}
 
 		return body, mode.GeminiVideo, nil
+	case mode.AliVideo:
+		body, err := BuildAliVideoRequest(modelConfig.Model)
+		if err != nil {
+			return nil, mode.Unknown, err
+		}
+
+		return body, mode.AliVideo, nil
+	case mode.DoubaoVideo:
+		body, err := BuildDoubaoVideoRequest(modelConfig.Model)
+		if err != nil {
+			return nil, mode.Unknown, err
+		}
+
+		return body, mode.DoubaoVideo, nil
 	default:
 		return nil, mode.Unknown, NewErrUnsupportedModelType(modelConfig.Type.String())
 	}
@@ -248,6 +262,48 @@ func BuildGeminiVideoRequest(_ string) (io.Reader, error) {
 				"prompt": "A calm cinematic shot of clouds moving over a mountain.",
 			},
 		},
+	}
+
+	jsonBytes, err := sonic.Marshal(testRequest)
+	if err != nil {
+		return nil, err
+	}
+
+	return bytes.NewReader(jsonBytes), nil
+}
+
+func BuildAliVideoRequest(model string) (io.Reader, error) {
+	testRequest := map[string]any{
+		"model": model,
+		"input": map[string]any{
+			"prompt": "A calm cinematic shot of clouds moving over a mountain.",
+		},
+		"parameters": map[string]any{
+			"duration": 5,
+			"size":     "720P",
+		},
+	}
+
+	jsonBytes, err := sonic.Marshal(testRequest)
+	if err != nil {
+		return nil, err
+	}
+
+	return bytes.NewReader(jsonBytes), nil
+}
+
+func BuildDoubaoVideoRequest(model string) (io.Reader, error) {
+	testRequest := map[string]any{
+		"model": model,
+		"content": []map[string]any{
+			{
+				"type": "text",
+				"text": "A calm cinematic shot of clouds moving over a mountain.",
+			},
+		},
+		"duration":   5,
+		"resolution": "720p",
+		"ratio":      "16:9",
 	}
 
 	jsonBytes, err := sonic.Marshal(testRequest)

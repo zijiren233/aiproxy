@@ -111,12 +111,12 @@ export interface ChartDataPoint {
     status500Count: number
     retryCount: number
     inputTokens: number
-    textInputTokens: number
+    generalInputTokens: number
     imageInputTokens: number
     audioInputTokens: number
     videoInputTokens: number
     outputTokens: number
-    textOutputTokens: number
+    generalOutputTokens: number
     imageOutputTokens: number
     audioOutputTokens: number
     cachedTokens: number

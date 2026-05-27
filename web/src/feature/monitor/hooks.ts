@@ -196,9 +196,9 @@ function toChartData(timeSeries: TimeSeriesPoint[], timespan?: string, hasModelF
         const totalInputAmount = inputAmount + imageInputAmount + audioInputAmount + videoInputAmount + cachedAmount + cacheCreationAmount
         const totalOutputAmount = outputAmount + imageOutputAmount + audioOutputAmount
 
-        // Non-overlapping text portions (subtract sub-categories from totals)
-        const textInputTokens = Math.max(0, inputTokens - imageInputTokens - audioInputTokens - videoInputTokens - cachedTokens - cacheCreationTokens)
-        const textOutputTokens = Math.max(0, outputTokens - imageOutputTokens - audioOutputTokens)
+        // Non-overlapping general portions (subtract modality-specific and cache categories from totals).
+        const generalInputTokens = Math.max(0, inputTokens - imageInputTokens - audioInputTokens - videoInputTokens - cachedTokens - cacheCreationTokens)
+        const generalOutputTokens = Math.max(0, outputTokens - imageOutputTokens - audioOutputTokens)
 
         const status2xxCount = summary.reduce((acc, s) => acc + (s?.status_2xx_count || 0), 0)
         const status4xxCount = summary.reduce((acc, s) => acc + (s?.status_4xx_count || 0), 0)
@@ -255,12 +255,12 @@ function toChartData(timeSeries: TimeSeriesPoint[], timespan?: string, hasModelF
             status500Count,
             retryCount,
             inputTokens,
-            textInputTokens,
+            generalInputTokens,
             imageInputTokens,
             audioInputTokens,
             videoInputTokens,
             outputTokens,
-            textOutputTokens,
+            generalOutputTokens,
             imageOutputTokens,
             audioOutputTokens,
             cachedTokens,
