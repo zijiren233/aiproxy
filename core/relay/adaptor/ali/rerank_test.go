@@ -229,6 +229,7 @@ func TestConvertRerankRequestRejectsInvalidAliImageBase64(t *testing.T) {
 	}
 
 	var relayErr adaptor.Error
+
 	ok := errors.As(err, &relayErr)
 	if !ok {
 		t.Fatalf("expected adaptor.Error, got %T: %v", err, err)

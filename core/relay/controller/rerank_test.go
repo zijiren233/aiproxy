@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/gin-gonic/gin"
@@ -77,5 +78,34 @@ func TestGetRerankRequestUsageStillSupportsStringRequest(t *testing.T) {
 
 	if usage.Usage.InputTokens == 0 {
 		t.Fatalf("string request should be counted in request usage, got %#v", usage)
+	}
+}
+
+func TestGetRerankRequestUsageRejectsEmptyStringQuery(t *testing.T) {
+	t.Parallel()
+
+	gin.SetMode(gin.TestMode)
+
+	recorder := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(recorder)
+	c.Request = httptest.NewRequestWithContext(
+		t.Context(),
+		http.MethodPost,
+		"/v1/rerank",
+		bytes.NewBufferString(`{
+			"model":"gte-rerank-v2",
+			"query":"",
+			"documents":["doc one"]
+		}`),
+	)
+	c.Request.Header.Set("Content-Type", "application/json")
+
+	_, err := GetRerankRequestUsage(c, model.ModelConfig{})
+	if err == nil {
+		t.Fatal("GetRerankRequestUsage should reject empty string query")
+	}
+
+	if !strings.Contains(err.Error(), "query must not be empty") {
+		t.Fatalf("unexpected error: %v", err)
 	}
 }

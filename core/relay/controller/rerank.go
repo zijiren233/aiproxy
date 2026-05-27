@@ -32,6 +32,13 @@ func getRerankRequestUsageFromNode(c *gin.Context) (RequestUsage, error) {
 		return RequestUsage{}, errors.New("query must not be empty")
 	}
 
+	if query.TypeSafe() == ast.V_STRING {
+		queryString, err := query.String()
+		if err != nil || queryString == "" {
+			return RequestUsage{}, errors.New("query must not be empty")
+		}
+	}
+
 	documents := node.Get("documents")
 	if documents == nil || !documents.Exists() || documents.TypeSafe() == ast.V_NULL {
 		return RequestUsage{}, errors.New("document list must not be empty")

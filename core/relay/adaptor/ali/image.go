@@ -242,11 +242,6 @@ func ConvertAliImageEditRequest(
 	for _, fileHeader := range fileHeaders {
 		imageData, err := multipartImageFileToDataURL(fileHeader)
 		if err != nil {
-			var error adaptor.Error
-			if errors.As(err, &error) {
-				return adaptor.ConvertResult{}, err
-			}
-
 			return adaptor.ConvertResult{}, err
 		}
 
@@ -309,11 +304,6 @@ func ConvertQwenMTImageRequest(
 		if len(fileHeaders) == 1 {
 			imageRequest.ImageURL, err = multipartImageFileToDataURL(fileHeaders[0])
 			if err != nil {
-				var error adaptor.Error
-				if errors.As(err, &error) {
-					return adaptor.ConvertResult{}, err
-				}
-
 				return adaptor.ConvertResult{}, err
 			}
 		}
