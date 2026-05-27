@@ -90,13 +90,18 @@ export interface ModelConfig {
 
 export type ModelSaveRequest = Omit<ModelConfig, 'created_at' | 'updated_at'>
 
-export const MODEL_TYPE_OPTIONS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 16, 21, 22, 26, 27, 28, 29, 30] as const
+export const MODEL_TYPE_OPTIONS = [
+    1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
+    11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
+    21, 22, 23, 24, 25, 26, 27, 28, 29, 30,
+    31, 32, 33, 34, 35, 36, 37, 38,
+] as const
 
 export const STREAM_TIMEOUT_SUPPORTED_MODEL_TYPES = [1, 2, 12, 16, 21] as const
-export const IMAGE_GENERATION_COUNT_LIMIT_SUPPORTED_MODEL_TYPES = [5, 6] as const
-export const VIDEO_GENERATION_SECONDS_LIMIT_SUPPORTED_MODEL_TYPES = [13, 22, 26, 27] as const
+export const IMAGE_GENERATION_COUNT_LIMIT_SUPPORTED_MODEL_TYPES = [5, 6, 30] as const
+export const VIDEO_GENERATION_SECONDS_LIMIT_SUPPORTED_MODEL_TYPES = [13, 22, 26, 27, 32, 33, 34, 36] as const
 export const VIDEO_GENERATION_COUNT_LIMIT_SUPPORTED_MODEL_TYPES = [13, 27] as const
-export const RESOLUTION_FUZZY_MATCH_SUPPORTED_MODEL_TYPES = [5, 6, 13, 22, 26, 27, 28, 30] as const
+export const RESOLUTION_FUZZY_MATCH_SUPPORTED_MODEL_TYPES = [5, 6, 13, 22, 26, 27, 28, 30, 32, 33, 34, 36] as const
 
 export type ModelTypeOption = (typeof MODEL_TYPE_OPTIONS)[number]
 

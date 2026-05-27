@@ -1439,11 +1439,11 @@ func TestAdaptorDoResponseVideoSubmitStoresJob(t *testing.T) {
 	)
 	m.Group.ID = "group-1"
 	m.Token.ID = 7
-	m.Set(metaDoubaoVideoRequest, doubaoVideoRequest{
-		Content:    []doubaoVideoContent{{Type: "text", Text: "Animate a calm ocean"}},
+	setDoubaoVideoMetadata(m, doubaoVideoStoreMetadata{
+		Prompt:     "Animate a calm ocean",
 		Resolution: "720p",
 		Ratio:      "16:9",
-		Duration:   intPtrFromAny(5),
+		Duration:   5,
 	})
 
 	resp := &http.Response{
@@ -1514,11 +1514,11 @@ func TestAdaptorDoResponseVideoSubmitStoresCompletedGeneration(t *testing.T) {
 	)
 	m.Group.ID = "group-1"
 	m.Token.ID = 7
-	m.Set(metaDoubaoVideoRequest, doubaoVideoRequest{
-		Content:    []doubaoVideoContent{{Type: "text", Text: "Animate a calm ocean"}},
+	setDoubaoVideoMetadata(m, doubaoVideoStoreMetadata{
+		Prompt:     "Animate a calm ocean",
 		Resolution: "720p",
 		Ratio:      "9:16",
-		Duration:   intPtrFromAny(5),
+		Duration:   5,
 	})
 
 	resp := &http.Response{
@@ -1845,7 +1845,132 @@ func TestAdaptorFetchAsyncUsageCombinesStoredRatioBeforeDerivingSize(t *testing.
 	}
 }
 
+func TestAdaptorFetchAsyncUsageDoubaoNativeUsesNativeResolution(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/custom/api/v3/contents/generations/tasks/task-123" {
+			t.Fatalf("expected task path, got %s", r.URL.Path)
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{
+			"id": "task-123",
+			"status": "succeeded",
+			"resolution": "720p",
+			"ratio": "16:9",
+			"service_tier": "default",
+			"usage": {
+				"completion_tokens": 411300,
+				"total_tokens": 411300
+			}
+		}`))
+	}))
+	defer server.Close()
+
+	doubaoAdaptor := &Adaptor{}
+	store := &doubaoTestStore{
+		saved: []adaptor.StoreCache{
+			{
+				ID:       coremodel.VideoGenerationStoreID("task-123"),
+				Metadata: `{"prompt":"Stored prompt","resolution":"1080p","ratio":"9:16","duration":6}`,
+			},
+		},
+	}
+
+	_, usageContext, completed, err := doubaoAdaptor.FetchAsyncUsage(
+		context.Background(),
+		doubaoAsyncUsageRequestWithMode(
+			mode.DoubaoVideo,
+			server.URL+"/custom",
+			"task-123",
+			store,
+		),
+	)
+	if err != nil {
+		t.Fatalf("FetchAsyncUsage returned error: %v", err)
+	}
+
+	if !completed {
+		t.Fatal("expected async usage to be completed")
+	}
+
+	if usageContext.Resolution != "720p" ||
+		usageContext.NativeResolution != "720p" ||
+		usageContext.ServiceTier != "default" {
+		t.Fatalf("unexpected native usage context: %#v", usageContext)
+	}
+}
+
+func TestAdaptorFetchAsyncUsageDoubaoNativeUsesNativeFallback(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/custom/api/v3/contents/generations/tasks/task-123" {
+			t.Fatalf("expected task path, got %s", r.URL.Path)
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{
+			"id": "task-123",
+			"status": "succeeded",
+			"usage": {
+				"completion_tokens": 411300,
+				"total_tokens": 411300
+			}
+		}`))
+	}))
+	defer server.Close()
+
+	doubaoAdaptor := &Adaptor{}
+
+	_, usageContext, completed, err := doubaoAdaptor.FetchAsyncUsage(
+		context.Background(),
+		adaptor.AsyncUsageRequest{
+			Channel: &coremodel.Channel{
+				BaseURL: server.URL + "/fallback",
+				Key:     "test-key",
+			},
+			Info: &coremodel.AsyncUsageInfo{
+				Mode:       int(mode.DoubaoVideo),
+				BaseURL:    server.URL + "/custom",
+				UpstreamID: "task-123",
+				GroupID:    "group-1",
+				TokenID:    7,
+				UsageContext: coremodel.UsageContext{
+					Resolution:       "1080p",
+					NativeResolution: "1080p",
+					ServiceTier:      "priority",
+				},
+			},
+		},
+	)
+	if err != nil {
+		t.Fatalf("FetchAsyncUsage returned error: %v", err)
+	}
+
+	if !completed {
+		t.Fatal("expected async usage to be completed")
+	}
+
+	if usageContext.Resolution != "1080p" ||
+		usageContext.NativeResolution != "1080p" ||
+		usageContext.ServiceTier != "priority" {
+		t.Fatalf("unexpected native usage context fallback: %#v", usageContext)
+	}
+}
+
 func doubaoAsyncUsageRequest(
+	baseURL string,
+	upstreamID string,
+	store adaptor.Store,
+) adaptor.AsyncUsageRequest {
+	return doubaoAsyncUsageRequestWithMode(
+		mode.VideoGenerationsJobs,
+		baseURL,
+		upstreamID,
+		store,
+	)
+}
+
+func doubaoAsyncUsageRequestWithMode(
+	relayMode mode.Mode,
 	baseURL string,
 	upstreamID string,
 	store adaptor.Store,
@@ -1856,7 +1981,7 @@ func doubaoAsyncUsageRequest(
 			Key:     "test-key",
 		},
 		Info: &coremodel.AsyncUsageInfo{
-			Mode:       int(mode.VideoGenerationsJobs),
+			Mode:       int(relayMode),
 			BaseURL:    baseURL,
 			UpstreamID: upstreamID,
 			GroupID:    "group-1",

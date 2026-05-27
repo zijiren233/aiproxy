@@ -140,6 +140,16 @@ func TestRelayControllerVideoModesValidateRequests(t *testing.T) {
 			mode: mode.GeminiVideo,
 			want: relaycontroller.ValidateGeminiVideoRequest,
 		},
+		{
+			name: "ali native video",
+			mode: mode.AliVideo,
+			want: relaycontroller.ValidateAliVideoRequest,
+		},
+		{
+			name: "doubao native video",
+			mode: mode.DoubaoVideo,
+			want: relaycontroller.ValidateDoubaoVideoRequest,
+		},
 	}
 
 	for _, tt := range tests {

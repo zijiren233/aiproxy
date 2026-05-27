@@ -348,6 +348,10 @@ export function ModelForm({
             case 22:
             case 26:
             case 27:
+            case 32:
+            case 33:
+            case 34:
+            case 36:
                 return {
                     tokenFields: ['max_input_tokens', 'max_output_tokens', 'max_context_tokens'] as Array<'max_input_tokens' | 'max_output_tokens' | 'max_context_tokens'>,
                     showToolChoice: false,

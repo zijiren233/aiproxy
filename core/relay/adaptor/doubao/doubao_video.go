@@ -9,6 +9,7 @@ import (
 	"github.com/bytedance/sonic/ast"
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/core/common"
+	coremodel "github.com/labring/aiproxy/core/model"
 	"github.com/labring/aiproxy/core/relay/adaptor"
 	"github.com/labring/aiproxy/core/relay/meta"
 	relaymodel "github.com/labring/aiproxy/core/relay/model"
@@ -26,6 +27,8 @@ func ConvertDoubaoNativeVideoRequest(
 	if _, err := body.Set("model", ast.NewString(meta.ActualModel)); err != nil {
 		return adaptor.ConvertResult{}, err
 	}
+
+	setDoubaoNativeVideoRequestMetadata(meta, &body)
 
 	data, err := body.MarshalJSON()
 	if err != nil {
@@ -62,9 +65,9 @@ func DoubaoNativeVideoSubmitHandler(
 	return adaptor.DoResponseResult{
 		UpstreamID: response.ID,
 		AsyncUsage: true,
-		UsageContext: doubaoVideoUsageContext(
+		UsageContext: doubaoNativeVideoUsageContext(
 			&response,
-		).WithFallback(doubaoVideoRequestUsageContext(meta)),
+		).WithFallback(doubaoNativeVideoRequestUsageContext(meta)),
 	}, nil
 }
 
@@ -83,6 +86,13 @@ func DoubaoNativeVideoTaskHandler(
 		response.ID = meta.VideoID
 	}
 
+	applyStoredDoubaoVideoMetadata(
+		meta,
+		store,
+		coremodel.VideoGenerationStoreID(response.ID),
+		&response,
+	)
+
 	if response.ID != "" {
 		expiresAt := doubaoVideoExpiresAt(response)
 		if err := saveDoubaoVideoStore(meta, store, response.ID, expiresAt); err != nil {
@@ -94,10 +104,110 @@ func DoubaoNativeVideoTaskHandler(
 
 	return adaptor.DoResponseResult{
 		UpstreamID: response.ID,
-		UsageContext: doubaoVideoUsageContext(
+		UsageContext: doubaoNativeVideoUsageContext(
 			&response,
-		).WithFallback(doubaoVideoRequestUsageContext(meta)),
+		).WithFallback(doubaoNativeVideoRequestUsageContext(meta)),
 	}, nil
+}
+
+func setDoubaoNativeVideoRequestMetadata(meta *meta.Meta, body *ast.Node) {
+	if meta == nil {
+		return
+	}
+
+	metadata := doubaoVideoStoreMetadata{
+		Prompt:      doubaoVideoPrompt(doubaoNativeVideoContent(body.Get("content"))),
+		Resolution:  doubaoNativeVideoString(body.Get("resolution")),
+		Ratio:       doubaoNativeVideoString(body.Get("ratio")),
+		Duration:    doubaoNativeVideoInt(body.Get("duration")),
+		ServiceTier: doubaoNativeVideoString(body.Get("service_tier")),
+	}
+
+	setDoubaoVideoMetadata(meta, metadata)
+}
+
+func doubaoNativeVideoContent(node *ast.Node) []doubaoVideoContent {
+	if node == nil || !node.Exists() || node.TypeSafe() == ast.V_NULL {
+		return nil
+	}
+
+	count, err := node.Len()
+	if err != nil || count <= 0 {
+		return nil
+	}
+
+	content := make([]doubaoVideoContent, 0, count)
+	for i := range count {
+		item := node.Index(i)
+		if item == nil || !item.Exists() || item.TypeSafe() == ast.V_NULL {
+			continue
+		}
+
+		content = append(content, doubaoVideoContent{
+			Type: doubaoNativeVideoString(item.Get("type")),
+			Text: doubaoNativeVideoString(item.Get("text")),
+		})
+	}
+
+	return content
+}
+
+func doubaoNativeVideoString(node *ast.Node) string {
+	if node == nil || !node.Exists() || node.TypeSafe() == ast.V_NULL {
+		return ""
+	}
+
+	value, err := node.String()
+	if err != nil {
+		return ""
+	}
+
+	return value
+}
+
+func doubaoNativeVideoInt(node *ast.Node) int {
+	if node == nil || !node.Exists() || node.TypeSafe() == ast.V_NULL {
+		return 0
+	}
+
+	value, err := node.Int64()
+	if err != nil {
+		return 0
+	}
+
+	return int(value)
+}
+
+func doubaoNativeVideoUsageContext(
+	response *relaymodel.DoubaoVideoTaskResponse,
+) coremodel.UsageContext {
+	usageContext := doubaoVideoUsageContext(response)
+	return doubaoNativeVideoUsageContextFromContext(usageContext)
+}
+
+func doubaoNativeVideoRequestUsageContext(meta *meta.Meta) coremodel.UsageContext {
+	usageContext := doubaoVideoRequestUsageContext(meta)
+	return doubaoNativeVideoUsageContextFromContext(usageContext)
+}
+
+func doubaoNativeVideoUsageContextFromContext(
+	usageContext coremodel.UsageContext,
+) coremodel.UsageContext {
+	nativeResolution := usageContext.NativeResolution
+	if nativeResolution == "" {
+		nativeResolution = usageContext.Resolution
+	}
+
+	if nativeResolution == "" && usageContext.ServiceTier == "" && usageContext.Quality == "" {
+		return coremodel.UsageContext{}
+	}
+
+	return coremodel.UsageContext{
+		Resolution:       nativeResolution,
+		NativeResolution: nativeResolution,
+		ServiceTier:      usageContext.ServiceTier,
+		Quality:          usageContext.Quality,
+	}
 }
 
 func DoubaoNativeVideoTaskDeleteHandler(

@@ -33,7 +33,7 @@ func (a *Adaptor) FetchAsyncUsage(
 
 	switch mode.Mode(info.Mode) {
 	case mode.AliVideo:
-		return a.fetchAliVideoJobUsage(ctx, channel, request.Store, info)
+		return a.fetchAliNativeVideoUsage(ctx, channel, request.Store, info)
 	case mode.VideoGenerationsJobs,
 		mode.Videos,
 		mode.VideosRemix,
@@ -46,6 +46,24 @@ func (a *Adaptor) FetchAsyncUsage(
 			info.Mode,
 		)
 	}
+}
+
+func (a *Adaptor) fetchAliNativeVideoUsage(
+	ctx context.Context,
+	channel *coremodel.Channel,
+	store adaptor.Store,
+	info *coremodel.AsyncUsageInfo,
+) (coremodel.Usage, coremodel.UsageContext, bool, error) {
+	usage, usageContext, completed, err := a.fetchAliVideoJobUsage(ctx, channel, store, info)
+	if !completed || err != nil {
+		return usage, usageContext, completed, err
+	}
+
+	return usage,
+		aliNativeVideoUsageContextFromContext(usageContext).
+			WithFallback(aliNativeVideoUsageContextFromContext(info.UsageContext)),
+		completed,
+		nil
 }
 
 func (a *Adaptor) fetchAliVideoJobUsage(
@@ -83,6 +101,26 @@ func (a *Adaptor) fetchAliVideoJobUsage(
 		)
 	default:
 		return coremodel.Usage{}, coremodel.UsageContext{}, false, nil
+	}
+}
+
+func aliNativeVideoUsageContextFromContext(
+	usageContext coremodel.UsageContext,
+) coremodel.UsageContext {
+	nativeResolution := usageContext.NativeResolution
+	if nativeResolution == "" {
+		nativeResolution = usageContext.Resolution
+	}
+
+	if nativeResolution == "" {
+		return coremodel.UsageContext{}
+	}
+
+	return coremodel.UsageContext{
+		Resolution:       nativeResolution,
+		NativeResolution: nativeResolution,
+		ServiceTier:      usageContext.ServiceTier,
+		Quality:          usageContext.Quality,
 	}
 }
 

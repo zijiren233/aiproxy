@@ -28,9 +28,10 @@ func TestConvertNativeVideoRequestPreservesBodyAndRewritesModel(t *testing.T) {
 	)
 	req.Header.Set("Content-Type", "application/json")
 
-	result, err := ConvertDoubaoNativeVideoRequest(&meta.Meta{
-		ActualModel: "mapped-seedance",
-	}, req)
+	m := meta.NewMeta(nil, mode.DoubaoVideo, "doubao-seedance-2-0", coremodel.ModelConfig{})
+	m.ActualModel = "mapped-seedance"
+
+	result, err := ConvertDoubaoNativeVideoRequest(m, req)
 	if err != nil {
 		t.Fatalf("ConvertDoubaoNativeVideoRequest returned error: %v", err)
 	}
@@ -52,6 +53,11 @@ func TestConvertNativeVideoRequestPreservesBodyAndRewritesModel(t *testing.T) {
 	if !ok || len(content) != 1 {
 		t.Fatalf("content was not preserved: %#v", body["content"])
 	}
+
+	if usageContext := doubaoNativeVideoRequestUsageContext(m); usageContext.Resolution != "720p" ||
+		usageContext.NativeResolution != "720p" {
+		t.Fatalf("unexpected native request usage context: %#v", usageContext)
+	}
 }
 
 func TestDoubaoNativeVideoSubmitHandlerPassesThroughAndStoresTask(t *testing.T) {
@@ -64,14 +70,17 @@ func TestDoubaoNativeVideoSubmitHandlerPassesThroughAndStoresTask(t *testing.T) 
 	ctx.Request = httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/", nil)
 
 	store := &doubaoTestStore{}
-	m := &meta.Meta{
-		Mode:        mode.DoubaoVideo,
-		OriginModel: "doubao-seedance-2-0",
-		Group:       coremodel.GroupCache{ID: "group-1"},
-		Token:       coremodel.TokenCache{ID: 7},
-		Channel:     meta.ChannelMeta{ID: 42},
-	}
-	respBody := `{"id":"task-123","model":"doubao-seedance-2-0","status":"queued"}`
+	m := meta.NewMeta(nil, mode.DoubaoVideo, "doubao-seedance-2-0", coremodel.ModelConfig{})
+	m.Group = coremodel.GroupCache{ID: "group-1"}
+	m.Token = coremodel.TokenCache{ID: 7}
+	m.Channel = meta.ChannelMeta{ID: 42}
+	setDoubaoVideoMetadata(m, doubaoVideoStoreMetadata{
+		Resolution:  "1080p",
+		Ratio:       "16:9",
+		ServiceTier: "priority",
+	})
+
+	respBody := `{"id":"task-123","model":"doubao-seedance-2-0","status":"queued","resolution":"720p","ratio":"16:9","service_tier":"default"}`
 	resp := &http.Response{
 		StatusCode: http.StatusOK,
 		Header:     http.Header{"Content-Type": {"application/json"}},
@@ -91,6 +100,12 @@ func TestDoubaoNativeVideoSubmitHandlerPassesThroughAndStoresTask(t *testing.T) 
 		t.Fatalf("unexpected result: %#v", result)
 	}
 
+	if result.UsageContext.Resolution != "720p" ||
+		result.UsageContext.NativeResolution != "720p" ||
+		result.UsageContext.ServiceTier != "default" {
+		t.Fatalf("unexpected native usage context: %#v", result.UsageContext)
+	}
+
 	if len(store.saved) != 1 {
 		t.Fatalf("expected one store save, got %d", len(store.saved))
 	}
@@ -99,6 +114,42 @@ func TestDoubaoNativeVideoSubmitHandlerPassesThroughAndStoresTask(t *testing.T) 
 		store.saved[0].ChannelID != 42 ||
 		store.saved[0].Model != "doubao-seedance-2-0" {
 		t.Fatalf("unexpected saved store: %#v", store.saved[0])
+	}
+}
+
+func TestDoubaoNativeVideoSubmitHandlerUsesNativeRequestResolutionFallback(t *testing.T) {
+	t.Parallel()
+
+	gin.SetMode(gin.TestMode)
+
+	recorder := httptest.NewRecorder()
+	ctx, _ := gin.CreateTestContext(recorder)
+	ctx.Request = httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/", nil)
+
+	m := meta.NewMeta(nil, mode.DoubaoVideo, "doubao-seedance-2-0", coremodel.ModelConfig{})
+	setDoubaoVideoMetadata(m, doubaoVideoStoreMetadata{
+		Resolution:  "1080p",
+		Ratio:       "16:9",
+		ServiceTier: "priority",
+	})
+
+	resp := &http.Response{
+		StatusCode: http.StatusOK,
+		Header:     http.Header{"Content-Type": {"application/json"}},
+		Body: io.NopCloser(bytes.NewBufferString(
+			`{"id":"task-123","model":"doubao-seedance-2-0","status":"queued"}`,
+		)),
+	}
+
+	result, relayErr := DoubaoNativeVideoSubmitHandler(m, nil, ctx, resp)
+	if relayErr != nil {
+		t.Fatalf("DoubaoNativeVideoSubmitHandler returned error: %v", relayErr)
+	}
+
+	if result.UsageContext.Resolution != "1080p" ||
+		result.UsageContext.NativeResolution != "1080p" ||
+		result.UsageContext.ServiceTier != "priority" {
+		t.Fatalf("unexpected native usage context fallback: %#v", result.UsageContext)
 	}
 }
 
@@ -141,7 +192,7 @@ func TestDoubaoNativeVideoTaskHandlerBackfillsMissingIDFromMeta(t *testing.T) {
 		Token:       coremodel.TokenCache{ID: 7},
 		Channel:     meta.ChannelMeta{ID: 42},
 	}
-	respBody := `{"model":"doubao-seedance-2-0","status":"succeeded","content":{"video_url":"https://example.com/out.mp4"}}`
+	respBody := `{"model":"doubao-seedance-2-0","status":"succeeded","resolution":"720p","ratio":"16:9","content":{"video_url":"https://example.com/out.mp4"}}`
 	resp := &http.Response{
 		StatusCode: http.StatusOK,
 		Header:     http.Header{"Content-Type": {"application/json"}},
@@ -159,6 +210,11 @@ func TestDoubaoNativeVideoTaskHandlerBackfillsMissingIDFromMeta(t *testing.T) {
 
 	if result.UpstreamID != "task-123" {
 		t.Fatalf("expected upstream id from meta, got %#v", result.UpstreamID)
+	}
+
+	if result.UsageContext.Resolution != "720p" ||
+		result.UsageContext.NativeResolution != "720p" {
+		t.Fatalf("unexpected native usage context: %#v", result.UsageContext)
 	}
 
 	if len(store.saved) != 1 {

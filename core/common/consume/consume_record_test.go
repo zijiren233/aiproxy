@@ -11,11 +11,16 @@ import (
 
 func TestNeedRecordConsumeSkipsSuccessfulStoredVideoReads(t *testing.T) {
 	tests := []mode.Mode{
+		mode.VideoGenerationsGetJobs,
+		mode.VideoGenerationsContent,
 		mode.VideosGet,
 		mode.VideosContent,
 		mode.VideosDelete,
 		mode.GeminiFiles,
 		mode.GeminiVideoOperations,
+		mode.AliVideoTasks,
+		mode.DoubaoVideoTasks,
+		mode.DoubaoVideoTasksDelete,
 	}
 
 	for _, relayMode := range tests {
@@ -34,6 +39,15 @@ func TestNeedRecordConsumeSkipsSuccessfulStoredVideoReads(t *testing.T) {
 				t.Fatalf("expected failed %s request to record consume", relayMode)
 			}
 		})
+	}
+}
+
+func TestNeedRecordConsumeSkipsSuccessfulDoubaoNativeDeleteNoContent(t *testing.T) {
+	if consume.NeedRecordConsumeForTest(
+		http.StatusNoContent,
+		&meta.Meta{Mode: mode.DoubaoVideoTasksDelete},
+	) {
+		t.Fatal("expected successful doubao native delete 204 request not to record consume")
 	}
 }
 

@@ -49,9 +49,16 @@ func (a *Adaptor) FetchAsyncUsage(
 
 	switch strings.ToLower(response.Status) {
 	case "succeeded":
+		usageContext := doubaoVideoAsyncUsageContext(response, request.Store, info)
+		if mode.Mode(info.Mode) == mode.DoubaoVideo {
+			usageContext = doubaoNativeVideoUsageContextFromContext(usageContext).
+				WithFallback(doubaoNativeVideoUsageContextFromContext(info.UsageContext))
+		} else {
+			usageContext = usageContext.WithFallback(info.UsageContext)
+		}
+
 		return doubaoVideoUsageToModelUsage(response.Usage),
-			doubaoVideoAsyncUsageContext(response, request.Store, info).
-				WithFallback(info.UsageContext),
+			usageContext,
 			true,
 			nil
 	case "queued", "running", "":
