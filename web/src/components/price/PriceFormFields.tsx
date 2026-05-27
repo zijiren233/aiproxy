@@ -153,6 +153,25 @@ function ConditionFields({ condition, onChange }: {
                 </Select>
             </div>
             <div className="space-y-1">
+                <Label className="text-xs">{t('group.price.inputMedia')}</Label>
+                <Select
+                    value={boolSelectValue(condition.input_media)}
+                    onValueChange={(value) => onChange({
+                        ...condition,
+                        input_media: parseBoolSelectValue(value),
+                    })}
+                >
+                    <SelectTrigger className="h-8 text-sm">
+                        <SelectValue placeholder={t('group.price.booleanAny')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value={anyBool}>{t('group.price.booleanAny')}</SelectItem>
+                        <SelectItem value="true">{t('common.yes')}</SelectItem>
+                        <SelectItem value="false">{t('common.no')}</SelectItem>
+                    </SelectContent>
+                </Select>
+            </div>
+            <div className="space-y-1">
                 <Label className="text-xs">{t('group.price.inputVideo')}</Label>
                 <Select
                     value={boolSelectValue(condition.input_video)}

@@ -581,6 +581,13 @@ export function ModelTable() {
     setModelDialogOpen(true);
   };
 
+  const openEditFromBuiltinDialog = (model: ModelConfig) => {
+    setDialogMode("update");
+    setSelectedModel(model);
+    setPreserveModelNameOnCreate(false);
+    setModelDialogOpen(true);
+  };
+
   // Open delete dialog
   const openDeleteDialog = (id: string) => {
     setSelectedModelId(id);
@@ -807,6 +814,14 @@ export function ModelTable() {
         </div>
       </Card>
 
+      <BuiltinModelsDialog
+        open={builtinModelsDialogOpen}
+        onOpenChange={setBuiltinModelsDialogOpen}
+        existingModels={models || []}
+        onCreateFromBuiltin={openCreateFromBuiltinDialog}
+        onEditFromBuiltin={openEditFromBuiltinDialog}
+      />
+
       {/* Model Dialog */}
       <ModelDialog
         open={modelDialogOpen}
@@ -814,13 +829,6 @@ export function ModelTable() {
         mode={dialogMode}
         model={selectedModel}
         preserveModelNameOnCreate={preserveModelNameOnCreate}
-      />
-
-      <BuiltinModelsDialog
-        open={builtinModelsDialogOpen}
-        onOpenChange={setBuiltinModelsDialogOpen}
-        existingModels={models || []}
-        onCreateFromBuiltin={openCreateFromBuiltinDialog}
       />
 
       {/* Delete Model Dialog */}

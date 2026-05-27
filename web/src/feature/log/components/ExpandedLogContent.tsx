@@ -230,6 +230,7 @@ export const ExpandedLogContent = ({ log }: { log: LogRecord }) => {
                         <div><span className="font-medium">{t('log.nativeResolution')}:</span> {usageContext?.native_resolution || '-'}</div>
                         <div><span className="font-medium">{t('log.quality')}:</span> {usageContext?.quality || '-'}</div>
                         <div><span className="font-medium">{t('log.serviceTier')}:</span> {usageContext?.service_tier || '-'}</div>
+                        <div><span className="font-medium">{t('log.inputMedia')}:</span> {usageContext?.input_media === undefined ? '-' : (usageContext.input_media ? t('common.yes') : t('common.no'))}</div>
                         <div><span className="font-medium">{t('log.inputVideo')}:</span> {usageContext?.input_video === undefined ? '-' : (usageContext.input_video ? t('common.yes') : t('common.no'))}</div>
                         <div><span className="font-medium">{t('log.outputAudio')}:</span> {usageContext?.output_audio === undefined ? '-' : (usageContext.output_audio ? t('common.yes') : t('common.no'))}</div>
                     </div>
