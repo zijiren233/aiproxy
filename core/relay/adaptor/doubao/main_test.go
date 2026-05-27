@@ -206,14 +206,14 @@ func TestAdaptorGetRequestURL(t *testing.T) {
 		{
 			name:       "video job create",
 			mode:       mode.VideoGenerationsJobs,
-			model:      "doubao-seedance-2-0",
+			model:      "doubao-seedance-2-0-260128",
 			wantMethod: http.MethodPost,
 			wantURL:    "https://ark.cn-beijing.volces.com/api/v3/contents/generations/tasks",
 		},
 		{
 			name:       "video job get",
 			mode:       mode.VideoGenerationsGetJobs,
-			model:      "doubao-seedance-2-0",
+			model:      "doubao-seedance-2-0-260128",
 			jobID:      "task-123",
 			wantMethod: http.MethodGet,
 			wantURL:    "https://ark.cn-beijing.volces.com/api/v3/contents/generations/tasks/task-123",
@@ -221,7 +221,7 @@ func TestAdaptorGetRequestURL(t *testing.T) {
 		{
 			name:         "video job content",
 			mode:         mode.VideoGenerationsContent,
-			model:        "doubao-seedance-2-0",
+			model:        "doubao-seedance-2-0-260128",
 			generationID: "task-456",
 			wantMethod:   http.MethodGet,
 			wantURL:      "https://ark.cn-beijing.volces.com/api/v3/contents/generations/tasks/task-456",
@@ -229,7 +229,7 @@ func TestAdaptorGetRequestURL(t *testing.T) {
 		{
 			name:       "videos get",
 			mode:       mode.VideosGet,
-			model:      "doubao-seedance-2-0",
+			model:      "doubao-seedance-2-0-260128",
 			videoID:    "video-123",
 			wantMethod: http.MethodGet,
 			wantURL:    "https://ark.cn-beijing.volces.com/api/v3/contents/generations/tasks/video-123",
@@ -237,7 +237,7 @@ func TestAdaptorGetRequestURL(t *testing.T) {
 		{
 			name:       "videos delete",
 			mode:       mode.VideosDelete,
-			model:      "doubao-seedance-2-0",
+			model:      "doubao-seedance-2-0-260128",
 			videoID:    "video-123",
 			wantMethod: http.MethodDelete,
 			wantURL:    "https://ark.cn-beijing.volces.com/api/v3/contents/generations/tasks/video-123",
@@ -807,7 +807,7 @@ func TestAdaptorConvertRequestVideoGenerationMapsOpenAIFields(t *testing.T) {
 	m := meta.NewMeta(
 		nil,
 		mode.VideoGenerationsJobs,
-		"doubao-seedance-2-0",
+		"doubao-seedance-2-0-260128",
 		coremodel.ModelConfig{},
 	)
 
@@ -847,7 +847,7 @@ func TestAdaptorConvertRequestVideoGenerationMapsOpenAIFields(t *testing.T) {
 		t.Fatalf("failed to unmarshal converted body %s: %v", string(body), err)
 	}
 
-	if payload["model"] != "doubao-seedance-2-0" {
+	if payload["model"] != "doubao-seedance-2-0-260128" {
 		t.Fatalf("expected actual model, got %#v", payload["model"])
 	}
 
@@ -868,11 +868,17 @@ func TestAdaptorConvertRequestVideoGenerationMapsOpenAIFields(t *testing.T) {
 	assertDoubaoVideoContent(t, content[1], "image_url", "https://example.com/reference.png", "")
 	assertDoubaoVideoContent(t, content[2], "video_url", "https://example.com/reference.mp4", "")
 	assertDoubaoVideoContent(t, content[3], "audio_url", "data:audio/wav;base64,AAAA", "")
+
+	usageContext := doubaoVideoRequestUsageContext(m)
+	if usageContext.InputVideo == nil || !*usageContext.InputVideo ||
+		usageContext.OutputAudio == nil || !*usageContext.OutputAudio {
+		t.Fatalf("expected converted request media usage context, got %#v", usageContext)
+	}
 }
 
 func TestAdaptorConvertVideosEditMapsVideoFieldToReferenceVideo(t *testing.T) {
 	adaptor := &Adaptor{}
-	m := meta.NewMeta(nil, mode.VideosEdits, "doubao-seedance-2-0", coremodel.ModelConfig{})
+	m := meta.NewMeta(nil, mode.VideosEdits, "doubao-seedance-2-0-260128", coremodel.ModelConfig{})
 
 	req, err := http.NewRequestWithContext(
 		context.Background(),
@@ -920,7 +926,7 @@ func TestAdaptorConvertVideosEditMapsVideoFieldToReferenceVideo(t *testing.T) {
 
 func TestAdaptorConvertVideosEditMapsStoredVideoIDToDraftTask(t *testing.T) {
 	adaptor := &Adaptor{}
-	m := meta.NewMeta(nil, mode.VideosEdits, "doubao-seedance-2-0", coremodel.ModelConfig{})
+	m := meta.NewMeta(nil, mode.VideosEdits, "doubao-seedance-2-0-260128", coremodel.ModelConfig{})
 
 	req, err := http.NewRequestWithContext(
 		context.Background(),
@@ -965,11 +971,21 @@ func TestAdaptorConvertVideosEditMapsStoredVideoIDToDraftTask(t *testing.T) {
 	if !ok || draftTask["id"] != "video_123" {
 		t.Fatalf("expected draft task video_123, got %#v", item["draft_task"])
 	}
+
+	usageContext := doubaoVideoRequestUsageContext(m)
+	if usageContext.InputVideo == nil || !*usageContext.InputVideo {
+		t.Fatalf("expected stored video draft task to count as input video, got %#v", usageContext)
+	}
 }
 
 func TestAdaptorConvertVideosExtensionMapsVideoFieldToFirstVideo(t *testing.T) {
 	adaptor := &Adaptor{}
-	m := meta.NewMeta(nil, mode.VideosExtensions, "doubao-seedance-2-0", coremodel.ModelConfig{})
+	m := meta.NewMeta(
+		nil,
+		mode.VideosExtensions,
+		"doubao-seedance-2-0-260128",
+		coremodel.ModelConfig{},
+	)
 
 	req, err := http.NewRequestWithContext(
 		context.Background(),
@@ -1020,7 +1036,7 @@ func TestAdaptorConvertRequestVideoGenerationMapsPixelSize(t *testing.T) {
 	m := meta.NewMeta(
 		nil,
 		mode.VideoGenerationsJobs,
-		"doubao-seedance-2-0",
+		"doubao-seedance-2-0-260128",
 		coremodel.ModelConfig{},
 	)
 
@@ -1069,7 +1085,7 @@ func TestAdaptorConvertRequestVideoGenerationMapsPortraitPixelSize(t *testing.T)
 	m := meta.NewMeta(
 		nil,
 		mode.VideoGenerationsJobs,
-		"doubao-seedance-2-0",
+		"doubao-seedance-2-0-260128",
 		coremodel.ModelConfig{},
 	)
 
@@ -1118,7 +1134,7 @@ func TestAdaptorConvertRequestVideosIgnoresJobOnlyDuration(t *testing.T) {
 	m := meta.NewMeta(
 		nil,
 		mode.Videos,
-		"doubao-seedance-2-0",
+		"doubao-seedance-2-0-260128",
 		coremodel.ModelConfig{},
 	)
 
@@ -1162,7 +1178,7 @@ func TestAdaptorConvertRequestVideoGenerationIgnoresVideosSeconds(t *testing.T) 
 	m := meta.NewMeta(
 		nil,
 		mode.VideoGenerationsJobs,
-		"doubao-seedance-2-0",
+		"doubao-seedance-2-0-260128",
 		coremodel.ModelConfig{},
 	)
 
@@ -1208,7 +1224,7 @@ func TestAdaptorConvertRequestVideoGenerationMapsMultipartPixelSize(t *testing.T
 	m := meta.NewMeta(
 		nil,
 		mode.VideoGenerationsJobs,
-		"doubao-seedance-2-0",
+		"doubao-seedance-2-0-260128",
 		coremodel.ModelConfig{},
 	)
 
@@ -1280,7 +1296,7 @@ func TestAdaptorConvertRequestVideoGenerationIgnoresDoubaoDurationField(t *testi
 	m := meta.NewMeta(
 		nil,
 		mode.VideoGenerationsJobs,
-		"doubao-seedance-2-0",
+		"doubao-seedance-2-0-260128",
 		coremodel.ModelConfig{},
 	)
 
@@ -1326,10 +1342,10 @@ func TestAdaptorConvertRequestDoubaoVideoMissingContentReturnsRelayError(t *test
 	m := meta.NewMeta(
 		nil,
 		mode.VideoGenerationsJobs,
-		"doubao-seedance-2-0",
+		"doubao-seedance-2-0-260128",
 		coremodel.ModelConfig{},
 	)
-	m.ActualModel = "doubao-seedance-2-0"
+	m.ActualModel = "doubao-seedance-2-0-260128"
 
 	req := httptest.NewRequestWithContext(
 		t.Context(),
@@ -1369,7 +1385,7 @@ func TestAdaptorConvertRequestVideoGenerationKeepsNativeContentOnce(t *testing.T
 	m := meta.NewMeta(
 		nil,
 		mode.VideoGenerationsJobs,
-		"doubao-seedance-2-0",
+		"doubao-seedance-2-0-260128",
 		coremodel.ModelConfig{},
 	)
 
@@ -1434,16 +1450,17 @@ func TestAdaptorDoResponseVideoSubmitStoresJob(t *testing.T) {
 	m := meta.NewMeta(
 		&coremodel.Channel{ID: 9},
 		mode.VideoGenerationsJobs,
-		"doubao-seedance-2-0",
+		"doubao-seedance-2-0-260128",
 		coremodel.ModelConfig{},
 	)
 	m.Group.ID = "group-1"
 	m.Token.ID = 7
-	m.Set(metaDoubaoVideoRequest, doubaoVideoRequest{
-		Content:    []doubaoVideoContent{{Type: "text", Text: "Animate a calm ocean"}},
+	setDoubaoVideoMetadata(m, doubaoVideoStoreMetadata{
+		Prompt:     "Animate a calm ocean",
 		Resolution: "720p",
 		Ratio:      "16:9",
-		Duration:   intPtrFromAny(5),
+		Duration:   5,
+		InputVideo: new(false),
 	})
 
 	resp := &http.Response{
@@ -1452,7 +1469,7 @@ func TestAdaptorDoResponseVideoSubmitStoresJob(t *testing.T) {
 		Body: io.NopCloser(strings.NewReader(`{
 			"id": "task-123",
 			"status": "queued",
-			"model": "doubao-seedance-2-0",
+			"model": "doubao-seedance-2-0-260128",
 			"created_at": 1770000000,
 			"execution_expires_after": 172800
 		}`)),
@@ -1471,7 +1488,7 @@ func TestAdaptorDoResponseVideoSubmitStoresJob(t *testing.T) {
 		t.Fatalf("expected video job store, got %#v", store.saved)
 	}
 
-	if store.saved[0].Metadata != `{"prompt":"Animate a calm ocean","resolution":"720p","ratio":"16:9","duration":5}` {
+	if store.saved[0].Metadata != `{"prompt":"Animate a calm ocean","resolution":"720p","ratio":"16:9","duration":5,"input_video":false}` {
 		t.Fatalf("unexpected saved metadata: %s", store.saved[0].Metadata)
 	}
 
@@ -1484,7 +1501,7 @@ func TestAdaptorDoResponseVideoSubmitStoresJob(t *testing.T) {
 		t.Fatalf("unexpected job: %#v", job)
 	}
 
-	if job.Model != "doubao-seedance-2-0" ||
+	if job.Model != "doubao-seedance-2-0-260128" ||
 		job.Prompt != "Animate a calm ocean" ||
 		job.NSeconds != 5 ||
 		job.Width != 1280 ||
@@ -1509,16 +1526,16 @@ func TestAdaptorDoResponseVideoSubmitStoresCompletedGeneration(t *testing.T) {
 	m := meta.NewMeta(
 		&coremodel.Channel{ID: 9},
 		mode.VideoGenerationsJobs,
-		"doubao-seedance-2-0",
+		"doubao-seedance-2-0-260128",
 		coremodel.ModelConfig{},
 	)
 	m.Group.ID = "group-1"
 	m.Token.ID = 7
-	m.Set(metaDoubaoVideoRequest, doubaoVideoRequest{
-		Content:    []doubaoVideoContent{{Type: "text", Text: "Animate a calm ocean"}},
+	setDoubaoVideoMetadata(m, doubaoVideoStoreMetadata{
+		Prompt:     "Animate a calm ocean",
 		Resolution: "720p",
 		Ratio:      "9:16",
-		Duration:   intPtrFromAny(5),
+		Duration:   5,
 	})
 
 	resp := &http.Response{
@@ -1527,7 +1544,7 @@ func TestAdaptorDoResponseVideoSubmitStoresCompletedGeneration(t *testing.T) {
 		Body: io.NopCloser(strings.NewReader(`{
 			"id": "task-123",
 			"status": "succeeded",
-			"model": "doubao-seedance-2-0",
+			"model": "doubao-seedance-2-0-260128",
 			"created_at": 1770000000,
 			"updated_at": 1770000100,
 			"execution_expires_after": 172800,
@@ -1597,7 +1614,7 @@ func TestAdaptorDoResponseVideoStatusRestoresOpenAIFieldsFromStore(t *testing.T)
 	m := meta.NewMeta(
 		&coremodel.Channel{ID: 9},
 		mode.VideosGet,
-		"doubao-seedance-2-0",
+		"doubao-seedance-2-0-260128",
 		coremodel.ModelConfig{},
 		meta.WithVideoID("video-123"),
 	)
@@ -1630,7 +1647,7 @@ func TestAdaptorDoResponseVideoStatusRestoresOpenAIFieldsFromStore(t *testing.T)
 	if video.ID != "video-123" ||
 		video.Object != relaymodel.VideoObject ||
 		video.Status != relaymodel.VideoStatusCompleted ||
-		video.Model != "doubao-seedance-2-0" ||
+		video.Model != "doubao-seedance-2-0-260128" ||
 		video.Prompt != "A stored prompt" ||
 		video.Seconds != 6 ||
 		video.Size != "720x1280" ||
@@ -1674,7 +1691,7 @@ func TestAdaptorDoResponseVideoContentDownloadsGeneratedVideo(t *testing.T) {
 			meta: meta.NewMeta(
 				&coremodel.Channel{ID: 9},
 				mode.VideoGenerationsContent,
-				"doubao-seedance-2-0",
+				"doubao-seedance-2-0-260128",
 				coremodel.ModelConfig{},
 				meta.WithGenerationID("generation-123"),
 			),
@@ -1686,7 +1703,7 @@ func TestAdaptorDoResponseVideoContentDownloadsGeneratedVideo(t *testing.T) {
 			meta: meta.NewMeta(
 				&coremodel.Channel{ID: 9},
 				mode.VideosContent,
-				"doubao-seedance-2-0",
+				"doubao-seedance-2-0-260128",
 				coremodel.ModelConfig{},
 				meta.WithVideoID("video-123"),
 			),
@@ -1754,6 +1771,7 @@ func TestAdaptorFetchAsyncUsageUsesDoubaoCompletionTokens(t *testing.T) {
 			"resolution": "720p",
 			"ratio": "16:9",
 			"service_tier": "default",
+			"generate_audio": false,
 			"usage": {
 				"completion_tokens": 411300,
 				"total_tokens": 411300,
@@ -1768,7 +1786,7 @@ func TestAdaptorFetchAsyncUsageUsesDoubaoCompletionTokens(t *testing.T) {
 		saved: []adaptor.StoreCache{
 			{
 				ID:       coremodel.VideoJobStoreID("task-123"),
-				Metadata: `{"prompt":"Stored prompt","resolution":"720p","ratio":"9:16","duration":6}`,
+				Metadata: `{"prompt":"Stored prompt","resolution":"720p","ratio":"9:16","duration":6,"input_video":true,"output_audio":true}`,
 			},
 		},
 	}
@@ -1793,7 +1811,11 @@ func TestAdaptorFetchAsyncUsageUsesDoubaoCompletionTokens(t *testing.T) {
 
 	if usageContext.Resolution != "1280x720" ||
 		usageContext.NativeResolution != "720p" ||
-		usageContext.ServiceTier != "default" {
+		usageContext.ServiceTier != "default" ||
+		usageContext.InputVideo == nil ||
+		!*usageContext.InputVideo ||
+		usageContext.OutputAudio == nil ||
+		*usageContext.OutputAudio {
 		t.Fatalf("unexpected usage context: %#v", usageContext)
 	}
 }
@@ -1845,7 +1867,142 @@ func TestAdaptorFetchAsyncUsageCombinesStoredRatioBeforeDerivingSize(t *testing.
 	}
 }
 
+func TestAdaptorFetchAsyncUsageDoubaoNativeUsesNativeResolution(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/custom/api/v3/contents/generations/tasks/task-123" {
+			t.Fatalf("expected task path, got %s", r.URL.Path)
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{
+			"id": "task-123",
+			"status": "succeeded",
+			"resolution": "720p",
+			"ratio": "16:9",
+			"service_tier": "default",
+			"usage": {
+				"completion_tokens": 411300,
+				"total_tokens": 411300
+			}
+		}`))
+	}))
+	defer server.Close()
+
+	doubaoAdaptor := &Adaptor{}
+	store := &doubaoTestStore{
+		saved: []adaptor.StoreCache{
+			{
+				ID:       coremodel.VideoGenerationStoreID("task-123"),
+				Metadata: `{"prompt":"Stored prompt","resolution":"1080p","ratio":"9:16","duration":6,"input_video":true,"output_audio":false}`,
+			},
+		},
+	}
+
+	_, usageContext, completed, err := doubaoAdaptor.FetchAsyncUsage(
+		context.Background(),
+		doubaoAsyncUsageRequestWithMode(
+			mode.DoubaoVideo,
+			server.URL+"/custom",
+			"task-123",
+			store,
+		),
+	)
+	if err != nil {
+		t.Fatalf("FetchAsyncUsage returned error: %v", err)
+	}
+
+	if !completed {
+		t.Fatal("expected async usage to be completed")
+	}
+
+	if usageContext.Resolution != "720p" ||
+		usageContext.NativeResolution != "720p" ||
+		usageContext.ServiceTier != "default" ||
+		usageContext.InputVideo == nil ||
+		!*usageContext.InputVideo ||
+		usageContext.OutputAudio == nil ||
+		*usageContext.OutputAudio {
+		t.Fatalf("unexpected native usage context: %#v", usageContext)
+	}
+}
+
+func TestAdaptorFetchAsyncUsageDoubaoNativeUsesNativeFallback(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/custom/api/v3/contents/generations/tasks/task-123" {
+			t.Fatalf("expected task path, got %s", r.URL.Path)
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{
+			"id": "task-123",
+			"status": "succeeded",
+			"usage": {
+				"completion_tokens": 411300,
+				"total_tokens": 411300
+			}
+		}`))
+	}))
+	defer server.Close()
+
+	doubaoAdaptor := &Adaptor{}
+
+	_, usageContext, completed, err := doubaoAdaptor.FetchAsyncUsage(
+		context.Background(),
+		adaptor.AsyncUsageRequest{
+			Channel: &coremodel.Channel{
+				BaseURL: server.URL + "/fallback",
+				Key:     "test-key",
+			},
+			Info: &coremodel.AsyncUsageInfo{
+				Mode:       int(mode.DoubaoVideo),
+				BaseURL:    server.URL + "/custom",
+				UpstreamID: "task-123",
+				GroupID:    "group-1",
+				TokenID:    7,
+				UsageContext: coremodel.UsageContext{
+					Resolution:       "1080p",
+					NativeResolution: "1080p",
+					ServiceTier:      "priority",
+					InputVideo:       new(true),
+					OutputAudio:      new(false),
+				},
+			},
+		},
+	)
+	if err != nil {
+		t.Fatalf("FetchAsyncUsage returned error: %v", err)
+	}
+
+	if !completed {
+		t.Fatal("expected async usage to be completed")
+	}
+
+	if usageContext.Resolution != "1080p" ||
+		usageContext.NativeResolution != "1080p" ||
+		usageContext.ServiceTier != "priority" ||
+		usageContext.InputVideo == nil ||
+		!*usageContext.InputVideo ||
+		usageContext.OutputAudio == nil ||
+		*usageContext.OutputAudio {
+		t.Fatalf("unexpected native usage context fallback: %#v", usageContext)
+	}
+}
+
 func doubaoAsyncUsageRequest(
+	baseURL string,
+	upstreamID string,
+	store adaptor.Store,
+) adaptor.AsyncUsageRequest {
+	return doubaoAsyncUsageRequestWithMode(
+		mode.VideoGenerationsJobs,
+		baseURL,
+		upstreamID,
+		store,
+	)
+}
+
+func doubaoAsyncUsageRequestWithMode(
+	relayMode mode.Mode,
 	baseURL string,
 	upstreamID string,
 	store adaptor.Store,
@@ -1856,7 +2013,7 @@ func doubaoAsyncUsageRequest(
 			Key:     "test-key",
 		},
 		Info: &coremodel.AsyncUsageInfo{
-			Mode:       int(mode.VideoGenerationsJobs),
+			Mode:       int(relayMode),
 			BaseURL:    baseURL,
 			UpstreamID: upstreamID,
 			GroupID:    "group-1",

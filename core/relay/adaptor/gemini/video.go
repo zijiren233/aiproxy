@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -69,6 +70,85 @@ type geminiVideoParameters struct {
 	NumberOfVideos   int    `json:"numberOfVideos,omitempty"`
 	NegativePrompt   string `json:"negativePrompt,omitempty"`
 	PersonGeneration string `json:"personGeneration,omitempty"`
+}
+
+type geminiOpenAIVideoRequest struct {
+	Prompt           string               `json:"prompt,omitempty"`
+	Model            string               `json:"model,omitempty"`
+	Width            geminiFlexibleInt    `json:"width,omitempty"`
+	Height           geminiFlexibleInt    `json:"height,omitempty"`
+	NVariants        geminiFlexibleInt    `json:"n_variants,omitempty"`
+	NSeconds         geminiFlexibleInt    `json:"n_seconds,omitempty"`
+	Seconds          geminiFlexibleInt    `json:"seconds,omitempty"`
+	Size             string               `json:"size,omitempty"`
+	NegativePrompt   string               `json:"negative_prompt,omitempty"`
+	PersonGeneration string               `json:"person_generation,omitempty"`
+	InputReference   geminiFlexibleString `json:"input_reference,omitempty"`
+	Image            geminiFlexibleString `json:"image,omitempty"`
+	ImageURL         geminiFlexibleString `json:"image_url,omitempty"`
+	VideoURL         geminiFlexibleString `json:"video_url,omitempty"`
+	Video            geminiFlexibleString `json:"video,omitempty"`
+}
+
+type geminiFlexibleString string
+
+func (value *geminiFlexibleString) UnmarshalJSON(data []byte) error {
+	var text string
+	if err := sonic.Unmarshal(data, &text); err == nil {
+		*value = geminiFlexibleString(strings.TrimSpace(text))
+		return nil
+	}
+
+	var object struct {
+		URL string `json:"url,omitempty"`
+	}
+	if err := sonic.Unmarshal(data, &object); err == nil {
+		*value = geminiFlexibleString(strings.TrimSpace(object.URL))
+	}
+
+	return nil
+}
+
+func (value geminiFlexibleString) String() string {
+	return strings.TrimSpace(string(value))
+}
+
+type geminiFlexibleInt struct {
+	Value int
+	Set   bool
+}
+
+func (value *geminiFlexibleInt) UnmarshalJSON(data []byte) error {
+	text := strings.TrimSpace(string(data))
+	if text == "" || text == "null" {
+		return nil
+	}
+
+	if strings.HasPrefix(text, `"`) {
+		var raw string
+		if err := sonic.Unmarshal(data, &raw); err != nil {
+			return nil
+		}
+
+		text = strings.TrimSpace(raw)
+	}
+
+	number := json.Number(text)
+
+	parsed, err := number.Int64()
+	if err != nil {
+		floatValue, floatErr := number.Float64()
+		if floatErr != nil {
+			return nil
+		}
+
+		parsed = int64(floatValue)
+	}
+
+	value.Value = int(parsed)
+	value.Set = true
+
+	return nil
 }
 
 type geminiVideoStoreMetadata struct {
@@ -554,12 +634,12 @@ func parseOpenAIVideoGenerationJobRequest(req *http.Request) (geminiVideoRequest
 		return parseMultipartOpenAIVideoGenerationJobRequest(req)
 	}
 
-	node, err := common.UnmarshalRequest2NodeReusable(req)
-	if err != nil {
+	var raw geminiOpenAIVideoRequest
+	if err := common.UnmarshalRequestReusable(req, &raw); err != nil {
 		return geminiVideoRequest{}, err
 	}
 
-	return parseJSONOpenAIVideoGenerationJobRequest(&node), nil
+	return parseJSONOpenAIVideoGenerationJobRequest(raw), nil
 }
 
 func parseOpenAIVideosRequest(req *http.Request) (geminiVideoRequest, error) {
@@ -567,12 +647,12 @@ func parseOpenAIVideosRequest(req *http.Request) (geminiVideoRequest, error) {
 		return parseMultipartOpenAIVideosRequest(req)
 	}
 
-	node, err := common.UnmarshalRequest2NodeReusable(req)
-	if err != nil {
+	var raw geminiOpenAIVideoRequest
+	if err := common.UnmarshalRequestReusable(req, &raw); err != nil {
 		return geminiVideoRequest{}, err
 	}
 
-	return parseJSONOpenAIVideosRequest(&node), nil
+	return parseJSONOpenAIVideosRequest(raw), nil
 }
 
 func parseOpenAIVideosEditRequest(req *http.Request) (geminiVideoRequest, error) {
@@ -601,14 +681,14 @@ func parseOpenAIVideosRequestWithVideoField(req *http.Request) (geminiVideoReque
 		return request, nil
 	}
 
-	node, err := common.UnmarshalRequest2NodeReusable(req)
-	if err != nil {
+	var raw geminiOpenAIVideoRequest
+	if err := common.UnmarshalRequestReusable(req, &raw); err != nil {
 		return geminiVideoRequest{}, err
 	}
 
-	request := parseJSONOpenAIVideosRequest(&node)
+	request := parseJSONOpenAIVideosRequest(raw)
 	if len(request.Instances) > 0 && request.Instances[0].Video == nil {
-		if media := mediaFromString(stringNode(&node, "video")); media != nil {
+		if media := mediaFromString(raw.Video.String()); media != nil {
 			request.Instances[0].Video = media
 		}
 	}
@@ -682,10 +762,10 @@ func hydrateGeminiOpenAIVideoReference(
 	return nil
 }
 
-func parseJSONOpenAIVideoGenerationJobRequest(node *ast.Node) geminiVideoRequest {
-	request := parseJSONOpenAIVideoCommonRequest(node, geminiVideoJobSizeFromJSON(node))
-	request.Parameters.DurationSeconds = intNode(node, "n_seconds")
-	request.Parameters.NumberOfVideos = intNode(node, "n_variants")
+func parseJSONOpenAIVideoGenerationJobRequest(raw geminiOpenAIVideoRequest) geminiVideoRequest {
+	request := parseJSONOpenAIVideoCommonRequest(raw, geminiVideoJobSizeFromJSON(raw))
+	request.Parameters.DurationSeconds = raw.NSeconds.Value
+	request.Parameters.NumberOfVideos = raw.NVariants.Value
 
 	if request.Parameters.NumberOfVideos <= 0 {
 		request.Parameters.NumberOfVideos = 1
@@ -694,37 +774,40 @@ func parseJSONOpenAIVideoGenerationJobRequest(node *ast.Node) geminiVideoRequest
 	return request
 }
 
-func parseJSONOpenAIVideosRequest(node *ast.Node) geminiVideoRequest {
-	request := parseJSONOpenAIVideoCommonRequest(node, stringNode(node, "size"))
-	request.Parameters.DurationSeconds = intNode(node, "seconds")
+func parseJSONOpenAIVideosRequest(raw geminiOpenAIVideoRequest) geminiVideoRequest {
+	request := parseJSONOpenAIVideoCommonRequest(raw, raw.Size)
+	request.Parameters.DurationSeconds = raw.Seconds.Value
 	request.Parameters.NumberOfVideos = 1
 
 	return request
 }
 
-func parseJSONOpenAIVideoCommonRequest(node *ast.Node, size string) geminiVideoRequest {
+func parseJSONOpenAIVideoCommonRequest(
+	raw geminiOpenAIVideoRequest,
+	size string,
+) geminiVideoRequest {
 	request := geminiVideoRequest{
 		Parameters: geminiVideoParameters{
 			AspectRatio:      geminiVideoAspectRatioFromSize(size),
 			Resolution:       geminiVideoResolutionFromSize(size),
-			NegativePrompt:   stringNode(node, "negative_prompt"),
-			PersonGeneration: stringNode(node, "person_generation"),
+			NegativePrompt:   strings.TrimSpace(raw.NegativePrompt),
+			PersonGeneration: strings.TrimSpace(raw.PersonGeneration),
 		},
 	}
 
 	instance := geminiVideoInstance{
-		Prompt: stringNode(node, "prompt"),
+		Prompt: strings.TrimSpace(raw.Prompt),
 	}
 
 	if media := mediaFromString(firstNonEmpty(
-		stringNode(node, "input_reference"),
-		stringNode(node, "image"),
-		stringNode(node, "image_url"),
+		raw.InputReference.String(),
+		raw.Image.String(),
+		raw.ImageURL.String(),
 	)); media != nil {
 		instance.Image = media
 	}
 
-	if media := mediaFromString(stringNode(node, "video_url")); media != nil {
+	if media := mediaFromString(raw.VideoURL.String()); media != nil {
 		instance.Video = media
 	}
 
@@ -830,15 +913,12 @@ func geminiVideoSizeFromForm(req *http.Request) string {
 	return req.PostFormValue("size")
 }
 
-func geminiVideoJobSizeFromJSON(node *ast.Node) string {
-	width := intNode(node, "width")
-
-	height := intNode(node, "height")
-	if width <= 0 || height <= 0 {
+func geminiVideoJobSizeFromJSON(raw geminiOpenAIVideoRequest) string {
+	if !raw.Width.Set || !raw.Height.Set || raw.Width.Value <= 0 || raw.Height.Value <= 0 {
 		return ""
 	}
 
-	return fmt.Sprintf("%dx%d", width, height)
+	return fmt.Sprintf("%dx%d", raw.Width.Value, raw.Height.Value)
 }
 
 func geminiVideoJobSizeFromForm(req *http.Request) string {

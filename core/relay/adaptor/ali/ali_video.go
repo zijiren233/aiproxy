@@ -30,6 +30,8 @@ func ConvertAliNativeVideoRequest(
 		return adaptor.ConvertResult{}, err
 	}
 
+	setAliNativeVideoRequestMetadata(meta, &body)
+
 	data, err := body.MarshalJSON()
 	if err != nil {
 		return adaptor.ConvertResult{}, err
@@ -92,9 +94,10 @@ func AliNativeVideoHandler(
 	writeAliNativeJSONResponse(c, resp, body)
 
 	return adaptor.DoResponseResult{
-		UpstreamID:   taskID,
-		AsyncUsage:   true,
-		UsageContext: aliVideoUsageContext(meta, aliResponse.Usage),
+		UpstreamID: taskID,
+		AsyncUsage: true,
+		UsageContext: aliNativeVideoUsageContext(aliResponse.Usage).
+			WithFallback(aliNativeVideoRequestUsageContext(meta)),
 	}, nil
 }
 
@@ -124,6 +127,16 @@ func AliNativeVideoTaskHandler(
 	}
 
 	taskID := strings.TrimSpace(aliResponse.Output.TaskID)
+	if taskID == "" {
+		taskID = meta.VideoID
+	}
+
+	applyStoredAliVideoRequestMetadata(
+		meta,
+		store,
+		coremodel.VideoGenerationStoreID(taskID),
+	)
+
 	if taskID != "" {
 		if err := saveAliNativeVideoStore(
 			meta,
@@ -138,9 +151,110 @@ func AliNativeVideoTaskHandler(
 	writeAliNativeJSONResponse(c, resp, body)
 
 	return adaptor.DoResponseResult{
-		UpstreamID:   firstNonEmpty(taskID, meta.VideoID),
-		UsageContext: aliVideoUsageContext(meta, aliResponse.Usage),
+		UpstreamID: firstNonEmpty(taskID, meta.VideoID),
+		UsageContext: aliNativeVideoUsageContext(aliResponse.Usage).
+			WithFallback(aliNativeVideoRequestUsageContext(meta)),
 	}, nil
+}
+
+func setAliNativeVideoRequestMetadata(meta *meta.Meta, body *ast.Node) {
+	if meta == nil {
+		return
+	}
+
+	if input := body.Get(
+		"input",
+	); input != nil && input.Exists() &&
+		input.TypeSafe() != ast.V_NULL {
+		if prompt := aliNativeVideoString(input.Get("prompt")); prompt != "" {
+			meta.Set(metaAliVideoPrompt, prompt)
+		}
+	}
+
+	parameters := body.Get("parameters")
+	if parameters == nil || !parameters.Exists() || parameters.TypeSafe() == ast.V_NULL {
+		return
+	}
+
+	size := firstNonEmpty(
+		aliNativeVideoString(parameters.Get("size")),
+		aliNativeVideoString(parameters.Get("resolution")),
+	)
+	if size != "" {
+		meta.Set(metaAliVideoSize, size)
+	}
+
+	if duration := aliNativeVideoInt(parameters.Get("duration")); duration > 0 {
+		meta.Set(metaAliVideoSeconds, duration)
+	}
+}
+
+func aliNativeVideoString(node *ast.Node) string {
+	if node == nil || !node.Exists() || node.TypeSafe() == ast.V_NULL {
+		return ""
+	}
+
+	value, err := node.String()
+	if err != nil {
+		return ""
+	}
+
+	return strings.TrimSpace(value)
+}
+
+func aliNativeVideoInt(node *ast.Node) int {
+	if node == nil || !node.Exists() || node.TypeSafe() == ast.V_NULL {
+		return 0
+	}
+
+	if node.TypeSafe() == ast.V_STRING {
+		value, err := node.String()
+		if err != nil {
+			return 0
+		}
+
+		parsed, err := strconv.Atoi(strings.TrimSpace(value))
+		if err != nil || parsed <= 0 {
+			return 0
+		}
+
+		return parsed
+	}
+
+	value, err := node.Int64()
+	if err != nil || value <= 0 {
+		return 0
+	}
+
+	return int(value)
+}
+
+func aliNativeVideoUsageContext(usage relaymodel.AliVideoUsage) coremodel.UsageContext {
+	nativeResolution := aliVideoNativeResolution(usage)
+	if nativeResolution == "" {
+		return coremodel.UsageContext{}
+	}
+
+	return coremodel.UsageContext{
+		Resolution:       nativeResolution,
+		NativeResolution: nativeResolution,
+	}
+}
+
+func aliNativeVideoRequestUsageContext(meta *meta.Meta) coremodel.UsageContext {
+	if meta == nil {
+		return coremodel.UsageContext{}
+	}
+
+	nativeResolution := strings.TrimSpace(meta.GetString(metaAliVideoSize))
+	if nativeResolution == "" {
+		return coremodel.UsageContext{}
+	}
+
+	return coremodel.UsageContext{
+		Resolution:       nativeResolution,
+		NativeResolution: nativeResolution,
+	}
 }
 
 func readAliNativeVideoResponseBody(resp *http.Response) ([]byte, adaptor.Error) {
@@ -179,6 +293,7 @@ func saveAliNativeVideoStore(
 		TokenID:   meta.Token.ID,
 		ChannelID: meta.Channel.ID,
 		Model:     meta.OriginModel,
+		Metadata:  aliVideoStoreMetadataString(meta, taskID),
 		ExpiresAt: expiresAt,
 	})
 }

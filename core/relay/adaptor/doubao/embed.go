@@ -75,12 +75,12 @@ func patchEmbeddingsVisionInput(node *ast.Node) error {
 			return err
 		}
 
-		_, err = node.SetAny("input", []map[string]string{
-			{
-				"type": "text",
-				"text": inputText,
-			},
-		})
+		_, err = node.Set("input", ast.NewArray([]ast.Node{
+			ast.NewObject([]ast.Pair{
+				ast.NewPair("type", ast.NewString("text")),
+				ast.NewPair("text", ast.NewString(inputText)),
+			}),
+		}))
 
 		return err
 	default:
@@ -104,9 +104,9 @@ func setEmbeddingVisionURLItem(
 		return err
 	}
 
-	_, err = item.SetAny(targetKey, map[string]string{
-		"url": url,
-	})
+	_, err = item.Set(targetKey, ast.NewObject([]ast.Pair{
+		ast.NewPair("url", ast.NewString(url)),
+	}))
 
 	return err
 }

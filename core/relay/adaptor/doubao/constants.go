@@ -40,28 +40,55 @@ var ModelList = []model.ModelConfig{
 		},
 	},
 	{
-		Model: "doubao-seedance-2-0",
-		Type:  mode.DoubaoVideo,
-		Owner: model.ModelOwnerDoubao,
+		Model:                     "doubao-seedance-2-0-260128",
+		Type:                      mode.DoubaoVideo,
+		Owner:                     model.ModelOwnerDoubao,
+		AllowedResolutions:        []string{"480p", "720p", "1080p"},
+		MaxVideoGenerationSeconds: 15,
 		Price: model.Price{
 			// Seedance video billing uses the API response usage.completion_tokens.
-			// The token unit price depends on output resolution and whether the
-			// request used reference video input; current usage context only carries
-			// resolution, so this uses the no-reference-video official tier.
-			OutputPrice:     51,
+			// Official prices are RMB per million tokens; aiproxy stores prices per
+			// 1K tokens by default, so divide the official value by 1000.
+			OutputPrice:     0.051,
 			OutputPriceUnit: model.PriceUnit,
 			ConditionalPrices: []model.ConditionalPrice{
 				{
-					Condition: model.PriceCondition{Resolution: []string{"480p", "720p"}},
+					Condition: model.PriceCondition{
+						Resolution: []string{"480p", "720p"},
+						InputVideo: new(false),
+					},
 					Price: model.Price{
-						OutputPrice:     46,
+						OutputPrice:     0.046,
 						OutputPriceUnit: model.PriceUnit,
 					},
 				},
 				{
-					Condition: model.PriceCondition{Resolution: []string{"1080p"}},
+					Condition: model.PriceCondition{
+						Resolution: []string{"480p", "720p"},
+						InputVideo: new(true),
+					},
 					Price: model.Price{
-						OutputPrice:     51,
+						OutputPrice:     0.028,
+						OutputPriceUnit: model.PriceUnit,
+					},
+				},
+				{
+					Condition: model.PriceCondition{
+						Resolution: []string{"1080p"},
+						InputVideo: new(false),
+					},
+					Price: model.Price{
+						OutputPrice:     0.051,
+						OutputPriceUnit: model.PriceUnit,
+					},
+				},
+				{
+					Condition: model.PriceCondition{
+						Resolution: []string{"1080p"},
+						InputVideo: new(true),
+					},
+					Price: model.Price{
+						OutputPrice:     0.031,
 						OutputPriceUnit: model.PriceUnit,
 					},
 				},
@@ -69,18 +96,27 @@ var ModelList = []model.ModelConfig{
 		},
 	},
 	{
-		Model: "doubao-seedance-2-0-fast",
-		Type:  mode.DoubaoVideo,
-		Owner: model.ModelOwnerDoubao,
+		Model:                     "doubao-seedance-2-0-fast-260128",
+		Type:                      mode.DoubaoVideo,
+		Owner:                     model.ModelOwnerDoubao,
+		AllowedResolutions:        []string{"480p", "720p"},
+		MaxVideoGenerationSeconds: 15,
 		Price: model.Price{
 			// Seedance video billing uses the API response usage.completion_tokens.
-			OutputPrice:     37,
+			OutputPrice:     0.037,
 			OutputPriceUnit: model.PriceUnit,
 			ConditionalPrices: []model.ConditionalPrice{
 				{
-					Condition: model.PriceCondition{Resolution: []string{"480p", "720p"}},
+					Condition: model.PriceCondition{InputVideo: new(false)},
 					Price: model.Price{
-						OutputPrice:     37,
+						OutputPrice:     0.037,
+						OutputPriceUnit: model.PriceUnit,
+					},
+				},
+				{
+					Condition: model.PriceCondition{InputVideo: new(true)},
+					Price: model.Price{
+						OutputPrice:     0.022,
 						OutputPriceUnit: model.PriceUnit,
 					},
 				},
@@ -88,19 +124,43 @@ var ModelList = []model.ModelConfig{
 		},
 	},
 	{
-		Model: "doubao-seedance-1-5-pro",
-		Type:  mode.DoubaoVideo,
-		Owner: model.ModelOwnerDoubao,
+		Model:                     "doubao-seedance-1-5-pro-251215",
+		Type:                      mode.DoubaoVideo,
+		Owner:                     model.ModelOwnerDoubao,
+		AllowedResolutions:        []string{"480p", "720p", "1080p"},
+		MaxVideoGenerationSeconds: 12,
 		Price: model.Price{
-			// Seedance 1.5 pro token price is for the default generated-audio case.
-			// The silent-video price is lower, but generate_audio is not part of PriceCondition.
-			OutputPrice:     16,
+			// Seedance 1.5 pro defaults generate_audio to true.
+			OutputPrice:     0.016,
 			OutputPriceUnit: model.PriceUnit,
 			ConditionalPrices: []model.ConditionalPrice{
 				{
-					Condition: model.PriceCondition{ServiceTier: "flex"},
+					Condition: model.PriceCondition{
+						ServiceTier: "default",
+						OutputAudio: new(false),
+					},
 					Price: model.Price{
-						OutputPrice:     8,
+						OutputPrice:     0.008,
+						OutputPriceUnit: model.PriceUnit,
+					},
+				},
+				{
+					Condition: model.PriceCondition{
+						ServiceTier: "flex",
+						OutputAudio: new(true),
+					},
+					Price: model.Price{
+						OutputPrice:     0.008,
+						OutputPriceUnit: model.PriceUnit,
+					},
+				},
+				{
+					Condition: model.PriceCondition{
+						ServiceTier: "flex",
+						OutputAudio: new(false),
+					},
+					Price: model.Price{
+						OutputPrice:     0.004,
 						OutputPriceUnit: model.PriceUnit,
 					},
 				},
@@ -108,18 +168,20 @@ var ModelList = []model.ModelConfig{
 		},
 	},
 	{
-		Model: "doubao-seedance-1-0-pro",
-		Type:  mode.DoubaoVideo,
-		Owner: model.ModelOwnerDoubao,
+		Model:                     "doubao-seedance-1-0-pro-250528",
+		Type:                      mode.DoubaoVideo,
+		Owner:                     model.ModelOwnerDoubao,
+		AllowedResolutions:        []string{"480p", "720p", "1080p"},
+		MaxVideoGenerationSeconds: 12,
 		Price: model.Price{
 			// Seedance 1.0 pro bills by returned video completion tokens.
-			OutputPrice:     15,
+			OutputPrice:     0.015,
 			OutputPriceUnit: model.PriceUnit,
 			ConditionalPrices: []model.ConditionalPrice{
 				{
 					Condition: model.PriceCondition{ServiceTier: "flex"},
 					Price: model.Price{
-						OutputPrice:     7.5,
+						OutputPrice:     0.0075,
 						OutputPriceUnit: model.PriceUnit,
 					},
 				},
@@ -127,18 +189,20 @@ var ModelList = []model.ModelConfig{
 		},
 	},
 	{
-		Model: "doubao-seedance-1-0-pro-fast",
-		Type:  mode.DoubaoVideo,
-		Owner: model.ModelOwnerDoubao,
+		Model:                     "doubao-seedance-1-0-pro-fast-251015",
+		Type:                      mode.DoubaoVideo,
+		Owner:                     model.ModelOwnerDoubao,
+		AllowedResolutions:        []string{"480p", "720p", "1080p"},
+		MaxVideoGenerationSeconds: 12,
 		Price: model.Price{
 			// Seedance 1.0 pro fast bills by returned video completion tokens.
-			OutputPrice:     4.2,
+			OutputPrice:     0.0042,
 			OutputPriceUnit: model.PriceUnit,
 			ConditionalPrices: []model.ConditionalPrice{
 				{
 					Condition: model.PriceCondition{ServiceTier: "flex"},
 					Price: model.Price{
-						OutputPrice:     2.1,
+						OutputPrice:     0.0021,
 						OutputPriceUnit: model.PriceUnit,
 					},
 				},

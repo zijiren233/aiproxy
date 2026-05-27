@@ -197,11 +197,15 @@ func checkNeedRecordConsume(code int, meta *meta.Meta) bool {
 		mode.VideosDelete,
 		mode.GeminiFiles,
 		mode.GeminiVideoOperations,
+		mode.AliVideoTasks,
+		mode.DoubaoVideoTasks,
 		mode.ResponsesGet,
 		mode.ResponsesDelete,
 		mode.ResponsesCancel,
 		mode.ResponsesInputItems:
 		return code != http.StatusOK
+	case mode.DoubaoVideoTasksDelete:
+		return code != http.StatusOK && code != http.StatusNoContent
 	default:
 		return true
 	}

@@ -206,6 +206,14 @@ func relayController(m mode.Mode) RelayController {
 		c.ValidateRequest = controller.ValidateGeminiVideoRequest
 		c.GetRequestPrice = controller.GetGeminiVideoRequestPrice
 		c.GetRequestUsage = controller.GetGeminiVideoRequestUsage
+	case mode.AliVideo:
+		c.ValidateRequest = controller.ValidateAliVideoRequest
+		c.GetRequestPrice = controller.GetAliVideoRequestPrice
+		c.GetRequestUsage = controller.GetAliVideoRequestUsage
+	case mode.DoubaoVideo:
+		c.ValidateRequest = controller.ValidateDoubaoVideoRequest
+		c.GetRequestPrice = controller.GetDoubaoVideoRequestPrice
+		c.GetRequestUsage = controller.GetDoubaoVideoRequestUsage
 	case mode.Responses:
 		c.GetRequestUsage = controller.GetResponsesRequestUsage
 	}

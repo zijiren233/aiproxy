@@ -366,9 +366,9 @@ func patchStreamOptions(node *ast.Node) error {
 
 	streamOptionsNode := node.Get("stream_options")
 	if !streamOptionsNode.Exists() {
-		_, err = node.SetAny("stream_options", map[string]any{
-			"include_usage": true,
-		})
+		_, err = node.Set("stream_options", ast.NewObject([]ast.Pair{
+			ast.NewPair("include_usage", ast.NewBool(true)),
+		}))
 		return err
 	}
 

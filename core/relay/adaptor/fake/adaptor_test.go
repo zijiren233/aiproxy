@@ -97,8 +97,6 @@ func TestFakeAdaptorResponsesForAllModes(t *testing.T) {
 	t.Parallel()
 	gin.SetMode(gin.TestMode)
 
-	boolPtr := func(v bool) *bool { return &v }
-
 	testCases := []struct {
 		name           string
 		mode           mode.Mode
@@ -532,7 +530,7 @@ func TestFakeAdaptorResponsesForAllModes(t *testing.T) {
 			requestBody: relaymodel.CreateResponseRequest{
 				Model: "fake-response",
 				Input: "request-driven input",
-				Store: boolPtr(false),
+				Store: new(false),
 			},
 			channelConfigs: model.ChannelConfigs{
 				"static_text": "request echoes request-driven input",

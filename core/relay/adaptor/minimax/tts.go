@@ -6,8 +6,10 @@ import (
 	"encoding/hex"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/bytedance/sonic"
+	"github.com/bytedance/sonic/ast"
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/core/common"
 	"github.com/labring/aiproxy/core/model"
@@ -19,81 +21,21 @@ import (
 )
 
 func ConvertTTSRequest(meta *meta.Meta, req *http.Request) (adaptor.ConvertResult, error) {
-	reqMap, err := utils.UnmarshalMap(req)
+	node, err := common.UnmarshalRequest2NodeReusable(req)
 	if err != nil {
 		return adaptor.ConvertResult{}, err
 	}
 
-	meta.Set("stream_format", reqMap["stream_format"])
+	meta.Set("stream_format", stringFromTTSNode(node.Get("stream_format")))
 
-	reqMap["model"] = meta.ActualModel
-
-	reqMap["text"] = reqMap["input"]
-	delete(reqMap, "input")
-
-	voice, _ := reqMap["voice"].(string)
-	delete(reqMap, "voice")
-
-	if voice == "" {
-		voice = "male-qn-qingse"
+	responseFormat, err := patchTTSRequestNode(&node, meta.ActualModel)
+	if err != nil {
+		return adaptor.ConvertResult{}, err
 	}
 
-	voiceSetting, ok := reqMap["voice_setting"].(map[string]any)
-	if !ok {
-		voiceSetting = map[string]any{}
-		reqMap["voice_setting"] = voiceSetting
-	}
-
-	if timberWeights, ok := reqMap["timber_weights"].([]any); !ok || len(timberWeights) == 0 {
-		voiceSetting["voice_id"] = voice
-	}
-
-	speed, ok := reqMap["speed"].(float64)
-	if ok {
-		voiceSetting["speed"] = int(speed)
-	}
-
-	delete(reqMap, "speed")
-
-	audioSetting, ok := reqMap["audio_setting"].(map[string]any)
-	if !ok {
-		audioSetting = map[string]any{}
-		reqMap["audio_setting"] = audioSetting
-	}
-
-	responseFormat, _ := reqMap["response_format"].(string)
-	if responseFormat == "" {
-		responseFormat, _ = reqMap["format"].(string)
-	}
-
-	if responseFormat == "" {
-		responseFormat = "mp3"
-	}
-
-	audioSetting["format"] = responseFormat
-
-	delete(reqMap, "response_format")
 	meta.Set("audio_format", responseFormat)
 
-	sampleRate, ok := reqMap["sample_rate"].(float64)
-	if ok {
-		audioSetting["sample_rate"] = int(sampleRate)
-	}
-
-	delete(reqMap, "sample_rate")
-
-	if responseFormat == "wav" {
-		reqMap["stream"] = false
-	} else {
-		reqMap["stream"] = true
-		reqMap["stream_options"] = map[string]any{
-			"exclude_aggregated_audio": true,
-		}
-	}
-
-	reqMap["language_boost"] = "auto"
-
-	body, err := sonic.Marshal(reqMap)
+	body, err := node.MarshalJSON()
 	if err != nil {
 		return adaptor.ConvertResult{}, err
 	}
@@ -105,6 +47,214 @@ func ConvertTTSRequest(meta *meta.Meta, req *http.Request) (adaptor.ConvertResul
 		},
 		Body: bytes.NewReader(body),
 	}, nil
+}
+
+func patchTTSRequestNode(node *ast.Node, actualModel string) (string, error) {
+	if err := patchTTSModelAndText(node, actualModel); err != nil {
+		return "", err
+	}
+
+	if err := patchTTSVoice(node); err != nil {
+		return "", err
+	}
+
+	responseFormat, err := patchTTSAudio(node)
+	if err != nil {
+		return "", err
+	}
+
+	if err := patchTTSStreamOptions(node, responseFormat); err != nil {
+		return "", err
+	}
+
+	if _, err := node.Set("language_boost", ast.NewString("auto")); err != nil {
+		return "", err
+	}
+
+	return responseFormat, nil
+}
+
+func patchTTSModelAndText(node *ast.Node, actualModel string) error {
+	if _, err := node.Set("model", ast.NewString(actualModel)); err != nil {
+		return err
+	}
+
+	inputNode := node.Get("input")
+	if inputNode.Exists() {
+		if _, err := node.Set("text", *inputNode); err != nil {
+			return err
+		}
+	} else if _, err := node.Set("text", ast.NewNull()); err != nil {
+		return err
+	}
+
+	if _, err := node.Unset("input"); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func patchTTSVoice(node *ast.Node) error {
+	voice := stringFromTTSNode(node.Get("voice"))
+
+	if _, err := node.Unset("voice"); err != nil {
+		return err
+	}
+
+	if voice == "" {
+		voice = "male-qn-qingse"
+	}
+
+	voiceSetting, err := ttsObjectNode(node, "voice_setting")
+	if err != nil {
+		return err
+	}
+
+	timberWeightsNode := node.Get("timber_weights")
+	if !timberWeightsNode.Exists() || timberWeightsNode.TypeSafe() != ast.V_ARRAY ||
+		ttsArrayLen(timberWeightsNode) == 0 {
+		if _, err := voiceSetting.Set("voice_id", ast.NewString(voice)); err != nil {
+			return err
+		}
+	}
+
+	if speed, ok := floatFromTTSNode(node.Get("speed")); ok {
+		if _, err := voiceSetting.Set(
+			"speed",
+			ast.NewNumber(strconv.Itoa(int(speed))),
+		); err != nil {
+			return err
+		}
+	}
+
+	if _, err := node.Unset("speed"); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func patchTTSAudio(node *ast.Node) (string, error) {
+	audioSetting, err := ttsObjectNode(node, "audio_setting")
+	if err != nil {
+		return "", err
+	}
+
+	responseFormat := stringFromTTSNode(node.Get("response_format"))
+	if responseFormat == "" {
+		responseFormat = stringFromTTSNode(node.Get("format"))
+	}
+
+	if responseFormat == "" {
+		responseFormat = "mp3"
+	}
+
+	if _, err := audioSetting.Set("format", ast.NewString(responseFormat)); err != nil {
+		return "", err
+	}
+
+	if _, err := node.Unset("response_format"); err != nil {
+		return "", err
+	}
+
+	if sampleRate, ok := floatFromTTSNode(node.Get("sample_rate")); ok {
+		if _, err := audioSetting.Set(
+			"sample_rate",
+			ast.NewNumber(strconv.Itoa(int(sampleRate))),
+		); err != nil {
+			return "", err
+		}
+	}
+
+	if _, err := node.Unset("sample_rate"); err != nil {
+		return "", err
+	}
+
+	return responseFormat, nil
+}
+
+func patchTTSStreamOptions(node *ast.Node, responseFormat string) error {
+	if responseFormat == "wav" {
+		if _, err := node.Set("stream", ast.NewBool(false)); err != nil {
+			return err
+		}
+	} else {
+		if _, err := node.Set("stream", ast.NewBool(true)); err != nil {
+			return err
+		}
+
+		if _, err := node.Set("stream_options", ast.NewObject([]ast.Pair{
+			ast.NewPair("exclude_aggregated_audio", ast.NewBool(true)),
+		})); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func ttsObjectNode(node *ast.Node, key string) (*ast.Node, error) {
+	value := node.Get(key)
+	if value.Exists() && value.TypeSafe() == ast.V_OBJECT {
+		return value, nil
+	}
+
+	if _, err := node.Set(key, ast.NewObject(nil)); err != nil {
+		return nil, err
+	}
+
+	return node.Get(key), nil
+}
+
+func stringFromTTSNode(node *ast.Node) string {
+	if node == nil || !node.Exists() || node.TypeSafe() != ast.V_STRING {
+		return ""
+	}
+
+	value, err := node.String()
+	if err != nil {
+		return ""
+	}
+
+	return strings.TrimSpace(value)
+}
+
+func floatFromTTSNode(node *ast.Node) (float64, bool) {
+	if node == nil || !node.Exists() || node.TypeSafe() == ast.V_NULL {
+		return 0, false
+	}
+
+	if node.TypeSafe() == ast.V_STRING {
+		value, err := node.String()
+		if err != nil {
+			return 0, false
+		}
+
+		parsed, err := strconv.ParseFloat(strings.TrimSpace(value), 64)
+		if err != nil {
+			return 0, false
+		}
+
+		return parsed, true
+	}
+
+	value, err := node.Float64()
+	if err != nil {
+		return 0, false
+	}
+
+	return value, true
+}
+
+func ttsArrayLen(node *ast.Node) int {
+	count := 0
+	_ = node.ForEach(func(_ ast.Sequence, _ *ast.Node) bool {
+		count++
+		return true
+	})
+
+	return count
 }
 
 type TTSExtraInfo struct {

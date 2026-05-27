@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"io"
 	"mime"
@@ -25,8 +26,8 @@ import (
 )
 
 const (
-	metaDoubaoVideoRequest = "doubao_video_request"
-	doubaoVideoTTL         = 7 * 24 * time.Hour
+	metaDoubaoVideoMetadata = "doubao_video_metadata"
+	doubaoVideoTTL          = 7 * 24 * time.Hour
 )
 
 type doubaoVideoRequest struct {
@@ -38,7 +39,7 @@ type doubaoVideoRequest struct {
 	ExecutionExpiresAfter *int                 `json:"execution_expires_after,omitempty"`
 	GenerateAudio         *bool                `json:"generate_audio,omitempty"`
 	Draft                 *bool                `json:"draft,omitempty"`
-	Tools                 []map[string]any     `json:"tools,omitempty"`
+	Tools                 []any                `json:"tools,omitempty"`
 	SafetyIdentifier      string               `json:"safety_identifier,omitempty"`
 	Priority              *int                 `json:"priority,omitempty"`
 	Resolution            string               `json:"resolution,omitempty"`
@@ -49,6 +50,225 @@ type doubaoVideoRequest struct {
 	Seed                  any                  `json:"seed,omitempty"`
 	CameraFixed           *bool                `json:"camera_fixed,omitempty"`
 	Watermark             *bool                `json:"watermark,omitempty"`
+}
+
+type doubaoOpenAIVideoRequest struct {
+	Content               []doubaoOpenAIVideoContent `json:"content,omitempty"`
+	Prompt                string                     `json:"prompt,omitempty"`
+	Model                 string                     `json:"model,omitempty"`
+	Width                 doubaoFlexibleInt          `json:"width,omitempty"`
+	Height                doubaoFlexibleInt          `json:"height,omitempty"`
+	NVariants             doubaoFlexibleInt          `json:"n_variants,omitempty"`
+	NSeconds              doubaoFlexibleInt          `json:"n_seconds,omitempty"`
+	CallbackURL           string                     `json:"callback_url,omitempty"`
+	ServiceTier           string                     `json:"service_tier,omitempty"`
+	SafetyIdentifier      string                     `json:"safety_identifier,omitempty"`
+	Resolution            string                     `json:"resolution,omitempty"`
+	Ratio                 string                     `json:"ratio,omitempty"`
+	Size                  string                     `json:"size,omitempty"`
+	Seconds               doubaoFlexibleInt          `json:"seconds,omitempty"`
+	Seed                  any                        `json:"seed,omitempty"`
+	ExecutionExpiresAfter doubaoFlexibleInt          `json:"execution_expires_after,omitempty"`
+	GenerateAudio         doubaoFlexibleBool         `json:"generate_audio,omitempty"`
+	Draft                 doubaoFlexibleBool         `json:"draft,omitempty"`
+	Priority              doubaoFlexibleInt          `json:"priority,omitempty"`
+	Frames                doubaoFlexibleInt          `json:"frames,omitempty"`
+	FramesPerSecond       doubaoFlexibleInt          `json:"framespersecond,omitempty"`
+	FPS                   doubaoFlexibleInt          `json:"fps,omitempty"`
+	CameraFixed           doubaoFlexibleBool         `json:"camera_fixed,omitempty"`
+	Watermark             doubaoFlexibleBool         `json:"watermark,omitempty"`
+	Tools                 []any                      `json:"tools,omitempty"`
+	InputReference        doubaoFlexibleString       `json:"input_reference,omitempty"`
+	Image                 doubaoFlexibleString       `json:"image,omitempty"`
+	ImageURL              doubaoFlexibleString       `json:"image_url,omitempty"`
+	FirstFrameURL         doubaoFlexibleString       `json:"first_frame_url,omitempty"`
+	LastFrameURL          doubaoFlexibleString       `json:"last_frame_url,omitempty"`
+	VideoURL              doubaoFlexibleString       `json:"video_url,omitempty"`
+	AudioURL              doubaoFlexibleString       `json:"audio_url,omitempty"`
+	InputAudio            *doubaoOpenAIInputAudio    `json:"input_audio,omitempty"`
+	DraftTaskID           string                     `json:"draft_task_id,omitempty"`
+	VideoID               string                     `json:"video_id,omitempty"`
+	Video                 doubaoFlexibleString       `json:"video,omitempty"`
+}
+
+type doubaoOpenAIVideoContent struct {
+	Type       string                  `json:"type,omitempty"`
+	Text       string                  `json:"text,omitempty"`
+	Role       string                  `json:"role,omitempty"`
+	ImageURL   doubaoFlexibleString    `json:"image_url,omitempty"`
+	VideoURL   doubaoFlexibleString    `json:"video_url,omitempty"`
+	AudioURL   doubaoFlexibleString    `json:"audio_url,omitempty"`
+	InputAudio *doubaoOpenAIInputAudio `json:"input_audio,omitempty"`
+	DraftTask  doubaoFlexibleID        `json:"draft_task,omitempty"`
+}
+
+type doubaoOpenAIInputAudio struct {
+	URL    string `json:"url,omitempty"`
+	Data   string `json:"data,omitempty"`
+	Format string `json:"format,omitempty"`
+}
+
+func (audio *doubaoOpenAIInputAudio) DoubaoURL() *doubaoVideoURLContent {
+	if audio == nil {
+		return nil
+	}
+
+	if url := strings.TrimSpace(audio.URL); url != "" {
+		return &doubaoVideoURLContent{URL: url}
+	}
+
+	data := strings.TrimSpace(audio.Data)
+	if data == "" {
+		return nil
+	}
+
+	if strings.HasPrefix(data, "data:audio/") {
+		return &doubaoVideoURLContent{URL: data}
+	}
+
+	format := strings.TrimSpace(strings.ToLower(audio.Format))
+	if format == "" {
+		format = "wav"
+	}
+
+	return &doubaoVideoURLContent{
+		URL: "data:audio/" + format + ";base64," + data,
+	}
+}
+
+type doubaoFlexibleInt struct {
+	Value int
+	Set   bool
+}
+
+func (value *doubaoFlexibleInt) UnmarshalJSON(data []byte) error {
+	text := strings.TrimSpace(string(data))
+	if text == "" || text == "null" {
+		return nil
+	}
+
+	if strings.HasPrefix(text, `"`) {
+		var raw string
+		if err := sonic.Unmarshal(data, &raw); err != nil {
+			return nil
+		}
+
+		text = strings.TrimSpace(raw)
+		if text == "" {
+			return nil
+		}
+	}
+
+	number := json.Number(text)
+
+	parsed, err := number.Int64()
+	if err != nil {
+		floatValue, floatErr := number.Float64()
+		if floatErr != nil {
+			return nil
+		}
+
+		parsed = int64(floatValue)
+	}
+
+	value.Value = int(parsed)
+	value.Set = true
+
+	return nil
+}
+
+func (value doubaoFlexibleInt) Ptr() *int {
+	if !value.Set {
+		return nil
+	}
+
+	return &value.Value
+}
+
+type doubaoFlexibleBool struct {
+	Value bool
+	Set   bool
+}
+
+func (value *doubaoFlexibleBool) UnmarshalJSON(data []byte) error {
+	text := strings.TrimSpace(string(data))
+	if text == "" || text == "null" {
+		return nil
+	}
+
+	if strings.HasPrefix(text, `"`) {
+		var raw string
+		if err := sonic.Unmarshal(data, &raw); err != nil {
+			return nil
+		}
+
+		text = strings.TrimSpace(raw)
+	}
+
+	parsed, err := strconv.ParseBool(text)
+	if err != nil {
+		return nil
+	}
+
+	value.Value = parsed
+	value.Set = true
+
+	return nil
+}
+
+func (value doubaoFlexibleBool) Ptr() *bool {
+	if !value.Set {
+		return nil
+	}
+
+	return &value.Value
+}
+
+type doubaoFlexibleString string
+
+func (value *doubaoFlexibleString) UnmarshalJSON(data []byte) error {
+	var text string
+	if err := sonic.Unmarshal(data, &text); err == nil {
+		*value = doubaoFlexibleString(strings.TrimSpace(text))
+		return nil
+	}
+
+	var object struct {
+		URL string `json:"url,omitempty"`
+	}
+	if err := sonic.Unmarshal(data, &object); err == nil {
+		*value = doubaoFlexibleString(strings.TrimSpace(object.URL))
+	}
+
+	return nil
+}
+
+func (value doubaoFlexibleString) String() string {
+	return strings.TrimSpace(string(value))
+}
+
+type doubaoFlexibleID string
+
+func (value *doubaoFlexibleID) UnmarshalJSON(data []byte) error {
+	var text string
+	if err := sonic.Unmarshal(data, &text); err == nil {
+		*value = doubaoFlexibleID(strings.TrimSpace(text))
+		return nil
+	}
+
+	var object struct {
+		ID     string `json:"id,omitempty"`
+		TaskID string `json:"task_id,omitempty"`
+	}
+	if err := sonic.Unmarshal(data, &object); err == nil {
+		*value = doubaoFlexibleID(firstNonEmptyString(object.ID, object.TaskID))
+	}
+
+	return nil
+}
+
+func (value doubaoFlexibleID) String() string {
+	return strings.TrimSpace(string(value))
 }
 
 type doubaoOpenAIVideoMode string
@@ -78,10 +298,13 @@ type doubaoDraftTask struct {
 }
 
 type doubaoVideoStoreMetadata struct {
-	Prompt     string `json:"prompt,omitempty"`
-	Resolution string `json:"resolution,omitempty"`
-	Ratio      string `json:"ratio,omitempty"`
-	Duration   int    `json:"duration,omitempty"`
+	Prompt      string `json:"prompt,omitempty"`
+	Resolution  string `json:"resolution,omitempty"`
+	Ratio       string `json:"ratio,omitempty"`
+	Duration    int    `json:"duration,omitempty"`
+	ServiceTier string `json:"service_tier,omitempty"`
+	InputVideo  *bool  `json:"input_video,omitempty"`
+	OutputAudio *bool  `json:"output_audio,omitempty"`
 }
 
 func ConvertVideoGenerationJobRequest(
@@ -182,7 +405,7 @@ func convertDoubaoVideoRequest(
 	}
 
 	request.Model = meta.ActualModel
-	meta.Set(metaDoubaoVideoRequest, request)
+	setDoubaoVideoMetadata(meta, doubaoVideoMetadataFromRequest(request))
 
 	data, err := sonic.Marshal(&request)
 	if err != nil {
@@ -203,7 +426,7 @@ func parseDoubaoVideoGenerationJobRequest(req *http.Request) (doubaoVideoRequest
 		return parseDoubaoMultipartVideoGenerationJobRequest(req)
 	}
 
-	var raw map[string]any
+	var raw doubaoOpenAIVideoRequest
 	if err := common.UnmarshalRequestReusable(req, &raw); err != nil {
 		return doubaoVideoRequest{}, err
 	}
@@ -216,7 +439,7 @@ func parseDoubaoVideosRequest(req *http.Request) (doubaoVideoRequest, error) {
 		return parseDoubaoMultipartVideosRequest(req, doubaoOpenAIVideoModeCreate)
 	}
 
-	var raw map[string]any
+	var raw doubaoOpenAIVideoRequest
 	if err := common.UnmarshalRequestReusable(req, &raw); err != nil {
 		return doubaoVideoRequest{}, err
 	}
@@ -240,67 +463,62 @@ func parseDoubaoVideosModeRequest(
 		return parseDoubaoMultipartVideosRequest(req, openAIMode)
 	}
 
-	var raw map[string]any
+	var raw doubaoOpenAIVideoRequest
 	if err := common.UnmarshalRequestReusable(req, &raw); err != nil {
 		return doubaoVideoRequest{}, err
 	}
 
 	request := parseDoubaoJSONVideosRequest(raw)
-	addDoubaoOpenAIVideoField(&request.Content, raw["video"], openAIMode)
+	addDoubaoOpenAIVideoField(&request.Content, raw.Video.String(), openAIMode)
 
 	return request, nil
 }
 
-func parseDoubaoJSONVideoGenerationJobRequest(raw map[string]any) doubaoVideoRequest {
+func parseDoubaoJSONVideoGenerationJobRequest(raw doubaoOpenAIVideoRequest) doubaoVideoRequest {
 	request := parseDoubaoJSONOpenAIVideoCommonRequest(raw, doubaoVideoJobSizeFromJSON(raw))
-	request.Duration = intPtrFromAny(raw["n_seconds"])
+	request.Duration = raw.NSeconds.Ptr()
 
 	return request
 }
 
-func parseDoubaoJSONVideosRequest(raw map[string]any) doubaoVideoRequest {
-	request := parseDoubaoJSONOpenAIVideoCommonRequest(raw, stringFromAny(raw["size"]))
-	request.Duration = intPtrFromAny(raw["seconds"])
+func parseDoubaoJSONVideosRequest(raw doubaoOpenAIVideoRequest) doubaoVideoRequest {
+	request := parseDoubaoJSONOpenAIVideoCommonRequest(raw, raw.Size)
+	request.Duration = raw.Seconds.Ptr()
 
 	return request
 }
 
-func parseDoubaoJSONOpenAIVideoCommonRequest(raw map[string]any, size string) doubaoVideoRequest {
+func parseDoubaoJSONOpenAIVideoCommonRequest(
+	raw doubaoOpenAIVideoRequest,
+	size string,
+) doubaoVideoRequest {
 	request := doubaoVideoRequest{
-		Content:          doubaoVideoContentFromAny(raw["content"]),
-		CallbackURL:      stringFromAny(raw["callback_url"]),
-		ServiceTier:      stringFromAny(raw["service_tier"]),
-		SafetyIdentifier: stringFromAny(raw["safety_identifier"]),
+		Content:          doubaoVideoContentFromOpenAIContent(raw.Content),
+		CallbackURL:      strings.TrimSpace(raw.CallbackURL),
+		ServiceTier:      strings.TrimSpace(raw.ServiceTier),
+		SafetyIdentifier: strings.TrimSpace(raw.SafetyIdentifier),
 		Resolution: firstNonEmptyString(
-			stringFromAny(raw["resolution"]),
+			raw.Resolution,
 			doubaoVideoResolutionFromSize(size),
 		),
 		Ratio: firstNonEmptyString(
-			stringFromAny(raw["ratio"]),
+			raw.Ratio,
 			ratioFromSize(size),
 		),
-		Seed:                  raw["seed"],
-		ExecutionExpiresAfter: intPtrFromAny(raw["execution_expires_after"]),
-		GenerateAudio:         boolPtrFromAny(raw["generate_audio"]),
-		Draft:                 boolPtrFromAny(raw["draft"]),
-		Priority:              intPtrFromAny(raw["priority"]),
-		Frames:                intPtrFromAny(raw["frames"]),
-		FramesPerSecond:       intPtrFromAny(firstPresent(raw, "framespersecond", "fps")),
-		CameraFixed:           boolPtrFromAny(raw["camera_fixed"]),
-		Watermark:             boolPtrFromAny(raw["watermark"]),
+		Seed:                  raw.Seed,
+		ExecutionExpiresAfter: raw.ExecutionExpiresAfter.Ptr(),
+		GenerateAudio:         raw.GenerateAudio.Ptr(),
+		Draft:                 raw.Draft.Ptr(),
+		Priority:              raw.Priority.Ptr(),
+		Frames:                raw.Frames.Ptr(),
+		FramesPerSecond:       firstFlexibleIntPtr(raw.FramesPerSecond, raw.FPS),
+		CameraFixed:           raw.CameraFixed.Ptr(),
+		Watermark:             raw.Watermark.Ptr(),
+		Tools:                 raw.Tools,
 	}
 
 	if request.Content == nil {
-		request.Content = doubaoVideoContentFromOpenAI(raw)
-	}
-
-	if tools, ok := raw["tools"].([]any); ok {
-		request.Tools = make([]map[string]any, 0, len(tools))
-		for _, item := range tools {
-			if tool, ok := item.(map[string]any); ok {
-				request.Tools = append(request.Tools, tool)
-			}
-		}
+		request.Content = doubaoVideoContentFromOpenAIRequest(raw)
 	}
 
 	return request
@@ -403,10 +621,10 @@ func doubaoVideoSizeFromForm(req *http.Request) string {
 	return req.PostFormValue("size")
 }
 
-func doubaoVideoJobSizeFromJSON(raw map[string]any) string {
-	width := intFromPtr(intPtrFromAny(raw["width"]))
+func doubaoVideoJobSizeFromJSON(raw doubaoOpenAIVideoRequest) string {
+	width := raw.Width.Value
 
-	height := intFromPtr(intPtrFromAny(raw["height"]))
+	height := raw.Height.Value
 	if width <= 0 || height <= 0 {
 		return ""
 	}
@@ -425,30 +643,38 @@ func doubaoVideoJobSizeFromForm(req *http.Request) string {
 	return fmt.Sprintf("%dx%d", width, height)
 }
 
-func doubaoVideoContentFromAny(value any) []doubaoVideoContent {
-	items, ok := value.([]any)
-	if !ok {
+func firstFlexibleIntPtr(values ...doubaoFlexibleInt) *int {
+	for _, value := range values {
+		if value.Set {
+			return &value.Value
+		}
+	}
+
+	return nil
+}
+
+func doubaoVideoContentFromOpenAIContent(items []doubaoOpenAIVideoContent) []doubaoVideoContent {
+	if len(items) == 0 {
 		return nil
 	}
 
 	content := make([]doubaoVideoContent, 0, len(items))
 	for _, item := range items {
-		m, ok := item.(map[string]any)
-		if !ok {
-			continue
-		}
+		content = append(content, doubaoVideoContentFromOpenAIContentItem(item))
+	}
 
-		content = append(content, doubaoVideoContentFromMap(m))
+	if len(content) == 0 {
+		return nil
 	}
 
 	return content
 }
 
-func doubaoVideoContentFromMap(m map[string]any) doubaoVideoContent {
+func doubaoVideoContentFromOpenAIContentItem(raw doubaoOpenAIVideoContent) doubaoVideoContent {
 	item := doubaoVideoContent{
-		Type: strings.TrimSpace(stringFromAny(m["type"])),
-		Text: stringFromAny(m["text"]),
-		Role: stringFromAny(m["role"]),
+		Type: strings.TrimSpace(raw.Type),
+		Text: strings.TrimSpace(raw.Text),
+		Role: strings.TrimSpace(raw.Role),
 	}
 
 	if item.Type == "" && item.Text != "" {
@@ -457,34 +683,34 @@ func doubaoVideoContentFromMap(m map[string]any) doubaoVideoContent {
 
 	switch item.Type {
 	case "image_url":
-		item.ImageURL = &doubaoVideoURLContent{URL: nestedURL(m["image_url"])}
+		item.ImageURL = &doubaoVideoURLContent{URL: raw.ImageURL.String()}
 	case "video_url":
-		item.VideoURL = &doubaoVideoURLContent{URL: nestedURL(m["video_url"])}
+		item.VideoURL = &doubaoVideoURLContent{URL: raw.VideoURL.String()}
 	case "audio_url":
-		item.AudioURL = &doubaoVideoURLContent{URL: nestedURL(m["audio_url"])}
+		item.AudioURL = &doubaoVideoURLContent{URL: raw.AudioURL.String()}
 	case "input_audio":
 		item.Type = "audio_url"
 
-		item.AudioURL = openAIAudioToDoubaoURL(m["input_audio"])
+		item.AudioURL = raw.InputAudio.DoubaoURL()
 		if item.Role == "" {
 			item.Role = "reference_audio"
 		}
 	case "draft_task":
-		item.DraftTask = &doubaoDraftTask{ID: nestedID(m["draft_task"])}
+		item.DraftTask = &doubaoDraftTask{ID: raw.DraftTask.String()}
 	}
 
 	return item
 }
 
-func doubaoVideoContentFromOpenAI(raw map[string]any) []doubaoVideoContent {
+func doubaoVideoContentFromOpenAIRequest(raw doubaoOpenAIVideoRequest) []doubaoVideoContent {
 	content := []doubaoVideoContent{}
 
-	if prompt := stringFromAny(raw["prompt"]); prompt != "" {
+	if prompt := strings.TrimSpace(raw.Prompt); prompt != "" {
 		content = append(content, doubaoVideoContent{Type: "text", Text: prompt})
 	}
 
-	addStringContent := func(contentType string, value any, role string) {
-		urlValue := stringFromAny(value)
+	addStringContent := func(contentType, urlValue, role string) {
+		urlValue = strings.TrimSpace(urlValue)
 		if urlValue == "" {
 			return
 		}
@@ -502,21 +728,25 @@ func doubaoVideoContentFromOpenAI(raw map[string]any) []doubaoVideoContent {
 		content = append(content, item)
 	}
 
-	addStringContent("image_url", firstPresent(raw, "input_reference", "image", "image_url"), "")
-	addStringContent("image_url", raw["first_frame_url"], "first_frame")
-	addStringContent("image_url", raw["last_frame_url"], "last_frame")
-	addStringContent("video_url", raw["video_url"], "reference_video")
-	addStringContent("audio_url", raw["audio_url"], "reference_audio")
+	addStringContent("image_url", firstNonEmptyString(
+		raw.InputReference.String(),
+		raw.Image.String(),
+		raw.ImageURL.String(),
+	), "")
+	addStringContent("image_url", raw.FirstFrameURL.String(), "first_frame")
+	addStringContent("image_url", raw.LastFrameURL.String(), "last_frame")
+	addStringContent("video_url", raw.VideoURL.String(), "reference_video")
+	addStringContent("audio_url", raw.AudioURL.String(), "reference_audio")
 
-	if inputAudio, ok := raw["input_audio"].(map[string]any); ok {
+	if inputAudio := raw.InputAudio.DoubaoURL(); inputAudio != nil {
 		content = append(content, doubaoVideoContent{
 			Type:     "audio_url",
-			AudioURL: openAIAudioToDoubaoURL(inputAudio),
+			AudioURL: inputAudio,
 			Role:     "reference_audio",
 		})
 	}
 
-	if draftTaskID := doubaoVideoDraftTaskIDFromRaw(raw); draftTaskID != "" {
+	if draftTaskID := firstNonEmptyString(raw.DraftTaskID, raw.VideoID); draftTaskID != "" {
 		addDoubaoDraftTaskContent(&content, draftTaskID)
 	}
 
@@ -525,14 +755,14 @@ func doubaoVideoContentFromOpenAI(raw map[string]any) []doubaoVideoContent {
 
 func addDoubaoOpenAIVideoField(
 	content *[]doubaoVideoContent,
-	value any,
+	value string,
 	openAIMode doubaoOpenAIVideoMode,
 ) {
 	if openAIMode == doubaoOpenAIVideoModeCreate {
 		return
 	}
 
-	videoURL := strings.TrimSpace(stringFromAny(value))
+	videoURL := strings.TrimSpace(value)
 	if videoURL == "" {
 		return
 	}
@@ -572,10 +802,6 @@ func addDoubaoOpenAIVideoField(
 		VideoURL: &doubaoVideoURLContent{URL: videoURL},
 		Role:     roleForMode(),
 	})
-}
-
-func doubaoVideoDraftTaskIDFromRaw(raw map[string]any) string {
-	return stringFromAny(firstPresent(raw, "draft_task_id", "video_id"))
 }
 
 func addDoubaoDraftTaskContent(content *[]doubaoVideoContent, draftTaskID string) {
@@ -826,7 +1052,7 @@ func VideoGenerationJobStatusHandler(
 		response.ID = meta.JobID
 	}
 
-	applyStoredDoubaoVideoRequestMetadata(
+	applyStoredDoubaoVideoMetadata(
 		meta,
 		store,
 		coremodel.VideoJobStoreID(response.ID),
@@ -875,7 +1101,7 @@ func VideosStatusHandler(
 		response.ID = meta.VideoID
 	}
 
-	applyStoredDoubaoVideoRequestMetadata(
+	applyStoredDoubaoVideoMetadata(
 		meta,
 		store,
 		coremodel.VideoGenerationStoreID(response.ID),
@@ -977,7 +1203,7 @@ func buildDoubaoVideoJob(
 	now := time.Now().Unix()
 	createdAt := firstPositiveInt64(response.CreatedAt, now)
 	expiresAt := doubaoVideoExpiresAt(*response).Unix()
-	request := doubaoVideoRequestFromMeta(meta)
+	metadata := doubaoVideoMetadataFromMeta(meta)
 	status := doubaoVideoJobStatus(response.Status)
 
 	job := relaymodel.VideoGenerationJob{
@@ -987,13 +1213,13 @@ func buildDoubaoVideoJob(
 		CreatedAt:   createdAt,
 		ExpiresAt:   &expiresAt,
 		Generations: []relaymodel.VideoGenerations{},
-		Prompt:      doubaoVideoPrompt(request),
+		Prompt:      metadata.Prompt,
 		Model:       meta.OriginModel,
 		NVariants:   1,
-		NSeconds:    firstPositiveInt(response.Duration, intFromPtr(request.Duration)),
+		NSeconds:    firstPositiveInt(response.Duration, metadata.Duration),
 	}
 
-	resolution, ratio := doubaoVideoResolutionAndRatio(response, request)
+	resolution, ratio := doubaoVideoResolutionAndRatio(response, metadata)
 	job.Width, job.Height = doubaoVideoDimensions(resolution, ratio)
 
 	if status == relaymodel.VideoGenerationJobStatusSucceeded ||
@@ -1030,16 +1256,16 @@ func buildDoubaoVideo(
 	response *relaymodel.DoubaoVideoTaskResponse,
 ) relaymodel.Video {
 	now := time.Now().Unix()
-	request := doubaoVideoRequestFromMeta(meta)
-	resolution, ratio := doubaoVideoResolutionAndRatio(response, request)
+	metadata := doubaoVideoMetadataFromMeta(meta)
+	resolution, ratio := doubaoVideoResolutionAndRatio(response, metadata)
 	video := relaymodel.Video{
 		ID:        id,
 		Object:    relaymodel.VideoObject,
 		CreatedAt: firstPositiveInt64(response.CreatedAt, now),
 		Status:    doubaoVideoStatus(response.Status),
 		Model:     meta.OriginModel,
-		Prompt:    doubaoVideoPrompt(request),
-		Seconds:   firstPositiveInt(response.Duration, intFromPtr(request.Duration)),
+		Prompt:    metadata.Prompt,
+		Seconds:   firstPositiveInt(response.Duration, metadata.Duration),
 		Size:      doubaoVideoSize(resolution, ratio),
 	}
 
@@ -1091,16 +1317,19 @@ func doubaoVideoUsageContext(response *relaymodel.DoubaoVideoTaskResponse) corem
 		Resolution:       doubaoVideoSize(resolution, ratio),
 		NativeResolution: resolution,
 		ServiceTier:      response.ServiceTier,
+		OutputAudio:      response.GenerateAudio,
 	}
 }
 
 func doubaoVideoRequestUsageContext(meta *meta.Meta) coremodel.UsageContext {
-	request := doubaoVideoRequestFromMeta(meta)
+	metadata := doubaoVideoMetadataFromMeta(meta)
 
 	return coremodel.UsageContext{
-		Resolution:       doubaoVideoSize(request.Resolution, request.Ratio),
-		NativeResolution: request.Resolution,
-		ServiceTier:      request.ServiceTier,
+		Resolution:       doubaoVideoSize(metadata.Resolution, metadata.Ratio),
+		NativeResolution: metadata.Resolution,
+		ServiceTier:      metadata.ServiceTier,
+		InputVideo:       metadata.InputVideo,
+		OutputAudio:      metadata.OutputAudio,
 	}
 }
 
@@ -1191,13 +1420,7 @@ func saveDoubaoVideoStore(
 }
 
 func doubaoVideoStoreMetadataString(meta *meta.Meta) string {
-	request := doubaoVideoRequestFromMeta(meta)
-	metadata := doubaoVideoStoreMetadata{
-		Prompt:     doubaoVideoPrompt(request),
-		Resolution: request.Resolution,
-		Ratio:      request.Ratio,
-		Duration:   intFromPtr(request.Duration),
-	}
+	metadata := doubaoVideoMetadataFromMeta(meta)
 
 	data, err := sonic.MarshalString(metadata)
 	if err != nil {
@@ -1207,7 +1430,7 @@ func doubaoVideoStoreMetadataString(meta *meta.Meta) string {
 	return data
 }
 
-func applyStoredDoubaoVideoRequestMetadata(
+func applyStoredDoubaoVideoMetadata(
 	meta *meta.Meta,
 	store adaptor.Store,
 	storeID string,
@@ -1227,30 +1450,8 @@ func applyStoredDoubaoVideoRequestMetadata(
 		return
 	}
 
-	var request doubaoVideoRequest
-	if value, ok := meta.Get(metaDoubaoVideoRequest); ok {
-		request, _ = value.(doubaoVideoRequest)
-	}
-
-	if doubaoVideoPrompt(request) == "" && metadata.Prompt != "" {
-		request.Content = append(
-			request.Content,
-			doubaoVideoContent{Type: "text", Text: metadata.Prompt},
-		)
-	}
-
-	if request.Resolution == "" {
-		request.Resolution = metadata.Resolution
-	}
-
-	if request.Ratio == "" {
-		request.Ratio = metadata.Ratio
-	}
-
-	if request.Duration == nil && metadata.Duration > 0 {
-		duration := metadata.Duration
-		request.Duration = &duration
-	}
+	metadata = doubaoVideoMetadataFromMeta(meta).WithFallback(metadata)
+	setDoubaoVideoMetadata(meta, metadata)
 
 	if response.Resolution == "" {
 		response.Resolution = metadata.Resolution
@@ -1264,35 +1465,117 @@ func applyStoredDoubaoVideoRequestMetadata(
 		response.Duration = metadata.Duration
 	}
 
-	if len(request.Content) > 0 ||
-		request.Resolution != "" ||
-		request.Ratio != "" ||
-		request.Duration != nil {
-		meta.Set(metaDoubaoVideoRequest, request)
+	if response.ServiceTier == "" {
+		response.ServiceTier = metadata.ServiceTier
+	}
+
+	if response.GenerateAudio == nil {
+		response.GenerateAudio = metadata.OutputAudio
 	}
 }
 
-func doubaoVideoRequestFromMeta(meta *meta.Meta) doubaoVideoRequest {
+func doubaoVideoMetadataFromMeta(meta *meta.Meta) doubaoVideoStoreMetadata {
 	if meta == nil {
-		return doubaoVideoRequest{}
+		return doubaoVideoStoreMetadata{}
 	}
 
-	if value, ok := meta.Get(metaDoubaoVideoRequest); ok {
-		request, _ := value.(doubaoVideoRequest)
-		return request
+	if value, ok := meta.Get(metaDoubaoVideoMetadata); ok {
+		metadata, _ := value.(doubaoVideoStoreMetadata)
+		return metadata
 	}
 
-	return doubaoVideoRequest{}
+	return doubaoVideoStoreMetadata{}
 }
 
-func doubaoVideoPrompt(request doubaoVideoRequest) string {
-	for _, item := range request.Content {
+func setDoubaoVideoMetadata(meta *meta.Meta, metadata doubaoVideoStoreMetadata) {
+	if meta == nil {
+		return
+	}
+
+	if metadata == (doubaoVideoStoreMetadata{}) {
+		return
+	}
+
+	meta.Set(metaDoubaoVideoMetadata, metadata)
+}
+
+func doubaoVideoMetadataFromRequest(request doubaoVideoRequest) doubaoVideoStoreMetadata {
+	return doubaoVideoStoreMetadata{
+		Prompt:      doubaoVideoPrompt(request.Content),
+		Resolution:  request.Resolution,
+		Ratio:       request.Ratio,
+		Duration:    intFromPtr(request.Duration),
+		ServiceTier: firstNonEmptyString(request.ServiceTier, "default"),
+		InputVideo:  new(doubaoVideoContentHasVideo(request.Content)),
+		OutputAudio: doubaoVideoOutputAudioFromRequest(request),
+	}
+}
+
+func (metadata doubaoVideoStoreMetadata) WithFallback(
+	fallback doubaoVideoStoreMetadata,
+) doubaoVideoStoreMetadata {
+	if metadata.Prompt == "" {
+		metadata.Prompt = fallback.Prompt
+	}
+
+	if metadata.Resolution == "" {
+		metadata.Resolution = fallback.Resolution
+	}
+
+	if metadata.Ratio == "" {
+		metadata.Ratio = fallback.Ratio
+	}
+
+	if metadata.Duration == 0 {
+		metadata.Duration = fallback.Duration
+	}
+
+	if metadata.ServiceTier == "" {
+		metadata.ServiceTier = fallback.ServiceTier
+	}
+
+	if metadata.InputVideo == nil {
+		metadata.InputVideo = fallback.InputVideo
+	}
+
+	if metadata.OutputAudio == nil {
+		metadata.OutputAudio = fallback.OutputAudio
+	}
+
+	return metadata
+}
+
+func doubaoVideoPrompt(content []doubaoVideoContent) string {
+	for _, item := range content {
 		if item.Type == "text" && item.Text != "" {
 			return item.Text
 		}
 	}
 
 	return ""
+}
+
+func doubaoVideoContentHasVideo(content []doubaoVideoContent) bool {
+	for _, item := range content {
+		if item.Type == "video_url" || (item.VideoURL != nil && item.VideoURL.URL != "") {
+			return true
+		}
+
+		if item.Type == "draft_task" || (item.DraftTask != nil && item.DraftTask.ID != "") {
+			return true
+		}
+	}
+
+	return false
+}
+
+func doubaoVideoOutputAudioFromRequest(request doubaoVideoRequest) *bool {
+	if request.GenerateAudio != nil {
+		return request.GenerateAudio
+	}
+
+	// Ark Seedance 2.0 and 1.5 default generate_audio to true.
+	return new(true)
 }
 
 func doubaoVideoExpiresAt(response relaymodel.DoubaoVideoTaskResponse) time.Time {
@@ -1334,14 +1617,14 @@ func doubaoVideoDimensions(resolution, ratio string) (int, int) {
 
 func doubaoVideoResolutionAndRatio(
 	response *relaymodel.DoubaoVideoTaskResponse,
-	request doubaoVideoRequest,
+	metadata doubaoVideoStoreMetadata,
 ) (string, string) {
 	if response == nil {
-		return request.Resolution, request.Ratio
+		return metadata.Resolution, metadata.Ratio
 	}
 
-	return firstNonEmptyString(response.Resolution, request.Resolution),
-		firstNonEmptyString(response.Ratio, request.Ratio)
+	return firstNonEmptyString(response.Resolution, metadata.Resolution),
+		firstNonEmptyString(response.Ratio, metadata.Ratio)
 }
 
 func doubaoVideoSize(resolution, ratio string) string {

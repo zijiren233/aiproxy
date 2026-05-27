@@ -981,6 +981,23 @@ func TestUsageContextWithFallbackPreservesNativeResolution(t *testing.T) {
 	}
 }
 
+func TestUsageContextWithFallbackPreservesMediaFlags(t *testing.T) {
+	resultContext := model.UsageContext{OutputAudio: new(false)}
+	requestContext := model.UsageContext{
+		InputVideo:  new(true),
+		OutputAudio: new(true),
+	}
+
+	got := resultContext.WithFallback(requestContext)
+	if got.InputVideo == nil || !*got.InputVideo {
+		t.Fatalf("expected input video fallback true, got %#v", got.InputVideo)
+	}
+
+	if got.OutputAudio == nil || *got.OutputAudio {
+		t.Fatalf("expected existing output audio false, got %#v", got.OutputAudio)
+	}
+}
+
 func TestPrice_SelectConditionalPrice_WithMediaConditions(t *testing.T) {
 	price := model.Price{
 		OutputPrice: 0.08,
@@ -1122,6 +1139,73 @@ func TestPrice_SelectConditionalPrice_WithMediaConditions(t *testing.T) {
 	})
 	if float64(fallbackPrice.OutputPrice) != 0.08 {
 		t.Fatalf("expected fallback price 0.08, got %v", fallbackPrice.OutputPrice)
+	}
+}
+
+func TestPrice_SelectConditionalPrice_WithMediaFlags(t *testing.T) {
+	price := model.Price{
+		OutputPrice: 0.20,
+		ConditionalPrices: []model.ConditionalPrice{
+			{
+				Condition: model.PriceCondition{
+					Resolution: []string{"720p"},
+					InputVideo: new(false),
+				},
+				Price: model.Price{OutputPrice: 0.046},
+			},
+			{
+				Condition: model.PriceCondition{
+					Resolution: []string{"720p"},
+					InputVideo: new(true),
+				},
+				Price: model.Price{OutputPrice: 0.028},
+			},
+			{
+				Condition: model.PriceCondition{
+					ServiceTier: "flex",
+					OutputAudio: new(false),
+				},
+				Price: model.Price{OutputPrice: 0.004},
+			},
+			{
+				Condition: model.PriceCondition{ServiceTier: "flex"},
+				Price:     model.Price{OutputPrice: 0.008},
+			},
+		},
+	}
+
+	inputVideoPrice := price.SelectConditionalPrice(model.Usage{}, model.UsageContext{
+		Resolution: "1280x720",
+		InputVideo: new(true),
+	})
+	if float64(inputVideoPrice.OutputPrice) != 0.028 {
+		t.Fatalf("expected input video price 0.028, got %v", inputVideoPrice.OutputPrice)
+	}
+
+	textOnlyPrice := price.SelectConditionalPrice(model.Usage{}, model.UsageContext{
+		Resolution: "720p",
+		InputVideo: new(false),
+	})
+	if float64(textOnlyPrice.OutputPrice) != 0.046 {
+		t.Fatalf("expected text-only price 0.046, got %v", textOnlyPrice.OutputPrice)
+	}
+
+	unknownInputVideoPrice := price.SelectConditionalPrice(model.Usage{}, model.UsageContext{
+		Resolution: "720p",
+	})
+	if float64(unknownInputVideoPrice.OutputPrice) != 0.20 {
+		t.Fatalf(
+			"expected base price when input video is unknown, got %v",
+			unknownInputVideoPrice.OutputPrice,
+		)
+	}
+
+	silentFlexPrice := price.SelectConditionalPrice(model.Usage{}, model.UsageContext{
+		ServiceTier: "flex",
+		OutputAudio: new(false),
+	})
+	if float64(silentFlexPrice.OutputPrice) != 0.004 {
+		t.Fatalf("expected specific silent flex price 0.004, got %v", silentFlexPrice.OutputPrice)
 	}
 }
 
@@ -1514,6 +1598,54 @@ func TestPrice_ValidateConditionalPrices_WithMediaConditions(t *testing.T) {
 				},
 			},
 			wantErr: false,
+		},
+		{
+			name: "same ranges with different input video flags are allowed",
+			price: model.Price{
+				ConditionalPrices: []model.ConditionalPrice{
+					{
+						Condition: model.PriceCondition{InputVideo: new(false)},
+						Price:     model.Price{OutputPrice: 0.08},
+					},
+					{
+						Condition: model.PriceCondition{InputVideo: new(true)},
+						Price:     model.Price{OutputPrice: 0.04},
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "same ranges with different output audio flags are allowed",
+			price: model.Price{
+				ConditionalPrices: []model.ConditionalPrice{
+					{
+						Condition: model.PriceCondition{OutputAudio: new(false)},
+						Price:     model.Price{OutputPrice: 0.08},
+					},
+					{
+						Condition: model.PriceCondition{OutputAudio: new(true)},
+						Price:     model.Price{OutputPrice: 0.04},
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "same media flag overlaps",
+			price: model.Price{
+				ConditionalPrices: []model.ConditionalPrice{
+					{
+						Condition: model.PriceCondition{InputVideo: new(true)},
+						Price:     model.Price{OutputPrice: 0.08},
+					},
+					{
+						Condition: model.PriceCondition{InputVideo: new(true)},
+						Price:     model.Price{OutputPrice: 0.04},
+					},
+				},
+			},
+			wantErr: true,
 		},
 	}
 

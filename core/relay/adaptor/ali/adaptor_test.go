@@ -3355,6 +3355,186 @@ func TestAliVideoAsyncUsageUsesStoredSizeWhenUpstreamRatioMissing(t *testing.T) 
 	}
 }
 
+func TestAliNativeVideoAsyncUsageUsesNativeResolution(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/custom/api/v1/tasks/task-123" {
+			t.Fatalf("expected task path, got %s", r.URL.Path)
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{
+			"output": {
+				"task_id": "task-123",
+				"task_status": "SUCCEEDED"
+			},
+			"usage": {
+				"duration": 8,
+				"input_video_duration": 3,
+				"output_video_duration": 5,
+				"SR": 720,
+				"ratio": "9:16"
+			}
+		}`))
+	}))
+	defer server.Close()
+
+	aliAdaptor := &Adaptor{}
+
+	usage, usageContext, completed, err := aliAdaptor.FetchAsyncUsage(
+		context.Background(),
+		adaptor.AsyncUsageRequest{
+			Channel: &coremodel.Channel{
+				BaseURL: server.URL + "/fallback",
+				Key:     "test-key",
+			},
+			Info: &coremodel.AsyncUsageInfo{
+				Mode:       int(mode.AliVideo),
+				BaseURL:    server.URL + "/custom",
+				UpstreamID: "task-123",
+				GroupID:    "group-1",
+				TokenID:    7,
+			},
+		},
+	)
+	if err != nil {
+		t.Fatalf("FetchAsyncUsage returned error: %v", err)
+	}
+
+	if !completed {
+		t.Fatal("expected async usage to be completed")
+	}
+
+	if usageContext.Resolution != "720P" ||
+		usageContext.NativeResolution != "720P" {
+		t.Fatalf("unexpected native usage context: %#v", usageContext)
+	}
+
+	if usage.VideoInputTokens != coremodel.ZeroNullInt64(3) ||
+		usage.OutputTokens != coremodel.ZeroNullInt64(5) ||
+		usage.TotalTokens != coremodel.ZeroNullInt64(8) {
+		t.Fatalf("unexpected usage: %#v", usage)
+	}
+}
+
+func TestAliNativeVideoAsyncUsageUsesNativeFallback(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/custom/api/v1/tasks/task-123" {
+			t.Fatalf("expected task path, got %s", r.URL.Path)
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{
+			"output": {
+				"task_id": "task-123",
+				"task_status": "SUCCEEDED"
+			},
+			"usage": {
+				"duration": 8,
+				"input_video_duration": 3,
+				"output_video_duration": 5
+			}
+		}`))
+	}))
+	defer server.Close()
+
+	aliAdaptor := &Adaptor{}
+
+	_, usageContext, completed, err := aliAdaptor.FetchAsyncUsage(
+		context.Background(),
+		adaptor.AsyncUsageRequest{
+			Channel: &coremodel.Channel{
+				BaseURL: server.URL + "/fallback",
+				Key:     "test-key",
+			},
+			Info: &coremodel.AsyncUsageInfo{
+				Mode:       int(mode.AliVideo),
+				BaseURL:    server.URL + "/custom",
+				UpstreamID: "task-123",
+				GroupID:    "group-1",
+				TokenID:    7,
+				UsageContext: coremodel.UsageContext{
+					Resolution:       "1080P",
+					NativeResolution: "1080P",
+				},
+			},
+		},
+	)
+	if err != nil {
+		t.Fatalf("FetchAsyncUsage returned error: %v", err)
+	}
+
+	if !completed {
+		t.Fatal("expected async usage to be completed")
+	}
+
+	if usageContext.Resolution != "1080P" ||
+		usageContext.NativeResolution != "1080P" {
+		t.Fatalf("unexpected native usage context fallback: %#v", usageContext)
+	}
+}
+
+func TestAliNativeVideoAsyncUsageUsesStoredNativeFallback(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/custom/api/v1/tasks/task-123" {
+			t.Fatalf("expected task path, got %s", r.URL.Path)
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{
+			"output": {
+				"task_id": "task-123",
+				"task_status": "SUCCEEDED"
+			},
+			"usage": {
+				"duration": 8,
+				"input_video_duration": 3,
+				"output_video_duration": 5
+			}
+		}`))
+	}))
+	defer server.Close()
+
+	aliAdaptor := &Adaptor{}
+	store := &aliTestStore{
+		saved: []adaptor.StoreCache{
+			{
+				ID:       coremodel.VideoGenerationStoreID("task-123"),
+				Metadata: `{"prompt":"Stored prompt","seconds":5,"size":"1080P"}`,
+			},
+		},
+	}
+
+	_, usageContext, completed, err := aliAdaptor.FetchAsyncUsage(
+		context.Background(),
+		adaptor.AsyncUsageRequest{
+			Channel: &coremodel.Channel{
+				BaseURL: server.URL + "/fallback",
+				Key:     "test-key",
+			},
+			Info: &coremodel.AsyncUsageInfo{
+				Mode:       int(mode.AliVideo),
+				BaseURL:    server.URL + "/custom",
+				UpstreamID: "task-123",
+				GroupID:    "group-1",
+				TokenID:    7,
+			},
+			Store: store,
+		},
+	)
+	if err != nil {
+		t.Fatalf("FetchAsyncUsage returned error: %v", err)
+	}
+
+	if !completed {
+		t.Fatal("expected async usage to be completed")
+	}
+
+	if usageContext.Resolution != "1080P" ||
+		usageContext.NativeResolution != "1080P" {
+		t.Fatalf("unexpected native usage context fallback: %#v", usageContext)
+	}
+}
+
 func TestAdaptorDoResponseResponsesDeleteNoContent(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 

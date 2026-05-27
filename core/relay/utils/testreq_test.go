@@ -31,6 +31,55 @@ func TestBuildRequestGeminiVideo(t *testing.T) {
 	)
 }
 
+func TestBuildRequestAliVideo(t *testing.T) {
+	body, relayMode, err := utils.BuildRequest(model.ModelConfig{
+		Model: "wan2.5-t2v-preview",
+		Type:  mode.AliVideo,
+	})
+	require.NoError(t, err)
+	require.Equal(t, mode.AliVideo, relayMode)
+
+	data, err := io.ReadAll(body)
+	require.NoError(t, err)
+	require.JSONEq(
+		t,
+		`{
+			"model":"wan2.5-t2v-preview",
+			"input":{"prompt":"A calm cinematic shot of clouds moving over a mountain."},
+			"parameters":{"duration":5,"size":"720P"}
+		}`,
+		string(data),
+	)
+}
+
+func TestBuildRequestDoubaoVideo(t *testing.T) {
+	body, relayMode, err := utils.BuildRequest(model.ModelConfig{
+		Model: "doubao-seedance-2-0-260128",
+		Type:  mode.DoubaoVideo,
+	})
+	require.NoError(t, err)
+	require.Equal(t, mode.DoubaoVideo, relayMode)
+
+	data, err := io.ReadAll(body)
+	require.NoError(t, err)
+	require.JSONEq(
+		t,
+		`{
+			"model":"doubao-seedance-2-0-260128",
+			"content":[
+				{
+					"type":"text",
+					"text":"A calm cinematic shot of clouds moving over a mountain."
+				}
+			],
+			"duration":5,
+			"resolution":"720p",
+			"ratio":"16:9"
+		}`,
+		string(data),
+	)
+}
+
 func TestBuildRequestVideoGenerationJob(t *testing.T) {
 	body, relayMode, err := utils.BuildRequest(model.ModelConfig{
 		Model: "happyhorse-1.0-t2v",

@@ -66,9 +66,9 @@ func RerankHandler(
 
 	modelUsage := usage.ToModelUsage()
 
-	_, err = node.SetAny("meta", map[string]any{
-		"tokens": modelUsage,
-	})
+	_, err = node.Set("meta", ast.NewObject([]ast.Pair{
+		ast.NewPair("tokens", ast.NewAny(modelUsage)),
+	}))
 	if err != nil {
 		return adaptor.DoResponseResult{Usage: modelUsage}, relaymodel.WrapperOpenAIError(
 			err,

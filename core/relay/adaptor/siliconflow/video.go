@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"io"
 	"mime"
@@ -37,6 +38,79 @@ type videoSubmitRequest struct {
 	Image          string `json:"image,omitempty"`
 	NegativePrompt string `json:"negative_prompt,omitempty"`
 	Seed           any    `json:"seed,omitempty"`
+}
+
+type openAIVideoRequest struct {
+	Prompt         string         `json:"prompt,omitempty"`
+	Model          string         `json:"model,omitempty"`
+	Width          flexibleInt    `json:"width,omitempty"`
+	Height         flexibleInt    `json:"height,omitempty"`
+	Size           string         `json:"size,omitempty"`
+	InputReference flexibleString `json:"input_reference,omitempty"`
+	Image          flexibleString `json:"image,omitempty"`
+	NegativePrompt string         `json:"negative_prompt,omitempty"`
+	Seed           any            `json:"seed,omitempty"`
+}
+
+type flexibleString string
+
+func (value *flexibleString) UnmarshalJSON(data []byte) error {
+	var text string
+	if err := sonic.Unmarshal(data, &text); err == nil {
+		*value = flexibleString(strings.TrimSpace(text))
+		return nil
+	}
+
+	var object struct {
+		URL string `json:"url,omitempty"`
+	}
+	if err := sonic.Unmarshal(data, &object); err == nil {
+		*value = flexibleString(strings.TrimSpace(object.URL))
+	}
+
+	return nil
+}
+
+func (value flexibleString) String() string {
+	return strings.TrimSpace(string(value))
+}
+
+type flexibleInt struct {
+	Value int
+	Set   bool
+}
+
+func (value *flexibleInt) UnmarshalJSON(data []byte) error {
+	text := strings.TrimSpace(string(data))
+	if text == "" || text == "null" {
+		return nil
+	}
+
+	if strings.HasPrefix(text, `"`) {
+		var raw string
+		if err := sonic.Unmarshal(data, &raw); err != nil {
+			return nil
+		}
+
+		text = strings.TrimSpace(raw)
+	}
+
+	number := json.Number(text)
+
+	parsed, err := number.Int64()
+	if err != nil {
+		floatValue, floatErr := number.Float64()
+		if floatErr != nil {
+			return nil
+		}
+
+		parsed = int64(floatValue)
+	}
+
+	value.Value = int(parsed)
+	value.Set = true
+
+	return nil
 }
 
 type videoSubmitResponse struct {
@@ -93,12 +167,12 @@ func convertSiliconFlowVideoGenerationJobRequest(
 
 		request = parsed
 	} else {
-		var reqMap map[string]any
-		if err := common.UnmarshalRequestReusable(req, &reqMap); err != nil {
+		var raw openAIVideoRequest
+		if err := common.UnmarshalRequestReusable(req, &raw); err != nil {
 			return adaptor.ConvertResult{}, err
 		}
 
-		request = jsonVideoGenerationJobSubmitRequest(reqMap)
+		request = jsonVideoGenerationJobSubmitRequest(raw)
 	}
 
 	return convertSiliconFlowVideoRequest(meta, request)
@@ -118,12 +192,12 @@ func convertSiliconFlowVideosRequest(
 
 		request = parsed
 	} else {
-		var reqMap map[string]any
-		if err := common.UnmarshalRequestReusable(req, &reqMap); err != nil {
+		var raw openAIVideoRequest
+		if err := common.UnmarshalRequestReusable(req, &raw); err != nil {
 			return adaptor.ConvertResult{}, err
 		}
 
-		request = jsonVideosSubmitRequest(reqMap)
+		request = jsonVideosSubmitRequest(raw)
 	}
 
 	return convertSiliconFlowVideoRequest(meta, request)
@@ -198,26 +272,26 @@ func ConvertVideosStatusRequest(meta *meta.Meta, _ *http.Request) (adaptor.Conve
 	}, nil
 }
 
-func jsonVideoGenerationJobSubmitRequest(reqMap map[string]any) videoSubmitRequest {
-	request := jsonVideoCommonSubmitRequest(reqMap)
-	request.ImageSize = videoGenerationJobImageSize(reqMap)
+func jsonVideoGenerationJobSubmitRequest(raw openAIVideoRequest) videoSubmitRequest {
+	request := jsonVideoCommonSubmitRequest(raw)
+	request.ImageSize = videoGenerationJobImageSize(raw)
 
 	return request
 }
 
-func jsonVideosSubmitRequest(reqMap map[string]any) videoSubmitRequest {
-	request := jsonVideoCommonSubmitRequest(reqMap)
-	request.ImageSize = normalizeSiliconFlowSize(stringFromMap(reqMap, "size"))
+func jsonVideosSubmitRequest(raw openAIVideoRequest) videoSubmitRequest {
+	request := jsonVideoCommonSubmitRequest(raw)
+	request.ImageSize = normalizeSiliconFlowSize(raw.Size)
 
 	return request
 }
 
-func jsonVideoCommonSubmitRequest(reqMap map[string]any) videoSubmitRequest {
+func jsonVideoCommonSubmitRequest(raw openAIVideoRequest) videoSubmitRequest {
 	return videoSubmitRequest{
-		Prompt:         stringFromMap(reqMap, "prompt"),
-		Image:          videoImage(reqMap),
-		NegativePrompt: stringFromMap(reqMap, "negative_prompt"),
-		Seed:           reqMap["seed"],
+		Prompt:         strings.TrimSpace(raw.Prompt),
+		Image:          videoImage(raw),
+		NegativePrompt: strings.TrimSpace(raw.NegativePrompt),
+		Seed:           raw.Seed,
 	}
 }
 
@@ -284,61 +358,24 @@ func multipartVideoCommonSubmitRequest(
 	return request, nil
 }
 
-func videoGenerationJobImageSize(reqMap map[string]any) string {
-	width, widthOK := intFromAny(reqMap["width"])
-
-	height, heightOK := intFromAny(reqMap["height"])
-	if widthOK && heightOK && width > 0 && height > 0 {
-		return fmt.Sprintf("%dx%d", width, height)
+func videoGenerationJobImageSize(raw openAIVideoRequest) string {
+	if raw.Width.Set && raw.Height.Set && raw.Width.Value > 0 && raw.Height.Value > 0 {
+		return fmt.Sprintf("%dx%d", raw.Width.Value, raw.Height.Value)
 	}
 
 	return ""
 }
 
-func videoImage(reqMap map[string]any) string {
-	if inputReference := stringFromMap(reqMap, "input_reference"); inputReference != "" {
+func videoImage(raw openAIVideoRequest) string {
+	if inputReference := raw.InputReference.String(); inputReference != "" {
 		return inputReference
 	}
 
-	if image := stringFromMap(reqMap, "image"); image != "" {
+	if image := raw.Image.String(); image != "" {
 		return image
 	}
 
 	return ""
-}
-
-func stringFromMap(reqMap map[string]any, key string) string {
-	value, ok := reqMap[key]
-	if !ok {
-		return ""
-	}
-
-	str, ok := value.(string)
-	if !ok {
-		return ""
-	}
-
-	return strings.TrimSpace(str)
-}
-
-func intFromAny(value any) (int, bool) {
-	switch v := value.(type) {
-	case int:
-		return v, true
-	case int64:
-		return int(v), true
-	case float64:
-		return int(v), true
-	case string:
-		parsed, err := strconv.Atoi(strings.TrimSpace(v))
-		if err != nil {
-			return 0, false
-		}
-
-		return parsed, true
-	default:
-		return 0, false
-	}
 }
 
 func multipartVideoImageDataURL(
