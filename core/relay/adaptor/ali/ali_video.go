@@ -183,6 +183,10 @@ func setAliNativeVideoRequestMetadata(meta *meta.Meta, body *ast.Node) {
 	if size != "" {
 		meta.Set(metaAliVideoSize, size)
 	}
+
+	if duration := aliNativeVideoInt(parameters.Get("duration")); duration > 0 {
+		meta.Set(metaAliVideoSeconds, duration)
+	}
 }
 
 func aliNativeVideoString(node *ast.Node) string {
@@ -196,6 +200,33 @@ func aliNativeVideoString(node *ast.Node) string {
 	}
 
 	return strings.TrimSpace(value)
+}
+
+func aliNativeVideoInt(node *ast.Node) int {
+	if node == nil || !node.Exists() || node.TypeSafe() == ast.V_NULL {
+		return 0
+	}
+
+	if node.TypeSafe() == ast.V_STRING {
+		value, err := node.String()
+		if err != nil {
+			return 0
+		}
+
+		parsed, err := strconv.Atoi(strings.TrimSpace(value))
+		if err != nil || parsed <= 0 {
+			return 0
+		}
+
+		return parsed
+	}
+
+	value, err := node.Int64()
+	if err != nil || value <= 0 {
+		return 0
+	}
+
+	return int(value)
 }
 
 func aliNativeVideoUsageContext(usage relaymodel.AliVideoUsage) coremodel.UsageContext {

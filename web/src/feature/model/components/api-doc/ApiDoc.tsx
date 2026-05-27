@@ -765,17 +765,14 @@ ${modelConfig?.config?.support_voices?.length
         case 31:
             return {
                 title: t('modeType.31'),
-                endpoint: '/files/{file}',
+                endpoint: '/files/{file}:download',
                 method: 'GET',
-                responseFormat: 'json',
+                responseFormat: 'binary',
                 requestExample: `curl --request GET \\
---url ${apiEndpoint}/v1beta/files/files/abc123 \\
---header "Authorization: Bearer $token"`,
-                responseExample: `{
-  "name": "files/abc123",
-  "uri": "https://generativelanguage.googleapis.com/v1beta/files/abc123",
-  "state": "ACTIVE"
-}`
+--url ${apiEndpoint}/v1beta/files/abc123:download?alt=media \\
+--header "Authorization: Bearer $token" \\
+--output video.mp4`,
+                responseExample: 'Binary file data'
             }
         case 32:
             return {

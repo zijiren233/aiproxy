@@ -23,7 +23,7 @@ func TestConvertAliNativeVideoRequestPreservesBodyAndRewritesModel(t *testing.T)
 		http.MethodPost,
 		"/api/v1/services/aigc/video-generation/video-synthesis",
 		bytes.NewBufferString(
-			`{"model":"wan2.5-t2v-preview","input":{"prompt":"go"},"parameters":{"size":"720P"}}`,
+			`{"model":"wan2.5-t2v-preview","input":{"prompt":"go"},"parameters":{"duration":5,"size":"720P"}}`,
 		),
 	)
 	req.Header.Set("Content-Type", "application/json")
@@ -62,6 +62,10 @@ func TestConvertAliNativeVideoRequestPreservesBodyAndRewritesModel(t *testing.T)
 	if got := aliNativeVideoRequestUsageContext(m).Resolution; got != "720P" {
 		t.Fatalf("expected native request usage context resolution, got %q", got)
 	}
+
+	if got := m.GetInt(metaAliVideoSeconds); got != 5 {
+		t.Fatalf("expected native request duration metadata, got %d", got)
+	}
 }
 
 func TestAliNativeVideoHandlerPassesThroughAndStoresTask(t *testing.T) {
@@ -79,6 +83,7 @@ func TestAliNativeVideoHandlerPassesThroughAndStoresTask(t *testing.T) {
 	m.Token = coremodel.TokenCache{ID: 7}
 	m.Channel = meta.ChannelMeta{ID: 42}
 	m.Set(metaAliVideoSize, "1080P")
+	m.Set(metaAliVideoSeconds, 6)
 
 	respBody := `{"request_id":"req-1","output":{"task_id":"task-123","task_status":"PENDING"},"usage":{"SR":720,"ratio":"16:9"}}`
 	resp := &http.Response{
@@ -120,7 +125,7 @@ func TestAliNativeVideoHandlerPassesThroughAndStoresTask(t *testing.T) {
 		t.Fatalf("parse saved metadata: %v", err)
 	}
 
-	if metadata.Size != "1080P" || metadata.UpstreamID != "task-123" {
+	if metadata.Size != "1080P" || metadata.Seconds != 6 || metadata.UpstreamID != "task-123" {
 		t.Fatalf("unexpected saved metadata: %#v", metadata)
 	}
 }
