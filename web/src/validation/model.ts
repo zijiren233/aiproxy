@@ -86,6 +86,8 @@ const priceConditionSchema = z.object({
     resolution: z.array(z.string()).optional(),
     quality: z.array(z.string()).optional(),
     service_tier: z.enum(['auto', 'default', 'flex', 'scale', 'priority']).or(z.literal('')).optional(),
+    input_video: z.boolean().optional(),
+    output_audio: z.boolean().optional(),
 })
 
 // Price schema (used for conditional prices)

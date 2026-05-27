@@ -54,7 +54,7 @@ func TestBuildRequestAliVideo(t *testing.T) {
 
 func TestBuildRequestDoubaoVideo(t *testing.T) {
 	body, relayMode, err := utils.BuildRequest(model.ModelConfig{
-		Model: "doubao-seedance-2-0",
+		Model: "doubao-seedance-2-0-260128",
 		Type:  mode.DoubaoVideo,
 	})
 	require.NoError(t, err)
@@ -65,7 +65,7 @@ func TestBuildRequestDoubaoVideo(t *testing.T) {
 	require.JSONEq(
 		t,
 		`{
-			"model":"doubao-seedance-2-0",
+			"model":"doubao-seedance-2-0-260128",
 			"content":[
 				{
 					"type":"text",

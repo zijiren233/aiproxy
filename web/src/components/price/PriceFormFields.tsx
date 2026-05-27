@@ -78,6 +78,15 @@ function ConditionFields({ condition, onChange }: {
 }) {
     const { t } = useTranslation()
     const anyServiceTier = '__any__'
+    const anyBool = '__any__'
+    const boolSelectValue = (value?: boolean) => {
+        if (value === undefined) return anyBool
+        return value ? 'true' : 'false'
+    }
+    const parseBoolSelectValue = (value: string) => {
+        if (value === anyBool) return undefined
+        return value === 'true'
+    }
 
     return (
         <div className="grid grid-cols-2 gap-2">
@@ -140,6 +149,44 @@ function ConditionFields({ condition, onChange }: {
                         <SelectItem value="flex">flex</SelectItem>
                         <SelectItem value="scale">scale</SelectItem>
                         <SelectItem value="priority">priority</SelectItem>
+                    </SelectContent>
+                </Select>
+            </div>
+            <div className="space-y-1">
+                <Label className="text-xs">{t('group.price.inputVideo')}</Label>
+                <Select
+                    value={boolSelectValue(condition.input_video)}
+                    onValueChange={(value) => onChange({
+                        ...condition,
+                        input_video: parseBoolSelectValue(value),
+                    })}
+                >
+                    <SelectTrigger className="h-8 text-sm">
+                        <SelectValue placeholder={t('group.price.booleanAny')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value={anyBool}>{t('group.price.booleanAny')}</SelectItem>
+                        <SelectItem value="true">{t('common.yes')}</SelectItem>
+                        <SelectItem value="false">{t('common.no')}</SelectItem>
+                    </SelectContent>
+                </Select>
+            </div>
+            <div className="space-y-1">
+                <Label className="text-xs">{t('group.price.outputAudio')}</Label>
+                <Select
+                    value={boolSelectValue(condition.output_audio)}
+                    onValueChange={(value) => onChange({
+                        ...condition,
+                        output_audio: parseBoolSelectValue(value),
+                    })}
+                >
+                    <SelectTrigger className="h-8 text-sm">
+                        <SelectValue placeholder={t('group.price.booleanAny')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value={anyBool}>{t('group.price.booleanAny')}</SelectItem>
+                        <SelectItem value="true">{t('common.yes')}</SelectItem>
+                        <SelectItem value="false">{t('common.no')}</SelectItem>
                     </SelectContent>
                 </Select>
             </div>

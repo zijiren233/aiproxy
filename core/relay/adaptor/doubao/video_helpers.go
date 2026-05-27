@@ -5,17 +5,6 @@ import (
 	"strings"
 )
 
-func firstPresent(values map[string]any, keys ...string) any {
-	for _, key := range keys {
-		value, ok := values[key]
-		if ok && value != nil {
-			return value
-		}
-	}
-
-	return nil
-}
-
 func firstNonEmptyString(values ...string) string {
 	for _, value := range values {
 		value = strings.TrimSpace(value)
@@ -25,15 +14,6 @@ func firstNonEmptyString(values ...string) string {
 	}
 
 	return ""
-}
-
-func stringFromAny(value any) string {
-	switch v := value.(type) {
-	case string:
-		return strings.TrimSpace(v)
-	default:
-		return ""
-	}
 }
 
 func intPtrFromAny(value any) *int {
@@ -53,17 +33,6 @@ func intPtrFromAny(value any) *int {
 		}
 
 		return &parsed
-	default:
-		return nil
-	}
-}
-
-func boolPtrFromAny(value any) *bool {
-	switch v := value.(type) {
-	case bool:
-		return &v
-	case string:
-		return boolPtrFromString(v)
 	default:
 		return nil
 	}
@@ -118,57 +87,6 @@ func firstPositiveInt64(values ...int64) int64 {
 	}
 
 	return 0
-}
-
-func nestedURL(value any) string {
-	switch v := value.(type) {
-	case string:
-		return strings.TrimSpace(v)
-	case map[string]any:
-		return stringFromAny(v["url"])
-	default:
-		return ""
-	}
-}
-
-func nestedID(value any) string {
-	switch v := value.(type) {
-	case string:
-		return strings.TrimSpace(v)
-	case map[string]any:
-		return firstNonEmptyString(stringFromAny(v["id"]), stringFromAny(v["task_id"]))
-	default:
-		return ""
-	}
-}
-
-func openAIAudioToDoubaoURL(value any) *doubaoVideoURLContent {
-	audio, ok := value.(map[string]any)
-	if !ok {
-		return nil
-	}
-
-	if url := stringFromAny(audio["url"]); url != "" {
-		return &doubaoVideoURLContent{URL: url}
-	}
-
-	data := stringFromAny(audio["data"])
-	if data == "" {
-		return nil
-	}
-
-	if strings.HasPrefix(data, "data:audio/") {
-		return &doubaoVideoURLContent{URL: data}
-	}
-
-	format := strings.TrimSpace(stringFromAny(audio["format"]))
-	if format == "" {
-		format = "wav"
-	}
-
-	return &doubaoVideoURLContent{
-		URL: "data:audio/" + strings.ToLower(format) + ";base64," + data,
-	}
 }
 
 func doubaoVideoResolutionFromSize(size string) string {

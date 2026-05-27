@@ -71,6 +71,14 @@ export function PriceDisplay({ price }: PriceDisplayProps) {
             parts.push(`${t('group.price.serviceTier')}: ${SERVICE_TIER_LABELS[condition.service_tier]}`)
         }
 
+        if (condition.input_video !== undefined) {
+            parts.push(`${t('group.price.inputVideo')}: ${condition.input_video ? t('common.yes') : t('common.no')}`)
+        }
+
+        if (condition.output_audio !== undefined) {
+            parts.push(`${t('group.price.outputAudio')}: ${condition.output_audio ? t('common.yes') : t('common.no')}`)
+        }
+
         if (condition.input_token_min || condition.input_token_max) {
             parts.push(`${t('group.price.inputPrice')}: ${condition.input_token_min || 0} - ${condition.input_token_max || '∞'}`)
         }

@@ -15006,8 +15006,17 @@ const docTemplate = `{
                 "resolution": {
                     "type": "string"
                 },
+                "native_resolution": {
+                    "type": "string"
+                },
                 "service_tier": {
                     "type": "string"
+                },
+                "input_video": {
+                    "type": "boolean"
+                },
+                "output_audio": {
+                    "type": "boolean"
                 }
             }
         },

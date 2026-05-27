@@ -6,9 +6,11 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/bytedance/sonic"
+	"github.com/bytedance/sonic/ast"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
@@ -102,16 +104,15 @@ func ConvertTTSRequest(meta *meta.Meta, req *http.Request) (adaptor.ConvertResul
 		return adaptor.ConvertResult{}, err
 	}
 
-	reqMap, err := utils.UnmarshalMap(req)
+	node, err := common.UnmarshalRequest2NodeReusable(req)
 	if err != nil {
 		return adaptor.ConvertResult{}, err
 	}
 
 	var sampleRate int
 
-	sampleRateI, ok := reqMap["sample_rate"].(float64)
-	if ok {
-		sampleRate = int(sampleRateI)
+	if sampleRateNode := node.Get("sample_rate"); sampleRateNode.Exists() {
+		sampleRate, _ = intFromTTSNode(sampleRateNode)
 	}
 
 	request.Model = meta.ActualModel
@@ -179,6 +180,33 @@ func ConvertTTSRequest(meta *meta.Meta, req *http.Request) (adaptor.ConvertResul
 		},
 		Body: bytes.NewReader(data),
 	}, nil
+}
+
+func intFromTTSNode(node *ast.Node) (int, bool) {
+	if node == nil || !node.Exists() || node.TypeSafe() == ast.V_NULL {
+		return 0, false
+	}
+
+	if node.TypeSafe() == ast.V_STRING {
+		value, err := node.String()
+		if err != nil {
+			return 0, false
+		}
+
+		parsed, err := strconv.Atoi(strings.TrimSpace(value))
+		if err != nil {
+			return 0, false
+		}
+
+		return parsed, true
+	}
+
+	value, err := node.Int64()
+	if err != nil {
+		return 0, false
+	}
+
+	return int(value), true
 }
 
 func TTSDoRequest(meta *meta.Meta, req *http.Request) (*http.Response, error) {

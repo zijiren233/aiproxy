@@ -185,6 +185,8 @@ func TestBuildLogExportCSVIncludesFullUsageContext(t *testing.T) {
 				NativeResolution: "1080p",
 				Quality:          "high",
 				ServiceTier:      "priority",
+				InputVideo:       new(true),
+				OutputAudio:      new(false),
 			},
 		},
 	}, time.UTC, false, false)
@@ -208,6 +210,14 @@ func TestBuildLogExportCSVIncludesFullUsageContext(t *testing.T) {
 
 	if values["service_tier"] != "priority" {
 		t.Fatalf("expected service_tier to be exported, got %q", values["service_tier"])
+	}
+
+	if values["input_video"] != "true" {
+		t.Fatalf("expected input_video to be exported, got %q", values["input_video"])
+	}
+
+	if values["output_audio"] != "false" {
+		t.Fatalf("expected output_audio to be exported, got %q", values["output_audio"])
 	}
 }
 

@@ -21,6 +21,8 @@ type PriceCondition struct {
 	Resolution     []string `json:"resolution,omitempty"`
 	Quality        []string `json:"quality,omitempty"`
 	ServiceTier    string   `json:"service_tier,omitempty"`
+	InputVideo     *bool    `json:"input_video,omitempty"`
+	OutputAudio    *bool    `json:"output_audio,omitempty"`
 }
 
 type ConditionalPrice struct {
@@ -128,6 +130,14 @@ func qualityConditionValuesOverlap(values1, values2 []string) bool {
 	return false
 }
 
+func boolConditionOverlap(value1, value2 *bool) bool {
+	if value1 == nil || value2 == nil {
+		return true
+	}
+
+	return *value1 == *value2
+}
+
 func priceConditionSpecificity(condition PriceCondition) int {
 	specificity := 0
 
@@ -140,6 +150,14 @@ func priceConditionSpecificity(condition PriceCondition) int {
 	}
 
 	if len(normalizeQualityConditionValues(condition.Quality)) > 0 {
+		specificity++
+	}
+
+	if condition.InputVideo != nil {
+		specificity++
+	}
+
+	if condition.OutputAudio != nil {
 		specificity++
 	}
 
@@ -377,6 +395,11 @@ func (p *Price) ValidateConditionalPrices() error {
 
 			if !resolutionConditionValuesOverlap(condition.Resolution, otherCondition.Resolution) ||
 				!qualityConditionValuesOverlap(condition.Quality, otherCondition.Quality) {
+				continue
+			}
+
+			if !boolConditionOverlap(condition.InputVideo, otherCondition.InputVideo) ||
+				!boolConditionOverlap(condition.OutputAudio, otherCondition.OutputAudio) {
 				continue
 			}
 
@@ -673,6 +696,8 @@ type UsageContext struct {
 	NativeResolution string `gorm:"size:32" json:"native_resolution,omitempty"`
 	Quality          string `gorm:"size:32" json:"quality,omitempty"`
 	ServiceTier      string `gorm:"size:32" json:"service_tier,omitempty"`
+	InputVideo       *bool  `               json:"input_video,omitempty"`
+	OutputAudio      *bool  `               json:"output_audio,omitempty"`
 }
 
 func (c UsageContext) PriceConditionMatches(condition PriceCondition) bool {
@@ -708,6 +733,18 @@ func (c UsageContext) priceConditionMatches(
 		return false
 	}
 
+	if condition.InputVideo != nil {
+		if c.InputVideo == nil || *c.InputVideo != *condition.InputVideo {
+			return false
+		}
+	}
+
+	if condition.OutputAudio != nil {
+		if c.OutputAudio == nil || *c.OutputAudio != *condition.OutputAudio {
+			return false
+		}
+	}
+
 	return true
 }
 
@@ -726,6 +763,14 @@ func (c UsageContext) WithFallback(fallback UsageContext) UsageContext {
 
 	if c.Quality == "" {
 		c.Quality = fallback.Quality
+	}
+
+	if c.InputVideo == nil {
+		c.InputVideo = fallback.InputVideo
+	}
+
+	if c.OutputAudio == nil {
+		c.OutputAudio = fallback.OutputAudio
 	}
 
 	return c

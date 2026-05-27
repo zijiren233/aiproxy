@@ -64,6 +64,8 @@ export interface LogUsageContext {
   native_resolution?: string
   quality?: string
   service_tier?: string
+  input_video?: boolean
+  output_audio?: boolean
 }
 
 // 请求详情

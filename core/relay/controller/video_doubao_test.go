@@ -16,7 +16,7 @@ func TestValidateDoubaoVideoRequestRejectsTooLongDuration(t *testing.T) {
 	t.Parallel()
 
 	ctx := newDoubaoVideoJSONTestContext(t, `{
-		"model":"doubao-seedance-2-0",
+		"model":"doubao-seedance-2-0-260128",
 		"content":[{"type":"text","text":"A city street"}],
 		"duration":6,
 		"resolution":"720p"
@@ -33,7 +33,7 @@ func TestValidateDoubaoVideoRequestRejectsUnsupportedResolution(t *testing.T) {
 	t.Parallel()
 
 	ctx := newDoubaoVideoJSONTestContext(t, `{
-		"model":"doubao-seedance-2-0",
+		"model":"doubao-seedance-2-0-260128",
 		"content":[{"type":"text","text":"A city street"}],
 		"duration":5,
 		"resolution":"1080p"
@@ -54,7 +54,7 @@ func TestValidateDoubaoVideoRequestRejectsNegativeDuration(t *testing.T) {
 	t.Parallel()
 
 	ctx := newDoubaoVideoJSONTestContext(t, `{
-		"model":"doubao-seedance-2-0",
+		"model":"doubao-seedance-2-0-260128",
 		"content":[{"type":"text","text":"A city street"}],
 		"duration":-1,
 		"resolution":"720p"
@@ -69,7 +69,7 @@ func TestGetDoubaoVideoRequestUsageUsesDoubaoResolution(t *testing.T) {
 	t.Parallel()
 
 	ctx := newDoubaoVideoJSONTestContext(t, `{
-		"model":"doubao-seedance-2-0",
+		"model":"doubao-seedance-2-0-260128",
 		"content":[{"type":"text","text":"A city street"}],
 		"duration":5,
 		"resolution":"720p"

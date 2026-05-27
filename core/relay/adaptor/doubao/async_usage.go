@@ -90,7 +90,15 @@ func doubaoVideoAsyncUsageContext(
 	merged.Resolution = firstNonEmptyString(response.Resolution, metadata.Resolution)
 	merged.Ratio = firstNonEmptyString(response.Ratio, metadata.Ratio)
 
-	return doubaoVideoUsageContext(&merged)
+	merged.ServiceTier = firstNonEmptyString(response.ServiceTier, metadata.ServiceTier)
+	if merged.GenerateAudio == nil {
+		merged.GenerateAudio = metadata.OutputAudio
+	}
+
+	return doubaoVideoUsageContext(&merged).WithFallback(coremodel.UsageContext{
+		InputVideo:  metadata.InputVideo,
+		OutputAudio: metadata.OutputAudio,
+	})
 }
 
 func doubaoVideoAsyncUsageContextFromStore(
@@ -103,11 +111,16 @@ func doubaoVideoAsyncUsageContextFromStore(
 	}
 
 	response := &relaymodel.DoubaoVideoTaskResponse{
-		Resolution: metadata.Resolution,
-		Ratio:      metadata.Ratio,
+		Resolution:    metadata.Resolution,
+		Ratio:         metadata.Ratio,
+		ServiceTier:   metadata.ServiceTier,
+		GenerateAudio: metadata.OutputAudio,
 	}
 
-	return doubaoVideoUsageContext(response)
+	return doubaoVideoUsageContext(response).WithFallback(coremodel.UsageContext{
+		InputVideo:  metadata.InputVideo,
+		OutputAudio: metadata.OutputAudio,
+	})
 }
 
 func doubaoVideoAsyncMetadataFromStore(

@@ -9,9 +9,11 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/bytedance/sonic"
+	"github.com/bytedance/sonic/ast"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
@@ -75,7 +77,7 @@ func ConvertTTSRequest(meta *meta.Meta, req *http.Request) (adaptor.ConvertResul
 
 	meta.Set("stream_format", request.StreamFormat)
 
-	reqMap, err := utils.UnmarshalMap(req)
+	node, err := common.UnmarshalRequest2NodeReusable(req)
 	if err != nil {
 		return adaptor.ConvertResult{}, err
 	}
@@ -125,13 +127,11 @@ func ConvertTTSRequest(meta *meta.Meta, req *http.Request) (adaptor.ConvertResul
 
 	doubaoRequest.Audio.Encoding = request.ResponseFormat
 
-	volumeRatio, ok := reqMap["volume_ratio"].(float64)
-	if ok {
+	if volumeRatio, ok := floatFromTTSNode(node.Get("volume_ratio")); ok {
 		doubaoRequest.Audio.VolumeRatio = volumeRatio
 	}
 
-	pitchRatio, ok := reqMap["pitch_ratio"].(float64)
-	if ok {
+	if pitchRatio, ok := floatFromTTSNode(node.Get("pitch_ratio")); ok {
 		doubaoRequest.Audio.PitchRatio = pitchRatio
 	}
 
@@ -155,6 +155,33 @@ func ConvertTTSRequest(meta *meta.Meta, req *http.Request) (adaptor.ConvertResul
 	return adaptor.ConvertResult{
 		Body: bytes.NewReader(clientRequest),
 	}, nil
+}
+
+func floatFromTTSNode(node *ast.Node) (float64, bool) {
+	if node == nil || !node.Exists() || node.TypeSafe() == ast.V_NULL {
+		return 0, false
+	}
+
+	if node.TypeSafe() == ast.V_STRING {
+		value, err := node.String()
+		if err != nil {
+			return 0, false
+		}
+
+		parsed, err := strconv.ParseFloat(strings.TrimSpace(value), 64)
+		if err != nil {
+			return 0, false
+		}
+
+		return parsed, true
+	}
+
+	value, err := node.Float64()
+	if err != nil {
+		return 0, false
+	}
+
+	return value, true
 }
 
 func TTSDoRequest(meta *meta.Meta, req *http.Request) (*http.Response, error) {

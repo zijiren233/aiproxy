@@ -457,6 +457,8 @@ func buildLogExportHeader(includeChannel, includeRetryAt bool) []string {
 		"native_resolution",
 		"quality",
 		"service_tier",
+		"input_video",
+		"output_audio",
 		"ttfb_milliseconds",
 		"retry_times",
 		"input_tokens",
@@ -537,6 +539,8 @@ func buildLogExportRow(
 		sanitizeCSVCell(logItem.UsageContext.NativeResolution),
 		sanitizeCSVCell(logItem.UsageContext.Quality),
 		sanitizeCSVCell(logItem.UsageContext.ServiceTier),
+		formatOptionalBool(logItem.UsageContext.InputVideo),
+		formatOptionalBool(logItem.UsageContext.OutputAudio),
 		strconv.FormatInt(int64(logItem.TTFBMilliseconds), 10),
 		strconv.FormatInt(int64(logItem.RetryTimes), 10),
 		strconv.FormatInt(int64(logItem.Usage.InputTokens), 10),
@@ -568,6 +572,14 @@ func buildLogExportRow(
 		sanitizeCSVCell(requestBody),
 		sanitizeCSVCell(responseBody),
 	)
+}
+
+func formatOptionalBool(value *bool) string {
+	if value == nil {
+		return ""
+	}
+
+	return strconv.FormatBool(*value)
 }
 
 func formatTimeForExport(t time.Time, location *time.Location) string {

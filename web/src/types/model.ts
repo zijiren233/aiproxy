@@ -22,6 +22,8 @@ export interface PriceCondition {
     resolution?: string[]
     quality?: string[]
     service_tier?: '' | 'auto' | 'default' | 'flex' | 'scale' | 'priority'
+    input_video?: boolean
+    output_audio?: boolean
 }
 
 export interface ConditionalPrice {

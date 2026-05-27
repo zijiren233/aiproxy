@@ -116,11 +116,16 @@ func setDoubaoNativeVideoRequestMetadata(meta *meta.Meta, body *ast.Node) {
 	}
 
 	metadata := doubaoVideoStoreMetadata{
-		Prompt:      doubaoVideoPrompt(doubaoNativeVideoContent(body.Get("content"))),
-		Resolution:  doubaoNativeVideoString(body.Get("resolution")),
-		Ratio:       doubaoNativeVideoString(body.Get("ratio")),
-		Duration:    doubaoNativeVideoInt(body.Get("duration")),
-		ServiceTier: doubaoNativeVideoString(body.Get("service_tier")),
+		Prompt:     doubaoVideoPrompt(doubaoNativeVideoContent(body.Get("content"))),
+		Resolution: doubaoNativeVideoString(body.Get("resolution")),
+		Ratio:      doubaoNativeVideoString(body.Get("ratio")),
+		Duration:   doubaoNativeVideoInt(body.Get("duration")),
+		ServiceTier: firstNonEmptyString(
+			doubaoNativeVideoString(body.Get("service_tier")),
+			"default",
+		),
+		InputVideo:  new(doubaoNativeVideoContentHasVideo(body.Get("content"))),
+		OutputAudio: doubaoNativeVideoOutputAudio(body.Get("generate_audio")),
 	}
 
 	setDoubaoVideoMetadata(meta, metadata)
@@ -198,7 +203,11 @@ func doubaoNativeVideoUsageContextFromContext(
 		nativeResolution = usageContext.Resolution
 	}
 
-	if nativeResolution == "" && usageContext.ServiceTier == "" && usageContext.Quality == "" {
+	if nativeResolution == "" &&
+		usageContext.ServiceTier == "" &&
+		usageContext.Quality == "" &&
+		usageContext.InputVideo == nil &&
+		usageContext.OutputAudio == nil {
 		return coremodel.UsageContext{}
 	}
 
@@ -207,7 +216,65 @@ func doubaoNativeVideoUsageContextFromContext(
 		NativeResolution: nativeResolution,
 		ServiceTier:      usageContext.ServiceTier,
 		Quality:          usageContext.Quality,
+		InputVideo:       usageContext.InputVideo,
+		OutputAudio:      usageContext.OutputAudio,
 	}
+}
+
+func doubaoNativeVideoContentHasVideo(node *ast.Node) bool {
+	if node == nil || !node.Exists() || node.TypeSafe() != ast.V_ARRAY {
+		return false
+	}
+
+	hasVideo := false
+
+	_ = node.ForEach(func(_ ast.Sequence, item *ast.Node) bool {
+		if item == nil || !item.Exists() || item.TypeSafe() != ast.V_OBJECT {
+			return true
+		}
+
+		typeNode := item.Get("type")
+		if typeNode.Exists() && typeNode.TypeSafe() == ast.V_STRING {
+			itemType, err := typeNode.String()
+			if err == nil && (itemType == "video_url" || itemType == "draft_task") {
+				hasVideo = true
+				return false
+			}
+		}
+
+		if videoNode := item.Get(
+			"video_url",
+		); videoNode.Exists() &&
+			videoNode.TypeSafe() != ast.V_NULL {
+			hasVideo = true
+			return false
+		}
+
+		if draftTaskNode := item.Get(
+			"draft_task",
+		); draftTaskNode.Exists() &&
+			draftTaskNode.TypeSafe() != ast.V_NULL {
+			hasVideo = true
+			return false
+		}
+
+		return true
+	})
+
+	return hasVideo
+}
+
+func doubaoNativeVideoOutputAudio(node *ast.Node) *bool {
+	if node == nil {
+		return new(true)
+	}
+
+	value, err := node.Bool()
+	if err != nil {
+		return new(true)
+	}
+
+	return &value
 }
 
 func DoubaoNativeVideoTaskDeleteHandler(

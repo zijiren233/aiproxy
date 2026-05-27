@@ -50,7 +50,7 @@ func ConvertEmbeddingsRequest(
 				return adaptor.ConvertResult{}, err
 			}
 
-			_, err = node.SetAny("input", []string{inputString})
+			_, err = node.Set("input", ast.NewArray([]ast.Node{ast.NewString(inputString)}))
 			if err != nil {
 				return adaptor.ConvertResult{}, err
 			}
