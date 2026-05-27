@@ -263,7 +263,7 @@ func convertOpenAIVideoGenerationJobRequest(
 ) (adaptor.ConvertResult, error) {
 	request, err := parseOpenAIVideoGenerationJobRequest(req)
 	if err != nil {
-		return adaptor.ConvertResult{}, err
+		return adaptor.ConvertResult{}, convertRequestError(meta, err.Error())
 	}
 
 	return convertGeminiVideoRequest(meta, request)
@@ -275,7 +275,7 @@ func convertOpenAIVideosRequest(
 ) (adaptor.ConvertResult, error) {
 	request, err := parseOpenAIVideosRequest(req)
 	if err != nil {
-		return adaptor.ConvertResult{}, err
+		return adaptor.ConvertResult{}, convertRequestError(meta, err.Error())
 	}
 
 	return convertGeminiVideoRequest(meta, request)
@@ -295,7 +295,7 @@ func convertOpenAIVideosEditRequestWithStore(
 ) (adaptor.ConvertResult, error) {
 	request, err := parseOpenAIVideosEditRequest(req)
 	if err != nil {
-		return adaptor.ConvertResult{}, err
+		return adaptor.ConvertResult{}, convertRequestError(meta, err.Error())
 	}
 
 	if err := hydrateGeminiOpenAIVideoReference(req.Context(), meta, store, &request); err != nil {
@@ -319,7 +319,7 @@ func convertOpenAIVideosExtensionRequestWithStore(
 ) (adaptor.ConvertResult, error) {
 	request, err := parseOpenAIVideosExtensionRequest(req)
 	if err != nil {
-		return adaptor.ConvertResult{}, err
+		return adaptor.ConvertResult{}, convertRequestError(meta, err.Error())
 	}
 
 	if err := hydrateGeminiOpenAIVideoReference(req.Context(), meta, store, &request); err != nil {
@@ -346,7 +346,7 @@ func convertOpenAIVideoRequestWithConfig(
 	}
 
 	if err != nil {
-		return adaptor.ConvertResult{}, err
+		return adaptor.ConvertResult{}, convertRequestError(meta, err.Error())
 	}
 
 	return convertGeminiVideoRequestWithConfig(meta, request, cfg)
@@ -370,7 +370,10 @@ func convertGeminiVideoRequestWithConfig(
 	cfg Config,
 ) (adaptor.ConvertResult, error) {
 	if len(request.Instances) == 0 {
-		return adaptor.ConvertResult{}, errors.New("prompt or input_reference is required")
+		return adaptor.ConvertResult{}, convertRequestError(
+			meta,
+			"prompt or input_reference is required",
+		)
 	}
 
 	applyVideoPersonGenerationConfig(&request, cfg)

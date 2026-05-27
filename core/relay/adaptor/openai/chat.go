@@ -265,7 +265,7 @@ func ConvertCompletionsRequest(
 ) (adaptor.ConvertResult, error) {
 	node, err := common.UnmarshalRequest2NodeReusable(req)
 	if err != nil {
-		return adaptor.ConvertResult{}, err
+		return adaptor.ConvertResult{}, convertRequestError(meta, err.Error())
 	}
 
 	for _, callback := range callback {
@@ -305,7 +305,7 @@ func ConvertChatCompletionsRequest(
 ) (adaptor.ConvertResult, error) {
 	node, err := common.UnmarshalRequest2NodeReusable(req)
 	if err != nil {
-		return adaptor.ConvertResult{}, err
+		return adaptor.ConvertResult{}, convertRequestError(meta, err.Error())
 	}
 
 	// Clean tool parameters (remove null/empty required fields)
@@ -320,13 +320,13 @@ func ConvertChatCompletionsRequest(
 		}
 
 		if err := callback(&node); err != nil {
-			return adaptor.ConvertResult{}, err
+			return adaptor.ConvertResult{}, convertRequestError(meta, err.Error())
 		}
 	}
 
 	if !doNotPatchStreamOptionsIncludeUsage {
 		if err := patchStreamOptions(&node); err != nil {
-			return adaptor.ConvertResult{}, err
+			return adaptor.ConvertResult{}, convertRequestError(meta, err.Error())
 		}
 	}
 

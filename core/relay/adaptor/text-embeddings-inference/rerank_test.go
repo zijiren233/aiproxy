@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/bytedance/sonic"
+	"github.com/labring/aiproxy/core/relay/adaptor"
 	textembeddingsinference "github.com/labring/aiproxy/core/relay/adaptor/text-embeddings-inference"
 	"github.com/labring/aiproxy/core/relay/meta"
 	"github.com/stretchr/testify/assert"
@@ -110,6 +111,10 @@ func TestConvertRerankRequestMissingDocuments(t *testing.T) {
 	// Assert error for missing documents
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "documents field not found")
+
+	var relayErr adaptor.Error
+	require.ErrorAs(t, err, &relayErr)
+	assert.Equal(t, http.StatusBadRequest, relayErr.StatusCode())
 }
 
 // TestConvertRerankRequestInvalidJSON tests the error case when the request body contains invalid

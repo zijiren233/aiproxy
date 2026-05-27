@@ -23,11 +23,15 @@ func ConvertRerankRequest(
 ) (adaptor.ConvertResult, error) {
 	node, err := common.UnmarshalRequest2NodeReusable(req)
 	if err != nil {
-		return adaptor.ConvertResult{}, err
+		return adaptor.ConvertResult{}, convertRequestError(meta, err.Error())
 	}
 
 	_, err = node.Set("model", ast.NewString(meta.ActualModel))
 	if err != nil {
+		return adaptor.ConvertResult{}, err
+	}
+
+	if err := patchRerankMultimodalContent(&node); err != nil {
 		return adaptor.ConvertResult{}, err
 	}
 
@@ -43,6 +47,100 @@ func ConvertRerankRequest(
 		},
 		Body: bytes.NewReader(jsonData),
 	}, nil
+}
+
+func patchRerankMultimodalContent(node *ast.Node) error {
+	if query := node.Get("query"); query.Exists() {
+		if err := patchRerankContentItem(query); err != nil {
+			return err
+		}
+	}
+
+	documents := node.Get("documents")
+	if !documents.Exists() || documents.TypeSafe() != ast.V_ARRAY {
+		return nil
+	}
+
+	var patchErr error
+
+	err := documents.ForEach(func(_ ast.Sequence, item *ast.Node) bool {
+		patchErr = patchRerankContentItem(item)
+		return patchErr == nil
+	})
+	if err != nil {
+		return err
+	}
+
+	return patchErr
+}
+
+func patchRerankContentItem(item *ast.Node) error {
+	if item == nil || !item.Exists() || item.TypeSafe() != ast.V_OBJECT {
+		return nil
+	}
+
+	if image, ok, err := rerankStringOrURLValue(item.Get("image_url")); err != nil || ok {
+		if err != nil {
+			return err
+		}
+
+		*item = ast.NewObject([]ast.Pair{
+			ast.NewPair("image", ast.NewString(image)),
+		})
+
+		return nil
+	}
+
+	if text, ok, err := rerankStringOrURLValue(item.Get("text")); err != nil || ok {
+		if err != nil {
+			return err
+		}
+
+		*item = ast.NewObject([]ast.Pair{
+			ast.NewPair("text", ast.NewString(text)),
+		})
+
+		return nil
+	}
+
+	if image, ok, err := rerankStringOrURLValue(item.Get("image")); err != nil || ok {
+		if err != nil {
+			return err
+		}
+
+		*item = ast.NewObject([]ast.Pair{
+			ast.NewPair("image", ast.NewString(image)),
+		})
+
+		return nil
+	}
+
+	_, err := item.Unset("type")
+
+	return err
+}
+
+func rerankStringOrURLValue(node *ast.Node) (string, bool, error) {
+	if node == nil || !node.Exists() {
+		return "", false, nil
+	}
+
+	switch node.TypeSafe() {
+	case ast.V_STRING:
+		value, err := node.String()
+		return value, true, err
+	case ast.V_OBJECT:
+		urlNode := node.Get("url")
+		if !urlNode.Exists() || urlNode.TypeSafe() != ast.V_STRING {
+			return "", false, nil
+		}
+
+		value, err := urlNode.String()
+
+		return value, true, err
+	default:
+		return "", false, nil
+	}
 }
 
 func RerankHandler(

@@ -553,6 +553,34 @@ func TestConvertVideosRequestUsesSecondsOverNSeconds(t *testing.T) {
 	)
 }
 
+func TestConvertVideoRequestMissingPromptReturnsRelayError(t *testing.T) {
+	t.Parallel()
+
+	m := meta.NewMeta(
+		nil,
+		mode.VideoGenerationsJobs,
+		"veo-3.1-generate-preview",
+		coremodel.ModelConfig{},
+	)
+	req := httptest.NewRequestWithContext(
+		t.Context(),
+		http.MethodPost,
+		"/v1/video/generations/jobs",
+		strings.NewReader(`{"model":"veo"}`),
+	)
+
+	_, err := gemini.ConvertVideoRequestForTest(m, req)
+	require.Error(t, err)
+
+	var relayErr adaptorapi.Error
+	require.ErrorAs(t, err, &relayErr)
+	require.Equal(t, http.StatusBadRequest, relayErr.StatusCode())
+
+	body, marshalErr := relayErr.MarshalJSON()
+	require.NoError(t, marshalErr)
+	require.JSONEq(t, `{"detail":"prompt or input_reference is required"}`, string(body))
+}
+
 func TestConvertVideoRequestKeepsProtocolAndNativeResolutionForPricing(t *testing.T) {
 	m := meta.NewMeta(
 		nil,

@@ -2,7 +2,6 @@ package textembeddingsinference
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -23,7 +22,10 @@ func ConvertRerankRequest(
 ) (adaptor.ConvertResult, error) {
 	node, err := common.UnmarshalRequest2NodeReusable(req)
 	if err != nil {
-		return adaptor.ConvertResult{}, fmt.Errorf("failed to parse request body: %w", err)
+		return adaptor.ConvertResult{}, convertRequestError(
+			meta,
+			fmt.Sprintf("failed to parse request body: %s", err),
+		)
 	}
 
 	// Set the actual model in the request
@@ -35,7 +37,7 @@ func ConvertRerankRequest(
 	// Get the documents array and rename it to texts
 	documentsNode := node.Get("documents")
 	if !documentsNode.Exists() {
-		return adaptor.ConvertResult{}, errors.New("documents field not found")
+		return adaptor.ConvertResult{}, convertRequestError(meta, "documents field not found")
 	}
 
 	// Set the texts field with the documents value
@@ -57,9 +59,9 @@ func ConvertRerankRequest(
 	if returnDocumentsNode.Exists() {
 		returnDocuments, err := returnDocumentsNode.Bool()
 		if err != nil {
-			return adaptor.ConvertResult{}, fmt.Errorf(
-				"failed to unmarshal return_documents field: %w",
-				err,
+			return adaptor.ConvertResult{}, convertRequestError(
+				meta,
+				fmt.Sprintf("failed to unmarshal return_documents field: %s", err),
 			)
 		}
 
@@ -93,6 +95,23 @@ func ConvertRerankRequest(
 		},
 		Body: bytes.NewReader(jsonData),
 	}, nil
+}
+
+func convertRequestError(meta *meta.Meta, message string) adaptor.Error {
+	if meta == nil {
+		return relaymodel.WrapperOpenAIErrorWithMessage(
+			message,
+			"invalid_request_error",
+			http.StatusBadRequest,
+		)
+	}
+
+	return relaymodel.WrapperErrorWithMessage(
+		meta.Mode,
+		http.StatusBadRequest,
+		message,
+		relaymodel.WithCode("invalid_request_error"),
+	)
 }
 
 type RerankResponse []RerankResponseItem

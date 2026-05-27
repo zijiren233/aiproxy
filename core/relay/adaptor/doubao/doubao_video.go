@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"github.com/bytedance/sonic"
+	"github.com/bytedance/sonic/ast"
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/core/common"
 	"github.com/labring/aiproxy/core/relay/adaptor"
@@ -17,14 +18,16 @@ func ConvertDoubaoNativeVideoRequest(
 	meta *meta.Meta,
 	req *http.Request,
 ) (adaptor.ConvertResult, error) {
-	var body map[string]any
-	if err := common.UnmarshalRequestReusable(req, &body); err != nil {
+	body, err := common.UnmarshalRequest2NodeReusable(req)
+	if err != nil {
 		return adaptor.ConvertResult{}, err
 	}
 
-	body["model"] = meta.ActualModel
+	if _, err := body.Set("model", ast.NewString(meta.ActualModel)); err != nil {
+		return adaptor.ConvertResult{}, err
+	}
 
-	data, err := sonic.Marshal(body)
+	data, err := body.MarshalJSON()
 	if err != nil {
 		return adaptor.ConvertResult{}, err
 	}

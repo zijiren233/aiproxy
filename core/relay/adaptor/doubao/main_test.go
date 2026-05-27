@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -1315,6 +1316,51 @@ func TestAdaptorConvertRequestVideoGenerationIgnoresDoubaoDurationField(t *testi
 
 	if duration, ok := payload["duration"].(float64); !ok || int(duration) != 5 {
 		t.Fatalf("expected duration from n_seconds=5, got %#v", payload["duration"])
+	}
+}
+
+func TestAdaptorConvertRequestDoubaoVideoMissingContentReturnsRelayError(t *testing.T) {
+	t.Parallel()
+
+	a := &Adaptor{}
+	m := meta.NewMeta(
+		nil,
+		mode.VideoGenerationsJobs,
+		"doubao-seedance-2-0",
+		coremodel.ModelConfig{},
+	)
+	m.ActualModel = "doubao-seedance-2-0"
+
+	req := httptest.NewRequestWithContext(
+		t.Context(),
+		http.MethodPost,
+		"/v1/video/generations/jobs",
+		strings.NewReader(`{"model":"alias-video"}`),
+	)
+
+	_, err := a.ConvertRequest(m, nil, req)
+	if err == nil {
+		t.Fatal("expected missing content error")
+	}
+
+	var relayErr adaptor.Error
+
+	ok := errors.As(err, &relayErr)
+	if !ok {
+		t.Fatalf("expected adaptor.Error, got %T: %v", err, err)
+	}
+
+	if relayErr.StatusCode() != http.StatusBadRequest {
+		t.Fatalf("expected status 400, got %d", relayErr.StatusCode())
+	}
+
+	body, marshalErr := relayErr.MarshalJSON()
+	if marshalErr != nil {
+		t.Fatalf("marshal error: %v", marshalErr)
+	}
+
+	if string(body) != `{"detail":"content is required"}` {
+		t.Fatalf("expected OpenAI video detail, got %s", body)
 	}
 }
 

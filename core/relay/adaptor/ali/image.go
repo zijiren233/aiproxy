@@ -168,7 +168,7 @@ func ConvertMultimodalImageGenerationRequest(
 
 	imageRequest, err := buildMultimodalImageRequest(meta, request.Prompt, request)
 	if err != nil {
-		return adaptor.ConvertResult{}, err
+		return adaptor.ConvertResult{}, convertRequestError(meta, err.Error())
 	}
 
 	data, err := sonic.Marshal(&imageRequest)
@@ -211,28 +211,31 @@ func ConvertAliImageEditRequest(
 	}
 
 	if err := parseAliImageFormFields(req, imageRequest); err != nil {
-		return adaptor.ConvertResult{}, err
+		return adaptor.ConvertResult{}, convertRequestError(meta, err.Error())
 	}
 
 	meta.Set(MetaResponseFormat, imageRequest.ResponseFormat)
 
 	qwenRequest, err := buildMultimodalImageRequest(meta, imageRequest.Prompt, imageRequest)
 	if err != nil {
-		return adaptor.ConvertResult{}, err
+		return adaptor.ConvertResult{}, convertRequestError(meta, err.Error())
 	}
 
 	userMessage := &qwenRequest.Input.Messages[0]
 
 	fileHeaders := qwenImageEditFileHeaders(req.MultipartForm.File)
 	if len(fileHeaders) == 0 {
-		return adaptor.ConvertResult{}, errors.New("image is required")
+		return adaptor.ConvertResult{}, convertRequestError(meta, "image is required")
 	}
 
 	if maxImages := multimodalImageEditMaxImages(
 		meta,
 	); maxImages > 0 &&
 		len(fileHeaders) > maxImages {
-		return adaptor.ConvertResult{}, fmt.Errorf("image supports at most %d files", maxImages)
+		return adaptor.ConvertResult{}, convertRequestError(
+			meta,
+			fmt.Sprintf("image supports at most %d files", maxImages),
+		)
 	}
 
 	imageContents := make([]map[string]any, 0, len(fileHeaders))
@@ -282,7 +285,7 @@ func ConvertQwenMTImageRequest(
 	}
 
 	if err := parseAliImageFormFields(req, imageRequest); err != nil {
-		return adaptor.ConvertResult{}, err
+		return adaptor.ConvertResult{}, convertRequestError(meta, err.Error())
 	}
 
 	if imageRequest.ImageURL == "" {
@@ -292,7 +295,10 @@ func ConvertQwenMTImageRequest(
 	if imageRequest.ImageURL == "" {
 		fileHeaders := qwenImageEditFileHeaders(req.MultipartForm.File)
 		if len(fileHeaders) > 1 {
-			return adaptor.ConvertResult{}, errors.New("qwen-mt-image supports at most 1 image")
+			return adaptor.ConvertResult{}, convertRequestError(
+				meta,
+				"qwen-mt-image supports at most 1 image",
+			)
 		}
 
 		if len(fileHeaders) == 1 {
@@ -304,15 +310,24 @@ func ConvertQwenMTImageRequest(
 	}
 
 	if imageRequest.ImageURL == "" {
-		return adaptor.ConvertResult{}, errors.New("image_url is required for qwen-mt-image")
+		return adaptor.ConvertResult{}, convertRequestError(
+			meta,
+			"image_url is required for qwen-mt-image",
+		)
 	}
 
 	if imageRequest.SourceLang == "" {
-		return adaptor.ConvertResult{}, errors.New("source_lang is required for qwen-mt-image")
+		return adaptor.ConvertResult{}, convertRequestError(
+			meta,
+			"source_lang is required for qwen-mt-image",
+		)
 	}
 
 	if imageRequest.TargetLang == "" {
-		return adaptor.ConvertResult{}, errors.New("target_lang is required for qwen-mt-image")
+		return adaptor.ConvertResult{}, convertRequestError(
+			meta,
+			"target_lang is required for qwen-mt-image",
+		)
 	}
 
 	body := map[string]any{
@@ -329,7 +344,10 @@ func ConvertQwenMTImageRequest(
 	if imageRequest.Ext != nil {
 		var ext any
 		if err := sonic.Unmarshal(imageRequest.Ext, &ext); err != nil {
-			return adaptor.ConvertResult{}, fmt.Errorf("invalid ext: %w", err)
+			return adaptor.ConvertResult{}, convertRequestError(
+				meta,
+				fmt.Sprintf("invalid ext: %s", err),
+			)
 		}
 
 		input["ext"] = ext
@@ -713,7 +731,11 @@ func multipartImageFileToDataURL(fileHeader *multipart.FileHeader) (string, erro
 	}
 
 	if len(data) > image.MaxImageSize {
-		return "", fmt.Errorf("image too large: max: %d", image.MaxImageSize)
+		return "", relaymodel.WrapperOpenAIErrorWithMessage(
+			fmt.Sprintf("image too large: max: %d", image.MaxImageSize),
+			"invalid_request_error",
+			http.StatusBadRequest,
+		)
 	}
 
 	contentType := fileHeader.Header.Get("Content-Type")
@@ -730,7 +752,11 @@ func multipartImageFileToDataURL(fileHeader *multipart.FileHeader) (string, erro
 	}
 
 	if !image.IsImageURL(contentType) {
-		return "", errors.New("image file is not an image")
+		return "", relaymodel.WrapperOpenAIErrorWithMessage(
+			"image file is not an image",
+			"invalid_request_error",
+			http.StatusBadRequest,
+		)
 	}
 
 	contentType = image.TrimImageContentType(contentType)

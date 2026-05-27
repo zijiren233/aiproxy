@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/base64"
-	"errors"
 	"fmt"
 	"io"
 	"mime"
@@ -135,7 +134,7 @@ func convertDoubaoVideoGenerationJobRequest(
 ) (adaptor.ConvertResult, error) {
 	request, err := parseDoubaoVideoGenerationJobRequest(req)
 	if err != nil {
-		return adaptor.ConvertResult{}, err
+		return adaptor.ConvertResult{}, convertRequestError(meta, err.Error())
 	}
 
 	return convertDoubaoVideoRequest(meta, request)
@@ -144,7 +143,7 @@ func convertDoubaoVideoGenerationJobRequest(
 func convertDoubaoVideosRequest(meta *meta.Meta, req *http.Request) (adaptor.ConvertResult, error) {
 	request, err := parseDoubaoVideosRequest(req)
 	if err != nil {
-		return adaptor.ConvertResult{}, err
+		return adaptor.ConvertResult{}, convertRequestError(meta, err.Error())
 	}
 
 	return convertDoubaoVideoRequest(meta, request)
@@ -156,7 +155,7 @@ func convertDoubaoVideosEditRequest(
 ) (adaptor.ConvertResult, error) {
 	request, err := parseDoubaoVideosEditRequest(req)
 	if err != nil {
-		return adaptor.ConvertResult{}, err
+		return adaptor.ConvertResult{}, convertRequestError(meta, err.Error())
 	}
 
 	return convertDoubaoVideoRequest(meta, request)
@@ -168,7 +167,7 @@ func convertDoubaoVideosExtensionRequest(
 ) (adaptor.ConvertResult, error) {
 	request, err := parseDoubaoVideosExtensionRequest(req)
 	if err != nil {
-		return adaptor.ConvertResult{}, err
+		return adaptor.ConvertResult{}, convertRequestError(meta, err.Error())
 	}
 
 	return convertDoubaoVideoRequest(meta, request)
@@ -179,7 +178,7 @@ func convertDoubaoVideoRequest(
 	request doubaoVideoRequest,
 ) (adaptor.ConvertResult, error) {
 	if len(request.Content) == 0 {
-		return adaptor.ConvertResult{}, errors.New("content is required")
+		return adaptor.ConvertResult{}, convertRequestError(meta, "content is required")
 	}
 
 	request.Model = meta.ActualModel

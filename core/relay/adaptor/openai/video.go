@@ -92,7 +92,10 @@ func convertMultipartOpenAIVideoRequest(
 	request *http.Request,
 ) (adaptor.ConvertResult, error) {
 	if err := common.ParseMultipartFormWithLimit(request); err != nil {
-		return adaptor.ConvertResult{}, fmt.Errorf("parse multipart form: %w", err)
+		return adaptor.ConvertResult{}, convertRequestError(
+			meta,
+			fmt.Sprintf("parse multipart form: %s", err),
+		)
 	}
 
 	multipartBody := &bytes.Buffer{}
