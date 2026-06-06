@@ -332,7 +332,19 @@ func isKnownOpenAIModelSuffix(suffix string) bool {
 	}
 
 	if matched, ok := strings.CutPrefix(suffix, "-"); ok {
-		return isDateSuffix(matched)
+		if isDateSuffix(matched) {
+			return true
+		}
+
+		for _, variant := range []string{"mini", "nano", "chat-latest"} {
+			if matched == variant {
+				return true
+			}
+
+			if dateSuffix, ok := strings.CutPrefix(matched, variant+"-"); ok {
+				return isDateSuffix(dateSuffix)
+			}
+		}
 	}
 
 	return false

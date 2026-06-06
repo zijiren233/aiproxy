@@ -186,9 +186,9 @@ func (s *chatCompletionStreamState) handleFunctionCallArgumentsDelta(
 // handleOutputItemDone handles response.output_item.done event for ChatCompletion
 func (s *chatCompletionStreamState) handleOutputItemDone(
 	event *relaymodel.ResponseStreamEvent,
-) *relaymodel.ChatCompletionsStreamResponse {
+) {
 	if event.Item == nil {
-		return nil
+		return
 	}
 
 	// Handle function call completion
@@ -205,32 +205,8 @@ func (s *chatCompletionStreamState) handleOutputItemDone(
 		s.toolCallArgs = ""
 
 		// No need to send another chunk - arguments already streamed
-		return nil
+		return
 	}
-
-	// Handle message content
-	if len(event.Item.Content) > 0 {
-		for _, content := range event.Item.Content {
-			if (content.Type == "text" || content.Type == "output_text") && content.Text != "" {
-				return &relaymodel.ChatCompletionsStreamResponse{
-					ID:      s.messageID,
-					Object:  relaymodel.ChatCompletionChunkObject,
-					Created: time.Now().Unix(),
-					Model:   s.meta.ActualModel,
-					Choices: []*relaymodel.ChatCompletionsStreamResponseChoice{
-						{
-							Index: 0,
-							Delta: relaymodel.Message{
-								Content: content.Text,
-							},
-						},
-					},
-				}
-			}
-		}
-	}
-
-	return nil
 }
 
 // handleResponseCompleted handles response.completed/done event for ChatCompletion
@@ -1221,7 +1197,7 @@ func ConvertResponsesToChatCompletionStreamResponse(
 		case relaymodel.EventFunctionCallArgumentsDelta:
 			chatStreamResp = state.handleFunctionCallArgumentsDelta(&event)
 		case relaymodel.EventOutputItemDone:
-			chatStreamResp = state.handleOutputItemDone(&event)
+			state.handleOutputItemDone(&event)
 		case relaymodel.EventResponseCompleted, relaymodel.EventResponseDone:
 			chatStreamResp = state.handleResponseCompleted(&event)
 		}

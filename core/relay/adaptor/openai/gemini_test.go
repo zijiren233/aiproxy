@@ -62,6 +62,20 @@ func TestConvertGeminiRequest_MapsThinkingConfigToReasoningEffort(t *testing.T) 
 			expectedEffort: "low",
 		},
 		{
+			name:        "gpt-5.4 mini snapshot does not receive minimal",
+			actualModel: "gpt-5.4-mini-2026-03-17",
+			requestJSON: `{
+				"generationConfig": {
+					"thinkingConfig": {
+						"thinkingBudget": 512,
+						"includeThoughts": true
+					}
+				},
+				"contents": [{"role":"user","parts":[{"text":"hello"}]}]
+			}`,
+			expectedEffort: "low",
+		},
+		{
 			name:        "gpt-5 does not receive xhigh",
 			actualModel: "gpt-5",
 			requestJSON: `{

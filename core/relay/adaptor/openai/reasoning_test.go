@@ -127,6 +127,18 @@ func TestOpenAIReasoningEffortForModel(t *testing.T) {
 			effort:      relaymodel.ReasoningEffortMinimal,
 			want:        relaymodel.ReasoningEffortLow,
 		},
+		{
+			name:        "series keyword matching handles mini dated snapshot names",
+			originModel: "gpt-5.4-mini-2026-03-17",
+			effort:      relaymodel.ReasoningEffortMinimal,
+			want:        relaymodel.ReasoningEffortLow,
+		},
+		{
+			name:        "series keyword matching handles nano dated snapshot names",
+			originModel: "gpt-5.4-nano-2026-03-17",
+			effort:      relaymodel.ReasoningEffortMinimal,
+			want:        relaymodel.ReasoningEffortLow,
+		},
 	}
 
 	for _, tt := range tests {
@@ -170,6 +182,13 @@ func TestConvertRequest_OpenAIReasoningEffortCompatibility(t *testing.T) {
 			actualModel: "gpt-5.1",
 			body:        `{"model":"alias","input":"hi","reasoning":{"effort":"xhigh"}}`,
 			wantEffort:  "high",
+		},
+		{
+			name:        "native responses gpt-5.4 mini snapshot minimal to low",
+			mode:        mode.Responses,
+			actualModel: "gpt-5.4-mini-2026-03-17",
+			body:        `{"model":"alias","input":"hi","reasoning":{"effort":"minimal"}}`,
+			wantEffort:  "low",
 		},
 		{
 			name:        "native chat origin match beats actual fallback",
