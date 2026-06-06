@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/gin-gonic/gin"
@@ -513,6 +514,81 @@ func TestConvertResponsesToChatCompletionResponse(t *testing.T) {
 			tt.checkFunc(t, chatResp)
 		})
 	}
+}
+
+func TestConvertResponsesToChatCompletionStreamResponseSkipsOutputItemDoneContent(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	stream := strings.Join([]string{
+		`data: {"type":"response.created","response":{"id":"resp_123","object":"response","created_at":1780731105,"status":"in_progress","model":"gpt-5.1","output":[],"parallel_tool_calls":true,"store":false}}`,
+		"",
+		`data: {"type":"response.output_item.added","item":{"id":"msg_123","type":"message","role":"assistant","content":[]}}`,
+		"",
+		`data: {"type":"response.output_text.delta","item_id":"msg_123","output_index":0,"content_index":0,"delta":"Hello! What would you like to discuss or work on?"}`,
+		"",
+		`data: {"type":"response.output_item.done","item":{"id":"msg_123","type":"message","role":"assistant","content":[{"type":"output_text","text":"Hello! What would you like to discuss or work on?"}]}}`,
+		"",
+		`data: {"type":"response.completed","response":{"id":"resp_123","object":"response","created_at":1780731105,"status":"completed","model":"gpt-5.1","output":[{"id":"msg_123","type":"message","role":"assistant","content":[{"type":"output_text","text":"Hello! What would you like to discuss or work on?"}]}],"parallel_tool_calls":true,"store":false,"usage":{"input_tokens":7,"output_tokens":22,"total_tokens":29}}}`,
+		"",
+		`data: [DONE]`,
+		"",
+	}, "\n")
+
+	httpResp := &http.Response{
+		StatusCode: http.StatusOK,
+		Body:       &mockReadCloser{Reader: bytes.NewReader([]byte(stream))},
+		Header:     make(http.Header),
+	}
+
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequestWithContext(
+		t.Context(),
+		http.MethodPost,
+		"/v1/chat/completions",
+		nil,
+	)
+
+	m := &meta.Meta{
+		ActualModel: "gpt-5.1",
+	}
+
+	_, err := openai.ConvertResponsesToChatCompletionStreamResponse(m, c, httpResp)
+	require.Nil(t, err)
+
+	content := collectChatCompletionStreamContent(t, w.Body.String())
+	assert.Equal(t, "Hello! What would you like to discuss or work on?", content)
+	assert.Equal(
+		t,
+		1,
+		strings.Count(w.Body.String(), "Hello! What would you like to discuss or work on?"),
+	)
+}
+
+func collectChatCompletionStreamContent(t *testing.T, body string) string {
+	t.Helper()
+
+	var builder strings.Builder
+
+	for line := range strings.SplitSeq(body, "\n") {
+		line = strings.TrimSpace(line)
+		if !strings.HasPrefix(line, "data: ") || line == "data: [DONE]" {
+			continue
+		}
+
+		var chunk relaymodel.ChatCompletionsStreamResponse
+
+		err := json.Unmarshal([]byte(strings.TrimPrefix(line, "data: ")), &chunk)
+		require.NoError(t, err)
+
+		for _, choice := range chunk.Choices {
+			if content, ok := choice.Delta.Content.(string); ok {
+				builder.WriteString(content)
+			}
+		}
+	}
+
+	return builder.String()
 }
 
 // mockReadCloser is a helper to create a ReadCloser from a Reader
