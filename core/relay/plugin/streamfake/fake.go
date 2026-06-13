@@ -182,8 +182,15 @@ func (p *StreamFake) handleFakeStreamResponse(
 type fakeStreamResponseWriter struct {
 	gin.ResponseWriter
 
-	lastChunk        *ast.Node
-	usageNode        *ast.Node
+	lastChunk *ast.Node
+	usageNode *ast.Node
+	choices   map[int]*fakeStreamChoiceState
+
+	// Azure OpenAI prompt-level content filtering fields
+	promptFilterResults *ast.Node
+}
+
+type fakeStreamChoiceState struct {
 	contentBuilder   bytes.Buffer
 	reasoningContent bytes.Buffer
 	finishReason     relaymodel.FinishReason
@@ -194,10 +201,23 @@ type fakeStreamResponseWriter struct {
 	audio            map[string]*bytes.Buffer
 	audioFields      map[string]any
 
-	// Azure OpenAI content filtering fields
-	promptFilterResults  *ast.Node // prompt-level filter results (from first chunk)
+	// Azure OpenAI choice-level content filtering fields
 	contentFilterResults *ast.Node // choice-level filter results
 	contentFilterResult  *ast.Node // choice-level filter result (alternative field name)
+}
+
+func (rw *fakeStreamResponseWriter) choiceState(index int) *fakeStreamChoiceState {
+	if rw.choices == nil {
+		rw.choices = make(map[int]*fakeStreamChoiceState)
+	}
+
+	state := rw.choices[index]
+	if state == nil {
+		state = &fakeStreamChoiceState{}
+		rw.choices[index] = state
+	}
+
+	return state
 }
 
 // ignore flush
@@ -256,16 +276,23 @@ func (rw *fakeStreamResponseWriter) parseStreamingData(data []byte) error {
 	}
 
 	return choicesNode.ForEach(func(_ ast.Sequence, choiceNode *ast.Node) bool {
+		choiceIndex, err := choiceNode.Get("index").Int64()
+		if err != nil {
+			choiceIndex = 0
+		}
+
+		state := rw.choiceState(int(choiceIndex))
+
 		// Extract content_filter_results from choice (keep last non-empty value)
 		contentFilterResultsNode := choiceNode.Get("content_filter_results")
 		if err := contentFilterResultsNode.Check(); err == nil {
-			rw.contentFilterResults = contentFilterResultsNode
+			state.contentFilterResults = contentFilterResultsNode
 		}
 
 		// Extract content_filter_result from choice (alternative field name, keep last non-empty value)
 		contentFilterResultNode := choiceNode.Get("content_filter_result")
 		if err := contentFilterResultNode.Check(); err == nil {
-			rw.contentFilterResult = contentFilterResultNode
+			state.contentFilterResult = contentFilterResultNode
 		}
 
 		deltaNode := choiceNode.Get("delta")
@@ -277,7 +304,7 @@ func (rw *fakeStreamResponseWriter) parseStreamingData(data []byte) error {
 		if err := contentNode.Check(); err == nil {
 			// Try as string first (common case)
 			if content, err := contentNode.String(); err == nil {
-				rw.contentBuilder.WriteString(content)
+				state.contentBuilder.WriteString(content)
 			} else {
 				// Try as array (for image/multimodal content)
 				_ = contentNode.ForEach(func(_ ast.Sequence, partNode *ast.Node) bool {
@@ -292,7 +319,7 @@ func (rw *fakeStreamResponseWriter) parseStreamingData(data []byte) error {
 					}
 
 					// Keep all parts in contentParts for multimodal content
-					rw.contentParts = append(rw.contentParts, part)
+					state.contentParts = append(state.contentParts, part)
 
 					return true
 				})
@@ -301,15 +328,15 @@ func (rw *fakeStreamResponseWriter) parseStreamingData(data []byte) error {
 
 		reasoningContent, err := deltaNode.Get("reasoning_content").String()
 		if err == nil {
-			rw.reasoningContent.WriteString(reasoningContent)
+			state.reasoningContent.WriteString(reasoningContent)
 		}
 
 		// Handle signature for thought
 		if signature, err := deltaNode.Get("signature").String(); err == nil && signature != "" {
-			rw.signature = signature
+			state.signature = signature
 		}
 
-		rw.processAudioDelta(deltaNode.Get("audio"))
+		state.processAudioDelta(deltaNode.Get("audio"))
 
 		_ = deltaNode.Get("tool_calls").
 			ForEach(func(_ ast.Sequence, toolCallNode *ast.Node) bool {
@@ -327,14 +354,14 @@ func (rw *fakeStreamResponseWriter) parseStreamingData(data []byte) error {
 					return true
 				}
 
-				rw.toolCalls = mergeToolCalls(rw.toolCalls, &toolCall)
+				state.toolCalls = mergeToolCalls(state.toolCalls, &toolCall)
 
 				return true
 			})
 
 		finishReason, err := choiceNode.Get("finish_reason").String()
 		if err == nil && finishReason != "" {
-			rw.finishReason = finishReason
+			state.finishReason = finishReason
 		}
 
 		logprobsContentNode := choiceNode.GetByPath("logprobs", "content")
@@ -344,10 +371,14 @@ func (rw *fakeStreamResponseWriter) parseStreamingData(data []byte) error {
 				return true
 			}
 
-			rw.logprobsContent = slices.Grow(rw.logprobsContent, l)
+			state.logprobsContent = slices.Grow(state.logprobsContent, l)
 			_ = logprobsContentNode.ForEach(
 				func(_ ast.Sequence, logprobsContentNode *ast.Node) bool {
-					rw.logprobsContent = append(rw.logprobsContent, *logprobsContentNode)
+					state.logprobsContent = append(
+						state.logprobsContent,
+						*logprobsContentNode,
+					)
+
 					return true
 				},
 			)
@@ -375,64 +406,19 @@ func (rw *fakeStreamResponseWriter) convertToNonStream() ([]byte, error) {
 		}
 	}
 
-	message := map[string]any{
-		"role": "assistant",
+	indexes := make([]int, 0, len(rw.choices))
+	for index := range rw.choices {
+		indexes = append(indexes, index)
 	}
 
-	// Use contentParts if available (for image/multimodal content), otherwise use string content
-	if len(rw.contentParts) > 0 {
-		message["content"] = rw.contentParts
-	} else {
-		message["content"] = rw.contentBuilder.String()
+	slices.Sort(indexes)
+
+	choices := make([]any, 0, len(indexes))
+	for _, index := range indexes {
+		choices = append(choices, rw.choices[index].buildChoice(index))
 	}
 
-	reasoningContent := rw.reasoningContent.String()
-	if reasoningContent != "" {
-		message["reasoning_content"] = reasoningContent
-	}
-
-	if rw.signature != "" {
-		message["signature"] = rw.signature
-	}
-
-	if audio := rw.buildAudio(); len(audio) > 0 {
-		message["audio"] = audio
-	}
-
-	if len(rw.toolCalls) > 0 {
-		message["tool_calls"] = rw.buildToolCalls()
-	}
-
-	if len(rw.logprobsContent) > 0 {
-		message["logprobs"] = map[string]any{
-			"content": rw.logprobsContent,
-		}
-	}
-
-	// Build choice with content filter fields
-	choice := map[string]any{
-		"index":         0,
-		"message":       message,
-		"finish_reason": rw.finishReason,
-	}
-
-	// Add content_filter_results to choice if present
-	if rw.contentFilterResults != nil {
-		contentFilterResultsRaw, err := rw.contentFilterResults.Interface()
-		if err == nil {
-			choice["content_filter_results"] = contentFilterResultsRaw
-		}
-	}
-
-	// Add content_filter_result to choice if present (alternative field name)
-	if rw.contentFilterResult != nil {
-		contentFilterResultRaw, err := rw.contentFilterResult.Interface()
-		if err == nil {
-			choice["content_filter_result"] = contentFilterResultRaw
-		}
-	}
-
-	_, err = lastChunk.SetAny("choices", []any{choice})
+	_, err = lastChunk.SetAny("choices", choices)
 	if err != nil {
 		return nil, err
 	}
@@ -448,7 +434,68 @@ func (rw *fakeStreamResponseWriter) convertToNonStream() ([]byte, error) {
 	return lastChunk.MarshalJSON()
 }
 
-func (rw *fakeStreamResponseWriter) processAudioDelta(audioNode *ast.Node) {
+func (state *fakeStreamChoiceState) buildChoice(index int) map[string]any {
+	message := map[string]any{
+		"role": "assistant",
+	}
+
+	// Use contentParts if available (for image/multimodal content), otherwise use string content
+	if len(state.contentParts) > 0 {
+		message["content"] = state.contentParts
+	} else {
+		message["content"] = state.contentBuilder.String()
+	}
+
+	reasoningContent := state.reasoningContent.String()
+	if reasoningContent != "" {
+		message["reasoning_content"] = reasoningContent
+	}
+
+	if state.signature != "" {
+		message["signature"] = state.signature
+	}
+
+	if audio := state.buildAudio(); len(audio) > 0 {
+		message["audio"] = audio
+	}
+
+	if len(state.toolCalls) > 0 {
+		message["tool_calls"] = state.buildToolCalls()
+	}
+
+	if len(state.logprobsContent) > 0 {
+		message["logprobs"] = map[string]any{
+			"content": state.logprobsContent,
+		}
+	}
+
+	// Build choice with content filter fields
+	choice := map[string]any{
+		"index":         index,
+		"message":       message,
+		"finish_reason": state.finishReason,
+	}
+
+	// Add content_filter_results to choice if present
+	if state.contentFilterResults != nil {
+		contentFilterResultsRaw, err := state.contentFilterResults.Interface()
+		if err == nil {
+			choice["content_filter_results"] = contentFilterResultsRaw
+		}
+	}
+
+	// Add content_filter_result to choice if present (alternative field name)
+	if state.contentFilterResult != nil {
+		contentFilterResultRaw, err := state.contentFilterResult.Interface()
+		if err == nil {
+			choice["content_filter_result"] = contentFilterResultRaw
+		}
+	}
+
+	return choice
+}
+
+func (state *fakeStreamChoiceState) processAudioDelta(audioNode *ast.Node) {
 	if audioNode == nil || audioNode.TypeSafe() != ast.V_OBJECT {
 		return
 	}
@@ -470,14 +517,14 @@ func (rw *fakeStreamResponseWriter) processAudioDelta(audioNode *ast.Node) {
 				return true
 			}
 
-			if rw.audio == nil {
-				rw.audio = make(map[string]*bytes.Buffer)
+			if state.audio == nil {
+				state.audio = make(map[string]*bytes.Buffer)
 			}
 
-			builder := rw.audio[key]
+			builder := state.audio[key]
 			if builder == nil {
 				builder = &bytes.Buffer{}
-				rw.audio[key] = builder
+				state.audio[key] = builder
 			}
 
 			builder.WriteString(value)
@@ -490,11 +537,11 @@ func (rw *fakeStreamResponseWriter) processAudioDelta(audioNode *ast.Node) {
 			return true
 		}
 
-		if rw.audioFields == nil {
-			rw.audioFields = make(map[string]any)
+		if state.audioFields == nil {
+			state.audioFields = make(map[string]any)
 		}
 
-		rw.audioFields[key] = value
+		state.audioFields[key] = value
 
 		return true
 	})
@@ -504,36 +551,36 @@ func shouldAppendAudioField(key string) bool {
 	return key == "data" || key == "transcript"
 }
 
-func (rw *fakeStreamResponseWriter) buildAudio() map[string]any {
-	audio := make(map[string]any, len(rw.audio)+len(rw.audioFields))
+func (state *fakeStreamChoiceState) buildAudio() map[string]any {
+	audio := make(map[string]any, len(state.audio)+len(state.audioFields))
 
-	maps.Copy(audio, rw.audioFields)
+	maps.Copy(audio, state.audioFields)
 
-	for key, builder := range rw.audio {
+	for key, builder := range state.audio {
 		audio[key] = builder.String()
 	}
 
 	return audio
 }
 
-func (rw *fakeStreamResponseWriter) buildToolCalls() []*relaymodel.ToolCall {
-	if len(rw.toolCalls) == 0 {
+func (state *fakeStreamChoiceState) buildToolCalls() []*relaymodel.ToolCall {
+	if len(state.toolCalls) == 0 {
 		return nil
 	}
 
-	slices.SortFunc(rw.toolCalls, func(a, b *relaymodel.ToolCall) int {
+	slices.SortFunc(state.toolCalls, func(a, b *relaymodel.ToolCall) int {
 		return a.Index - b.Index
 	})
 
-	if rw.toolCalls[0].Index == 0 {
-		return rw.toolCalls
+	if state.toolCalls[0].Index == 0 {
+		return state.toolCalls
 	}
 	// fix tool call index start with 0
-	for i, v := range rw.toolCalls {
+	for i, v := range state.toolCalls {
 		v.Index = i
 	}
 
-	return rw.toolCalls
+	return state.toolCalls
 }
 
 func mergeToolCalls(

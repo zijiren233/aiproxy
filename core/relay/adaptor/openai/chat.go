@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"net/http"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -804,6 +805,148 @@ func ConvertToolsToResponseTools(tools []relaymodel.Tool) []relaymodel.ResponseT
 	return responseTools
 }
 
+func convertLegacyFunctionsToResponseTools(functions any) []relaymodel.ResponseTool {
+	functionList, ok := functions.([]any)
+	if !ok || len(functionList) == 0 {
+		return nil
+	}
+
+	responseTools := make([]relaymodel.ResponseTool, 0, len(functionList))
+	for _, function := range functionList {
+		functionMap, ok := function.(map[string]any)
+		if !ok {
+			continue
+		}
+
+		name, _ := functionMap["name"].(string)
+		if name == "" {
+			continue
+		}
+
+		description, _ := functionMap["description"].(string)
+
+		responseTools = append(responseTools, relaymodel.ResponseTool{
+			Type:        relaymodel.ToolChoiceTypeFunction,
+			Name:        name,
+			Description: description,
+			Parameters:  CleanToolParameters(functionMap["parameters"]),
+		})
+	}
+
+	return responseTools
+}
+
+func convertLegacyFunctionCallToResponseToolChoice(functionCall any) any {
+	switch value := functionCall.(type) {
+	case string:
+		switch value {
+		case "auto", "none":
+			return value
+		default:
+			return nil
+		}
+	case map[string]any:
+		name, _ := value["name"].(string)
+		if name == "" {
+			return nil
+		}
+
+		return map[string]any{
+			"type": "function",
+			"name": name,
+		}
+	default:
+		return nil
+	}
+}
+
+func convertChatToolChoiceToResponseToolChoice(toolChoice any) any {
+	toolChoiceMap, ok := toolChoice.(map[string]any)
+	if !ok {
+		return toolChoice
+	}
+
+	toolType, _ := toolChoiceMap["type"].(string)
+
+	functionMap, ok := toolChoiceMap["function"].(map[string]any)
+	if !ok || toolType != relaymodel.ToolChoiceTypeFunction {
+		return toolChoice
+	}
+
+	name, _ := functionMap["name"].(string)
+	if name == "" {
+		return toolChoice
+	}
+
+	return map[string]any{
+		"type": relaymodel.ToolChoiceTypeFunction,
+		"name": name,
+	}
+}
+
+func convertChatResponseFormatToResponseText(
+	responseFormat *relaymodel.ResponseFormat,
+) *relaymodel.ResponseText {
+	if responseFormat == nil || responseFormat.Type == "" {
+		return nil
+	}
+
+	format := relaymodel.ResponseTextFormat{
+		Type: responseFormat.Type,
+	}
+
+	if responseFormat.JSONSchema != nil {
+		format.Name = responseFormat.JSONSchema.Name
+		format.Schema = responseFormat.JSONSchema.Schema
+		format.Strict = responseFormat.JSONSchema.Strict
+		format.Description = responseFormat.JSONSchema.Description
+	}
+
+	return &relaymodel.ResponseText{Format: format}
+}
+
+func appendUniqueString(values []string, value string) []string {
+	if slices.Contains(values, value) {
+		return values
+	}
+
+	return append(values, value)
+}
+
+func appendChatContentPartToResponseInput(
+	inputItem *relaymodel.InputItem,
+	contentType relaymodel.InputContentType,
+	part map[string]any,
+) {
+	partType, _ := part["type"].(string)
+	switch partType {
+	case relaymodel.ContentTypeText:
+		text, _ := part["text"].(string)
+		if text == "" {
+			return
+		}
+
+		inputItem.Content = append(inputItem.Content, relaymodel.InputContent{
+			Type: contentType,
+			Text: text,
+		})
+	case relaymodel.ContentTypeImageURL:
+		imageURL, _ := part["image_url"].(map[string]any)
+
+		url, _ := imageURL["url"].(string)
+		if url == "" {
+			return
+		}
+
+		detail, _ := imageURL["detail"].(string)
+		inputItem.Content = append(inputItem.Content, relaymodel.InputContent{
+			Type:     "input_image",
+			ImageURL: url,
+			Detail:   detail,
+		})
+	}
+}
+
 // ConvertMessagesToInputItems converts Message array to InputItem array for Responses API
 func ConvertMessagesToInputItems(messages []relaymodel.Message) []relaymodel.InputItem {
 	inputItems := make([]relaymodel.InputItem, 0, len(messages))
@@ -913,14 +1056,7 @@ func ConvertMessagesToInputItems(messages []relaymodel.Message) []relaymodel.Inp
 			// Array of content parts (multimodal)
 			for _, part := range content {
 				if partMap, ok := part.(map[string]any); ok {
-					if partType, ok := partMap["type"].(string); ok && partType == "text" {
-						if text, ok := partMap["text"].(string); ok {
-							inputItem.Content = append(inputItem.Content, relaymodel.InputContent{
-								Type: contentType,
-								Text: text,
-							})
-						}
-					}
+					appendChatContentPartToResponseInput(&inputItem, contentType, partMap)
 				}
 			}
 		}
@@ -963,6 +1099,21 @@ func ConvertChatCompletionToResponsesRequest(
 		responsesReq.TopP = chatReq.TopP
 	}
 
+	if chatReq.ResponseFormat != nil {
+		responsesReq.Text = convertChatResponseFormatToResponseText(chatReq.ResponseFormat)
+	}
+
+	if chatReq.TopLogprobs != nil {
+		responsesReq.TopLogprobs = chatReq.TopLogprobs
+	}
+
+	if chatReq.Logprobs != nil && *chatReq.Logprobs {
+		responsesReq.Include = appendUniqueString(
+			responsesReq.Include,
+			"message.output_text.logprobs",
+		)
+	}
+
 	if chatReq.MaxTokens > 0 {
 		responsesReq.MaxOutputTokens = &chatReq.MaxTokens
 	} else if chatReq.MaxCompletionTokens > 0 {
@@ -972,10 +1123,20 @@ func ConvertChatCompletionToResponsesRequest(
 	// Map tools
 	if len(chatReq.Tools) > 0 {
 		responsesReq.Tools = ConvertToolsToResponseTools(chatReq.Tools)
+	} else if chatReq.Functions != nil {
+		responsesReq.Tools = convertLegacyFunctionsToResponseTools(chatReq.Functions)
 	}
 
 	if chatReq.ToolChoice != nil {
-		responsesReq.ToolChoice = chatReq.ToolChoice
+		responsesReq.ToolChoice = convertChatToolChoiceToResponseToolChoice(chatReq.ToolChoice)
+	} else if chatReq.FunctionCall != nil {
+		responsesReq.ToolChoice = convertLegacyFunctionCallToResponseToolChoice(
+			chatReq.FunctionCall,
+		)
+	}
+
+	if chatReq.ParallelToolCalls != nil {
+		responsesReq.ParallelToolCalls = chatReq.ParallelToolCalls
 	}
 
 	// Map service tier

@@ -58,12 +58,15 @@ type GeneralOpenAIRequest struct {
 	Size                 string          `json:"size,omitempty"`
 	Messages             []Message       `json:"messages,omitempty"`
 	Tools                []Tool          `json:"tools,omitempty"`
+	Modalities           []string        `json:"modalities,omitempty"`
 	Seed                 float64         `json:"seed,omitempty"`
+	N                    int             `json:"n,omitempty"`
 	MaxTokens            int             `json:"max_tokens,omitempty"`
 	MaxCompletionTokens  int             `json:"max_completion_tokens,omitempty"`
 	TopK                 int             `json:"top_k,omitempty"`
 	NumCtx               int             `json:"num_ctx,omitempty"`
 	Stream               bool            `json:"stream,omitempty"`
+	ParallelToolCalls    *bool           `json:"parallel_tool_calls,omitempty"`
 	ReasoningEffort      *string         `json:"reasoning_effort,omitempty"`
 	EnableThinking       *bool           `json:"enable_thinking,omitempty"`
 	ThinkingBudget       *int            `json:"thinking_budget,omitempty"`

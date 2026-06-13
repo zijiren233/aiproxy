@@ -157,7 +157,11 @@ type ResponseReasoning struct {
 
 // ResponseTextFormat represents text format configuration
 type ResponseTextFormat struct {
-	Type string `json:"type"`
+	Type        string         `json:"type"`
+	Name        string         `json:"name,omitempty"`
+	Schema      map[string]any `json:"schema,omitempty"`
+	Strict      *bool          `json:"strict,omitempty"`
+	Description string         `json:"description,omitempty"`
 }
 
 // ResponseText represents text configuration
@@ -189,6 +193,10 @@ type OutputItem struct {
 type InputContent struct {
 	Type string `json:"type"`
 	Text string `json:"text,omitempty"`
+	// Fields for input_image type
+	ImageURL string `json:"image_url,omitempty"`
+	FileID   string `json:"file_id,omitempty"`
+	Detail   string `json:"detail,omitempty"`
 	// Fields for function_call type
 	ID        string `json:"id,omitempty"`
 	Name      string `json:"name,omitempty"`
