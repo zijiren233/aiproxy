@@ -772,6 +772,35 @@ func TestConvertResponsesToChatCompletionResponse(t *testing.T) {
 			expectedStatus: http.StatusOK,
 		},
 		{
+			name: "message response without role defaults to assistant",
+			responsesResp: relaymodel.Response{
+				ID:        "resp_missing_role",
+				Model:     "gpt-5-mini",
+				Status:    relaymodel.ResponseStatusCompleted,
+				CreatedAt: 1781355958,
+				Output: []relaymodel.OutputItem{
+					{
+						Type: relaymodel.InputItemTypeMessage,
+						Content: []relaymodel.OutputContent{
+							{Type: "output_text", Text: "Hello"},
+						},
+					},
+				},
+				Usage: &relaymodel.ResponseUsage{
+					InputTokens:  4,
+					OutputTokens: 2,
+					TotalTokens:  6,
+				},
+			},
+			checkFunc: func(t *testing.T, chatResp relaymodel.TextResponse) {
+				t.Helper()
+				require.Len(t, chatResp.Choices, 1)
+				assert.Equal(t, relaymodel.RoleAssistant, chatResp.Choices[0].Message.Role)
+				assert.Equal(t, "Hello", chatResp.Choices[0].Message.Content)
+			},
+			expectedStatus: http.StatusOK,
+		},
+		{
 			name: "incomplete reasoning-only response",
 			responsesResp: relaymodel.Response{
 				ID:        "resp_incomplete",
@@ -879,6 +908,39 @@ func TestConvertResponsesToChatCompletionResponse(t *testing.T) {
 				assert.Equal(t, relaymodel.ToolChoiceTypeFunction, toolCall.Type)
 				assert.Equal(t, "get_weather", toolCall.Function.Name)
 				assert.Equal(t, `{"location":"Boston"}`, toolCall.Function.Arguments)
+			},
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name: "incomplete function call keeps incomplete finish reason",
+			responsesResp: relaymodel.Response{
+				ID:        "resp_tool_incomplete",
+				Model:     "gpt-5-mini",
+				Status:    relaymodel.ResponseStatusIncomplete,
+				CreatedAt: 1781355958,
+				Output: []relaymodel.OutputItem{
+					{
+						ID:        "fc_123",
+						Type:      relaymodel.InputItemTypeFunctionCall,
+						CallID:    "call_123",
+						Name:      "get_weather",
+						Arguments: `{"location":"Boston"}`,
+					},
+				},
+				IncompleteDetails: &relaymodel.IncompleteDetails{
+					Reason: "max_output_tokens",
+				},
+				Usage: &relaymodel.ResponseUsage{
+					InputTokens:  12,
+					OutputTokens: 3,
+					TotalTokens:  15,
+				},
+			},
+			checkFunc: func(t *testing.T, chatResp relaymodel.TextResponse) {
+				t.Helper()
+				require.Len(t, chatResp.Choices, 1)
+				assert.Equal(t, relaymodel.FinishReasonLength, chatResp.Choices[0].FinishReason)
+				require.Len(t, chatResp.Choices[0].Message.ToolCalls, 1)
 			},
 			expectedStatus: http.StatusOK,
 		},

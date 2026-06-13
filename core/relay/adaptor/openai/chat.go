@@ -1267,10 +1267,15 @@ func ConvertResponsesToChatCompletionResponse(
 	for _, outputItem := range responsesResp.Output {
 		switch outputItem.Type {
 		case "", relaymodel.InputItemTypeMessage:
+			role := outputItem.Role
+			if role == "" {
+				role = relaymodel.RoleAssistant
+			}
+
 			choice := relaymodel.TextResponseChoice{
 				Index: len(chatResp.Choices),
 				Message: relaymodel.Message{
-					Role:    outputItem.Role,
+					Role:    role,
 					Content: "",
 				},
 			}
@@ -1295,6 +1300,11 @@ func ConvertResponsesToChatCompletionResponse(
 				toolCallID = outputItem.ID
 			}
 
+			finishReason := responseToChatFinishReason(&responsesResp)
+			if finishReason == relaymodel.FinishReasonStop {
+				finishReason = relaymodel.FinishReasonToolCalls
+			}
+
 			chatResp.Choices = append(chatResp.Choices, &relaymodel.TextResponseChoice{
 				Index: len(chatResp.Choices),
 				Message: relaymodel.Message{
@@ -1311,7 +1321,7 @@ func ConvertResponsesToChatCompletionResponse(
 						},
 					},
 				},
-				FinishReason: relaymodel.FinishReasonToolCalls,
+				FinishReason: finishReason,
 			})
 
 		default:
