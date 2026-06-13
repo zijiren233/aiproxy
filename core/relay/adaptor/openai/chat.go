@@ -1164,10 +1164,15 @@ func (s *responsesStreamErrorState) update(event *relaymodel.ResponseStreamEvent
 }
 
 func (s *responsesStreamErrorState) result() adaptor.DoResponseResult {
+	asyncUsage := responseNeedsAsyncUsage(s.lastResponse)
+	if s.pendingFailure != nil {
+		asyncUsage = false
+	}
+
 	return adaptor.DoResponseResult{
 		Usage:      s.usage,
 		UpstreamID: s.responseID,
-		AsyncUsage: responseNeedsAsyncUsage(s.lastResponse),
+		AsyncUsage: asyncUsage,
 	}
 }
 
@@ -1194,6 +1199,8 @@ func (s *responsesStreamErrorState) handleFailure(
 
 	if event.Type == relaymodel.EventResponseFailed && event.Response != nil &&
 		event.Response.Error == nil {
+		s.update(event)
+
 		pendingEvent := *event
 		s.pendingFailure = &pendingEvent
 
@@ -1398,12 +1405,43 @@ func responseStreamError(event *relaymodel.ResponseStreamEvent) adaptor.Error {
 		}
 	}
 
-	switch openAIError.Code {
-	case "too_many_requests", "rate_limit_exceeded":
-		statusCode = http.StatusTooManyRequests
+	if status, ok := streamErrorStatusCode(openAIError.Code); ok {
+		statusCode = status
 	}
 
 	return relaymodel.NewOpenAIError(statusCode, openAIError)
+}
+
+func streamErrorStatusCode(code any) (int, bool) {
+	switch value := code.(type) {
+	case int:
+		return statusCodeFromNumericCode(value)
+	case int64:
+		return statusCodeFromNumericCode(int(value))
+	case float64:
+		if value == float64(int(value)) {
+			return statusCodeFromNumericCode(int(value))
+		}
+	case string:
+		if status, err := strconv.Atoi(value); err == nil {
+			return statusCodeFromNumericCode(status)
+		}
+
+		switch value {
+		case "too_many_requests", "rate_limit_exceeded":
+			return http.StatusTooManyRequests, true
+		}
+	}
+
+	return 0, false
+}
+
+func statusCodeFromNumericCode(code int) (int, bool) {
+	if code >= http.StatusBadRequest && code < 600 {
+		return code, true
+	}
+
+	return 0, false
 }
 
 func responseStreamErrorMessage(event *relaymodel.ResponseStreamEvent) string {

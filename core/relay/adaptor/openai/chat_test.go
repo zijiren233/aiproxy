@@ -600,6 +600,90 @@ func TestConvertResponsesToChatCompletionStreamResponseReturnsErrorBeforeDownstr
 	assert.Empty(t, w.Body.String())
 }
 
+func TestConvertResponsesToChatCompletionStreamResponsePreservesNumericStreamErrorStatus(
+	t *testing.T,
+) {
+	gin.SetMode(gin.TestMode)
+
+	stream := strings.Join([]string{
+		`event: response.created`,
+		`data: {"type":"response.created","response":{"id":"resp_429","object":"response","created_at":1781332973,"status":"in_progress","model":"gpt-5-mini","output":[],"parallel_tool_calls":true,"store":false}}`,
+		"",
+		`event: error`,
+		`data: {"type":"error","error":{"type":"too_many_requests","code":429,"message":"Too Many Requests","param":null},"sequence_number":1}`,
+		"",
+	}, "\n")
+
+	httpResp := &http.Response{
+		StatusCode: http.StatusOK,
+		Body:       &mockReadCloser{Reader: bytes.NewReader([]byte(stream))},
+		Header:     make(http.Header),
+	}
+
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequestWithContext(
+		t.Context(),
+		http.MethodPost,
+		"/v1/chat/completions",
+		nil,
+	)
+
+	m := &meta.Meta{
+		ActualModel: "gpt-5-mini",
+	}
+
+	result, err := openai.ConvertResponsesToChatCompletionStreamResponse(m, c, httpResp)
+	require.NotNil(t, err)
+	assert.Equal(t, http.StatusTooManyRequests, err.StatusCode())
+	assert.Equal(t, "resp_429", result.UpstreamID)
+	assert.Empty(t, w.Body.String())
+}
+
+func TestConvertResponsesToChatCompletionStreamResponseFailedWithoutErrorDoesNotMarkAsyncUsage(
+	t *testing.T,
+) {
+	gin.SetMode(gin.TestMode)
+
+	stream := strings.Join([]string{
+		`event: response.created`,
+		`data: {"type":"response.created","response":{"id":"resp_failed","object":"response","created_at":1781332973,"status":"in_progress","model":"gpt-5-mini","output":[],"parallel_tool_calls":true,"store":true}}`,
+		"",
+		`event: response.in_progress`,
+		`data: {"type":"response.in_progress","response":{"id":"resp_failed","object":"response","created_at":1781332973,"status":"in_progress","model":"gpt-5-mini","output":[],"parallel_tool_calls":true,"store":true}}`,
+		"",
+		`event: response.failed`,
+		`data: {"type":"response.failed","response":{"id":"resp_failed","object":"response","created_at":1781332973,"status":"failed","model":"gpt-5-mini","output":[],"parallel_tool_calls":true,"store":true},"sequence_number":2}`,
+		"",
+	}, "\n")
+
+	httpResp := &http.Response{
+		StatusCode: http.StatusOK,
+		Body:       &mockReadCloser{Reader: bytes.NewReader([]byte(stream))},
+		Header:     make(http.Header),
+	}
+
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequestWithContext(
+		t.Context(),
+		http.MethodPost,
+		"/v1/chat/completions",
+		nil,
+	)
+
+	m := &meta.Meta{
+		ActualModel: "gpt-5-mini",
+	}
+
+	result, err := openai.ConvertResponsesToChatCompletionStreamResponse(m, c, httpResp)
+	require.NotNil(t, err)
+	assert.Equal(t, http.StatusBadGateway, err.StatusCode())
+	assert.Equal(t, "resp_failed", result.UpstreamID)
+	assert.False(t, result.AsyncUsage)
+	assert.Empty(t, w.Body.String())
+}
+
 func TestConvertResponsesToChatCompletionStreamResponseHandlesErrorAfterDownstreamWrite(
 	t *testing.T,
 ) {

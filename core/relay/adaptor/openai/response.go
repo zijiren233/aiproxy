@@ -164,7 +164,9 @@ func ResponseStreamHandler(
 		wroteStream   bool
 		bufferTimer   *time.Timer
 	)
-	defer stopResponseStreamBufferTimer(bufferTimer)
+	defer func() {
+		stopResponseStreamBufferTimer(bufferTimer)
+	}()
 
 readLoop:
 	for {
@@ -311,10 +313,12 @@ func scanResponseStreamEvents(
 
 			var event relaymodel.ResponseStreamEvent
 
+			parseErr := sonic.Unmarshal(data, &event)
+
 			item := responseStreamEventItem{
 				data:     data,
 				event:    event,
-				parseErr: sonic.Unmarshal(data, &event),
+				parseErr: parseErr,
 			}
 
 			select {

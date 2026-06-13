@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -24,6 +25,8 @@ type responseTestStore struct {
 	saved           []adaptor.StoreCache
 	savedIfNotExist []adaptor.StoreCache
 }
+
+var responseStreamInitialBufferTimeoutTestMu sync.Mutex
 
 func (s *responseTestStore) GetStore(string, int, string) (adaptor.StoreCache, error) {
 	return adaptor.StoreCache{}, nil
@@ -211,6 +214,39 @@ func TestResponseStreamHandlerReturnsErrorBeforeRealOutputAfterLifecycleEvents(t
 	assert.Empty(t, recorder.Body.String())
 }
 
+func TestResponseStreamHandlerFailedWithoutErrorDoesNotMarkAsyncUsage(t *testing.T) {
+	t.Parallel()
+	gin.SetMode(gin.TestMode)
+
+	recorder := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(recorder)
+	c.Request = httptest.NewRequestWithContext(
+		t.Context(),
+		http.MethodPost,
+		"/v1/responses",
+		nil,
+	)
+
+	body := "event: response.created\n" +
+		"data: {\"type\":\"response.created\",\"response\":{\"id\":\"resp_failed\",\"object\":\"response\",\"created_at\":1,\"status\":\"in_progress\",\"model\":\"gpt-5\",\"output\":[],\"parallel_tool_calls\":true,\"store\":true}}\n\n" +
+		"event: response.in_progress\n" +
+		"data: {\"type\":\"response.in_progress\",\"response\":{\"id\":\"resp_failed\",\"object\":\"response\",\"created_at\":1,\"status\":\"in_progress\",\"model\":\"gpt-5\",\"output\":[],\"parallel_tool_calls\":true,\"store\":true}}\n\n" +
+		"event: response.failed\n" +
+		"data: {\"type\":\"response.failed\",\"response\":{\"id\":\"resp_failed\",\"object\":\"response\",\"created_at\":1,\"status\":\"failed\",\"model\":\"gpt-5\",\"output\":[],\"parallel_tool_calls\":true,\"store\":true}}\n\n"
+	resp := &http.Response{
+		StatusCode: http.StatusOK,
+		Body:       io.NopCloser(bytes.NewBufferString(body)),
+		Header:     make(http.Header),
+	}
+
+	result, err := ResponseStreamHandler(&meta.Meta{}, &responseTestStore{}, c, resp)
+	require.NotNil(t, err)
+	assert.Equal(t, http.StatusBadGateway, err.StatusCode())
+	assert.Equal(t, "resp_failed", result.UpstreamID)
+	assert.False(t, result.AsyncUsage)
+	assert.Empty(t, recorder.Body.String())
+}
+
 func TestResponseStreamHandlerFlushesLifecycleEventsOnOfficialTextStreamOrder(t *testing.T) {
 	t.Parallel()
 	gin.SetMode(gin.TestMode)
@@ -274,6 +310,9 @@ func TestResponseStreamHandlerFlushesLifecycleEventsOnOfficialTextStreamOrder(t 
 }
 
 func TestResponseStreamHandlerStartsBufferTimeoutFromFirstDelayedEvent(t *testing.T) {
+	responseStreamInitialBufferTimeoutTestMu.Lock()
+	defer responseStreamInitialBufferTimeoutTestMu.Unlock()
+
 	gin.SetMode(gin.TestMode)
 
 	oldTimeout := responseStreamInitialBufferTimeout
