@@ -502,6 +502,49 @@ func TestResponseHandlerRewritesOnlyModelField(t *testing.T) {
 	assert.NotContains(t, recorder.Body.String(), "mapped-gpt-5")
 }
 
+func TestConvertResponseRequestMapsSystemInputRoleToDeveloper(t *testing.T) {
+	t.Parallel()
+
+	req := httptest.NewRequestWithContext(
+		t.Context(),
+		http.MethodPost,
+		"/v1/responses",
+		strings.NewReader(`{
+			"model":"gpt-5.5",
+			"input":[
+				{"type":"message","role":"system","content":[{"type":"input_text","text":"Be concise"}]},
+				{"type":"message","role":"user","content":[{"type":"input_text","text":"Hello"}]}
+			]
+		}`),
+	)
+	req.Header.Set("Content-Type", "application/json")
+
+	m := &meta.Meta{
+		ActualModel: "mapped-gpt-5.5",
+	}
+
+	result, err := ConvertResponseRequest(m, req)
+	require.NoError(t, err)
+
+	var body map[string]any
+
+	err = json.NewDecoder(result.Body).Decode(&body)
+	require.NoError(t, err)
+
+	input, ok := body["input"].([]any)
+	require.True(t, ok)
+	require.Len(t, input, 2)
+
+	first, ok := input[0].(map[string]any)
+	require.True(t, ok)
+	assert.Equal(t, "developer", first["role"])
+
+	second, ok := input[1].(map[string]any)
+	require.True(t, ok)
+	assert.Equal(t, "user", second["role"])
+	assert.Equal(t, "mapped-gpt-5.5", body["model"])
+}
+
 func TestGetResponseHandlerRewritesModelToOriginModel(t *testing.T) {
 	t.Parallel()
 	gin.SetMode(gin.TestMode)
@@ -537,8 +580,51 @@ func TestGetResponseHandlerRewritesModelToOriginModel(t *testing.T) {
 	result, err := GetResponseHandler(m, c, resp)
 	require.Nil(t, err)
 	assert.Equal(t, "resp_1", result.UpstreamID)
+	assert.Zero(t, result.Usage.TotalTokens)
+	assert.False(t, result.AsyncUsage)
 	assert.Contains(t, recorder.Body.String(), `"model":"gpt-5"`)
 	assert.NotContains(t, recorder.Body.String(), "mapped-gpt-5")
+}
+
+func TestGetResponseHandlerDoesNotReportUsageForCompletedResponse(t *testing.T) {
+	t.Parallel()
+	gin.SetMode(gin.TestMode)
+
+	recorder := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(recorder)
+	c.Request = httptest.NewRequestWithContext(
+		t.Context(),
+		http.MethodGet,
+		"/v1/responses/resp_1",
+		nil,
+	)
+	m := &meta.Meta{
+		OriginModel: "gpt-5",
+		ActualModel: "mapped-gpt-5",
+	}
+
+	resp := &http.Response{
+		StatusCode: http.StatusOK,
+		Body: io.NopCloser(bytes.NewBufferString(`{
+			"id":"resp_1",
+			"object":"response",
+			"created_at":1,
+			"status":"completed",
+			"model":"mapped-gpt-5",
+			"output":[],
+			"parallel_tool_calls":true,
+			"store":true,
+			"usage":{"input_tokens":7,"output_tokens":13,"total_tokens":20}
+		}`)),
+		Header: make(http.Header),
+	}
+
+	result, err := GetResponseHandler(m, c, resp)
+	require.Nil(t, err)
+	assert.Equal(t, "resp_1", result.UpstreamID)
+	assert.Zero(t, result.Usage.TotalTokens)
+	assert.False(t, result.AsyncUsage)
+	assert.Contains(t, recorder.Body.String(), `"usage"`)
 }
 
 func TestCancelResponseHandlerRewritesModelToOriginModel(t *testing.T) {

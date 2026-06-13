@@ -44,6 +44,10 @@ func ConvertResponseRequest(
 		}
 	}
 
+	if err := normalizeResponsesInputSystemRole(&node); err != nil {
+		return adaptor.ConvertResult{}, err
+	}
+
 	// Set the model
 	_, err = node.Set("model", ast.NewString(meta.ActualModel))
 	if err != nil {
@@ -62,6 +66,50 @@ func ConvertResponseRequest(
 		},
 		Body: bytes.NewReader(jsonData),
 	}, nil
+}
+
+func normalizeResponsesInputSystemRole(node *ast.Node) error {
+	inputNode := node.Get("input")
+	if !inputNode.Exists() || inputNode.TypeSafe() != ast.V_ARRAY {
+		return nil
+	}
+
+	inputItems, err := inputNode.ArrayUseNode()
+	if err != nil {
+		return err
+	}
+
+	for index, inputItem := range inputItems {
+		if inputItem.TypeSafe() != ast.V_OBJECT {
+			continue
+		}
+
+		roleNode := inputItem.Get("role")
+		if !roleNode.Exists() || roleNode.TypeSafe() != ast.V_STRING {
+			continue
+		}
+
+		role, err := roleNode.String()
+		if err != nil {
+			return err
+		}
+
+		if role != relaymodel.RoleSystem {
+			continue
+		}
+
+		_, err = inputItem.Set("role", ast.NewString(relaymodel.RoleDeveloper))
+		if err != nil {
+			return err
+		}
+
+		_, err = inputNode.SetByIndex(index, inputItem)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // ResponseHandler handles non-streaming response
@@ -539,9 +587,7 @@ func GetResponseHandler(
 	}
 
 	return adaptor.DoResponseResult{
-		Usage:      response.ToModelUsage(),
 		UpstreamID: response.ID,
-		AsyncUsage: responseNeedsAsyncUsage(&response),
 	}, nil
 }
 

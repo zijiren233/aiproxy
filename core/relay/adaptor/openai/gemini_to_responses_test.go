@@ -98,14 +98,14 @@ func TestConvertGeminiToResponsesRequest_WithFunctionCalls(t *testing.T) {
 		t,
 		4,
 		len(inputArray),
-		"Should have 4 items: system message, user message, function call, function result",
+		"Should have 4 items: developer message, user message, function call, function result",
 	)
 
-	// Verify system message
+	// Verify developer message
 	systemMsg, ok := inputArray[0].(map[string]any)
 	require.True(t, ok)
 	assert.Equal(t, "message", systemMsg["type"])
-	assert.Equal(t, "system", systemMsg["role"])
+	assert.Equal(t, "developer", systemMsg["role"])
 
 	// Verify user message
 	userMsg, ok := inputArray[1].(map[string]any)

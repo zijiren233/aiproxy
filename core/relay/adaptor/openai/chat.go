@@ -869,8 +869,11 @@ func ConvertMessagesToInputItems(messages []relaymodel.Message) []relaymodel.Inp
 		// Handle regular messages
 		role := msg.Role
 		// Tool role without ToolCallID is treated as user role
-		if role == relaymodel.RoleTool {
+		switch role {
+		case relaymodel.RoleTool:
 			role = relaymodel.RoleUser
+		case relaymodel.RoleSystem:
+			role = relaymodel.RoleDeveloper
 		}
 
 		inputItem := relaymodel.InputItem{
@@ -1407,6 +1410,10 @@ func responseStreamError(event *relaymodel.ResponseStreamEvent) adaptor.Error {
 
 	if status, ok := streamErrorStatusCode(openAIError.Code); ok {
 		statusCode = status
+	} else if status, ok := streamErrorStatusCode(openAIError.Type); ok {
+		statusCode = status
+	} else if status, ok := streamErrorStatusCode(openAIError.Message); ok {
+		statusCode = status
 	}
 
 	return relaymodel.NewOpenAIError(statusCode, openAIError)
@@ -1430,6 +1437,13 @@ func streamErrorStatusCode(code any) (int, bool) {
 		switch value {
 		case "too_many_requests", "rate_limit_exceeded":
 			return http.StatusTooManyRequests, true
+		case "invalid_request_error", "bad_request", "bad_request_error", "invalid_request":
+			return http.StatusBadRequest, true
+		}
+
+		lowerValue := strings.ToLower(value)
+		if strings.Contains(lowerValue, "system messages are not allowed") {
+			return http.StatusBadRequest, true
 		}
 	}
 

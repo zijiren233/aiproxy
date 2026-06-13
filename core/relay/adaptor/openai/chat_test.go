@@ -252,6 +252,27 @@ func TestConvertChatCompletionToResponsesRequest(t *testing.T) {
 			},
 		},
 		{
+			name: "system messages become developer messages",
+			inputRequest: relaymodel.GeneralOpenAIRequest{
+				Model: "gpt-5.5",
+				Messages: []relaymodel.Message{
+					{Role: "system", Content: "You are concise."},
+					{Role: "user", Content: "Hello"},
+				},
+			},
+			checkFunc: func(t *testing.T, responsesReq relaymodel.CreateResponseRequest) {
+				t.Helper()
+
+				inputItems, ok := responsesReq.Input.([]any)
+				require.True(t, ok)
+				require.Len(t, inputItems, 2)
+
+				systemItem, ok := inputItems[0].(map[string]any)
+				require.True(t, ok)
+				assert.Equal(t, "developer", systemItem["role"])
+			},
+		},
+		{
 			name: "request with temperature and max_tokens",
 			inputRequest: relaymodel.GeneralOpenAIRequest{
 				Model: "gpt-5-codex",
@@ -681,6 +702,43 @@ func TestConvertResponsesToChatCompletionStreamResponseFailedWithoutErrorDoesNot
 	assert.Equal(t, http.StatusBadGateway, err.StatusCode())
 	assert.Equal(t, "resp_failed", result.UpstreamID)
 	assert.False(t, result.AsyncUsage)
+	assert.Empty(t, w.Body.String())
+}
+
+func TestConvertResponsesToChatCompletionStreamResponseMapsInvalidRequestErrorToBadRequest(
+	t *testing.T,
+) {
+	gin.SetMode(gin.TestMode)
+
+	stream := strings.Join([]string{
+		`event: error`,
+		`data: {"type":"error","error":{"type":"invalid_request_error","code":"bad_response","message":"System messages are not allowed","param":null},"sequence_number":1}`,
+		"",
+	}, "\n")
+
+	httpResp := &http.Response{
+		StatusCode: http.StatusOK,
+		Body:       &mockReadCloser{Reader: bytes.NewReader([]byte(stream))},
+		Header:     make(http.Header),
+	}
+
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequestWithContext(
+		t.Context(),
+		http.MethodPost,
+		"/v1/chat/completions",
+		nil,
+	)
+
+	m := &meta.Meta{
+		ActualModel: "gpt-5.5",
+	}
+
+	result, err := openai.ConvertResponsesToChatCompletionStreamResponse(m, c, httpResp)
+	require.NotNil(t, err)
+	assert.Equal(t, http.StatusBadRequest, err.StatusCode())
+	assert.Empty(t, result.UpstreamID)
 	assert.Empty(t, w.Body.String())
 }
 
