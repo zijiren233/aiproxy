@@ -1,16 +1,21 @@
 package openai_test
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"io"
 	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 
+	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/core/relay/adaptor/openai"
 	"github.com/labring/aiproxy/core/relay/meta"
 	relaymodel "github.com/labring/aiproxy/core/relay/model"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestConvertGeminiRequest_MapsThinkingConfigToReasoningEffort(t *testing.T) {
@@ -130,6 +135,45 @@ func TestConvertGeminiRequest_MapsThinkingConfigToReasoningEffort(t *testing.T) 
 			}
 		})
 	}
+}
+
+func TestConvertResponsesToGeminiStreamResponseReturnsErrorAfterUnwrittenFunctionCall(
+	t *testing.T,
+) {
+	gin.SetMode(gin.TestMode)
+
+	stream := strings.Join([]string{
+		`data: {"type":"response.function_call_arguments.done","item_id":"fc_missing","arguments":"{\"query\":\"hello\"}"}`,
+		"",
+		`event: error`,
+		`data: {"type":"error","error":{"type":"server_error","code":"server_error","message":"stream failed"}}`,
+		"",
+	}, "\n")
+
+	httpResp := &http.Response{
+		StatusCode: http.StatusOK,
+		Body:       io.NopCloser(bytes.NewReader([]byte(stream))),
+		Header:     make(http.Header),
+	}
+
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequestWithContext(
+		t.Context(),
+		http.MethodPost,
+		"/v1beta/models/gemini-pro:streamGenerateContent",
+		nil,
+	)
+
+	m := &meta.Meta{
+		ActualModel: "gpt-5",
+	}
+
+	result, err := openai.ConvertResponsesToGeminiStreamResponse(m, c, httpResp)
+	require.NotNil(t, err)
+	assert.Equal(t, http.StatusBadGateway, err.StatusCode())
+	assert.Empty(t, result.UpstreamID)
+	assert.Empty(t, w.Body.String())
 }
 
 func TestConvertGeminiRequest_ToolResponse(t *testing.T) {

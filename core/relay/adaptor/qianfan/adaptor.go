@@ -102,7 +102,7 @@ func qianfanModelMatches(mt *meta.Meta, match func(string) bool) bool {
 		return false
 	}
 
-	return utils.FirstMatchingModelName(mt.OriginModel, mt.ActualModel, match) != ""
+	return utils.FirstMatchingModelName(match, mt.OriginModel, mt.ActualModel) != ""
 }
 
 func isBuiltinResponsesModel(modelName string) bool {

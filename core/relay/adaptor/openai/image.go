@@ -253,7 +253,7 @@ func ImagesStreamHandler(
 
 	log := common.GetLogger(c)
 
-	scanner, cleanup := utils.NewStreamScanner(resp.Body, meta.ActualModel)
+	scanner, cleanup := utils.NewStreamScanner(resp.Body, meta.OriginModel, meta.ActualModel)
 	defer cleanup()
 
 	usage := model.Usage{}

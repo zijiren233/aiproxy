@@ -677,20 +677,37 @@ func PreferredModelName(originModel, actualModel string) string {
 }
 
 func FirstMatchingModelName(
-	originModel string,
-	actualModel string,
 	match func(string) bool,
+	modelNames ...string,
 ) string {
 	if match == nil {
-		return PreferredModelName(originModel, actualModel)
+		if len(modelNames) == 0 {
+			return ""
+		}
+
+		for _, modelName := range modelNames {
+			if modelName != "" {
+				return modelName
+			}
+		}
+
+		return ""
 	}
 
-	if originModel != "" && match(originModel) {
-		return originModel
-	}
+	seen := map[string]struct{}{}
+	for _, modelName := range modelNames {
+		if modelName == "" {
+			continue
+		}
 
-	if actualModel != "" && actualModel != originModel && match(actualModel) {
-		return actualModel
+		if _, ok := seen[modelName]; ok {
+			continue
+		}
+
+		seen[modelName] = struct{}{}
+		if match(modelName) {
+			return modelName
+		}
 	}
 
 	return ""
@@ -739,9 +756,9 @@ func ClampReasoningBudget(maxTokens *int, budget int) int {
 }
 
 func resolveGeminiModelName(originModel, actualModel string) string {
-	if modelName := FirstMatchingModelName(originModel, actualModel, func(modelName string) bool {
+	if modelName := FirstMatchingModelName(func(modelName string) bool {
 		return strings.Contains(strings.ToLower(modelName), "gemini")
-	}); modelName != "" {
+	}, originModel, actualModel); modelName != "" {
 		return modelName
 	}
 
@@ -749,14 +766,14 @@ func resolveGeminiModelName(originModel, actualModel string) string {
 }
 
 func resolveAliModelName(originModel, actualModel string) string {
-	if modelName := FirstMatchingModelName(originModel, actualModel, func(modelName string) bool {
+	if modelName := FirstMatchingModelName(func(modelName string) bool {
 		modelName = strings.ToLower(modelName)
 
 		return strings.HasPrefix(modelName, "qwen") ||
 			strings.HasPrefix(modelName, "qwq-") ||
 			strings.Contains(modelName, "glm") ||
 			strings.Contains(modelName, "kimi")
-	}); modelName != "" {
+	}, originModel, actualModel); modelName != "" {
 		return modelName
 	}
 

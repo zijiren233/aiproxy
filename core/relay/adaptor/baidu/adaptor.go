@@ -87,12 +87,12 @@ func (a *Adaptor) GetRequestURL(
 	}
 
 	if endpointModel := utils.FirstMatchingModelName(
-		meta.OriginModel,
-		meta.ActualModel,
 		func(modelName string) bool {
 			_, ok := modelEndpointMap[modelName]
 			return ok
 		},
+		meta.OriginModel,
+		meta.ActualModel,
 	); endpointModel != "" {
 		modelName = endpointModel
 	}

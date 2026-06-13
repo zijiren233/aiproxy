@@ -27,12 +27,12 @@ func featureModel(meta *meta.Meta) string {
 	}
 
 	if modelName := utils.FirstMatchingModelName(
-		meta.OriginModel,
-		meta.ActualModel,
 		func(modelName string) bool {
 			modelName = strings.ToLower(modelName)
 			return strings.HasPrefix(modelName, "bot-") || strings.Contains(modelName, "vision")
 		},
+		meta.OriginModel,
+		meta.ActualModel,
 	); modelName != "" {
 		return modelName
 	}

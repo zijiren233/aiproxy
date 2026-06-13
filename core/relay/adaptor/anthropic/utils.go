@@ -24,12 +24,12 @@ func shouldAutoUseAdaptiveThinking(model string) bool {
 
 func ResolveModelName(originModel, actualModel string) string {
 	if modelName := relayutils.FirstMatchingModelName(
-		originModel,
-		actualModel,
 		func(modelName string) bool {
 			modelName = strings.ToLower(modelName)
 			return strings.Contains(modelName, "claude") || strings.Contains(modelName, "mythos")
 		},
+		originModel,
+		actualModel,
 	); modelName != "" {
 		return modelName
 	}

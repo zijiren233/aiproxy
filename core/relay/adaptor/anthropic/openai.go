@@ -141,11 +141,11 @@ func openAIConvertRequest(
 			claudeRequest.OutputConfig = nil
 		}
 	} else if utils.FirstMatchingModelName(
-		meta.OriginModel,
-		meta.ActualModel,
 		func(modelName string) bool {
 			return strings.Contains(strings.ToLower(modelName), "think")
 		},
+		meta.OriginModel,
+		meta.ActualModel,
 	) != "" {
 		thinkingType := relaymodel.ClaudeThinkingTypeEnabled
 		if shouldAutoUseAdaptiveThinking(resolvedModel) {

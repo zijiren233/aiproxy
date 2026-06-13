@@ -21,7 +21,7 @@ func aliModelMatches(meta *meta.Meta, match func(string) bool) bool {
 	if meta == nil {
 		return false
 	}
-	return utils.FirstMatchingModelName(meta.OriginModel, meta.ActualModel, match) != ""
+	return utils.FirstMatchingModelName(match, meta.OriginModel, meta.ActualModel) != ""
 }
 
 func isAliQwen3Model(meta *meta.Meta) bool {

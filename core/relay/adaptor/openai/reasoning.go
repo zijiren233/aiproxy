@@ -239,12 +239,12 @@ func openAIReasoningEffortsForModel(
 	actualModel string,
 ) ([]relaymodel.ReasoningEffort, bool) {
 	return openAIReasoningEffortsForName(utils.FirstMatchingModelName(
-		originModel,
-		actualModel,
 		func(modelName string) bool {
 			_, ok := openAIReasoningEffortsForName(modelName)
 			return ok
 		},
+		originModel,
+		actualModel,
 	))
 }
 

@@ -54,6 +54,29 @@ func TestScannerBuffer(t *testing.T) {
 	})
 }
 
+func TestNewStreamScannerUsesImageBufferForAnyMappedModel(t *testing.T) {
+	convey.Convey(
+		"NewStreamScanner should use image buffer when origin or actual model is image",
+		t,
+		func() {
+			largeLine := bytes.Repeat([]byte("x"), utils.ScannerBufferSize+1)
+			lineLength := len(largeLine)
+			largeLine = append(largeLine, '\n')
+
+			scanner, cleanup := utils.NewStreamScanner(
+				bytes.NewReader(largeLine),
+				"gpt-image-1",
+				"mapped-chat-model",
+			)
+			defer cleanup()
+
+			convey.So(scanner.Scan(), convey.ShouldBeTrue)
+			convey.So(len(scanner.Bytes()), convey.ShouldEqual, lineLength)
+			convey.So(scanner.Err(), convey.ShouldBeNil)
+		},
+	)
+}
+
 func TestDoRequest(t *testing.T) {
 	convey.Convey("DoRequest", t, func() {
 		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

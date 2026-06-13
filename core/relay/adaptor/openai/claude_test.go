@@ -4,8 +4,10 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/gin-gonic/gin"
@@ -459,6 +461,7 @@ func TestConvertResponsesToClaudeResponse(t *testing.T) {
 			c, _ := gin.CreateTestContext(w)
 
 			m := &meta.Meta{
+				OriginModel: "client-claude",
 				ActualModel: tt.responsesResp.Model,
 			}
 
@@ -475,6 +478,7 @@ func TestConvertResponsesToClaudeResponse(t *testing.T) {
 			// Verify
 			assert.Equal(t, tt.expectedType, claudeResp.Type)
 			assert.Equal(t, tt.expectedRole, claudeResp.Role)
+			assert.Equal(t, "client-claude", claudeResp.Model)
 			assert.NotEmpty(t, claudeResp.Content)
 
 			if tt.hasReasoning {
@@ -605,4 +609,47 @@ func TestConvertClaudeToolsToOpenAI_WithRequiredField(t *testing.T) {
 			tt.checkFunc(t, result)
 		})
 	}
+}
+
+func TestConvertResponsesToClaudeStreamResponseReturnsErrorBeforeRealOutputAfterLifecycleEvents(
+	t *testing.T,
+) {
+	gin.SetMode(gin.TestMode)
+
+	stream := strings.Join([]string{
+		`event: response.created`,
+		`data: {"type":"response.created","response":{"id":"resp_123","object":"response","created_at":1,"status":"in_progress","model":"gpt-5","output":[],"parallel_tool_calls":true,"store":false}}`,
+		"",
+		`event: response.in_progress`,
+		`data: {"type":"response.in_progress","response":{"id":"resp_123","object":"response","created_at":1,"status":"in_progress","model":"gpt-5","output":[],"parallel_tool_calls":true,"store":false}}`,
+		"",
+		`event: error`,
+		`data: {"type":"error","error":{"type":"server_error","code":"server_error","message":"stream failed"}}`,
+		"",
+	}, "\n")
+
+	httpResp := &http.Response{
+		StatusCode: http.StatusOK,
+		Body:       io.NopCloser(bytes.NewReader([]byte(stream))),
+		Header:     make(http.Header),
+	}
+
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequestWithContext(
+		t.Context(),
+		http.MethodPost,
+		"/v1/messages",
+		nil,
+	)
+
+	m := &meta.Meta{
+		ActualModel: "gpt-5",
+	}
+
+	result, err := openai.ConvertResponsesToClaudeStreamResponse(m, c, httpResp)
+	require.NotNil(t, err)
+	assert.Equal(t, http.StatusBadGateway, err.StatusCode())
+	assert.Equal(t, "resp_123", result.UpstreamID)
+	assert.Empty(t, w.Body.String())
 }

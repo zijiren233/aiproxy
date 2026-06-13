@@ -71,12 +71,12 @@ func resolveFeatureModel(meta *meta.Meta) string {
 	}
 
 	if modelName := utils.FirstMatchingModelName(
-		meta.OriginModel,
-		meta.ActualModel,
 		func(modelName string) bool {
 			modelName = strings.ToLower(modelName)
 			return strings.Contains(modelName, "gemini") || strings.Contains(modelName, "claude")
 		},
+		meta.OriginModel,
+		meta.ActualModel,
 	); modelName != "" {
 		return modelName
 	}
