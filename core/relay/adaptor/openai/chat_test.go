@@ -771,6 +771,202 @@ func TestConvertResponsesToChatCompletionResponse(t *testing.T) {
 			},
 			expectedStatus: http.StatusOK,
 		},
+		{
+			name: "message response without role defaults to assistant",
+			responsesResp: relaymodel.Response{
+				ID:        "resp_missing_role",
+				Model:     "gpt-5-mini",
+				Status:    relaymodel.ResponseStatusCompleted,
+				CreatedAt: 1781355958,
+				Output: []relaymodel.OutputItem{
+					{
+						Type: relaymodel.InputItemTypeMessage,
+						Content: []relaymodel.OutputContent{
+							{Type: "output_text", Text: "Hello"},
+						},
+					},
+				},
+				Usage: &relaymodel.ResponseUsage{
+					InputTokens:  4,
+					OutputTokens: 2,
+					TotalTokens:  6,
+				},
+			},
+			checkFunc: func(t *testing.T, chatResp relaymodel.TextResponse) {
+				t.Helper()
+				require.Len(t, chatResp.Choices, 1)
+				assert.Equal(t, relaymodel.RoleAssistant, chatResp.Choices[0].Message.Role)
+				assert.Equal(t, "Hello", chatResp.Choices[0].Message.Content)
+			},
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name: "incomplete reasoning-only response",
+			responsesResp: relaymodel.Response{
+				ID:        "resp_incomplete",
+				Model:     "gpt-5-mini",
+				Status:    relaymodel.ResponseStatusIncomplete,
+				CreatedAt: 1781355958,
+				Output: []relaymodel.OutputItem{
+					{
+						Type:    "reasoning",
+						Summary: []relaymodel.SummaryPart{},
+					},
+				},
+				IncompleteDetails: &relaymodel.IncompleteDetails{
+					Reason: "max_output_tokens",
+				},
+				Usage: &relaymodel.ResponseUsage{
+					InputTokens:  268,
+					OutputTokens: 192,
+					OutputTokensDetails: &relaymodel.ResponseUsageDetails{
+						ReasoningTokens: 192,
+					},
+					TotalTokens: 460,
+				},
+			},
+			checkFunc: func(t *testing.T, chatResp relaymodel.TextResponse) {
+				t.Helper()
+				require.Len(t, chatResp.Choices, 1)
+				choice := chatResp.Choices[0]
+				assert.Equal(t, 0, choice.Index)
+				assert.Equal(t, relaymodel.RoleAssistant, choice.Message.Role)
+				assert.Equal(t, "", choice.Message.Content)
+				assert.Equal(t, relaymodel.FinishReasonLength, choice.FinishReason)
+				assert.Equal(t, int64(192), chatResp.Usage.CompletionTokens)
+				require.NotNil(t, chatResp.Usage.CompletionTokensDetails)
+				assert.Equal(
+					t,
+					int64(192),
+					chatResp.Usage.CompletionTokensDetails.ReasoningTokens,
+				)
+			},
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name: "incomplete content filter response",
+			responsesResp: relaymodel.Response{
+				ID:        "resp_content_filter",
+				Model:     "gpt-5-mini",
+				Status:    relaymodel.ResponseStatusIncomplete,
+				CreatedAt: 1781355958,
+				IncompleteDetails: &relaymodel.IncompleteDetails{
+					Reason: "content_filter",
+				},
+				Usage: &relaymodel.ResponseUsage{
+					InputTokens:  12,
+					OutputTokens: 3,
+					TotalTokens:  15,
+				},
+			},
+			checkFunc: func(t *testing.T, chatResp relaymodel.TextResponse) {
+				t.Helper()
+				require.Len(t, chatResp.Choices, 1)
+				assert.Equal(
+					t,
+					relaymodel.FinishReasonContentFilter,
+					chatResp.Choices[0].FinishReason,
+				)
+			},
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name: "function call only response",
+			responsesResp: relaymodel.Response{
+				ID:        "resp_tool",
+				Model:     "gpt-5-mini",
+				Status:    relaymodel.ResponseStatusCompleted,
+				CreatedAt: 1781355958,
+				Output: []relaymodel.OutputItem{
+					{
+						ID:        "fc_123",
+						Type:      relaymodel.InputItemTypeFunctionCall,
+						CallID:    "call_123",
+						Name:      "get_weather",
+						Arguments: `{"location":"Boston"}`,
+					},
+				},
+				Usage: &relaymodel.ResponseUsage{
+					InputTokens:  12,
+					OutputTokens: 3,
+					TotalTokens:  15,
+				},
+			},
+			checkFunc: func(t *testing.T, chatResp relaymodel.TextResponse) {
+				t.Helper()
+				require.Len(t, chatResp.Choices, 1)
+
+				choice := chatResp.Choices[0]
+				assert.Equal(t, relaymodel.FinishReasonToolCalls, choice.FinishReason)
+				assert.Equal(t, relaymodel.RoleAssistant, choice.Message.Role)
+				assert.Empty(t, choice.Message.Content)
+				require.Len(t, choice.Message.ToolCalls, 1)
+
+				toolCall := choice.Message.ToolCalls[0]
+				assert.Equal(t, 0, toolCall.Index)
+				assert.Equal(t, "call_123", toolCall.ID)
+				assert.Equal(t, relaymodel.ToolChoiceTypeFunction, toolCall.Type)
+				assert.Equal(t, "get_weather", toolCall.Function.Name)
+				assert.Equal(t, `{"location":"Boston"}`, toolCall.Function.Arguments)
+			},
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name: "incomplete function call keeps incomplete finish reason",
+			responsesResp: relaymodel.Response{
+				ID:        "resp_tool_incomplete",
+				Model:     "gpt-5-mini",
+				Status:    relaymodel.ResponseStatusIncomplete,
+				CreatedAt: 1781355958,
+				Output: []relaymodel.OutputItem{
+					{
+						ID:        "fc_123",
+						Type:      relaymodel.InputItemTypeFunctionCall,
+						CallID:    "call_123",
+						Name:      "get_weather",
+						Arguments: `{"location":"Boston"}`,
+					},
+				},
+				IncompleteDetails: &relaymodel.IncompleteDetails{
+					Reason: "max_output_tokens",
+				},
+				Usage: &relaymodel.ResponseUsage{
+					InputTokens:  12,
+					OutputTokens: 3,
+					TotalTokens:  15,
+				},
+			},
+			checkFunc: func(t *testing.T, chatResp relaymodel.TextResponse) {
+				t.Helper()
+				require.Len(t, chatResp.Choices, 1)
+				assert.Equal(t, relaymodel.FinishReasonLength, chatResp.Choices[0].FinishReason)
+				require.Len(t, chatResp.Choices[0].Message.ToolCalls, 1)
+			},
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name: "incomplete unknown reason response",
+			responsesResp: relaymodel.Response{
+				ID:        "resp_unknown_incomplete",
+				Model:     "gpt-5-mini",
+				Status:    relaymodel.ResponseStatusIncomplete,
+				CreatedAt: 1781355958,
+				IncompleteDetails: &relaymodel.IncompleteDetails{
+					Reason: "unknown_reason",
+				},
+				Usage: &relaymodel.ResponseUsage{
+					InputTokens:  12,
+					OutputTokens: 3,
+					TotalTokens:  15,
+				},
+			},
+			checkFunc: func(t *testing.T, chatResp relaymodel.TextResponse) {
+				t.Helper()
+				require.Len(t, chatResp.Choices, 1)
+				assert.Equal(t, relaymodel.FinishReasonStop, chatResp.Choices[0].FinishReason)
+			},
+			expectedStatus: http.StatusOK,
+		},
 	}
 
 	for _, tt := range tests {
@@ -1065,6 +1261,167 @@ func TestConvertResponsesToChatCompletionStreamResponseHandlesErrorAfterDownstre
 	assert.NotContains(t, w.Body.String(), "late")
 }
 
+func TestConvertResponsesToChatCompletionStreamResponseHandlesIncompleteReasoningOnly(
+	t *testing.T,
+) {
+	gin.SetMode(gin.TestMode)
+
+	stream := strings.Join([]string{
+		`event: response.created`,
+		`data: {"type":"response.created","response":{"id":"resp_incomplete","object":"response","created_at":1781355623,"status":"in_progress","model":"gpt-5-mini","output":[],"parallel_tool_calls":true,"store":false}}`,
+		"",
+		`event: response.output_item.added`,
+		`data: {"type":"response.output_item.added","item":{"id":"rs_1","type":"reasoning","summary":[]},"output_index":0,"sequence_number":2}`,
+		"",
+		`event: response.output_item.done`,
+		`data: {"type":"response.output_item.done","item":{"id":"rs_1","type":"reasoning","summary":[]},"output_index":0,"sequence_number":3}`,
+		"",
+		`event: response.incomplete`,
+		`data: {"type":"response.incomplete","response":{"id":"resp_incomplete","object":"response","created_at":1781355623,"status":"incomplete","incomplete_details":{"reason":"max_output_tokens"},"model":"gpt-5-mini","output":[{"id":"rs_1","type":"reasoning","summary":[]}],"parallel_tool_calls":true,"store":false,"usage":{"input_tokens":268,"output_tokens":192,"output_tokens_details":{"reasoning_tokens":192},"total_tokens":460}},"sequence_number":4}`,
+		"",
+	}, "\n")
+
+	httpResp := &http.Response{
+		StatusCode: http.StatusOK,
+		Body:       &mockReadCloser{Reader: bytes.NewReader([]byte(stream))},
+		Header:     make(http.Header),
+	}
+
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequestWithContext(
+		t.Context(),
+		http.MethodPost,
+		"/v1/chat/completions",
+		nil,
+	)
+
+	m := &meta.Meta{
+		ActualModel: "gpt-5-mini",
+	}
+
+	result, err := openai.ConvertResponsesToChatCompletionStreamResponse(m, c, httpResp)
+	require.Nil(t, err)
+	assert.Equal(t, "resp_incomplete", result.UpstreamID)
+	assert.Equal(t, int64(460), int64(result.Usage.TotalTokens))
+	assert.Equal(t, int64(192), int64(result.Usage.ReasoningTokens))
+
+	chunks := collectChatCompletionStreamChunks(t, w.Body.String())
+	require.Len(t, chunks, 2)
+
+	assert.Equal(t, relaymodel.RoleAssistant, chunks[0].Choices[0].Delta.Role)
+	assert.Equal(t, relaymodel.FinishReasonLength, chunks[1].Choices[0].FinishReason)
+	require.NotNil(t, chunks[1].Usage)
+	assert.Equal(t, int64(192), chunks[1].Usage.CompletionTokens)
+	assert.Equal(t, 1, strings.Count(w.Body.String(), "data: [DONE]"))
+}
+
+func TestConvertResponsesToChatCompletionStreamResponseHandlesIncompleteContentFilter(
+	t *testing.T,
+) {
+	gin.SetMode(gin.TestMode)
+
+	stream := strings.Join([]string{
+		`event: response.created`,
+		`data: {"type":"response.created","response":{"id":"resp_content_filter","object":"response","created_at":1781355623,"status":"in_progress","model":"gpt-5-mini","output":[],"parallel_tool_calls":true,"store":false}}`,
+		"",
+		`event: response.incomplete`,
+		`data: {"type":"response.incomplete","response":{"id":"resp_content_filter","object":"response","created_at":1781355623,"status":"incomplete","incomplete_details":{"reason":"content_filter"},"model":"gpt-5-mini","output":[],"parallel_tool_calls":true,"store":false,"usage":{"input_tokens":12,"output_tokens":3,"total_tokens":15}},"sequence_number":1}`,
+		"",
+	}, "\n")
+
+	httpResp := &http.Response{
+		StatusCode: http.StatusOK,
+		Body:       &mockReadCloser{Reader: bytes.NewReader([]byte(stream))},
+		Header:     make(http.Header),
+	}
+
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequestWithContext(
+		t.Context(),
+		http.MethodPost,
+		"/v1/chat/completions",
+		nil,
+	)
+
+	m := &meta.Meta{
+		ActualModel: "gpt-5-mini",
+	}
+
+	_, err := openai.ConvertResponsesToChatCompletionStreamResponse(m, c, httpResp)
+	require.Nil(t, err)
+
+	chunks := collectChatCompletionStreamChunks(t, w.Body.String())
+	require.Len(t, chunks, 2)
+	assert.Equal(
+		t,
+		relaymodel.FinishReasonContentFilter,
+		chunks[1].Choices[0].FinishReason,
+	)
+	assert.Equal(t, 1, strings.Count(w.Body.String(), "data: [DONE]"))
+}
+
+func TestConvertResponsesToChatCompletionStreamResponseUsesToolCallsFinishReason(
+	t *testing.T,
+) {
+	gin.SetMode(gin.TestMode)
+
+	stream := strings.Join([]string{
+		`event: response.created`,
+		`data: {"type":"response.created","response":{"id":"resp_tool","object":"response","created_at":1781355623,"status":"in_progress","model":"gpt-5-mini","output":[],"parallel_tool_calls":true,"store":false}}`,
+		"",
+		`event: response.output_item.added`,
+		`data: {"type":"response.output_item.added","item":{"id":"fc_123","type":"function_call","call_id":"call_123","name":"get_weather","arguments":"","status":"in_progress"},"output_index":0,"sequence_number":1}`,
+		"",
+		`event: response.function_call_arguments.delta`,
+		`data: {"type":"response.function_call_arguments.delta","item_id":"fc_123","output_index":0,"delta":"{\"location\":\"Boston\"}","sequence_number":2}`,
+		"",
+		`event: response.output_item.done`,
+		`data: {"type":"response.output_item.done","item":{"id":"fc_123","type":"function_call","call_id":"call_123","name":"get_weather","arguments":"{\"location\":\"Boston\"}","status":"completed"},"output_index":0,"sequence_number":3}`,
+		"",
+		`event: response.completed`,
+		`data: {"type":"response.completed","response":{"id":"resp_tool","object":"response","created_at":1781355623,"status":"completed","model":"gpt-5-mini","output":[{"id":"fc_123","type":"function_call","call_id":"call_123","name":"get_weather","arguments":"{\"location\":\"Boston\"}","status":"completed"}],"parallel_tool_calls":true,"store":false,"usage":{"input_tokens":12,"output_tokens":3,"total_tokens":15}},"sequence_number":4}`,
+		"",
+	}, "\n")
+
+	httpResp := &http.Response{
+		StatusCode: http.StatusOK,
+		Body:       &mockReadCloser{Reader: bytes.NewReader([]byte(stream))},
+		Header:     make(http.Header),
+	}
+
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequestWithContext(
+		t.Context(),
+		http.MethodPost,
+		"/v1/chat/completions",
+		nil,
+	)
+
+	m := &meta.Meta{
+		ActualModel: "gpt-5-mini",
+	}
+
+	_, err := openai.ConvertResponsesToChatCompletionStreamResponse(m, c, httpResp)
+	require.Nil(t, err)
+
+	chunks := collectChatCompletionStreamChunks(t, w.Body.String())
+	require.Len(t, chunks, 4)
+
+	require.Len(t, chunks[1].Choices[0].Delta.ToolCalls, 1)
+	assert.Equal(t, "call_123", chunks[1].Choices[0].Delta.ToolCalls[0].ID)
+	assert.Equal(t, "get_weather", chunks[1].Choices[0].Delta.ToolCalls[0].Function.Name)
+	assert.Equal(
+		t,
+		`{"location":"Boston"}`,
+		chunks[2].Choices[0].Delta.ToolCalls[0].Function.Arguments,
+	)
+	assert.Equal(t, relaymodel.FinishReasonToolCalls, chunks[3].Choices[0].FinishReason)
+	assert.Equal(t, 1, strings.Count(w.Body.String(), "data: [DONE]"))
+}
+
 func TestConvertResponsesToChatCompletionStreamResponseUsesOriginModelForEveryChunk(
 	t *testing.T,
 ) {
@@ -1144,6 +1501,31 @@ func collectChatCompletionStreamContent(t *testing.T, body string) string {
 	}
 
 	return builder.String()
+}
+
+func collectChatCompletionStreamChunks(
+	t *testing.T,
+	body string,
+) []relaymodel.ChatCompletionsStreamResponse {
+	t.Helper()
+
+	var chunks []relaymodel.ChatCompletionsStreamResponse
+
+	for line := range strings.SplitSeq(body, "\n") {
+		line = strings.TrimSpace(line)
+		if !strings.HasPrefix(line, "data: ") || line == "data: [DONE]" {
+			continue
+		}
+
+		var chunk relaymodel.ChatCompletionsStreamResponse
+
+		err := json.Unmarshal([]byte(strings.TrimPrefix(line, "data: ")), &chunk)
+		require.NoError(t, err)
+
+		chunks = append(chunks, chunk)
+	}
+
+	return chunks
 }
 
 // mockReadCloser is a helper to create a ReadCloser from a Reader
