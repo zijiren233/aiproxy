@@ -174,13 +174,15 @@ func VideoHandler(
 		)
 	}
 
-	idNode, err := common.GetJSONNodeNoCopy(responseBody, "id")
+	node, err := common.GetJSONNodeNoCopy(responseBody)
 	if err != nil {
 		return adaptor.DoResponseResult{}, relaymodel.WrapperOpenAIVideoError(
 			err,
 			http.StatusInternalServerError,
 		)
 	}
+
+	idNode := node.Get("id")
 
 	id, err := idNode.String()
 	if err != nil {
@@ -201,6 +203,14 @@ func VideoHandler(
 	if err != nil {
 		log := common.GetLogger(c)
 		log.Errorf("save store failed: %v", err)
+	}
+
+	responseBody, err = rewriteTopLevelModelNode(responseBody, &node, responseModelName(meta))
+	if err != nil {
+		return adaptor.DoResponseResult{}, relaymodel.WrapperOpenAIVideoError(
+			err,
+			http.StatusInternalServerError,
+		)
 	}
 
 	c.Writer.Header().Set("Content-Type", "application/json")
@@ -269,13 +279,15 @@ func videosHandler(
 		)
 	}
 
-	idNode, err := common.GetJSONNodeNoCopy(responseBody, "id")
+	node, err := common.GetJSONNodeNoCopy(responseBody)
 	if err != nil {
 		return adaptor.DoResponseResult{}, relaymodel.WrapperOpenAIVideoError(
 			err,
 			http.StatusInternalServerError,
 		)
 	}
+
+	idNode := node.Get("id")
 
 	id, err := idNode.String()
 	if err != nil {
@@ -288,6 +300,14 @@ func videosHandler(
 	if err := saveOpenAIVideoStore(meta, store, id); err != nil {
 		log := common.GetLogger(c)
 		log.Errorf("save video store failed: %v", err)
+	}
+
+	responseBody, err = rewriteTopLevelModelNode(responseBody, &node, responseModelName(meta))
+	if err != nil {
+		return adaptor.DoResponseResult{}, relaymodel.WrapperOpenAIVideoError(
+			err,
+			http.StatusInternalServerError,
+		)
 	}
 
 	c.Writer.Header().Set("Content-Type", "application/json")
@@ -390,6 +410,14 @@ func VideoGetJobsHandler(
 		)
 	}
 
+	responseBody, err = rewriteTopLevelModelNode(responseBody, &node, responseModelName(meta))
+	if err != nil {
+		return adaptor.DoResponseResult{}, relaymodel.WrapperOpenAIVideoError(
+			err,
+			http.StatusInternalServerError,
+		)
+	}
+
 	c.Writer.Header().Set("Content-Type", "application/json")
 	c.Writer.Header().Set("Content-Length", strconv.Itoa(len(responseBody)))
 	_, _ = c.Writer.Write(responseBody)
@@ -421,7 +449,7 @@ func VideosGetHandler(
 	c *gin.Context,
 	resp *http.Response,
 ) (adaptor.DoResponseResult, adaptor.Error) {
-	return videoObjectHandler(c, resp)
+	return videoObjectHandler(meta, c, resp)
 }
 
 func VideosContentHandler(
@@ -433,6 +461,7 @@ func VideosContentHandler(
 }
 
 func videoObjectHandler(
+	meta *meta.Meta,
 	c *gin.Context,
 	resp *http.Response,
 ) (adaptor.DoResponseResult, adaptor.Error) {
@@ -443,6 +472,14 @@ func videoObjectHandler(
 	defer resp.Body.Close()
 
 	responseBody, err := common.GetResponseBody(resp)
+	if err != nil {
+		return adaptor.DoResponseResult{}, relaymodel.WrapperOpenAIVideoError(
+			err,
+			http.StatusInternalServerError,
+		)
+	}
+
+	responseBody, err = rewriteTopLevelModel(responseBody, responseModelName(meta))
 	if err != nil {
 		return adaptor.DoResponseResult{}, relaymodel.WrapperOpenAIVideoError(
 			err,

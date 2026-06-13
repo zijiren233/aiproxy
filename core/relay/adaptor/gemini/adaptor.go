@@ -68,12 +68,12 @@ func requestVersionModel(meta *meta.Meta) string {
 	}
 
 	if modelName := utils.FirstMatchingModelName(
-		meta.OriginModel,
-		meta.ActualModel,
 		func(modelName string) bool {
 			_, ok := v1ModelMap[modelName]
 			return ok
 		},
+		meta.OriginModel,
+		meta.ActualModel,
 	); modelName != "" {
 		return modelName
 	}

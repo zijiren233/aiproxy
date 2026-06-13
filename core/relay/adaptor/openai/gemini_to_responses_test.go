@@ -470,6 +470,7 @@ func TestConvertResponsesToGeminiResponse(t *testing.T) {
 			c, _ := gin.CreateTestContext(w)
 
 			m := &meta.Meta{
+				OriginModel: "client-gemini",
 				ActualModel: tt.responsesResp.Model,
 			}
 
@@ -484,7 +485,7 @@ func TestConvertResponsesToGeminiResponse(t *testing.T) {
 			require.NoError(t, err)
 
 			// Verify
-			assert.Equal(t, tt.responsesResp.Model, geminiResp.ModelVersion)
+			assert.Equal(t, "client-gemini", geminiResp.ModelVersion)
 			assert.NotEmpty(t, geminiResp.Candidates)
 
 			if tt.hasReasoning {

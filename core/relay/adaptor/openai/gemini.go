@@ -114,7 +114,7 @@ func ConvertOpenAIToGeminiResponse(
 	openaiResp *relaymodel.TextResponse,
 ) *relaymodel.GeminiChatResponse {
 	geminiResp := &relaymodel.GeminiChatResponse{
-		ModelVersion: meta.ActualModel,
+		ModelVersion: responseModelName(meta),
 	}
 
 	if openaiResp.Usage.TotalTokens > 0 {
@@ -201,7 +201,7 @@ func GeminiStreamHandler(
 
 	defer resp.Body.Close()
 
-	scanner, cleanup := utils.NewStreamScanner(resp.Body, meta.ActualModel)
+	scanner, cleanup := utils.NewStreamScanner(resp.Body, meta.OriginModel, meta.ActualModel)
 	defer cleanup()
 
 	usage := model.Usage{}
@@ -257,7 +257,7 @@ func (s *GeminiStreamState) ConvertOpenAIStreamToGemini(
 	openaiResp *relaymodel.ChatCompletionsStreamResponse,
 ) *relaymodel.GeminiChatResponse {
 	geminiResp := &relaymodel.GeminiChatResponse{
-		ModelVersion: meta.ActualModel,
+		ModelVersion: responseModelName(meta),
 		Candidates:   []*relaymodel.GeminiChatCandidate{},
 	}
 
@@ -975,7 +975,7 @@ func ConvertResponsesToGeminiResponse(
 
 	// Convert to Gemini format
 	geminiResp := relaymodel.GeminiChatResponse{
-		ModelVersion: responsesResp.Model,
+		ModelVersion: responseModelName(meta),
 		Candidates:   []*relaymodel.GeminiChatCandidate{},
 	}
 
@@ -1096,13 +1096,12 @@ func ConvertResponsesToGeminiStreamResponse(
 
 	log := common.GetLogger(c)
 
-	scanner, cleanup := utils.NewStreamScanner(resp.Body, meta.ActualModel)
+	scanner, cleanup := utils.NewStreamScanner(resp.Body, meta.OriginModel, meta.ActualModel)
 	defer cleanup()
 
 	var (
-		usage        model.Usage
-		responseID   string
-		lastResponse *relaymodel.Response
+		errorState  responsesStreamErrorState
+		wroteStream bool
 	)
 
 	state := &geminiStreamState{
@@ -1110,16 +1109,15 @@ func ConvertResponsesToGeminiStreamResponse(
 		c:    c,
 	}
 
-	for scanner.Scan() {
+	stopStream := false
+
+	for scanner.Scan() && !stopStream {
 		data := scanner.Bytes()
 		if !render.IsValidSSEData(data) {
 			continue
 		}
 
 		data = render.ExtractSSEData(data)
-		if render.IsSSEDone(data) {
-			break
-		}
 
 		// Parse the stream event
 		var event relaymodel.ResponseStreamEvent
@@ -1130,13 +1128,33 @@ func ConvertResponsesToGeminiStreamResponse(
 			continue
 		}
 
-		if event.Response != nil {
-			if responseID == "" {
-				responseID = event.Response.ID
+		errorState.update(&event)
+
+		if err := errorState.errorBeforeEvent(&event); err != nil {
+			return errorState.result(), err
+		}
+
+		if event.Type == relaymodel.EventResponseFailed || event.Type == relaymodel.EventError {
+			if wroteStream {
+				log.Error(
+					"response stream failed after data was sent: " + responseStreamErrorMessage(
+						&event,
+					),
+				)
+
+				stopStream = true
+
+				continue
 			}
 
-			lastResponse = event.Response
-			usage = event.Response.ToModelUsage()
+			err, handled := errorState.handleFailure(&event)
+			if handled && err == nil {
+				continue
+			}
+
+			if handled {
+				return errorState.result(), err
+			}
 		}
 
 		// Handle events
@@ -1146,11 +1164,17 @@ func ConvertResponsesToGeminiStreamResponse(
 		case relaymodel.EventOutputItemAdded:
 			state.handleOutputItemAdded(&event)
 		case relaymodel.EventOutputTextDelta:
-			state.handleOutputTextDelta(&event)
+			if state.handleOutputTextDelta(&event) {
+				wroteStream = true
+			}
 		case relaymodel.EventFunctionCallArgumentsDone:
-			state.handleFunctionCallArgumentsDone(&event)
+			if state.handleFunctionCallArgumentsDone(&event) {
+				wroteStream = true
+			}
 		case relaymodel.EventResponseCompleted, relaymodel.EventResponseDone:
-			state.handleResponseCompleted(&event)
+			if state.handleResponseCompleted(&event) {
+				wroteStream = true
+			}
 		}
 	}
 
@@ -1158,11 +1182,11 @@ func ConvertResponsesToGeminiStreamResponse(
 		log.Error("error reading response stream: " + err.Error())
 	}
 
-	return adaptor.DoResponseResult{
-		Usage:      usage,
-		UpstreamID: responseID,
-		AsyncUsage: responseNeedsAsyncUsage(lastResponse),
-	}, nil
+	if errorState.pendingFailure != nil && !wroteStream {
+		return errorState.result(), responseStreamError(errorState.pendingFailure)
+	}
+
+	return errorState.result(), nil
 }
 
 // geminiStreamState manages state for Gemini stream conversion
@@ -1189,14 +1213,14 @@ func (s *geminiStreamState) handleOutputItemAdded(event *relaymodel.ResponseStre
 }
 
 // handleOutputTextDelta handles response.output_text.delta event for Gemini
-func (s *geminiStreamState) handleOutputTextDelta(event *relaymodel.ResponseStreamEvent) {
+func (s *geminiStreamState) handleOutputTextDelta(event *relaymodel.ResponseStreamEvent) bool {
 	if event.Delta == "" {
-		return
+		return false
 	}
 
 	// Send text delta
 	geminiResp := relaymodel.GeminiChatResponse{
-		ModelVersion: s.meta.ActualModel,
+		ModelVersion: responseModelName(s.meta),
 		Candidates: []*relaymodel.GeminiChatCandidate{
 			{
 				Index: 0,
@@ -1213,29 +1237,33 @@ func (s *geminiStreamState) handleOutputTextDelta(event *relaymodel.ResponseStre
 	}
 
 	_ = render.GeminiObjectData(s.c, geminiResp)
+
+	return true
 }
 
 // handleFunctionCallArgumentsDone handles response.function_call_arguments.done event for Gemini
-func (s *geminiStreamState) handleFunctionCallArgumentsDone(event *relaymodel.ResponseStreamEvent) {
+func (s *geminiStreamState) handleFunctionCallArgumentsDone(
+	event *relaymodel.ResponseStreamEvent,
+) bool {
 	if event.Arguments == "" || event.ItemID == "" {
-		return
+		return false
 	}
 
 	// Get function name from tracked state
 	functionName := s.functionCallNames[event.ItemID]
 	if functionName == "" {
-		return
+		return false
 	}
 
 	// Parse arguments
 	var args map[string]any
 	if err := sonic.UnmarshalString(event.Arguments, &args); err != nil {
-		return
+		return false
 	}
 
 	// Send complete function call
 	geminiResp := relaymodel.GeminiChatResponse{
-		ModelVersion: s.meta.ActualModel,
+		ModelVersion: responseModelName(s.meta),
 		Candidates: []*relaymodel.GeminiChatCandidate{
 			{
 				Index: 0,
@@ -1255,18 +1283,20 @@ func (s *geminiStreamState) handleFunctionCallArgumentsDone(event *relaymodel.Re
 	}
 
 	_ = render.GeminiObjectData(s.c, geminiResp)
+
+	return true
 }
 
 // handleResponseCompleted handles response.completed/done event for Gemini
-func (s *geminiStreamState) handleResponseCompleted(event *relaymodel.ResponseStreamEvent) {
+func (s *geminiStreamState) handleResponseCompleted(event *relaymodel.ResponseStreamEvent) bool {
 	if event.Response == nil || event.Response.Usage == nil {
-		return
+		return false
 	}
 
 	// Send final response with usage
 	geminiUsage := event.Response.Usage.ToGeminiUsage()
 	geminiResp := relaymodel.GeminiChatResponse{
-		ModelVersion:  s.meta.ActualModel,
+		ModelVersion:  responseModelName(s.meta),
 		UsageMetadata: &geminiUsage,
 		Candidates: []*relaymodel.GeminiChatCandidate{
 			{
@@ -1281,4 +1311,6 @@ func (s *geminiStreamState) handleResponseCompleted(event *relaymodel.ResponseSt
 	}
 
 	_ = render.GeminiObjectData(s.c, geminiResp)
+
+	return true
 }

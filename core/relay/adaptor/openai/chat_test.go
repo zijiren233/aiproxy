@@ -428,7 +428,6 @@ func TestConvertResponsesToChatCompletionResponse(t *testing.T) {
 			checkFunc: func(t *testing.T, chatResp relaymodel.TextResponse) {
 				t.Helper()
 				assert.Equal(t, "resp_123", chatResp.ID)
-				assert.Equal(t, "gpt-5-codex", chatResp.Model)
 				assert.Equal(t, "chat.completion", chatResp.Object)
 				require.Len(t, chatResp.Choices, 1)
 				assert.Contains(t, chatResp.Choices[0].Message.Content, "Hello, world!")
@@ -468,16 +467,8 @@ func TestConvertResponsesToChatCompletionResponse(t *testing.T) {
 			},
 			checkFunc: func(t *testing.T, chatResp relaymodel.TextResponse) {
 				t.Helper()
-				// Current implementation creates one choice per output item
-				require.Len(t, chatResp.Choices, 2)
-				// First choice is reasoning
-				assert.Contains(
-					t,
-					chatResp.Choices[0].Message.Content,
-					"Let me think about this...",
-				)
-				// Second choice is the message
-				assert.Contains(t, chatResp.Choices[1].Message.Content, "The answer is 42.")
+				require.Len(t, chatResp.Choices, 1)
+				assert.Contains(t, chatResp.Choices[0].Message.Content, "The answer is 42.")
 			},
 			expectedStatus: http.StatusOK,
 		},
@@ -500,6 +491,7 @@ func TestConvertResponsesToChatCompletionResponse(t *testing.T) {
 			c, _ := gin.CreateTestContext(w)
 
 			m := &meta.Meta{
+				OriginModel: "client-gpt-5",
 				ActualModel: tt.responsesResp.Model,
 			}
 
@@ -511,6 +503,7 @@ func TestConvertResponsesToChatCompletionResponse(t *testing.T) {
 			err = json.Unmarshal(w.Body.Bytes(), &chatResp)
 			require.NoError(t, err)
 
+			assert.Equal(t, "client-gpt-5", chatResp.Model)
 			tt.checkFunc(t, chatResp)
 		})
 	}
@@ -529,8 +522,6 @@ func TestConvertResponsesToChatCompletionStreamResponseSkipsOutputItemDoneConten
 		`data: {"type":"response.output_item.done","item":{"id":"msg_123","type":"message","role":"assistant","content":[{"type":"output_text","text":"Hello! What would you like to discuss or work on?"}]}}`,
 		"",
 		`data: {"type":"response.completed","response":{"id":"resp_123","object":"response","created_at":1780731105,"status":"completed","model":"gpt-5.1","output":[{"id":"msg_123","type":"message","role":"assistant","content":[{"type":"output_text","text":"Hello! What would you like to discuss or work on?"}]}],"parallel_tool_calls":true,"store":false,"usage":{"input_tokens":7,"output_tokens":22,"total_tokens":29}}}`,
-		"",
-		`data: [DONE]`,
 		"",
 	}, "\n")
 
@@ -563,6 +554,150 @@ func TestConvertResponsesToChatCompletionStreamResponseSkipsOutputItemDoneConten
 		1,
 		strings.Count(w.Body.String(), "Hello! What would you like to discuss or work on?"),
 	)
+	assert.Equal(t, 1, strings.Count(w.Body.String(), "data: [DONE]"))
+}
+
+func TestConvertResponsesToChatCompletionStreamResponseReturnsErrorBeforeDownstreamWrite(
+	t *testing.T,
+) {
+	gin.SetMode(gin.TestMode)
+
+	stream := strings.Join([]string{
+		`event: response.created`,
+		`data: {"type":"response.created","response":{"id":"resp_123","object":"response","created_at":1781332973,"status":"in_progress","model":"gpt-5-mini","output":[],"parallel_tool_calls":true,"store":false}}`,
+		"",
+		`event: response.failed`,
+		`data: {"type":"response.failed","response":{"id":"resp_123","object":"response","created_at":1781332973,"status":"failed","model":"gpt-5-mini","output":[],"parallel_tool_calls":true,"store":false},"sequence_number":1}`,
+		"",
+		`event: error`,
+		`data: {"type":"error","error":{"type":"too_many_requests","code":"too_many_requests","message":"Too Many Requests","param":null},"sequence_number":2}`,
+		"",
+	}, "\n")
+
+	httpResp := &http.Response{
+		StatusCode: http.StatusOK,
+		Body:       &mockReadCloser{Reader: bytes.NewReader([]byte(stream))},
+		Header:     make(http.Header),
+	}
+
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequestWithContext(
+		t.Context(),
+		http.MethodPost,
+		"/v1/chat/completions",
+		nil,
+	)
+
+	m := &meta.Meta{
+		ActualModel: "gpt-5-mini",
+	}
+
+	result, err := openai.ConvertResponsesToChatCompletionStreamResponse(m, c, httpResp)
+	require.NotNil(t, err)
+	assert.Equal(t, http.StatusTooManyRequests, err.StatusCode())
+	assert.Equal(t, "resp_123", result.UpstreamID)
+	assert.Empty(t, w.Body.String())
+}
+
+func TestConvertResponsesToChatCompletionStreamResponseHandlesErrorAfterDownstreamWrite(
+	t *testing.T,
+) {
+	gin.SetMode(gin.TestMode)
+
+	stream := strings.Join([]string{
+		`data: {"type":"response.created","response":{"id":"resp_123","object":"response","created_at":1781332973,"status":"in_progress","model":"gpt-5-mini","output":[],"parallel_tool_calls":true,"store":false}}`,
+		"",
+		`data: {"type":"response.output_text.delta","delta":"partial"}`,
+		"",
+		`event: error`,
+		`data: {"type":"error","error":{"type":"server_error","code":"server_error","message":"stream failed","param":null},"sequence_number":2}`,
+		"",
+		`data: {"type":"response.output_text.delta","delta":"late"}`,
+		"",
+		`data: {"type":"response.completed","response":{"id":"resp_123","object":"response","created_at":1781332973,"status":"completed","model":"gpt-5-mini","output":[],"parallel_tool_calls":true,"store":false}}`,
+		"",
+	}, "\n")
+
+	httpResp := &http.Response{
+		StatusCode: http.StatusOK,
+		Body:       &mockReadCloser{Reader: bytes.NewReader([]byte(stream))},
+		Header:     make(http.Header),
+	}
+
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequestWithContext(
+		t.Context(),
+		http.MethodPost,
+		"/v1/chat/completions",
+		nil,
+	)
+
+	m := &meta.Meta{
+		ActualModel: "gpt-5-mini",
+	}
+
+	_, err := openai.ConvertResponsesToChatCompletionStreamResponse(m, c, httpResp)
+	require.Nil(t, err)
+	assert.Equal(t, "partial", collectChatCompletionStreamContent(t, w.Body.String()))
+	assert.Equal(t, 1, strings.Count(w.Body.String(), "data: [DONE]"))
+	assert.NotContains(t, w.Body.String(), "late")
+}
+
+func TestConvertResponsesToChatCompletionStreamResponseUsesOriginModelForEveryChunk(
+	t *testing.T,
+) {
+	gin.SetMode(gin.TestMode)
+
+	stream := strings.Join([]string{
+		`data: {"type":"response.created","response":{"id":"resp_123","object":"response","created_at":1781332973,"status":"in_progress","model":"mapped-gpt-5","output":[],"parallel_tool_calls":true,"store":false}}`,
+		"",
+		`data: {"type":"response.output_text.delta","delta":"partial"}`,
+		"",
+		`data: {"type":"response.completed","response":{"id":"resp_123","object":"response","created_at":1781332973,"status":"completed","model":"mapped-gpt-5","output":[],"parallel_tool_calls":true,"store":false,"usage":{"input_tokens":1,"output_tokens":1,"total_tokens":2}}}`,
+		"",
+	}, "\n")
+
+	httpResp := &http.Response{
+		StatusCode: http.StatusOK,
+		Body:       &mockReadCloser{Reader: bytes.NewReader([]byte(stream))},
+		Header:     make(http.Header),
+	}
+
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequestWithContext(
+		t.Context(),
+		http.MethodPost,
+		"/v1/chat/completions",
+		nil,
+	)
+
+	m := &meta.Meta{
+		OriginModel: "gpt-5",
+		ActualModel: "mapped-gpt-5",
+	}
+
+	_, err := openai.ConvertResponsesToChatCompletionStreamResponse(m, c, httpResp)
+	require.Nil(t, err)
+	assert.NotContains(t, w.Body.String(), "mapped-gpt-5")
+
+	chunkCount := 0
+	for line := range strings.SplitSeq(w.Body.String(), "\n") {
+		line = strings.TrimSpace(line)
+		if !strings.HasPrefix(line, "data: ") || line == "data: [DONE]" {
+			continue
+		}
+
+		var chunk relaymodel.ChatCompletionsStreamResponse
+		require.NoError(t, json.Unmarshal([]byte(strings.TrimPrefix(line, "data: ")), &chunk))
+		assert.Equal(t, "gpt-5", chunk.Model)
+
+		chunkCount++
+	}
+
+	assert.GreaterOrEqual(t, chunkCount, 2)
 }
 
 func collectChatCompletionStreamContent(t *testing.T, body string) string {

@@ -119,6 +119,9 @@ const (
 
 	// Error event
 	EventError ResponseStreamEventType = "error"
+
+	// Compatibility event
+	EventKeepAlive ResponseStreamEventType = "keepalive"
 )
 
 // ResponseError represents an error in a response
@@ -323,6 +326,7 @@ type InputItemList struct {
 type ResponseStreamEvent struct {
 	Type           string         `json:"type"`
 	Response       *Response      `json:"response,omitempty"`
+	Error          *OpenAIError   `json:"error,omitempty"`
 	OutputIndex    *int           `json:"output_index,omitempty"`
 	Item           *OutputItem    `json:"item,omitempty"`
 	ItemID         string         `json:"item_id,omitempty"`

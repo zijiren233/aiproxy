@@ -30,6 +30,18 @@ type chatCompletionStreamState struct {
 	toolCallArgs      string
 }
 
+func responseModelName(meta *meta.Meta) string {
+	if meta == nil {
+		return ""
+	}
+
+	if meta.OriginModel != "" {
+		return meta.OriginModel
+	}
+
+	return meta.ActualModel
+}
+
 // handleResponseCreated handles response.created event for ChatCompletion
 func (s *chatCompletionStreamState) handleResponseCreated(
 	event *relaymodel.ResponseStreamEvent,
@@ -44,7 +56,7 @@ func (s *chatCompletionStreamState) handleResponseCreated(
 		ID:      s.messageID,
 		Object:  relaymodel.ChatCompletionChunkObject,
 		Created: event.Response.CreatedAt,
-		Model:   event.Response.Model,
+		Model:   responseModelName(s.meta),
 		Choices: []*relaymodel.ChatCompletionsStreamResponseChoice{
 			{
 				Index: 0,
@@ -68,7 +80,7 @@ func (s *chatCompletionStreamState) handleOutputTextDelta(
 		ID:      s.messageID,
 		Object:  relaymodel.ChatCompletionChunkObject,
 		Created: time.Now().Unix(),
-		Model:   s.meta.ActualModel,
+		Model:   responseModelName(s.meta),
 		Choices: []*relaymodel.ChatCompletionsStreamResponseChoice{
 			{
 				Index: 0,
@@ -106,7 +118,7 @@ func (s *chatCompletionStreamState) handleOutputItemAdded(
 			ID:      s.messageID,
 			Object:  relaymodel.ChatCompletionChunkObject,
 			Created: time.Now().Unix(),
-			Model:   s.meta.ActualModel,
+			Model:   responseModelName(s.meta),
 			Choices: []*relaymodel.ChatCompletionsStreamResponseChoice{
 				{
 					Index: 0,
@@ -133,7 +145,7 @@ func (s *chatCompletionStreamState) handleOutputItemAdded(
 			ID:      s.messageID,
 			Object:  relaymodel.ChatCompletionChunkObject,
 			Created: time.Now().Unix(),
-			Model:   s.meta.ActualModel,
+			Model:   responseModelName(s.meta),
 			Choices: []*relaymodel.ChatCompletionsStreamResponseChoice{
 				{
 					Index: 0,
@@ -164,7 +176,7 @@ func (s *chatCompletionStreamState) handleFunctionCallArgumentsDelta(
 		ID:      s.messageID,
 		Object:  relaymodel.ChatCompletionChunkObject,
 		Created: time.Now().Unix(),
-		Model:   s.meta.ActualModel,
+		Model:   responseModelName(s.meta),
 		Choices: []*relaymodel.ChatCompletionsStreamResponseChoice{
 			{
 				Index: 0,
@@ -223,7 +235,7 @@ func (s *chatCompletionStreamState) handleResponseCompleted(
 		ID:      s.messageID,
 		Object:  relaymodel.ChatCompletionChunkObject,
 		Created: time.Now().Unix(),
-		Model:   s.meta.ActualModel,
+		Model:   responseModelName(s.meta),
 		Choices: []*relaymodel.ChatCompletionsStreamResponseChoice{
 			{
 				Index:        0,
@@ -417,7 +429,7 @@ func StreamHandler(
 
 	responseText := strings.Builder{}
 
-	scanner, cleanup := utils.NewStreamScanner(resp.Body, meta.ActualModel)
+	scanner, cleanup := utils.NewStreamScanner(resp.Body, meta.OriginModel, meta.ActualModel)
 	defer cleanup()
 
 	var (
@@ -1052,13 +1064,17 @@ func ConvertResponsesToChatCompletionResponse(
 		ID:      responsesResp.ID,
 		Object:  relaymodel.ChatCompletionObject,
 		Created: responsesResp.CreatedAt,
-		Model:   responsesResp.Model,
+		Model:   responseModelName(meta),
 		Choices: []*relaymodel.TextResponseChoice{},
 		Usage:   relaymodel.ChatUsage{},
 	}
 
 	// Convert output items to choices
 	for _, outputItem := range responsesResp.Output {
+		if outputItem.Type != "" && outputItem.Type != relaymodel.InputItemTypeMessage {
+			continue
+		}
+
 		choice := relaymodel.TextResponseChoice{
 			Index: 0, // Responses API doesn't have index, default to 0
 			Message: relaymodel.Message{
@@ -1127,6 +1143,78 @@ func ConvertResponsesToChatCompletionResponse(
 	}, nil
 }
 
+type responsesStreamErrorState struct {
+	usage          model.Usage
+	responseID     string
+	lastResponse   *relaymodel.Response
+	pendingFailure *relaymodel.ResponseStreamEvent
+}
+
+func (s *responsesStreamErrorState) update(event *relaymodel.ResponseStreamEvent) {
+	if event.Response == nil {
+		return
+	}
+
+	if s.responseID == "" {
+		s.responseID = event.Response.ID
+	}
+
+	s.lastResponse = event.Response
+	s.usage = event.Response.ToModelUsage()
+}
+
+func (s *responsesStreamErrorState) result() adaptor.DoResponseResult {
+	return adaptor.DoResponseResult{
+		Usage:      s.usage,
+		UpstreamID: s.responseID,
+		AsyncUsage: responseNeedsAsyncUsage(s.lastResponse),
+	}
+}
+
+func (s *responsesStreamErrorState) errorBeforeEvent(
+	event *relaymodel.ResponseStreamEvent,
+) adaptor.Error {
+	if s.pendingFailure == nil {
+		return nil
+	}
+
+	if event.Type == relaymodel.EventError {
+		return responseStreamError(event)
+	}
+
+	return responseStreamError(s.pendingFailure)
+}
+
+func (s *responsesStreamErrorState) handleFailure(
+	event *relaymodel.ResponseStreamEvent,
+) (adaptor.Error, bool) {
+	if event.Type != relaymodel.EventResponseFailed && event.Type != relaymodel.EventError {
+		return nil, false
+	}
+
+	if event.Type == relaymodel.EventResponseFailed && event.Response != nil &&
+		event.Response.Error == nil {
+		pendingEvent := *event
+		s.pendingFailure = &pendingEvent
+
+		return nil, true
+	}
+
+	return responseStreamError(event), true
+}
+
+func responseStreamEventCanDelay(eventType string) bool {
+	switch eventType {
+	case relaymodel.EventResponseCreated,
+		relaymodel.EventResponseInProgress,
+		relaymodel.EventResponseQueued,
+		relaymodel.EventKeepAlive:
+		return true
+	default:
+		return false
+	}
+}
+
 // ConvertResponsesToChatCompletionStreamResponse converts Responses API stream to ChatCompletion stream
 func ConvertResponsesToChatCompletionStreamResponse(
 	meta *meta.Meta,
@@ -1141,30 +1229,57 @@ func ConvertResponsesToChatCompletionStreamResponse(
 
 	log := common.GetLogger(c)
 
-	scanner, cleanup := utils.NewStreamScanner(resp.Body, meta.ActualModel)
+	scanner, cleanup := utils.NewStreamScanner(resp.Body, meta.OriginModel, meta.ActualModel)
 	defer cleanup()
 
 	var (
-		usage        model.Usage
-		responseID   string
-		lastResponse *relaymodel.Response
+		usage               model.Usage
+		responseID          string
+		lastResponse        *relaymodel.Response
+		pendingInitialChunk *relaymodel.ChatCompletionsStreamResponse
+		wroteStream         bool
 	)
+
+	errorState := responsesStreamErrorState{}
 
 	state := &chatCompletionStreamState{
 		meta: meta,
 		c:    c,
 	}
+	stopStream := false
 
-	for scanner.Scan() {
+	var writeChatStreamResp func(*relaymodel.ChatCompletionsStreamResponse)
+
+	writeChatStreamResp = func(chatStreamResp *relaymodel.ChatCompletionsStreamResponse) {
+		if chatStreamResp == nil {
+			return
+		}
+
+		if pendingInitialChunk != nil {
+			initialChunk := pendingInitialChunk
+			pendingInitialChunk = nil
+
+			writeChatStreamResp(initialChunk)
+		}
+
+		chunkData, err := sonic.Marshal(chatStreamResp)
+		if err != nil {
+			log.Error("error marshalling chat stream response: " + err.Error())
+			return
+		}
+
+		render.OpenaiBytesData(c, chunkData)
+
+		wroteStream = true
+	}
+
+	for scanner.Scan() && !stopStream {
 		data := scanner.Bytes()
 		if !render.IsValidSSEData(data) {
 			continue
 		}
 
 		data = render.ExtractSSEData(data)
-		if render.IsSSEDone(data) {
-			break
-		}
 
 		// Parse the stream event
 		var event relaymodel.ResponseStreamEvent
@@ -1184,12 +1299,20 @@ func ConvertResponsesToChatCompletionStreamResponse(
 			usage = event.Response.ToModelUsage()
 		}
 
+		errorState.usage = usage
+		errorState.responseID = responseID
+		errorState.lastResponse = lastResponse
+
+		if err := errorState.errorBeforeEvent(&event); err != nil {
+			return errorState.result(), err
+		}
+
 		// Handle event and get response
 		var chatStreamResp *relaymodel.ChatCompletionsStreamResponse
 
 		switch event.Type {
 		case relaymodel.EventResponseCreated:
-			chatStreamResp = state.handleResponseCreated(&event)
+			pendingInitialChunk = state.handleResponseCreated(&event)
 		case relaymodel.EventOutputTextDelta:
 			chatStreamResp = state.handleOutputTextDelta(&event)
 		case relaymodel.EventOutputItemAdded:
@@ -1200,22 +1323,42 @@ func ConvertResponsesToChatCompletionStreamResponse(
 			state.handleOutputItemDone(&event)
 		case relaymodel.EventResponseCompleted, relaymodel.EventResponseDone:
 			chatStreamResp = state.handleResponseCompleted(&event)
-		}
+		case relaymodel.EventResponseFailed, relaymodel.EventError:
+			if wroteStream {
+				log.Error(
+					"response stream failed after data was sent: " + responseStreamErrorMessage(
+						&event,
+					),
+				)
 
-		// Send the converted chunk
-		if chatStreamResp != nil {
-			chunkData, err := sonic.Marshal(chatStreamResp)
-			if err != nil {
-				log.Error("error marshalling chat stream response: " + err.Error())
+				stopStream = true
+
+				break
+			}
+
+			err, handled := errorState.handleFailure(&event)
+			if handled && err == nil {
 				continue
 			}
 
-			render.OpenaiBytesData(c, chunkData)
+			if handled {
+				return errorState.result(), err
+			}
 		}
+
+		writeChatStreamResp(chatStreamResp)
 	}
 
 	if err := scanner.Err(); err != nil {
 		log.Error("error reading response stream: " + err.Error())
+	}
+
+	if errorState.pendingFailure != nil && !wroteStream {
+		return errorState.result(), responseStreamError(errorState.pendingFailure)
+	}
+
+	if wroteStream {
+		render.OpenaiDone(c)
 	}
 
 	return adaptor.DoResponseResult{
@@ -1223,4 +1366,58 @@ func ConvertResponsesToChatCompletionStreamResponse(
 		UpstreamID: responseID,
 		AsyncUsage: responseNeedsAsyncUsage(lastResponse),
 	}, nil
+}
+
+func responseStreamError(event *relaymodel.ResponseStreamEvent) adaptor.Error {
+	openAIError := relaymodel.OpenAIError{
+		Message: responseStreamErrorMessage(event),
+		Type:    relaymodel.ErrorTypeUpstream,
+		Code:    relaymodel.ErrorCodeBadResponse,
+	}
+	statusCode := http.StatusBadGateway
+
+	if event.Error != nil {
+		openAIError = *event.Error
+		if openAIError.Type == "" {
+			openAIError.Type = relaymodel.ErrorTypeUpstream
+		}
+
+		if openAIError.Message == "" {
+			openAIError.Message = responseStreamErrorMessage(event)
+		}
+
+		if openAIError.Code == nil {
+			openAIError.Code = relaymodel.ErrorCodeBadResponse
+		}
+	}
+
+	if event.Response != nil && event.Response.Error != nil {
+		openAIError.Message = event.Response.Error.Message
+		if event.Response.Error.Code != "" {
+			openAIError.Code = event.Response.Error.Code
+		}
+	}
+
+	switch openAIError.Code {
+	case "too_many_requests", "rate_limit_exceeded":
+		statusCode = http.StatusTooManyRequests
+	}
+
+	return relaymodel.NewOpenAIError(statusCode, openAIError)
+}
+
+func responseStreamErrorMessage(event *relaymodel.ResponseStreamEvent) string {
+	if event.Error != nil && event.Error.Message != "" {
+		return event.Error.Message
+	}
+
+	if event.Response != nil && event.Response.Error != nil && event.Response.Error.Message != "" {
+		return event.Response.Error.Message
+	}
+
+	if event.Type != "" {
+		return "response stream failed: " + event.Type
+	}
+
+	return "response stream failed"
 }

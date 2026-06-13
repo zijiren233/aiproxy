@@ -27,11 +27,11 @@ func ConvertChatCompletionsRequest(
 	}
 
 	if utils.FirstMatchingModelName(
-		meta.OriginModel,
-		meta.ActualModel,
 		func(modelName string) bool {
 			return strings.HasPrefix(strings.ToLower(modelName), "deepseek-reasoner")
 		},
+		meta.OriginModel,
+		meta.ActualModel,
 	) != "" {
 		callbacks = append(callbacks, patchDeepseekReasonerSystemPrompt)
 	}

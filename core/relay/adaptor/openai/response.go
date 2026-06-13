@@ -18,7 +18,10 @@ import (
 	relaymodel "github.com/labring/aiproxy/core/relay/model"
 	"github.com/labring/aiproxy/core/relay/render"
 	"github.com/labring/aiproxy/core/relay/utils"
+	"github.com/sirupsen/logrus"
 )
+
+var responseStreamInitialBufferTimeout = 2 * time.Second
 
 // ConvertResponseRequest converts a response creation request
 func ConvertResponseRequest(
@@ -111,6 +114,15 @@ func ResponseHandler(
 		}
 	}
 
+	responseBody, err = rewriteTopLevelModel(responseBody, responseModelName(meta))
+	if err != nil {
+		return adaptor.DoResponseResult{}, relaymodel.WrapperOpenAIError(
+			err,
+			"rewrite_response_model_failed",
+			http.StatusInternalServerError,
+		)
+	}
+
 	// Write response
 	c.Writer.Header().Set("Content-Type", "application/json")
 	c.Writer.Header().Set("Content-Length", strconv.Itoa(len(responseBody)))
@@ -141,69 +153,351 @@ func ResponseStreamHandler(
 
 	log := common.GetLogger(c)
 
-	scanner, cleanup := utils.NewStreamScanner(resp.Body, meta.ActualModel)
-	defer cleanup()
+	done := make(chan struct{})
+	defer close(done)
+
+	events := scanResponseStreamEvents(resp.Body, done, meta.OriginModel, meta.ActualModel)
 
 	var (
-		usage        model.Usage
-		responseID   string
-		lastResponse *relaymodel.Response
+		errorState    responsesStreamErrorState
+		pendingEvents [][]byte
+		wroteStream   bool
+		bufferTimer   *time.Timer
 	)
+	defer stopResponseStreamBufferTimer(bufferTimer)
 
-	for scanner.Scan() {
-		data := scanner.Bytes()
-		if !render.IsValidSSEData(data) {
+readLoop:
+	for {
+		var item responseStreamEventItem
+
+		if bufferTimer == nil {
+			next, ok := <-events
+			if !ok {
+				break
+			}
+
+			item = next
+		} else {
+			select {
+			case next, ok := <-events:
+				if !ok {
+					break readLoop
+				}
+
+				item = next
+			case <-bufferTimer.C:
+				bufferTimer = nil
+
+				flushDelayedResponseStreamEvents(c, &pendingEvents, &wroteStream)
+				continue
+			}
+		}
+
+		if item.scanErr != nil {
+			log.Error("error reading response stream: " + item.scanErr.Error())
 			continue
 		}
 
-		data = render.ExtractSSEData(data)
-
-		// Parse the stream event
-		var event relaymodel.ResponseStreamEvent
-
-		err := sonic.Unmarshal(data, &event)
-		if err != nil {
-			log.Error("error unmarshalling response stream: " + err.Error())
+		if item.parseErr != nil {
+			log.Error("error unmarshalling response stream: " + item.parseErr.Error())
 			continue
+		}
+
+		event := item.event
+		data := item.data
+		data = rewriteResponseStreamEventModel(data, &event, responseModelName(meta), log)
+
+		if err := errorState.errorBeforeEvent(&event); err != nil {
+			return errorState.result(), err
 		}
 
 		// Store response ID if this is the first event with a response
-		if event.Response != nil && responseID == "" {
-			responseID = event.Response.ID
-			if event.Response.Store && responseID != "" {
-				err = store.SaveStore(adaptor.StoreCache{
-					ID:        model.ResponseStoreID(responseID),
+		if event.Response != nil && errorState.responseID == "" {
+			errorState.responseID = event.Response.ID
+			if event.Response.Store && errorState.responseID != "" {
+				saveErr := store.SaveStore(adaptor.StoreCache{
+					ID:        model.ResponseStoreID(errorState.responseID),
 					GroupID:   meta.Group.ID,
 					TokenID:   meta.Token.ID,
 					ChannelID: meta.Channel.ID,
 					Model:     meta.OriginModel,
 					ExpiresAt: time.Now().Add(time.Hour * 24 * 7),
 				})
-				if err != nil {
-					log.Errorf("save response store failed: %v", err)
+				if saveErr != nil {
+					log.Errorf("save response store failed: %v", saveErr)
 				}
 			}
 		}
 
 		// Update usage if available
-		if event.Response != nil {
-			lastResponse = event.Response
-			usage = event.Response.ToModelUsage()
+		errorState.update(&event)
+
+		if event.Type == relaymodel.EventResponseFailed || event.Type == relaymodel.EventError {
+			if wroteStream {
+				log.Error(
+					"response stream failed after data was sent: " + responseStreamErrorMessage(
+						&event,
+					),
+				)
+			} else {
+				err, handled := errorState.handleFailure(&event)
+				if handled && err == nil {
+					continue
+				}
+
+				if handled {
+					return errorState.result(), err
+				}
+			}
 		}
+
+		if responseStreamEventCanDelay(event.Type) && !wroteStream {
+			pendingEvents = append(pendingEvents, append([]byte(nil), data...))
+
+			if bufferTimer == nil {
+				bufferTimer = time.NewTimer(responseStreamInitialBufferTimeout)
+			}
+
+			continue
+		}
+
+		stopResponseStreamBufferTimer(bufferTimer)
+		bufferTimer = nil
+
+		flushDelayedResponseStreamEvents(c, &pendingEvents, &wroteStream)
 
 		// Forward the event
 		render.ResponsesData(c, data)
+
+		wroteStream = true
 	}
 
-	if err := scanner.Err(); err != nil {
-		log.Error("error reading response stream: " + err.Error())
+	if errorState.pendingFailure != nil && !wroteStream {
+		return errorState.result(), responseStreamError(errorState.pendingFailure)
 	}
 
-	return adaptor.DoResponseResult{
-		Usage:      usage,
-		UpstreamID: responseID,
-		AsyncUsage: responseNeedsAsyncUsage(lastResponse),
-	}, nil
+	flushDelayedResponseStreamEvents(c, &pendingEvents, &wroteStream)
+
+	return errorState.result(), nil
+}
+
+type responseStreamEventItem struct {
+	data     []byte
+	event    relaymodel.ResponseStreamEvent
+	parseErr error
+	scanErr  error
+}
+
+func scanResponseStreamEvents(
+	body io.Reader,
+	done <-chan struct{},
+	modelNames ...string,
+) <-chan responseStreamEventItem {
+	events := make(chan responseStreamEventItem, 16)
+
+	go func() {
+		defer close(events)
+
+		scanner, cleanup := utils.NewStreamScanner(body, modelNames...)
+		defer cleanup()
+
+		for scanner.Scan() {
+			data := scanner.Bytes()
+			if !render.IsValidSSEData(data) {
+				continue
+			}
+
+			data = append([]byte(nil), render.ExtractSSEData(data)...)
+
+			var event relaymodel.ResponseStreamEvent
+
+			item := responseStreamEventItem{
+				data:     data,
+				event:    event,
+				parseErr: sonic.Unmarshal(data, &event),
+			}
+
+			select {
+			case events <- item:
+			case <-done:
+				return
+			}
+		}
+
+		if err := scanner.Err(); err != nil {
+			select {
+			case events <- responseStreamEventItem{scanErr: err}:
+			case <-done:
+			}
+		}
+	}()
+
+	return events
+}
+
+func stopResponseStreamBufferTimer(timer *time.Timer) {
+	if timer == nil {
+		return
+	}
+
+	if !timer.Stop() {
+		select {
+		case <-timer.C:
+		default:
+		}
+	}
+}
+
+func flushDelayedResponseStreamEvents(
+	c *gin.Context,
+	pendingEvents *[][]byte,
+	wroteStream *bool,
+) {
+	if len(*pendingEvents) == 0 {
+		return
+	}
+
+	for _, pendingEvent := range *pendingEvents {
+		render.ResponsesData(c, pendingEvent)
+	}
+
+	*pendingEvents = nil
+	*wroteStream = true
+}
+
+func rewriteResponseStreamEventModel(
+	data []byte,
+	event *relaymodel.ResponseStreamEvent,
+	originModel string,
+	log *logrus.Entry,
+) []byte {
+	if originModel == "" || event == nil || event.Response == nil ||
+		event.Response.Model == originModel {
+		return data
+	}
+
+	rewrittenData, err := rewriteNestedModel(data, originModel, "response", "model")
+	if err != nil {
+		log.Error("error rewriting response stream event model: " + err.Error())
+		return data
+	}
+
+	return rewrittenData
+}
+
+func writeResponseObjectWithOriginModel(
+	meta *meta.Meta,
+	c *gin.Context,
+	resp *http.Response,
+) (relaymodel.Response, adaptor.Error) {
+	responseBody, err := common.GetResponseBody(resp)
+	if err != nil {
+		return relaymodel.Response{}, relaymodel.WrapperOpenAIError(
+			err,
+			"read_response_body_failed",
+			http.StatusInternalServerError,
+		)
+	}
+
+	var response relaymodel.Response
+
+	err = sonic.Unmarshal(responseBody, &response)
+	if err != nil {
+		return relaymodel.Response{}, relaymodel.WrapperOpenAIError(
+			err,
+			"unmarshal_response_body_failed",
+			http.StatusInternalServerError,
+		)
+	}
+
+	responseBody, err = rewriteTopLevelModel(responseBody, responseModelName(meta))
+	if err != nil {
+		return response, relaymodel.WrapperOpenAIError(
+			err,
+			"rewrite_response_model_failed",
+			http.StatusInternalServerError,
+		)
+	}
+
+	c.Writer.Header().Set("Content-Type", "application/json")
+	c.Writer.Header().Set("Content-Length", strconv.Itoa(len(responseBody)))
+	_, _ = c.Writer.Write(responseBody)
+
+	return response, nil
+}
+
+func rewriteTopLevelModel(data []byte, modelName string) ([]byte, error) {
+	node, err := common.GetJSONNodeNoCopy(data)
+	if err != nil {
+		return nil, err
+	}
+
+	return rewriteTopLevelModelNode(data, &node, modelName)
+}
+
+func rewriteNestedModel(data []byte, modelName string, path ...string) ([]byte, error) {
+	if modelName == "" {
+		return data, nil
+	}
+
+	node, err := common.GetJSONNodeNoCopy(data)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(path) == 0 {
+		return rewriteTopLevelModelNode(data, &node, modelName)
+	}
+
+	parent := &node
+	for _, key := range path[:len(path)-1] {
+		next := parent.Get(key)
+		if !next.Exists() {
+			return data, nil
+		}
+
+		parent = next
+	}
+
+	modelKey := path[len(path)-1]
+
+	modelNode := parent.Get(modelKey)
+	if !modelNode.Exists() {
+		return data, nil
+	}
+
+	if currentModel, err := modelNode.String(); err == nil && currentModel == modelName {
+		return data, nil
+	}
+
+	_, err = parent.Set(modelKey, ast.NewString(modelName))
+	if err != nil {
+		return nil, err
+	}
+
+	return node.MarshalJSON()
+}
+
+func rewriteTopLevelModelNode(data []byte, node *ast.Node, modelName string) ([]byte, error) {
+	if modelName == "" || node == nil {
+		return data, nil
+	}
+
+	modelNode := node.Get("model")
+	if !modelNode.Exists() {
+		return data, nil
+	}
+
+	if currentModel, err := modelNode.String(); err == nil && currentModel == modelName {
+		return data, nil
+	}
+
+	_, err := node.Set("model", ast.NewString(modelName))
+	if err != nil {
+		return nil, err
+	}
+
+	return node.MarshalJSON()
 }
 
 func responseNeedsAsyncUsage(response *relaymodel.Response) bool {
@@ -225,7 +519,7 @@ func responseNeedsAsyncUsage(response *relaymodel.Response) bool {
 
 // GetResponseHandler handles GET /v1/responses/{response_id}
 func GetResponseHandler(
-	_ *meta.Meta,
+	meta *meta.Meta,
 	c *gin.Context,
 	resp *http.Response,
 ) (adaptor.DoResponseResult, adaptor.Error) {
@@ -235,11 +529,16 @@ func GetResponseHandler(
 
 	defer resp.Body.Close()
 
-	c.Writer.Header().Set("Content-Type", resp.Header.Get("Content-Type"))
-	c.Writer.Header().Set("Content-Length", resp.Header.Get("Content-Length"))
-	_, _ = io.Copy(c.Writer, resp.Body)
+	response, err := writeResponseObjectWithOriginModel(meta, c, resp)
+	if err != nil {
+		return adaptor.DoResponseResult{}, err
+	}
 
-	return adaptor.DoResponseResult{}, nil
+	return adaptor.DoResponseResult{
+		Usage:      response.ToModelUsage(),
+		UpstreamID: response.ID,
+		AsyncUsage: responseNeedsAsyncUsage(&response),
+	}, nil
 }
 
 // DeleteResponseHandler handles DELETE /v1/responses/{response_id}
@@ -264,7 +563,7 @@ func DeleteResponseHandler(
 
 // CancelResponseHandler handles POST /v1/responses/{response_id}/cancel
 func CancelResponseHandler(
-	_ *meta.Meta,
+	meta *meta.Meta,
 	c *gin.Context,
 	resp *http.Response,
 ) (adaptor.DoResponseResult, adaptor.Error) {
@@ -274,11 +573,16 @@ func CancelResponseHandler(
 
 	defer resp.Body.Close()
 
-	c.Writer.Header().Set("Content-Type", resp.Header.Get("Content-Type"))
-	c.Writer.Header().Set("Content-Length", resp.Header.Get("Content-Length"))
-	_, _ = io.Copy(c.Writer, resp.Body)
+	response, err := writeResponseObjectWithOriginModel(meta, c, resp)
+	if err != nil {
+		return adaptor.DoResponseResult{}, err
+	}
 
-	return adaptor.DoResponseResult{}, nil
+	return adaptor.DoResponseResult{
+		Usage:      response.ToModelUsage(),
+		UpstreamID: response.ID,
+		AsyncUsage: responseNeedsAsyncUsage(&response),
+	}, nil
 }
 
 // GetInputItemsHandler handles GET /v1/responses/{response_id}/input_items

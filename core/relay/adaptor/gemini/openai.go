@@ -99,11 +99,11 @@ func resolveGeminiFeatureModel(meta *meta.Meta) string {
 	}
 
 	if modelName := utils.FirstMatchingModelName(
-		meta.OriginModel,
-		meta.ActualModel,
 		func(modelName string) bool {
 			return strings.Contains(strings.ToLower(modelName), "gemini")
 		},
+		meta.OriginModel,
+		meta.ActualModel,
 	); modelName != "" {
 		return modelName
 	}
