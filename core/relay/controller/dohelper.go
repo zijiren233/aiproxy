@@ -359,11 +359,9 @@ func handleResponse(
 	result, relayErr := a.DoResponse(meta, store, c, resp)
 	if relayErr != nil && opt.IncludeResponseBody && opt.MaxResponseBodySize >= 0 {
 		respBody, _ := relayErr.MarshalJSON()
-		detail.ResponseBody = limitBodyDetail(conv.BytesToString(respBody), opt.MaxResponseBodySize)
+		detail.ResponseBody = responseBodyDetail(respBody, opt.MaxResponseBodySize)
 	} else if rw.body != nil {
-		// copy body buffer
-		// do not use bytes conv
-		detail.ResponseBody = limitBodyDetail(rw.body.String(), opt.MaxResponseBodySize)
+		detail.ResponseBody = capturedResponseBodyDetail(rw.body.Bytes(), opt.MaxResponseBodySize)
 	}
 
 	if result.UpstreamID == "" && resp != nil && resp.Header != nil &&
@@ -396,19 +394,31 @@ func requestBodyDetail(c *gin.Context, opt BodyDetailOption) (string, error) {
 		return "", err
 	}
 
-	return limitBodyDetailString(string(limitBodyDetailBytes(body, opt.MaxRequestBodySize))), nil
+	return bodyDetailFromBytes(body, opt.MaxRequestBodySize), nil
 }
 
-func limitBodyDetail(body string, maxSize int64) string {
-	return limitBodyDetailString(limitBodyDetailStringLength(body, maxSize))
-}
-
-func limitBodyDetailStringLength(body string, maxSize int64) string {
-	if maxSize == 0 || int64(len(body)) <= maxSize {
-		return body
+func bodyDetailFromBytes(body []byte, maxSize int64) string {
+	if !utf8.Valid(body) {
+		return ""
 	}
 
-	return body[:min(len(body), int(maxSize)+1)]
+	return limitBodyDetailString(string(limitBodyDetailBytes(body, maxSize)))
+}
+
+func responseBodyDetail(body []byte, maxSize int64) string {
+	return bodyDetailFromBytes(body, maxSize)
+}
+
+func capturedResponseBodyDetail(body []byte, maxSize int64) string {
+	if maxSize == 0 || int64(len(body)) <= maxSize {
+		if !utf8.Valid(body) {
+			return ""
+		}
+
+		return conv.BytesToString(body)
+	}
+
+	return limitBodyDetailString(conv.BytesToString(limitBodyDetailBytes(body, maxSize)))
 }
 
 func limitBodyDetailString(body string) string {

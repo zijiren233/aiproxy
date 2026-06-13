@@ -67,6 +67,62 @@ func responseToChatFinishReason(response *relaymodel.Response) relaymodel.Finish
 	}
 }
 
+func responseReasoningSummaryText(response *relaymodel.Response) string {
+	if response == nil {
+		return ""
+	}
+
+	var summaryParts []string
+
+	for _, outputItem := range response.Output {
+		if outputItem.Type != relaymodel.InputItemTypeReasoning {
+			continue
+		}
+
+		summaryParts = append(summaryParts, reasoningSummaryText(outputItem.Summary)...)
+	}
+
+	return strings.Join(summaryParts, "\n")
+}
+
+func reasoningSummaryText(summary any) []string {
+	switch value := summary.(type) {
+	case string:
+		if value == "" {
+			return nil
+		}
+
+		return []string{value}
+	case []relaymodel.SummaryPart:
+		parts := make([]string, 0, len(value))
+		for _, part := range value {
+			if part.Text != "" {
+				parts = append(parts, part.Text)
+			}
+		}
+
+		return parts
+	case []any:
+		parts := make([]string, 0, len(value))
+		for _, item := range value {
+			switch typedItem := item.(type) {
+			case relaymodel.SummaryPart:
+				if typedItem.Text != "" {
+					parts = append(parts, typedItem.Text)
+				}
+			case map[string]any:
+				if text, ok := typedItem["text"].(string); ok && text != "" {
+					parts = append(parts, text)
+				}
+			}
+		}
+
+		return parts
+	default:
+		return nil
+	}
+}
+
 // handleResponseCreated handles response.created event for ChatCompletion
 func (s *chatCompletionStreamState) handleResponseCreated(
 	event *relaymodel.ResponseStreamEvent,
@@ -111,6 +167,29 @@ func (s *chatCompletionStreamState) handleOutputTextDelta(
 				Index: 0,
 				Delta: relaymodel.Message{
 					Content: event.Delta,
+				},
+			},
+		},
+	}
+}
+
+func (s *chatCompletionStreamState) handleReasoningSummaryTextDelta(
+	event *relaymodel.ResponseStreamEvent,
+) *relaymodel.ChatCompletionsStreamResponse {
+	if event.Delta == "" {
+		return nil
+	}
+
+	return &relaymodel.ChatCompletionsStreamResponse{
+		ID:      s.messageID,
+		Object:  relaymodel.ChatCompletionChunkObject,
+		Created: time.Now().Unix(),
+		Model:   responseModelName(s.meta),
+		Choices: []*relaymodel.ChatCompletionsStreamResponseChoice{
+			{
+				Index: 0,
+				Delta: relaymodel.Message{
+					ReasoningContent: event.Delta,
 				},
 			},
 		},
@@ -1189,11 +1268,8 @@ func ConvertChatCompletionToResponsesRequest(
 		responsesReq.User = &chatReq.User
 	}
 
-	applyReasoningToResponsesRequestForModel(
-		meta,
-		&responsesReq,
-		utils.ParseOpenAIReasoning(&chatReq),
-	)
+	reasoning := utils.ParseOpenAIReasoning(&chatReq)
+	applyReasoningToResponsesRequestForModel(meta, &responsesReq, reasoning)
 
 	// Map metadata
 	if chatReq.Metadata != nil {
@@ -1263,6 +1339,8 @@ func ConvertResponsesToChatCompletionResponse(
 		Usage:   relaymodel.ChatUsage{},
 	}
 
+	reasonContent := responseReasoningSummaryText(&responsesResp)
+
 	// Convert output items to choices
 	for _, outputItem := range responsesResp.Output {
 		switch outputItem.Type {
@@ -1275,8 +1353,9 @@ func ConvertResponsesToChatCompletionResponse(
 			choice := relaymodel.TextResponseChoice{
 				Index: len(chatResp.Choices),
 				Message: relaymodel.Message{
-					Role:    role,
-					Content: "",
+					Role:             role,
+					Content:          "",
+					ReasoningContent: reasonContent,
 				},
 			}
 
@@ -1293,6 +1372,7 @@ func ConvertResponsesToChatCompletionResponse(
 
 			choice.FinishReason = responseToChatFinishReason(&responsesResp)
 			chatResp.Choices = append(chatResp.Choices, &choice)
+			reasonContent = ""
 
 		case relaymodel.InputItemTypeFunctionCall:
 			toolCallID := outputItem.CallID
@@ -1308,7 +1388,8 @@ func ConvertResponsesToChatCompletionResponse(
 			chatResp.Choices = append(chatResp.Choices, &relaymodel.TextResponseChoice{
 				Index: len(chatResp.Choices),
 				Message: relaymodel.Message{
-					Role: relaymodel.RoleAssistant,
+					Role:             relaymodel.RoleAssistant,
+					ReasoningContent: reasonContent,
 					ToolCalls: []relaymodel.ToolCall{
 						{
 							Index: 0,
@@ -1323,6 +1404,7 @@ func ConvertResponsesToChatCompletionResponse(
 				},
 				FinishReason: finishReason,
 			})
+			reasonContent = ""
 
 		default:
 			continue
@@ -1333,8 +1415,9 @@ func ConvertResponsesToChatCompletionResponse(
 		chatResp.Choices = append(chatResp.Choices, &relaymodel.TextResponseChoice{
 			Index: 0,
 			Message: relaymodel.Message{
-				Role:    relaymodel.RoleAssistant,
-				Content: "",
+				Role:             relaymodel.RoleAssistant,
+				Content:          "",
+				ReasoningContent: reasonContent,
 			},
 			FinishReason: responseToChatFinishReason(&responsesResp),
 		})
@@ -1546,6 +1629,8 @@ func ConvertResponsesToChatCompletionStreamResponse(
 			pendingInitialChunk = state.handleResponseCreated(&event)
 		case relaymodel.EventOutputTextDelta:
 			chatStreamResp = state.handleOutputTextDelta(&event)
+		case relaymodel.EventReasoningSummaryTextDelta:
+			chatStreamResp = state.handleReasoningSummaryTextDelta(&event)
 		case relaymodel.EventOutputItemAdded:
 			chatStreamResp = state.handleOutputItemAdded(&event)
 		case relaymodel.EventFunctionCallArgumentsDelta:

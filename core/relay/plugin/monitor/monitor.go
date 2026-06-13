@@ -50,9 +50,13 @@ var channelNoPermissionStatusCodesMap = map[int]struct{}{
 	http.StatusNotFound:        {},
 }
 
-func ChannelHasPermission(relayErr adaptor.Error) bool {
-	_, ok := channelNoPermissionStatusCodesMap[relayErr.StatusCode()]
+func ChannelStatusHasPermission(statusCode int) bool {
+	_, ok := channelNoPermissionStatusCodesMap[statusCode]
 	return !ok
+}
+
+func ChannelHasPermission(relayErr adaptor.Error) bool {
+	return ChannelStatusHasPermission(relayErr.StatusCode())
 }
 
 func getRequestDuration(meta *meta.Meta) time.Duration {

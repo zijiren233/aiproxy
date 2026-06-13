@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/bytedance/sonic"
 	"github.com/labring/aiproxy/core/common"
@@ -43,6 +44,18 @@ func truncateDetailBody(body string, maxSize int64) (string, bool) {
 func (d *RequestDetail) ApplyBodySizeLimits(requestMaxSize, responseMaxSize int64) {
 	d.RequestBody, d.RequestBodyTruncated = truncateDetailBody(d.RequestBody, requestMaxSize)
 	d.ResponseBody, d.ResponseBodyTruncated = truncateDetailBody(d.ResponseBody, responseMaxSize)
+}
+
+func (d *RequestDetail) DropInvalidUTF8Bodies() {
+	if d.RequestBody != "" && !utf8.ValidString(d.RequestBody) {
+		d.RequestBody = ""
+		d.RequestBodyTruncated = false
+	}
+
+	if d.ResponseBody != "" && !utf8.ValidString(d.ResponseBody) {
+		d.ResponseBody = ""
+		d.ResponseBodyTruncated = false
+	}
 }
 
 type Log struct {

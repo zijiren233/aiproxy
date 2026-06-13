@@ -9,6 +9,7 @@ type InputItemType = string
 
 const (
 	InputItemTypeMessage            InputItemType = "message"
+	InputItemTypeReasoning          InputItemType = "reasoning"
 	InputItemTypeFunctionCall       InputItemType = "function_call"
 	InputItemTypeFunctionCallOutput InputItemType = "function_call_output"
 )
