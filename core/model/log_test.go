@@ -58,6 +58,33 @@ func TestRequestDetailApplyBodySizeLimitsZeroKeepsOriginalBody(t *testing.T) {
 	}
 }
 
+func TestRequestDetailDropInvalidUTF8Bodies(t *testing.T) {
+	detail := &model.RequestDetail{
+		RequestBody:           string([]byte{0xff, 0xfe}),
+		ResponseBody:          "valid",
+		RequestBodyTruncated:  true,
+		ResponseBodyTruncated: true,
+	}
+
+	detail.DropInvalidUTF8Bodies()
+
+	if detail.RequestBody != "" {
+		t.Fatalf("expected invalid request body to be cleared, got %q", detail.RequestBody)
+	}
+
+	if detail.RequestBodyTruncated {
+		t.Fatal("expected request body truncated flag to be cleared")
+	}
+
+	if detail.ResponseBody != "valid" {
+		t.Fatalf("expected valid response body to remain unchanged, got %q", detail.ResponseBody)
+	}
+
+	if !detail.ResponseBodyTruncated {
+		t.Fatal("expected valid response body truncated flag to remain unchanged")
+	}
+}
+
 func TestRecordConsumeLogPersistsWebSearchCount(t *testing.T) {
 	db, err := model.OpenSQLite(filepath.Join(t.TempDir(), "logs.db"))
 	if err != nil {

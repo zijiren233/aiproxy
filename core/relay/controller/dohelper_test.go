@@ -2,6 +2,7 @@
 package controller
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"io"
@@ -17,6 +18,7 @@ import (
 	"github.com/labring/aiproxy/core/relay/mode"
 	relaymodel "github.com/labring/aiproxy/core/relay/model"
 	"github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -342,6 +344,83 @@ func TestHandleCapturesBoundedBodyDetail(t *testing.T) {
 	require.Equal(t, "12345", result.BodyDetail.RequestBody)
 	require.Equal(t, "abcd", result.BodyDetail.ResponseBody)
 	require.False(t, result.BodyDetail.FirstByteAt.IsZero())
+}
+
+func TestHandleDropsInvalidUTF8BodyDetail(t *testing.T) {
+	c, relayMeta := newTestRelayContext()
+	requestBody := []byte{'{', '"', 'x', '"', ':', '"', 0xff, '"', '}'}
+
+	c.Request.Header.Set("Content-Type", "application/json")
+	c.Request.Body = io.NopCloser(bytes.NewReader(requestBody))
+	c.Request.ContentLength = int64(len(requestBody))
+
+	result := Handle(
+		testAdaptor{
+			convertRequest: func(
+				_ *meta.Meta,
+				_ adaptor.Store,
+				_ *http.Request,
+			) (adaptor.ConvertResult, error) {
+				return adaptor.ConvertResult{Body: http.NoBody}, nil
+			},
+			doRequest: func(
+				_ *meta.Meta,
+				_ adaptor.Store,
+				_ *gin.Context,
+				_ *http.Request,
+			) (*http.Response, error) {
+				return &http.Response{
+					StatusCode: http.StatusOK,
+					Body:       io.NopCloser(strings.NewReader("upstream")),
+					Header:     make(http.Header),
+				}, nil
+			},
+			doResponse: func(
+				_ *meta.Meta,
+				_ adaptor.Store,
+				c *gin.Context,
+				_ *http.Response,
+			) (adaptor.DoResponseResult, adaptor.Error) {
+				_, _ = c.Writer.Write([]byte{'o', 'k', 0xff})
+				return adaptor.DoResponseResult{}, nil
+			},
+		},
+		c,
+		relayMeta,
+		nil,
+		BodyDetailOption{
+			IncludeRequestBody:  true,
+			IncludeResponseBody: true,
+			MaxRequestBodySize:  0,
+			MaxResponseBodySize: 0,
+		},
+	)
+
+	require.NoError(t, result.Error)
+	require.NotNil(t, result.BodyDetail)
+	require.Empty(t, result.BodyDetail.RequestBody)
+	require.Empty(t, result.BodyDetail.ResponseBody)
+}
+
+func TestLogHandleErrorLogsOnlyAvailableBodyDetails(t *testing.T) {
+	var logBuf bytes.Buffer
+
+	logger := logrus.New()
+	logger.SetOutput(&logBuf)
+	logger.SetFormatter(&logrus.TextFormatter{DisableTimestamp: true, DisableColors: true})
+	entry := logrus.NewEntry(logger)
+	respErr := relaymodel.WrapperErrorWithMessage(
+		mode.ChatCompletions,
+		http.StatusTooManyRequests,
+		"limited",
+	)
+
+	logHandleError(entry, respErr, &BodyDetail{ResponseBody: `{"error":"limited"}`}, true)
+
+	assert.Contains(t, logBuf.String(), "handle failed")
+	assert.Contains(t, logBuf.String(), "response detail:")
+	assert.Contains(t, logBuf.String(), "limited")
+	assert.NotContains(t, logBuf.String(), "request detail:")
 }
 
 func TestHandleWithoutBodyDetailOptionSkipsBodies(t *testing.T) {

@@ -1,12 +1,16 @@
 package controller
 
 import (
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 	"github.com/labring/aiproxy/core/common"
 	"github.com/labring/aiproxy/core/common/config"
 	"github.com/labring/aiproxy/core/model"
 	"github.com/labring/aiproxy/core/relay/adaptor"
 	"github.com/labring/aiproxy/core/relay/meta"
+	monitorplugin "github.com/labring/aiproxy/core/relay/plugin/monitor"
+	"github.com/sirupsen/logrus"
 )
 
 // HandleResult contains all the information needed for consumption recording
@@ -17,6 +21,56 @@ type HandleResult struct {
 	UpstreamID   string
 	AsyncUsage   bool
 	BodyDetail   *BodyDetail
+}
+
+func ShouldSkipRequestBodyDetailForStatus(statusCode int) bool {
+	if !monitorplugin.ChannelStatusHasPermission(statusCode) {
+		return true
+	}
+
+	switch statusCode {
+	case http.StatusMethodNotAllowed,
+		http.StatusTooManyRequests:
+		return true
+	default:
+		return false
+	}
+}
+
+func logHandleError(
+	log *logrus.Entry,
+	respErr adaptor.Error,
+	detail *BodyDetail,
+	debugEnabled bool,
+) {
+	if detail == nil || !debugEnabled {
+		log.Errorf("handle failed: %+v", respErr)
+		return
+	}
+
+	switch {
+	case detail.RequestBody != "" && detail.ResponseBody != "":
+		log.Errorf(
+			"handle failed: %+v\nrequest detail:\n%s\nresponse detail:\n%s",
+			respErr,
+			detail.RequestBody,
+			detail.ResponseBody,
+		)
+	case detail.RequestBody != "":
+		log.Errorf(
+			"handle failed: %+v\nrequest detail:\n%s",
+			respErr,
+			detail.RequestBody,
+		)
+	case detail.ResponseBody != "":
+		log.Errorf(
+			"handle failed: %+v\nresponse detail:\n%s",
+			respErr,
+			detail.ResponseBody,
+		)
+	default:
+		log.Errorf("handle failed: %+v", respErr)
+	}
 }
 
 func Handle(
@@ -30,17 +84,7 @@ func Handle(
 
 	result, detail, respErr := DoHelper(adaptor, c, meta, store, opts...)
 	if respErr != nil {
-		if detail != nil && config.DebugEnabled &&
-			(detail.RequestBody != "" || detail.ResponseBody != "") {
-			log.Errorf(
-				"handle failed: %+v\nrequest detail:\n%s\nresponse detail:\n%s",
-				respErr,
-				detail.RequestBody,
-				detail.ResponseBody,
-			)
-		} else {
-			log.Errorf("handle failed: %+v", respErr)
-		}
+		logHandleError(log, respErr, detail, config.DebugEnabled)
 
 		return &HandleResult{
 			Error:        respErr,

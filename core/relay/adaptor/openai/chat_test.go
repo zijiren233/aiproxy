@@ -250,6 +250,39 @@ func TestConvertChatCompletionToResponsesRequest(t *testing.T) {
 				assert.Equal(t, "gpt-5-codex", responsesReq.Model)
 				assert.NotNil(t, responsesReq.Store)
 				assert.False(t, *responsesReq.Store)
+				assert.Nil(t, responsesReq.Reasoning)
+			},
+		},
+		{
+			name: "reasoning effort maps effort without enabling summary",
+			inputRequest: relaymodel.GeneralOpenAIRequest{
+				Model: "gpt-5-codex",
+				Messages: []relaymodel.Message{
+					{Role: "user", Content: "Hello"},
+				},
+				ReasoningEffort: new("medium"),
+			},
+			checkFunc: func(t *testing.T, responsesReq relaymodel.CreateResponseRequest) {
+				t.Helper()
+				require.NotNil(t, responsesReq.Reasoning)
+				require.NotNil(t, responsesReq.Reasoning.Effort)
+				assert.Equal(t, "medium", *responsesReq.Reasoning.Effort)
+				assert.Nil(t, responsesReq.Reasoning.Summary)
+			},
+		},
+		{
+			name: "none reasoning effort does not enable reasoning summary",
+			inputRequest: relaymodel.GeneralOpenAIRequest{
+				Model: "gpt-5-codex",
+				Messages: []relaymodel.Message{
+					{Role: "user", Content: "Hello"},
+				},
+				ReasoningEffort: new("none"),
+			},
+			checkFunc: func(t *testing.T, responsesReq relaymodel.CreateResponseRequest) {
+				t.Helper()
+				require.NotNil(t, responsesReq.Reasoning)
+				assert.Nil(t, responsesReq.Reasoning.Summary)
 			},
 		},
 		{
@@ -745,9 +778,9 @@ func TestConvertResponsesToChatCompletionResponse(t *testing.T) {
 				CreatedAt: 1234567890,
 				Output: []relaymodel.OutputItem{
 					{
-						Type: "reasoning",
-						Content: []relaymodel.OutputContent{
-							{Type: "text", Text: "Let me think about this..."},
+						Type: relaymodel.InputItemTypeReasoning,
+						Summary: []relaymodel.SummaryPart{
+							{Type: "summary_text", Text: "Need answer the math question."},
 						},
 					},
 					{
@@ -768,6 +801,11 @@ func TestConvertResponsesToChatCompletionResponse(t *testing.T) {
 				t.Helper()
 				require.Len(t, chatResp.Choices, 1)
 				assert.Contains(t, chatResp.Choices[0].Message.Content, "The answer is 42.")
+				assert.Equal(
+					t,
+					"Need answer the math question.",
+					chatResp.Choices[0].Message.ReasoningContent,
+				)
 			},
 			expectedStatus: http.StatusOK,
 		},
@@ -801,6 +839,53 @@ func TestConvertResponsesToChatCompletionResponse(t *testing.T) {
 			expectedStatus: http.StatusOK,
 		},
 		{
+			name: "reasoning summary attaches only to first converted choice",
+			responsesResp: relaymodel.Response{
+				ID:        "resp_multi_reasoning",
+				Model:     "gpt-5-mini",
+				Status:    relaymodel.ResponseStatusCompleted,
+				CreatedAt: 1781355958,
+				Output: []relaymodel.OutputItem{
+					{
+						Type: relaymodel.InputItemTypeReasoning,
+						Summary: []relaymodel.SummaryPart{
+							{Type: "summary_text", Text: "Need compare options."},
+						},
+					},
+					{
+						Type: relaymodel.InputItemTypeMessage,
+						Role: relaymodel.RoleAssistant,
+						Content: []relaymodel.OutputContent{
+							{Type: "output_text", Text: "Option A"},
+						},
+					},
+					{
+						Type: relaymodel.InputItemTypeMessage,
+						Role: relaymodel.RoleAssistant,
+						Content: []relaymodel.OutputContent{
+							{Type: "output_text", Text: "Option B"},
+						},
+					},
+				},
+				Usage: &relaymodel.ResponseUsage{
+					InputTokens:  8,
+					OutputTokens: 4,
+					TotalTokens:  12,
+				},
+			},
+			checkFunc: func(t *testing.T, chatResp relaymodel.TextResponse) {
+				t.Helper()
+				require.Len(t, chatResp.Choices, 2)
+				assert.Equal(
+					t,
+					"Need compare options.",
+					chatResp.Choices[0].Message.ReasoningContent,
+				)
+				assert.Empty(t, chatResp.Choices[1].Message.ReasoningContent)
+			},
+			expectedStatus: http.StatusOK,
+		},
+		{
 			name: "incomplete reasoning-only response",
 			responsesResp: relaymodel.Response{
 				ID:        "resp_incomplete",
@@ -809,7 +894,7 @@ func TestConvertResponsesToChatCompletionResponse(t *testing.T) {
 				CreatedAt: 1781355958,
 				Output: []relaymodel.OutputItem{
 					{
-						Type:    "reasoning",
+						Type:    relaymodel.InputItemTypeReasoning,
 						Summary: []relaymodel.SummaryPart{},
 					},
 				},
@@ -1314,6 +1399,62 @@ func TestConvertResponsesToChatCompletionStreamResponseHandlesIncompleteReasonin
 	require.NotNil(t, chunks[1].Usage)
 	assert.Equal(t, int64(192), chunks[1].Usage.CompletionTokens)
 	assert.Equal(t, 1, strings.Count(w.Body.String(), "data: [DONE]"))
+}
+
+func TestConvertResponsesToChatCompletionStreamResponseMapsReasoningSummary(
+	t *testing.T,
+) {
+	gin.SetMode(gin.TestMode)
+
+	stream := strings.Join([]string{
+		`event: response.created`,
+		`data: {"type":"response.created","response":{"id":"resp_reasoning","object":"response","created_at":1781355623,"status":"in_progress","model":"gpt-5-mini","output":[],"parallel_tool_calls":true,"store":false}}`,
+		"",
+		`event: response.reasoning_summary_text.delta`,
+		`data: {"type":"response.reasoning_summary_text.delta","delta":"Checking facts","sequence_number":2}`,
+		"",
+		`event: response.reasoning_summary_text.delta`,
+		`data: {"type":"response.reasoning_summary_text.delta","delta":" and constraints.","sequence_number":3}`,
+		"",
+		`event: response.output_text.delta`,
+		`data: {"type":"response.output_text.delta","delta":"Final answer","sequence_number":4}`,
+		"",
+		`event: response.completed`,
+		`data: {"type":"response.completed","response":{"id":"resp_reasoning","object":"response","created_at":1781355623,"status":"completed","model":"gpt-5-mini","output":[],"parallel_tool_calls":true,"store":false,"usage":{"input_tokens":5,"output_tokens":6,"total_tokens":11}},"sequence_number":5}`,
+		"",
+	}, "\n")
+
+	httpResp := &http.Response{
+		StatusCode: http.StatusOK,
+		Body:       &mockReadCloser{Reader: bytes.NewReader([]byte(stream))},
+		Header:     make(http.Header),
+	}
+
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequestWithContext(
+		t.Context(),
+		http.MethodPost,
+		"/v1/chat/completions",
+		nil,
+	)
+
+	m := &meta.Meta{
+		ActualModel: "gpt-5-mini",
+	}
+
+	_, err := openai.ConvertResponsesToChatCompletionStreamResponse(m, c, httpResp)
+	require.Nil(t, err)
+
+	chunks := collectChatCompletionStreamChunks(t, w.Body.String())
+	require.Len(t, chunks, 5)
+
+	assert.Equal(t, relaymodel.RoleAssistant, chunks[0].Choices[0].Delta.Role)
+	assert.Equal(t, "Checking facts", chunks[1].Choices[0].Delta.ReasoningContent)
+	assert.Equal(t, " and constraints.", chunks[2].Choices[0].Delta.ReasoningContent)
+	assert.Equal(t, "Final answer", chunks[3].Choices[0].Delta.Content)
+	assert.Equal(t, relaymodel.FinishReasonStop, chunks[4].Choices[0].FinishReason)
+	assert.Contains(t, w.Body.String(), `"reasoning_content":"Checking facts"`)
 }
 
 func TestConvertResponsesToChatCompletionStreamResponseHandlesIncompleteContentFilter(

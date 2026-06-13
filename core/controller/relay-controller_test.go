@@ -2,6 +2,7 @@
 package controller
 
 import (
+	"net/http"
 	"reflect"
 	"testing"
 	"time"
@@ -208,4 +209,86 @@ func TestSaveAsyncUsageInfoDoesNotStoreInitialUsage(t *testing.T) {
 	require.Zero(t, captured.Usage.OutputTokens)
 	require.Zero(t, captured.Usage.TotalTokens)
 	require.Equal(t, "priority", captured.UsageContext.ServiceTier)
+}
+
+func TestBuildRequestDetailForLogSkipsRequestBodyForUpstreamOnlyStatuses(t *testing.T) {
+	t.Parallel()
+
+	bodyDetail := &relaycontroller.BodyDetail{
+		RequestBody:  `{"prompt":"secret"}`,
+		ResponseBody: `{"error":"upstream"}`,
+	}
+
+	for _, statusCode := range []int{
+		http.StatusUnauthorized,
+		http.StatusPaymentRequired,
+		http.StatusForbidden,
+		http.StatusNotFound,
+		http.StatusMethodNotAllowed,
+		http.StatusTooManyRequests,
+	} {
+		t.Run(http.StatusText(statusCode), func(t *testing.T) {
+			t.Parallel()
+
+			detail := buildRequestDetailForLog(bodyDetail, model.ModelConfig{}, statusCode, false)
+
+			require.NotNil(t, detail)
+			assert.Empty(t, detail.RequestBody)
+			assert.Equal(t, `{"error":"upstream"}`, detail.ResponseBody)
+		})
+	}
+}
+
+func TestBuildRequestDetailForLogKeepsRequestBodyWhenForced(t *testing.T) {
+	t.Parallel()
+
+	detail := buildRequestDetailForLog(
+		&relaycontroller.BodyDetail{
+			RequestBody:  `{"prompt":"secret"}`,
+			ResponseBody: `{"error":"limited"}`,
+		},
+		model.ModelConfig{},
+		http.StatusTooManyRequests,
+		true,
+	)
+
+	require.NotNil(t, detail)
+	assert.Equal(t, `{"prompt":"secret"}`, detail.RequestBody)
+	assert.Equal(t, `{"error":"limited"}`, detail.ResponseBody)
+}
+
+func TestBuildRequestDetailForLogKeepsRequestBodyForClientPayloadErrors(t *testing.T) {
+	t.Parallel()
+
+	detail := buildRequestDetailForLog(
+		&relaycontroller.BodyDetail{
+			RequestBody:  `{"prompt":"secret"}`,
+			ResponseBody: `{"error":"bad request"}`,
+		},
+		model.ModelConfig{},
+		http.StatusBadRequest,
+		false,
+	)
+
+	require.NotNil(t, detail)
+	assert.Equal(t, `{"prompt":"secret"}`, detail.RequestBody)
+	assert.Equal(t, `{"error":"bad request"}`, detail.ResponseBody)
+}
+
+func TestBuildRequestDetailForLogDropsInvalidUTF8Bodies(t *testing.T) {
+	t.Parallel()
+
+	detail := buildRequestDetailForLog(
+		&relaycontroller.BodyDetail{
+			RequestBody:  string([]byte{0xff, 0xfe}),
+			ResponseBody: string([]byte{'o', 'k', 0xff}),
+		},
+		model.ModelConfig{},
+		http.StatusBadRequest,
+		false,
+	)
+
+	require.NotNil(t, detail)
+	assert.Empty(t, detail.RequestBody)
+	assert.Empty(t, detail.ResponseBody)
 }

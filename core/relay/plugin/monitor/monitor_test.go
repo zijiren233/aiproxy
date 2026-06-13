@@ -2,6 +2,7 @@
 package monitor
 
 import (
+	"net/http"
 	"testing"
 
 	"github.com/labring/aiproxy/core/common/config"
@@ -52,4 +53,23 @@ func TestShouldTryBanNoPermissionRequiresChannelSwitch(t *testing.T) {
 
 	require.True(t, shouldTryBanNoPermission(meta, false))
 	require.False(t, shouldTryBanNoPermission(meta, true))
+}
+
+func TestChannelStatusHasPermission(t *testing.T) {
+	t.Parallel()
+
+	for _, statusCode := range []int{
+		http.StatusUnauthorized,
+		http.StatusPaymentRequired,
+		http.StatusForbidden,
+		http.StatusNotFound,
+	} {
+		t.Run(http.StatusText(statusCode), func(t *testing.T) {
+			t.Parallel()
+
+			require.False(t, ChannelStatusHasPermission(statusCode))
+		})
+	}
+
+	require.True(t, ChannelStatusHasPermission(http.StatusBadRequest))
 }

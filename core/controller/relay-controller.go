@@ -401,23 +401,14 @@ func recordResult(
 		firstByteAt = result.BodyDetail.FirstByteAt
 	}
 
-	if config.GetSaveAllLogDetail() || meta.ModelConfig.ForceSaveDetail || code != http.StatusOK {
-		if result.BodyDetail != nil {
-			requestBodyMaxSize := effectiveDetailBodyMaxSize(
-				meta.ModelConfig.RequestBodyStorageMaxSize,
-				config.GetLogDetailRequestBodyMaxSize(),
-			)
-			responseBodyMaxSize := effectiveDetailBodyMaxSize(
-				meta.ModelConfig.ResponseBodyStorageMaxSize,
-				config.GetLogDetailResponseBodyMaxSize(),
-			)
-
-			detail = &model.RequestDetail{
-				RequestBody:  result.BodyDetail.RequestBody,
-				ResponseBody: result.BodyDetail.ResponseBody,
-			}
-			detail.ApplyBodySizeLimits(requestBodyMaxSize, responseBodyMaxSize)
-		}
+	forceSaveDetail := config.GetSaveAllLogDetail() || meta.ModelConfig.ForceSaveDetail
+	if forceSaveDetail || code != http.StatusOK {
+		detail = buildRequestDetailForLog(
+			result.BodyDetail,
+			meta.ModelConfig,
+			code,
+			forceSaveDetail,
+		)
 	}
 
 	gbc := middleware.GetGroupBalanceConsumerFromContext(c)
@@ -500,6 +491,40 @@ func effectiveDetailBodyMaxSize(modelLimit, globalLimit int64) int64 {
 	}
 
 	return globalLimit
+}
+
+func buildRequestDetailForLog(
+	bodyDetail *controller.BodyDetail,
+	modelConfig model.ModelConfig,
+	code int,
+	forceSaveDetail bool,
+) *model.RequestDetail {
+	if bodyDetail == nil {
+		return nil
+	}
+
+	requestBodyMaxSize := effectiveDetailBodyMaxSize(
+		modelConfig.RequestBodyStorageMaxSize,
+		config.GetLogDetailRequestBodyMaxSize(),
+	)
+	responseBodyMaxSize := effectiveDetailBodyMaxSize(
+		modelConfig.ResponseBodyStorageMaxSize,
+		config.GetLogDetailResponseBodyMaxSize(),
+	)
+
+	detail := &model.RequestDetail{
+		RequestBody:  bodyDetail.RequestBody,
+		ResponseBody: bodyDetail.ResponseBody,
+	}
+	detail.DropInvalidUTF8Bodies()
+
+	if controller.ShouldSkipRequestBodyDetailForStatus(code) && !forceSaveDetail {
+		detail.RequestBody = ""
+	}
+
+	detail.ApplyBodySizeLimits(requestBodyMaxSize, responseBodyMaxSize)
+
+	return detail
 }
 
 func buildBodyDetailOption(meta *meta.Meta) controller.BodyDetailOption {
