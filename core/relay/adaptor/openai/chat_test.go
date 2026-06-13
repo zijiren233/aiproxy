@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -339,6 +340,184 @@ func TestConvertChatCompletionToResponsesRequest(t *testing.T) {
 			},
 		},
 		{
+			name: "request with named tool choice",
+			inputRequest: relaymodel.GeneralOpenAIRequest{
+				Model: "gpt-5-codex",
+				Messages: []relaymodel.Message{
+					{Role: "user", Content: "What's the weather?"},
+				},
+				Tools: []relaymodel.Tool{
+					{
+						Type: "function",
+						Function: relaymodel.Function{
+							Name: "get_weather",
+						},
+					},
+				},
+				ToolChoice: map[string]any{
+					"type":     "function",
+					"function": map[string]any{"name": "get_weather"},
+				},
+			},
+			checkFunc: func(t *testing.T, responsesReq relaymodel.CreateResponseRequest) {
+				t.Helper()
+				assert.Equal(
+					t,
+					map[string]any{"type": "function", "name": "get_weather"},
+					responsesReq.ToolChoice,
+				)
+			},
+		},
+		{
+			name: "request with legacy functions",
+			inputRequest: relaymodel.GeneralOpenAIRequest{
+				Model: "gpt-5-codex",
+				Messages: []relaymodel.Message{
+					{Role: "user", Content: "What's the weather?"},
+				},
+				Functions: []any{
+					map[string]any{
+						"name":        "get_weather",
+						"description": "Get weather information",
+						"parameters": map[string]any{
+							"type": "object",
+							"properties": map[string]any{
+								"location": map[string]any{
+									"type": "string",
+								},
+							},
+						},
+					},
+				},
+				FunctionCall: map[string]any{"name": "get_weather"},
+			},
+			checkFunc: func(t *testing.T, responsesReq relaymodel.CreateResponseRequest) {
+				t.Helper()
+				require.Len(t, responsesReq.Tools, 1)
+				assert.Equal(t, "function", responsesReq.Tools[0].Type)
+				assert.Equal(t, "get_weather", responsesReq.Tools[0].Name)
+				assert.Equal(
+					t,
+					map[string]any{"type": "function", "name": "get_weather"},
+					responsesReq.ToolChoice,
+				)
+			},
+		},
+		{
+			name: "request with image content",
+			inputRequest: relaymodel.GeneralOpenAIRequest{
+				Model: "gpt-5.5",
+				Messages: []relaymodel.Message{
+					{
+						Role: "user",
+						Content: []any{
+							map[string]any{
+								"type": "text",
+								"text": "What's in this image?",
+							},
+							map[string]any{
+								"type": "image_url",
+								"image_url": map[string]any{
+									"url":    "https://example.com/image.png",
+									"detail": "high",
+								},
+							},
+						},
+					},
+				},
+			},
+			checkFunc: func(t *testing.T, responsesReq relaymodel.CreateResponseRequest) {
+				t.Helper()
+
+				inputItems, ok := responsesReq.Input.([]any)
+				require.True(t, ok)
+				require.Len(t, inputItems, 1)
+
+				userItem, ok := inputItems[0].(map[string]any)
+				require.True(t, ok)
+				content, ok := userItem["content"].([]any)
+				require.True(t, ok)
+				require.Len(t, content, 2)
+
+				imageContent, ok := content[1].(map[string]any)
+				require.True(t, ok)
+				assert.Equal(t, "input_image", imageContent["type"])
+				assert.Equal(t, "https://example.com/image.png", imageContent["image_url"])
+				assert.Equal(t, "high", imageContent["detail"])
+			},
+		},
+		{
+			name: "request with response format",
+			inputRequest: relaymodel.GeneralOpenAIRequest{
+				Model: "gpt-5-codex",
+				Messages: []relaymodel.Message{
+					{Role: "user", Content: "Return JSON"},
+				},
+				ResponseFormat: &relaymodel.ResponseFormat{
+					Type: "json_schema",
+					JSONSchema: &relaymodel.JSONSchema{
+						Name: "answer",
+						Schema: map[string]any{
+							"type": "object",
+							"properties": map[string]any{
+								"answer": map[string]any{"type": "string"},
+							},
+						},
+					},
+				},
+			},
+			checkFunc: func(t *testing.T, responsesReq relaymodel.CreateResponseRequest) {
+				t.Helper()
+				require.NotNil(t, responsesReq.Text)
+				assert.Equal(t, "json_schema", responsesReq.Text.Format.Type)
+				assert.Equal(t, "answer", responsesReq.Text.Format.Name)
+				assert.Equal(t, map[string]any{
+					"type": "object",
+					"properties": map[string]any{
+						"answer": map[string]any{"type": "string"},
+					},
+				}, responsesReq.Text.Format.Schema)
+			},
+		},
+		{
+			name: "request with logprobs",
+			inputRequest: relaymodel.GeneralOpenAIRequest{
+				Model: "gpt-5-codex",
+				Messages: []relaymodel.Message{
+					{Role: "user", Content: "Hello"},
+				},
+				Logprobs: func() *bool {
+					value := true
+					return &value
+				}(),
+				TopLogprobs: func() *int {
+					value := 3
+					return &value
+				}(),
+			},
+			checkFunc: func(t *testing.T, responsesReq relaymodel.CreateResponseRequest) {
+				t.Helper()
+				require.NotNil(t, responsesReq.TopLogprobs)
+				assert.Equal(t, 3, *responsesReq.TopLogprobs)
+				assert.Contains(t, responsesReq.Include, "message.output_text.logprobs")
+			},
+		},
+		{
+			name: "request with parallel tool calls",
+			inputRequest: relaymodel.GeneralOpenAIRequest{
+				Model: "gpt-5-codex",
+				Messages: []relaymodel.Message{
+					{Role: "user", Content: "Hello"},
+				},
+				ParallelToolCalls: new(bool),
+			},
+			checkFunc: func(t *testing.T, responsesReq relaymodel.CreateResponseRequest) {
+				t.Helper()
+				require.NotNil(t, responsesReq.ParallelToolCalls)
+				assert.False(t, *responsesReq.ParallelToolCalls)
+			},
+		},
+		{
 			name: "request with service tier",
 			inputRequest: relaymodel.GeneralOpenAIRequest{
 				Model:       "gpt-5-codex",
@@ -415,6 +594,105 @@ func TestConvertChatCompletionToResponsesRequest(t *testing.T) {
 			tt.checkFunc(t, responsesReq)
 		})
 	}
+}
+
+func TestConvertChatCompletionToResponsesRequestAcceptsMultipleChoices(t *testing.T) {
+	inputRequest := relaymodel.GeneralOpenAIRequest{
+		Model: "gpt-5-codex",
+		Messages: []relaymodel.Message{
+			{Role: "user", Content: "Hello"},
+		},
+		N: 2,
+	}
+	reqBody, err := json.Marshal(inputRequest)
+	require.NoError(t, err)
+
+	req, _ := http.NewRequestWithContext(context.Background(),
+		http.MethodPost,
+		"/v1/chat/completions",
+		bytes.NewReader(reqBody),
+	)
+	req.Header.Set("Content-Type", "application/json")
+
+	m := &meta.Meta{
+		ActualModel: inputRequest.Model,
+	}
+
+	result, err := openai.ConvertChatCompletionToResponsesRequest(m, req)
+	require.NoError(t, err)
+
+	body, err := io.ReadAll(result.Body)
+	require.NoError(t, err)
+
+	assert.NotContains(t, string(body), `"n"`)
+
+	var responsesReq relaymodel.CreateResponseRequest
+
+	err = json.Unmarshal(body, &responsesReq)
+	require.NoError(t, err)
+
+	assert.Equal(t, inputRequest.Model, responsesReq.Model)
+	assert.Equal(t, false, *responsesReq.Store)
+}
+
+func TestConvertChatCompletionToResponsesRequestFlattensJSONSchemaTextFormat(t *testing.T) {
+	strict := true
+	inputRequest := relaymodel.GeneralOpenAIRequest{
+		Model: "gpt-5-codex",
+		Messages: []relaymodel.Message{
+			{Role: "user", Content: "Return JSON"},
+		},
+		ResponseFormat: &relaymodel.ResponseFormat{
+			Type: "json_schema",
+			JSONSchema: &relaymodel.JSONSchema{
+				Name:        "answer",
+				Description: "Answer payload",
+				Strict:      &strict,
+				Schema: map[string]any{
+					"type": "object",
+					"properties": map[string]any{
+						"answer": map[string]any{"type": "string"},
+					},
+					"required": []any{"answer"},
+				},
+			},
+		},
+	}
+	reqBody, err := json.Marshal(inputRequest)
+	require.NoError(t, err)
+
+	req, _ := http.NewRequestWithContext(context.Background(),
+		http.MethodPost,
+		"/v1/chat/completions",
+		bytes.NewReader(reqBody),
+	)
+	req.Header.Set("Content-Type", "application/json")
+
+	result, err := openai.ConvertChatCompletionToResponsesRequest(&meta.Meta{
+		ActualModel: inputRequest.Model,
+	}, req)
+	require.NoError(t, err)
+
+	body, err := io.ReadAll(result.Body)
+	require.NoError(t, err)
+
+	assert.NotContains(t, string(body), `"json_schema":`)
+
+	var raw map[string]any
+
+	err = json.Unmarshal(body, &raw)
+	require.NoError(t, err)
+
+	text, ok := raw["text"].(map[string]any)
+	require.True(t, ok)
+	format, ok := text["format"].(map[string]any)
+	require.True(t, ok)
+
+	assert.Equal(t, "json_schema", format["type"])
+	assert.Equal(t, "answer", format["name"])
+	assert.Equal(t, "Answer payload", format["description"])
+	assert.Equal(t, true, format["strict"])
+	assert.NotNil(t, format["schema"])
 }
 
 func TestConvertResponsesToChatCompletionResponse(t *testing.T) {
