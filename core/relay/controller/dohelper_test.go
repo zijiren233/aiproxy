@@ -12,7 +12,6 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
-	"github.com/labring/aiproxy/core/common/config"
 	"github.com/labring/aiproxy/core/model"
 	"github.com/labring/aiproxy/core/relay/adaptor"
 	"github.com/labring/aiproxy/core/relay/meta"
@@ -404,12 +403,6 @@ func TestHandleDropsInvalidUTF8BodyDetail(t *testing.T) {
 }
 
 func TestLogHandleErrorLogsOnlyAvailableBodyDetails(t *testing.T) {
-	oldDebug := config.DebugEnabled
-	config.DebugEnabled = true
-	t.Cleanup(func() {
-		config.DebugEnabled = oldDebug
-	})
-
 	var logBuf bytes.Buffer
 
 	logger := logrus.New()
@@ -422,7 +415,7 @@ func TestLogHandleErrorLogsOnlyAvailableBodyDetails(t *testing.T) {
 		"limited",
 	)
 
-	logHandleError(entry, respErr, &BodyDetail{ResponseBody: `{"error":"limited"}`})
+	logHandleError(entry, respErr, &BodyDetail{ResponseBody: `{"error":"limited"}`}, true)
 
 	assert.Contains(t, logBuf.String(), "handle failed")
 	assert.Contains(t, logBuf.String(), "response detail:")

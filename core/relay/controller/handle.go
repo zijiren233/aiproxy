@@ -37,8 +37,13 @@ func ShouldSkipRequestBodyDetailForStatus(statusCode int) bool {
 	}
 }
 
-func logHandleError(log *logrus.Entry, respErr adaptor.Error, detail *BodyDetail) {
-	if detail == nil || !config.DebugEnabled {
+func logHandleError(
+	log *logrus.Entry,
+	respErr adaptor.Error,
+	detail *BodyDetail,
+	debugEnabled bool,
+) {
+	if detail == nil || !debugEnabled {
 		log.Errorf("handle failed: %+v", respErr)
 		return
 	}
@@ -79,7 +84,7 @@ func Handle(
 
 	result, detail, respErr := DoHelper(adaptor, c, meta, store, opts...)
 	if respErr != nil {
-		logHandleError(log, respErr, detail)
+		logHandleError(log, respErr, detail, config.DebugEnabled)
 
 		return &HandleResult{
 			Error:        respErr,
