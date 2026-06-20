@@ -1,8 +1,40 @@
 package model
 
 import (
+	"slices"
+
+	"github.com/bytedance/sonic"
 	"github.com/labring/aiproxy/core/model"
 )
+
+var nullBytes = []byte("null")
+
+type ResponseArguments string
+
+func (a *ResponseArguments) UnmarshalJSON(data []byte) error {
+	var s string
+	if err := sonic.ConfigDefault.Unmarshal(data, &s); err == nil {
+		*a = ResponseArguments(s)
+		return nil
+	}
+
+	if slices.Equal(data, nullBytes) {
+		*a = ""
+		return nil
+	}
+
+	*a = ResponseArguments(data)
+
+	return nil
+}
+
+func (a ResponseArguments) MarshalJSON() ([]byte, error) {
+	return sonic.ConfigDefault.Marshal(string(a))
+}
+
+func (a ResponseArguments) String() string {
+	return string(a)
+}
 
 // InputItemType represents the type of an input item
 type InputItemType = string
@@ -179,15 +211,15 @@ type OutputContent struct {
 
 // OutputItem represents an output item in a response
 type OutputItem struct {
-	ID        string          `json:"id"`
-	Type      string          `json:"type"`
-	Status    ResponseStatus  `json:"status,omitempty"`
-	Role      string          `json:"role,omitempty"`
-	Content   []OutputContent `json:"content,omitempty"`
-	Arguments string          `json:"arguments,omitempty"` // For function_call type
-	CallID    string          `json:"call_id,omitempty"`   // For function_call type
-	Name      string          `json:"name,omitempty"`      // For function_call type
-	Summary   any             `json:"summary,omitempty"`   // For reasoning type: []SummaryPart or string
+	ID        string            `json:"id"`
+	Type      string            `json:"type"`
+	Status    ResponseStatus    `json:"status,omitempty"`
+	Role      string            `json:"role,omitempty"`
+	Content   []OutputContent   `json:"content,omitempty"`
+	Arguments ResponseArguments `json:"arguments,omitempty"` // For function_call type
+	CallID    string            `json:"call_id,omitempty"`   // For function_call type
+	Name      string            `json:"name,omitempty"`      // For function_call type
+	Summary   any               `json:"summary,omitempty"`   // For reasoning type: []SummaryPart or string
 }
 
 // InputContent represents content in an input item
@@ -333,18 +365,18 @@ type InputItemList struct {
 
 // ResponseStreamEvent represents a server-sent event for response streaming
 type ResponseStreamEvent struct {
-	Type           string         `json:"type"`
-	Response       *Response      `json:"response,omitempty"`
-	Error          *OpenAIError   `json:"error,omitempty"`
-	OutputIndex    *int           `json:"output_index,omitempty"`
-	Item           *OutputItem    `json:"item,omitempty"`
-	ItemID         string         `json:"item_id,omitempty"`
-	ContentIndex   *int           `json:"content_index,omitempty"`
-	Part           *OutputContent `json:"part,omitempty"`      // For content_part events
-	Delta          string         `json:"delta,omitempty"`     // For text.delta, function_call_arguments.delta
-	Text           string         `json:"text,omitempty"`      // For text content
-	Arguments      string         `json:"arguments,omitempty"` // For function_call_arguments.done
-	SequenceNumber int            `json:"sequence_number,omitempty"`
+	Type           string            `json:"type"`
+	Response       *Response         `json:"response,omitempty"`
+	Error          *OpenAIError      `json:"error,omitempty"`
+	OutputIndex    *int              `json:"output_index,omitempty"`
+	Item           *OutputItem       `json:"item,omitempty"`
+	ItemID         string            `json:"item_id,omitempty"`
+	ContentIndex   *int              `json:"content_index,omitempty"`
+	Part           *OutputContent    `json:"part,omitempty"`      // For content_part events
+	Delta          string            `json:"delta,omitempty"`     // For text.delta, function_call_arguments.delta
+	Text           string            `json:"text,omitempty"`      // For text content
+	Arguments      ResponseArguments `json:"arguments,omitempty"` // For function_call_arguments.done
+	SequenceNumber int               `json:"sequence_number,omitempty"`
 }
 
 func (r *Response) ToolUsageWebSearchCallCount() int64 {
