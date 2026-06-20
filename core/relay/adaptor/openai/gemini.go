@@ -1010,7 +1010,7 @@ func ConvertResponsesToGeminiResponse(
 			if outputItem.Name != "" {
 				var args map[string]any
 				if outputItem.Arguments != "" {
-					err := sonic.Unmarshal([]byte(outputItem.Arguments), &args)
+					err := sonic.UnmarshalString(outputItem.Arguments.String(), &args)
 					if err == nil {
 						candidate.Content.Parts = append(
 							candidate.Content.Parts,
@@ -1257,7 +1257,7 @@ func (s *geminiStreamState) handleFunctionCallArgumentsDone(
 
 	// Parse arguments
 	var args map[string]any
-	if err := sonic.UnmarshalString(event.Arguments, &args); err != nil {
+	if err := sonic.UnmarshalString(event.Arguments.String(), &args); err != nil {
 		return false
 	}
 

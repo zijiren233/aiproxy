@@ -309,6 +309,49 @@ func TestResponseStreamHandlerFlushesLifecycleEventsOnOfficialTextStreamOrder(t 
 	assert.Contains(t, output, "response.completed")
 }
 
+func TestResponseStreamHandlerAcceptsObjectFunctionCallArguments(t *testing.T) {
+	t.Parallel()
+	gin.SetMode(gin.TestMode)
+
+	recorder := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(recorder)
+	c.Request = httptest.NewRequestWithContext(
+		t.Context(),
+		http.MethodPost,
+		"/v1/responses",
+		nil,
+	)
+
+	body := strings.Join([]string{
+		"event: response.output_item.added",
+		`data: {"type":"response.output_item.added","output_index":0,"item":{"id":"fc_123","type":"function_call","call_id":"call_123","name":"search","arguments":{},"status":"in_progress"}}`,
+		"",
+		"event: response.function_call_arguments.done",
+		`data: {"type":"response.function_call_arguments.done","item_id":"fc_123","output_index":0,"arguments":{"query":"spawn tool"},"sequence_number":1}`,
+		"",
+		"event: response.output_item.done",
+		`data: {"type":"response.output_item.done","output_index":0,"item":{"id":"fc_123","type":"function_call","call_id":"call_123","name":"search","arguments":{"query":"spawn tool"},"status":"completed"}}`,
+		"",
+		"event: response.completed",
+		`data: {"type":"response.completed","response":{"id":"resp_tool","object":"response","created_at":1,"status":"completed","model":"gpt-5.5","output":[{"id":"fc_123","type":"function_call","call_id":"call_123","name":"search","arguments":{"query":"spawn tool"},"status":"completed"}],"parallel_tool_calls":true,"store":false,"usage":{"input_tokens":1,"output_tokens":1,"total_tokens":2}}}`,
+		"",
+	}, "\n")
+	resp := &http.Response{
+		StatusCode: http.StatusOK,
+		Body:       io.NopCloser(bytes.NewBufferString(body)),
+		Header:     make(http.Header),
+	}
+
+	result, err := ResponseStreamHandler(&meta.Meta{}, &responseTestStore{}, c, resp)
+	require.Nil(t, err)
+	assert.Equal(t, "resp_tool", result.UpstreamID)
+	assert.Equal(t, model.ZeroNullInt64(2), result.Usage.TotalTokens)
+
+	output := recorder.Body.String()
+	assert.Contains(t, output, `"arguments":{"query":"spawn tool"}`)
+	assert.Contains(t, output, `"type":"response.completed"`)
+}
+
 func TestResponseStreamHandlerStartsBufferTimeoutFromFirstDelayedEvent(t *testing.T) {
 	responseStreamInitialBufferTimeoutTestMu.Lock()
 	defer responseStreamInitialBufferTimeoutTestMu.Unlock()

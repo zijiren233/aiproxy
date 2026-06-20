@@ -1397,7 +1397,7 @@ func ConvertResponsesToChatCompletionResponse(
 							Type:  relaymodel.ToolChoiceTypeFunction,
 							Function: relaymodel.Function{
 								Name:      outputItem.Name,
-								Arguments: outputItem.Arguments,
+								Arguments: outputItem.Arguments.String(),
 							},
 						},
 					},
