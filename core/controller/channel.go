@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"slices"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/bytedance/sonic"
@@ -28,6 +27,8 @@ import (
 //	@Security		ApiKeyAuth
 //	@Success		200	{object}	middleware.APIResponse{data=map[int]adaptors.AdaptorMeta}
 //	@Router			/api/channels/type_metas [get]
+//	@Router			/api/group/{group}/channels/type_metas [get]
+//	@Router			/api/group_channels/type_metas [get]
 func ChannelTypeMetas(c *gin.Context) {
 	middleware.SuccessResponse(c, adaptors.ChannelMetas)
 }
@@ -165,14 +166,14 @@ func AddChannels(c *gin.Context) {
 	}
 
 	_channels := make([]*model.Channel, 0, len(channels))
-	for _, channel := range channels {
-		channels, err := channel.ToChannels()
+	for _, req := range channels {
+		channel, err := req.ToChannel()
 		if err != nil {
 			middleware.ErrorResponse(c, http.StatusBadRequest, err.Error())
 			return
 		}
 
-		_channels = append(_channels, channels...)
+		_channels = append(_channels, channel)
 	}
 
 	err = model.BatchInsertChannels(_channels)
@@ -332,36 +333,6 @@ func (r *AddChannelRequest) ToChannel() (*model.Channel, error) {
 	}, nil
 }
 
-func (r *AddChannelRequest) ToChannels() ([]*model.Channel, error) {
-	keys := strings.Split(r.Key, "\n")
-
-	channels := make([]*model.Channel, 0, len(keys))
-	for _, key := range keys {
-		if key == "" {
-			continue
-		}
-
-		c, err := r.ToChannel()
-		if err != nil {
-			return nil, err
-		}
-
-		c.Key = key
-		channels = append(channels, c)
-	}
-
-	if len(channels) == 0 {
-		ch, err := r.ToChannel()
-		if err != nil {
-			return nil, err
-		}
-
-		return []*model.Channel{ch}, nil
-	}
-
-	return channels, nil
-}
-
 // AddChannel godoc
 //
 //	@Summary		Add a single channel
@@ -382,13 +353,13 @@ func AddChannel(c *gin.Context) {
 		return
 	}
 
-	channels, err := channel.ToChannels()
+	ch, err := channel.ToChannel()
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	err = model.BatchInsertChannels(channels)
+	err = model.BatchInsertChannels([]*model.Channel{ch})
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
