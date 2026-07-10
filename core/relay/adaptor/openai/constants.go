@@ -9,6 +9,262 @@ import (
 
 var ModelList = []model.ModelConfig{
 	{
+		Model: "gpt-5.6",
+		Type:  mode.ChatCompletions,
+		Owner: model.ModelOwnerOpenAI,
+		Price: model.Price{
+			InputPrice:         0.010,
+			OutputPrice:        0.045,
+			CachedPrice:        0.001,
+			CacheCreationPrice: 0.0125,
+			ConditionalPrices: []model.ConditionalPrice{
+				{
+					Condition: model.PriceCondition{InputTokenMax: 272000, ServiceTier: "priority"},
+					Price: model.Price{
+						InputPrice:         0.010,
+						OutputPrice:        0.060,
+						CachedPrice:        0.001,
+						CacheCreationPrice: 0.0125,
+					},
+				},
+				{
+					Condition: model.PriceCondition{InputTokenMin: 272001, ServiceTier: "priority"},
+					Price: model.Price{
+						InputPrice:         0.020,
+						OutputPrice:        0.090,
+						CachedPrice:        0.002,
+						CacheCreationPrice: 0.025,
+					},
+				},
+				{
+					Condition: model.PriceCondition{InputTokenMax: 272000, ServiceTier: "flex"},
+					Price: model.Price{
+						InputPrice:         0.0025,
+						OutputPrice:        0.015,
+						CachedPrice:        0.00025,
+						CacheCreationPrice: 0.003125,
+					},
+				},
+				{
+					Condition: model.PriceCondition{InputTokenMin: 272001, ServiceTier: "flex"},
+					Price: model.Price{
+						InputPrice:         0.005,
+						OutputPrice:        0.0225,
+						CachedPrice:        0.0005,
+						CacheCreationPrice: 0.00625,
+					},
+				},
+				{
+					Condition: model.PriceCondition{InputTokenMax: 272000},
+					Price: model.Price{
+						InputPrice:         0.005,
+						OutputPrice:        0.030,
+						CachedPrice:        0.0005,
+						CacheCreationPrice: 0.00625,
+					},
+				},
+			},
+		},
+		SummaryServiceTier: true,
+		Config: model.NewModelConfig(
+			model.WithModelConfigMaxContextTokens(1050000),
+			model.WithModelConfigMaxOutputTokens(128000),
+			model.WithModelConfigToolChoice(true),
+		),
+	},
+	{
+		Model: "gpt-5.6-sol",
+		Type:  mode.ChatCompletions,
+		Owner: model.ModelOwnerOpenAI,
+		Price: model.Price{
+			InputPrice:         0.010,
+			OutputPrice:        0.045,
+			CachedPrice:        0.001,
+			CacheCreationPrice: 0.0125,
+			ConditionalPrices: []model.ConditionalPrice{
+				{
+					Condition: model.PriceCondition{InputTokenMax: 272000, ServiceTier: "priority"},
+					Price: model.Price{
+						InputPrice:         0.010,
+						OutputPrice:        0.060,
+						CachedPrice:        0.001,
+						CacheCreationPrice: 0.0125,
+					},
+				},
+				{
+					Condition: model.PriceCondition{InputTokenMin: 272001, ServiceTier: "priority"},
+					Price: model.Price{
+						InputPrice:         0.020,
+						OutputPrice:        0.090,
+						CachedPrice:        0.002,
+						CacheCreationPrice: 0.025,
+					},
+				},
+				{
+					Condition: model.PriceCondition{InputTokenMax: 272000, ServiceTier: "flex"},
+					Price: model.Price{
+						InputPrice:         0.0025,
+						OutputPrice:        0.015,
+						CachedPrice:        0.00025,
+						CacheCreationPrice: 0.003125,
+					},
+				},
+				{
+					Condition: model.PriceCondition{InputTokenMin: 272001, ServiceTier: "flex"},
+					Price: model.Price{
+						InputPrice:         0.005,
+						OutputPrice:        0.0225,
+						CachedPrice:        0.0005,
+						CacheCreationPrice: 0.00625,
+					},
+				},
+				{
+					Condition: model.PriceCondition{InputTokenMax: 272000},
+					Price: model.Price{
+						InputPrice:         0.005,
+						OutputPrice:        0.030,
+						CachedPrice:        0.0005,
+						CacheCreationPrice: 0.00625,
+					},
+				},
+			},
+		},
+		SummaryServiceTier: true,
+		Config: model.NewModelConfig(
+			model.WithModelConfigMaxContextTokens(1050000),
+			model.WithModelConfigMaxOutputTokens(128000),
+			model.WithModelConfigToolChoice(true),
+		),
+	},
+	{
+		Model: "gpt-5.6-terra",
+		Type:  mode.ChatCompletions,
+		Owner: model.ModelOwnerOpenAI,
+		Price: model.Price{
+			InputPrice:         0.005,
+			OutputPrice:        0.0225,
+			CachedPrice:        0.0005,
+			CacheCreationPrice: 0.00625,
+			ConditionalPrices: []model.ConditionalPrice{
+				{
+					Condition: model.PriceCondition{InputTokenMax: 272000, ServiceTier: "priority"},
+					Price: model.Price{
+						InputPrice:         0.005,
+						OutputPrice:        0.030,
+						CachedPrice:        0.0005,
+						CacheCreationPrice: 0.00625,
+					},
+				},
+				{
+					Condition: model.PriceCondition{InputTokenMin: 272001, ServiceTier: "priority"},
+					Price: model.Price{
+						InputPrice:         0.010,
+						OutputPrice:        0.045,
+						CachedPrice:        0.001,
+						CacheCreationPrice: 0.0125,
+					},
+				},
+				{
+					Condition: model.PriceCondition{InputTokenMax: 272000, ServiceTier: "flex"},
+					Price: model.Price{
+						InputPrice:         0.00125,
+						OutputPrice:        0.0075,
+						CachedPrice:        0.000125,
+						CacheCreationPrice: 0.0015625,
+					},
+				},
+				{
+					Condition: model.PriceCondition{InputTokenMin: 272001, ServiceTier: "flex"},
+					Price: model.Price{
+						InputPrice:         0.0025,
+						OutputPrice:        0.01125,
+						CachedPrice:        0.00025,
+						CacheCreationPrice: 0.003125,
+					},
+				},
+				{
+					Condition: model.PriceCondition{InputTokenMax: 272000},
+					Price: model.Price{
+						InputPrice:         0.0025,
+						OutputPrice:        0.015,
+						CachedPrice:        0.00025,
+						CacheCreationPrice: 0.003125,
+					},
+				},
+			},
+		},
+		SummaryServiceTier: true,
+		Config: model.NewModelConfig(
+			model.WithModelConfigMaxContextTokens(1050000),
+			model.WithModelConfigMaxOutputTokens(128000),
+			model.WithModelConfigToolChoice(true),
+		),
+	},
+	{
+		Model: "gpt-5.6-luna",
+		Type:  mode.ChatCompletions,
+		Owner: model.ModelOwnerOpenAI,
+		Price: model.Price{
+			InputPrice:         0.002,
+			OutputPrice:        0.009,
+			CachedPrice:        0.0002,
+			CacheCreationPrice: 0.0025,
+			ConditionalPrices: []model.ConditionalPrice{
+				{
+					Condition: model.PriceCondition{InputTokenMax: 272000, ServiceTier: "priority"},
+					Price: model.Price{
+						InputPrice:         0.002,
+						OutputPrice:        0.012,
+						CachedPrice:        0.0002,
+						CacheCreationPrice: 0.0025,
+					},
+				},
+				{
+					Condition: model.PriceCondition{InputTokenMin: 272001, ServiceTier: "priority"},
+					Price: model.Price{
+						InputPrice:         0.004,
+						OutputPrice:        0.018,
+						CachedPrice:        0.0004,
+						CacheCreationPrice: 0.005,
+					},
+				},
+				{
+					Condition: model.PriceCondition{InputTokenMax: 272000, ServiceTier: "flex"},
+					Price: model.Price{
+						InputPrice:         0.0005,
+						OutputPrice:        0.003,
+						CachedPrice:        0.00005,
+						CacheCreationPrice: 0.000625,
+					},
+				},
+				{
+					Condition: model.PriceCondition{InputTokenMin: 272001, ServiceTier: "flex"},
+					Price: model.Price{
+						InputPrice:         0.001,
+						OutputPrice:        0.0045,
+						CachedPrice:        0.0001,
+						CacheCreationPrice: 0.00125,
+					},
+				},
+				{
+					Condition: model.PriceCondition{InputTokenMax: 272000},
+					Price: model.Price{
+						InputPrice:         0.001,
+						OutputPrice:        0.006,
+						CachedPrice:        0.0001,
+						CacheCreationPrice: 0.00125,
+					},
+				},
+			},
+		},
+		SummaryServiceTier: true,
+		Config: model.NewModelConfig(
+			model.WithModelConfigMaxContextTokens(1050000),
+			model.WithModelConfigMaxOutputTokens(128000),
+			model.WithModelConfigToolChoice(true),
+		),
+	},
+	{
 		Model: "o3",
 		Type:  mode.Responses,
 		Owner: model.ModelOwnerOpenAI,

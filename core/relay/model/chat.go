@@ -28,7 +28,9 @@ func (u ChatUsage) ToModelUsage() model.Usage {
 		usage.AudioInputTokens = model.ZeroNullInt64(u.PromptTokensDetails.AudioTokens)
 		usage.VideoInputTokens = model.ZeroNullInt64(u.PromptTokensDetails.VideoTokens)
 		usage.CachedTokens = model.ZeroNullInt64(u.PromptTokensDetails.CachedTokens)
-		usage.CacheCreationTokens = model.ZeroNullInt64(u.PromptTokensDetails.CacheCreationTokens)
+		usage.CacheCreationTokens = model.ZeroNullInt64(
+			u.PromptTokensDetails.CacheCreationTokenCount(),
+		)
 	}
 
 	if u.CompletionTokensDetails != nil {
@@ -73,7 +75,7 @@ func (u ChatUsage) ToClaudeUsage() ClaudeUsage {
 	}
 
 	if u.PromptTokensDetails != nil {
-		cu.CacheCreationInputTokens = u.PromptTokensDetails.CacheCreationTokens
+		cu.CacheCreationInputTokens = u.PromptTokensDetails.CacheCreationTokenCount()
 		cu.CacheReadInputTokens = u.PromptTokensDetails.CachedTokens
 	}
 
@@ -90,15 +92,16 @@ func (u ChatUsage) ToResponseUsage() ResponseUsage {
 
 	if u.PromptTokensDetails != nil &&
 		(u.PromptTokensDetails.CachedTokens > 0 ||
-			u.PromptTokensDetails.CacheCreationTokens > 0 ||
+			u.PromptTokensDetails.CacheCreationTokenCount() > 0 ||
 			u.PromptTokensDetails.ImageTokens > 0 ||
 			u.PromptTokensDetails.VideoTokens > 0 ||
 			u.PromptTokensDetails.AudioTokens > 0) {
 		usage.InputTokensDetails = &ResponseUsageDetails{
-			AudioTokens:  u.PromptTokensDetails.AudioTokens,
-			CachedTokens: u.PromptTokensDetails.CachedTokens,
-			ImageTokens:  u.PromptTokensDetails.ImageTokens,
-			VideoTokens:  u.PromptTokensDetails.VideoTokens,
+			AudioTokens:      u.PromptTokensDetails.AudioTokens,
+			CachedTokens:     u.PromptTokensDetails.CachedTokens,
+			CacheWriteTokens: u.PromptTokensDetails.CacheCreationTokenCount(),
+			ImageTokens:      u.PromptTokensDetails.ImageTokens,
+			VideoTokens:      u.PromptTokensDetails.VideoTokens,
 		}
 	}
 
@@ -141,6 +144,15 @@ type PromptTokensDetails struct {
 	ImageTokens         int64 `json:"image_tokens,omitempty"`
 	VideoTokens         int64 `json:"video_tokens,omitempty"`
 	CacheCreationTokens int64 `json:"cache_creation_tokens,omitempty"`
+	CacheWriteTokens    int64 `json:"cache_write_tokens,omitempty"`
+}
+
+func (d *PromptTokensDetails) CacheCreationTokenCount() int64 {
+	if d == nil {
+		return 0
+	}
+
+	return max(d.CacheCreationTokens, d.CacheWriteTokens)
 }
 
 func (d *PromptTokensDetails) Add(other *PromptTokensDetails) {
@@ -153,6 +165,7 @@ func (d *PromptTokensDetails) Add(other *PromptTokensDetails) {
 	d.ImageTokens += other.ImageTokens
 	d.VideoTokens += other.VideoTokens
 	d.CacheCreationTokens += other.CacheCreationTokens
+	d.CacheWriteTokens += other.CacheWriteTokens
 }
 
 type CompletionTokensDetails struct {

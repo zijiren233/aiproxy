@@ -1,6 +1,7 @@
 package model_test
 
 import (
+	"encoding/json"
 	"errors"
 	"net/http"
 	"testing"
@@ -81,6 +82,27 @@ func TestChatUsage(t *testing.T) {
 			convey.So(cu.CacheReadInputTokens, convey.ShouldEqual, 5)
 			convey.So(cu.CacheCreationInputTokens, convey.ShouldEqual, 2)
 		})
+	})
+}
+
+func TestChatUsageCacheWriteTokens(t *testing.T) {
+	convey.Convey("cache_write_tokens maps to cache creation usage", t, func() {
+		var usage model.ChatUsage
+		err := json.Unmarshal([]byte(`{
+			"prompt_tokens": 2006,
+			"completion_tokens": 300,
+			"total_tokens": 2306,
+			"prompt_tokens_details": {
+				"cached_tokens": 1920,
+				"cache_creation_tokens": 32,
+				"cache_write_tokens": 64
+			}
+		}`), &usage)
+		convey.So(err, convey.ShouldBeNil)
+
+		modelUsage := usage.ToModelUsage()
+		convey.So(int64(modelUsage.CachedTokens), convey.ShouldEqual, 1920)
+		convey.So(int64(modelUsage.CacheCreationTokens), convey.ShouldEqual, 64)
 	})
 }
 

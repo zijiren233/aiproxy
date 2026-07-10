@@ -1,12 +1,28 @@
 package model_test
 
 import (
+	"encoding/json"
 	"testing"
 
 	coremodel "github.com/labring/aiproxy/core/model"
 	"github.com/labring/aiproxy/core/relay/model"
 	"github.com/stretchr/testify/assert"
 )
+
+func TestResponseUsageCacheWriteTokensJSON(t *testing.T) {
+	var usage model.ResponseUsage
+	err := json.Unmarshal([]byte(`{
+		"input_tokens": 2006,
+		"output_tokens": 300,
+		"total_tokens": 2306,
+		"input_tokens_details": {
+			"cached_tokens": 1920,
+			"cache_write_tokens": 64
+		}
+	}`), &usage)
+	assert.NoError(t, err)
+	assert.Equal(t, coremodel.ZeroNullInt64(64), usage.ToModelUsage().CacheCreationTokens)
+}
 
 func TestChatUsageConversions(t *testing.T) {
 	chatUsage := model.ChatUsage{
@@ -37,6 +53,7 @@ func TestChatUsageConversions(t *testing.T) {
 		assert.Equal(t, int64(6), responseUsage.InputTokensDetails.ImageTokens)
 		assert.Equal(t, int64(9), responseUsage.InputTokensDetails.VideoTokens)
 		assert.Equal(t, int64(20), responseUsage.InputTokensDetails.CachedTokens)
+		assert.Equal(t, int64(10), responseUsage.InputTokensDetails.CacheWriteTokens)
 		assert.NotNil(t, responseUsage.OutputTokensDetails)
 		assert.Equal(t, int64(7), responseUsage.OutputTokensDetails.AudioTokens)
 		assert.Equal(t, int64(8), responseUsage.OutputTokensDetails.ImageTokens)
@@ -78,10 +95,11 @@ func TestResponseUsageConversions(t *testing.T) {
 		OutputTokens: 50,
 		TotalTokens:  150,
 		InputTokensDetails: &model.ResponseUsageDetails{
-			AudioTokens:  5,
-			ImageTokens:  6,
-			VideoTokens:  9,
-			CachedTokens: 20,
+			AudioTokens:      5,
+			ImageTokens:      6,
+			VideoTokens:      9,
+			CachedTokens:     20,
+			CacheWriteTokens: 10,
 		},
 		OutputTokensDetails: &model.ResponseUsageDetails{
 			AudioTokens:     7,
@@ -100,6 +118,7 @@ func TestResponseUsageConversions(t *testing.T) {
 		assert.Equal(t, int64(6), chatUsage.PromptTokensDetails.ImageTokens)
 		assert.Equal(t, int64(9), chatUsage.PromptTokensDetails.VideoTokens)
 		assert.Equal(t, int64(20), chatUsage.PromptTokensDetails.CachedTokens)
+		assert.Equal(t, int64(10), chatUsage.PromptTokensDetails.CacheWriteTokens)
 		assert.NotNil(t, chatUsage.CompletionTokensDetails)
 		assert.Equal(t, int64(7), chatUsage.CompletionTokensDetails.AudioTokens)
 		assert.Equal(t, int64(8), chatUsage.CompletionTokensDetails.ImageTokens)
@@ -115,6 +134,7 @@ func TestResponseUsageConversions(t *testing.T) {
 		assert.Equal(t, coremodel.ZeroNullInt64(50), modelUsage.OutputTokens)
 		assert.Equal(t, coremodel.ZeroNullInt64(8), modelUsage.ImageOutputTokens)
 		assert.Equal(t, coremodel.ZeroNullInt64(7), modelUsage.AudioOutputTokens)
+		assert.Equal(t, coremodel.ZeroNullInt64(10), modelUsage.CacheCreationTokens)
 	})
 
 	t.Run("ResponseUsage to ClaudeUsage", func(t *testing.T) {
@@ -122,6 +142,7 @@ func TestResponseUsageConversions(t *testing.T) {
 		assert.Equal(t, int64(100), claudeUsage.InputTokens)
 		assert.Equal(t, int64(50), claudeUsage.OutputTokens)
 		assert.Equal(t, int64(20), claudeUsage.CacheReadInputTokens)
+		assert.Equal(t, int64(10), claudeUsage.CacheCreationInputTokens)
 	})
 
 	t.Run("ResponseUsage to GeminiUsage", func(t *testing.T) {
