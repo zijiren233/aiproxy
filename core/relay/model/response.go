@@ -495,6 +495,7 @@ func (u *ResponseUsage) ToClaudeUsage() ClaudeUsage {
 	if u.InputTokensDetails != nil && u.InputTokensDetails.CachedTokens > 0 {
 		usage.CacheReadInputTokens = u.InputTokensDetails.CachedTokens
 	}
+
 	if u.InputTokensDetails != nil && u.InputTokensDetails.CacheWriteTokens > 0 {
 		usage.CacheCreationInputTokens = u.InputTokensDetails.CacheWriteTokens
 	}

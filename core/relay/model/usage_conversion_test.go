@@ -11,6 +11,7 @@ import (
 
 func TestResponseUsageCacheWriteTokensJSON(t *testing.T) {
 	var usage model.ResponseUsage
+
 	err := json.Unmarshal([]byte(`{
 		"input_tokens": 2006,
 		"output_tokens": 300,

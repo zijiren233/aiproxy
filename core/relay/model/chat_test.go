@@ -88,6 +88,7 @@ func TestChatUsage(t *testing.T) {
 func TestChatUsageCacheWriteTokens(t *testing.T) {
 	convey.Convey("cache_write_tokens maps to cache creation usage", t, func() {
 		var usage model.ChatUsage
+
 		err := json.Unmarshal([]byte(`{
 			"prompt_tokens": 2006,
 			"completion_tokens": 300,
