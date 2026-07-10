@@ -202,6 +202,26 @@ func TestIsResponsesOnlyModel(t *testing.T) {
 			expected: false,
 		},
 		{
+			name:     "gpt-5.6 should support chat completions",
+			model:    "gpt-5.6",
+			expected: false,
+		},
+		{
+			name:     "gpt-5.6 sol should support chat completions",
+			model:    "gpt-5.6-sol",
+			expected: false,
+		},
+		{
+			name:     "gpt-5.6 terra should support chat completions",
+			model:    "gpt-5.6-terra",
+			expected: false,
+		},
+		{
+			name:     "gpt-5.6 luna should support chat completions",
+			model:    "gpt-5.6-luna",
+			expected: false,
+		},
+		{
 			name:     "empty model should not be responses only",
 			model:    "",
 			expected: false,

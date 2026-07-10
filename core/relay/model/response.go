@@ -255,11 +255,12 @@ type InputItem struct {
 
 // ResponseUsageDetails represents detailed token usage information
 type ResponseUsageDetails struct {
-	AudioTokens     int64 `json:"audio_tokens,omitempty"`
-	CachedTokens    int64 `json:"cached_tokens,omitempty"`
-	ReasoningTokens int64 `json:"reasoning_tokens,omitempty"`
-	ImageTokens     int64 `json:"image_tokens,omitempty"`
-	VideoTokens     int64 `json:"video_tokens,omitempty"`
+	AudioTokens      int64 `json:"audio_tokens,omitempty"`
+	CachedTokens     int64 `json:"cached_tokens,omitempty"`
+	CacheWriteTokens int64 `json:"cache_write_tokens,omitempty"`
+	ReasoningTokens  int64 `json:"reasoning_tokens,omitempty"`
+	ImageTokens      int64 `json:"image_tokens,omitempty"`
+	VideoTokens      int64 `json:"video_tokens,omitempty"`
 }
 
 // ResponseUsage represents usage information for a response
@@ -435,6 +436,7 @@ func (u *ResponseUsage) ToModelUsage() model.Usage {
 		usage.AudioInputTokens = model.ZeroNullInt64(u.InputTokensDetails.AudioTokens)
 		usage.VideoInputTokens = model.ZeroNullInt64(u.InputTokensDetails.VideoTokens)
 		usage.CachedTokens = model.ZeroNullInt64(u.InputTokensDetails.CachedTokens)
+		usage.CacheCreationTokens = model.ZeroNullInt64(u.InputTokensDetails.CacheWriteTokens)
 	}
 
 	if u.OutputTokensDetails != nil {
@@ -456,14 +458,16 @@ func (u *ResponseUsage) ToChatUsage() ChatUsage {
 
 	if u.InputTokensDetails != nil &&
 		(u.InputTokensDetails.CachedTokens > 0 ||
+			u.InputTokensDetails.CacheWriteTokens > 0 ||
 			u.InputTokensDetails.AudioTokens > 0 ||
 			u.InputTokensDetails.ImageTokens > 0 ||
 			u.InputTokensDetails.VideoTokens > 0) {
 		usage.PromptTokensDetails = &PromptTokensDetails{
-			AudioTokens:  u.InputTokensDetails.AudioTokens,
-			CachedTokens: u.InputTokensDetails.CachedTokens,
-			ImageTokens:  u.InputTokensDetails.ImageTokens,
-			VideoTokens:  u.InputTokensDetails.VideoTokens,
+			AudioTokens:      u.InputTokensDetails.AudioTokens,
+			CachedTokens:     u.InputTokensDetails.CachedTokens,
+			CacheWriteTokens: u.InputTokensDetails.CacheWriteTokens,
+			ImageTokens:      u.InputTokensDetails.ImageTokens,
+			VideoTokens:      u.InputTokensDetails.VideoTokens,
 		}
 	}
 
@@ -490,6 +494,10 @@ func (u *ResponseUsage) ToClaudeUsage() ClaudeUsage {
 
 	if u.InputTokensDetails != nil && u.InputTokensDetails.CachedTokens > 0 {
 		usage.CacheReadInputTokens = u.InputTokensDetails.CachedTokens
+	}
+
+	if u.InputTokensDetails != nil && u.InputTokensDetails.CacheWriteTokens > 0 {
+		usage.CacheCreationInputTokens = u.InputTokensDetails.CacheWriteTokens
 	}
 
 	return usage
