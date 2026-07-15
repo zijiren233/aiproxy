@@ -192,6 +192,10 @@ type OpenAIErrorResponse struct {
 	Error OpenAIError `json:"error"`
 }
 
+func (e OpenAIErrorResponse) ErrorCode() any {
+	return e.Error.Code
+}
+
 type OpenAIError struct {
 	Code    any    `json:"code,omitempty"`
 	Message string `json:"message,omitempty"`

@@ -22,6 +22,15 @@ func (e BasicError[T]) StatusCode() int {
 	return e.statusCode
 }
 
+func (e BasicError[T]) ErrorCode() any {
+	provider, ok := any(e.error).(ErrorCodeProvider)
+	if !ok {
+		return nil
+	}
+
+	return provider.ErrorCode()
+}
+
 func (e BasicError[T]) Error() string {
 	return fmt.Sprintf("status code: %d, error: %v", e.statusCode, e.error)
 }

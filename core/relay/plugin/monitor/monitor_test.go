@@ -7,6 +7,7 @@ import (
 
 	"github.com/labring/aiproxy/core/common/config"
 	relaymeta "github.com/labring/aiproxy/core/relay/meta"
+	relaymodel "github.com/labring/aiproxy/core/relay/model"
 	"github.com/stretchr/testify/require"
 )
 
@@ -72,4 +73,39 @@ func TestChannelStatusHasPermission(t *testing.T) {
 	}
 
 	require.True(t, ChannelStatusHasPermission(http.StatusBadRequest))
+}
+
+func TestChannelHasPermissionForForbiddenErrorCode(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name string
+		code string
+		want bool
+	}{
+		{
+			name: "request blocked by cyber policy",
+			code: "session_blocked_by_cyber_policy",
+			want: true,
+		},
+		{
+			name: "channel permission failure",
+			code: "insufficient_user_quota",
+			want: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			relayErr := relaymodel.NewOpenAIError(http.StatusForbidden, relaymodel.OpenAIError{
+				Code:    tt.code,
+				Message: "forbidden",
+				Type:    relaymodel.ErrorTypeUpstream,
+			})
+
+			require.Equal(t, tt.want, ChannelHasPermission(relayErr))
+		})
+	}
 }

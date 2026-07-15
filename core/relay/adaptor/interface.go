@@ -121,6 +121,10 @@ type Error interface {
 	StatusCode() int
 }
 
+type ErrorCodeProvider interface {
+	ErrorCode() any
+}
+
 var ErrGetBalanceNotImplemented = errors.New("get balance not implemented")
 
 type Balancer interface {
