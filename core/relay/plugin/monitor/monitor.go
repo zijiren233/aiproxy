@@ -50,13 +50,37 @@ var channelNoPermissionStatusCodesMap = map[int]struct{}{
 	http.StatusNotFound:        {},
 }
 
+var forbiddenHasPermissionErrorCodesMap = map[string]struct{}{
+	"session_blocked_by_cyber_policy": {},
+}
+
 func ChannelStatusHasPermission(statusCode int) bool {
 	_, ok := channelNoPermissionStatusCodesMap[statusCode]
 	return !ok
 }
 
 func ChannelHasPermission(relayErr adaptor.Error) bool {
-	return ChannelStatusHasPermission(relayErr.StatusCode())
+	if ChannelStatusHasPermission(relayErr.StatusCode()) {
+		return true
+	}
+
+	if relayErr.StatusCode() != http.StatusForbidden {
+		return false
+	}
+
+	provider, ok := relayErr.(adaptor.ErrorCodeProvider)
+	if !ok {
+		return false
+	}
+
+	errorCode, ok := provider.ErrorCode().(string)
+	if !ok {
+		return false
+	}
+
+	_, ok = forbiddenHasPermissionErrorCodesMap[errorCode]
+
+	return ok
 }
 
 func getRequestDuration(meta *meta.Meta) time.Duration {
