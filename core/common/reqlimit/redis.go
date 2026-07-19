@@ -52,9 +52,9 @@ const pushRequestLuaScript = `
 local bucket_key = KEYS[1]
 local meta_key = KEYS[2]
 local window_seconds = tonumber(ARGV[1])
-local current_time = tonumber(ARGV[2])
-local max_requests = tonumber(ARGV[3])
-local n = tonumber(ARGV[4])
+local current_time = tonumber(redis.call('TIME')[1])
+local max_requests = tonumber(ARGV[2])
+local n = tonumber(ARGV[3])
 local cutoff_slice = current_time - window_seconds
 
 local function parse_count(value)
@@ -81,7 +81,8 @@ local count = tonumber(redis.call('HGET', meta_key, 'total_normal')) or 0
 local over_count = tonumber(redis.call('HGET', meta_key, 'total_over')) or 0
 local last_cleaned = tonumber(redis.call('HGET', meta_key, 'last_cleaned_second'))
 
-if not last_cleaned then
+if not last_cleaned or last_cleaned > cutoff_slice or
+    cutoff_slice - last_cleaned > window_seconds then
     last_cleaned = cutoff_slice
     local all_fields = redis.call('HGETALL', bucket_key)
     count = 0
@@ -131,9 +132,8 @@ return string.format("%d:%d:%d", count, over_count, current_second_count)
 
 const getRequestCountLuaScript = `
 local exact_meta_key = KEYS[1]
-local pattern = KEYS[2]
 local window_seconds = tonumber(ARGV[1])
-local current_time = tonumber(ARGV[2])
+local current_time = tonumber(redis.call('TIME')[1])
 local cutoff_slice = current_time - window_seconds
 
 local function parse_count(value)
@@ -143,11 +143,18 @@ local function parse_count(value)
 end
 
 local function cleanup_meta(bucket_key, meta_key)
+    local bucket_ttl = redis.call('PTTL', bucket_key)
+    if bucket_ttl == -2 then
+        redis.call('DEL', meta_key)
+        return 0, 0
+    end
+
     local count = tonumber(redis.call('HGET', meta_key, 'total_normal')) or 0
     local over = tonumber(redis.call('HGET', meta_key, 'total_over')) or 0
     local last_cleaned = tonumber(redis.call('HGET', meta_key, 'last_cleaned_second'))
 
-    if not last_cleaned then
+    if not last_cleaned or last_cleaned > cutoff_slice or
+        cutoff_slice - last_cleaned > window_seconds then
         last_cleaned = cutoff_slice
         local all_fields = redis.call('HGETALL', bucket_key)
         count = 0
@@ -185,32 +192,20 @@ local function cleanup_meta(bucket_key, meta_key)
         cutoff_slice
     )
 
+    if bucket_ttl == -1 then
+        bucket_ttl = window_seconds * 1000
+        redis.call('PEXPIRE', bucket_key, bucket_ttl)
+    end
+    redis.call('PEXPIRE', meta_key, bucket_ttl)
+
     return count, over
 end
 
-if exact_meta_key ~= '' then
-    local exact_bucket_key = string.gsub(exact_meta_key, ':meta$', ':buckets')
-    local count, over = cleanup_meta(exact_bucket_key, exact_meta_key)
-    local current_value = redis.call('HGET', exact_bucket_key, tostring(current_time))
-    local current_c, current_oc = parse_count(current_value)
-    return string.format("%d:%d", count + over, current_c + current_oc)
-end
-
-local total = 0
-local current_second_count = 0
-
-local keys = redis.call('KEYS', pattern)
-for _, meta_key in ipairs(keys) do
-    local bucket_key = string.gsub(meta_key, ':meta$', ':buckets')
-    local count, over = cleanup_meta(bucket_key, meta_key)
-    total = total + count + over
-
-    local current_value = redis.call('HGET', bucket_key, tostring(current_time))
-    local current_c, current_oc = parse_count(current_value)
-    current_second_count = current_second_count + current_c + current_oc
-end
-
-return string.format("%d:%d", total, current_second_count)
+local exact_bucket_key = string.gsub(exact_meta_key, ':meta$', ':buckets')
+local count, over = cleanup_meta(exact_bucket_key, exact_meta_key)
+local current_value = redis.call('HGET', exact_bucket_key, tostring(current_time))
+local current_c, current_oc = parse_count(current_value)
+return string.format("%d:%d", count + over, current_c + current_oc)
 `
 
 var (
@@ -240,20 +235,25 @@ func (r *redisRateRecord) GetRequest(
 		return 0, 0, errors.New("redis client is nil")
 	}
 
-	exactMetaKey := ""
+	if hasWildcard(keys) {
+		snapshots, err := r.SnapshotByPattern(ctx, duration, keys...)
+		if err != nil {
+			return 0, 0, err
+		}
 
-	pattern := r.buildMetaKey(keys...)
-	if !hasWildcard(keys) {
-		exactMetaKey = pattern
-		pattern = ""
+		for _, snapshot := range snapshots {
+			totalCount += snapshot.TotalCount
+			secondCount += snapshot.SecondCount
+		}
+
+		return totalCount, secondCount, nil
 	}
 
 	result, err := getRequestCountScript.Run(
 		ctx,
 		rdb,
-		[]string{exactMetaKey, pattern},
+		[]string{r.buildMetaKey(keys...)},
 		duration.Seconds(),
-		time.Now().Unix(),
 	).Text()
 	if err != nil {
 		return 0, 0, err
@@ -297,7 +297,6 @@ func (r *redisRateRecord) PushRequest(
 		rdb,
 		[]string{bucketKey, metaKey},
 		duration.Seconds(),
-		time.Now().Unix(),
 		overed,
 		n,
 	).Text()
@@ -345,26 +344,24 @@ func (r *redisRateRecord) SnapshotByPattern(
 		return nil, errors.New("redis client is nil")
 	}
 
-	metaPattern := r.buildMetaKey(keys...)
-	if !hasWildcard(keys) {
-		metaPattern = r.buildMetaKey(keys...)
-	}
-
-	pattern := metaPattern
+	pattern := r.buildMetaKey(keys...)
 	iter := rdb.Scan(ctx, 0, pattern, 0).Iterator()
-	nowUnix := time.Now().Unix()
 	windowSeconds := duration.Seconds()
 	snapshots := make([]recordSnapshot, 0)
+	seenMetaKeys := make(map[string]struct{})
 
 	for iter.Next(ctx) {
 		metaKey := iter.Val()
+		if _, seen := seenMetaKeys[metaKey]; seen {
+			continue
+		}
+		seenMetaKeys[metaKey] = struct{}{}
 
 		result, err := getRequestCountScript.Run(
 			ctx,
 			rdb,
-			[]string{metaKey, ""},
+			[]string{metaKey},
 			windowSeconds,
-			nowUnix,
 		).Text()
 		if err != nil {
 			return nil, err

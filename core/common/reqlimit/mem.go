@@ -82,7 +82,10 @@ func (m *InMemoryRecord) rebuildAggregateLocked(e *entry, windowSeconds, cutoff 
 func (m *InMemoryRecord) refreshAggregateLocked(e *entry, nowSecond, windowSeconds int64) {
 	cutoff := nowSecond - windowSeconds
 
-	if !e.aggregateInitialized || e.windowSeconds != windowSeconds {
+	if !e.aggregateInitialized ||
+		e.windowSeconds != windowSeconds ||
+		e.lastCleanedCutoff > cutoff ||
+		cutoff-e.lastCleanedCutoff > windowSeconds {
 		m.rebuildAggregateLocked(e, windowSeconds, cutoff)
 		return
 	}
