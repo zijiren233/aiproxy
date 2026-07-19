@@ -321,6 +321,136 @@ func TestRedisRateRecordGetDoesNotRefreshTTL(t *testing.T) {
 	}, 4*time.Second, 100*time.Millisecond)
 }
 
+func TestRedisRateRecordGetMissingDoesNotCreateMeta(t *testing.T) {
+	ctx := context.Background()
+
+	redisClient, cleanup := setupRedisForReqLimitTest(t, ctx)
+	defer cleanup()
+
+	record := newRedisChannelModelRecord(func() *redis.Client { return redisClient })
+	bucketKey := record.buildBucketKey("missing-channel", "missing-model")
+	metaKey := record.buildMetaKey("missing-channel", "missing-model")
+
+	totalCount, secondCount, err := record.GetRequest(
+		ctx,
+		time.Minute,
+		"missing-channel",
+		"missing-model",
+	)
+	require.NoError(t, err)
+	require.Zero(t, totalCount)
+	require.Zero(t, secondCount)
+
+	exists, err := redisClient.Exists(ctx, bucketKey, metaKey).Result()
+	require.NoError(t, err)
+	require.Zero(t, exists)
+}
+
+func TestRedisRateRecordGetRemovesOrphanedMeta(t *testing.T) {
+	ctx := context.Background()
+
+	redisClient, cleanup := setupRedisForReqLimitTest(t, ctx)
+	defer cleanup()
+
+	record := newRedisChannelModelRecord(func() *redis.Client { return redisClient })
+	metaKey := record.buildMetaKey("orphan-channel", "orphan-model")
+	require.NoError(t, redisClient.HSet(
+		ctx,
+		metaKey,
+		"total_normal", 0,
+		"total_over", 0,
+		"last_cleaned_second", 1,
+	).Err())
+
+	totalCount, secondCount, err := record.GetRequest(
+		ctx,
+		time.Minute,
+		"orphan-channel",
+		"orphan-model",
+	)
+	require.NoError(t, err)
+	require.Zero(t, totalCount)
+	require.Zero(t, secondCount)
+
+	exists, err := redisClient.Exists(ctx, metaKey).Result()
+	require.NoError(t, err)
+	require.Zero(t, exists)
+}
+
+func TestRedisRateRecordGetRebuildsStaleMeta(t *testing.T) {
+	ctx := context.Background()
+
+	redisClient, cleanup := setupRedisForReqLimitTest(t, ctx)
+	defer cleanup()
+
+	record := newRedisChannelModelRecord(func() *redis.Client { return redisClient })
+	bucketKey := record.buildBucketKey("stale-channel", "stale-model")
+	metaKey := record.buildMetaKey("stale-channel", "stale-model")
+	now := time.Now().Unix()
+
+	pipe := redisClient.Pipeline()
+	pipe.HSet(ctx, bucketKey, strconv.FormatInt(now, 10), "7:2")
+	pipe.Expire(ctx, bucketKey, time.Minute)
+	pipe.HSet(
+		ctx,
+		metaKey,
+		"total_normal", 100,
+		"total_over", 50,
+		"last_cleaned_second", 1,
+	)
+	pipe.Expire(ctx, metaKey, time.Minute)
+	_, err := pipe.Exec(ctx)
+	require.NoError(t, err)
+
+	totalCount, secondCount, err := record.GetRequest(
+		ctx,
+		time.Minute,
+		"stale-channel",
+		"stale-model",
+	)
+	require.NoError(t, err)
+	require.Equal(t, int64(9), totalCount)
+	require.Equal(t, int64(9), secondCount)
+
+	metaTTL, err := redisClient.TTL(ctx, metaKey).Result()
+	require.NoError(t, err)
+	require.Positive(t, metaTTL)
+}
+
+func TestRedisRateRecordPushRebuildsStaleMeta(t *testing.T) {
+	ctx := context.Background()
+
+	redisClient, cleanup := setupRedisForReqLimitTest(t, ctx)
+	defer cleanup()
+
+	record := newRedisChannelModelRecord(func() *redis.Client { return redisClient })
+	metaKey := record.buildMetaKey("stale-push-channel", "stale-push-model")
+	require.NoError(t, redisClient.HSet(
+		ctx,
+		metaKey,
+		"total_normal", 100,
+		"total_over", 50,
+		"last_cleaned_second", 1,
+	).Err())
+
+	normalCount, overCount, secondCount, err := record.PushRequest(
+		ctx,
+		0,
+		time.Minute,
+		1,
+		"stale-push-channel",
+		"stale-push-model",
+	)
+	require.NoError(t, err)
+	require.Equal(t, int64(1), normalCount)
+	require.Zero(t, overCount)
+	require.Equal(t, int64(1), secondCount)
+
+	metaTTL, err := redisClient.TTL(ctx, metaKey).Result()
+	require.NoError(t, err)
+	require.Positive(t, metaTTL)
+}
+
 func setupRedisForReqLimitTest(t *testing.T, ctx context.Context) (*redis.Client, func()) {
 	t.Helper()
 
