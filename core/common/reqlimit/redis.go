@@ -355,6 +355,7 @@ func (r *redisRateRecord) SnapshotByPattern(
 		if _, seen := seenMetaKeys[metaKey]; seen {
 			continue
 		}
+
 		seenMetaKeys[metaKey] = struct{}{}
 
 		result, err := getRequestCountScript.Run(
