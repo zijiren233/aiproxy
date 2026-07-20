@@ -12,6 +12,19 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestAddChannelRequestToChannelPreservesNewlinesInKey(t *testing.T) {
+	const key = "first-key\nsecond-key"
+
+	channel, err := (&AddChannelRequest{
+		Type: model.ChannelTypeOpenAI,
+		Name: "channel",
+		Key:  key,
+	}).ToChannel()
+
+	require.NoError(t, err)
+	require.Equal(t, key, channel.Key)
+}
+
 func TestRunAutoTestBannedModelsHonorsConcurrencyLimit(t *testing.T) {
 	const (
 		concurrency = 7
