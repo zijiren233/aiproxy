@@ -154,12 +154,12 @@ func AddOneAPIChannel(ch OneAPIChannel) error {
 		add.BaseURL += "/v1"
 	}
 
-	chs, err := add.ToChannels()
+	channel, err := add.ToChannel()
 	if err != nil {
 		return err
 	}
 
-	return model.BatchInsertChannels(chs)
+	return model.BatchInsertChannels([]*model.Channel{channel})
 }
 
 // ImportChannelFromOneAPI godoc
