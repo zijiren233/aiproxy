@@ -1685,6 +1685,13 @@ func TestConvertResponsesToChatCompletionStreamResponseKeepsParallelToolCallsSep
 	chunks := collectChatCompletionStreamChunks(t, w.Body.String())
 	require.Len(t, chunks, 6)
 
+	for _, chunk := range chunks {
+		assert.Equal(t, int64(1781355623), chunk.Created)
+	}
+
+	assert.NotContains(t, w.Body.String(), `"id":""`)
+	assert.NotContains(t, w.Body.String(), `"type":""`)
+
 	argumentsByIndex := make(map[int]string)
 
 	callIDsByIndex := make(map[int]string)

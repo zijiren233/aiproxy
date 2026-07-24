@@ -24,12 +24,21 @@ import (
 // chatCompletionStreamState manages state for ChatCompletion stream conversion
 type chatCompletionStreamState struct {
 	messageID                  string
+	created                    int64
 	meta                       *meta.Meta
 	c                          *gin.Context
 	toolCallIndexByItemID      map[string]int
 	toolCallIndexByOutputIndex map[int]int
 	nextToolCallIndex          int
 	hasToolCall                bool
+}
+
+func (s *chatCompletionStreamState) createdAt() int64 {
+	if s.created == 0 {
+		s.created = time.Now().Unix()
+	}
+
+	return s.created
 }
 
 func (s *chatCompletionStreamState) registerToolCall(
@@ -183,11 +192,14 @@ func (s *chatCompletionStreamState) handleResponseCreated(
 	}
 
 	s.messageID = event.Response.ID
+	if event.Response.CreatedAt != 0 {
+		s.created = event.Response.CreatedAt
+	}
 
 	return &relaymodel.ChatCompletionsStreamResponse{
 		ID:      s.messageID,
 		Object:  relaymodel.ChatCompletionChunkObject,
-		Created: event.Response.CreatedAt,
+		Created: s.createdAt(),
 		Model:   responseModelName(s.meta),
 		Choices: []*relaymodel.ChatCompletionsStreamResponseChoice{
 			{
@@ -211,7 +223,7 @@ func (s *chatCompletionStreamState) handleOutputTextDelta(
 	return &relaymodel.ChatCompletionsStreamResponse{
 		ID:      s.messageID,
 		Object:  relaymodel.ChatCompletionChunkObject,
-		Created: time.Now().Unix(),
+		Created: s.createdAt(),
 		Model:   responseModelName(s.meta),
 		Choices: []*relaymodel.ChatCompletionsStreamResponseChoice{
 			{
@@ -234,7 +246,7 @@ func (s *chatCompletionStreamState) handleReasoningSummaryTextDelta(
 	return &relaymodel.ChatCompletionsStreamResponse{
 		ID:      s.messageID,
 		Object:  relaymodel.ChatCompletionChunkObject,
-		Created: time.Now().Unix(),
+		Created: s.createdAt(),
 		Model:   responseModelName(s.meta),
 		Choices: []*relaymodel.ChatCompletionsStreamResponseChoice{
 			{
@@ -264,7 +276,7 @@ func (s *chatCompletionStreamState) handleOutputItemAdded(
 		return &relaymodel.ChatCompletionsStreamResponse{
 			ID:      s.messageID,
 			Object:  relaymodel.ChatCompletionChunkObject,
-			Created: time.Now().Unix(),
+			Created: s.createdAt(),
 			Model:   responseModelName(s.meta),
 			Choices: []*relaymodel.ChatCompletionsStreamResponseChoice{
 				{
@@ -291,7 +303,7 @@ func (s *chatCompletionStreamState) handleOutputItemAdded(
 		return &relaymodel.ChatCompletionsStreamResponse{
 			ID:      s.messageID,
 			Object:  relaymodel.ChatCompletionChunkObject,
-			Created: time.Now().Unix(),
+			Created: s.createdAt(),
 			Model:   responseModelName(s.meta),
 			Choices: []*relaymodel.ChatCompletionsStreamResponseChoice{
 				{
@@ -324,7 +336,7 @@ func (s *chatCompletionStreamState) handleFunctionCallArgumentsDelta(
 	return &relaymodel.ChatCompletionsStreamResponse{
 		ID:      s.messageID,
 		Object:  relaymodel.ChatCompletionChunkObject,
-		Created: time.Now().Unix(),
+		Created: s.createdAt(),
 		Model:   responseModelName(s.meta),
 		Choices: []*relaymodel.ChatCompletionsStreamResponseChoice{
 			{
@@ -362,7 +374,7 @@ func (s *chatCompletionStreamState) handleResponseCompleted(
 	return &relaymodel.ChatCompletionsStreamResponse{
 		ID:      s.messageID,
 		Object:  relaymodel.ChatCompletionChunkObject,
-		Created: time.Now().Unix(),
+		Created: s.createdAt(),
 		Model:   responseModelName(s.meta),
 		Choices: []*relaymodel.ChatCompletionsStreamResponseChoice{
 			{
