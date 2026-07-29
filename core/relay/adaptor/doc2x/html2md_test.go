@@ -20,9 +20,11 @@ func TestCleanMarkdownNormalizesDoc2XFragments(t *testing.T) {
 	if !strings.Contains(result, `深度神经网络在学习范式 [^2] 和矩阵 $$ x+y $$`) {
 		t.Fatalf("math delimiters or footnote reference were not normalized: %q", result)
 	}
+
 	if !strings.Contains(result, "**图内文字**\n\n输入图像。\n输出结果") {
 		t.Fatalf("figure text was lost: %q", result)
 	}
+
 	for _, marker := range []string{"<!-- Meanless:", "<!-- Media -->", "<!-- figureText:", "<!-- Footnote -->"} {
 		if strings.Contains(result, marker) {
 			t.Fatalf("comment marker %q remains in %q", marker, result)
@@ -34,6 +36,7 @@ func TestCleanMarkdownNormalizesMathTagsAndTextSubscripts(t *testing.T) {
 	t.Parallel()
 
 	result := doc2x.CleanMarkdown(`$x + y \tag{1}$ and \text{where a_b is defined}`)
+
 	expected := `$$x + y \qquad \qquad (1)$$ and \text{where a\_b is defined}`
 	if result != expected {
 		t.Fatalf("expected %q, got %q", expected, result)
@@ -53,10 +56,12 @@ https://example.com/reference
 <!-- Footnote -->
 ---`
 	result := doc2x.CleanMarkdown(input)
+
 	expected := "正文 [^2]\n\n[^2]: 脚注说明\n\n    https://example.com/reference"
 	if result != expected {
 		t.Fatalf("expected %q, got %q", expected, result)
 	}
+
 	if strings.Contains(result, "<!-- Footnote -->") || strings.Contains(result, "\n---\n") {
 		t.Fatalf("footnote markers or separators remain: %q", result)
 	}
@@ -75,6 +80,7 @@ func TestHTMLImage2MdPreservesSignedURLQuery(t *testing.T) {
 	t.Parallel()
 
 	input := `<img src="https://img.doc2x.noedgeai.com/page.jpg?x=275&y=216&w=1189&h=678&r=0"/>`
+
 	expected := `![img](https://img.doc2x.noedgeai.com/page.jpg?x=275&y=216&w=1189&h=678&r=0)`
 	if result := doc2x.HTMLImage2Md(input); result != expected {
 		t.Fatalf("expected %q, got %q", expected, result)

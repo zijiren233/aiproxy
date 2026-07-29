@@ -97,6 +97,7 @@ func HandleParsePdfResponse(
 			http.StatusBadRequest,
 		)
 	}
+
 	if response.Data.UID == "" {
 		return adaptor.DoResponseResult{}, relaymodel.WrapperOpenAIErrorWithMessage(
 			"parse pdf failed: uid is empty",
@@ -125,11 +126,13 @@ func HandleParsePdfResponse(
 					http.StatusBadGateway,
 				)
 			}
+
 			return handleParsePdfResponse(meta, c, status.Result)
 		case StatusResponseDataStatusReady, StatusResponseDataStatusProcessing:
 			if attempt == statusPollMaxAttempts-1 {
 				break
 			}
+
 			select {
 			case <-ctx.Done():
 				return adaptor.DoResponseResult{}, relaymodel.WrapperOpenAIErrorWithMessage(
@@ -180,12 +183,14 @@ var (
 	textSubscriptRegex       = regexp.MustCompile(`\\text\{([^}]*?)(\b\w+)_(\w+\b)([^}]*?)\}`)
 	simpleFootnoteRefRegex   = regexp.MustCompile(`\$\s*\{\}\^\{(\d+)\}\s*\$`)
 
-	mediaCommentRegex     = regexp.MustCompile(`<!-- Media -->`)
-	footnoteCommentRegex  = regexp.MustCompile(`<!-- Footnote -->`)
-	meanlessCommentRegex  = regexp.MustCompile(`(?s)<!-- Meanless:.*?-->`)
-	figureTextRegex       = regexp.MustCompile(`(?s)<!-- figureText:\s*(.*?)\s*-->`)
-	figureLineBreakRegex  = regexp.MustCompile(`(?i)<br\s*/?>`)
-	footnoteSectionRegex  = regexp.MustCompile(`(?s)(?:^|\n)\s*---\s*<!-- Footnote -->\s*(.*?)\s*<!-- Footnote -->\s*---\s*(?:\n|$)`)
+	mediaCommentRegex    = regexp.MustCompile(`<!-- Media -->`)
+	footnoteCommentRegex = regexp.MustCompile(`<!-- Footnote -->`)
+	meanlessCommentRegex = regexp.MustCompile(`(?s)<!-- Meanless:.*?-->`)
+	figureTextRegex      = regexp.MustCompile(`(?s)<!-- figureText:\s*(.*?)\s*-->`)
+	figureLineBreakRegex = regexp.MustCompile(`(?i)<br\s*/?>`)
+	footnoteSectionRegex = regexp.MustCompile(
+		`(?s)(?:^|\n)\s*---\s*<!-- Footnote -->\s*(.*?)\s*<!-- Footnote -->\s*---\s*(?:\n|$)`,
+	)
 	footnoteBlockRegex    = regexp.MustCompile(`(?s)<!-- Footnote -->\s*(.*?)\s*<!-- Footnote -->`)
 	plainFootnoteNumRegex = regexp.MustCompile(`^(\d+)\s+`)
 	mathFootnoteNumRegex  = regexp.MustCompile(`^\\\(\s*\{\}\^\{(\d+)\}\s*\\\)\s*`)
@@ -227,6 +232,7 @@ func CleanMarkdown(content string) string {
 	content = footnoteCommentRegex.ReplaceAllString(content, "")
 	content = meanlessCommentRegex.ReplaceAllString(content, "")
 	content = excessBlankLinesRegex.ReplaceAllString(content, "\n\n")
+
 	return strings.TrimSpace(content)
 }
 
@@ -256,6 +262,7 @@ func formatFootnote(body string) string {
 			lines[i] = "    " + lines[i]
 		}
 	}
+
 	return "\n\n[^" + number + "]: " + strings.Join(lines, "\n") + "\n\n"
 }
 
@@ -507,8 +514,10 @@ func imageURL2MdBase64(ctx context.Context, m *meta.Meta, url, altText string) (
 		if !commonimage.IsImageURL(detectedMime) {
 			return "", fmt.Errorf("downloaded content is not an image: %s", detectedMime)
 		}
+
 		mime = detectedMime
 	}
+
 	if mime == "" {
 		mime = inferMimeType(url)
 	}
@@ -646,6 +655,7 @@ func GetStatus(ctx context.Context, meta *meta.Meta, uid string) (*StatusRespons
 	if !isSuccessfulResponseCode(response.Code) {
 		return nil, errors.New("get status failed: " + response.Msg)
 	}
+
 	if response.Data == nil {
 		return nil, errors.New("get status failed: response data is empty")
 	}
