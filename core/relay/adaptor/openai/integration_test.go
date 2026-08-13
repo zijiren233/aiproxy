@@ -212,6 +212,12 @@ func TestIntegrationGetRequestURL(t *testing.T) {
 			expectedURL: "/responses/compact",
 		},
 		{
+			name:        "alpha search should use /alpha/search",
+			model:       "gpt-5.6-sol",
+			mode:        mode.AlphaSearch,
+			expectedURL: "/alpha/search",
+		},
+		{
 			name:        "sora-2 with Videos mode should use /videos",
 			model:       "sora-2",
 			mode:        mode.Videos,
