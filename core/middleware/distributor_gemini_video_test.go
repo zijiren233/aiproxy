@@ -49,6 +49,7 @@ func TestCheckRelayModeResponsesCompatibility(t *testing.T) {
 	require.True(t, middleware.CheckRelayMode(mode.Anthropic, mode.Responses))
 	require.True(t, middleware.CheckRelayMode(mode.Gemini, mode.Responses))
 	require.True(t, middleware.CheckRelayMode(mode.Responses, mode.Responses))
+	require.True(t, middleware.CheckRelayMode(mode.ResponsesCompact, mode.ChatCompletions))
 	require.True(t, middleware.CheckRelayMode(mode.ResponsesCompact, mode.Responses))
 	require.True(t, middleware.CheckRelayMode(mode.ResponsesCompact, mode.ResponsesCompact))
 	require.True(t, middleware.CheckRelayMode(mode.ResponsesGet, mode.Responses))
@@ -63,5 +64,4 @@ func TestCheckRelayModeResponsesCompatibility(t *testing.T) {
 	require.False(t, middleware.CheckRelayMode(mode.ChatCompletions, mode.ResponsesInputItems))
 	require.False(t, middleware.CheckRelayMode(mode.Anthropic, mode.ResponsesGet))
 	require.False(t, middleware.CheckRelayMode(mode.Gemini, mode.ResponsesGet))
-	require.False(t, middleware.CheckRelayMode(mode.ResponsesCompact, mode.ChatCompletions))
 }
