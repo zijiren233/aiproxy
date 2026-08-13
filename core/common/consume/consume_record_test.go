@@ -47,7 +47,10 @@ func TestNeedRecordConsumeSkipsSuccessfulAlphaSearch(t *testing.T) {
 		t.Fatal("successful alpha search must not record consumption")
 	}
 
-	if !consume.NeedRecordConsumeForTest(http.StatusBadGateway, &meta.Meta{Mode: mode.AlphaSearch}) {
+	if !consume.NeedRecordConsumeForTest(
+		http.StatusBadGateway,
+		&meta.Meta{Mode: mode.AlphaSearch},
+	) {
 		t.Fatal("failed alpha search must record consumption")
 	}
 }

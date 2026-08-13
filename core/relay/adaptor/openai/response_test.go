@@ -720,9 +720,22 @@ func TestConvertAlphaSearchRequestPreservesProtocolFields(t *testing.T) {
 	require.NoError(t, json.NewDecoder(result.Body).Decode(&body))
 	assert.Equal(t, "search-session", body["id"])
 	assert.Equal(t, "mapped-gpt-5.6", body["model"])
-	assert.Equal(t, "OpenAI news", body["commands"].(map[string]any)["search_query"].([]any)[0].(map[string]any)["q"])
-	assert.Equal(t, "live", body["settings"].(map[string]any)["external_web_access"])
-	assert.Equal(t, true, body["future_field"].(map[string]any)["keep"])
+	commands, ok := body["commands"].(map[string]any)
+	require.True(t, ok)
+	searchQueries, ok := commands["search_query"].([]any)
+	require.True(t, ok)
+	require.Len(t, searchQueries, 1)
+	searchQuery, ok := searchQueries[0].(map[string]any)
+	require.True(t, ok)
+	assert.Equal(t, "OpenAI news", searchQuery["q"])
+
+	settings, ok := body["settings"].(map[string]any)
+	require.True(t, ok)
+	assert.Equal(t, "live", settings["external_web_access"])
+
+	futureField, ok := body["future_field"].(map[string]any)
+	require.True(t, ok)
+	assert.Equal(t, true, futureField["keep"])
 }
 
 func TestAlphaSearchHandlerPreservesOpaqueResponse(t *testing.T) {
