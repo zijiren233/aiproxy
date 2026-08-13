@@ -696,6 +696,94 @@ func TestConvertResponseCompactRequestPreservesOpaqueItems(t *testing.T) {
 	assert.Equal(t, true, futureField["keep"])
 }
 
+func TestConvertAlphaSearchRequestPreservesProtocolFields(t *testing.T) {
+	t.Parallel()
+
+	req := httptest.NewRequestWithContext(
+		t.Context(),
+		http.MethodPost,
+		"/v1/alpha/search",
+		strings.NewReader(`{
+			"id":"search-session",
+			"model":"gpt-5.6-sol",
+			"commands":{"search_query":[{"q":"OpenAI news","recency":7}]},
+			"settings":{"external_web_access":"live"},
+			"future_field":{"keep":true}
+		}`),
+	)
+	req.Header.Set("Content-Type", "application/json")
+
+	result, err := ConvertAlphaSearchRequest(&meta.Meta{ActualModel: "mapped-gpt-5.6"}, req)
+	require.NoError(t, err)
+
+	var body map[string]any
+	require.NoError(t, json.NewDecoder(result.Body).Decode(&body))
+	assert.Equal(t, "search-session", body["id"])
+	assert.Equal(t, "mapped-gpt-5.6", body["model"])
+	commands, ok := body["commands"].(map[string]any)
+	require.True(t, ok)
+	searchQueries, ok := commands["search_query"].([]any)
+	require.True(t, ok)
+	require.Len(t, searchQueries, 1)
+	searchQuery, ok := searchQueries[0].(map[string]any)
+	require.True(t, ok)
+	assert.Equal(t, "OpenAI news", searchQuery["q"])
+
+	settings, ok := body["settings"].(map[string]any)
+	require.True(t, ok)
+	assert.Equal(t, "live", settings["external_web_access"])
+
+	futureField, ok := body["future_field"].(map[string]any)
+	require.True(t, ok)
+	assert.Equal(t, true, futureField["keep"])
+}
+
+func TestAlphaSearchHandlerPreservesOpaqueResponse(t *testing.T) {
+	t.Parallel()
+	gin.SetMode(gin.TestMode)
+
+	recorder := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(recorder)
+	respBody := `{"model":"mapped-gpt-5.6","encrypted_output":"ciphertext","output":"Search result","results":[{"type":"text_result","ref_id":"turn0search0","future_field":{"preserved":true}}]}`
+	resp := &http.Response{
+		StatusCode: http.StatusOK,
+		Header:     http.Header{"Content-Type": []string{"application/json; charset=utf-8"}},
+		Body:       io.NopCloser(strings.NewReader(respBody)),
+	}
+
+	result, err := AlphaSearchHandler(&meta.Meta{
+		OriginModel: "gpt-5.6",
+		ActualModel: "mapped-gpt-5.6",
+	}, c, resp)
+	require.NoError(t, err)
+	assert.Empty(t, result.Usage)
+	assert.Contains(t, recorder.Body.String(), `"model":"gpt-5.6"`)
+	assert.NotContains(t, recorder.Body.String(), "mapped-gpt-5.6")
+	assert.Contains(t, recorder.Body.String(), `"future_field":{"preserved":true}`)
+	assert.Equal(t, "application/json; charset=utf-8", recorder.Header().Get("Content-Type"))
+}
+
+func TestAlphaSearchHandlerPreservesResponseWithoutModel(t *testing.T) {
+	t.Parallel()
+	gin.SetMode(gin.TestMode)
+
+	recorder := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(recorder)
+	respBody := `{"encrypted_output":"ciphertext","output":"Search result","results":[]}`
+	resp := &http.Response{
+		StatusCode: http.StatusOK,
+		Header:     http.Header{"Content-Type": []string{"application/json"}},
+		Body:       io.NopCloser(strings.NewReader(respBody)),
+	}
+
+	_, err := AlphaSearchHandler(&meta.Meta{
+		OriginModel: "gpt-5.6",
+		ActualModel: "mapped-gpt-5.6",
+	}, c, resp)
+	require.NoError(t, err)
+	assert.Equal(t, respBody, recorder.Body.String())
+}
+
 func TestCompactResponseHandlerPreservesOpaqueJSONAndUsage(t *testing.T) {
 	t.Parallel()
 	gin.SetMode(gin.TestMode)

@@ -375,6 +375,8 @@ func CheckRelayMode(requestMode, modelMode mode.Mode) bool {
 		)
 	case mode.ResponsesCompact:
 		return containsMode(mode.ChatCompletions, mode.Responses, mode.ResponsesCompact)
+	case mode.AlphaSearch:
+		return containsMode(mode.ChatCompletions, mode.Responses, mode.AlphaSearch)
 	case mode.ResponsesGet, mode.ResponsesDelete, mode.ResponsesCancel, mode.ResponsesInputItems:
 		return containsMode(
 			mode.ChatCompletions,

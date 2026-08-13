@@ -645,6 +645,13 @@ func CompactResponse() []gin.HandlerFunc {
 	}
 }
 
+func AlphaSearch() []gin.HandlerFunc {
+	return []gin.HandlerFunc{
+		middleware.NewDistribute(mode.AlphaSearch),
+		NewRelay(mode.AlphaSearch),
+	}
+}
+
 // GetResponse godoc
 //
 //	@Summary		Get response

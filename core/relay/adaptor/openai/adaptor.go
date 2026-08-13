@@ -63,7 +63,8 @@ func (a *Adaptor) SupportMode(mt *meta.Meta) bool {
 		m == mode.ResponsesGet ||
 		m == mode.ResponsesDelete ||
 		m == mode.ResponsesCancel ||
-		m == mode.ResponsesInputItems
+		m == mode.ResponsesInputItems ||
+		m == mode.AlphaSearch
 }
 
 //nolint:gocyclo
@@ -75,6 +76,16 @@ func (a *Adaptor) GetRequestURL(
 	u := meta.Channel.BaseURL
 
 	switch meta.Mode {
+	case mode.AlphaSearch:
+		url, err := url.JoinPath(u, "/alpha/search")
+		if err != nil {
+			return adaptor.RequestURL{}, err
+		}
+
+		return adaptor.RequestURL{
+			Method: http.MethodPost,
+			URL:    url,
+		}, nil
 	case mode.Responses:
 		url, err := url.JoinPath(u, "/responses")
 		if err != nil {
@@ -410,6 +421,8 @@ func ConvertRequest(
 	}
 
 	switch meta.Mode {
+	case mode.AlphaSearch:
+		return ConvertAlphaSearchRequest(meta, req)
 	case mode.Responses:
 		return ConvertResponseRequest(meta, req, patchOpenAIResponsesReasoningEffort(meta))
 	case mode.ResponsesCompact:
@@ -500,6 +513,8 @@ func doResponse(
 	options DoResponseOptions,
 ) (result adaptor.DoResponseResult, err adaptor.Error) {
 	switch meta.Mode {
+	case mode.AlphaSearch:
+		result, err = AlphaSearchHandler(meta, c, resp)
 	case mode.Responses:
 		if utils.IsStreamResponse(resp) {
 			result, err = responseStreamHandler(

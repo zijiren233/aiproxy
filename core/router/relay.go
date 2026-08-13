@@ -187,6 +187,8 @@ func SetRelayRouter(router *gin.Engine) {
 			controller.CreateResponse()...)
 		relayRouter.POST("/responses/compact",
 			controller.CompactResponse()...)
+		relayRouter.POST("/alpha/search",
+			controller.AlphaSearch()...)
 		relayRouter.GET("/responses/:response_id",
 			controller.GetResponse()...)
 		relayRouter.DELETE("/responses/:response_id",
