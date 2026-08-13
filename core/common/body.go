@@ -43,6 +43,10 @@ const (
 func LimitReader(r io.Reader, n int64) io.Reader { return &LimitedReader{r, n} }
 
 func ParseMultipartFormWithLimit(req *http.Request) error {
+	if err := decodeZstdRequest(req); err != nil {
+		return err
+	}
+
 	if req.ContentLength > 0 && req.ContentLength > MaxRequestBodySize {
 		return fmt.Errorf(
 			"request body too large: %d, max: %d",
@@ -63,6 +67,10 @@ func ParseMultipartFormWithLimit(req *http.Request) error {
 }
 
 func ParseFormWithLimit(req *http.Request) error {
+	if err := decodeZstdRequest(req); err != nil {
+		return err
+	}
+
 	if req.ContentLength > 0 && req.ContentLength > MaxRequestBodySize {
 		return fmt.Errorf(
 			"request body too large: %d, max: %d",
@@ -169,6 +177,10 @@ func GetRequestBodyReusable(req *http.Request) ([]byte, error) {
 		return nil, errors.New("request is nil")
 	}
 
+	if err := decodeZstdRequest(req); err != nil {
+		return nil, err
+	}
+
 	contentType := req.Header.Get("Content-Type")
 	if strings.HasPrefix(contentType, "application/x-www-form-urlencoded") ||
 		strings.HasPrefix(contentType, "multipart/form-data") {
@@ -191,15 +203,6 @@ func GetRequestBodyReusable(req *http.Request) ([]byte, error) {
 		return nil, fmt.Errorf("request body read failed: %w", err)
 	}
 
-	if isZstdContentEncoding(req.Header.Get("Content-Encoding")) {
-		buf, err = decodeZstdRequestBody(buf)
-		if err != nil {
-			return nil, err
-		}
-
-		req.Header.Del("Content-Encoding")
-	}
-
 	SetRequestBody(req, buf)
 
 	return buf, nil
@@ -207,6 +210,36 @@ func GetRequestBodyReusable(req *http.Request) ([]byte, error) {
 
 func isZstdContentEncoding(value string) bool {
 	return strings.EqualFold(strings.TrimSpace(value), "zstd")
+}
+
+func decodeZstdRequest(req *http.Request) error {
+	if req == nil {
+		return errors.New("request is nil")
+	}
+
+	if !isZstdContentEncoding(req.Header.Get("Content-Encoding")) {
+		return nil
+	}
+
+	originalBody := req.Body
+	if originalBody != nil {
+		defer originalBody.Close()
+	}
+
+	compressed, err := GetBodyLimit(req.Body, req.ContentLength, MaxRequestBodySize)
+	if err != nil {
+		return fmt.Errorf("request body read failed: %w", err)
+	}
+
+	decoded, err := decodeZstdRequestBody(compressed)
+	if err != nil {
+		return err
+	}
+
+	SetRequestBody(req, decoded)
+	req.Header.Del("Content-Encoding")
+
+	return nil
 }
 
 func decodeZstdRequestBody(compressed []byte) ([]byte, error) {
