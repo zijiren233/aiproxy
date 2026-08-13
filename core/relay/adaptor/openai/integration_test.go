@@ -206,6 +206,12 @@ func TestIntegrationGetRequestURL(t *testing.T) {
 			expectedURL: "/responses",
 		},
 		{
+			name:        "standalone compact should use /responses/compact",
+			model:       "gpt-5.6-sol",
+			mode:        mode.ResponsesCompact,
+			expectedURL: "/responses/compact",
+		},
+		{
 			name:        "sora-2 with Videos mode should use /videos",
 			model:       "sora-2",
 			mode:        mode.Videos,

@@ -66,6 +66,84 @@ func ConvertResponseRequest(
 	}, nil
 }
 
+// ConvertResponseCompactRequest preserves compact input items, including opaque
+// encrypted compaction items, while applying the channel's model mapping.
+func ConvertResponseCompactRequest(
+	meta *meta.Meta,
+	req *http.Request,
+) (adaptor.ConvertResult, error) {
+	node, err := common.UnmarshalRequest2NodeReusable(req)
+	if err != nil {
+		return adaptor.ConvertResult{}, err
+	}
+
+	if _, err = node.Set("model", ast.NewString(meta.ActualModel)); err != nil {
+		return adaptor.ConvertResult{}, err
+	}
+
+	jsonData, err := node.MarshalJSON()
+	if err != nil {
+		return adaptor.ConvertResult{}, err
+	}
+
+	return adaptor.ConvertResult{
+		Header: http.Header{
+			"Content-Type":   {"application/json"},
+			"Content-Length": {strconv.Itoa(len(jsonData))},
+		},
+		Body: bytes.NewReader(jsonData),
+	}, nil
+}
+
+// CompactResponseHandler forwards the standalone compact response as raw JSON.
+// The output contains opaque encrypted items and must remain canonical.
+func CompactResponseHandler(
+	meta *meta.Meta,
+	c *gin.Context,
+	resp *http.Response,
+) (adaptor.DoResponseResult, adaptor.Error) {
+	if !adaptor.IsSuccessfulResponseStatus(mode.ResponsesCompact, resp.StatusCode) {
+		return adaptor.DoResponseResult{}, ErrorHanlder(resp)
+	}
+
+	defer resp.Body.Close()
+
+	responseBody, err := common.GetResponseBody(resp)
+	if err != nil {
+		return adaptor.DoResponseResult{}, relaymodel.WrapperOpenAIError(
+			err,
+			"read_response_body_failed",
+			http.StatusInternalServerError,
+		)
+	}
+
+	var response struct {
+		ID    string                   `json:"id"`
+		Usage relaymodel.ResponseUsage `json:"usage"`
+	}
+	if err := sonic.Unmarshal(responseBody, &response); err != nil {
+		return adaptor.DoResponseResult{}, relaymodel.WrapperOpenAIError(
+			err,
+			"unmarshal_response_body_failed",
+			http.StatusInternalServerError,
+		)
+	}
+
+	contentType := resp.Header.Get("Content-Type")
+	if contentType == "" {
+		contentType = "application/json"
+	}
+
+	c.Writer.Header().Set("Content-Type", contentType)
+	c.Writer.Header().Set("Content-Length", strconv.Itoa(len(responseBody)))
+	_, _ = c.Writer.Write(responseBody)
+
+	return adaptor.DoResponseResult{
+		Usage:      response.Usage.ToModelUsage(),
+		UpstreamID: response.ID,
+	}, nil
+}
+
 func normalizeResponsesInputSystemRole(node *ast.Node) error {
 	inputNode := node.Get("input")
 	if !inputNode.Exists() || inputNode.TypeSafe() != ast.V_ARRAY {

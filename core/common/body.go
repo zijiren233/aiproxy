@@ -10,6 +10,7 @@ import (
 
 	"github.com/bytedance/sonic"
 	"github.com/bytedance/sonic/ast"
+	"github.com/klauspost/compress/zstd"
 )
 
 type reusableRequestBody struct {
@@ -164,6 +165,10 @@ func IsJSONContentType(ct string) bool {
 }
 
 func GetRequestBodyReusable(req *http.Request) ([]byte, error) {
+	if req == nil {
+		return nil, errors.New("request is nil")
+	}
+
 	contentType := req.Header.Get("Content-Type")
 	if strings.HasPrefix(contentType, "application/x-www-form-urlencoded") ||
 		strings.HasPrefix(contentType, "multipart/form-data") {
@@ -174,11 +179,6 @@ func GetRequestBodyReusable(req *http.Request) ([]byte, error) {
 		return body, nil
 	}
 
-	var (
-		buf []byte
-		err error
-	)
-
 	originalBody := req.Body
 	defer func() {
 		if originalBody != nil {
@@ -186,34 +186,61 @@ func GetRequestBodyReusable(req *http.Request) ([]byte, error) {
 		}
 	}()
 
-	if req.ContentLength > 0 {
-		if req.ContentLength > MaxRequestBodySize {
-			return nil, fmt.Errorf(
-				"request body too large: %d, max: %d",
-				req.ContentLength,
-				MaxRequestBodySize,
-			)
-		}
-
-		buf = make([]byte, req.ContentLength)
-		_, err = io.ReadFull(req.Body, buf)
-	} else {
-		buf, err = io.ReadAll(LimitReader(req.Body, MaxRequestBodySize))
-		if err != nil {
-			if errors.Is(err, ErrLimitedReaderExceeded) {
-				return nil, fmt.Errorf("request body too large, max: %d", MaxRequestBodySize)
-			}
-			return nil, fmt.Errorf("request body read failed: %w", err)
-		}
-	}
-
+	buf, err := GetBodyLimit(req.Body, req.ContentLength, MaxRequestBodySize)
 	if err != nil {
 		return nil, fmt.Errorf("request body read failed: %w", err)
+	}
+
+	if isZstdContentEncoding(req.Header.Get("Content-Encoding")) {
+		buf, err = decodeZstdRequestBody(buf)
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Del("Content-Encoding")
 	}
 
 	SetRequestBody(req, buf)
 
 	return buf, nil
+}
+
+func isZstdContentEncoding(value string) bool {
+	return strings.EqualFold(strings.TrimSpace(value), "zstd")
+}
+
+func decodeZstdRequestBody(compressed []byte) ([]byte, error) {
+	decoder, err := zstd.NewReader(
+		nil,
+		zstd.WithDecoderMaxMemory(MaxRequestBodySize),
+		zstd.WithDecoderMaxWindow(MaxRequestBodySize),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("zstd decoder initialization failed: %w", err)
+	}
+	defer decoder.Close()
+
+	decoded, err := decoder.DecodeAll(compressed, nil)
+	if err != nil {
+		if errors.Is(err, zstd.ErrDecoderSizeExceeded) {
+			return nil, fmt.Errorf(
+				"decompressed request body too large, max: %d",
+				MaxRequestBodySize,
+			)
+		}
+
+		return nil, fmt.Errorf("zstd request body decode failed: %w", err)
+	}
+
+	if int64(len(decoded)) > MaxRequestBodySize {
+		return nil, fmt.Errorf(
+			"decompressed request body too large: %d, max: %d",
+			len(decoded),
+			MaxRequestBodySize,
+		)
+	}
+
+	return decoded, nil
 }
 
 func UnmarshalRequestReusable(req *http.Request, v any) error {
