@@ -638,6 +638,13 @@ func CreateResponse() []gin.HandlerFunc {
 	}
 }
 
+func CompactResponse() []gin.HandlerFunc {
+	return []gin.HandlerFunc{
+		middleware.NewDistribute(mode.ResponsesCompact),
+		NewRelay(mode.ResponsesCompact),
+	}
+}
+
 // GetResponse godoc
 //
 //	@Summary		Get response
