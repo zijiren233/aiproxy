@@ -324,6 +324,7 @@ func relay(c *gin.Context, mode mode.Mode, relayController RelayController) {
 			price,
 			model.PriceSelectionOptions{
 				DisableResolutionFuzzyMatch: mc.DisableResolutionFuzzyMatch,
+				RequestAt:                   meta.RequestAt,
 			},
 		),
 		middleware.GroupMinimumBalance,
@@ -420,6 +421,7 @@ func recordResult(
 		price,
 		model.PriceSelectionOptions{
 			DisableResolutionFuzzyMatch: meta.ModelConfig.DisableResolutionFuzzyMatch,
+			RequestAt:                   meta.RequestAt,
 		},
 	)
 	if amount > 0 {
