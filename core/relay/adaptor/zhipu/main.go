@@ -41,12 +41,12 @@ func EmbeddingsHandler(
 	jsonResponse, err := sonic.Marshal(fullTextResponse)
 	if err != nil {
 		return adaptor.DoResponseResult{
-			Usage: fullTextResponse.Usage.ToModelUsage(),
-		}, relaymodel.WrapperOpenAIError(
-			err,
-			"marshal_response_body_failed",
-			http.StatusInternalServerError,
-		)
+				Usage: fullTextResponse.Usage.ToModelUsage(),
+			}, relaymodel.WrapperOpenAIError(
+				err,
+				"marshal_response_body_failed",
+				http.StatusInternalServerError,
+			)
 	}
 
 	c.Writer.Header().Set("Content-Type", "application/json")

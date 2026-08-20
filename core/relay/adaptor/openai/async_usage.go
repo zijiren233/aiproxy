@@ -247,11 +247,11 @@ func calculateVideoUsage(job *relaymodel.VideoGenerationJob) (model.Usage, model
 	totalSeconds := job.NSeconds * job.NVariants
 
 	return model.Usage{
-		OutputTokens: model.ZeroNullInt64(totalSeconds),
-		TotalTokens:  model.ZeroNullInt64(totalSeconds),
-	}, model.UsageContext{
-		Resolution: videoGenerationJobPriceResolution(job),
-	}
+			OutputTokens: model.ZeroNullInt64(totalSeconds),
+			TotalTokens:  model.ZeroNullInt64(totalSeconds),
+		}, model.UsageContext{
+			Resolution: videoGenerationJobPriceResolution(job),
+		}
 }
 
 func calculateOfficialVideoUsage(video *relaymodel.Video) (model.Usage, model.UsageContext) {

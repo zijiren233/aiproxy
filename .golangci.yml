@@ -152,4 +152,3 @@ formatters:
     gofumpt:
       extra:
         group-params: true
-        balance-calls: true

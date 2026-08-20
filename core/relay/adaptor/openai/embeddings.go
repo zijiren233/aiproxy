@@ -155,12 +155,12 @@ func EmbeddingsHandler(
 		_, err = node.Set("usage", ast.NewAny(usage))
 		if err != nil {
 			return adaptor.DoResponseResult{
-				Usage: usage.ToModelUsage(),
-			}, relaymodel.WrapperOpenAIError(
-				err,
-				"set_usage_failed",
-				http.StatusInternalServerError,
-			)
+					Usage: usage.ToModelUsage(),
+				}, relaymodel.WrapperOpenAIError(
+					err,
+					"set_usage_failed",
+					http.StatusInternalServerError,
+				)
 		}
 	} else if usage.TotalTokens != 0 && usage.PromptTokens == 0 { // some channels don't return prompt tokens
 		usage.PromptTokens = usage.TotalTokens
@@ -168,12 +168,12 @@ func EmbeddingsHandler(
 		_, err = node.Set("usage", ast.NewAny(usage))
 		if err != nil {
 			return adaptor.DoResponseResult{
-				Usage: usage.ToModelUsage(),
-			}, relaymodel.WrapperOpenAIError(
-				err,
-				"set_usage_failed",
-				http.StatusInternalServerError,
-			)
+					Usage: usage.ToModelUsage(),
+				}, relaymodel.WrapperOpenAIError(
+					err,
+					"set_usage_failed",
+					http.StatusInternalServerError,
+				)
 		}
 	}
 

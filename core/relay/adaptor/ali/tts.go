@@ -270,12 +270,12 @@ func TTSDoResponse(
 			err = sonic.Unmarshal(data, &msg)
 			if err != nil {
 				return adaptor.DoResponseResult{
-					Usage: usage,
-				}, relaymodel.WrapperOpenAIErrorWithMessage(
-					"ali_wss_read_msg_failed",
-					nil,
-					http.StatusInternalServerError,
-				)
+						Usage: usage,
+					}, relaymodel.WrapperOpenAIErrorWithMessage(
+						"ali_wss_read_msg_failed",
+						nil,
+						http.StatusInternalServerError,
+					)
 			}
 
 			switch msg.Header.Event {
@@ -299,12 +299,12 @@ func TTSDoResponse(
 				}
 
 				return adaptor.DoResponseResult{
-					Usage: usage,
-				}, relaymodel.WrapperOpenAIErrorWithMessage(
-					msg.Header.ErrorMessage,
-					msg.Header.ErrorCode,
-					http.StatusInternalServerError,
-				)
+						Usage: usage,
+					}, relaymodel.WrapperOpenAIErrorWithMessage(
+						msg.Header.ErrorMessage,
+						msg.Header.ErrorCode,
+						http.StatusInternalServerError,
+					)
 			}
 		case websocket.BinaryMessage:
 			if sseFormat {
