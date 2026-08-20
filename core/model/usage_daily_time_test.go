@@ -57,9 +57,11 @@ func TestPriceValidateConditionalPricesWithDailyTimeRange(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name:       "missing end",
-			conditions: []model.PriceCondition{{DailyStartTime: "09:00", Timezone: "Asia/Shanghai"}},
-			wantErr:    true,
+			name: "missing end",
+			conditions: []model.PriceCondition{
+				{DailyStartTime: "09:00", Timezone: "Asia/Shanghai"},
+			},
+			wantErr: true,
 		},
 		{
 			name: "equal bounds",
@@ -146,9 +148,21 @@ func TestPriceSelectConditionalPriceWithDailyTimeRange(t *testing.T) {
 		at   time.Time
 		want float64
 	}{
-		{name: "start inclusive", at: time.Date(2026, time.July, 20, 9, 0, 0, 0, location), want: 2},
-		{name: "first end exclusive", at: time.Date(2026, time.July, 20, 12, 0, 0, 0, location), want: 1},
-		{name: "between ranges", at: time.Date(2026, time.July, 20, 13, 0, 0, 0, location), want: 1},
+		{
+			name: "start inclusive",
+			at:   time.Date(2026, time.July, 20, 9, 0, 0, 0, location),
+			want: 2,
+		},
+		{
+			name: "first end exclusive",
+			at:   time.Date(2026, time.July, 20, 12, 0, 0, 0, location),
+			want: 1,
+		},
+		{
+			name: "between ranges",
+			at:   time.Date(2026, time.July, 20, 13, 0, 0, 0, location),
+			want: 1,
+		},
 		{name: "second range", at: time.Date(2026, time.July, 20, 15, 30, 0, 0, location), want: 2},
 	}
 

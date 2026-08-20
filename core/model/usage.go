@@ -1,6 +1,7 @@
 package model
 
 import (
+	"errors"
 	"fmt"
 	"math"
 	"slices"
@@ -147,7 +148,7 @@ func parseDailyTime(value string) (int, error) {
 	if len(value) != len("00:00") || value[2] != ':' ||
 		value[0] < '0' || value[0] > '9' || value[1] < '0' || value[1] > '9' ||
 		value[3] < '0' || value[3] > '9' || value[4] < '0' || value[4] > '9' {
-		return 0, fmt.Errorf("must use HH:mm format")
+		return 0, errors.New("must use HH:mm format")
 	}
 
 	parsed, err := time.Parse("15:04", value)
@@ -167,7 +168,10 @@ var priceTimezoneLocations sync.Map
 
 func loadPriceTimezone(value string) (*time.Location, error) {
 	if cached, ok := priceTimezoneLocations.Load(value); ok {
-		return cached.(*time.Location), nil
+		location, valid := cached.(*time.Location)
+		if valid {
+			return location, nil
+		}
 	}
 
 	location, err := time.LoadLocation(value)
@@ -177,11 +181,17 @@ func loadPriceTimezone(value string) (*time.Location, error) {
 
 	cached, _ := priceTimezoneLocations.LoadOrStore(value, location)
 
-	return cached.(*time.Location), nil
+	cachedLocation, valid := cached.(*time.Location)
+	if !valid {
+		return nil, errors.New("invalid cached price timezone location")
+	}
+
+	return cachedLocation, nil
 }
 
 func dailyTimeIntervals(start, end string) ([]dailyTimeInterval, bool) {
 	startSecond, startErr := parseDailyTime(start)
+
 	endSecond, endErr := parseDailyTime(end)
 	if startErr != nil || endErr != nil || startSecond == endSecond {
 		return nil, false
@@ -209,6 +219,7 @@ func dailyTimeRangeOverlap(condition1, condition2 PriceCondition) bool {
 	}
 
 	intervals1, valid1 := dailyTimeIntervals(condition1.DailyStartTime, condition1.DailyEndTime)
+
 	intervals2, valid2 := dailyTimeIntervals(condition2.DailyStartTime, condition2.DailyEndTime)
 	if !valid1 || !valid2 {
 		return true
@@ -241,6 +252,7 @@ func dailyTimeRangeMatches(condition PriceCondition, at time.Time) bool {
 	}
 
 	localTime := at.In(location)
+
 	secondOfDay := localTime.Hour()*60*60 + localTime.Minute()*60 + localTime.Second()
 	for _, interval := range intervals {
 		if secondOfDay >= interval.start && secondOfDay < interval.end {
@@ -455,6 +467,57 @@ func parseResolutionDimensions(value string) (int, int, bool) {
 	return width, height, width > 0 && height > 0
 }
 
+func validateDailyTimeCondition(condition PriceCondition, index int) error {
+	hasDailyStart := condition.DailyStartTime != ""
+	hasDailyEnd := condition.DailyEndTime != ""
+
+	if hasDailyStart != hasDailyEnd {
+		return fmt.Errorf(
+			"conditional price %d: daily start time and daily end time must be set together",
+			index,
+		)
+	}
+
+	if !hasDailyStart {
+		if strings.TrimSpace(condition.Timezone) != "" {
+			return fmt.Errorf("conditional price %d: timezone requires a daily time range", index)
+		}
+
+		return nil
+	}
+
+	startSecond, err := parseDailyTime(condition.DailyStartTime)
+	if err != nil {
+		return fmt.Errorf("conditional price %d: invalid daily start time: %w", index, err)
+	}
+
+	endSecond, err := parseDailyTime(condition.DailyEndTime)
+	if err != nil {
+		return fmt.Errorf("conditional price %d: invalid daily end time: %w", index, err)
+	}
+
+	if startSecond == endSecond {
+		return fmt.Errorf(
+			"conditional price %d: daily start time must differ from daily end time",
+			index,
+		)
+	}
+
+	timezone := strings.TrimSpace(condition.Timezone)
+	if timezone == "" {
+		return fmt.Errorf(
+			"conditional price %d: timezone is required for a daily time range",
+			index,
+		)
+	}
+
+	if _, err := loadPriceTimezone(timezone); err != nil {
+		return fmt.Errorf("conditional price %d: invalid timezone %q: %w", index, timezone, err)
+	}
+
+	return nil
+}
+
 func (p *Price) ValidateConditionalPrices() error {
 	if len(p.ConditionalPrices) == 0 {
 		return nil
@@ -506,43 +569,8 @@ func (p *Price) ValidateConditionalPrices() error {
 			}
 		}
 
-		hasDailyStart := condition.DailyStartTime != ""
-		hasDailyEnd := condition.DailyEndTime != ""
-		if hasDailyStart != hasDailyEnd {
-			return fmt.Errorf(
-				"conditional price %d: daily start time and daily end time must be set together",
-				i,
-			)
-		}
-
-		if hasDailyStart {
-			startSecond, err := parseDailyTime(condition.DailyStartTime)
-			if err != nil {
-				return fmt.Errorf("conditional price %d: invalid daily start time: %w", i, err)
-			}
-
-			endSecond, err := parseDailyTime(condition.DailyEndTime)
-			if err != nil {
-				return fmt.Errorf("conditional price %d: invalid daily end time: %w", i, err)
-			}
-
-			if startSecond == endSecond {
-				return fmt.Errorf(
-					"conditional price %d: daily start time must differ from daily end time",
-					i,
-				)
-			}
-
-			timezone := strings.TrimSpace(condition.Timezone)
-			if timezone == "" {
-				return fmt.Errorf("conditional price %d: timezone is required for a daily time range", i)
-			}
-
-			if _, err := loadPriceTimezone(timezone); err != nil {
-				return fmt.Errorf("conditional price %d: invalid timezone %q: %w", i, timezone, err)
-			}
-		} else if strings.TrimSpace(condition.Timezone) != "" {
-			return fmt.Errorf("conditional price %d: timezone requires a daily time range", i)
+		if err := validateDailyTimeCondition(condition, i); err != nil {
+			return err
 		}
 
 		// Same-specificity overlapping conditions are ambiguous because runtime
@@ -691,6 +719,7 @@ func (p *Price) selectConditionalPrice(
 	inputTokens := int64(usage.InputTokens)
 	outputTokens := int64(usage.OutputTokens)
 	usageServiceTier := normalizeServiceTier(usageContext.ServiceTier)
+
 	requestAt := options.RequestAt
 	if requestAt.IsZero() {
 		requestAt = time.Now()
