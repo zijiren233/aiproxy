@@ -1,7 +1,7 @@
 version: "2"
 
 run:
-  go: "1.26"
+  go: "1.27"
   relative-path-mode: gomod
   modules-download-mode: readonly
 
@@ -108,6 +108,7 @@ linters:
       http-status-code-whitelist: []
     modernize:
       disable:
+        - embedlit
         - forvar
         - omitzero
     perfsprint:
