@@ -257,8 +257,7 @@ func relay(c *gin.Context, mode mode.Mode, relayController RelayController) {
 		if err := relayController.ValidateRequest(c, mc); err != nil {
 			statusCode := http.StatusInternalServerError
 
-			var requestParamErr *controller.RequestParamError
-			if errors.As(err, &requestParamErr) {
+			if requestParamErr, ok := errors.AsType[*controller.RequestParamError](err); ok {
 				statusCode = requestParamErr.StatusCode
 			}
 
@@ -324,6 +323,7 @@ func relay(c *gin.Context, mode mode.Mode, relayController RelayController) {
 			price,
 			model.PriceSelectionOptions{
 				DisableResolutionFuzzyMatch: mc.DisableResolutionFuzzyMatch,
+				RequestAt:                   meta.RequestAt,
 			},
 		),
 		middleware.GroupMinimumBalance,
@@ -420,6 +420,7 @@ func recordResult(
 		price,
 		model.PriceSelectionOptions{
 			DisableResolutionFuzzyMatch: meta.ModelConfig.DisableResolutionFuzzyMatch,
+			RequestAt:                   meta.RequestAt,
 		},
 	)
 	if amount > 0 {

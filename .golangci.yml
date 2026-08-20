@@ -126,6 +126,7 @@ linters:
       os-temp-dir: true
     gosec:
       excludes:
+        - G102
         - G404
     wsl_v5:
       allow-whole-block: true
@@ -134,7 +135,6 @@ linters:
 formatters:
   enable:
     - gci
-    - gofmt
     - gofumpt
     - golines
   exclusions:
@@ -144,9 +144,7 @@ formatters:
       - builtin$
       - examples$
   settings:
-    gofmt:
-      rewrite-rules:
-        - pattern: "a[b:len(a)]"
-          replacement: "a[b:]"
     gofumpt:
-      extra-rules: true
+      extra:
+        group-params: true
+        balance-calls: true
