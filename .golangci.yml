@@ -135,7 +135,6 @@ linters:
 formatters:
   enable:
     - gci
-    - gofmt
     - gofumpt
     - golines
   exclusions:
@@ -145,10 +144,7 @@ formatters:
       - builtin$
       - examples$
   settings:
-    gofmt:
-      rewrite-rules:
-        - pattern: "a[b:len(a)]"
-          replacement: "a[b:]"
     gofumpt:
       extra:
         group-params: true
+        balance-calls: true
