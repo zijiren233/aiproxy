@@ -499,8 +499,10 @@ func setupRedisForReqLimitTest(t *testing.T, ctx context.Context) (*redis.Client
 
 	cleanup := func() {
 		_ = client.Close()
+
 		cleanupCtx, cancel := context.WithTimeout(context.Background(), time.Second)
 		defer cancel()
+
 		_ = container.Terminate(cleanupCtx)
 	}
 
