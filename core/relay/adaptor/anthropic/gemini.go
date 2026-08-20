@@ -236,12 +236,12 @@ func GeminiHandler(
 	jsonResponse, err := sonic.Marshal(geminiResp)
 	if err != nil {
 		return adaptor.DoResponseResult{
-				Usage: claudeResp.Usage.ToOpenAIUsage().ToModelUsage(),
-			}, relaymodel.WrapperAnthropicError(
-				err,
-				"marshal_response_body_failed",
-				http.StatusInternalServerError,
-			)
+			Usage: claudeResp.Usage.ToOpenAIUsage().ToModelUsage(),
+		}, relaymodel.WrapperAnthropicError(
+			err,
+			"marshal_response_body_failed",
+			http.StatusInternalServerError,
+		)
 	}
 
 	c.Writer.Header().Set("Content-Type", "application/json")

@@ -80,11 +80,11 @@ func (a *Adaptor) fetchVideoJobUsage(
 		totalSeconds := job.NSeconds * job.NVariants
 
 		return model.Usage{
-				OutputTokens: model.ZeroNullInt64(totalSeconds),
-				TotalTokens:  model.ZeroNullInt64(totalSeconds),
-			}, model.UsageContext{
-				Resolution: videoGenerationJobPriceResolution(&job),
-			}, true, nil
+			OutputTokens: model.ZeroNullInt64(totalSeconds),
+			TotalTokens:  model.ZeroNullInt64(totalSeconds),
+		}, model.UsageContext{
+			Resolution: videoGenerationJobPriceResolution(&job),
+		}, true, nil
 	case relaymodel.VideoGenerationJobStatusQueued,
 		relaymodel.VideoGenerationJobStatusProcessing,
 		relaymodel.VideoGenerationJobStatusRunning:

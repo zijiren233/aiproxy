@@ -47,10 +47,10 @@ func (a *Adaptor) FetchAsyncUsage(
 		outputTokens := siliconFlowVideoOutputTokens(response)
 
 		return model.Usage{
-				OutputTokens: model.ZeroNullInt64(outputTokens),
-				TotalTokens:  model.ZeroNullInt64(outputTokens),
-			}, siliconFlowVideoAsyncUsageContextFromStore(request.Store, info).
-				WithFallback(info.UsageContext), true, nil
+			OutputTokens: model.ZeroNullInt64(outputTokens),
+			TotalTokens:  model.ZeroNullInt64(outputTokens),
+		}, siliconFlowVideoAsyncUsageContextFromStore(request.Store, info).
+			WithFallback(info.UsageContext), true, nil
 	case relaymodel.VideoStatusQueued, relaymodel.VideoStatusInProgress:
 		return model.Usage{}, model.UsageContext{}, false, nil
 	default:
