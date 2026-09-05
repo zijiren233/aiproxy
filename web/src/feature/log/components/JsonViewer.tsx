@@ -1,9 +1,8 @@
 import React, { Suspense } from 'react'
-import { useTheme } from '@/handler/ThemeContext'
 import { Skeleton } from '@/components/ui/skeleton'
 
-// 动态导入 react-json-view 以避免 SSR 问题
-const ReactJson = React.lazy(() => import('react-json-view'))
+// Keep the JSON viewer out of the initial bundle; logs are opened on demand.
+const LazyJsonView = React.lazy(() => import('@uiw/react-json-view'))
 
 interface JsonViewerProps {
     src: unknown
@@ -26,8 +25,6 @@ export function JsonViewer({
     collapseStringsAfterLength = 100,
     fallbackToRawText = false,
 }: JsonViewerProps) {
-    const { theme } = useTheme()
-
     let parsedSrc = src
     let shouldRenderRawText = false
 
@@ -60,22 +57,16 @@ export function JsonViewer({
     return (
         <div className="json-viewer-container">
             <Suspense fallback={<Skeleton className="h-20 w-full" />}>
-                <ReactJson
-                    src={parsedSrc as object}
-                    theme={theme === 'dark' ? 'tomorrow' : 'rjv-default'}
-                    name={name}
+                <LazyJsonView
+                    value={parsedSrc as object}
+                    keyName={name || undefined}
                     collapsed={collapsed}
                     enableClipboard={enableClipboard}
                     displayDataTypes={displayDataTypes}
                     displayObjectSize={displayObjectSize}
-                    collapseStringsAfterLength={collapseStringsAfterLength}
+                    shortenTextAfterLength={collapseStringsAfterLength}
                     style={{
-                        backgroundColor: 'transparent',
-                        fontSize: '13px',
-                        fontFamily: 'Monaco, Menlo, "Ubuntu Mono", monospace',
-                        padding: '8px',
-                        borderRadius: '6px',
-                        border: '1px solid hsl(var(--border))',
+                        backgroundColor: 'transparent', fontSize: '13px', fontFamily: 'Monaco, Menlo, "Ubuntu Mono", monospace', padding: '8px',
                     }}
                 />
             </Suspense>

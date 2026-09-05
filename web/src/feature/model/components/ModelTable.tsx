@@ -1,7 +1,7 @@
 // src/feature/model/components/ModelTable.tsx
 import { useState, useMemo, useRef } from "react";
 import { useModels, useModelSets } from "../hooks";
-import { useChannelTypeMetas } from "@/feature/channel/hooks";
+import { useChannelInfoMap, useChannelTypeMetas } from "@/feature/channel/hooks";
 import { useRuntimeMetrics } from "@/feature/monitor/runtime-hooks";
 import { ModelConfig, ModelSaveRequest } from "@/types/model";
 import { PriceDisplay } from "@/components/price/PriceDisplay";
@@ -65,6 +65,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { openResourceDialog, showDeletedResourceToast } from "@/utils/resource-dialog";
 import { getChannelModelMetric } from "@/utils/runtime-metrics";
 import { writeTextToClipboard } from "@/lib/clipboard";
+import { ChannelLabel } from "@/components/common/ChannelLabel";
 
 export function ModelTable() {
   const { t } = useTranslation();
@@ -97,6 +98,14 @@ export function ModelTable() {
 
   // Get model sets data
   const { data: modelSets, isLoading: isLoadingModelSets } = useModelSets();
+  const modelSetChannelIds = useMemo(() => {
+    const ids = new Set<number>();
+    Object.values(modelSets ?? {}).forEach((sets) => {
+      Object.values(sets).forEach((channels) => channels.forEach((channel) => ids.add(channel.id)));
+    });
+    return [...ids];
+  }, [modelSets]);
+  const { data: channelInfoMap = {} } = useChannelInfoMap(modelSetChannelIds, !isLoadingModelSets);
   const { data: runtimeMetrics, isLoading: isLoadingRuntimeMetrics } = useRuntimeMetrics();
 
   // Get channel type metadata
@@ -157,13 +166,15 @@ export function ModelTable() {
   // Get channel type name by type ID
   const getChannelTypeName = (typeId: number): string => {
     if (!channelTypeMetas) return `Type: ${typeId}`;
-    
+
     const typeKey = String(typeId);
     return channelTypeMetas[typeKey]?.name || `Type: ${typeId}`;
   };
 
   const toModelSaveRequest = (model: ModelConfig): ModelSaveRequest => {
-    const { created_at, updated_at, ...rest } = model;
+    const rest = { ...model };
+    delete rest.created_at;
+    delete rest.updated_at;
     return rest;
   };
 
@@ -204,7 +215,7 @@ export function ModelTable() {
   const formatPercent = (value?: number) => `${((value || 0) * 100).toFixed(1)}%`;
 
   // Create table columns
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+
   const columns: ColumnDef<ModelConfig>[] = useMemo(() => [
     {
       accessorKey: "model",
@@ -354,7 +365,7 @@ export function ModelTable() {
                           }}
                         >
                           <Badge variant="secondary" className="max-w-full text-xs">
-                            <span className="truncate">{channel.name}</span>
+                            <ChannelLabel id={channel.id} info={channelInfoMap[channel.id] ?? channel} compact />
                           </Badge>
                           {channel.backup_only && <BackupOnlyBadge />}
                           <span className="text-xs text-muted-foreground">

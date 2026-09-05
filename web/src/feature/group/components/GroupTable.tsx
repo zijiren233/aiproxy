@@ -147,7 +147,7 @@ export function GroupTable() {
     }
 
     // Table column definitions
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
     const columns: ColumnDef<Group>[] = useMemo(() => [
         {
             accessorKey: 'id',

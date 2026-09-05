@@ -55,8 +55,8 @@ function MetricCard({ title, value, icon, className, tooltip, bgColor, iconColor
 
     const cardContent = (
         <Card className={cn(
-            "border-0 shadow-sm hover:shadow-md transition-all duration-200 h-28",
-            "dark:bg-card dark:shadow-lg dark:hover:shadow-xl",
+            "border border-border/70 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 h-28",
+            "dark:bg-card dark:shadow-none dark:hover:shadow-lg",
             bgColor,
             className
         )}>
@@ -113,7 +113,7 @@ export function MetricsCards({
 
     if (loading) {
         return (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
                 {Array.from({ length: 9 }).map((_, index) => (
                     <Card key={index} className="border-0 shadow-sm h-28 dark:bg-card">
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 h-full px-6 py-4">
@@ -150,7 +150,7 @@ export function MetricsCards({
         : '0.0'
 
     return (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
             {/* Row 1: Core metrics */}
             <MetricCard
                 title={t('monitor.metrics.totalRequests')}

@@ -37,6 +37,19 @@ func TestAddChannelRequestToChannelPreservesBackupOnly(t *testing.T) {
 	}
 }
 
+func TestAddChannelRequestToChannelPreservesRemark(t *testing.T) {
+	t.Parallel()
+
+	channel, err := (&AddChannelRequest{
+		Type:   model.ChannelTypeOpenAI,
+		Name:   "channel",
+		Key:    "test-key",
+		Remark: "primary **production** channel",
+	}).ToChannel()
+	require.NoError(t, err)
+	require.Equal(t, "primary **production** channel", channel.Remark)
+}
+
 func TestRunAutoTestBannedModelsHonorsConcurrencyLimit(t *testing.T) {
 	const (
 		concurrency = 7

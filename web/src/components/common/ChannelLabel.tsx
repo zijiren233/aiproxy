@@ -24,6 +24,7 @@ export function ChannelLabel({
 }: ChannelLabelProps) {
     const name = info?.name || `#${id}`
     const typeLabel = typeName || ''
+    const title = info?.remark ? `${name} · ${info.remark}` : name
 
     const clickableClass = onClick
         ? 'cursor-pointer hover:text-primary transition-colors'
@@ -44,7 +45,7 @@ export function ChannelLabel({
                         {typeLabel}
                     </Badge>
                 )}
-                <span className="truncate max-w-[140px]" title={name}>{name}</span>
+                <span className="truncate max-w-[140px]" title={title}>{name}</span>
                 {info?.backup_only && <BackupOnlyBadge compact />}
                 <span className="text-muted-foreground shrink-0 max-w-[80px] truncate" title={`#${id}`}>#{id}</span>
             </span>
@@ -65,7 +66,7 @@ export function ChannelLabel({
                     {typeLabel}
                 </Badge>
             )}
-            <span className="truncate max-w-[180px]" title={name}>{name}</span>
+            <span className="truncate max-w-[180px]" title={title}>{name}</span>
             {info?.backup_only && <BackupOnlyBadge />}
             <span className="text-muted-foreground shrink-0 max-w-[90px] truncate" title={`(#${id})`}>(#{id})</span>
         </span>

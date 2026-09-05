@@ -28,8 +28,8 @@ import { useConsumptionRanking } from '../hooks'
 import type { ConsumptionRankingType } from '@/types/consumption-ranking'
 import { useGroupSummaryMetrics, useRuntimeMetrics } from '@/feature/monitor/runtime-hooks'
 import type { RuntimeRateMetric } from '@/types/runtime-metrics'
-import { useAllChannels } from '@/feature/channel/hooks'
-import { BackupOnlyBadge } from '@/components/common/BackupOnlyBadge'
+import { useChannelInfoMap } from '@/feature/channel/hooks'
+import { ChannelLabel } from '@/components/common/ChannelLabel'
 
 const getDefaultDateRange = (): DateRange => {
     const today = new Date()
@@ -103,12 +103,16 @@ export function ConsumptionRankingPanel({
         rankingType === 'group' && currentPageGroupIds.length > 0,
     )
     const { data: runtimeMetrics } = useRuntimeMetrics()
-    const { data: allChannels } = useAllChannels(rankingType === 'channel')
     const effectiveTimezone = query.timezone || DEFAULT_TIMEZONE
-    const channelInfoMap = useMemo(
-        () => Object.fromEntries((allChannels || []).map((channel) => [channel.id, channel])),
-        [allChannels],
+    const rankingChannelIds = useMemo(
+        () => rankingType === 'channel'
+            ? (data?.items || []).map((item) => item.channel_id).filter((id): id is number => id !== undefined)
+            : [],
+        [data?.items, rankingType],
     )
+    // The batch endpoint includes soft-deleted channels so historical rankings
+    // keep their original display name.
+    const { data: channelInfoMap = {} } = useChannelInfoMap(rankingChannelIds, rankingType === 'channel')
 
     const handleDateRangeChange = (nextRange: DateRange | undefined) => {
         setDateRange(nextRange)
@@ -150,8 +154,7 @@ export function ConsumptionRankingPanel({
                 return item.channel_id !== undefined
                     ? (
                         <span className="inline-flex flex-wrap items-center gap-1.5">
-                            {channelInfoMap[item.channel_id]?.name || `#${item.channel_id}`}
-                            {channelInfoMap[item.channel_id]?.backup_only && <BackupOnlyBadge />}
+                            <ChannelLabel id={item.channel_id} info={channelInfoMap[item.channel_id]} compact />
                         </span>
                     )
                     : '-'

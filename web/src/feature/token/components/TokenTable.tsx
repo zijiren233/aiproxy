@@ -209,7 +209,7 @@ export function TokenTable() {
     }
 
     // 表格列定义
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
     const columns: ColumnDef<Token>[] = useMemo(() => [
         {
             accessorKey: 'name',

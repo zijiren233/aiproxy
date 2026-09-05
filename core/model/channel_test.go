@@ -4,6 +4,7 @@ package model
 import (
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/bytedance/sonic"
 	"github.com/labring/aiproxy/core/relay/mode"
@@ -31,6 +32,7 @@ func TestChannelBackupOnlyPersistence(t *testing.T) {
 
 	channel := &Channel{
 		Name:   "test-channel",
+		Remark: "primary channel",
 		Type:   ChannelTypeOpenAI,
 		Models: []string{"backup-test"},
 	}
@@ -39,6 +41,7 @@ func TestChannelBackupOnlyPersistence(t *testing.T) {
 	loaded, err := GetChannelByID(channel.ID)
 	require.NoError(t, err)
 	require.False(t, loaded.BackupOnly)
+	require.Equal(t, "primary channel", loaded.Remark)
 
 	for _, backupOnly := range []bool{true, false} {
 		channel.BackupOnly = backupOnly
@@ -51,6 +54,7 @@ func TestChannelBackupOnlyPersistence(t *testing.T) {
 		require.NoError(t, err)
 		require.Len(t, infos, 1)
 		require.Equal(t, backupOnly, infos[0].BackupOnly)
+		require.Equal(t, "primary channel", infos[0].Remark)
 
 		mc := LoadModelCaches()
 		require.Contains(t, mc.EnabledModelsBySet[ChannelDefaultSet], "backup-test")
@@ -62,6 +66,11 @@ func TestChannelBackupOnlyPersistence(t *testing.T) {
 			mc.EnabledModel2ChannelsBySet[ChannelDefaultSet]["backup-test"][0].BackupOnly,
 		)
 	}
+	require.NoError(t, db.Model(&Channel{}).Where("id = ?", channel.ID).Update("deleted_at", time.Now()).Error)
+	infos, err := GetChannelsBasicInfoByIDs([]int{channel.ID})
+	require.NoError(t, err)
+	require.Len(t, infos, 1)
+	require.Equal(t, "test-channel", infos[0].Name)
 }
 
 func TestChannelBackupOnlyYAMLAndJSON(t *testing.T) {

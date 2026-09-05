@@ -34,10 +34,13 @@ import { ChannelConfigEditor } from './ChannelConfigEditor'
 import { useRuntimeMetrics } from '@/feature/monitor/runtime-hooks'
 import { getChannelModelMetric } from '@/utils/runtime-metrics'
 import { DEFAULT_PRIORITY } from '@/types/channel'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 
 type ComparableChannelPayload = {
     type: number
     name: string
+    remark?: string
     key: string
     base_url: string
     proxy_url: string
@@ -72,11 +75,13 @@ const normalizeChannelPayload = (
     payload: Partial<ComparableChannelPayload> & {
         type: number
         name: string
+        remark?: string
         key: string
     }
 ): ComparableChannelPayload => ({
     type: payload.type,
     name: payload.name,
+    remark: payload.remark ?? '',
     key: payload.key,
     base_url: payload.base_url ?? '',
     proxy_url: payload.proxy_url ?? '',
@@ -103,6 +108,7 @@ interface ChannelFormProps {
         type: number
         name: string
         key: string
+        remark?: string
         base_url?: string
         proxy_url?: string
         models: string[]
@@ -127,6 +133,7 @@ export function ChannelForm({
         type: 0,
         name: '',
         key: '',
+        remark: '',
         base_url: '',
         proxy_url: '',
         models: [],
@@ -277,6 +284,7 @@ export function ChannelForm({
         const formData = {
             type: data.type,
             name: data.name,
+            remark: data.remark?.trim() || '',
             key: data.key,
             base_url: data.base_url || '',
             proxy_url: data.proxy_url || '',
@@ -369,6 +377,7 @@ export function ChannelForm({
         const currentPayload = normalizeChannelPayload({
             type: formData.type,
             name: formData.name,
+            remark: formData.remark || '',
             key: formData.key,
             base_url: formData.base_url || '',
             proxy_url: formData.proxy_url || '',
@@ -387,6 +396,7 @@ export function ChannelForm({
         const originalPayload = normalizeChannelPayload({
             type: channel.type,
             name: channel.name,
+            remark: channel.remark || '',
             key: channel.key,
             base_url: channel.base_url || '',
             proxy_url: channel.proxy_url || '',
@@ -767,8 +777,8 @@ export function ChannelForm({
                                 const meta = typeId ? typeMetas[String(typeId)] : null
                                 if (!meta?.readme) return null
                                 return (
-                                    <div className="rounded-lg border bg-muted/50 p-3 text-sm text-muted-foreground whitespace-pre-line">
-                                        {meta.readme}
+                                    <div className="prose prose-sm dark:prose-invert max-w-none rounded-lg border bg-muted/50 p-3 text-muted-foreground">
+                                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{meta.readme}</ReactMarkdown>
                                     </div>
                                 )
                             })()}
@@ -782,6 +792,20 @@ export function ChannelForm({
                                         <FormLabel>{t("channel.dialog.name")}</FormLabel>
                                         <FormControl>
                                             <Input placeholder={t("channel.dialog.namePlaceholder")} {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+
+                            <FormField
+                                control={form.control}
+                                name="remark"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>{t("channel.dialog.remark")}</FormLabel>
+                                        <FormControl>
+                                            <Input maxLength={255} placeholder={t("channel.dialog.remarkPlaceholder")} {...field} />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>

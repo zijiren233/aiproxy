@@ -39,6 +39,7 @@ type Channel struct {
 	ModelMapping            map[string]string `gorm:"serializer:fastjson;type:text"      json:"model_mapping"              yaml:"model_mapping,omitempty"`
 	Key                     string            `gorm:"type:text;index:,length:191"        json:"key"                        yaml:"key,omitempty"`
 	Name                    string            `gorm:"size:64;index"                      json:"name"                       yaml:"name,omitempty"`
+	Remark                  string            `gorm:"size:255"                           json:"remark,omitempty"             yaml:"remark,omitempty"`
 	BaseURL                 string            `gorm:"size:128;index"                     json:"base_url"                   yaml:"base_url,omitempty"`
 	ProxyURL                string            `gorm:"size:255"                           json:"proxy_url"                  yaml:"proxy_url,omitempty"`
 	Models                  []string          `gorm:"serializer:fastjson;type:text"      json:"models"                     yaml:"models,omitempty"`
@@ -414,6 +415,7 @@ func UpdateChannel(channel *Channel) (err error) {
 		"model_mapping",
 		"key",
 		"base_url",
+		"remark",
 		"proxy_url",
 		"models",
 		"priority",
@@ -569,6 +571,7 @@ func UpdateChannelUsedAmount(id int, amount float64, requestCount, retryCount in
 type ChannelBasicInfo struct {
 	ID         int         `json:"id"`
 	Name       string      `json:"name"`
+	Remark     string      `json:"remark,omitempty"`
 	Type       ChannelType `json:"type"`
 	BackupOnly bool        `json:"backup_only"`
 }
@@ -582,7 +585,7 @@ func GetChannelsBasicInfoByIDs(ids []int) ([]*ChannelBasicInfo, error) {
 
 	err := DB.Unscoped().
 		Model(&Channel{}).
-		Select("id", "name", "type", "backup_only").
+		Select("id", "name", "remark", "type", "backup_only").
 		Where("id IN ?", ids).
 		Find(&result).
 		Error

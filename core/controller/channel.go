@@ -264,6 +264,7 @@ type AddChannelRequest struct {
 	ModelMapping            map[string]string    `json:"model_mapping"`
 	Configs                 model.ChannelConfigs `json:"configs"`
 	Name                    string               `json:"name"`
+	Remark                  string               `json:"remark"`
 	Key                     string               `json:"key"`
 	BaseURL                 string               `json:"base_url"`
 	ProxyURL                string               `json:"proxy_url"`
@@ -315,6 +316,7 @@ func (r *AddChannelRequest) ToChannel() (*model.Channel, error) {
 	return &model.Channel{
 		Type:                    r.Type,
 		Name:                    r.Name,
+		Remark:                  r.Remark,
 		Key:                     r.Key,
 		BaseURL:                 r.BaseURL,
 		ProxyURL:                r.ProxyURL,
@@ -422,7 +424,7 @@ func DeleteChannels(c *gin.Context) {
 // GetChannelBatchInfo godoc
 //
 //	@Summary		Get basic info for multiple channels
-//	@Description	Returns id, name, type, and backup-only status for a batch of channel IDs
+//	@Description	Returns id, name, remark, type, and backup-only status for a batch of channel IDs, including soft-deleted channels
 //	@Tags			channels
 //	@Accept			json
 //	@Produce		json

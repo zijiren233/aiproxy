@@ -47,6 +47,7 @@ export function ChannelDialog({
         ? {
             type: channel.type,
             name: mode === 'update' ? channel.name : '',
+            remark: channel.remark || '',
             key: channel.key,
             base_url: channel.base_url,
             proxy_url: channel.proxy_url,
@@ -66,6 +67,7 @@ export function ChannelDialog({
         : {
             type: 0,
             name: '',
+            remark: '',
             key: '',
             base_url: '',
             proxy_url: '',

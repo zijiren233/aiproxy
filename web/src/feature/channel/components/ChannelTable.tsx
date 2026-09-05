@@ -184,6 +184,7 @@ export function ChannelTable() {
             const exportData: ChannelCreateRequest[] = allChannels.map(channel => ({
                 type: channel.type,
                 name: channel.name,
+                remark: channel.remark,
                 key: channel.key,
                 base_url: channel.base_url,
                 proxy_url: channel.proxy_url,
@@ -221,6 +222,7 @@ export function ChannelTable() {
         const exportData: ChannelCreateRequest[] = [{
             type: channel.type,
             name: channel.name,
+            remark: channel.remark,
             key: channel.key,
             base_url: channel.base_url,
             proxy_url: channel.proxy_url,
@@ -353,7 +355,7 @@ export function ChannelTable() {
     const dashboardCell = 'cursor-pointer hover:text-primary transition-colors'
 
     // 表格列定义
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
     const columns: ColumnDef<Channel>[] = useMemo(() => [
         {
             accessorKey: 'id',
@@ -379,6 +381,15 @@ export function ChannelTable() {
                 >
                     <span className="truncate" title={row.original.name}>{row.original.name}</span>
                     {row.original.backup_only && <BackupOnlyBadge />}
+                </div>
+            ),
+        },
+        {
+            accessorKey: 'remark',
+            header: () => <div className="font-medium py-3.5 whitespace-nowrap">{t("channel.remark")}</div>,
+            cell: ({ row }) => (
+                <div className="max-w-[220px] truncate text-sm text-muted-foreground" title={row.original.remark || undefined}>
+                    {row.original.remark || <span className="text-muted-foreground/50">-</span>}
                 </div>
             ),
         },
