@@ -955,8 +955,10 @@
     "dialog": {
       "createTitle": "创建渠道",
       "updateTitle": "更新渠道",
+      "copyTitle": "复制渠道",
       "createDescription": "向系统添加新渠道",
       "updateDescription": "更新渠道信息",
+      "copyDescription": "基于现有渠道创建新渠道，可在提交前调整名称和配置",
       "type": "提供商",
       "selectType": "选择提供商",
       "name": "自定义名称",

@@ -967,8 +967,10 @@
     "dialog": {
       "createTitle": "Create Channel",
       "updateTitle": "Update Channel",
+      "copyTitle": "Copy Channel",
       "createDescription": "Add a new channel to the system",
       "updateDescription": "Update the channel information",
+      "copyDescription": "Create a new channel from the existing one and adjust its name or settings before saving",
       "type": "Provider",
       "selectType": "Select provider",
       "name": "Custom Name",

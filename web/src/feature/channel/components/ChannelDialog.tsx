@@ -11,6 +11,7 @@ import { Channel } from '@/types/channel'
 import { AnimatePresence, motion } from "motion/react"
 import { useMemo, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
+import { getChannelFormDefaults } from './channel-form-defaults'
 import {
     dialogEnterExitAnimation,
     dialogContentAnimation,
@@ -36,52 +37,18 @@ export function ChannelDialog({
     // Determine title and description based on mode
     const title = mode === 'update'
         ? t("channel.dialog.updateTitle")
-        : t("channel.dialog.createTitle")
+        : mode === 'copy'
+            ? t("channel.dialog.copyTitle")
+            : t("channel.dialog.createTitle")
     const description = mode === 'update'
         ? t("channel.dialog.updateDescription")
-        : t("channel.dialog.createDescription")
+        : mode === 'copy'
+            ? t("channel.dialog.copyDescription")
+            : t("channel.dialog.createDescription")
 
     // Default values for form - memoized to avoid new object reference every render
     // Use channel data if available (for both update and copy)
-    const defaultValues = useMemo(() => channel
-        ? {
-            type: channel.type,
-            name: mode === 'update' ? channel.name : '',
-            remark: channel.remark || '',
-            key: channel.key,
-            base_url: channel.base_url,
-            proxy_url: channel.proxy_url,
-            models: channel.models || [],
-            model_mapping: channel.model_mapping || {},
-            sets: channel.sets || [],
-            priority: channel.priority,
-            backup_only: channel.backup_only ?? false,
-            skip_tls_verify: channel.skip_tls_verify ?? false,
-            enabled_no_permission_ban: channel.enabled_no_permission_ban ?? false,
-            warn_error_rate: channel.warn_error_rate,
-            max_error_rate: channel.max_error_rate !== undefined && channel.max_error_rate > 0
-                ? channel.max_error_rate
-                : undefined,
-            configs_text: channel.configs ? JSON.stringify(channel.configs, null, 2) : ''
-        }
-        : {
-            type: 0,
-            name: '',
-            remark: '',
-            key: '',
-            base_url: '',
-            proxy_url: '',
-            models: [],
-            model_mapping: {},
-            sets: [],
-            priority: 10,
-            backup_only: false,
-            skip_tls_verify: false,
-            enabled_no_permission_ban: false,
-            warn_error_rate: undefined,
-            max_error_rate: undefined,
-            configs_text: ''
-        }, [mode, channel])
+    const defaultValues = useMemo(() => getChannelFormDefaults(channel), [channel])
 
     const handleSuccess = useCallback(() => onOpenChange(false), [onOpenChange])
 
