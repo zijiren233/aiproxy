@@ -50,6 +50,25 @@ func TestAddChannelRequestToChannelPreservesRemark(t *testing.T) {
 	require.Equal(t, "primary **production** channel", channel.Remark)
 }
 
+func TestUpdateChannelRequestPreservesOmittedValues(t *testing.T) {
+	t.Parallel()
+	current := &model.Channel{Name: "existing", Remark: "keep", Key: "key", Type: model.ChannelTypeOpenAI, BackupOnly: true}
+	updated, err := (&UpdateChannelRequest{}).Apply(current)
+	require.NoError(t, err)
+	require.Equal(t, "keep", updated.Remark)
+	require.True(t, updated.BackupOnly)
+}
+
+func TestUpdateChannelRequestAllowsExplicitZeroValues(t *testing.T) {
+	t.Parallel()
+	remark := ""
+	backupOnly := false
+	updated, err := (&UpdateChannelRequest{Remark: &remark, BackupOnly: &backupOnly}).Apply(&model.Channel{Key: "key", Type: model.ChannelTypeOpenAI, Remark: "old", BackupOnly: true})
+	require.NoError(t, err)
+	require.Empty(t, updated.Remark)
+	require.False(t, updated.BackupOnly)
+}
+
 func TestRunAutoTestBannedModelsHonorsConcurrencyLimit(t *testing.T) {
 	const (
 		concurrency = 7

@@ -281,6 +281,92 @@ type AddChannelRequest struct {
 	MaxErrorRate            float64              `json:"max_error_rate"`
 }
 
+// UpdateChannelRequest uses pointers so omitted fields keep their current values.
+// A pointer to an empty string, false, or zero explicitly clears or disables a field.
+type UpdateChannelRequest struct {
+	Type                    *model.ChannelType    `json:"type"`
+	Name                    *string               `json:"name"`
+	Remark                  *string               `json:"remark"`
+	Key                     *string               `json:"key"`
+	BaseURL                 *string               `json:"base_url"`
+	ProxyURL                *string               `json:"proxy_url"`
+	Models                  *[]string             `json:"models"`
+	ModelMapping            *map[string]string    `json:"model_mapping"`
+	Configs                 *model.ChannelConfigs `json:"configs"`
+	Priority                *int32                `json:"priority"`
+	BackupOnly              *bool                 `json:"backup_only"`
+	Sets                    *[]string             `json:"sets"`
+	EnabledAutoBalanceCheck *bool                 `json:"enabled_auto_balance_check"`
+	SkipTLSVerify           *bool                 `json:"skip_tls_verify"`
+	EnabledNoPermissionBan  *bool                 `json:"enabled_no_permission_ban"`
+	WarnErrorRate           *float64              `json:"warn_error_rate"`
+	MaxErrorRate            *float64              `json:"max_error_rate"`
+	BalanceThreshold        *float64              `json:"balance_threshold"`
+}
+
+func (r *UpdateChannelRequest) Apply(current *model.Channel) (*model.Channel, error) {
+	next := *current
+	if r.Type != nil {
+		next.Type = *r.Type
+	}
+	if r.Name != nil {
+		next.Name = *r.Name
+	}
+	if r.Remark != nil {
+		next.Remark = *r.Remark
+	}
+	if r.Key != nil {
+		next.Key = *r.Key
+	}
+	if r.BaseURL != nil {
+		next.BaseURL = *r.BaseURL
+	}
+	if r.ProxyURL != nil {
+		next.ProxyURL = *r.ProxyURL
+	}
+	if r.Models != nil {
+		next.Models = slices.Clone(*r.Models)
+	}
+	if r.ModelMapping != nil {
+		next.ModelMapping = maps.Clone(*r.ModelMapping)
+	}
+	if r.Configs != nil {
+		next.Configs = *r.Configs
+	}
+	if r.Priority != nil {
+		next.Priority = *r.Priority
+	}
+	if r.BackupOnly != nil {
+		next.BackupOnly = *r.BackupOnly
+	}
+	if r.Sets != nil {
+		next.Sets = slices.Clone(*r.Sets)
+	}
+	if r.EnabledAutoBalanceCheck != nil {
+		next.EnabledAutoBalanceCheck = *r.EnabledAutoBalanceCheck
+	}
+	if r.SkipTLSVerify != nil {
+		next.SkipTLSVerify = *r.SkipTLSVerify
+	}
+	if r.EnabledNoPermissionBan != nil {
+		next.EnabledNoPermissionBan = *r.EnabledNoPermissionBan
+	}
+	if r.WarnErrorRate != nil {
+		next.WarnErrorRate = *r.WarnErrorRate
+	}
+	if r.MaxErrorRate != nil {
+		next.MaxErrorRate = *r.MaxErrorRate
+	}
+	if r.BalanceThreshold != nil {
+		next.BalanceThreshold = *r.BalanceThreshold
+	}
+
+	if _, err := (&AddChannelRequest{Type: next.Type, Name: next.Name, Key: next.Key}).ToChannel(); err != nil {
+		return nil, err
+	}
+	return &next, nil
+}
+
 func (r *AddChannelRequest) ToChannel() (*model.Channel, error) {
 	a, ok := adaptors.GetAdaptor(r.Type)
 	if !ok {
@@ -475,7 +561,7 @@ func UpdateChannel(c *gin.Context) {
 		return
 	}
 
-	channel := AddChannelRequest{}
+	channel := UpdateChannelRequest{}
 
 	err = c.ShouldBindJSON(&channel)
 	if err != nil {
@@ -483,13 +569,17 @@ func UpdateChannel(c *gin.Context) {
 		return
 	}
 
-	ch, err := channel.ToChannel()
+	current, err := model.GetChannelByID(id)
+	if err != nil {
+		middleware.ErrorResponse(c, http.StatusNotFound, err.Error())
+		return
+	}
+
+	ch, err := channel.Apply(current)
 	if err != nil {
 		middleware.ErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
 	}
-
-	ch.ID = id
 
 	err = model.UpdateChannel(ch)
 	if err != nil {

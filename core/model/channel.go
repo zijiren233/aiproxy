@@ -39,7 +39,7 @@ type Channel struct {
 	ModelMapping            map[string]string `gorm:"serializer:fastjson;type:text"      json:"model_mapping"              yaml:"model_mapping,omitempty"`
 	Key                     string            `gorm:"type:text;index:,length:191"        json:"key"                        yaml:"key,omitempty"`
 	Name                    string            `gorm:"size:64;index"                      json:"name"                       yaml:"name,omitempty"`
-	Remark                  string            `gorm:"size:255"                           json:"remark,omitempty"             yaml:"remark,omitempty"`
+	Remark                  string            `gorm:"size:255;index"                    json:"remark,omitempty"             yaml:"remark,omitempty"`
 	BaseURL                 string            `gorm:"size:128;index"                     json:"base_url"                   yaml:"base_url,omitempty"`
 	ProxyURL                string            `gorm:"size:255"                           json:"proxy_url"                  yaml:"proxy_url,omitempty"`
 	Models                  []string          `gorm:"serializer:fastjson;type:text"      json:"models"                     yaml:"models,omitempty"`
@@ -319,6 +319,13 @@ func SearchChannels(
 			values = append(values, "%"+keyword+"%")
 		}
 
+		if !common.UsingSQLite {
+			conditions = append(conditions, "remark ILIKE ?")
+		} else {
+			conditions = append(conditions, "remark LIKE ?")
+		}
+		values = append(values, "%"+keyword+"%")
+
 		if key == "" {
 			if !common.UsingSQLite {
 				conditions = append(conditions, "key ILIKE ?")
@@ -412,6 +419,8 @@ func UpdateChannel(channel *Channel) (err error) {
 	}
 
 	selects := []string{
+		"type",
+		"name",
 		"model_mapping",
 		"key",
 		"base_url",
@@ -429,14 +438,6 @@ func UpdateChannel(channel *Channel) (err error) {
 		"balance_threshold",
 		"sets",
 	}
-	if channel.Type != 0 {
-		selects = append(selects, "type")
-	}
-
-	if channel.Name != "" {
-		selects = append(selects, "name")
-	}
-
 	result := DB.
 		Select(selects).
 		Clauses(clause.Returning{}).
