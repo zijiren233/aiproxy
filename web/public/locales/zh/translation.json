@@ -986,6 +986,7 @@
       "sets": "分组",
       "setsPlaceholder": "输入分组名称并回车添加",
       "priority": "优先级",
+      "backupOnly": "仅备用",
       "priorityPlaceholder": "1-100，默认10",
       "priorityHelp": "数值越高优先级越高，实际优先级会根据错误率动态调整，默认为10",
       "skipTlsVerify": "跳过 TLS 证书校验",

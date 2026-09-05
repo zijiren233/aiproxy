@@ -14,6 +14,7 @@ export interface Channel {
     created_at: number
     accessed_at: number
     priority: number
+    backup_only?: boolean
     skip_tls_verify?: boolean
     enabled_no_permission_ban?: boolean
     warn_error_rate?: number
@@ -25,6 +26,8 @@ export interface Channel {
 }
 
 export const DEFAULT_PRIORITY = 10
+
+export type ChannelBasicInfo = Pick<Channel, 'id' | 'name' | 'type' | 'backup_only'>
 
 export interface ChannelConfigSchema {
     type?: string
@@ -62,6 +65,7 @@ export interface ChannelCreateRequest {
     model_mapping?: Record<string, string>
     sets?: string[]
     priority?: number
+    backup_only?: boolean
     skip_tls_verify?: boolean
     enabled_no_permission_ban?: boolean
     warn_error_rate?: number
@@ -79,6 +83,7 @@ export interface ChannelUpdateRequest {
     model_mapping?: Record<string, string>
     sets?: string[]
     priority?: number
+    backup_only?: boolean
     skip_tls_verify?: boolean
     enabled_no_permission_ban?: boolean
     warn_error_rate?: number

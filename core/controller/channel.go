@@ -270,6 +270,7 @@ type AddChannelRequest struct {
 	Models                  []string             `json:"models"`
 	Type                    model.ChannelType    `json:"type"`
 	Priority                int32                `json:"priority"`
+	BackupOnly              bool                 `json:"backup_only"`
 	Status                  int                  `json:"status"`
 	Sets                    []string             `json:"sets"`
 	EnabledAutoBalanceCheck bool                 `json:"enabled_auto_balance_check"`
@@ -320,6 +321,7 @@ func (r *AddChannelRequest) ToChannel() (*model.Channel, error) {
 		Models:                  slices.Clone(r.Models),
 		ModelMapping:            maps.Clone(r.ModelMapping),
 		Priority:                r.Priority,
+		BackupOnly:              r.BackupOnly,
 		Status:                  r.Status,
 		Configs:                 r.Configs,
 		Sets:                    slices.Clone(r.Sets),
@@ -420,7 +422,7 @@ func DeleteChannels(c *gin.Context) {
 // GetChannelBatchInfo godoc
 //
 //	@Summary		Get basic info for multiple channels
-//	@Description	Returns id, name, and type for a batch of channel IDs
+//	@Description	Returns id, name, type, and backup-only status for a batch of channel IDs
 //	@Tags			channels
 //	@Accept			json
 //	@Produce		json

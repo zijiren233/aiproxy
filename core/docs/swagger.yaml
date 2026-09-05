@@ -22,6 +22,8 @@ definitions:
     type: object
   controller.AddChannelRequest:
     properties:
+      backup_only:
+        type: boolean
       base_url:
         type: string
       configs:
@@ -214,6 +216,8 @@ definitions:
     type: object
   controller.EnabledModelChannel:
     properties:
+      backup_only:
+        type: boolean
       id:
         type: integer
       name:
@@ -1251,6 +1255,8 @@ definitions:
     type: object
   model.Channel:
     properties:
+      backup_only:
+        type: boolean
       balance:
         type: number
       balance_threshold:
@@ -1314,6 +1320,8 @@ definitions:
     type: object
   model.ChannelBasicInfo:
     properties:
+      backup_only:
+        type: boolean
       id:
         type: integer
       name:
@@ -4264,7 +4272,7 @@ paths:
     post:
       consumes:
       - application/json
-      description: Returns id, name, and type for a batch of channel IDs
+      description: Returns id, name, type, and backup-only status for a batch of channel IDs
       parameters:
       - description: Channel IDs
         in: body

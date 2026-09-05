@@ -29,6 +29,7 @@ import type { ConsumptionRankingType } from '@/types/consumption-ranking'
 import { useGroupSummaryMetrics, useRuntimeMetrics } from '@/feature/monitor/runtime-hooks'
 import type { RuntimeRateMetric } from '@/types/runtime-metrics'
 import { useAllChannels } from '@/feature/channel/hooks'
+import { BackupOnlyBadge } from '@/components/common/BackupOnlyBadge'
 
 const getDefaultDateRange = (): DateRange => {
     const today = new Date()
@@ -104,8 +105,8 @@ export function ConsumptionRankingPanel({
     const { data: runtimeMetrics } = useRuntimeMetrics()
     const { data: allChannels } = useAllChannels(rankingType === 'channel')
     const effectiveTimezone = query.timezone || DEFAULT_TIMEZONE
-    const channelNameMap = useMemo(
-        () => Object.fromEntries((allChannels || []).map((channel) => [channel.id, channel.name])),
+    const channelInfoMap = useMemo(
+        () => Object.fromEntries((allChannels || []).map((channel) => [channel.id, channel])),
         [allChannels],
     )
 
@@ -147,7 +148,12 @@ export function ConsumptionRankingPanel({
         switch (rankingType) {
             case 'channel':
                 return item.channel_id !== undefined
-                    ? channelNameMap[item.channel_id] || `#${item.channel_id}`
+                    ? (
+                        <span className="inline-flex flex-wrap items-center gap-1.5">
+                            {channelInfoMap[item.channel_id]?.name || `#${item.channel_id}`}
+                            {channelInfoMap[item.channel_id]?.backup_only && <BackupOnlyBadge />}
+                        </span>
+                    )
                     : '-'
             case 'model':
                 return item.model || '-'

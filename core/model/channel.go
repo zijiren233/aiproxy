@@ -50,6 +50,7 @@ type Channel struct {
 	Status                  int               `gorm:"default:1;index"                    json:"status"                     yaml:"status,omitempty"`
 	Type                    ChannelType       `gorm:"default:0;index"                    json:"type"                       yaml:"type,omitempty"`
 	Priority                int32             `                                          json:"priority"                   yaml:"priority,omitempty"`
+	BackupOnly              bool              `gorm:"default:false"                      json:"backup_only"                yaml:"backup_only,omitempty"`
 	EnabledAutoBalanceCheck bool              `                                          json:"enabled_auto_balance_check" yaml:"enabled_auto_balance_check,omitempty"`
 	BalanceThreshold        float64           `                                          json:"balance_threshold"          yaml:"balance_threshold,omitempty"`
 	SkipTLSVerify           bool              `                                          json:"skip_tls_verify"            yaml:"skip_tls_verify,omitempty"`
@@ -417,6 +418,7 @@ func UpdateChannel(channel *Channel) (err error) {
 		"models",
 		"priority",
 		"configs",
+		"backup_only",
 		"enabled_auto_balance_check",
 		"skip_tls_verify",
 		"enabled_no_permission_ban",
@@ -565,9 +567,10 @@ func UpdateChannelUsedAmount(id int, amount float64, requestCount, retryCount in
 }
 
 type ChannelBasicInfo struct {
-	ID   int         `json:"id"`
-	Name string      `json:"name"`
-	Type ChannelType `json:"type"`
+	ID         int         `json:"id"`
+	Name       string      `json:"name"`
+	Type       ChannelType `json:"type"`
+	BackupOnly bool        `json:"backup_only"`
 }
 
 func GetChannelsBasicInfoByIDs(ids []int) ([]*ChannelBasicInfo, error) {
@@ -579,7 +582,7 @@ func GetChannelsBasicInfoByIDs(ids []int) ([]*ChannelBasicInfo, error) {
 
 	err := DB.Unscoped().
 		Model(&Channel{}).
-		Select("id", "name", "type").
+		Select("id", "name", "type", "backup_only").
 		Where("id IN ?", ids).
 		Find(&result).
 		Error

@@ -546,6 +546,8 @@ func buildBodyDetailOption(meta *meta.Meta) controller.BodyDetailOption {
 }
 
 type retryState struct {
+	channelSelectionState
+
 	retryTimes        int
 	designatedChannel *model.Channel
 	preferChannelIDs  []int
@@ -601,17 +603,18 @@ func initRetryState(
 	initialEndAt time.Time,
 ) *retryState {
 	state := &retryState{
-		retryTimes:          retryTimes,
-		preferChannelIDs:    channel.preferChannelIDs,
-		ignoreChannelIDs:    channel.ignoreChannelIDs,
-		meta:                meta,
-		result:              result,
-		price:               price,
-		requestUsage:        meta.RequestUsage,
-		requestUsageContext: meta.RequestUsageContext,
-		migratedChannels:    channel.migratedChannels,
-		failedChannelIDs:    make(map[int64]struct{}),
-		channelRetryInfo:    make(map[int]channelRetryInfo),
+		channelSelectionState: channel.channelSelectionState,
+		retryTimes:            retryTimes,
+		preferChannelIDs:      channel.preferChannelIDs,
+		ignoreChannelIDs:      channel.ignoreChannelIDs,
+		meta:                  meta,
+		result:                result,
+		price:                 price,
+		requestUsage:          meta.RequestUsage,
+		requestUsageContext:   meta.RequestUsageContext,
+		migratedChannels:      channel.migratedChannels,
+		failedChannelIDs:      make(map[int64]struct{}),
+		channelRetryInfo:      make(map[int]channelRetryInfo),
 	}
 
 	// Record initial failed channel

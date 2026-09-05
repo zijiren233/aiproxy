@@ -1,10 +1,9 @@
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
+import { BackupOnlyBadge } from './BackupOnlyBadge'
+import type { ChannelBasicInfo } from '@/types/channel'
 
-interface ChannelInfo {
-    name: string
-    type: number
-}
+type ChannelInfo = Omit<ChannelBasicInfo, 'id'>
 
 interface ChannelLabelProps {
     id: number
@@ -46,6 +45,7 @@ export function ChannelLabel({
                     </Badge>
                 )}
                 <span className="truncate max-w-[140px]" title={name}>{name}</span>
+                {info?.backup_only && <BackupOnlyBadge compact />}
                 <span className="text-muted-foreground shrink-0 max-w-[80px] truncate" title={`#${id}`}>#{id}</span>
             </span>
         )
@@ -66,6 +66,7 @@ export function ChannelLabel({
                 </Badge>
             )}
             <span className="truncate max-w-[180px]" title={name}>{name}</span>
+            {info?.backup_only && <BackupOnlyBadge />}
             <span className="text-muted-foreground shrink-0 max-w-[90px] truncate" title={`(#${id})`}>(#{id})</span>
         </span>
     )
