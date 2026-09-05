@@ -784,7 +784,7 @@ const docTemplate = `{
                         "ApiKeyAuth": []
                     }
                 ],
-                "description": "Returns id, name, and type for a batch of channel IDs",
+                "description": "Returns id, name, type, and backup-only status for a batch of channel IDs",
                 "consumes": [
                     "application/json"
                 ],
@@ -9879,6 +9879,9 @@ const docTemplate = `{
         "controller.AddChannelRequest": {
             "type": "object",
             "properties": {
+                "backup_only": {
+                    "type": "boolean"
+                },
                 "base_url": {
                     "type": "string"
                 },
@@ -10170,6 +10173,9 @@ const docTemplate = `{
         "controller.EnabledModelChannel": {
             "type": "object",
             "properties": {
+                "backup_only": {
+                    "type": "boolean"
+                },
                 "id": {
                     "type": "integer"
                 },
@@ -11695,6 +11701,9 @@ const docTemplate = `{
         "model.Channel": {
             "type": "object",
             "properties": {
+                "backup_only": {
+                    "type": "boolean"
+                },
                 "balance": {
                     "type": "number"
                 },
@@ -11790,6 +11799,9 @@ const docTemplate = `{
         "model.ChannelBasicInfo": {
             "type": "object",
             "properties": {
+                "backup_only": {
+                    "type": "boolean"
+                },
                 "id": {
                     "type": "integer"
                 },

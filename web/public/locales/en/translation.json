@@ -998,6 +998,7 @@
       "sets": "Groups",
       "setsPlaceholder": "Enter group name and press enter to add",
       "priority": "Priority",
+      "backupOnly": "Backup Only",
       "priorityPlaceholder": "1-100, default 10",
       "priorityHelp": "Higher value means higher priority. Effective priority is dynamically adjusted by error rate. Default is 10",
       "skipTlsVerify": "Skip TLS Verification",

@@ -50,6 +50,7 @@ import { AnimatedButton } from "@/components/ui/animation/components/animated-bu
 import { AnimatedIcon } from "@/components/ui/animation/components/animated-icon";
 import ApiDocDrawer from "./api-doc/ApiDoc";
 import { Badge } from "@/components/ui/badge";
+import { BackupOnlyBadge } from "@/components/common/BackupOnlyBadge";
 import {
   Popover,
   PopoverContent,
@@ -321,7 +322,12 @@ export function ModelTable() {
                     </span>
                   </Badge>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto p-3" align="start">
+                <PopoverContent
+                  className="w-auto max-w-[calc(100vw-2rem)] p-3"
+                  align="start"
+                  sticky="always"
+                  collisionPadding={16}
+                >
                   <div className="space-y-2">
                     <h4 className="font-medium">
                       {t("model.availableChannels")} ({t("model.channelCount", { count: channels.length })})
@@ -330,7 +336,7 @@ export function ModelTable() {
                       {[...channels].sort((a, b) => (b.weight ?? 0) - (a.weight ?? 0)).map((channel) => (
                         <div
                           key={channel.id}
-                          className="flex items-center gap-2 cursor-pointer hover:bg-muted/50 rounded px-1 py-0.5 transition-colors"
+                          className="flex flex-wrap items-center gap-2 cursor-pointer hover:bg-muted/50 rounded px-1 py-0.5 transition-colors"
                           onClick={() => {
                             openResourceDialog({
                               fetcher: () => channelApi.getChannel(channel.id),
@@ -347,9 +353,10 @@ export function ModelTable() {
                             });
                           }}
                         >
-                          <Badge variant="secondary" className="text-xs">
-                            {channel.name}
+                          <Badge variant="secondary" className="max-w-full text-xs">
+                            <span className="truncate">{channel.name}</span>
                           </Badge>
+                          {channel.backup_only && <BackupOnlyBadge />}
                           <span className="text-xs text-muted-foreground">
                             ID: {channel.id}, {getChannelTypeName(channel.type)}, {t("channel.priority")}: {channel.priority}
                           </span>

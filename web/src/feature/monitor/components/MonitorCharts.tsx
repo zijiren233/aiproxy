@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useState } from 'react'
+import { Fragment, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { EChartsOption } from 'echarts'
 
@@ -9,7 +9,7 @@ import { ChartDataPoint, ModelSummary } from '@/types/dashboard'
 import { cn } from '@/lib/utils'
 import { ChevronRight } from 'lucide-react'
 import { channelApi } from '@/api/channel'
-import { useChannelTypeMetas } from '@/feature/channel/hooks'
+import { useChannelInfoMap, useChannelTypeMetas } from '@/feature/channel/hooks'
 import { ChannelLabel } from '@/components/common/ChannelLabel'
 import { ChannelDialog } from '@/feature/channel/components/ChannelDialog'
 import type { Channel } from '@/types/channel'
@@ -295,7 +295,6 @@ export function MonitorCharts({ chartData, modelRanking, detailRanking = [], has
     }, [groupTokennameModelMetrics])
 
     // Batch fetch channel info for detail rows
-    const [channelInfoMap, setChannelInfoMap] = useState<Record<number, { name: string; type: number }>>({})
     const detailChannelIds = useMemo(() => {
         const ids = new Set<number>()
         for (const m of detailRanking) {
@@ -304,28 +303,7 @@ export function MonitorCharts({ chartData, modelRanking, detailRanking = [], has
         return [...ids]
     }, [detailRanking])
 
-    useEffect(() => {
-        if (detailChannelIds.length === 0) return
-        const missing = detailChannelIds.filter(id => !(id in channelInfoMap))
-        if (missing.length === 0) return
-        channelApi.getChannelBatchInfo(missing)
-            .then(infos => {
-                setChannelInfoMap(prev => {
-                    const next = { ...prev }
-                    for (const info of infos) next[info.id] = { name: info.name, type: info.type }
-                    return next
-                })
-            })
-            .catch(() => {
-                setChannelInfoMap(prev => {
-                    const next = { ...prev }
-                    for (const id of missing) {
-                        if (!(id in next)) next[id] = { name: `#${id}`, type: 0 }
-                    }
-                    return next
-                })
-            })
-    }, [detailChannelIds]) // eslint-disable-line react-hooks/exhaustive-deps
+    const { data: channelInfoMap = {} } = useChannelInfoMap(detailChannelIds)
 
     if (loading) {
         return (

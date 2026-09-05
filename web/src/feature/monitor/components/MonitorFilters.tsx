@@ -14,9 +14,8 @@ import {
 import { DateRangePicker } from '@/components/common/DateRangePicker'
 import { TimezoneInput } from '@/components/common/TimezoneInput'
 import { ChannelLabel } from '@/components/common/ChannelLabel'
+import { useChannelInfoMap, useChannelTypeMetas } from '@/feature/channel/hooks'
 import { DashboardFilters } from '@/types/dashboard'
-import { channelApi } from '@/api/channel'
-import { useChannelTypeMetas } from '@/feature/channel/hooks'
 import { DEFAULT_TIMEZONE, zonedBoundaryToUnix } from '@/utils/timezone'
 
 export type DataSourceMode = 'total' | 'serviceTierFlex' | 'serviceTierPriority' | 'claudeLongContext'
@@ -62,34 +61,7 @@ export function MonitorFilters({
     const [timespan, setTimespan] = useState<'minute' | 'hour' | 'day' | 'month'>('hour')
     const [timezone, setTimezone] = useState(DEFAULT_TIMEZONE)
 
-    // Batch fetch channel names
-    const [channelInfoMap, setChannelInfoMap] = useState<Record<number, { name: string; type: number }>>({})
-
-    useEffect(() => {
-        if (availableChannels.length === 0) return
-        const missing = availableChannels.filter(id => !(id in channelInfoMap))
-        if (missing.length === 0) return
-
-        channelApi.getChannelBatchInfo(missing)
-            .then(infos => {
-                setChannelInfoMap(prev => {
-                    const next = { ...prev }
-                    for (const info of infos) {
-                        next[info.id] = { name: info.name, type: info.type }
-                    }
-                    return next
-                })
-            })
-            .catch(() => {
-                setChannelInfoMap(prev => {
-                    const next = { ...prev }
-                    for (const id of missing) {
-                        if (!(id in next)) next[id] = { name: `#${id}`, type: 0 }
-                    }
-                    return next
-                })
-            })
-    }, [availableChannels]) // eslint-disable-line react-hooks/exhaustive-deps
+    const { data: channelInfoMap = {} } = useChannelInfoMap(availableChannels)
 
     const buildFilters = useCallback((): DashboardFilters => {
         const effectiveModel = model === '__all__' ? '' : model

@@ -25,6 +25,18 @@ func TestAddChannelRequestToChannelPreservesNewlinesInKey(t *testing.T) {
 	require.Equal(t, key, channel.Key)
 }
 
+func TestAddChannelRequestToChannelPreservesBackupOnly(t *testing.T) {
+	t.Parallel()
+
+	for _, backupOnly := range []bool{false, true} {
+		channel, err := (&AddChannelRequest{
+			Type: model.ChannelTypeOpenAI, Name: "channel", Key: "test-key", BackupOnly: backupOnly,
+		}).ToChannel()
+		require.NoError(t, err)
+		require.Equal(t, backupOnly, channel.BackupOnly)
+	}
+}
+
 func TestRunAutoTestBannedModelsHonorsConcurrencyLimit(t *testing.T) {
 	const (
 		concurrency = 7

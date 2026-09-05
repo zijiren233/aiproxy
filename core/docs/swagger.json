@@ -775,7 +775,7 @@
                         "ApiKeyAuth": []
                     }
                 ],
-                "description": "Returns id, name, and type for a batch of channel IDs",
+                "description": "Returns id, name, type, and backup-only status for a batch of channel IDs",
                 "consumes": [
                     "application/json"
                 ],
@@ -9870,6 +9870,9 @@
         "controller.AddChannelRequest": {
             "type": "object",
             "properties": {
+                "backup_only": {
+                    "type": "boolean"
+                },
                 "base_url": {
                     "type": "string"
                 },
@@ -10161,6 +10164,9 @@
         "controller.EnabledModelChannel": {
             "type": "object",
             "properties": {
+                "backup_only": {
+                    "type": "boolean"
+                },
                 "id": {
                     "type": "integer"
                 },
@@ -11686,6 +11692,9 @@
         "model.Channel": {
             "type": "object",
             "properties": {
+                "backup_only": {
+                    "type": "boolean"
+                },
                 "balance": {
                     "type": "number"
                 },
@@ -11781,6 +11790,9 @@
         "model.ChannelBasicInfo": {
             "type": "object",
             "properties": {
+                "backup_only": {
+                    "type": "boolean"
+                },
                 "id": {
                     "type": "integer"
                 },

@@ -6,7 +6,7 @@ import { JsonViewer } from './JsonViewer'
 import { useLogDetail } from '@/feature/log/hooks'
 import type { LogRecord, LogRequestDetail } from '@/types/log'
 import { channelApi } from '@/api/channel'
-import { useChannelTypeMetas } from '@/feature/channel/hooks'
+import { useChannelInfoMap, useChannelTypeMetas } from '@/feature/channel/hooks'
 import { ChannelLabel } from '@/components/common/ChannelLabel'
 import { ChannelDialog } from '@/feature/channel/components/ChannelDialog'
 import type { Channel } from '@/types/channel'
@@ -24,7 +24,8 @@ const formatPrice = (price: number, unit: number): string => {
 export const ExpandedLogContent = ({ log }: { log: LogRecord }) => {
     const { t } = useTranslation()
     const { data: typeMetas } = useChannelTypeMetas()
-    const [channelInfo, setChannelInfo] = useState<{ name: string; type: number } | null>(null)
+    const { data: channelInfoMap } = useChannelInfoMap(log.channel ? [log.channel] : [])
+    const channelInfo = channelInfoMap?.[log.channel]
     const [channelDialogOpen, setChannelDialogOpen] = useState(false)
     const [editingChannel, setEditingChannel] = useState<Channel | null>(null)
 
@@ -43,15 +44,6 @@ export const ExpandedLogContent = ({ log }: { log: LogRecord }) => {
             },
         })
     }
-
-    useEffect(() => {
-        if (!log.channel) return
-        channelApi.getChannelBatchInfo([log.channel])
-            .then(infos => {
-                if (infos.length > 0) setChannelInfo({ name: infos[0].name, type: infos[0].type })
-            })
-            .catch(() => {})
-    }, [log.channel])
 
     const needsDetail = !!log.request_detail
     const [requestDetail, setRequestDetail] = useState<LogRequestDetail | null>(null)

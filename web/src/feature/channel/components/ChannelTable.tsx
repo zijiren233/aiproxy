@@ -9,6 +9,7 @@ import { useNavigate } from 'react-router'
 import { useQueryClient } from '@tanstack/react-query'
 import { useChannels, useChannelTypeMetas, useUpdateChannelStatus, useTestChannel, useTestAllChannels, useAllChannelDefaultModels } from '../hooks'
 import { channelApi } from '@/api/channel'
+import { BackupOnlyBadge } from '@/components/common/BackupOnlyBadge'
 import { Channel, ChannelCreateRequest } from '@/types/channel'
 import { Button } from '@/components/ui/button'
 import {
@@ -190,6 +191,7 @@ export function ChannelTable() {
                 model_mapping: channel.model_mapping || undefined,
                 sets: channel.sets,
                 priority: channel.priority,
+                backup_only: channel.backup_only,
                 skip_tls_verify: channel.skip_tls_verify,
                 enabled_no_permission_ban: channel.enabled_no_permission_ban,
                 warn_error_rate: channel.warn_error_rate,
@@ -226,6 +228,7 @@ export function ChannelTable() {
             model_mapping: channel.model_mapping || undefined,
             sets: channel.sets,
             priority: channel.priority,
+            backup_only: channel.backup_only,
             skip_tls_verify: channel.skip_tls_verify,
             enabled_no_permission_ban: channel.enabled_no_permission_ban,
             warn_error_rate: channel.warn_error_rate,
@@ -370,11 +373,12 @@ export function ChannelTable() {
             header: () => <div className="font-medium py-3.5 whitespace-nowrap">{t("channel.name")}</div>,
             cell: ({ row }) => (
                 <div
-                    className={cn("max-w-[240px] truncate font-medium", clickableCell)}
+                    className={cn("flex max-w-[240px] flex-wrap items-center gap-1.5 font-medium", clickableCell)}
                     onClick={() => openUpdateDialog(row.original)}
                     title={row.original.name}
                 >
-                    {row.original.name}
+                    <span className="truncate" title={row.original.name}>{row.original.name}</span>
+                    {row.original.backup_only && <BackupOnlyBadge />}
                 </div>
             ),
         },
