@@ -492,6 +492,7 @@ func distribute(c *gin.Context, mode mode.Mode) {
 
 		return
 	}
+
 	if findModel == "" {
 		findModel = requestModel
 	}
@@ -505,6 +506,7 @@ func distribute(c *gin.Context, mode mode.Mode) {
 			ok = true
 		}
 	}
+
 	if !ok {
 		AbortLogWithMessage(
 			c,
