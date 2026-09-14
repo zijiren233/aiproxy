@@ -475,9 +475,12 @@ func distribute(c *gin.Context, mode mode.Mode) {
 		return
 	}
 
+	channelHeader := c.Request.Header.Get("Aiproxy-Channel")
+	adminChannelBypass := config.EnableAdminBypassChannelModelCheck &&
+		group.Status == model.GroupStatusInternal && channelHeader != ""
 	findModel := token.FindModel(requestModel)
 
-	if findModel == "" {
+	if findModel == "" && !adminChannelBypass {
 		AbortLogWithMessage(
 			c,
 			http.StatusNotFound,
@@ -490,9 +493,20 @@ func distribute(c *gin.Context, mode mode.Mode) {
 		return
 	}
 
+	if findModel == "" {
+		findModel = requestModel
+	}
+
 	SetLogModelFields(log.Data, findModel)
 
 	mc, ok := GetModelCaches(c).ModelConfig.GetModelConfig(findModel)
+	if !ok {
+		if adminChannelBypass {
+			mc = model.NewDefaultModelConfig(findModel)
+			ok = true
+		}
+	}
+
 	if !ok {
 		AbortLogWithMessage(
 			c,
