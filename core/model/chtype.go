@@ -58,6 +58,7 @@ const (
 	ChannelTypeQwenCloud               ChannelType = 56
 	ChannelTypeAIProxyHZH              ChannelType = 57
 	ChannelTypeAIProxyUSW1             ChannelType = 58
+	ChannelTypeTokenDance              ChannelType = 59
 )
 
 var channelTypeNames = map[ChannelType]string{
@@ -107,4 +108,5 @@ var channelTypeNames = map[ChannelType]string{
 	ChannelTypeQwenCloud:               "QwenCloud",
 	ChannelTypeAIProxyHZH:              "AIProxy HZH",
 	ChannelTypeAIProxyUSW1:             "AIProxy USW-1",
+	ChannelTypeTokenDance:              "TokenDance",
 }

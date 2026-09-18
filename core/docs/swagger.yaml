@@ -1474,6 +1474,7 @@ definitions:
     - 56
     - 57
     - 58
+    - 59
     type: integer
     x-enum-varnames:
     - ChannelTypeOpenAI
@@ -1522,6 +1523,7 @@ definitions:
     - ChannelTypeQwenCloud
     - ChannelTypeAIProxyHZH
     - ChannelTypeAIProxyUSW1
+    - ChannelTypeTokenDance
   model.ChartData:
     properties:
       audio_input_amount:
@@ -7376,6 +7378,7 @@ paths:
         - 56
         - 57
         - 58
+        - 59
         in: path
         name: type
         required: true
